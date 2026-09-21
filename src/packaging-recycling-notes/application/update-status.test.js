@@ -1782,6 +1782,123 @@ describe('updatePrnStatus', () => {
     })
   })
 
+  describe('stamping an explicit pool on every general PRN event (PAE-1977)', () => {
+    // A general (non-December) PRN's ledger events used to disagree on the pool
+    // key: absent on the raise, an accidental explicit general on the issue (the
+    // accreditation was in hand for the number stamp), absent on the reversals.
+    // The raise now resolves general as a constant (no accreditation read) and
+    // writes it, and every later movement reads it back, so the whole life of a
+    // general PRN carries `pool: general` uniformly. A historical raise that
+    // predates the pool dimension stays bare and coalesces to general, so no
+    // migration is needed.
+    const LEDGER_ID = {
+      organisationId: ORG_ID,
+      registrationId: REG_ID,
+      accreditationId: ACC_ID
+    }
+
+    it('writes an explicit general pool on a non-December raise without reading the accreditation', async () => {
+      // No accreditation is seeded, so a general pool on the event can only have
+      // been resolved as the constant it is, never fetched.
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        withAccreditation: false
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
+      expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
+    })
+
+    it('mirrors an absent raise pool on a non-December issue rather than re-deriving it', async () => {
+      // A general PRN whose raise predates the pool dimension carries no pool.
+      // The issue reads that absent pool off the raise and stays bare, rather
+      // than re-deriving general from the accreditation it loads for the number
+      // stamp, so the issue mirrors its raise exactly.
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          lastAppliedEventNumber: 2,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        ledgerEvents: [
+          buildOpeningBalanceEvent({ amount: 1000, availableAmount: 1000 }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            amount: 100,
+            openingBalance: { amount: 1000, availableAmount: 1000 },
+            closingBalance: { amount: 1000, availableAmount: 900 }
+          })
+        ]
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
+      expect(latest?.payload).not.toHaveProperty('pool')
+    })
+
+    it('reads the general pool back onto a non-December reversal event', async () => {
+      // The delete reads the pool off the raise for every PRN, so a general
+      // raise's reversal states general explicitly rather than omitting it. No
+      // accreditation is seeded, so the pool can only have come from the raise.
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          lastAppliedEventNumber: 2,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        ledgerEvents: [
+          buildOpeningBalanceEvent({ amount: 1000, availableAmount: 1000 }),
+          buildPrnLedgerEvent({
+            kind: LEDGER_EVENT_KIND.PRN_CREATED,
+            number: 2,
+            pool: POOL.GENERAL,
+            amount: 100,
+            openingBalance: { amount: 1000, availableAmount: 1000 },
+            closingBalance: { amount: 1000, availableAmount: 900 }
+          })
+        ],
+        withAccreditation: false
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const latest =
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
+      expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
+    })
+  })
+
   describe('metrics', () => {
     it('records the status transition metric on a successful update', async () => {
       const repositories = seedRepositories({
