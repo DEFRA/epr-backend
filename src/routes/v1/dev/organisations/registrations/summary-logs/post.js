@@ -102,6 +102,88 @@ const naming = (error, summaryLogId) => {
   return boom
 }
 
+/**
+ * @typedef {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
+ *   params: { organisationId: string, registrationId: string },
+ *   systemLogsRepository: SystemLogsRepository
+ * }} SubmitRequest
+ */
+
+/**
+ * Inserts the document an upload's completion would, validating against the
+ * registration's latest submission.
+ *
+ * @param {SubmitRequest} request
+ * @param {string} summaryLogId
+ */
+const insertValidatingLog = async (request, summaryLogId) => {
+  const { summaryLogsRepository } = request
+  const { organisationId, registrationId } = request.params
+
+  const latestSubmitted =
+    await summaryLogsRepository.findLatestSubmittedForOrgReg(
+      organisationId,
+      registrationId
+    )
+  await summaryLogsRepository.insert(summaryLogId, {
+    status: SUMMARY_LOG_STATUS.VALIDATING,
+    expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
+    createdAt: new Date().toISOString(),
+    file: { id: summaryLogId, name: 'summary-log.json' },
+    organisationId,
+    registrationId,
+    validatedAgainstSummaryLogId: latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
+  })
+}
+
+/**
+ * Submits a validated document as the submit route would, then runs the
+ * consumer's submit step.
+ *
+ * @param {SubmitRequest} request
+ * @param {SubmitCommandPayload} submitPayload
+ * @param {SummaryLogHandlerDeps} deps
+ * @returns {Promise<SummaryLogVersion>} The submitted document
+ */
+const submitValidatedLog = async (request, submitPayload, deps) => {
+  const { summaryLogsRepository } = request
+  const { organisationId, registrationId } = request.params
+  const { summaryLogId } = submitPayload
+
+  const transition =
+    await summaryLogsRepository.transitionToSubmittingExclusive(summaryLogId)
+  if (!transition.success) {
+    throw Boom.conflict('Another submission is in progress. Please try again.')
+  }
+
+  const isStale = await supersedeIfStale({
+    summaryLogsRepository,
+    summaryLog: transition.summaryLog,
+    summaryLogId,
+    organisationId,
+    registrationId,
+    version: transition.version
+  })
+  if (isStale) {
+    throw Boom.conflict('Waste records have changed since validation.')
+  }
+
+  await auditSummaryLogSubmit(request, {
+    summaryLogId,
+    organisationId,
+    registrationId
+  })
+
+  await waitForVersion(summaryLogsRepository, summaryLogId, transition.version)
+  await runCommand(submitSummaryLogCommand, submitPayload, deps)
+
+  return waitForVersion(
+    summaryLogsRepository,
+    summaryLogId,
+    transition.version + 1
+  )
+}
+
 export const devSummaryLogsSubmitPath =
   '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
@@ -117,10 +199,7 @@ export const devSummaryLogsSubmit = {
     }
   },
   /**
-   * @param {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
-   *   params: { organisationId: string, registrationId: string },
-   *   systemLogsRepository: SystemLogsRepository
-   * }} request
+   * @param {SubmitRequest} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -139,20 +218,7 @@ export const devSummaryLogsSubmit = {
       templateForRegistration(registration)
     )
 
-    const latestSubmitted =
-      await summaryLogsRepository.findLatestSubmittedForOrgReg(
-        organisationId,
-        registrationId
-      )
-    await summaryLogsRepository.insert(summaryLogId, {
-      status: SUMMARY_LOG_STATUS.VALIDATING,
-      expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
-      createdAt: new Date().toISOString(),
-      file: { id: summaryLogId, name: 'summary-log.json' },
-      organisationId,
-      registrationId,
-      validatedAgainstSummaryLogId: latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
-    })
+    await insertValidatingLog(request, summaryLogId)
 
     const deps = {
       logger,
@@ -183,46 +249,10 @@ export const devSummaryLogsSubmit = {
           .code(StatusCodes.UNPROCESSABLE_ENTITY)
       }
 
-      const transition =
-        await summaryLogsRepository.transitionToSubmittingExclusive(
-          summaryLogId
-        )
-      if (!transition.success) {
-        throw Boom.conflict(
-          'Another submission is in progress. Please try again.'
-        )
-      }
-
-      const isStale = await supersedeIfStale({
-        summaryLogsRepository,
-        summaryLog: transition.summaryLog,
-        summaryLogId,
-        organisationId,
-        registrationId,
-        version: transition.version
-      })
-      if (isStale) {
-        throw Boom.conflict('Waste records have changed since validation.')
-      }
-
-      await auditSummaryLogSubmit(request, {
-        summaryLogId,
-        organisationId,
-        registrationId
-      })
-
-      await waitForVersion(
-        summaryLogsRepository,
-        summaryLogId,
-        transition.version
-      )
-      await runCommand(submitSummaryLogCommand, { summaryLogId, user }, deps)
-
-      /** @type {SummaryLogVersion} */
-      const submitted = await waitForVersion(
-        summaryLogsRepository,
-        summaryLogId,
-        transition.version + 1
+      const submitted = await submitValidatedLog(
+        request,
+        { summaryLogId, user },
+        deps
       )
       return h
         .response({
