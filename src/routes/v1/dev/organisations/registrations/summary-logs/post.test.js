@@ -27,13 +27,22 @@ const META = {
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
 
+// Cell values are the parsed forms, not a sheet's: a row id is a string and a
+// date is a calendar date.
+const DATE_RECEIVED = '2025-01-15'
+
 /** @param {Parameters<typeof createReprocessorReceivedRowValues>[0][]} rows */
 const payloadWithReceived = (rows) => ({
   meta: META,
   data: {
     RECEIVED_LOADS_FOR_REPROCESSING: {
       headers: REPROCESSOR_RECEIVED_HEADERS,
-      rows: rows.map(createReprocessorReceivedRowValues)
+      rows: rows.map((row) =>
+        createReprocessorReceivedRowValues({
+          dateReceived: DATE_RECEIVED,
+          ...row
+        })
+      )
     }
   }
 })
@@ -73,11 +82,11 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const response = await submit(
       env,
       payloadWithReceived([
-        { rowId: 1001, tonnageReceived: 100 },
+        { rowId: '1001', tonnageReceived: 100 },
         {
-          rowId: 1002,
+          rowId: '1002',
           tonnageReceived: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z'
+          dateReceived: '2025-01-16'
         }
       ])
     )
@@ -89,7 +98,9 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
       status: SUMMARY_LOG_STATUS.SUBMITTED,
       processingType: 'REPROCESSOR_INPUT',
       loads: expect.objectContaining({
-        added: expect.objectContaining({ valid: expect.any(Object) })
+        added: expect.objectContaining({
+          valid: { count: 2, rowIds: ['1001', '1002'] }
+        })
       }),
       loadsByReportingPeriod: expect.any(Object)
     })
@@ -106,7 +117,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: -5 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: -5 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -140,7 +151,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -150,13 +161,13 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const env = await createEnvironment()
     const first = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
     expect(first.statusCode).toBe(StatusCodes.OK)
 
     const second = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 150 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 150 }])
     )
 
     expect(second.statusCode).toBe(StatusCodes.OK)
@@ -216,7 +227,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -235,7 +246,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -253,7 +264,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -282,7 +293,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const env = await createEnvironment()
 
     const response = await submit(env, {
-      ...payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }]),
+      ...payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
       meta: { ...META, PROCESSING_TYPE: 'REPROCESSOR_OUTPUT' }
     })
 
@@ -296,7 +307,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const response = await env.server.inject({
       method: 'POST',
       url: submitUrl(env.organisationId, env.registrationId),
-      payload: payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -310,7 +321,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await submit(
       env,
-      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     )
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
