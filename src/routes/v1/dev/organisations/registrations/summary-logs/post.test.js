@@ -237,6 +237,18 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(JSON.parse(response.payload)).not.toHaveProperty('summaryLogId')
   })
 
+  it('rejects a payload that names the template, since it is inferred from the registration', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(env, {
+      ...payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }]),
+      meta: { ...META, PROCESSING_TYPE: 'REPROCESSOR_OUTPUT' }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload)).not.toHaveProperty('summaryLogId')
+  })
+
   it('requires the organisation write scope', async () => {
     const env = await createEnvironment()
 

@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+
 const cell = Joi.alternatives()
   .try(Joi.string(), Joi.number(), Joi.boolean())
   .allow(null)
@@ -10,7 +12,12 @@ const tableSchema = Joi.object({
 })
 
 export const summaryLogContentPayloadSchema = Joi.object({
-  meta: Joi.object().pattern(Joi.string(), cell.disallow(null)).required(),
+  meta: Joi.object({
+    [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]: Joi.forbidden(),
+    [SUMMARY_LOG_META_FIELDS.TEMPLATE_VERSION]: Joi.forbidden()
+  })
+    .pattern(Joi.string(), cell.disallow(null))
+    .required(),
   data: Joi.object().pattern(Joi.string(), tableSchema).required()
 })
 
