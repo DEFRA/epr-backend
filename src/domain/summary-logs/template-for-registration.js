@@ -1,11 +1,22 @@
 import { PROCESSING_TYPES } from './meta-fields.js'
 import { MIN_TEMPLATE_VERSIONS } from './table-schemas/index.js'
 
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { ProcessingType } from './meta-fields.js' */
 
 /**
- * @param {Registration} registration
+ * The parts of a registration that decide its template.
+ *
+ * @typedef {{
+ *   wasteProcessingType: Registration['wasteProcessingType'],
+ *   reprocessingType?: Registration['reprocessingType'],
+ *   accreditation: Pick<Accreditation, 'accreditationNumber'> | null
+ * }} TemplateRegistration
+ */
+
+/**
+ * @param {TemplateRegistration} registration
  * @returns {ProcessingType}
  */
 const processingTypeFor = (registration) => {
@@ -30,7 +41,7 @@ const processingTypeFor = (registration) => {
  * The summary log template a registration's operator would fill in today:
  * its processing type and the current version of that template.
  *
- * @param {Registration} registration
+ * @param {TemplateRegistration} registration
  * @returns {{ PROCESSING_TYPE: ProcessingType, TEMPLATE_VERSION: number }}
  */
 export const templateForRegistration = (registration) => {

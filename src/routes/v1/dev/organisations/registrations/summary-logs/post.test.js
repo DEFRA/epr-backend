@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict'
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
@@ -23,6 +25,9 @@ const META = {
   ACCREDITATION_NUMBER: 'ACC-123'
 }
 
+/** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
+
+/** @param {Parameters<typeof createReprocessorReceivedRowValues>[0][]} rows */
 const payloadWithReceived = (rows) => ({
   meta: META,
   data: {
@@ -33,6 +38,10 @@ const payloadWithReceived = (rows) => ({
   }
 })
 
+/**
+ * @param {string} organisationId
+ * @param {string} registrationId
+ */
 const submitUrl = (organisationId, registrationId) =>
   `/v1/dev/organisations/${organisationId}/registrations/${registrationId}/summary-logs`
 
@@ -43,6 +52,10 @@ const createEnvironment = () =>
     config: DEV_ENDPOINTS_ON
   })
 
+/**
+ * @param {Environment} env
+ * @param {object} payload
+ */
 const submit = (env, payload) =>
   env.server.inject({
     method: 'POST',
@@ -159,8 +172,13 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   // The interleavings below happen between the validate and submit steps of one
   // request, so a spy on the exclusive transition is the only seam to place them.
   // It also captures the id the route minted, which a conflict answer omits.
+  /**
+   * @param {Environment} env
+   * @param {() => Promise<unknown>} interleave
+   */
   const beforeTransitionToSubmitting = (env, interleave) => {
     const original = env.summaryLogsRepository.transitionToSubmittingExclusive
+    /** @type {{ summaryLogId: string | undefined }} */
     const minted = { summaryLogId: undefined }
     vi.spyOn(
       env.summaryLogsRepository,
@@ -173,7 +191,12 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     return minted
   }
 
+  /**
+   * @param {Environment} env
+   * @param {string | undefined} summaryLogId
+   */
   const storedAfterReplication = async (env, summaryLogId) => {
+    assert(summaryLogId)
     await new Promise((resolve) => setImmediate(resolve))
     const stored = await env.summaryLogsRepository.findById(summaryLogId)
     return stored?.summaryLog
@@ -209,6 +232,24 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
         registrationId: env.registrationId
       })
     )
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: 1001, tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    const failed = await storedAfterReplication(env, minted.summaryLogId)
+    expect(failed?.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+  })
+
+  it('answers 500 even when the failing step threw an error carrying its own status', async () => {
+    const env = await createEnvironment()
+    const minted = beforeTransitionToSubmitting(env, async () => {
+      vi.spyOn(env.summaryLogsRepository, 'update').mockRejectedValueOnce(
+        Boom.conflict('version conflict while finalising')
+      )
+    })
 
     const response = await submit(
       env,

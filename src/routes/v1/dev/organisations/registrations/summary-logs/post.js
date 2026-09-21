@@ -23,7 +23,8 @@ import { summaryLogContentPayloadSchema } from './post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
-/** @import { CommandHandler } from '#server/queue-consumer/summary-log-commands.js' */
+/** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
+/** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
 /** @import { SummaryLogContentPayload } from './post.schema.js' */
 
@@ -34,14 +35,15 @@ const FIRST_DATA_ROW = 2
 
 // Reads can come from a replica, so each read after a write waits for the
 // version that write leaves behind: the insert makes 1, validation makes 2.
-const VALIDATED_VERSION = 2
+const INSERTED_VERSION = 1
+const VALIDATED_VERSION = INSERTED_VERSION + 1
 
 /**
  * A workbook's metadata sits on the cover sheet and each table on a sheet of
  * its own, so the locations issues are reported against follow that layout.
  *
  * @param {SummaryLogContentPayload} payload
- * @param {{ PROCESSING_TYPE: string, TEMPLATE_VERSION: number }} template
+ * @param {ReturnType<typeof templateForRegistration>} template
  * @returns {ParsedSummaryLog}
  */
 const toParsedSummaryLog = ({ meta, data }, template) => ({
@@ -71,15 +73,17 @@ const toParsedSummaryLog = ({ meta, data }, template) => ({
  * own failure step marks the document, as the queue consumer would.
  *
  * @param {CommandHandler} handler
- * @param {object} payload
- * @param {object} deps
+ * @param {ValidateCommandPayload | SubmitCommandPayload} payload
+ * @param {SummaryLogHandlerDeps} deps
  */
 const runCommand = async (handler, payload, deps) => {
   try {
     await handler.execute(payload, deps)
   } catch (error) {
     await handler.onFailure(payload, deps)
-    throw error
+    throw Boom.boomify(error, {
+      statusCode: StatusCodes.INTERNAL_SERVER_ERROR
+    })
   }
 }
 
@@ -139,8 +143,10 @@ export const devSummaryLogsSubmit = {
       summaryLogExtractor: { extract: async () => parsed }
     }
 
+    await waitForVersion(summaryLogsRepository, summaryLogId, INSERTED_VERSION)
     await runCommand(validateSummaryLogCommand, { summaryLogId }, deps)
 
+    /** @type {SummaryLogVersion} */
     const validated = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
@@ -186,6 +192,7 @@ export const devSummaryLogsSubmit = {
       deps
     )
 
+    /** @type {SummaryLogVersion} */
     const submitted = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
