@@ -15,7 +15,7 @@ import { summaryLogMetrics } from './metrics.js'
  *
  * @param {{
  *   summaryLogsRepository: SummaryLogsRepository,
- *   summaryLog: SummaryLog & { validatedAgainstSummaryLogId?: string },
+ *   summaryLog: SummaryLog,
  *   summaryLogId: string,
  *   organisationId: string,
  *   registrationId: string,
