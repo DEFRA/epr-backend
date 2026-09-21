@@ -244,10 +244,13 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
 const transitionToSubmittingExclusive = (db) => async (logId) => {
   const validatedId = validateId(logId)
 
-  // First, verify the document exists and check its current state
+  // Verify the document exists and check its current state. Read the primary:
+  // a lagging secondary would answer conflict for a log that has validated.
   /** @type {any} */
   const findFilter = { _id: validatedId }
-  const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+  const existing = await db
+    .collection(COLLECTION_NAME)
+    .findOne(findFilter, { readPreference: 'primary' })
 
   if (!existing) {
     throw Boom.notFound(`Summary log with id ${validatedId} not found`)
