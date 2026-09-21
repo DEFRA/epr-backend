@@ -105,6 +105,23 @@ export const testTransitionToSubmittingExclusive = (it) => {
       )
     })
 
+    it('throws when the same summary log is already submitting', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const logId = `summary-${randomUUID()}`
+
+      await repository.insert(
+        logId,
+        summaryLogFactory.validated({ organisationId, registrationId })
+      )
+      await repository.transitionToSubmittingExclusive(logId)
+
+      await expect(
+        repository.transitionToSubmittingExclusive(logId)
+      ).rejects.toThrow(
+        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.SUBMITTING}`
+      )
+    })
+
     it('allows concurrent submissions for different org/reg pairs', async () => {
       const orgReg1 = generateOrgReg()
       const orgReg2 = generateOrgReg()

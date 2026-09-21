@@ -162,62 +162,11 @@ describe('MongoDB summary logs repository', () => {
   })
 
   describe('transitionToSubmittingExclusive edge cases', () => {
-    it('returns success: false when findOneAndUpdate fails due to concurrent modification', async () => {
-      const logId = `test-${randomUUID()}`
-      let findOneCallCount = 0
-
-      const mockDb = createMockDb({
-        createIndex: async () => {},
-        findOne: async () => {
-          findOneCallCount++
-          if (findOneCallCount === 1) {
-            // First call: document exists and is validated
-            return {
-              _id: logId,
-              version: 1,
-              status: 'validated',
-              organisationId: 'org-1',
-              registrationId: 'reg-1'
-            }
-          }
-          // Second call: check for existing submitting - none found
-          return null
-        },
-        findOneAndUpdate: async () => null // Concurrent modification beat us
-      })
-
-      const repositoryFactory = await createSummaryLogsRepository(
-        mockDb,
-        mockS3Config
-      )
-      const repository = repositoryFactory(createMockLogger())
-
-      const result = await repository.transitionToSubmittingExclusive(logId)
-
-      expect(result.success).toBe(false)
-    })
-
     it('returns success: false when unique index violation occurs (race condition)', async () => {
       const logId = `test-${randomUUID()}`
-      let findOneCallCount = 0
 
       const mockDb = createMockDb({
         createIndex: async () => {},
-        findOne: async () => {
-          findOneCallCount++
-          if (findOneCallCount === 1) {
-            // First call: document exists and is validated
-            return {
-              _id: logId,
-              version: 1,
-              status: 'validated',
-              organisationId: 'org-1',
-              registrationId: 'reg-1'
-            }
-          }
-          // Second call: check for existing submitting - none found
-          return null
-        },
         findOneAndUpdate: async () => {
           // Another request beat us and the unique index blocks our update
           throw createMongoError(
@@ -240,25 +189,9 @@ describe('MongoDB summary logs repository', () => {
 
     it('re-throws non-duplicate key errors from findOneAndUpdate', async () => {
       const logId = `test-${randomUUID()}`
-      let findOneCallCount = 0
 
       const mockDb = createMockDb({
         createIndex: async () => {},
-        findOne: async () => {
-          findOneCallCount++
-          if (findOneCallCount === 1) {
-            // First call: document exists and is validated
-            return {
-              _id: logId,
-              version: 1,
-              status: 'validated',
-              organisationId: 'org-1',
-              registrationId: 'reg-1'
-            }
-          }
-          // Second call: check for existing submitting - none found
-          return null
-        },
         findOneAndUpdate: async () => {
           throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
         }
