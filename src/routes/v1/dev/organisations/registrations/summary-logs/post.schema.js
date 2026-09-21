@@ -6,9 +6,21 @@ const cell = Joi.alternatives()
   .try(Joi.string(), Joi.number(), Joi.boolean())
   .allow(null)
 
+const valuePerHeader = Joi.ref('...headers', {
+  adjust: (headers) => headers.length
+})
+
 const tableSchema = Joi.object({
   headers: Joi.array().items(Joi.string()).min(1).required(),
-  rows: Joi.array().items(Joi.array().items(cell)).min(1).required()
+  rows: Joi.array()
+    .items(
+      Joi.array()
+        .items(cell)
+        .length(valuePerHeader)
+        .messages({ 'array.length': 'must hold one value per header' })
+    )
+    .min(1)
+    .required()
 })
 
 export const summaryLogContentPayloadSchema = Joi.object({

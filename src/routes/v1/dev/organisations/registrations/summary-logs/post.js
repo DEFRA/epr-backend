@@ -13,6 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
+import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
 import {
   submitSummaryLogCommand,
@@ -26,6 +27,7 @@ import { summaryLogContentPayloadSchema } from './post.schema.js'
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogContentPayload } from './post.schema.js' */
 
 const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024
@@ -87,6 +89,19 @@ const runCommand = async (handler, payload, deps) => {
   }
 }
 
+/**
+ * Every answer after the insert names the document, so a caller can find what
+ * its failed request left behind.
+ *
+ * @param {Error} error
+ * @param {string} summaryLogId
+ */
+const naming = (error, summaryLogId) => {
+  const boom = Boom.boomify(error)
+  boom.output.payload.summaryLogId = summaryLogId
+  return boom
+}
+
 export const devSummaryLogsSubmitPath =
   '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
@@ -103,7 +118,8 @@ export const devSummaryLogsSubmit = {
   },
   /**
    * @param {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
-   *   params: { organisationId: string, registrationId: string }
+   *   params: { organisationId: string, registrationId: string },
+   *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
@@ -111,6 +127,7 @@ export const devSummaryLogsSubmit = {
     const { summaryLogsRepository, organisationsRepository, payload, logger } =
       request
     const { organisationId, registrationId } = request.params
+    const user = extractUser(request)
     const summaryLogId = randomUUID()
 
     const registration = await organisationsRepository.findRegistrationById(
@@ -143,63 +160,78 @@ export const devSummaryLogsSubmit = {
       summaryLogExtractor: { extract: async () => parsed }
     }
 
-    await waitForVersion(summaryLogsRepository, summaryLogId, INSERTED_VERSION)
-    await runCommand(validateSummaryLogCommand, { summaryLogId }, deps)
+    try {
+      await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        INSERTED_VERSION
+      )
+      await runCommand(validateSummaryLogCommand, { summaryLogId }, deps)
 
-    /** @type {SummaryLogVersion} */
-    const validated = await waitForVersion(
-      summaryLogsRepository,
-      summaryLogId,
-      VALIDATED_VERSION
-    )
-    if (validated.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+      /** @type {SummaryLogVersion} */
+      const validated = await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        VALIDATED_VERSION
+      )
+      if (validated.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+        return h
+          .response({
+            summaryLogId,
+            ...toSummaryLogResponse(validated.summaryLog)
+          })
+          .code(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+
+      const transition =
+        await summaryLogsRepository.transitionToSubmittingExclusive(
+          summaryLogId
+        )
+      if (!transition.success) {
+        throw Boom.conflict(
+          'Another submission is in progress. Please try again.'
+        )
+      }
+
+      const isStale = await supersedeIfStale({
+        summaryLogsRepository,
+        summaryLog: transition.summaryLog,
+        summaryLogId,
+        organisationId,
+        registrationId,
+        version: transition.version
+      })
+      if (isStale) {
+        throw Boom.conflict('Waste records have changed since validation.')
+      }
+
+      await auditSummaryLogSubmit(request, {
+        summaryLogId,
+        organisationId,
+        registrationId
+      })
+
+      await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        transition.version
+      )
+      await runCommand(submitSummaryLogCommand, { summaryLogId, user }, deps)
+
+      /** @type {SummaryLogVersion} */
+      const submitted = await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        transition.version + 1
+      )
       return h
         .response({
           summaryLogId,
-          ...toSummaryLogResponse(validated.summaryLog)
+          ...toSummaryLogResponse(submitted.summaryLog)
         })
-        .code(StatusCodes.UNPROCESSABLE_ENTITY)
+        .code(StatusCodes.OK)
+    } catch (error) {
+      throw naming(error, summaryLogId)
     }
-
-    const transition =
-      await summaryLogsRepository.transitionToSubmittingExclusive(summaryLogId)
-    if (!transition.success) {
-      throw Boom.conflict(
-        'Another submission is in progress. Please try again.'
-      )
-    }
-
-    const isStale = await supersedeIfStale({
-      summaryLogsRepository,
-      summaryLog: transition.summaryLog,
-      summaryLogId,
-      organisationId,
-      registrationId,
-      version: transition.version
-    })
-    if (isStale) {
-      throw Boom.conflict('Waste records have changed since validation.')
-    }
-
-    await waitForVersion(
-      summaryLogsRepository,
-      summaryLogId,
-      transition.version
-    )
-    await runCommand(
-      submitSummaryLogCommand,
-      { summaryLogId, user: extractUser(request) },
-      deps
-    )
-
-    /** @type {SummaryLogVersion} */
-    const submitted = await waitForVersion(
-      summaryLogsRepository,
-      summaryLogId,
-      transition.version + 1
-    )
-    return h
-      .response({ summaryLogId, ...toSummaryLogResponse(submitted.summaryLog) })
-      .code(StatusCodes.OK)
   }
 }

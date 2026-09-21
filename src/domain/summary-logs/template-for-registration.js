@@ -1,4 +1,9 @@
-import { PROCESSING_TYPES } from './meta-fields.js'
+import {
+  PROCESSING_TYPE_TO_REPROCESSING_TYPE,
+  PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE,
+  PROCESSING_TYPES,
+  REGISTERED_ONLY_PROCESSING_TYPES
+} from './meta-fields.js'
 import { MIN_TEMPLATE_VERSIONS } from './table-schemas/index.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
@@ -16,36 +21,38 @@ import { MIN_TEMPLATE_VERSIONS } from './table-schemas/index.js'
  */
 
 /**
+ * The one processing type the validator accepts for a registration, judged by
+ * the same maps it judges an upload's PROCESSING_TYPE against.
+ *
  * @param {TemplateRegistration} registration
- * @returns {ProcessingType}
+ * @returns {ProcessingType | undefined}
  */
 const processingTypeFor = (registration) => {
-  const accredited = Boolean(registration.accreditation?.accreditationNumber)
+  const registeredOnly = !registration.accreditation?.accreditationNumber
 
-  if (registration.wasteProcessingType === 'exporter') {
-    return accredited
-      ? PROCESSING_TYPES.EXPORTER
-      : PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
-  }
-
-  if (!accredited) {
-    return PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-  }
-
-  return registration.reprocessingType === 'output'
-    ? PROCESSING_TYPES.REPROCESSOR_OUTPUT
-    : PROCESSING_TYPES.REPROCESSOR_INPUT
+  return Object.values(PROCESSING_TYPES).find(
+    (processingType) =>
+      PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE[processingType] ===
+        registration.wasteProcessingType &&
+      REGISTERED_ONLY_PROCESSING_TYPES.has(processingType) === registeredOnly &&
+      (PROCESSING_TYPE_TO_REPROCESSING_TYPE[processingType] ??
+        registration.reprocessingType) === registration.reprocessingType
+  )
 }
 
 /**
- * The summary log template a registration's operator would fill in today:
- * its processing type and the current version of that template.
+ * The summary log template a registration's operator would fill in: its
+ * processing type and the lowest version of that template the validator
+ * accepts.
  *
  * @param {TemplateRegistration} registration
  * @returns {{ PROCESSING_TYPE: ProcessingType, TEMPLATE_VERSION: number }}
  */
 export const templateForRegistration = (registration) => {
   const PROCESSING_TYPE = processingTypeFor(registration)
+  if (!PROCESSING_TYPE) {
+    throw new Error('No summary log template fits the registration')
+  }
 
   return {
     PROCESSING_TYPE,

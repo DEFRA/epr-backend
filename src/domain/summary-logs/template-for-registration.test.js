@@ -55,6 +55,15 @@ const cases = [
 ]
 
 describe('templateForRegistration', () => {
+  it('refuses a registration no template fits', () => {
+    expect(() =>
+      templateForRegistration({
+        wasteProcessingType: 'reprocessor',
+        accreditation
+      })
+    ).toThrow('No summary log template fits the registration')
+  })
+
   it.each(cases)(
     'names the template an %s would fill in',
     (_label, registration, processingType, templateVersion) => {

@@ -36,6 +36,8 @@ export const PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE = Object.freeze({
 
 /**
  * Processing types that use the registered-only template variant
+ *
+ * @type {ReadonlySet<ProcessingType>}
  */
 export const REGISTERED_ONLY_PROCESSING_TYPES = new Set([
   PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,

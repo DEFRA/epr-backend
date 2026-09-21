@@ -3,10 +3,12 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
+import { asRegulator } from '#test/inject-auth.js'
 import {
   asOperator,
   createReprocessorReceivedRowValues,
@@ -110,6 +112,17 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const balance = await getWasteBalance(env)
     expect(balance.amount).toBe(300)
+
+    const { systemLogs } = await env.server.app.systemLogsRepository.find({
+      subCategory: SUMMARY_LOG_SUB_CATEGORY,
+      limit: 10
+    })
+    expect(systemLogs).toMatchObject([
+      {
+        event: { action: 'submit' },
+        context: { summaryLogId: body.summaryLogId }
+      }
+    ])
   })
 
   it('answers with the invalid document and its issues when the content fails validation', async () => {
@@ -231,6 +244,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     )
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(JSON.parse(response.payload).summaryLogId).toBe(minted.summaryLogId)
     const superseded = await storedAfterReplication(env, minted.summaryLogId)
     expect(superseded?.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
   })
@@ -250,8 +264,26 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     )
 
     expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(JSON.parse(response.payload).summaryLogId).toBe(minted.summaryLogId)
     const failed = await storedAfterReplication(env, minted.summaryLogId)
     expect(failed?.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+  })
+
+  it('answers 500 and leaves the log validation-failed when the validate step throws', async () => {
+    const env = await createEnvironment()
+    vi.spyOn(env.summaryLogsRepository, 'update').mockRejectedValueOnce(
+      new Error('write failed')
+    )
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    const { summaryLogId } = JSON.parse(response.payload)
+    const failed = await storedAfterReplication(env, summaryLogId)
+    expect(failed?.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
   })
 
   it('answers 500 even when the failing step threw an error carrying its own status', async () => {
@@ -289,6 +321,42 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(JSON.parse(response.payload)).not.toHaveProperty('summaryLogId')
   })
 
+  it('rejects a row whose length differs from its headers', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(env, {
+      meta: META,
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          headers: REPROCESSOR_RECEIVED_HEADERS,
+          rows: [['1001', '2025-01-15']]
+        }
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload)).not.toHaveProperty('summaryLogId')
+  })
+
+  it('answers not found for an unknown registration before writing anything', async () => {
+    const env = await createEnvironment()
+
+    const response = await env.server.inject({
+      method: 'POST',
+      url: submitUrl(env.organisationId, 'no-such-registration'),
+      payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(
+      await env.summaryLogsRepository.findAllByOrgReg(
+        env.organisationId,
+        'no-such-registration'
+      )
+    ).toEqual([])
+  })
+
   it('rejects a payload that names the template, since it is inferred from the registration', async () => {
     const env = await createEnvironment()
 
@@ -311,6 +379,19 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+  })
+
+  it('refuses a user without the organisation write scope', async () => {
+    const env = await createEnvironment()
+
+    const response = await env.server.inject({
+      method: 'POST',
+      url: submitUrl(env.organisationId, env.registrationId),
+      payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      ...asRegulator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
 
   it('is not registered when the dev endpoints flag is off', async () => {
