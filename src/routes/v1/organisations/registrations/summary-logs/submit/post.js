@@ -5,68 +5,19 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  SUMMARY_LOG_STATUS,
-  NO_PRIOR_SUBMISSION,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
+import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-
-/**
- * Checks if the summary log's preview is stale and handles the superseded transition
- * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {SummaryLog & {validatedAgainstSummaryLogId?: string}} summaryLog
- * @param {string} summaryLogId
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {number} version
- * @returns {Promise<boolean>} true if stale (superseded), false if valid
- */
-async function handleStalenessCheck(
-  summaryLogsRepository,
-  summaryLog,
-  summaryLogId,
-  organisationId,
-  registrationId,
-  version
-) {
-  const currentLatest =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg(
-      organisationId,
-      registrationId
-    )
-
-  const baseline = summaryLog.validatedAgainstSummaryLogId
-  const current = currentLatest?.id ?? NO_PRIOR_SUBMISSION
-
-  if (baseline !== current) {
-    await summaryLogsRepository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
-    )
-    const processingType =
-      summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-    await summaryLogMetrics.recordStatusTransition({
-      status: SUMMARY_LOG_STATUS.SUPERSEDED,
-      processingType
-    })
-    return true
-  }
-
-  return false
-}
 
 export const summaryLogsSubmitPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/submit'
@@ -110,14 +61,14 @@ export const summaryLogsSubmit = {
 
       const { summaryLog, version: newVersion } = result
 
-      const isStale = await handleStalenessCheck(
+      const isStale = await supersedeIfStale({
         summaryLogsRepository,
         summaryLog,
         summaryLogId,
         organisationId,
         registrationId,
-        newVersion
-      )
+        version: newVersion
+      })
 
       if (isStale) {
         throw Boom.conflict(

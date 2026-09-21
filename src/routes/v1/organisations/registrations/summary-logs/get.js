@@ -4,14 +4,9 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  getDefaultStatus,
-  SUMMARY_LOG_STATUS
-} from '#domain/summary-logs/status.js'
-import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
-import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
-import { transformValidationResponse } from './transform-validation-response.js'
+import { getDefaultStatus } from '#domain/summary-logs/status.js'
 import { summaryLogResponseSchema } from './response.schema.js'
+import { toSummaryLogResponse } from './summary-log-response.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
@@ -48,19 +43,7 @@ export const summaryLogsGet = {
       return h.response({ status: getDefaultStatus() }).code(StatusCodes.OK)
     }
 
-    const { summaryLog } = result
-
-    const response = {
-      status: summaryLog.status,
-      ...transformValidationResponse(summaryLog.validation),
-      ...(summaryLog.loads && { loads: summaryLog.loads }),
-      ...((summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED ||
-        summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) && {
-        loadsByReportingPeriod:
-          summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
-      }),
-      ...extractResponseMetaFields(summaryLog.meta)
-    }
+    const response = toSummaryLogResponse(result.summaryLog)
 
     logger.info({
       message: `Summary log status retrieved: summaryLogId=${summaryLogId}`,

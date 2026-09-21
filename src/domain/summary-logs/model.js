@@ -2,7 +2,7 @@
  * @typedef {Object} FileUpload
  * @property {string} id
  * @property {string} name
- * @property {'pending'|'rejected'} status
+ * @property {'pending'|'rejected'} [status] - Absent when the content arrived without an upload
  */
 
 /**
@@ -65,6 +65,7 @@
  *   registrationId?: string,
  *   status: SummaryLogStatus,
  *   submittedAt?: string,
+ *   validatedAgainstSummaryLogId?: string,
  *   validation?: Validation
  * }} SummaryLog
  */

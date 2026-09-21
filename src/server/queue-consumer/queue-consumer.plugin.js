@@ -3,10 +3,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
-import { createReportsService } from '#reports/application/report-service.js'
 import { createCommandQueueConsumer } from './consumer.js'
+import { buildSummaryLogHandlerDeps } from './summary-log-handler-deps.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
 
@@ -28,34 +26,11 @@ function buildConsumerDeps(server, { config }) {
     endpoint: config.get('commandQueue.endpoint')
   })
 
-  const {
-    uploadsRepository,
-    summaryLogsRepository,
-    organisationsRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    wasteBalanceService,
-    reportsRepository,
-    systemLogsRepository
-  } = server.app
-
-  const onSummaryLogUploaded = createOnSummaryLogUploaded({
-    reportsRepository,
-    systemLogsRepository
-  })
-
   return {
     sqsClient,
     queueName: config.get('commandQueue.queueName'),
-    uploadsRepository,
-    summaryLogsRepository,
-    organisationsRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    wasteBalanceService,
-    reportsService: createReportsService(reportsRepository),
-    summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
-    onSummaryLogUploaded
+    uploadsRepository: server.app.uploadsRepository,
+    ...buildSummaryLogHandlerDeps(server.app)
   }
 }
 

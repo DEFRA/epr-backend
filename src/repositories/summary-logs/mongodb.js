@@ -243,80 +243,59 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
 
 const transitionToSubmittingExclusive = (db) => async (logId) => {
   const validatedId = validateId(logId)
-
-  // First, verify the document exists and check its current state
-  /** @type {any} */
-  const findFilter = { _id: validatedId }
-  const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
-
-  if (!existing) {
-    throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-  }
-
-  if (existing.status !== SUMMARY_LOG_STATUS.VALIDATED) {
-    throw Boom.conflict(
-      `Summary log must be validated before submission. Current status: ${existing.status}`
-    )
-  }
-
-  const { organisationId, registrationId } = existing
-
-  // Check if another log for same org/reg is already submitting (fast path)
-  /** @type {any} */
-  const submittingFilter = {
-    _id: { $ne: validatedId },
-    organisationId,
-    registrationId,
-    status: SUMMARY_LOG_STATUS.SUBMITTING
-  }
-  const existingSubmitting = await db
-    .collection(COLLECTION_NAME)
-    .findOne(submittingFilter)
-
-  if (existingSubmitting) {
-    return { success: false }
-  }
-
-  // Atomically transition to submitting
-  // The unique partial index on (organisationId, registrationId) where status='submitting'
-  // ensures only one document can be in submitting status per org/reg at a time
   const submittedAt = new Date().toISOString()
   const expiresAt = calculateExpiresAt(SUMMARY_LOG_STATUS.SUBMITTING)
-  /** @type {any} */
-  const updateFilter = {
-    _id: validatedId,
-    status: SUMMARY_LOG_STATUS.VALIDATED
+
+  // One conditional write answers every case without a read that could lag
+  // behind it: the document as it stood before says whether it existed and
+  // whether it was validated, and only a validated document is changed.
+  const submitted = {
+    status: SUMMARY_LOG_STATUS.SUBMITTING,
+    submittedAt,
+    expiresAt
+  }
+  const submitting = { ...submitted, version: { $add: ['$version', 1] } }
+  const whenValidated = {
+    $cond: [
+      { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
+      { $mergeObjects: ['$$ROOT', submitting] },
+      '$$ROOT'
+    ]
   }
 
+  /** @type {any} */
+  const findFilter = { _id: validatedId }
+  let before
   try {
-    const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-      updateFilter,
-      {
-        $set: { status: SUMMARY_LOG_STATUS.SUBMITTING, submittedAt, expiresAt },
-        $inc: { version: 1 }
-      },
-      { returnDocument: 'after' }
-    )
-
-    // If update failed due to status mismatch, another transaction beat us
-    if (!result) {
-      return { success: false }
-    }
-
-    // Extract summaryLog from result (remove _id and version)
-    const { _id, version: newVersion, ...summaryLog } = result
-    return {
-      success: true,
-      summaryLog: normaliseStoredSummaryLog(summaryLog),
-      version: newVersion
-    }
+    before = await db
+      .collection(COLLECTION_NAME)
+      .findOneAndUpdate(findFilter, [{ $replaceWith: whenValidated }], {
+        returnDocument: 'before'
+      })
   } catch (error) {
-    // Unique index violation means another document for same org/reg is already submitting
-    // This can happen in a race even if the pre-check passed
+    // The unique partial index on (organisationId, registrationId) where
+    // status='submitting' refuses a second submitting document per org/reg
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       return { success: false }
     }
     throw error
+  }
+
+  if (!before) {
+    throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+  }
+
+  if (before.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+    throw Boom.conflict(
+      `Summary log must be validated before submission. Current status: ${before.status}`
+    )
+  }
+
+  const { _id, version, ...summaryLog } = before
+  return {
+    success: true,
+    summaryLog: normaliseStoredSummaryLog({ ...summaryLog, ...submitted }),
+    version: version + 1
   }
 }
 
