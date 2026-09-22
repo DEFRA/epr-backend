@@ -50,6 +50,19 @@
  *   A row state belongs to the ledger that wrote it, so the summary log alone
  *   does not identify one: the same `summaryLogId` under a different ledger
  *   identity matches nothing.
+ * @property {(summaryLogIds: string[]) => Promise<Map<string, SummaryLogRowState[]>>} findRowStatesForSummaryLogs
+ *   Fetch, in a single `$in` query, the full row-state documents whose
+ *   membership contains at least one of `summaryLogIds`, grouped into a Map
+ *   keyed by summary-log id: a document is placed under every queried id its
+ *   membership holds. A summary-log id is a per-upload file id committed under
+ *   one ledger identity (see `findRowStatesForSummaryLogFile`), so in the data
+ *   the write path produces each id maps to a single partition; the grouping
+ *   does not itself enforce that, so a caller needing one partition's rows
+ *   scopes the returned bucket by ledger identity. Unlike the projected
+ *   `streamRowStatesForSummaryLogs`, this preserves the whole document,
+ *   including `rowId` and `classification`. Queried ids with no row states are
+ *   absent from the map. The batch read the credited-tonnage report uses in
+ *   place of one `findRowStatesForSummaryLog` round trip per partition.
  * @property {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the

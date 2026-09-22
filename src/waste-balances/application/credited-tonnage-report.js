@@ -105,6 +105,27 @@ const compareRows = (a, b) =>
 const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
   `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
 
+/**
+ * One partition's row states from the batched fetch. The batch groups documents
+ * by summary-log id alone, so scope the bucket to this ledger identity before
+ * aggregating: a summary-log id maps to a single partition in the data the
+ * write path produces, but scoping here reproduces the ledger-scoped read the
+ * per-entry query did and keeps the report from ever summing another
+ * partition's rows, without depending on that invariant.
+ *
+ * @param {Map<string, import('#waste-records/repository/schema.js').SummaryLogRowState[]>} rowStatesByLog
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+ * @param {string} summaryLogId
+ * @returns {import('#waste-records/repository/schema.js').SummaryLogRowState[]}
+ */
+const rowStatesForEntry = (rowStatesByLog, ledgerId, summaryLogId) =>
+  (rowStatesByLog.get(summaryLogId) ?? []).filter(
+    (state) =>
+      state.organisationId === ledgerId.organisationId &&
+      state.registrationId === ledgerId.registrationId &&
+      state.accreditationId === ledgerId.accreditationId
+  )
+
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
@@ -135,6 +156,13 @@ export const buildCreditedTonnageReport = async ({
 
   const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
+  // One batched `$in` read of every partition's row states, keyed by summary
+  // log id, replacing the per-partition round trip that dominated the endpoint.
+  const rowStatesByLog =
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLogs(
+      creditedEntries.map((entry) => entry.summaryLogId)
+    )
+
   /** @type {CreditedTonnageRow[]} */
   const rows = []
 
@@ -159,11 +187,11 @@ export const buildCreditedTonnageReport = async ({
 
     const { organisation, registration, accreditation } = context
 
-    const storedRowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-        ledgerId,
-        summaryLogId
-      )
+    const storedRowStates = rowStatesForEntry(
+      rowStatesByLog,
+      ledgerId,
+      summaryLogId
+    )
     const rowStates = reclassifyWasteRecordStates(
       storedRowStates.map(toWasteRecordState),
       {

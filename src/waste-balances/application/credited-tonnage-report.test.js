@@ -229,9 +229,28 @@ const run = ({
     findLatestSubmittedSummaryLogPerLedger: async () => entries
   }
   const summaryLogRowStatesRepository = {
-    findRowStatesForSummaryLog: async (
-      /** @type {{ accreditationId: string }} */ ledgerId
-    ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
+    findRowStatesForSummaryLogs: async (
+      /** @type {string[]} */ summaryLogIds
+    ) => {
+      const asked = new Set(summaryLogIds)
+      const grouped = new Map()
+      for (const entry of entries) {
+        if (!asked.has(entry.summaryLogId)) {
+          continue
+        }
+        const rows = rowStatesByAccreditationId[entry.ledgerId.accreditationId]
+        if (!rows) {
+          continue
+        }
+        // Real adapters stamp each document with the partition that wrote it,
+        // and group by summary-log id alone (a union when an id is shared).
+        const tagged = rows.map((row) => ({ ...entry.ledgerId, ...row }))
+        const bucket = grouped.get(entry.summaryLogId) ?? []
+        bucket.push(...tagged)
+        grouped.set(entry.summaryLogId, bucket)
+      }
+      return grouped
+    }
   }
   const organisationsRepository = { findAll: async () => organisations }
   const overseasSitesRepository =
@@ -321,6 +340,33 @@ describe('buildCreditedTonnageReport', () => {
         }
       ]
     })
+  })
+
+  it('scopes each partition to its own rows when two partitions share a summary-log id', async () => {
+    const first = makeAccreditation({ orgId: 500001 })
+    const second = makeAccreditation({ orgId: 500002 })
+
+    const { report } = run({
+      organisations: [first.organisation, second.organisation],
+      entries: [
+        { ...first.ledgerEntry, summaryLogId: 'shared-log' },
+        { ...second.ledgerEntry, summaryLogId: 'shared-log' }
+      ],
+      rowStatesByAccreditationId: {
+        [first.accreditationId]: [receivedRow('2026-02-10', 100)],
+        [second.accreditationId]: [receivedRow('2026-02-10', 50)]
+      }
+    })
+
+    const data = (await report).data
+    const februaryFor = (reference) =>
+      data.find(
+        (row) =>
+          row.month === '2026-02' && row.organisation.reference === reference
+      )?.tonnage.totalCredited
+
+    expect(februaryFor('500001')).toBe(100)
+    expect(februaryFor('500002')).toBe(50)
   })
 
   it('splits glass into re-melt and other via the registration glassRecyclingProcess', async () => {
