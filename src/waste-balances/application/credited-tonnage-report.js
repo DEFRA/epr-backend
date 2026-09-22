@@ -7,17 +7,45 @@ import { indexAccreditations } from '#waste-balances/application/accreditation-i
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
+import { mapWithConcurrency } from '#common/helpers/map-with-concurrency.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
+ * @typedef {import('#overseas-sites/repository/port.js').OverseasSite} OverseasSite
  * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
+ * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
+ * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LedgerEntry
+ * @typedef {import('#waste-balances/domain/credited-tonnage.js').MonthRange} MonthRange
+ * @typedef {import('#waste-balances/domain/credited-tonnage.js').SkippedRows} SkippedRows
  */
+
+/**
+ * The shared inputs each ledger entry is processed against. Passed to
+ * {@link buildRowsForEntry} so entries can be handled concurrently without
+ * threading each dependency through separately.
+ *
+ * @typedef {Object} EntryContext
+ * @property {Map<string, AccreditationContext>} index
+ * @property {Set<string>} testOrgAccreditationIds
+ * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
+ * @property {Map<string, OverseasSite>} sitesById
+ * @property {MonthRange} monthRange
+ * @property {TypedLogger} logger
+ */
+
+/**
+ * How many summary-log row-state reads to keep in flight at once. Each accredited
+ * partition needs one Mongo round-trip, and reading them serially was the
+ * dominant cost of the report (roughly 35s over ~1360 partitions). A modest cap
+ * bounds the load on Mongo while collapsing the wall-clock to a fraction.
+ */
+const ROW_STATE_READ_CONCURRENCY = 10
 
 /**
  * The report covers a fixed window: January 2026 (the first reporting month)
@@ -105,6 +133,139 @@ const compareRows = (a, b) =>
 const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
   `(${totalCredited}t credited, ${eligibleForWasteBalance}t eligible)`
 
+/**
+ * Warn that a ledger entry named an accreditation absent from the organisation
+ * data. Test-org accreditations are dropped by design and never reach here.
+ *
+ * @param {TypedLogger} logger
+ * @param {string} accreditationId
+ */
+const warnUnmatchedAccreditation = (logger, accreditationId) => {
+  logger.warn({
+    message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'credited_tonnage_ledger_entry_unmatched',
+      reference: accreditationId
+    }
+  })
+}
+
+/**
+ * Log one structured line per accreditation whose rows could not all be placed,
+ * split by why. Silent when nothing was skipped.
+ *
+ * @param {TypedLogger} logger
+ * @param {string} accreditationId
+ * @param {SkippedRows} skippedRows
+ * @param {MonthRange} monthRange
+ */
+const logSkippedRows = (logger, accreditationId, skippedRows, monthRange) => {
+  const { noUsableDate, beforeWindowStart, afterWindowEnd } = skippedRows
+  const skippedTotal =
+    noUsableDate.rowCount + beforeWindowStart.rowCount + afterWindowEnd.rowCount
+
+  if (skippedTotal === 0) {
+    return
+  }
+
+  logger.info({
+    message:
+      `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditationId}: ` +
+      `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
+      `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
+      `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'credited_tonnage_rows_skipped',
+      reference: accreditationId
+    }
+  })
+}
+
+/**
+ * Build the report rows for one accredited-partition ledger entry: read its row
+ * states at the submission head, reclassify against today's accreditation and
+ * overseas-site data, aggregate by month and emit one row per month. An entry
+ * whose accreditation is missing yields no rows (and warns unless it is a
+ * dropped test org). Called once per entry, safe to run concurrently: it only
+ * reads shared state and its own side effects are the two log lines.
+ *
+ * @param {LedgerEntry} entry
+ * @param {EntryContext} context
+ * @returns {Promise<CreditedTonnageRow[]>}
+ */
+const buildRowsForEntry = async (
+  { ledgerId, summaryLogId },
+  {
+    index,
+    testOrgAccreditationIds,
+    summaryLogRowStatesRepository,
+    sitesById,
+    monthRange,
+    logger
+  }
+) => {
+  // creditedEntries holds accredited partitions only, so `accreditationId`
+  // is non-null here despite the ledger id's wider type.
+  const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
+  const entryContext = index.get(accreditationId)
+  if (!entryContext) {
+    if (!testOrgAccreditationIds.has(accreditationId)) {
+      warnUnmatchedAccreditation(logger, accreditationId)
+    }
+    return []
+  }
+
+  const { organisation, registration, accreditation } = entryContext
+
+  const storedRowStates =
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      ledgerId,
+      summaryLogId
+    )
+  const rowStates = reclassifyWasteRecordStates(
+    storedRowStates.map(toWasteRecordState),
+    {
+      accreditation,
+      overseasSites: buildOverseasSitesContext(registration, sitesById)
+    }
+  )
+
+  const { months, skippedRows } = creditedTonnageByMonth(
+    rowStates,
+    {
+      wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
+        registration.wasteProcessingType
+      ),
+      reprocessingType: registration.reprocessingType
+    },
+    monthRange
+  )
+
+  logSkippedRows(logger, accreditation.id, skippedRows, monthRange)
+
+  const material = resolveMaterial(registration)
+  const reference = String(organisation.orgId)
+  const accreditationNumber = accreditation.accreditationNumber ?? ''
+
+  return months.map((month) => ({
+    month: month.month,
+    organisation: { id: organisation.id, reference },
+    accreditation: {
+      id: accreditation.id,
+      accreditationNumber,
+      processingType: registration.wasteProcessingType,
+      material
+    },
+    tonnage: {
+      totalCredited: month.totalCredited,
+      eligibleForWasteBalance: month.eligibleForWasteBalance,
+      sentOnDeductions: month.sentOnDeductions
+    }
+  }))
+}
+
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
@@ -135,98 +296,25 @@ export const buildCreditedTonnageReport = async ({
 
   const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
-  /** @type {CreditedTonnageRow[]} */
-  const rows = []
-
-  for (const { ledgerId, summaryLogId } of creditedEntries) {
-    // creditedEntries holds accredited partitions only, so `accreditationId`
-    // is non-null here despite the ledger id's wider type.
-    const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
-    const context = index.get(accreditationId)
-    if (!context) {
-      if (!testOrgAccreditationIds.has(accreditationId)) {
-        logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationId}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: 'credited_tonnage_ledger_entry_unmatched',
-            reference: accreditationId
-          }
-        })
-      }
-      continue
-    }
-
-    const { organisation, registration, accreditation } = context
-
-    const storedRowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-        ledgerId,
-        summaryLogId
-      )
-    const rowStates = reclassifyWasteRecordStates(
-      storedRowStates.map(toWasteRecordState),
-      {
-        accreditation,
-        overseasSites: buildOverseasSitesContext(registration, sitesById)
-      }
-    )
-
-    const { months, skippedRows } = creditedTonnageByMonth(
-      rowStates,
-      {
-        wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
-          registration.wasteProcessingType
-        ),
-        reprocessingType: registration.reprocessingType
-      },
-      monthRange
-    )
-
-    const { noUsableDate, beforeWindowStart, afterWindowEnd } = skippedRows
-    const skippedTotal =
-      noUsableDate.rowCount +
-      beforeWindowStart.rowCount +
-      afterWindowEnd.rowCount
-
-    if (skippedTotal > 0) {
-      logger.info({
-        message:
-          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
-          `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
-          `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
-          `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: 'credited_tonnage_rows_skipped',
-          reference: accreditation.id
-        }
+  // Each entry's row states are read with one Mongo round-trip. Reading them
+  // serially dominated the response time, so the reads run through a
+  // bounded-concurrency pool. The final `rows.sort(compareRows)` imposes a
+  // total order, so the order entries settle in does not affect the output.
+  const rowsPerEntry = await mapWithConcurrency(
+    creditedEntries,
+    ROW_STATE_READ_CONCURRENCY,
+    (entry) =>
+      buildRowsForEntry(entry, {
+        index,
+        testOrgAccreditationIds,
+        summaryLogRowStatesRepository,
+        sitesById,
+        monthRange,
+        logger
       })
-    }
+  )
 
-    const material = resolveMaterial(registration)
-    const reference = String(organisation.orgId)
-    const accreditationNumber = accreditation.accreditationNumber ?? ''
-
-    for (const month of months) {
-      rows.push({
-        month: month.month,
-        organisation: { id: organisation.id, reference },
-        accreditation: {
-          id: accreditation.id,
-          accreditationNumber,
-          processingType: registration.wasteProcessingType,
-          material
-        },
-        tonnage: {
-          totalCredited: month.totalCredited,
-          eligibleForWasteBalance: month.eligibleForWasteBalance,
-          sentOnDeductions: month.sentOnDeductions
-        }
-      })
-    }
-  }
-
+  const rows = rowsPerEntry.flat()
   rows.sort(compareRows)
 
   return { meta: { generatedAt: now.toISOString() }, data: rows }
