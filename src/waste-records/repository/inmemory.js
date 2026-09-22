@@ -90,6 +90,78 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 }
 
 /**
+ * Group each stored document under every queried summary-log id its membership
+ * holds. The batch groups by id alone (a union when an id is shared across
+ * ledger identities); a caller needing one partition's rows scopes the bucket
+ * by ledger identity, as the credited-tonnage report does.
+ *
+ * @param {SummaryLogRowState[]} storage
+ * @param {string[]} summaryLogIds
+ * @returns {Map<string, SummaryLogRowState[]>}
+ */
+const collectRowStatesForSummaryLogs = (storage, summaryLogIds) => {
+  const asked = new Set(summaryLogIds)
+  /** @type {Map<string, SummaryLogRowState[]>} */
+  const grouped = new Map()
+  for (const doc of storage) {
+    for (const summaryLogId of doc.summaryLogIds) {
+      if (!asked.has(summaryLogId)) {
+        continue
+      }
+      const bucket = grouped.get(summaryLogId) ?? []
+      bucket.push(structuredClone(doc))
+      grouped.set(summaryLogId, bucket)
+    }
+  }
+  return grouped
+}
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} rowId
+ * @param {string} wasteRecordType
+ * @returns {SummaryLogRowState[]}
+ */
+const selectRowHistory = (
+  storage,
+  organisationId,
+  registrationId,
+  rowId,
+  wasteRecordType
+) =>
+  structuredClone(
+    storage.filter(
+      (doc) =>
+        doc.organisationId === organisationId &&
+        doc.registrationId === registrationId &&
+        doc.rowId === rowId &&
+        doc.wasteRecordType === wasteRecordType
+    )
+  )
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {string[]} summaryLogIds
+ */
+const streamRowStates = async function* (storage, summaryLogIds) {
+  const asked = new Set(summaryLogIds)
+  for (const doc of storage) {
+    if (doc.summaryLogIds.some((id) => asked.has(id))) {
+      yield structuredClone({
+        organisationId: doc.organisationId,
+        registrationId: doc.registrationId,
+        accreditationId: doc.accreditationId,
+        wasteRecordType: doc.wasteRecordType,
+        processingType: doc.processingType,
+        data: doc.data
+      })
+    }
+  }
+}
+
+/**
  * @param {SummaryLogRowState[]} [initialSummaryLogRowStates]
  * @returns {import('./port.js').SummaryLogRowStatesRepositoryFactory}
  */
@@ -129,22 +201,8 @@ export const createInMemorySummaryLogRowStatesRepository = (
     /**
      * @param {string[]} summaryLogIds
      */
-    findRowStatesForSummaryLogs: async (summaryLogIds) => {
-      const asked = new Set(summaryLogIds)
-      /** @type {Map<string, SummaryLogRowState[]>} */
-      const grouped = new Map()
-      for (const doc of storage) {
-        for (const summaryLogId of doc.summaryLogIds) {
-          if (!asked.has(summaryLogId)) {
-            continue
-          }
-          const bucket = grouped.get(summaryLogId) ?? []
-          bucket.push(structuredClone(doc))
-          grouped.set(summaryLogId, bucket)
-        }
-      }
-      return grouped
-    },
+    findRowStatesForSummaryLogs: async (summaryLogIds) =>
+      collectRowStatesForSummaryLogs(storage, summaryLogIds),
 
     /**
      * @param {string} organisationId
@@ -177,34 +235,19 @@ export const createInMemorySummaryLogRowStatesRepository = (
       rowId,
       wasteRecordType
     ) =>
-      structuredClone(
-        storage.filter(
-          (doc) =>
-            doc.organisationId === organisationId &&
-            doc.registrationId === registrationId &&
-            doc.rowId === rowId &&
-            doc.wasteRecordType === wasteRecordType
-        )
+      selectRowHistory(
+        storage,
+        organisationId,
+        registrationId,
+        rowId,
+        wasteRecordType
       ),
 
     /**
      * @param {string[]} summaryLogIds
      */
-    streamRowStatesForSummaryLogs: async function* (summaryLogIds) {
-      const asked = new Set(summaryLogIds)
-      for (const doc of storage) {
-        if (doc.summaryLogIds.some((id) => asked.has(id))) {
-          yield structuredClone({
-            organisationId: doc.organisationId,
-            registrationId: doc.registrationId,
-            accreditationId: doc.accreditationId,
-            wasteRecordType: doc.wasteRecordType,
-            processingType: doc.processingType,
-            data: doc.data
-          })
-        }
-      }
-    },
+    streamRowStatesForSummaryLogs: (summaryLogIds) =>
+      streamRowStates(storage, summaryLogIds),
 
     findDistinctDataKeys: async () => {
       const keys = new Set()
