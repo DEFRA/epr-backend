@@ -98,5 +98,27 @@ export const testFindRowStatesForSummaryLogsBehaviour = (it) => {
       expect(grouped.get('log-2')).toHaveLength(1)
       expect(grouped.get('log-2')[0].summaryLogIds).toEqual(['log-1', 'log-2'])
     })
+
+    it('unions the row states of every ledger identity that holds the id, carrying each partition on its documents', async () => {
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+        'shared-log'
+      )
+      await repository.upsertSummaryLogRowStates(
+        OTHER_LEDGER,
+        [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
+        'shared-log'
+      )
+
+      const bucket = (
+        await repository.findRowStatesForSummaryLogs(['shared-log'])
+      ).get('shared-log')
+
+      expect(bucket.map((state) => state.registrationId).sort()).toEqual([
+        'reg-1',
+        'reg-2'
+      ])
+    })
   })
 }

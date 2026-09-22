@@ -263,9 +263,10 @@ const performFindRowStatesForSummaryLog =
 
 /**
  * Places a state document under every queried summary-log id its membership
- * holds. A queried id is unique to one partition's submission, so a document is
- * grouped under exactly one id in practice; the loop stays correct even if that
- * assumption were ever broken.
+ * holds. The write path commits each id under one ledger identity, so a
+ * document normally lands under a single id; the grouping does not depend on
+ * that, and a caller needing one partition's rows scopes the bucket by ledger
+ * identity (as the credited-tonnage report does).
  *
  * @param {Map<string, SummaryLogRowState[]>} grouped
  * @param {Set<string>} asked
