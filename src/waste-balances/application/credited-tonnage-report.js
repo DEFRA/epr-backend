@@ -30,7 +30,7 @@ import { mapWithConcurrency } from '#common/helpers/map-with-concurrency.js'
  * {@link buildRowsForEntry} so entries can be handled concurrently without
  * threading each dependency through separately.
  *
- * @typedef {Object} EntryContext
+ * @typedef {Object} EntryDependencies
  * @property {Map<string, AccreditationContext>} index
  * @property {Set<string>} testOrgAccreditationIds
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
@@ -192,7 +192,7 @@ const logSkippedRows = (logger, accreditationId, skippedRows, monthRange) => {
  * reads shared state and its own side effects are the two log lines.
  *
  * @param {LedgerEntry} entry
- * @param {EntryContext} context
+ * @param {EntryDependencies} deps
  * @returns {Promise<CreditedTonnageRow[]>}
  */
 const buildRowsForEntry = async (
