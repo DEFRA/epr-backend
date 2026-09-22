@@ -4,8 +4,8 @@
  *
  * A worker pool over a shared index cursor: `limit` workers each pull the next
  * index off the cursor, await `fn`, and repeat until the items are exhausted.
- * The cursor read and increment (`cursor++`) are a single synchronous step with
- * no `await` between them, so two workers never claim the same index.
+ * The cursor read and the `cursor += 1` that follows are a single synchronous
+ * step with no `await` between them, so two workers never claim the same index.
  *
  * Results land at their source index, so ordering is preserved regardless of
  * which call settles first. Failures propagate: if any `fn` rejects, the
@@ -19,12 +19,13 @@
  */
 export const mapWithConcurrency = async (items, limit, fn) => {
   /** @type {R[]} */
-  const results = new Array(items.length)
+  const results = Array.from({ length: items.length })
   let cursor = 0
 
   const worker = async () => {
     while (cursor < items.length) {
-      const index = cursor++
+      const index = cursor
+      cursor += 1
       results[index] = await fn(items[index], index)
     }
   }
