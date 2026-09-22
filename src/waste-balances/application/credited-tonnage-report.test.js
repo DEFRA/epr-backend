@@ -229,9 +229,22 @@ const run = ({
     findLatestSubmittedSummaryLogPerLedger: async () => entries
   }
   const summaryLogRowStatesRepository = {
-    findRowStatesForSummaryLog: async (
-      /** @type {{ accreditationId: string }} */ ledgerId
-    ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
+    findRowStatesForSummaryLogs: async (
+      /** @type {string[]} */ summaryLogIds
+    ) => {
+      const asked = new Set(summaryLogIds)
+      const grouped = new Map()
+      for (const entry of entries) {
+        if (!asked.has(entry.summaryLogId)) {
+          continue
+        }
+        const rows = rowStatesByAccreditationId[entry.ledgerId.accreditationId]
+        if (rows) {
+          grouped.set(entry.summaryLogId, rows)
+        }
+      }
+      return grouped
+    }
   }
   const organisationsRepository = { findAll: async () => organisations }
   const overseasSitesRepository =

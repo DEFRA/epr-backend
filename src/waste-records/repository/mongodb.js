@@ -262,6 +262,56 @@ const performFindRowStatesForSummaryLog =
   }
 
 /**
+ * Places a state document under every queried summary-log id its membership
+ * holds. A queried id is unique to one partition's submission, so a document is
+ * grouped under exactly one id in practice; the loop stays correct even if that
+ * assumption were ever broken.
+ *
+ * @param {Map<string, SummaryLogRowState[]>} grouped
+ * @param {Set<string>} asked
+ * @param {SummaryLogRowState} state
+ */
+const groupStateByQueriedIds = (grouped, asked, state) => {
+  for (const summaryLogId of state.summaryLogIds) {
+    if (!asked.has(summaryLogId)) {
+      continue
+    }
+    const bucket = grouped.get(summaryLogId)
+    if (bucket) {
+      bucket.push(state)
+    } else {
+      grouped.set(summaryLogId, [state])
+    }
+  }
+}
+
+/**
+ * Rides the multikey `summary_log_membership` index in a single `$in` query,
+ * then groups the full documents by queried summary-log id — the batch read
+ * behind the credited-tonnage report, replacing one round trip per partition.
+ *
+ * @param {Collection} collection
+ * @returns {(summaryLogIds: string[]) => Promise<Map<string, SummaryLogRowState[]>>}
+ */
+const performFindRowStatesForSummaryLogs =
+  (collection) => async (summaryLogIds) => {
+    /** @type {Map<string, SummaryLogRowState[]>} */
+    const grouped = new Map()
+    if (summaryLogIds.length === 0) {
+      return grouped
+    }
+    const asked = new Set(summaryLogIds)
+    const docs = await collection
+      .find({ summaryLogIds: { $in: summaryLogIds } })
+      .sort({ _id: 1 })
+      .toArray()
+    for (const doc of docs) {
+      groupStateByQueriedIds(grouped, asked, toSummaryLogRowState(doc))
+    }
+    return grouped
+  }
+
+/**
  * Rides the multikey `summary_log_membership` index, as
  * `findRowStatesForSummaryLog` does — a file id is selective enough that the
  * organisation and registration are a residual filter, not a key prefix.
@@ -375,6 +425,7 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
   return () => ({
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
+    findRowStatesForSummaryLogs: performFindRowStatesForSummaryLogs(collection),
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
     findRowHistory: performFindRowHistory(collection),

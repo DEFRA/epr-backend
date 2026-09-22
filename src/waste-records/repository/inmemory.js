@@ -127,6 +127,26 @@ export const createInMemorySummaryLogRowStatesRepository = (
       ),
 
     /**
+     * @param {string[]} summaryLogIds
+     */
+    findRowStatesForSummaryLogs: async (summaryLogIds) => {
+      const asked = new Set(summaryLogIds)
+      /** @type {Map<string, SummaryLogRowState[]>} */
+      const grouped = new Map()
+      for (const doc of storage) {
+        for (const summaryLogId of doc.summaryLogIds) {
+          if (!asked.has(summaryLogId)) {
+            continue
+          }
+          const bucket = grouped.get(summaryLogId) ?? []
+          bucket.push(structuredClone(doc))
+          grouped.set(summaryLogId, bucket)
+        }
+      }
+      return grouped
+    },
+
+    /**
      * @param {string} organisationId
      * @param {string} registrationId
      * @param {string} fileId

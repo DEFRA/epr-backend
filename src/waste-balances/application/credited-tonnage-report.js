@@ -135,6 +135,13 @@ export const buildCreditedTonnageReport = async ({
 
   const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
+  // One batched `$in` read of every partition's row states, keyed by summary
+  // log id, replacing the per-partition round trip that dominated the endpoint.
+  const rowStatesByLog =
+    await summaryLogRowStatesRepository.findRowStatesForSummaryLogs(
+      creditedEntries.map((entry) => entry.summaryLogId)
+    )
+
   /** @type {CreditedTonnageRow[]} */
   const rows = []
 
@@ -159,11 +166,7 @@ export const buildCreditedTonnageReport = async ({
 
     const { organisation, registration, accreditation } = context
 
-    const storedRowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-        ledgerId,
-        summaryLogId
-      )
+    const storedRowStates = rowStatesByLog.get(summaryLogId) ?? []
     const rowStates = reclassifyWasteRecordStates(
       storedRowStates.map(toWasteRecordState),
       {
