@@ -215,3 +215,35 @@ export const withPublishedFigures = (measures) => ({
     measures.revisedTonnageIssued
   )
 })
+
+const SENT_ON_SPLITS = [
+  'tonnageSentOnToReprocessor',
+  'tonnageSentOnToExporter',
+  'tonnageSentOnToOtherFacilities'
+]
+
+const AVERAGE_PRICE_INPUTS = ['totalRevenue', 'revisedTonnageIssued']
+
+/**
+ * The published figures one report's measures put something into. A measure
+ * reported as zero puts nothing in, so where one operator reports a figure and
+ * others report zero, that figure is the one operator's alone. A figure worked
+ * out from others, the sent-on total and the average price, takes something
+ * from any report that put something into one of the figures it is worked out
+ * from.
+ *
+ * @param {Measures} measures
+ * @returns {string[]}
+ */
+export const figuresContributedTo = (measures) => {
+  const contributed = Object.entries(measures)
+    .filter(([, value]) => value !== 0)
+    .map(([measure]) => measure)
+  /** @param {string[]} inputs */
+  const anyOf = (inputs) => inputs.some((input) => contributed.includes(input))
+  return [
+    ...contributed,
+    ...(anyOf(SENT_ON_SPLITS) ? ['tonnageSentOnTotal'] : []),
+    ...(anyOf(AVERAGE_PRICE_INPUTS) ? ['averagePricePerTonne'] : [])
+  ]
+}

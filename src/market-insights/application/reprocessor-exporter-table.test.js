@@ -189,21 +189,29 @@ const run = async ({
   return { table, logger }
 }
 
-const NO_REPROCESSOR_ACTIVITY = {
+/**
+ * @param {Record<string, number>} figures
+ */
+const withNoOperators = (figures) => ({
+  ...figures,
+  operatorCount: 0,
+  submittingOperatorCount: 0,
+  contributingOperatorCounts: Object.fromEntries(
+    Object.keys(figures).map((figure) => [figure, 0])
+  )
+})
+
+const NO_REPROCESSOR_ACTIVITY = withNoOperators({
   ...noMeasures(WASTE_PROCESSING_TYPE.REPROCESSOR),
   tonnageSentOnTotal: 0,
-  averagePricePerTonne: 0,
-  operatorCount: 0,
-  submittingOperatorCount: 0
-}
+  averagePricePerTonne: 0
+})
 
-const NO_EXPORTER_ACTIVITY = {
+const NO_EXPORTER_ACTIVITY = withNoOperators({
   ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
   tonnageSentOnTotal: 0,
-  averagePricePerTonne: 0,
-  operatorCount: 0,
-  submittingOperatorCount: 0
-}
+  averagePricePerTonne: 0
+})
 
 /**
  * The cells something was reported into, flattened to one row each, without
@@ -222,6 +230,7 @@ const reported = (table) =>
             {
               operatorCount: _operators,
               submittingOperatorCount: _submitting,
+              contributingOperatorCounts: _contributing,
               ...measures
             }
           ]) => ({ accreditationType, measures })
@@ -1043,6 +1052,178 @@ describe('buildReprocessorExporterTable', () => {
     })
   })
 
+  describe('the operators contributing to each figure', () => {
+    /**
+     * @param {number} orgId
+     * @param {import('#domain/organisations/model.js').AppliedForMaterial} [material]
+     */
+    const receivingOperator = (orgId, material) => {
+      const operator = makeOperator({ orgId, material })
+      return {
+        operator,
+        report: monthlyReport(operator, 1, {
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 100,
+            tonnageRecycled: 100,
+            tonnageNotRecycled: 0
+          }
+        })
+      }
+    }
+
+    it('counts for each figure only the operators whose reports put something into it', async () => {
+      const receiving = [1, 2, 3, 4].map((orgId) => receivingOperator(orgId))
+      const issuing = makeOperator({ orgId: 5 })
+
+      const { table } = await run({
+        organisations: [...receiving.map(({ operator }) => operator), issuing],
+        reports: [
+          ...receiving.map(({ report }) => report),
+          monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(
+        expect.objectContaining({
+          operatorCount: 5,
+          submittingOperatorCount: 5,
+          contributingOperatorCounts: expect.objectContaining({
+            tonnageReceived: 4,
+            tonnageRecycled: 4,
+            tonnageReceivedButNotRecycled: 0,
+            revisedTonnageIssued: 1,
+            totalRevenue: 1,
+            averagePricePerTonne: 1
+          })
+        })
+      )
+    })
+
+    it('counts toward the sent-on total whoever sent any on, and toward the average price whoever reported revenue or issued tonnage', async () => {
+      const [toReprocessor, toOtherFacilities, revenueOnly, tonnageOnly] = [
+        1, 2, 3, 4
+      ].map((orgId) => makeOperator({ orgId }))
+      /**
+       * @param {number} tonnageSentToReprocessor
+       * @param {number} tonnageSentToAnotherSite
+       */
+      const wasteSent = (
+        tonnageSentToReprocessor,
+        tonnageSentToAnotherSite
+      ) => ({
+        tonnageSentToReprocessor,
+        tonnageSentToExporter: 0,
+        tonnageSentToAnotherSite,
+        finalDestinations: []
+      })
+
+      const { table } = await run({
+        organisations: [
+          toReprocessor,
+          toOtherFacilities,
+          revenueOnly,
+          tonnageOnly
+        ],
+        reports: [
+          monthlyReport(toReprocessor, 1, { wasteSent: wasteSent(5, 0) }),
+          monthlyReport(toOtherFacilities, 1, { wasteSent: wasteSent(0, 5) }),
+          monthlyReport(revenueOnly, 1, { prn: prn(0, 0, 1000) }),
+          monthlyReport(tonnageOnly, 1, { prn: prn(10, 0, 0) })
+        ]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ].contributingOperatorCounts
+      ).toEqual(
+        expect.objectContaining({
+          tonnageSentOnToReprocessor: 1,
+          tonnageSentOnToExporter: 0,
+          tonnageSentOnToOtherFacilities: 1,
+          tonnageSentOnTotal: 2,
+          revisedTonnageIssued: 1,
+          totalRevenue: 1,
+          averagePricePerTonne: 2
+        })
+      )
+    })
+
+    it('does not count an operator whose issued tonnage is all self-issued toward the revised tonnage', async () => {
+      const selfIssuing = makeOperator({ orgId: 1 })
+
+      const { table } = await run({
+        organisations: [selfIssuing],
+        reports: [monthlyReport(selfIssuing, 1, { prn: prn(10, 10, 0) })]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(
+        expect.objectContaining({
+          submittingOperatorCount: 1,
+          contributingOperatorCounts: expect.objectContaining({
+            revisedTonnageIssued: 0,
+            averagePricePerTonne: 0
+          })
+        })
+      )
+    })
+
+    it('counts each operator once toward each figure of the grand total, however many materials it reports', async () => {
+      const plastic = receivingOperator(1)
+      const wood = receivingOperator(2, MATERIAL.WOOD)
+      const twoMaterials = {
+        ...plastic.operator,
+        registrations: [
+          ...plastic.operator.registrations,
+          ...wood.operator.registrations
+        ],
+        accreditations: [
+          ...plastic.operator.accreditations,
+          ...wood.operator.accreditations
+        ]
+      }
+      const issuing = makeOperator({ orgId: 3, material: MATERIAL.WOOD })
+
+      const { table } = await run({
+        organisations: [twoMaterials, issuing],
+        reports: [
+          plastic.report,
+          { ...wood.report, organisationId: twoMaterials.id },
+          monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(
+        table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
+      ).toEqual(
+        expect.objectContaining({
+          operatorCount: 2,
+          submittingOperatorCount: 2,
+          contributingOperatorCounts: {
+            tonnageReceived: 1,
+            tonnageRecycled: 1,
+            tonnageReceivedButNotRecycled: 0,
+            tonnageSentOnTotal: 0,
+            tonnageSentOnToReprocessor: 0,
+            tonnageSentOnToExporter: 0,
+            tonnageSentOnToOtherFacilities: 0,
+            revisedTonnageIssued: 1,
+            totalRevenue: 1
+          }
+        })
+      )
+    })
+  })
+
   describe('the grand total of each table', () => {
     it('sums every material of its accreditation type, and leaves the average price out', async () => {
       const aluminium = makeOperator({ orgId: 1, material: MATERIAL.ALUMINIUM })
@@ -1080,12 +1261,12 @@ describe('buildReprocessorExporterTable', () => {
 
       expect(
         table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.EXPORTER]
-      ).toEqual({
-        ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
-        tonnageSentOnTotal: 0,
-        operatorCount: 0,
-        submittingOperatorCount: 0
-      })
+      ).toEqual(
+        withNoOperators({
+          ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
+          tonnageSentOnTotal: 0
+        })
+      )
     })
   })
 })

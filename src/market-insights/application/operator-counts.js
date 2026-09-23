@@ -28,11 +28,12 @@
  * contribution belongs to. An operator counts once however many sites it
  * reports from.
  *
- * @param {Iterable<Contribution>} contributions
- * @param {(contribution: Contribution) => string[]} keysOf
+ * @template {Contribution} C
+ * @param {Iterable<C>} contributions
+ * @param {(contribution: C) => string[]} keysOf
  * @returns {Map<string, Set<string>>}
  */
-const operatorsByKey = (contributions, keysOf) => {
+export const operatorsByKey = (contributions, keysOf) => {
   /** @type {Map<string, Set<string>>} */
   const operators = new Map()
   for (const contribution of contributions) {

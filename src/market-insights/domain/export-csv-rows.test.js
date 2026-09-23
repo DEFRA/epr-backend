@@ -65,6 +65,20 @@ const wasteBalanceTable = (months, overrides = {}) => ({
 })
 
 /**
+ * @template {Record<string, number>} T
+ * @param {T} figures
+ */
+const withNoOperators = (figures) => ({
+  ...figures,
+  operatorCount: 0,
+  submittingOperatorCount: 0,
+  contributingOperatorCounts: recordOf(
+    /** @type {(keyof T & string)[]} */ (Object.keys(figures)),
+    () => 0
+  )
+})
+
+/**
  * @param {string[]} months
  * @param {Record<string, object>} [overrides] - keyed `month::material::type`
  */
@@ -74,20 +88,18 @@ const reprocessorExporterTable = (months, overrides = {}) => ({
     months: recordOf(months, (month) => ({
       reports: { expected: 0, submitted: 0 },
       figures: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-        recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
-          ...withPublishedFigures({
-            ...noMeasures(accreditationType),
-            ...overrides[`${month}::${material}::${accreditationType}`]
-          }),
-          operatorCount: 0,
-          submittingOperatorCount: 0
-        }))
+        recordOf(ACCREDITATION_TYPES, (accreditationType) =>
+          withNoOperators(
+            withPublishedFigures({
+              ...noMeasures(accreditationType),
+              ...overrides[`${month}::${material}::${accreditationType}`]
+            })
+          )
+        )
       ),
-      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
-        ...withPublishedFigures(noMeasures(accreditationType)),
-        operatorCount: 0,
-        submittingOperatorCount: 0
-      }))
+      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) =>
+        withNoOperators(withPublishedFigures(noMeasures(accreditationType)))
+      )
     })),
     period: { reports: { expected: 0, submitted: 0 } }
   }
