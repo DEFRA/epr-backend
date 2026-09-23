@@ -13,6 +13,8 @@ import {
 
 const figure = Joi.number()
 
+const operatorCount = Joi.number().integer().min(0).required()
+
 const TOTALLED_MEASURES = [
   'tonnageReceived',
   'tonnageSentOnTotal',
@@ -44,11 +46,15 @@ const byAccreditationType = (measures) =>
     [WASTE_PROCESSING_TYPE.REPROCESSOR]: recordOf(
       [...measures, ...REPROCESSOR_ONLY],
       figure
-    ).required(),
+    )
+      .keys({ operatorCount })
+      .required(),
     [WASTE_PROCESSING_TYPE.EXPORTER]: recordOf(
       [...measures, ...EXPORTER_ONLY],
       figure
-    ).required()
+    )
+      .keys({ operatorCount })
+      .required()
   })
 
 const figuresByMaterialSchema = recordOf(
@@ -66,7 +72,8 @@ const totalsSchema = byAccreditationType(TOTALLED_MEASURES)
  * many have been submitted, and the period carries the sum, so a page can say
  * how complete the figures are. That count covers the registrations these
  * figures cover, those holding a live accreditation, which is a narrower
- * population than the waste balance counts over.
+ * population than the waste balance counts over. Every figure and grand total
+ * also carries how many separate operators it is built from.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
   meta: metaSchema,

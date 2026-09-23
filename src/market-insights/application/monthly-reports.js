@@ -143,6 +143,7 @@ const owedPeriods = (served, years, accreditation) => {
  *
  * @typedef {Object} OwedReport
  * @property {YearMonth} month
+ * @property {Organisation} org
  * @property {import('#domain/organisations/registration.js').Registration} registration
  * @property {Accreditation} accreditation
  * @property {boolean} submitted
@@ -205,6 +206,7 @@ export function* owedMonthlyReports({
       })
       yield {
         month,
+        org,
         registration,
         accreditation,
         submitted: submissions.length > 0
@@ -217,12 +219,13 @@ export function* owedMonthlyReports({
  * Count, for each month served, the monthly reports that were required and
  * those submitted.
  *
- * @param {Parameters<typeof owedMonthlyReports>[0]} params
+ * @param {YearMonth[]} months - the reporting months served
+ * @param {Iterable<OwedReport>} owedReports
  * @returns {MonthlyReportCounts}
  */
-export const countMonthlyReports = (params) => {
-  const owed = Map.groupBy(owedMonthlyReports(params), ({ month }) => month)
-  const byMonth = recordOf(params.months, (month) => {
+export const countMonthlyReports = (months, owedReports) => {
+  const owed = Map.groupBy(owedReports, ({ month }) => month)
+  const byMonth = recordOf(months, (month) => {
     const reports = owed.get(month) ?? []
     return {
       expected: reports.length,

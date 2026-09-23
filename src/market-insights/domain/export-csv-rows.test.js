@@ -64,16 +64,18 @@ const reprocessorExporterTable = (months, overrides = {}) => ({
     months: recordOf(months, (month) => ({
       reports: { expected: 0, submitted: 0 },
       figures: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-        recordOf(ACCREDITATION_TYPES, (accreditationType) =>
-          withPublishedFigures({
+        recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
+          ...withPublishedFigures({
             ...noMeasures(accreditationType),
             ...overrides[`${month}::${material}::${accreditationType}`]
-          })
-        )
+          }),
+          operatorCount: 0
+        }))
       ),
-      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) =>
-        withPublishedFigures(noMeasures(accreditationType))
-      )
+      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
+        ...withPublishedFigures(noMeasures(accreditationType)),
+        operatorCount: 0
+      }))
     })),
     period: { reports: { expected: 0, submitted: 0 } }
   }

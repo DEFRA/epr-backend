@@ -20,7 +20,10 @@ import {
   withPublishedFigures,
   withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
-import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
+import {
+  countMonthlyReports,
+  owedMonthlyReports
+} from '#market-insights/application/monthly-reports.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -39,12 +42,19 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
  * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
+ * @typedef {import('#market-insights/application/monthly-reports.js').OwedReport} OwedReport
  */
 
 /**
- * @typedef {Record<WasteProcessingTypeValue, PublishedFigures>} FiguresByAccreditationType
+ * How many separate operators a figure is built from.
+ *
+ * @typedef {{ operatorCount: number }} OperatorCount
+ */
+
+/**
+ * @typedef {Record<WasteProcessingTypeValue, PublishedFigures & OperatorCount>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
- * @typedef {Record<WasteProcessingTypeValue, PublishedTotal>} TotalsByAccreditationType
+ * @typedef {Record<WasteProcessingTypeValue, PublishedTotal & OperatorCount>} TotalsByAccreditationType
  */
 
 /**
@@ -71,6 +81,12 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
+ * @param {{ accreditationType: WasteProcessingTypeValue, month: YearMonth }} total
+ */
+const totalKey = ({ accreditationType, month }) =>
+  `${accreditationType}::${month}`
+
+/**
  * @param {{ organisationId: string, registrationId: string }} ref
  */
 const registrationKey = ({ organisationId, registrationId }) =>
@@ -87,15 +103,23 @@ const registrationKey = ({ organisationId, registrationId }) =>
 const latestSubmission = (slot) => selectSubmittedReports(slot).at(-1)
 
 /**
+ * The accreditation type a registration reports under. The registration types
+ * it as a bare string, though only an accreditation type is ever stored there.
+ *
+ * @param {Registration} registration
+ * @returns {WasteProcessingTypeValue}
+ */
+const accreditationTypeOf = (registration) =>
+  /** @type {WasteProcessingTypeValue} */ (registration.wasteProcessingType)
+
+/**
  * @param {Map<string, Measures>} cells
  * @param {ReportableRegistration} registration
  * @param {YearMonth} month
  * @param {import('#reports/repository/port.js').ReportSummary} report
  */
 const foldIntoCell = (cells, registration, month, report) => {
-  const accreditationType = /** @type {WasteProcessingTypeValue} */ (
-    registration.wasteProcessingType
-  )
+  const accreditationType = accreditationTypeOf(registration)
   const key = cellKey({
     material: resolveMaterial(registration),
     accreditationType,
@@ -137,22 +161,66 @@ const measuresFor = (cells, material, accreditationType, month) =>
   noMeasures(accreditationType)
 
 /**
+ * The operators each figure is built from, keyed as its cell or its grand
+ * total is. An operator counts in a month when it owed that month a report the
+ * figures would include, whether or not it submitted one: a suspended operator
+ * counts, and one cancelled throughout the month does not. An operator counts
+ * once however many sites it reports from, so one with a site in each of two
+ * nations counts once in each nation's figures and once in the UK's.
+ *
+ * @param {Iterable<OwedReport>} owedReports
+ * @returns {Map<string, Set<string>>}
+ */
+const operatorsByCell = (owedReports) => {
+  /** @type {Map<string, Set<string>>} */
+  const operators = new Map()
+  /**
+   * @param {string} key
+   * @param {string} organisationId
+   */
+  const count = (key, organisationId) =>
+    operators.set(key, (operators.get(key) ?? new Set()).add(organisationId))
+
+  for (const { month, org, registration } of owedReports) {
+    const accreditationType = accreditationTypeOf(registration)
+    const material = resolveMaterial(registration)
+    count(cellKey({ material, accreditationType, month }), org.id)
+    count(totalKey({ accreditationType, month }), org.id)
+  }
+  return operators
+}
+
+/**
+ * @param {Map<string, Set<string>>} operators
+ * @param {string} key
+ * @returns {OperatorCount}
+ */
+const operatorCountOf = (operators, key) => ({
+  operatorCount: operators.get(key)?.size ?? 0
+})
+
+/**
  * The publication prints every material and both accreditation types for
  * every month, so a combination nothing was reported into is still served, at
  * zero: a row vanishing when a material has no data is the error the work
  * instruction warns about.
  *
  * @param {Map<string, Measures>} cells
+ * @param {Map<string, Set<string>>} operators
  * @param {YearMonth} month
  * @returns {FiguresByMaterial}
  */
-const publishedFigures = (cells, month) =>
+const publishedFigures = (cells, operators, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-      withPublishedFigures(
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => ({
+      ...withPublishedFigures(
         measuresFor(cells, material, accreditationType, month)
+      ),
+      ...operatorCountOf(
+        operators,
+        cellKey({ material, accreditationType, month })
       )
-    )
+    }))
   )
 
 /**
@@ -160,12 +228,13 @@ const publishedFigures = (cells, month) =>
  * accreditation type summed, for the month.
  *
  * @param {Map<string, Measures>} cells
+ * @param {Map<string, Set<string>>} operators
  * @param {YearMonth} month
  * @returns {TotalsByAccreditationType}
  */
-const publishedTotals = (cells, month) =>
-  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-    withSentOnTotal(
+const publishedTotals = (cells, operators, month) =>
+  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => ({
+    ...withSentOnTotal(
       TONNAGE_MONITORING_MATERIALS.reduce(
         (total, material) =>
           addMeasures(
@@ -174,8 +243,9 @@ const publishedTotals = (cells, month) =>
           ),
         noMeasures(accreditationType)
       )
-    )
-  )
+    ),
+    ...operatorCountOf(operators, totalKey({ accreditationType, month }))
+  }))
 
 /**
  * Whether the registration holds a live accreditation and was submitted to the
@@ -283,7 +353,8 @@ const measuresByCell = ({
  * them. Quarterly reports belong to registered-only operators and are left
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
- * was owed and how many were submitted, and the period carries the sum.
+ * was owed and how many were submitted, and the period carries the sum. Every
+ * figure and grand total carries how many operators it is built from.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -319,24 +390,23 @@ export const buildReprocessorExporterTable = async ({
   })
 
   // Counted over the registrations the figures cover rather than the whole
-  // register, so a month cannot report coverage for one set of operators
-  // beside tonnages for another. A cancelled accreditation is the case that
-  // separates them: its submissions are absent from the figures, so its
-  // months are not owed here.
-  const reports = countMonthlyReports({
-    organisations,
-    periodicReports,
-    months,
-    covers
-  })
+  // register, so a month cannot report coverage or operators for one set of
+  // registrations beside tonnages for another. A cancelled accreditation is
+  // the case that separates them: its submissions are absent from the
+  // figures, so its months are not owed here.
+  const owedReports = [
+    ...owedMonthlyReports({ organisations, periodicReports, months, covers })
+  ]
+  const reports = countMonthlyReports(months, owedReports)
+  const operators = operatorsByCell(owedReports)
 
   return {
     meta: { generatedAt: now.toISOString() },
     data: {
       months: recordOf(months, (month) => ({
         reports: reports.byMonth[month],
-        figures: publishedFigures(cells, month),
-        totals: publishedTotals(cells, month)
+        figures: publishedFigures(cells, operators, month),
+        totals: publishedTotals(cells, operators, month)
       })),
       period: { reports: reports.total }
     }

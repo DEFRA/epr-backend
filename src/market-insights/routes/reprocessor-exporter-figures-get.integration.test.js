@@ -164,7 +164,8 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath} (integration)`, ()
       tonnageSentOnToOtherFacilities: 3,
       revisedTonnageIssued: 112,
       totalRevenue: 60000,
-      averagePricePerTonne: 535.71
+      averagePricePerTonne: 535.71,
+      operatorCount: 1
     })
     expect(months['2026-02'].figures.plastic.reprocessor.tonnageReceived).toBe(
       0
@@ -244,7 +245,8 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
     ).toEqual(
       expect.objectContaining({
         revisedTonnageIssued: 112,
-        totalRevenue: 60000
+        totalRevenue: 60000,
+        operatorCount: 1
       })
     )
     expect(
@@ -252,7 +254,8 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
     ).toEqual(
       expect.objectContaining({
         revisedTonnageIssued: 1112,
-        totalRevenue: 160000
+        totalRevenue: 160000,
+        operatorCount: 2
       })
     )
   })

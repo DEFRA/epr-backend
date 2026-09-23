@@ -14,7 +14,10 @@ import {
   NO_FIGURES,
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
-import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
+import {
+  countMonthlyReports,
+  owedMonthlyReports
+} from '#market-insights/application/monthly-reports.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -350,11 +353,10 @@ export const buildWasteBalanceTable = async ({
 
   warnAboutUndatedRows(logger, into.undated)
 
-  const reports = countMonthlyReports({
-    organisations,
-    periodicReports,
-    months
-  })
+  const reports = countMonthlyReports(
+    months,
+    owedMonthlyReports({ organisations, periodicReports, months })
+  )
 
   return {
     meta: { generatedAt: now.toISOString() },
