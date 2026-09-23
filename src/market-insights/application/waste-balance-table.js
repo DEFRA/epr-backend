@@ -309,7 +309,7 @@ const recordUndated = (undated, { deducts, figures }) => {
 /**
  * @typedef {Object} Aggregate
  * @property {Map<string, WasteBalanceCell>} cells
- * @property {Contribution[]} contributions - one per row the cells include
+ * @property {Map<string, Contribution>} contributions - one per registration and month the cells include
  * @property {UndatedTally} undated
  * @property {(month: string) => month is YearMonth} isPublishedMonth
  */
@@ -329,7 +329,11 @@ const recordRow = (
   }
   if (isPublishedMonth(month)) {
     foldIntoCell(cells, registration, month, figures)
-    contributions.push({ month, org, registration })
+    contributions.set(`${registration.id}::${month}`, {
+      month,
+      org,
+      registration
+    })
   }
 }
 
@@ -409,7 +413,7 @@ export const buildWasteBalanceTable = async ({
   /** @type {Aggregate} */
   const into = {
     cells: new Map(),
-    contributions: [],
+    contributions: new Map(),
     undated: newUndatedTally(),
     isPublishedMonth: /** @returns {month is YearMonth} */ (month) =>
       publishedMonths.has(month)
@@ -433,7 +437,7 @@ export const buildWasteBalanceTable = async ({
   const reports = countMonthlyReports(months, owedReports)
   const operators = operatorsByFigure(
     owedReports,
-    into.contributions,
+    [...into.contributions.values()],
     figuresOf
   )
 
