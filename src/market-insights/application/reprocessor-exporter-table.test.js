@@ -50,6 +50,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   accreditationRegulator?: import('#domain/organisations/model.js').RegulatorValue,
  *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
  *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
+ *   validFrom?: string
  * }} options
  */
 const makeOperator = ({
@@ -60,7 +61,8 @@ const makeOperator = ({
   regulator = REGULATOR.EA,
   accreditationRegulator = regulator,
   registrationStatusHistory = approvedHistory,
-  accreditationStatusHistory = approvedHistory
+  accreditationStatusHistory = approvedHistory,
+  validFrom = '2026-01-01'
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -88,7 +90,7 @@ const makeOperator = ({
         accreditationNumber: `ACC-${orgId}`,
         status: accreditationStatusHistory.at(-1)?.status,
         statusHistory: accreditationStatusHistory,
-        validFrom: '2026-01-01',
+        validFrom,
         validTo: '2026-12-31',
         material,
         wasteProcessingType,
@@ -190,19 +192,23 @@ const run = async ({
 const NO_REPROCESSOR_ACTIVITY = {
   ...noMeasures(WASTE_PROCESSING_TYPE.REPROCESSOR),
   tonnageSentOnTotal: 0,
-  averagePricePerTonne: 0
+  averagePricePerTonne: 0,
+  operatorCount: 0,
+  submittingOperatorCount: 0
 }
 
 const NO_EXPORTER_ACTIVITY = {
   ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
   tonnageSentOnTotal: 0,
-  averagePricePerTonne: 0
+  averagePricePerTonne: 0,
+  operatorCount: 0,
+  submittingOperatorCount: 0
 }
 
 /**
- * The cells something was reported into, flattened to one row each. The table
- * carries a zero cell for every other combination, which these tests are not
- * about.
+ * The cells something was reported into, flattened to one row each, without
+ * their operator counts. The table carries a zero cell for every other
+ * combination, which these tests are not about.
  *
  * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  */
@@ -210,17 +216,54 @@ const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
     Object.entries(figures).flatMap(([material, byAccreditationType]) =>
       Object.entries(byAccreditationType)
-        .filter(([, cell]) =>
-          Object.values(cell).some((measure) => measure !== 0)
+        .map(
+          ([
+            accreditationType,
+            {
+              operatorCount: _operators,
+              submittingOperatorCount: _submitting,
+              ...measures
+            }
+          ]) => ({ accreditationType, measures })
         )
-        .map(([accreditationType, cell]) => ({
+        .filter(({ measures }) =>
+          Object.values(measures).some((measure) => measure !== 0)
+        )
+        .map(({ accreditationType, measures }) => ({
           material,
           accreditationType,
           month,
-          ...cell
+          ...measures
         }))
     )
   )
+
+/**
+ * One of the operator counts of every cell where it is not zero, keyed
+ * `month material type`.
+ *
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ * @param {'operatorCount' | 'submittingOperatorCount'} [count]
+ */
+const operatorCounts = (table, count = 'operatorCount') =>
+  Object.fromEntries(
+    Object.entries(table.data.months).flatMap(([month, { figures }]) =>
+      Object.entries(figures).flatMap(([material, byAccreditationType]) =>
+        Object.entries(byAccreditationType)
+          .filter(([, cell]) => cell[count] !== 0)
+          .map(([accreditationType, cell]) => [
+            `${month} ${material} ${accreditationType}`,
+            cell[count]
+          ])
+      )
+    )
+  )
+
+/**
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ */
+const submittingOperatorCounts = (table) =>
+  operatorCounts(table, 'submittingOperatorCount')
 
 /**
  * The reports each month was owed and how many arrived, and the same for the
@@ -778,6 +821,228 @@ describe('buildReprocessorExporterTable', () => {
     })
   })
 
+  describe('the operator count', () => {
+    /**
+     * @param {number} count
+     * @param {string} [cell] - `material type`, as `operatorCounts` keys it
+     */
+    const everyMonth = (count, cell = 'plastic reprocessor') =>
+      Object.fromEntries(
+        JANUARY_TO_MARCH_2026.map((month) => [`${month} ${cell}`, count])
+      )
+
+    const cancelledThroughoutFebruary = [
+      ...approvedHistory,
+      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
+      {
+        status: ACCREDITATION_STATUS.CANCELLED,
+        updatedAt: '2026-01-20T09:00:00.000Z'
+      },
+      { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+    ]
+
+    it('counts every operator owed a report for the month, whether or not it submitted', async () => {
+      const submitting = makeOperator({ orgId: 1 })
+      const silent = makeOperator({ orgId: 2 })
+
+      const { table } = await run({
+        organisations: [submitting, silent],
+        reports: [monthlyReport(submitting, 1, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(2))
+    })
+
+    it('counts the operators owed a report apart from those whose reports the figure includes', async () => {
+      const operators = [1, 2, 3].map((orgId) => makeOperator({ orgId }))
+
+      const { table } = await run({
+        organisations: operators,
+        reports: [monthlyReport(operators[0], 1, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(
+        expect.objectContaining({
+          operatorCount: 3,
+          submittingOperatorCount: 1
+        })
+      )
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1
+      })
+    })
+
+    it('counts a suspended operator, which still owes its reports', async () => {
+      const suspended = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-10' }
+        ]
+      })
+
+      const { table } = await run({ organisations: [suspended] })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
+    it('leaves an operator out of a month its accreditation stood cancelled throughout', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: cancelledThroughoutFebruary
+      })
+
+      const { table } = await run({ organisations: [reinstated] })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
+    })
+
+    it('counts an operator whose report the figures include for a month it was not owed', async () => {
+      const early = makeOperator({ orgId: 1, validFrom: '2026-02-01' })
+
+      const { table } = await run({
+        organisations: [early],
+        reports: [monthlyReport(early, 1, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
+      ])
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+      expect(
+        table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
+          .operatorCount
+      ).toBe(1)
+    })
+
+    it('counts an operator in a month it stood cancelled throughout when the figures include its report for that month', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: cancelledThroughoutFebruary
+      })
+
+      const { table } = await run({
+        organisations: [reinstated],
+        reports: [monthlyReport(reinstated, 2, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-02', revisedTonnageIssued: 10 })
+      ])
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
+    it('leaves out an operator whose accreditation the figures leave out', async () => {
+      const cancelled = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+        ]
+      })
+      const refused = makeOperator({
+        orgId: 2,
+        accreditationStatusHistory: [
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
+          { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
+        ]
+      })
+
+      const { table } = await run({
+        organisations: [cancelled, refused],
+        reports: [
+          monthlyReport(cancelled, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(refused, 1, { prn: prn(10, 0, 1000) })
+        ]
+      })
+
+      expect(reported(table)).toEqual([])
+      expect(operatorCounts(table)).toEqual({})
+    })
+
+    it('counts an operator with sites in two nations once in each nation and once in the UK', async () => {
+      const englishSite = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
+      const scottishSite = makeOperator({ orgId: 2, regulator: REGULATOR.SEPA })
+      const twoNations = {
+        ...englishSite,
+        registrations: [
+          ...englishSite.registrations,
+          ...scottishSite.registrations
+        ],
+        accreditations: [
+          ...englishSite.accreditations,
+          ...scottishSite.accreditations
+        ]
+      }
+      const englishOnly = makeOperator({ orgId: 3, regulator: REGULATOR.EA })
+      const seeded = {
+        organisations: [twoNations, englishOnly],
+        reports: [
+          monthlyReport(twoNations, 1, { prn: prn(10, 0, 1000) }),
+          {
+            ...monthlyReport(twoNations, 1, { prn: prn(20, 0, 2000) }),
+            registrationId: scottishSite.registrations[0].id
+          }
+        ]
+      }
+
+      const { table: uk } = await run(seeded)
+      const { table: england } = await run({
+        ...seeded,
+        regulator: REGULATOR.EA
+      })
+      const { table: scotland } = await run({
+        ...seeded,
+        regulator: REGULATOR.SEPA
+      })
+
+      expect(operatorCounts(uk)).toEqual(everyMonth(2))
+      expect(operatorCounts(england)).toEqual(everyMonth(2))
+      expect(operatorCounts(scotland)).toEqual(everyMonth(1))
+      const januaryOnce = { '2026-01 plastic reprocessor': 1 }
+      expect(submittingOperatorCounts(uk)).toEqual(januaryOnce)
+      expect(submittingOperatorCounts(england)).toEqual(januaryOnce)
+      expect(submittingOperatorCounts(scotland)).toEqual(januaryOnce)
+      expect(reported(uk)).toEqual([
+        expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 30 })
+      ])
+    })
+
+    it('counts each operator once in the grand total of its accreditation type, however many materials it reports', async () => {
+      const plasticAndWood = makeOperator({ orgId: 1 })
+      const woodSite = makeOperator({ orgId: 2, material: MATERIAL.WOOD })
+      const twoMaterials = {
+        ...plasticAndWood,
+        registrations: [
+          ...plasticAndWood.registrations,
+          ...woodSite.registrations
+        ],
+        accreditations: [
+          ...plasticAndWood.accreditations,
+          ...woodSite.accreditations
+        ]
+      }
+      const wood = makeOperator({ orgId: 3, material: MATERIAL.WOOD })
+
+      const { table } = await run({ organisations: [twoMaterials, wood] })
+      const { totals } = table.data.months['2026-01']
+
+      expect(operatorCounts(table)).toEqual({
+        ...everyMonth(1),
+        ...everyMonth(2, 'wood reprocessor')
+      })
+      expect(totals[WASTE_PROCESSING_TYPE.REPROCESSOR].operatorCount).toBe(2)
+      expect(totals[WASTE_PROCESSING_TYPE.EXPORTER].operatorCount).toBe(0)
+    })
+  })
+
   describe('the grand total of each table', () => {
     it('sums every material of its accreditation type, and leaves the average price out', async () => {
       const aluminium = makeOperator({ orgId: 1, material: MATERIAL.ALUMINIUM })
@@ -817,7 +1082,9 @@ describe('buildReprocessorExporterTable', () => {
         table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.EXPORTER]
       ).toEqual({
         ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
-        tonnageSentOnTotal: 0
+        tonnageSentOnTotal: 0,
+        operatorCount: 0,
+        submittingOperatorCount: 0
       })
     })
   })

@@ -186,7 +186,9 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       tonnageSentOnToOtherFacilities: 0,
       revisedTonnageIssued: 0,
       totalRevenue: 0,
-      averagePricePerTonne: 0
+      averagePricePerTonne: 0,
+      operatorCount: 0,
+      submittingOperatorCount: 0
     })
     expect(
       january.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
@@ -203,7 +205,9 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       tonnageSentOnToOtherFacilities: 0,
       revisedTonnageIssued: 0,
       totalRevenue: 0,
-      averagePricePerTonne: 0
+      averagePricePerTonne: 0,
+      operatorCount: 0,
+      submittingOperatorCount: 0
     })
   })
 })
