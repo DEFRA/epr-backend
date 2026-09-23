@@ -45,14 +45,16 @@ const operatorCountsByMaterialSchema = recordOf(
  * counts once.
  *
  * - `operatorCount` is the operators who could have contributed: every
- *   operator owed a monthly report for the month, whether or not the figure
- *   includes any of its tonnage, and every operator whose tonnage the figure
+ *   operator owed a monthly report for the month, whether or not the net
+ *   credit includes any of its tonnage, and every operator whose tonnage it
  *   includes. A suspended operator counts. One whose accreditation stood
- *   cancelled for the whole month does not, unless the figure includes tonnage
- *   of its all the same, and neither does one the figures leave out.
- * - `submittingOperatorCount` is the operators whose tonnage the figure
- *   includes, whether a load that credits it or a sent-on load deducted from
- *   it.
+ *   cancelled for the whole month does not, unless it sent tonnage on that
+ *   month, and neither does one the figures leave out.
+ * - `submittingOperatorCount` is the operators whose tonnage the net credit
+ *   includes: an eligible load that credits it, or a sent-on load deducted
+ *   from it. A load the waste balance ignores, such as one dated while the
+ *   accreditation was suspended, adds to the gross credited tonnage only, so
+ *   its operator does not count.
  *
  * The period carries the same two counts for each material and accreditation
  * type's total across the months served. An operator counts once there,

@@ -841,24 +841,49 @@ describe('buildWasteBalanceTable', () => {
       expect(operatorCounts(table)).toEqual(otherMonths)
     })
 
-    it('counts an operator in a month it stood cancelled throughout when the figure includes its tonnage', async () => {
-      const operator = makeOperator({ orgId: 500034 })
-      const reinstated = reinstatedOn(
-        cancelledOn(operator.organisation, '2026-01-20'),
-        '2026-03-01'
+    it('counts as submitting only an operator whose tonnage moves the net credit', async () => {
+      const eligible = makeOperator({ orgId: 500034 })
+      const suspendedOperator = makeOperator({ orgId: 500045 })
+      const suspended = withAccreditationStatus(
+        suspendedOperator.organisation,
+        ACCREDITATION_STATUS.SUSPENDED,
+        [{ status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-10' }]
       )
 
       const { table } = await run({
-        organisations: [reinstated],
+        organisations: [eligible.organisation, suspended],
         submissions: [
-          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+          { ...eligible, rows: [receivedRow('row-1', '2026-02-10', 40)] },
+          {
+            ...suspendedOperator,
+            rows: [receivedRow('row-1', '2026-02-10', 60)]
+          }
         ]
       })
 
       expect(reported(table)).toEqual([
-        expect.objectContaining({ month: '2026-02', totalCredited: 40 })
+        expect.objectContaining({
+          month: '2026-02',
+          totalCredited: 100,
+          netCredit: 40
+        })
       ])
-      expect(operatorCounts(table)).toEqual(everyMonth(1))
+      expect(operatorCounts(table)).toEqual(everyMonth(2))
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('counts as submitting an operator whose only tonnage in the month is sent on', async () => {
+      const operator = makeOperator({ orgId: 500046 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          { ...operator, rows: [sentOnRow('row-1', '2026-02-20', 10)] }
+        ]
+      })
+
       expect(submittingOperatorCounts(table)).toEqual({
         '2026-02 plastic reprocessor': 1
       })

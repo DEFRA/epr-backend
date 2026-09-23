@@ -307,9 +307,18 @@ const recordUndated = (undated, { deducts, figures }) => {
 }
 
 /**
+ * Net credit is the only figure published, so an operator's tonnage is in it
+ * only where it is eligible or deducted as sent on.
+ *
+ * @param {WasteBalanceFigures} figures
+ */
+const movesNetCredit = ({ eligibleForWasteBalance, sentOnDeductions }) =>
+  eligibleForWasteBalance !== 0 || sentOnDeductions !== 0
+
+/**
  * @typedef {Object} Aggregate
  * @property {Map<string, WasteBalanceCell>} cells
- * @property {Map<string, Contribution>} contributions - one per registration and month the cells include
+ * @property {Map<string, Contribution>} contributions - one per registration and month whose tonnage the net credit includes
  * @property {UndatedTally} undated
  * @property {(month: string) => month is YearMonth} isPublishedMonth
  */
@@ -327,8 +336,11 @@ const recordRow = (
     recordUndated(undated, contribution)
     return
   }
-  if (isPublishedMonth(month)) {
-    foldIntoCell(cells, registration, month, figures)
+  if (!isPublishedMonth(month)) {
+    return
+  }
+  foldIntoCell(cells, registration, month, figures)
+  if (movesNetCredit(figures)) {
     contributions.set(`${registration.id}::${month}`, {
       month,
       org,
