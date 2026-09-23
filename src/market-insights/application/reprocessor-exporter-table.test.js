@@ -193,14 +193,16 @@ const NO_REPROCESSOR_ACTIVITY = {
   ...noMeasures(WASTE_PROCESSING_TYPE.REPROCESSOR),
   tonnageSentOnTotal: 0,
   averagePricePerTonne: 0,
-  operatorCount: 0
+  operatorCount: 0,
+  submittingOperatorCount: 0
 }
 
 const NO_EXPORTER_ACTIVITY = {
   ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
   tonnageSentOnTotal: 0,
   averagePricePerTonne: 0,
-  operatorCount: 0
+  operatorCount: 0,
+  submittingOperatorCount: 0
 }
 
 /**
@@ -214,10 +216,16 @@ const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
     Object.entries(figures).flatMap(([material, byAccreditationType]) =>
       Object.entries(byAccreditationType)
-        .map(([accreditationType, { operatorCount: _count, ...measures }]) => ({
-          accreditationType,
-          measures
-        }))
+        .map(
+          ([
+            accreditationType,
+            {
+              operatorCount: _operators,
+              submittingOperatorCount: _submitting,
+              ...measures
+            }
+          ]) => ({ accreditationType, measures })
+        )
         .filter(({ measures }) =>
           Object.values(measures).some((measure) => measure !== 0)
         )
@@ -231,23 +239,31 @@ const reported = (table) =>
   )
 
 /**
- * The operator count of every cell that has one, as `month material type`.
+ * One of the operator counts of every cell where it is not zero, keyed
+ * `month material type`.
  *
  * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ * @param {'operatorCount' | 'submittingOperatorCount'} [count]
  */
-const operatorCounts = (table) =>
+const operatorCounts = (table, count = 'operatorCount') =>
   Object.fromEntries(
     Object.entries(table.data.months).flatMap(([month, { figures }]) =>
       Object.entries(figures).flatMap(([material, byAccreditationType]) =>
         Object.entries(byAccreditationType)
-          .filter(([, { operatorCount }]) => operatorCount !== 0)
-          .map(([accreditationType, { operatorCount }]) => [
+          .filter(([, cell]) => cell[count] !== 0)
+          .map(([accreditationType, cell]) => [
             `${month} ${material} ${accreditationType}`,
-            operatorCount
+            cell[count]
           ])
       )
     )
   )
+
+/**
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
+ */
+const submittingOperatorCounts = (table) =>
+  operatorCounts(table, 'submittingOperatorCount')
 
 /**
  * The reports each month was owed and how many arrived, and the same for the
@@ -837,6 +853,29 @@ describe('buildReprocessorExporterTable', () => {
       expect(operatorCounts(table)).toEqual(everyMonth(2))
     })
 
+    it('counts the operators owed a report apart from those whose reports the figure includes', async () => {
+      const operators = [1, 2, 3].map((orgId) => makeOperator({ orgId }))
+
+      const { table } = await run({
+        organisations: operators,
+        reports: [monthlyReport(operators[0], 1, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(
+        expect.objectContaining({
+          operatorCount: 3,
+          submittingOperatorCount: 1
+        })
+      )
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1
+      })
+    })
+
     it('counts a suspended operator, which still owes its reports', async () => {
       const suspended = makeOperator({
         orgId: 1,
@@ -967,6 +1006,10 @@ describe('buildReprocessorExporterTable', () => {
       expect(operatorCounts(uk)).toEqual(everyMonth(2))
       expect(operatorCounts(england)).toEqual(everyMonth(2))
       expect(operatorCounts(scotland)).toEqual(everyMonth(1))
+      const januaryOnce = { '2026-01 plastic reprocessor': 1 }
+      expect(submittingOperatorCounts(uk)).toEqual(januaryOnce)
+      expect(submittingOperatorCounts(england)).toEqual(januaryOnce)
+      expect(submittingOperatorCounts(scotland)).toEqual(januaryOnce)
       expect(reported(uk)).toEqual([
         expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 30 })
       ])
@@ -1040,7 +1083,8 @@ describe('buildReprocessorExporterTable', () => {
       ).toEqual({
         ...noMeasures(WASTE_PROCESSING_TYPE.EXPORTER),
         tonnageSentOnTotal: 0,
-        operatorCount: 0
+        operatorCount: 0,
+        submittingOperatorCount: 0
       })
     })
   })

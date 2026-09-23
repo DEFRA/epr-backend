@@ -69,12 +69,14 @@ const reprocessorExporterTable = (months, overrides = {}) => ({
             ...noMeasures(accreditationType),
             ...overrides[`${month}::${material}::${accreditationType}`]
           }),
-          operatorCount: 0
+          operatorCount: 0,
+          submittingOperatorCount: 0
         }))
       ),
       totals: recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
         ...withPublishedFigures(noMeasures(accreditationType)),
-        operatorCount: 0
+        operatorCount: 0,
+        submittingOperatorCount: 0
       }))
     })),
     period: { reports: { expected: 0, submitted: 0 } }

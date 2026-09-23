@@ -52,15 +52,25 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * How many separate operators could have contributed to a figure.
+ * How many separate operators could have contributed to a figure, and how many
+ * of them it includes a report from.
  *
- * @typedef {{ operatorCount: number }} OperatorCount
+ * @typedef {{ operatorCount: number, submittingOperatorCount: number }} OperatorCounts
  */
 
 /**
- * @typedef {Record<WasteProcessingTypeValue, PublishedFigures & OperatorCount>} FiguresByAccreditationType
+ * The operators behind every figure, each keyed as the figure's cell or grand
+ * total is.
+ *
+ * @typedef {Object} OperatorsByCell
+ * @property {Map<string, Set<string>>} possible - those who could have contributed
+ * @property {Map<string, Set<string>>} submitting - those whose reports the figure includes
+ */
+
+/**
+ * @typedef {Record<WasteProcessingTypeValue, PublishedFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
- * @typedef {Record<WasteProcessingTypeValue, PublishedTotal & OperatorCount>} TotalsByAccreditationType
+ * @typedef {Record<WasteProcessingTypeValue, PublishedTotal & OperatorCounts>} TotalsByAccreditationType
  */
 
 /**
@@ -167,14 +177,10 @@ const measuresFor = (cells, material, accreditationType, month) =>
   noMeasures(accreditationType)
 
 /**
- * The operators who could have contributed to each figure, keyed as its cell
- * or its grand total is. An operator counts in a month when its report could be included in
- * that month's figures: when it owed the month a report, whether or not it
- * submitted one, and when the figures include a report of its for the month.
- * So a suspended operator counts, and one cancelled throughout the month does
- * not unless the figures include a report of its all the same. An operator
- * counts once however many sites it reports from, so one with a site in each
- * of two nations counts once in each nation's figures and once in the UK's.
+ * The separate operators among the contributions, keyed as each figure's cell
+ * or grand total is. An operator counts once however many sites it reports
+ * from, so one with a site in each of two nations counts once in each nation's
+ * figures and once in the UK's.
  *
  * @param {Iterable<Contribution>} contributions
  * @returns {Map<string, Set<string>>}
@@ -199,12 +205,13 @@ const operatorsByCell = (contributions) => {
 }
 
 /**
- * @param {Map<string, Set<string>>} operators
+ * @param {OperatorsByCell} operators
  * @param {string} key
- * @returns {OperatorCount}
+ * @returns {OperatorCounts}
  */
-const operatorCountOf = (operators, key) => ({
-  operatorCount: operators.get(key)?.size ?? 0
+const operatorCountsOf = ({ possible, submitting }, key) => ({
+  operatorCount: possible.get(key)?.size ?? 0,
+  submittingOperatorCount: submitting.get(key)?.size ?? 0
 })
 
 /**
@@ -214,7 +221,7 @@ const operatorCountOf = (operators, key) => ({
  * instruction warns about.
  *
  * @param {Map<string, Measures>} cells
- * @param {Map<string, Set<string>>} operators
+ * @param {OperatorsByCell} operators
  * @param {YearMonth} month
  * @returns {FiguresByMaterial}
  */
@@ -224,7 +231,7 @@ const publishedFigures = (cells, operators, month) =>
       ...withPublishedFigures(
         measuresFor(cells, material, accreditationType, month)
       ),
-      ...operatorCountOf(
+      ...operatorCountsOf(
         operators,
         cellKey({ material, accreditationType, month })
       )
@@ -236,7 +243,7 @@ const publishedFigures = (cells, operators, month) =>
  * accreditation type summed, for the month.
  *
  * @param {Map<string, Measures>} cells
- * @param {Map<string, Set<string>>} operators
+ * @param {OperatorsByCell} operators
  * @param {YearMonth} month
  * @returns {TotalsByAccreditationType}
  */
@@ -252,7 +259,7 @@ const publishedTotals = (cells, operators, month) =>
         noMeasures(accreditationType)
       )
     ),
-    ...operatorCountOf(operators, totalKey({ accreditationType, month }))
+    ...operatorCountsOf(operators, totalKey({ accreditationType, month }))
   }))
 
 /**
@@ -368,7 +375,7 @@ const measuresByCell = ({
  * make that nation's. Each month also carries the count of monthly reports it
  * was owed and how many were submitted, and the period carries the sum. Every
  * figure and grand total carries how many operators could have contributed to
- * it.
+ * it, and how many it includes a report from.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -412,7 +419,12 @@ export const buildReprocessorExporterTable = async ({
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
   const reports = countMonthlyReports(months, owedReports)
-  const operators = operatorsByCell([...owedReports, ...contributions])
+  // Whoever owed the month a report could have contributed to it, and so
+  // could whoever the figures include a report from, owed or not.
+  const operators = {
+    possible: operatorsByCell([...owedReports, ...contributions]),
+    submitting: operatorsByCell(contributions)
+  }
 
   return {
     meta: { generatedAt: now.toISOString() },
