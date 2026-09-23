@@ -10,8 +10,8 @@ const OTHER_REGISTRATION = { ...DEFAULT_LEDGER_ID, registrationId: 'reg-2' }
 const OTHER_ACCREDITATION = { ...DEFAULT_LEDGER_ID, accreditationId: 'acc-2' }
 const REGISTERED_ONLY = { ...DEFAULT_LEDGER_ID, accreditationId: null }
 
-export const testFindRowStatesForSummaryLogBehaviour = (it) => {
-  describe('findRowStatesForSummaryLog', () => {
+export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
+  describe('findWasteRecordStatesForSummaryLog', () => {
     let repository
 
     beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
@@ -20,14 +20,58 @@ export const testFindRowStatesForSummaryLogBehaviour = (it) => {
 
     it('returns an empty list for a summary log with no row states', async () => {
       expect(
-        await repository.findRowStatesForSummaryLog(
+        await repository.findWasteRecordStatesForSummaryLog(
           DEFAULT_LEDGER_ID,
           'unknown-log'
         )
       ).toEqual([])
     })
 
-    it('returns only documents whose membership contains the id', async () => {
+    it('returns each row as a waste record state, carrying nothing of how it is stored', async () => {
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+        'log-1'
+      )
+
+      const [state] = await repository.findWasteRecordStatesForSummaryLog(
+        DEFAULT_LEDGER_ID,
+        'log-1'
+      )
+
+      expect(Object.keys(state).sort()).toEqual([
+        'classification',
+        'data',
+        'processingType',
+        'rowId',
+        'wasteRecordType'
+      ])
+    })
+
+    it('returns every row of the summary log', async () => {
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [
+          buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
+          buildSummaryLogRowStateEntry({ rowId: 'row-2' }),
+          buildSummaryLogRowStateEntry({ rowId: 'row-3' })
+        ],
+        'log-1'
+      )
+
+      const states = await repository.findWasteRecordStatesForSummaryLog(
+        DEFAULT_LEDGER_ID,
+        'log-1'
+      )
+
+      expect(states.map((state) => state.rowId).sort()).toEqual([
+        'row-1',
+        'row-2',
+        'row-3'
+      ])
+    })
+
+    it('returns only the rows the summary log committed', async () => {
       await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,
         [
@@ -47,61 +91,14 @@ export const testFindRowStatesForSummaryLogBehaviour = (it) => {
         'log-2'
       )
 
-      const atLog2 = await repository.findRowStatesForSummaryLog(
+      const atLog2 = await repository.findWasteRecordStatesForSummaryLog(
         DEFAULT_LEDGER_ID,
         'log-2'
       )
+
       expect(atLog2).toHaveLength(1)
       expect(atLog2[0].rowId).toBe('row-1')
       expect(atLog2[0].data).toEqual({ tonnage: 99 })
-    })
-
-    it('returns the full row state of a summary log', async () => {
-      await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [
-          buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
-          buildSummaryLogRowStateEntry({ rowId: 'row-2' }),
-          buildSummaryLogRowStateEntry({ rowId: 'row-3' })
-        ],
-        'log-1'
-      )
-
-      const rowStates = await repository.findRowStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
-        'log-1'
-      )
-      expect(rowStates.map((s) => s.rowId).sort()).toEqual([
-        'row-1',
-        'row-2',
-        'row-3'
-      ])
-    })
-
-    it('returns the full membership verbatim on each document', async () => {
-      const entry = buildSummaryLogRowStateEntry()
-
-      await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [entry],
-        'log-1'
-      )
-      await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [entry],
-        'log-2'
-      )
-      await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [entry],
-        'log-3'
-      )
-
-      const [doc] = await repository.findRowStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
-        'log-2'
-      )
-      expect(doc.summaryLogIds).toEqual(['log-1', 'log-2', 'log-3'])
     })
 
     describe.each([
@@ -113,34 +110,44 @@ export const testFindRowStatesForSummaryLogBehaviour = (it) => {
       beforeEach(async () => {
         await repository.upsertSummaryLogRowStates(
           DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+          [
+            buildSummaryLogRowStateEntry({
+              rowId: 'row-1',
+              data: { tonnage: 10 }
+            })
+          ],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
           otherLedgerId,
-          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+          [
+            buildSummaryLogRowStateEntry({
+              rowId: 'row-1',
+              data: { tonnage: 20 }
+            })
+          ],
           'log-1'
         )
       })
 
-      it('returns only the row states of the ledger asked for', async () => {
-        const own = await repository.findRowStatesForSummaryLog(
+      it('returns only the rows of the ledger asked for', async () => {
+        const own = await repository.findWasteRecordStatesForSummaryLog(
           DEFAULT_LEDGER_ID,
           'log-1'
         )
 
         expect(own).toHaveLength(1)
-        expect(own[0]).toMatchObject(DEFAULT_LEDGER_ID)
+        expect(own[0].data).toEqual({ tonnage: 10 })
       })
 
-      it('returns only the row states of the other ledger when it is the one asked for', async () => {
-        const other = await repository.findRowStatesForSummaryLog(
+      it('returns only the rows of the other ledger when it is the one asked for', async () => {
+        const other = await repository.findWasteRecordStatesForSummaryLog(
           otherLedgerId,
           'log-1'
         )
 
         expect(other).toHaveLength(1)
-        expect(other[0]).toMatchObject(otherLedgerId)
+        expect(other[0].data).toEqual({ tonnage: 20 })
       })
     })
   })

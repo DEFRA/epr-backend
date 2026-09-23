@@ -169,7 +169,7 @@ const run = async ({
     findLatestInLedgerByKind
   }
   const summaryLogRowStatesRepository = {
-    findRowStatesForSummaryLog: async (
+    findWasteRecordStatesForSummaryLog: async (
       /** @type {{ accreditationId: string }} */ ledgerId
     ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
   }

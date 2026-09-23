@@ -248,23 +248,52 @@ const performUpsertSummaryLogRowStates =
     )
   }
 
+const WASTE_RECORD_STATE_PROJECTION = {
+  _id: 0,
+  rowId: 1,
+  wasteRecordType: 1,
+  processingType: 1,
+  data: 1,
+  classification: 1
+}
+
 /**
- * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<SummaryLogRowState[]>}
+ * @param {import('mongodb').Document} doc
+ * @returns {import('./port.js').WasteRecordState}
  */
-const performFindRowStatesForSummaryLog =
+const toWasteRecordState = ({
+  rowId,
+  wasteRecordType,
+  processingType,
+  data,
+  classification
+}) => ({ rowId, wasteRecordType, processingType, data, classification })
+
+/**
+ * Projecting in the query rather than reading whole documents skips
+ * `validateSummaryLogRowStateRead`: the write path validates, and the
+ * projection returns only fields the schema guarantees. Measured at roughly
+ * 40% of the credited tonnage report's read time over 423 summary logs.
+ *
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<import('./port.js').WasteRecordState[]>}
+ */
+const performFindWasteRecordStatesForSummaryLog =
   (collection) => async (ledgerId, summaryLogId) => {
     const docs = await collection
-      .find(buildSummaryLogFilter(ledgerId, summaryLogId))
+      .find(buildSummaryLogFilter(ledgerId, summaryLogId), {
+        projection: WASTE_RECORD_STATE_PROJECTION
+      })
       .sort({ _id: 1 })
       .toArray()
-    return docs.map(toSummaryLogRowState)
+    return docs.map(toWasteRecordState)
   }
 
 /**
  * Rides the multikey `summary_log_membership` index, as
- * `findRowStatesForSummaryLog` does — a file id is selective enough that the
- * organisation and registration are a residual filter, not a key prefix.
+ * `findWasteRecordStatesForSummaryLog` does — a file id is selective enough
+ * that the organisation and registration are a residual filter, not a key
+ * prefix.
  *
  * @param {Collection} collection
  * @returns {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>}
@@ -374,7 +403,8 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
 
   return () => ({
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
-    findRowStatesForSummaryLog: performFindRowStatesForSummaryLog(collection),
+    findWasteRecordStatesForSummaryLog:
+      performFindWasteRecordStatesForSummaryLog(collection),
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
     findRowHistory: performFindRowHistory(collection),

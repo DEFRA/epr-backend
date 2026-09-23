@@ -102,22 +102,18 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
     expect(committed.map((doc) => doc.rowId).sort()).toEqual(['1', '2'])
     expect(committed.find((doc) => doc.rowId === '1')).toMatchObject({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: null,
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       classification: {
         outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
         reasons: [],
         transactionAmount: 0
-      },
-      summaryLogIds: ['log-A']
+      }
     })
   })
 
@@ -132,7 +128,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -150,7 +146,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -172,7 +168,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const committed =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
@@ -186,7 +182,7 @@ describe('writeSummaryLogRowStates', () => {
     expect(storedTonnages.reduce((sum, t) => sum + t, 0)).toBeCloseTo(3.03, 10)
   })
 
-  it('carries the supplied accreditation id onto the ledger', async () => {
+  it('writes the row states under the supplied accreditation ledger', async () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
@@ -200,12 +196,18 @@ describe('writeSummaryLogRowStates', () => {
       summaryLogId: 'log-A'
     })
 
-    const [committed] =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+    expect(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         accreditedLedgerId,
         'log-A'
       )
-    expect(committed.accreditationId).toBe('acc-1')
+    ).toHaveLength(1)
+    expect(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
+        registeredOnlyLedgerId,
+        'log-A'
+      )
+    ).toEqual([])
   })
 
   it('stamps the missing field on a row excluded for incomplete data', async () => {
@@ -223,7 +225,7 @@ describe('writeSummaryLogRowStates', () => {
     })
 
     const [committed] =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         accreditedLedgerId,
         'log-A'
       )
@@ -252,11 +254,10 @@ describe('writeSummaryLogRowStates', () => {
     await submit()
 
     const committed =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         registeredOnlyLedgerId,
         'log-A'
       )
     expect(committed).toHaveLength(1)
-    expect(committed[0].summaryLogIds).toEqual(['log-A'])
   })
 })

@@ -1273,8 +1273,8 @@ describe('streamCsvExport', () => {
       orgs: [baseOrg({ registrations: [baseRegistration()] })],
       seeds: [{ rows: [receivedRowState()] }]
     })
-    deps.summaryLogRowStatesRepository.findRowStatesForSummaryLog = () =>
-      Promise.reject(new Error('cursor died'))
+    deps.summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog =
+      () => Promise.reject(new Error('cursor died'))
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow('cursor died')
   })

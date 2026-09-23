@@ -15,7 +15,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
   it('exposes the row-state port surface', () => {
     const repository = createInMemorySummaryLogRowStatesRepository()()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
-    expect(repository.findRowStatesForSummaryLog).toBeTypeOf('function')
+    expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
@@ -39,12 +39,23 @@ describe('summary-log row states repository - in-memory implementation', () => {
       }
     ])()
 
-    const committed = await repository.findRowStatesForSummaryLog(
+    const committed = await repository.findWasteRecordStatesForSummaryLog(
       DEFAULT_LEDGER_ID,
       'log-seed'
     )
-    expect(committed).toHaveLength(1)
-    expect(committed[0].id).toBe('seed-1')
+    expect(committed).toEqual([
+      {
+        rowId: 'row-1',
+        wasteRecordType: 'received',
+        processingType: 'REPROCESSOR_INPUT',
+        data: { tonnage: 10 },
+        classification: {
+          outcome: 'INCLUDED',
+          reasons: [],
+          transactionAmount: 10
+        }
+      }
+    ])
   })
 
   testSummaryLogRowStatesRepositoryContract(it)

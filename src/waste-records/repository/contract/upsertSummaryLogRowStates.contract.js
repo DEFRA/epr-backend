@@ -238,13 +238,16 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         expect(
-          await repository.findRowStatesForSummaryLog(
+          await repository.findWasteRecordStatesForSummaryLog(
             DEFAULT_LEDGER_ID,
             'log-1'
           )
         ).toHaveLength(1)
         expect(
-          await repository.findRowStatesForSummaryLog(otherLedgerId, 'log-2')
+          await repository.findWasteRecordStatesForSummaryLog(
+            otherLedgerId,
+            'log-2'
+          )
         ).toHaveLength(1)
       })
 
@@ -267,7 +270,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         expect(
-          await repository.findRowStatesForSummaryLog(
+          await repository.findWasteRecordStatesForSummaryLog(
             DEFAULT_LEDGER_ID,
             'log-1'
           )
@@ -379,9 +382,11 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         returned.data.tonnage = 999
         returned.summaryLogIds.push('log-injected')
 
-        const [stored] = await repository.findRowStatesForSummaryLog(
-          DEFAULT_LEDGER_ID,
-          'log-1'
+        const [stored] = await repository.findRowHistory(
+          'org-1',
+          'reg-1',
+          'row-1',
+          WASTE_RECORD_TYPE.RECEIVED
         )
         expect(stored.data.tonnage).toBe(10)
         expect(stored.summaryLogIds).toEqual(['log-1'])

@@ -9,7 +9,7 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload} SummaryLogSubmittedPayload
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
+ * @typedef {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState} WasteRecordState
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
@@ -78,8 +78,8 @@ const compareRows = (a, b) =>
  * credit computation reads `data.processingType`, exactly as the write path fed
  * it — so the diagnostic reconstructs the ledger's figure faithfully.
  *
- * @param {SummaryLogRowState} rowState
- * @returns {SummaryLogRowState}
+ * @param {WasteRecordState} rowState
+ * @returns {WasteRecordState}
  */
 const withProcessingTypeInData = (rowState) => ({
   ...rowState,
@@ -117,7 +117,7 @@ const scanAccreditation = async ({
   })
 
   const rowStates =
-    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+    await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
       ledgerId,
       summaryLogId
     )

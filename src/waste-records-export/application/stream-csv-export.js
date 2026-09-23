@@ -5,7 +5,6 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { toWasteRecordState } from '#waste-records/application/read-summary-log-row-states.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
@@ -18,6 +17,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
+/** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
@@ -31,7 +31,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /**
  * @typedef {Object} StreamCsvExportDeps
  * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
- * @property {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
+ * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
@@ -105,13 +105,12 @@ const sortEntriesByAccreditationId = (a, b) =>
  * stamped at submission and recomputes against the accreditation and overseas
  * sites as they stand at export time.
  *
- * @param {SummaryLogRowState} rowState
+ * @param {WasteRecordState} rowState
  * @param {ReclassificationContext} context
- * @returns {SummaryLogRowState['classification']}
+ * @returns {WasteRecordState['classification']}
  */
 const recomputedClassification = (rowState, context) =>
-  reclassifyWasteRecordState(toWasteRecordState(rowState), context)
-    .classification
+  reclassifyWasteRecordState(rowState, context).classification
 
 /**
  * Yield one CSV row per row state of a single ledger partition, ordered by
@@ -121,7 +120,7 @@ const recomputedClassification = (rowState, context) =>
  * @param {Organisation} input.org
  * @param {Registration} input.registration
  * @param {WasteBalanceLedgerId} input.ledgerId
- * @param {SummaryLogRowState[]} input.rowStates
+ * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites
  * @param {string[]} input.dataFieldColumns
@@ -183,7 +182,7 @@ async function* streamPartitionRows({
  *
  * @param {RegistrationRowsContext & {
  *   entries: LatestSubmittedSummaryLogPerLedger[],
- *   summaryLogRowStatesRepository: Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'>
+ *   summaryLogRowStatesRepository: Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>
  * }} input
  * @returns {AsyncGenerator<string>}
  */
@@ -199,10 +198,11 @@ async function* streamLatestSubmissionRows({
     yield* streamPartitionRows({
       ...context,
       ledgerId,
-      rowStates: await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-        ledgerId,
-        summaryLogId
-      ),
+      rowStates:
+        await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
+          ledgerId,
+          summaryLogId
+        ),
       summaryLogEntry: summaryLogMap.get(summaryLogId) ?? null
     })
   }
@@ -222,7 +222,7 @@ async function* streamLatestSubmissionRows({
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
- * @param {Pick<SummaryLogRowStatesRepository, 'findRowStatesForSummaryLog'>} input.summaryLogRowStatesRepository
+ * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
