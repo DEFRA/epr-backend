@@ -7,7 +7,9 @@ import {
 import { recordOf } from '#common/helpers/record-of.js'
 import {
   noMeasures,
-  withPublishedFigures
+  withOperatorCounts,
+  withPublishedFigures,
+  withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { NO_FIGURES, withNetCredit } from './waste-balance-figures.js'
 import {
@@ -68,15 +70,12 @@ const wasteBalanceTable = (months, overrides = {}) => ({
  * @template {Record<string, number>} T
  * @param {T} figures
  */
-const withNoOperators = (figures) => ({
-  ...figures,
-  operatorCount: 0,
-  submittingOperatorCount: 0,
-  contributingOperatorCounts: recordOf(
-    /** @type {(keyof T & string)[]} */ (Object.keys(figures)),
-    () => 0
-  )
-})
+const withNoOperators = (figures) =>
+  withOperatorCounts(figures, {
+    operatorCount: 0,
+    submittingOperatorCount: 0,
+    contributingOperatorCountOf: () => 0
+  })
 
 /**
  * @param {string[]} months
@@ -98,7 +97,7 @@ const reprocessorExporterTable = (months, overrides = {}) => ({
         )
       ),
       totals: recordOf(ACCREDITATION_TYPES, (accreditationType) =>
-        withNoOperators(withPublishedFigures(noMeasures(accreditationType)))
+        withNoOperators(withSentOnTotal(noMeasures(accreditationType)))
       )
     })),
     period: { reports: { expected: 0, submitted: 0 } }
