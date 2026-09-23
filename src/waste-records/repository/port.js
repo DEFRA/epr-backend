@@ -37,12 +37,7 @@
  */
 
 /**
- * A stored row state projected to its domain content, dropping the storage id,
- * the `summaryLogIds` membership and the ledger identity the caller supplied.
- * Structurally the application's `WasteRecordState`, stated here in terms of
- * this port's own document so the seam does not point outwards.
- *
- * @typedef {Pick<SummaryLogRowState, 'rowId' | 'wasteRecordType' | 'processingType' | 'data' | 'classification'>} WasteRecordStateProjection
+ * @typedef {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState} WasteRecordState
  */
 
 /**
@@ -54,16 +49,13 @@
  *   new state document whose membership starts with `summaryLogId`. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
  *   Returns the resulting state document for each entry, in input order.
- * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLog
- *   Return the row states `ledgerId` holds at the summary log `summaryLogId`.
- *   A row state belongs to the ledger that wrote it, so the summary log alone
- *   does not identify one: the same `summaryLogId` under a different ledger
- *   identity matches nothing.
- * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<WasteRecordStateProjection[]>} findWasteRecordStatesForSummaryLog
- *   The same rows `findRowStatesForSummaryLog` returns, projected to their
- *   domain content. Reads that only fold row content — the credited tonnage
- *   report over every accreditation, for one — take this rather than the whole
- *   document, which spares them a read-schema validation per row.
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
+ *   Return the waste record states `ledgerId` holds at the summary log
+ *   `summaryLogId`. A row state belongs to the ledger that wrote it, so the
+ *   summary log alone does not identify one: the same `summaryLogId` under a
+ *   different ledger identity matches nothing. The storage id, the
+ *   `summaryLogIds` membership and the ledger identity the caller supplied stay
+ *   behind the port.
  * @property {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the

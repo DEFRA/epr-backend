@@ -154,9 +154,9 @@ const distinctDataKeys = (storage) => {
 
 /**
  * @param {SummaryLogRowState} doc
- * @returns {import('./port.js').WasteRecordStateProjection}
+ * @returns {import('./port.js').WasteRecordState}
  */
-const toWasteRecordStateProjection = ({
+const toWasteRecordState = ({
   rowId,
   wasteRecordType,
   processingType,
@@ -221,16 +221,9 @@ const repositoryOver = (storage) => ({
    * @param {WasteBalanceLedgerId} ledgerId
    * @param {string} summaryLogId
    */
-  findRowStatesForSummaryLog: async (ledgerId, summaryLogId) =>
-    rowStatesForSummaryLog(storage, ledgerId, summaryLogId),
-
-  /**
-   * @param {WasteBalanceLedgerId} ledgerId
-   * @param {string} summaryLogId
-   */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>
     rowStatesForSummaryLog(storage, ledgerId, summaryLogId).map(
-      toWasteRecordStateProjection
+      toWasteRecordState
     ),
 
   /**

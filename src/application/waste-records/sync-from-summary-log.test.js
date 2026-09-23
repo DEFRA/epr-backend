@@ -120,7 +120,7 @@ describe('syncFromSummaryLog', () => {
     await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     const rowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         LEDGER_ID,
         fileId
       )
@@ -151,7 +151,7 @@ describe('syncFromSummaryLog', () => {
     await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     const rowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         LEDGER_ID,
         fileId
       )
@@ -191,7 +191,7 @@ describe('syncFromSummaryLog', () => {
     await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     const rowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         LEDGER_ID,
         fileId
       )
@@ -269,7 +269,7 @@ describe('syncFromSummaryLog', () => {
     await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
 
     const rowStates =
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+      await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         LEDGER_ID,
         fileId
       )

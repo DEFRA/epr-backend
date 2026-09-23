@@ -4,7 +4,6 @@ import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js'
-import { toWasteRecordState } from './read-summary-log-row-states.js'
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
@@ -44,7 +43,7 @@ export const liveClassifiedRowStatesForRegistration = async ({
   }
 
   const rowStates =
-    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
+    await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
       ledgerId,
       head
     )
@@ -74,7 +73,7 @@ export const liveClassifiedRowStatesForRegistration = async ({
     new Map(sites.map((site) => [site.id, site]))
   )
 
-  return reclassifyWasteRecordStates(rowStates.map(toWasteRecordState), {
+  return reclassifyWasteRecordStates(rowStates, {
     accreditation,
     overseasSites
   })

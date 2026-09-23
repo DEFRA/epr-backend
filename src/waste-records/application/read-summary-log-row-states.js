@@ -1,15 +1,10 @@
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 
 /**
- * @typedef {import('#waste-records/repository/schema.js').SummaryLogRowState} SummaryLogRowState
- */
-
-/**
- * A registration's committed waste-record state projected to its domain
- * content: the row's identity, type, the template it reported under, coerced
- * data and classification. The storage artifacts — the cumulative
- * `summaryLogIds` membership and the storage `id` — and the redundant ledger
- * identity stay behind the seam.
+ * A registration's committed waste-record state: the row's identity, type, the
+ * template it reported under, coerced data and classification. The type the
+ * row states port answers in; how an adapter stores a row, and what it keeps
+ * alongside to do so, stays behind the port.
  *
  * `processingType` is content, not an artifact: it is the template the row
  * reported under, so a reader deciding what a row means needs it as much as it
@@ -24,32 +19,11 @@ import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-su
  */
 
 /**
- * Project a stored row state onto its domain content — the storage↔domain
- * seam where membership, storage id and ledger identity are dropped.
- *
- * @param {SummaryLogRowState} summaryLogRowState
- * @returns {WasteRecordState}
- */
-export const toWasteRecordState = ({
-  rowId,
-  wasteRecordType,
-  processingType,
-  data,
-  classification
-}) => ({
-  rowId,
-  wasteRecordType,
-  processingType,
-  data,
-  classification
-})
-
-/**
- * The ledger's row states at a resolved head submission, projected to their
- * domain content — or nothing when the ledger has no submitted summary log
- * yet. For a caller that has already resolved the head (and whose read must
- * stay consistent with it), this is the whole read;
- * `summaryLogRowStatesForRegistration` composes it with the head resolution.
+ * The ledger's waste record states at a resolved head submission, or nothing
+ * when the ledger has no submitted summary log yet. For a caller that has
+ * already resolved the head (and whose read must stay consistent with it),
+ * this is the whole read; `summaryLogRowStatesForRegistration` composes it
+ * with the head resolution.
  *
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
@@ -60,17 +34,13 @@ export const wasteRecordStatesForHead = async (
   summaryLogRowStatesRepository,
   ledgerId,
   head
-) => {
-  if (head === null) {
-    return []
-  }
-  const summaryLogRowStates =
-    await summaryLogRowStatesRepository.findRowStatesForSummaryLog(
-      ledgerId,
-      head
-    )
-  return summaryLogRowStates.map(toWasteRecordState)
-}
+) =>
+  head === null
+    ? []
+    : summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
+        ledgerId,
+        head
+      )
 
 /**
  * A registration's latest submitted summary log together with the row states

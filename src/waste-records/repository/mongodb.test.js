@@ -126,7 +126,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await createMongoSummaryLogRowStatesRepository(database)
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
-    expect(repository.findRowStatesForSummaryLog).toBeTypeOf('function')
+    expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
     expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
@@ -194,7 +194,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       expect(history).toHaveLength(1)
       expect(history[0].summaryLogIds).toEqual(['log-1'])
 
-      const committed = await repository.findRowStatesForSummaryLog(
+      const committed = await repository.findWasteRecordStatesForSummaryLog(
         DEFAULT_LEDGER_ID,
         'log-1'
       )
@@ -330,7 +330,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
 
     // Read the submitted state back through Mongo, then compare the identical
     // row's fresh projection against it — exactly what a resubmission does.
-    const submitted = await repository.findRowStatesForSummaryLog(
+    const submitted = await repository.findWasteRecordStatesForSummaryLog(
       DEFAULT_LEDGER_ID,
       'log-1'
     )
