@@ -52,7 +52,15 @@ const wasteBalanceTable = (months, overrides = {}) => ({
         }))
       )
     })),
-    period: { reports: { expected: 0, submitted: 0 } }
+    period: {
+      reports: { expected: 0, submitted: 0 },
+      operatorCounts: recordOf(TONNAGE_MONITORING_MATERIALS, () =>
+        recordOf(ACCREDITATION_TYPES, () => ({
+          operatorCount: 0,
+          submittingOperatorCount: 0
+        }))
+      )
+    }
   }
 })
 

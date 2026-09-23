@@ -70,6 +70,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /**
  * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ * @typedef {Record<Material, Record<WasteProcessingTypeValue, OperatorCounts>>} OperatorCountsByMaterial
  */
 
 /**
@@ -82,9 +83,18 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
+ * The whole period served: the reports it was owed and how many arrived, and
+ * the operators behind each row's total across its months.
+ *
+ * @typedef {Object} PublishedPeriod
+ * @property {ReportCount} reports
+ * @property {OperatorCountsByMaterial} operatorCounts
+ */
+
+/**
  * @typedef {Object} WasteBalanceTable
  * @property {{ generatedAt: string }} meta
- * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: PublishedPeriod }} data
  */
 
 /**
@@ -102,18 +112,40 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
- * The cell a contribution counts towards. An operator counts once in it,
- * however many sites it reports from.
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType'>} row
+ * @returns {string}
+ */
+const periodKey = ({ material, accreditationType }) =>
+  `${material}::${accreditationType}`
+
+/**
+ * The cell a contribution counts towards, and its row's whole-period total. An
+ * operator counts once in each, however many sites it reports from and
+ * however many months it contributes to.
  *
  * @param {Contribution} contribution
  */
-const figuresOf = ({ month, registration }) => [
-  cellKey({
+const figuresOf = ({ month, registration }) => {
+  const row = {
     material: resolveMaterial(registration),
-    accreditationType: registration.wasteProcessingType,
-    month
-  })
-]
+    accreditationType: registration.wasteProcessingType
+  }
+  return [cellKey({ ...row, month }), periodKey(row)]
+}
+
+/**
+ * The operators behind each row's whole-period total, for every material and
+ * accreditation type the publication prints.
+ *
+ * @param {OperatorsByFigure} operators
+ * @returns {OperatorCountsByMaterial}
+ */
+const periodOperatorCounts = (operators) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      operatorCountsOf(operators, periodKey({ material, accreditationType }))
+    )
+  )
 
 /**
  * The publication prints every material and accreditation type, so one
@@ -326,7 +358,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * count of monthly reports it was owed and how many were submitted, and the
  * period carries the sum, which says how close the figures are to publication.
  * Every figure carries how many operators could have contributed to it, and
- * how many it includes tonnage from.
+ * how many it includes tonnage from, and the period carries the same for each
+ * row's total across its months.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -411,7 +444,10 @@ export const buildWasteBalanceTable = async ({
         reports: reports.byMonth[month],
         figures: publishedFigures(into.cells, operators, month)
       })),
-      period: { reports: reports.total }
+      period: {
+        reports: reports.total,
+        operatorCounts: periodOperatorCounts(operators)
+      }
     }
   }
 }

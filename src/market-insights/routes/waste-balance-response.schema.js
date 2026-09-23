@@ -25,6 +25,11 @@ const figuresByMaterialSchema = recordOf(
   recordOf(Object.values(WASTE_PROCESSING_TYPE), publishedFiguresSchema)
 )
 
+const operatorCountsByMaterialSchema = recordOf(
+  TONNAGE_MONITORING_MATERIALS,
+  recordOf(Object.values(WASTE_PROCESSING_TYPE), Joi.object(operatorCountKeys))
+)
+
 /**
  * Response contract for the published UK Waste Balance table. Keyed by
  * reporting month, then material, then accreditation type, with the net credit
@@ -48,6 +53,11 @@ const figuresByMaterialSchema = recordOf(
  * - `submittingOperatorCount` is the operators whose tonnage the figure
  *   includes, whether a load that credits it or a sent-on load deducted from
  *   it.
+ *
+ * The period carries the same two counts for each material and accreditation
+ * type's total across the months served. An operator counts once there,
+ * however many of those months it contributes to, so a period count is not
+ * the sum of the monthly ones.
  */
 export const wasteBalanceResponseSchema = Joi.object({
   meta: metaSchema,
@@ -58,6 +68,9 @@ export const wasteBalanceResponseSchema = Joi.object({
         figures: figuresByMaterialSchema.required()
       })
     ),
-    period: Joi.object({ reports: reportCountSchema.required() }).required()
+    period: Joi.object({
+      reports: reportCountSchema.required(),
+      operatorCounts: operatorCountsByMaterialSchema.required()
+    }).required()
   }).required()
 })

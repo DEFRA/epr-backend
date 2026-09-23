@@ -492,6 +492,25 @@ const submittingOperatorCounts = (table) =>
   operatorCounts(table, 'submittingOperatorCount')
 
 /**
+ * The operator counts of every row's whole-period total that any operator
+ * could have contributed to, keyed `material type`.
+ *
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ */
+const periodOperatorCounts = (table) =>
+  Object.fromEntries(
+    Object.entries(table.data.period.operatorCounts).flatMap(
+      ([material, byAccreditationType]) =>
+        Object.entries(byAccreditationType)
+          .filter(([, counts]) => counts.operatorCount !== 0)
+          .map(([accreditationType, counts]) => [
+            `${material} ${accreditationType}`,
+            counts
+          ])
+    )
+  )
+
+/**
  * The monthly report counts the table carries, one pair per month served and
  * one for the period.
  *
@@ -904,6 +923,53 @@ describe('buildWasteBalanceTable', () => {
       expect(operatorCounts(table)).toEqual(everyMonth(2))
       expect(submittingOperatorCounts(table)).toEqual({
         '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('counts each operator once across the period, however many months it contributes to', async () => {
+      const crediting = makeOperator({ orgId: 500041 })
+      const silent = makeOperator({ orgId: 500042 })
+
+      const { table } = await run({
+        organisations: [crediting.organisation, silent.organisation],
+        submissions: [
+          {
+            ...crediting,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40),
+              receivedRow('row-2', '2026-03-10', 60)
+            ]
+          }
+        ]
+      })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(2))
+      expect(periodOperatorCounts(table)).toEqual({
+        'plastic reprocessor': { operatorCount: 2, submittingOperatorCount: 1 }
+      })
+      expect(
+        table.data.period.operatorCounts[MATERIAL.WOOD][
+          WASTE_PROCESSING_TYPE.EXPORTER
+        ]
+      ).toEqual({ operatorCount: 0, submittingOperatorCount: 0 })
+    })
+
+    it('counts an operator in the period of a row it joins partway through', async () => {
+      const early = makeOperator({ orgId: 500043 })
+      const late = makeOperator({ orgId: 500044, validFrom: '2026-05-01' })
+
+      const { table } = await run({
+        organisations: [early.organisation, late.organisation],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        ...everyMonth(1),
+        '2026-05 plastic reprocessor': 2,
+        '2026-06 plastic reprocessor': 2
+      })
+      expect(periodOperatorCounts(table)).toEqual({
+        'plastic reprocessor': { operatorCount: 2, submittingOperatorCount: 0 }
       })
     })
 
