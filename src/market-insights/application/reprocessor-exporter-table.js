@@ -46,6 +46,12 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
+ * An operator's registration that could put a report into a month's figures.
+ *
+ * @typedef {Pick<OwedReport, 'month' | 'org' | 'registration'>} Contribution
+ */
+
+/**
  * How many separate operators a figure is built from.
  *
  * @typedef {{ operatorCount: number }} OperatorCount
@@ -162,16 +168,18 @@ const measuresFor = (cells, material, accreditationType, month) =>
 
 /**
  * The operators each figure is built from, keyed as its cell or its grand
- * total is. An operator counts in a month when it owed that month a report the
- * figures would include, whether or not it submitted one: a suspended operator
- * counts, and one cancelled throughout the month does not. An operator counts
- * once however many sites it reports from, so one with a site in each of two
- * nations counts once in each nation's figures and once in the UK's.
+ * total is. An operator counts in a month when its report could be included in
+ * that month's figures: when it owed the month a report, whether or not it
+ * submitted one, and when the figures include a report of its for the month.
+ * So a suspended operator counts, and one cancelled throughout the month does
+ * not unless the figures include a report of its all the same. An operator
+ * counts once however many sites it reports from, so one with a site in each
+ * of two nations counts once in each nation's figures and once in the UK's.
  *
- * @param {Iterable<OwedReport>} owedReports
+ * @param {Iterable<Contribution>} contributions
  * @returns {Map<string, Set<string>>}
  */
-const operatorsByCell = (owedReports) => {
+const operatorsByCell = (contributions) => {
   /** @type {Map<string, Set<string>>} */
   const operators = new Map()
   /**
@@ -181,7 +189,7 @@ const operatorsByCell = (owedReports) => {
   const count = (key, organisationId) =>
     operators.set(key, (operators.get(key) ?? new Set()).add(organisationId))
 
-  for (const { month, org, registration } of owedReports) {
+  for (const { month, org, registration } of contributions) {
     const accreditationType = accreditationTypeOf(registration)
     const material = resolveMaterial(registration)
     count(cellKey({ material, accreditationType, month }), org.id)
@@ -269,8 +277,9 @@ const publicationCovers =
 /**
  * Every periodic report folded into its cell: the latest monthly submission of
  * each registration the publication covers, summed by material and
- * accreditation type within each month served. A report whose registration no
- * longer resolves is logged and left out, unless a test organisation filed it.
+ * accreditation type within each month served, beside the contribution each
+ * folded report made. A report whose registration no longer resolves is
+ * logged and left out, unless a test organisation filed it.
  *
  * @param {Object} params
  * @param {Organisation[]} params.organisations
@@ -278,7 +287,7 @@ const publicationCovers =
  * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {CoversRegistration} params.covers - which registrations the publication covers
- * @returns {Map<string, Measures>}
+ * @returns {{ cells: Map<string, Measures>, contributions: Contribution[] }}
  */
 const measuresByCell = ({
   organisations,
@@ -304,9 +313,9 @@ const measuresByCell = ({
 
   /**
    * @param {PeriodicReport} periodicReport
-   * @returns {ReportableRegistration | undefined}
+   * @returns {{ org: Organisation, registration: ReportableRegistration } | undefined}
    */
-  const accreditedRegistrationFor = (periodicReport) => {
+  const coveredRegistrationFor = (periodicReport) => {
     const key = registrationKey(periodicReport)
     const entry = registrations.get(key)
     if (entry === undefined) {
@@ -315,18 +324,21 @@ const measuresByCell = ({
       }
       return undefined
     }
-    return covers(entry) ? entry.registration : undefined
+    return covers(entry) ? entry : undefined
   }
 
   const served = new Set(months)
   /** @type {Map<string, Measures>} */
   const cells = new Map()
+  /** @type {Contribution[]} */
+  const contributions = []
 
   for (const periodicReport of periodicReports) {
-    const registration = accreditedRegistrationFor(periodicReport)
-    if (registration === undefined) {
+    const covered = coveredRegistrationFor(periodicReport)
+    if (covered === undefined) {
       continue
     }
+    const { org, registration } = covered
     for (const [period, slot] of Object.entries(
       periodicReport.reports.monthly ?? {}
     )) {
@@ -337,11 +349,12 @@ const measuresByCell = ({
       const report = latestSubmission(slot)
       if (served.has(month) && report !== undefined) {
         foldIntoCell(cells, registration, month, report)
+        contributions.push({ month, org, registration })
       }
     }
   }
 
-  return cells
+  return { cells, contributions }
 }
 
 /**
@@ -381,7 +394,7 @@ export const buildReprocessorExporterTable = async ({
   ])
 
   const covers = publicationCovers(regulator)
-  const cells = measuresByCell({
+  const { cells, contributions } = measuresByCell({
     organisations,
     periodicReports,
     months,
@@ -398,7 +411,7 @@ export const buildReprocessorExporterTable = async ({
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
   const reports = countMonthlyReports(months, owedReports)
-  const operators = operatorsByCell(owedReports)
+  const operators = operatorsByCell([...owedReports, ...contributions])
 
   return {
     meta: { generatedAt: now.toISOString() },
