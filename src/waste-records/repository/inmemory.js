@@ -127,6 +127,27 @@ export const createInMemorySummaryLogRowStatesRepository = (
       ),
 
     /**
+     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {string} summaryLogId
+     */
+    findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>
+      structuredClone(
+        storage.filter(
+          (doc) =>
+            matchesLedgerIdentity(doc, ledgerId) &&
+            doc.summaryLogIds.includes(summaryLogId)
+        )
+      ).map(
+        ({ rowId, wasteRecordType, processingType, data, classification }) => ({
+          rowId,
+          wasteRecordType,
+          processingType,
+          data,
+          classification
+        })
+      ),
+
+    /**
      * @param {string} organisationId
      * @param {string} registrationId
      * @param {string} fileId

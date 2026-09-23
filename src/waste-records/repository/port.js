@@ -37,6 +37,15 @@
  */
 
 /**
+ * A stored row state projected to its domain content, dropping the storage id,
+ * the `summaryLogIds` membership and the ledger identity the caller supplied.
+ * Structurally the application's `WasteRecordState`, stated here in terms of
+ * this port's own document so the seam does not point outwards.
+ *
+ * @typedef {Pick<SummaryLogRowState, 'rowId' | 'wasteRecordType' | 'processingType' | 'data' | 'classification'>} WasteRecordStateProjection
+ */
+
+/**
  * @typedef {Object} SummaryLogRowStatesRepository
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
@@ -50,6 +59,11 @@
  *   A row state belongs to the ledger that wrote it, so the summary log alone
  *   does not identify one: the same `summaryLogId` under a different ledger
  *   identity matches nothing.
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<WasteRecordStateProjection[]>} findWasteRecordStatesForSummaryLog
+ *   The same rows `findRowStatesForSummaryLog` returns, projected to their
+ *   domain content. Reads that only fold row content — the credited tonnage
+ *   report over every accreditation, for one — take this rather than the whole
+ *   document, which spares them a read-schema validation per row.
  * @property {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the
