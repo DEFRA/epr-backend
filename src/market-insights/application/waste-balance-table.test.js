@@ -3,6 +3,7 @@ import {
   ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
+  REGULATOR,
   REPROCESSING_TYPE,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -67,7 +68,8 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   reprocessingType?: string,
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
  *   validFrom?: string,
- *   validTo?: string
+ *   validTo?: string,
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue
  * }} options
  */
 const makeOperator = ({
@@ -78,7 +80,8 @@ const makeOperator = ({
   reprocessingType = REPROCESSING_TYPE.INPUT,
   overseasSites,
   validFrom = ACCREDITED_FROM,
-  validTo = ACCREDITED_TO
+  validTo = ACCREDITED_TO,
+  regulator = REGULATOR.EA
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
@@ -98,7 +101,8 @@ const makeOperator = ({
           glassRecyclingProcess,
           wasteProcessingType,
           reprocessingType,
-          overseasSites
+          overseasSites,
+          submittedToRegulator: regulator
         }
       ],
       accreditations: [
@@ -111,7 +115,8 @@ const makeOperator = ({
           validTo,
           material,
           wasteProcessingType,
-          reprocessingType
+          reprocessingType,
+          submittedToRegulator: regulator
         }
       ]
     },
@@ -427,13 +432,15 @@ const NO_ACTIVITY = {
   totalCredited: 0,
   eligibleForWasteBalance: 0,
   sentOnDeductions: 0,
-  netCredit: 0
+  netCredit: 0,
+  operatorCount: 0,
+  submittingOperatorCount: 0
 }
 
 /**
- * The cells something was reported into, flattened to one row each. The table
- * carries a zero cell for every other combination, which these tests are not
- * about.
+ * The cells something was reported into, flattened to one row each, without
+ * their operator counts. The table carries a zero cell for every other
+ * combination, which these tests are not about.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
@@ -444,14 +451,45 @@ const reported = (table) =>
         .filter(
           ([, cell]) => cell.totalCredited !== 0 || cell.sentOnDeductions !== 0
         )
-        .map(([accreditationType, cell]) => ({
-          material,
-          accreditationType,
-          month,
-          ...cell
-        }))
+        .map(
+          ([
+            accreditationType,
+            {
+              operatorCount: _operators,
+              submittingOperatorCount: _submitting,
+              ...cell
+            }
+          ]) => ({ material, accreditationType, month, ...cell })
+        )
     )
   )
+
+/**
+ * One of the operator counts of every cell where it is not zero, keyed
+ * `month material type`.
+ *
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {'operatorCount' | 'submittingOperatorCount'} [count]
+ */
+const operatorCounts = (table, count = 'operatorCount') =>
+  Object.fromEntries(
+    Object.entries(table.data.months).flatMap(([month, { figures }]) =>
+      Object.entries(figures).flatMap(([material, byAccreditationType]) =>
+        Object.entries(byAccreditationType)
+          .filter(([, cell]) => cell[count] !== 0)
+          .map(([accreditationType, cell]) => [
+            `${month} ${material} ${accreditationType}`,
+            cell[count]
+          ])
+      )
+    )
+  )
+
+/**
+ * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ */
+const submittingOperatorCounts = (table) =>
+  operatorCounts(table, 'submittingOperatorCount')
 
 /**
  * The monthly report counts the table carries, one pair per month served and
@@ -704,6 +742,184 @@ describe('buildWasteBalanceTable', () => {
       expect(monthlyReports(table)).toEqual(
         perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
+    })
+  })
+
+  describe('the operator count', () => {
+    /**
+     * @param {number} count
+     * @param {string} [cell] - `material type`, as `operatorCounts` keys it
+     */
+    const everyMonth = (count, cell = 'plastic reprocessor') =>
+      Object.fromEntries(
+        JANUARY_TO_JUNE_2026.map((month) => [`${month} ${cell}`, count])
+      )
+
+    /**
+     * One operator holding every registration and accreditation of the
+     * given operators.
+     *
+     * @param {ReturnType<typeof makeOperator>} first
+     * @param {ReturnType<typeof makeOperator>} second
+     */
+    const oneBusiness = ({ organisation }, { organisation: other }) => ({
+      ...organisation,
+      registrations: [...organisation.registrations, ...other.registrations],
+      accreditations: [...organisation.accreditations, ...other.accreditations]
+    })
+
+    it('counts every operator owed a report for the month, whether or not the figure includes its tonnage', async () => {
+      const crediting = makeOperator({ orgId: 500030 })
+      const silent = makeOperator({ orgId: 500031 })
+
+      const { table } = await run({
+        organisations: [crediting.organisation, silent.organisation],
+        submissions: [
+          {
+            ...crediting,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40),
+              sentOnRow('row-2', '2026-02-20', 10)
+            ]
+          }
+        ]
+      })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(2))
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('counts a suspended operator, which still owes its reports', async () => {
+      const suspended = withAccreditationStatus(
+        makeOperator({ orgId: 500032 }).organisation,
+        ACCREDITATION_STATUS.SUSPENDED,
+        [{ status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-10' }]
+      )
+
+      const { table } = await run({
+        organisations: [suspended],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
+    it('leaves an operator out of a month its accreditation stood cancelled throughout', async () => {
+      const reinstated = reinstatedOn(
+        cancelledOn(makeOperator({ orgId: 500033 }).organisation, '2026-01-20'),
+        '2026-03-01'
+      )
+
+      const { table } = await run({
+        organisations: [reinstated],
+        submissions: []
+      })
+
+      const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
+        everyMonth(1)
+      expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
+    it('counts an operator in a month it stood cancelled throughout when the figure includes its tonnage', async () => {
+      const operator = makeOperator({ orgId: 500034 })
+      const reinstated = reinstatedOn(
+        cancelledOn(operator.organisation, '2026-01-20'),
+        '2026-03-01'
+      )
+
+      const { table } = await run({
+        organisations: [reinstated],
+        submissions: [
+          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+        ]
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-02', totalCredited: 40 })
+      ])
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('leaves out an operator whose tonnage the waste balance leaves out', async () => {
+      const testOrganisation = makeOperator({ orgId: TEST_ORG_ID })
+      const registered = makeOperator({ orgId: 500035 })
+
+      const { table } = await run({
+        organisations: [
+          testOrganisation.organisation,
+          registeredOnly(registered)
+        ],
+        submissions: [
+          {
+            ...testOrganisation,
+            rows: [receivedRow('row-1', '2026-02-10', 40)]
+          },
+          {
+            ledgerId: { ...registered.ledgerId, accreditationId: null },
+            summaryLogId: registered.summaryLogId,
+            rows: [receivedRow('row-1', '2026-02-10', 60)]
+          }
+        ]
+      })
+
+      expect(reported(table)).toEqual([])
+      expect(operatorCounts(table)).toEqual({})
+    })
+
+    it('counts an operator with sites in two nations once', async () => {
+      const englishSite = makeOperator({
+        orgId: 500036,
+        regulator: REGULATOR.EA
+      })
+      const scottishSite = makeOperator({
+        orgId: 500037,
+        regulator: REGULATOR.SEPA
+      })
+      const twoNations = oneBusiness(englishSite, scottishSite)
+      const englishOnly = makeOperator({ orgId: 500038 })
+
+      const { table } = await run({
+        organisations: [twoNations, englishOnly.organisation],
+        submissions: [
+          { ...englishSite, rows: [receivedRow('row-1', '2026-02-10', 40)] },
+          {
+            ...scottishSite,
+            ledgerId: {
+              ...scottishSite.ledgerId,
+              organisationId: twoNations.id
+            },
+            rows: [receivedRow('row-1', '2026-02-20', 60)]
+          }
+        ]
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-02', totalCredited: 100 })
+      ])
+      expect(operatorCounts(table)).toEqual(everyMonth(2))
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('counts an operator in each material it reports', async () => {
+      const plastic = makeOperator({ orgId: 500039 })
+      const paper = makeOperator({ orgId: 500040, material: MATERIAL.PAPER })
+
+      const { table } = await run({
+        organisations: [oneBusiness(plastic, paper)],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        ...everyMonth(1),
+        ...everyMonth(1, 'paper reprocessor')
+      })
     })
   })
 

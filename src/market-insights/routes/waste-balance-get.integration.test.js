@@ -252,13 +252,17 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
       totalCredited: 100,
       eligibleForWasteBalance: 100,
       sentOnDeductions: 30,
-      netCredit: 70
+      netCredit: 70,
+      operatorCount: 1,
+      submittingOperatorCount: 1
     })
     expect(months['2026-02'].figures.wood.exporter).toEqual({
       totalCredited: 0,
       eligibleForWasteBalance: 0,
       sentOnDeductions: 0,
-      netCredit: 0
+      netCredit: 0,
+      operatorCount: 0,
+      submittingOperatorCount: 0
     })
     expect(
       Object.values(months).flatMap(({ figures }) =>

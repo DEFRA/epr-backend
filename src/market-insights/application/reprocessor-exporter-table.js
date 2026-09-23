@@ -24,6 +24,10 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import {
+  operatorCountsOf,
+  operatorsByFigure
+} from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -42,29 +46,9 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
  * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
- * @typedef {import('#market-insights/application/monthly-reports.js').OwedReport} OwedReport
- */
-
-/**
- * An operator's registration that could put a report into a month's figures.
- *
- * @typedef {Pick<OwedReport, 'month' | 'org' | 'registration'>} Contribution
- */
-
-/**
- * How many separate operators could have contributed to a figure, and how many
- * of them it includes a report from.
- *
- * @typedef {{ operatorCount: number, submittingOperatorCount: number }} OperatorCounts
- */
-
-/**
- * The operators behind every figure, each keyed as the figure's cell or grand
- * total is.
- *
- * @typedef {Object} OperatorsByCell
- * @property {Map<string, Set<string>>} possible - those who could have contributed
- * @property {Map<string, Set<string>>} submitting - those whose reports the figure includes
+ * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
+ * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
+ * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
  */
 
 /**
@@ -177,42 +161,23 @@ const measuresFor = (cells, material, accreditationType, month) =>
   noMeasures(accreditationType)
 
 /**
- * The separate operators among the contributions, keyed as each figure's cell
- * or grand total is. An operator counts once however many sites it reports
- * from, so one with a site in each of two nations counts once in each nation's
- * figures and once in the UK's.
+ * The cell and grand total a contribution counts towards. An operator counts
+ * once in each, however many sites it reports from, so one with a site in each
+ * of two nations counts once in each nation's figures and once in the UK's.
  *
- * @param {Iterable<Contribution>} contributions
- * @returns {Map<string, Set<string>>}
+ * @param {Contribution} contribution
  */
-const operatorsByCell = (contributions) => {
-  /** @type {Map<string, Set<string>>} */
-  const operators = new Map()
-  /**
-   * @param {string} key
-   * @param {string} organisationId
-   */
-  const count = (key, organisationId) =>
-    operators.set(key, (operators.get(key) ?? new Set()).add(organisationId))
-
-  for (const { month, org, registration } of contributions) {
-    const accreditationType = accreditationTypeOf(registration)
-    const material = resolveMaterial(registration)
-    count(cellKey({ material, accreditationType, month }), org.id)
-    count(totalKey({ accreditationType, month }), org.id)
-  }
-  return operators
+const figuresOf = ({ month, registration }) => {
+  const accreditationType = accreditationTypeOf(registration)
+  return [
+    cellKey({
+      material: resolveMaterial(registration),
+      accreditationType,
+      month
+    }),
+    totalKey({ accreditationType, month })
+  ]
 }
-
-/**
- * @param {OperatorsByCell} operators
- * @param {string} key
- * @returns {OperatorCounts}
- */
-const operatorCountsOf = ({ possible, submitting }, key) => ({
-  operatorCount: possible.get(key)?.size ?? 0,
-  submittingOperatorCount: submitting.get(key)?.size ?? 0
-})
 
 /**
  * The publication prints every material and both accreditation types for
@@ -221,7 +186,7 @@ const operatorCountsOf = ({ possible, submitting }, key) => ({
  * instruction warns about.
  *
  * @param {Map<string, Measures>} cells
- * @param {OperatorsByCell} operators
+ * @param {OperatorsByFigure} operators
  * @param {YearMonth} month
  * @returns {FiguresByMaterial}
  */
@@ -243,7 +208,7 @@ const publishedFigures = (cells, operators, month) =>
  * accreditation type summed, for the month.
  *
  * @param {Map<string, Measures>} cells
- * @param {OperatorsByCell} operators
+ * @param {OperatorsByFigure} operators
  * @param {YearMonth} month
  * @returns {TotalsByAccreditationType}
  */
@@ -419,12 +384,7 @@ export const buildReprocessorExporterTable = async ({
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
   const reports = countMonthlyReports(months, owedReports)
-  // Whoever owed the month a report could have contributed to it, and so
-  // could whoever the figures include a report from, owed or not.
-  const operators = {
-    possible: operatorsByCell([...owedReports, ...contributions]),
-    submitting: operatorsByCell(contributions)
-  }
+  const operators = operatorsByFigure(owedReports, contributions, figuresOf)
 
   return {
     meta: { generatedAt: now.toISOString() },
