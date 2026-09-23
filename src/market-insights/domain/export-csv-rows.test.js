@@ -42,12 +42,14 @@ const wasteBalanceTable = (months, overrides = {}) => ({
     months: recordOf(months, (month) => ({
       reports: { expected: 0, submitted: 0 },
       figures: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-        recordOf(ACCREDITATION_TYPES, (accreditationType) =>
-          withNetCredit({
+        recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
+          ...withNetCredit({
             ...NO_FIGURES,
             ...overrides[`${month}::${material}::${accreditationType}`]
-          })
-        )
+          }),
+          operatorCount: 0,
+          submittingOperatorCount: 0
+        }))
       )
     })),
     period: { reports: { expected: 0, submitted: 0 } }

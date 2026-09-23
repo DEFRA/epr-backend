@@ -427,7 +427,7 @@ const run = async ({
   return { table, logger }
 }
 
-/** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} */
+/** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures & import('#market-insights/application/operator-counts.js').OperatorCounts} */
 const NO_ACTIVITY = {
   totalCredited: 0,
   eligibleForWasteBalance: 0,
