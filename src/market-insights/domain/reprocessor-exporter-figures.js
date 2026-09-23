@@ -216,6 +216,12 @@ const SENT_ON_SPLITS = [
 /** @type {(keyof SharedMeasures)[]} */
 const AVERAGE_PRICE_INPUTS = ['totalRevenue', 'revisedTonnageIssued']
 
+/** @type {keyof PublishedExtras} */
+const SENT_ON_TOTAL = 'tonnageSentOnTotal'
+
+/** @type {keyof PublishedExtras} */
+const AVERAGE_PRICE = 'averagePricePerTonne'
+
 /**
  * @template {Measures} T
  * @param {T} measures
@@ -262,8 +268,8 @@ export const figuresContributedTo = (measures) => {
     ...Object.entries(measures)
       .filter(([, value]) => value !== 0)
       .map(([measure]) => measure),
-    ...(anyOf(SENT_ON_SPLITS) ? ['tonnageSentOnTotal'] : []),
-    ...(anyOf(AVERAGE_PRICE_INPUTS) ? ['averagePricePerTonne'] : [])
+    ...(anyOf(SENT_ON_SPLITS) ? [SENT_ON_TOTAL] : []),
+    ...(anyOf(AVERAGE_PRICE_INPUTS) ? [AVERAGE_PRICE] : [])
   ]
 }
 

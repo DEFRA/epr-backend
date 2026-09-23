@@ -1177,6 +1177,87 @@ describe('buildReprocessorExporterTable', () => {
       )
     })
 
+    it('counts toward an export-only figure only the exporters who reported it', async () => {
+      const [refusing, exporting] = [1, 2].map((orgId) =>
+        makeOperator({
+          orgId,
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+        })
+      )
+      /** @param {number} tonnageRefusedAtDestination */
+      const exportActivity = (tonnageRefusedAtDestination) => ({
+        overseasSites: [],
+        unapprovedOverseasSites: [],
+        totalTonnageExported: 100,
+        tonnageReceivedNotExported: 0,
+        tonnageRefusedAtDestination,
+        tonnageStoppedDuringExport: 0,
+        totalTonnageRefusedOrStopped: tonnageRefusedAtDestination,
+        tonnageRepatriated: 0
+      })
+
+      const { table } = await run({
+        organisations: [refusing, exporting],
+        reports: [
+          monthlyReport(refusing, 1, { exportActivity: exportActivity(5) }),
+          monthlyReport(exporting, 1, { exportActivity: exportActivity(0) })
+        ]
+      })
+
+      expect(
+        table.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.EXPORTER
+        ].contributingOperatorCounts
+      ).toEqual(
+        expect.objectContaining({
+          tonnageExported: 2,
+          tonnageRefused: 1,
+          tonnageStopped: 0
+        })
+      )
+    })
+
+    it("counts toward a nation's figures only the operators of that nation who put something into them", async () => {
+      const english = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
+      const [issuing, receiving] = [2, 3].map((orgId) =>
+        makeOperator({ orgId, regulator: REGULATOR.SEPA })
+      )
+      const seeded = {
+        organisations: [english, issuing, receiving],
+        reports: [
+          monthlyReport(english, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) }),
+          monthlyReport(receiving, 1, {
+            recyclingActivity: {
+              suppliers: [],
+              totalTonnageReceived: 100,
+              tonnageRecycled: 100,
+              tonnageNotRecycled: 0
+            }
+          })
+        ]
+      }
+
+      const { table: scotland } = await run({
+        ...seeded,
+        regulator: REGULATOR.SEPA
+      })
+
+      expect(
+        scotland.data.months['2026-01'].figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual(
+        expect.objectContaining({
+          submittingOperatorCount: 2,
+          contributingOperatorCounts: expect.objectContaining({
+            tonnageReceived: 1,
+            revisedTonnageIssued: 1
+          })
+        })
+      )
+    })
+
     it('counts each operator once toward each figure of the grand total, however many materials it reports', async () => {
       const plastic = receivingOperator(1)
       const wood = receivingOperator(2, MATERIAL.WOOD)
