@@ -815,6 +815,16 @@ describe('buildReprocessorExporterTable', () => {
         JANUARY_TO_MARCH_2026.map((month) => [`${month} ${cell}`, count])
       )
 
+    const cancelledThroughoutFebruary = [
+      ...approvedHistory,
+      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
+      {
+        status: ACCREDITATION_STATUS.CANCELLED,
+        updatedAt: '2026-01-20T09:00:00.000Z'
+      },
+      { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+    ]
+
     it('counts every operator owed a report for the month, whether or not it submitted', async () => {
       const submitting = makeOperator({ orgId: 1 })
       const silent = makeOperator({ orgId: 2 })
@@ -844,15 +854,7 @@ describe('buildReprocessorExporterTable', () => {
     it('leaves an operator out of a month its accreditation stood cancelled throughout', async () => {
       const reinstated = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
-          {
-            status: ACCREDITATION_STATUS.CANCELLED,
-            updatedAt: '2026-01-20T09:00:00.000Z'
-          },
-          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
-        ]
+        accreditationStatusHistory: cancelledThroughoutFebruary
       })
 
       const { table } = await run({ organisations: [reinstated] })
@@ -879,6 +881,23 @@ describe('buildReprocessorExporterTable', () => {
         table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
           .operatorCount
       ).toBe(1)
+    })
+
+    it('counts an operator in a month it stood cancelled throughout when the figures include its report for that month', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: cancelledThroughoutFebruary
+      })
+
+      const { table } = await run({
+        organisations: [reinstated],
+        reports: [monthlyReport(reinstated, 2, { prn: prn(10, 0, 1000) })]
+      })
+
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-02', revisedTonnageIssued: 10 })
+      ])
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
     })
 
     it('leaves out an operator whose accreditation the figures leave out', async () => {

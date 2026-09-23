@@ -73,7 +73,7 @@ const totalsSchema = byAccreditationType(TOTALLED_MEASURES)
  * how complete the figures are. That count covers the registrations these
  * figures cover, those holding a live accreditation, which is a narrower
  * population than the waste balance counts over. Every figure and grand total
- * also carries how many separate operators it is built from.
+ * also carries how many separate operators could have contributed to it.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
   meta: metaSchema,

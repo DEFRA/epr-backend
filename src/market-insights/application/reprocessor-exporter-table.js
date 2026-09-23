@@ -52,7 +52,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * How many separate operators a figure is built from.
+ * How many separate operators could have contributed to a figure.
  *
  * @typedef {{ operatorCount: number }} OperatorCount
  */
@@ -167,8 +167,8 @@ const measuresFor = (cells, material, accreditationType, month) =>
   noMeasures(accreditationType)
 
 /**
- * The operators each figure is built from, keyed as its cell or its grand
- * total is. An operator counts in a month when its report could be included in
+ * The operators who could have contributed to each figure, keyed as its cell
+ * or its grand total is. An operator counts in a month when its report could be included in
  * that month's figures: when it owed the month a report, whether or not it
  * submitted one, and when the figures include a report of its for the month.
  * So a suspended operator counts, and one cancelled throughout the month does
@@ -367,7 +367,8 @@ const measuresByCell = ({
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
  * was owed and how many were submitted, and the period carries the sum. Every
- * figure and grand total carries how many operators it is built from.
+ * figure and grand total carries how many operators could have contributed to
+ * it.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -403,10 +404,10 @@ export const buildReprocessorExporterTable = async ({
   })
 
   // Counted over the registrations the figures cover rather than the whole
-  // register, so a month cannot report coverage or operators for one set of
-  // registrations beside tonnages for another. A cancelled accreditation is
-  // the case that separates them: its submissions are absent from the
-  // figures, so its months are not owed here.
+  // register, so a month cannot report coverage for one set of operators
+  // beside tonnages for another. A cancelled accreditation is the case that
+  // separates them: its submissions are absent from the figures, so its
+  // months are not owed here.
   const owedReports = [
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
