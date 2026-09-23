@@ -20,7 +20,10 @@ import {
   withPublishedFigures,
   withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
-import { countMonthlyReports } from '#market-insights/application/monthly-reports.js'
+import {
+  countMonthlyReports,
+  owedMonthlyReports
+} from '#market-insights/application/monthly-reports.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -39,12 +42,35 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
  * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
+ * @typedef {import('#market-insights/application/monthly-reports.js').OwedReport} OwedReport
  */
 
 /**
- * @typedef {Record<WasteProcessingTypeValue, PublishedFigures>} FiguresByAccreditationType
+ * An operator's registration that could put a report into a month's figures.
+ *
+ * @typedef {Pick<OwedReport, 'month' | 'org' | 'registration'>} Contribution
+ */
+
+/**
+ * How many separate operators could have contributed to a figure, and how many
+ * of them it includes a report from.
+ *
+ * @typedef {{ operatorCount: number, submittingOperatorCount: number }} OperatorCounts
+ */
+
+/**
+ * The operators behind every figure, each keyed as the figure's cell or grand
+ * total is.
+ *
+ * @typedef {Object} OperatorsByCell
+ * @property {Map<string, Set<string>>} possible - those who could have contributed
+ * @property {Map<string, Set<string>>} submitting - those whose reports the figure includes
+ */
+
+/**
+ * @typedef {Record<WasteProcessingTypeValue, PublishedFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
- * @typedef {Record<WasteProcessingTypeValue, PublishedTotal>} TotalsByAccreditationType
+ * @typedef {Record<WasteProcessingTypeValue, PublishedTotal & OperatorCounts>} TotalsByAccreditationType
  */
 
 /**
@@ -71,6 +97,12 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
+ * @param {{ accreditationType: WasteProcessingTypeValue, month: YearMonth }} total
+ */
+const totalKey = ({ accreditationType, month }) =>
+  `${accreditationType}::${month}`
+
+/**
  * @param {{ organisationId: string, registrationId: string }} ref
  */
 const registrationKey = ({ organisationId, registrationId }) =>
@@ -87,15 +119,23 @@ const registrationKey = ({ organisationId, registrationId }) =>
 const latestSubmission = (slot) => selectSubmittedReports(slot).at(-1)
 
 /**
+ * The accreditation type a registration reports under. The registration types
+ * it as a bare string, though only an accreditation type is ever stored there.
+ *
+ * @param {Registration} registration
+ * @returns {WasteProcessingTypeValue}
+ */
+const accreditationTypeOf = (registration) =>
+  /** @type {WasteProcessingTypeValue} */ (registration.wasteProcessingType)
+
+/**
  * @param {Map<string, Measures>} cells
  * @param {ReportableRegistration} registration
  * @param {YearMonth} month
  * @param {import('#reports/repository/port.js').ReportSummary} report
  */
 const foldIntoCell = (cells, registration, month, report) => {
-  const accreditationType = /** @type {WasteProcessingTypeValue} */ (
-    registration.wasteProcessingType
-  )
+  const accreditationType = accreditationTypeOf(registration)
   const key = cellKey({
     material: resolveMaterial(registration),
     accreditationType,
@@ -137,22 +177,65 @@ const measuresFor = (cells, material, accreditationType, month) =>
   noMeasures(accreditationType)
 
 /**
+ * The separate operators among the contributions, keyed as each figure's cell
+ * or grand total is. An operator counts once however many sites it reports
+ * from, so one with a site in each of two nations counts once in each nation's
+ * figures and once in the UK's.
+ *
+ * @param {Iterable<Contribution>} contributions
+ * @returns {Map<string, Set<string>>}
+ */
+const operatorsByCell = (contributions) => {
+  /** @type {Map<string, Set<string>>} */
+  const operators = new Map()
+  /**
+   * @param {string} key
+   * @param {string} organisationId
+   */
+  const count = (key, organisationId) =>
+    operators.set(key, (operators.get(key) ?? new Set()).add(organisationId))
+
+  for (const { month, org, registration } of contributions) {
+    const accreditationType = accreditationTypeOf(registration)
+    const material = resolveMaterial(registration)
+    count(cellKey({ material, accreditationType, month }), org.id)
+    count(totalKey({ accreditationType, month }), org.id)
+  }
+  return operators
+}
+
+/**
+ * @param {OperatorsByCell} operators
+ * @param {string} key
+ * @returns {OperatorCounts}
+ */
+const operatorCountsOf = ({ possible, submitting }, key) => ({
+  operatorCount: possible.get(key)?.size ?? 0,
+  submittingOperatorCount: submitting.get(key)?.size ?? 0
+})
+
+/**
  * The publication prints every material and both accreditation types for
  * every month, so a combination nothing was reported into is still served, at
  * zero: a row vanishing when a material has no data is the error the work
  * instruction warns about.
  *
  * @param {Map<string, Measures>} cells
+ * @param {OperatorsByCell} operators
  * @param {YearMonth} month
  * @returns {FiguresByMaterial}
  */
-const publishedFigures = (cells, month) =>
+const publishedFigures = (cells, operators, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-      withPublishedFigures(
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => ({
+      ...withPublishedFigures(
         measuresFor(cells, material, accreditationType, month)
+      ),
+      ...operatorCountsOf(
+        operators,
+        cellKey({ material, accreditationType, month })
       )
-    )
+    }))
   )
 
 /**
@@ -160,12 +243,13 @@ const publishedFigures = (cells, month) =>
  * accreditation type summed, for the month.
  *
  * @param {Map<string, Measures>} cells
+ * @param {OperatorsByCell} operators
  * @param {YearMonth} month
  * @returns {TotalsByAccreditationType}
  */
-const publishedTotals = (cells, month) =>
-  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-    withSentOnTotal(
+const publishedTotals = (cells, operators, month) =>
+  recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => ({
+    ...withSentOnTotal(
       TONNAGE_MONITORING_MATERIALS.reduce(
         (total, material) =>
           addMeasures(
@@ -174,8 +258,9 @@ const publishedTotals = (cells, month) =>
           ),
         noMeasures(accreditationType)
       )
-    )
-  )
+    ),
+    ...operatorCountsOf(operators, totalKey({ accreditationType, month }))
+  }))
 
 /**
  * Whether the registration holds a live accreditation and was submitted to the
@@ -199,8 +284,9 @@ const publicationCovers =
 /**
  * Every periodic report folded into its cell: the latest monthly submission of
  * each registration the publication covers, summed by material and
- * accreditation type within each month served. A report whose registration no
- * longer resolves is logged and left out, unless a test organisation filed it.
+ * accreditation type within each month served, beside the contribution each
+ * folded report made. A report whose registration no longer resolves is
+ * logged and left out, unless a test organisation filed it.
  *
  * @param {Object} params
  * @param {Organisation[]} params.organisations
@@ -208,7 +294,7 @@ const publicationCovers =
  * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {CoversRegistration} params.covers - which registrations the publication covers
- * @returns {Map<string, Measures>}
+ * @returns {{ cells: Map<string, Measures>, contributions: Contribution[] }}
  */
 const measuresByCell = ({
   organisations,
@@ -234,9 +320,9 @@ const measuresByCell = ({
 
   /**
    * @param {PeriodicReport} periodicReport
-   * @returns {ReportableRegistration | undefined}
+   * @returns {{ org: Organisation, registration: ReportableRegistration } | undefined}
    */
-  const accreditedRegistrationFor = (periodicReport) => {
+  const coveredRegistrationFor = (periodicReport) => {
     const key = registrationKey(periodicReport)
     const entry = registrations.get(key)
     if (entry === undefined) {
@@ -245,18 +331,21 @@ const measuresByCell = ({
       }
       return undefined
     }
-    return covers(entry) ? entry.registration : undefined
+    return covers(entry) ? entry : undefined
   }
 
   const served = new Set(months)
   /** @type {Map<string, Measures>} */
   const cells = new Map()
+  /** @type {Contribution[]} */
+  const contributions = []
 
   for (const periodicReport of periodicReports) {
-    const registration = accreditedRegistrationFor(periodicReport)
-    if (registration === undefined) {
+    const covered = coveredRegistrationFor(periodicReport)
+    if (covered === undefined) {
       continue
     }
+    const { org, registration } = covered
     for (const [period, slot] of Object.entries(
       periodicReport.reports.monthly ?? {}
     )) {
@@ -267,11 +356,12 @@ const measuresByCell = ({
       const report = latestSubmission(slot)
       if (served.has(month) && report !== undefined) {
         foldIntoCell(cells, registration, month, report)
+        contributions.push({ month, org, registration })
       }
     }
   }
 
-  return cells
+  return { cells, contributions }
 }
 
 /**
@@ -283,7 +373,9 @@ const measuresByCell = ({
  * them. Quarterly reports belong to registered-only operators and are left
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
- * was owed and how many were submitted, and the period carries the sum.
+ * was owed and how many were submitted, and the period carries the sum. Every
+ * figure and grand total carries how many operators could have contributed to
+ * it, and how many it includes a report from.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -310,7 +402,7 @@ export const buildReprocessorExporterTable = async ({
   ])
 
   const covers = publicationCovers(regulator)
-  const cells = measuresByCell({
+  const { cells, contributions } = measuresByCell({
     organisations,
     periodicReports,
     months,
@@ -323,20 +415,24 @@ export const buildReprocessorExporterTable = async ({
   // beside tonnages for another. A cancelled accreditation is the case that
   // separates them: its submissions are absent from the figures, so its
   // months are not owed here.
-  const reports = countMonthlyReports({
-    organisations,
-    periodicReports,
-    months,
-    covers
-  })
+  const owedReports = [
+    ...owedMonthlyReports({ organisations, periodicReports, months, covers })
+  ]
+  const reports = countMonthlyReports(months, owedReports)
+  // Whoever owed the month a report could have contributed to it, and so
+  // could whoever the figures include a report from, owed or not.
+  const operators = {
+    possible: operatorsByCell([...owedReports, ...contributions]),
+    submitting: operatorsByCell(contributions)
+  }
 
   return {
     meta: { generatedAt: now.toISOString() },
     data: {
       months: recordOf(months, (month) => ({
         reports: reports.byMonth[month],
-        figures: publishedFigures(cells, month),
-        totals: publishedTotals(cells, month)
+        figures: publishedFigures(cells, operators, month),
+        totals: publishedTotals(cells, operators, month)
       })),
       period: { reports: reports.total }
     }

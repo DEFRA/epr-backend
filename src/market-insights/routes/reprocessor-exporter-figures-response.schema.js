@@ -13,6 +13,13 @@ import {
 
 const figure = Joi.number()
 
+const operatorCount = Joi.number().integer().min(0).required()
+
+const operatorCounts = {
+  operatorCount,
+  submittingOperatorCount: operatorCount
+}
+
 const TOTALLED_MEASURES = [
   'tonnageReceived',
   'tonnageSentOnTotal',
@@ -44,11 +51,15 @@ const byAccreditationType = (measures) =>
     [WASTE_PROCESSING_TYPE.REPROCESSOR]: recordOf(
       [...measures, ...REPROCESSOR_ONLY],
       figure
-    ).required(),
+    )
+      .keys(operatorCounts)
+      .required(),
     [WASTE_PROCESSING_TYPE.EXPORTER]: recordOf(
       [...measures, ...EXPORTER_ONLY],
       figure
-    ).required()
+    )
+      .keys(operatorCounts)
+      .required()
   })
 
 const figuresByMaterialSchema = recordOf(
@@ -67,6 +78,20 @@ const totalsSchema = byAccreditationType(TOTALLED_MEASURES)
  * how complete the figures are. That count covers the registrations these
  * figures cover, those holding a live accreditation, which is a narrower
  * population than the waste balance counts over.
+ *
+ * Every figure and grand total also carries two operator counts, for the
+ * regulators to judge whether it would identify an operator. An operator is a
+ * business, and counts once however many sites it has, so one with sites in
+ * two nations counts once in each nation and once in the UK.
+ *
+ * - `operatorCount` is the operators who could have contributed: every
+ *   operator owed a report for the month, whether or not it submitted one, and
+ *   every operator whose report the figure includes. A suspended operator
+ *   counts. One whose accreditation stood cancelled for the whole month does
+ *   not, unless the figure includes a report of its all the same, and neither
+ *   does one the figures leave out.
+ * - `submittingOperatorCount` is the operators whose reports the figure
+ *   includes.
  */
 export const reprocessorExporterFiguresResponseSchema = Joi.object({
   meta: metaSchema,
