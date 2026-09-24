@@ -490,6 +490,9 @@ describe('Advanced validation scenarios', () => {
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
+        }),
+        packagingRecyclingNotesRepository: /** @type {any} */ ({
+          findByAccreditation: async () => []
         })
       })
       server = await createTestServer({
@@ -673,6 +676,9 @@ describe('Advanced validation scenarios', () => {
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
+        }),
+        packagingRecyclingNotesRepository: /** @type {any} */ ({
+          findByAccreditation: async () => []
         })
       })
       server = await createTestServer({

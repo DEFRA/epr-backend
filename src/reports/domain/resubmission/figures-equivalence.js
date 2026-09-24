@@ -14,16 +14,18 @@
  * insensitive to both key order and row order.
  */
 
-/** @import { RecyclingActivity, ExportActivity, WasteSent, PrnData } from '#reports/repository/port.js' */
+/** @import { RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
 /**
- * A report (or submission) carrying the figure-bearing activity blocks.
+ * A report (or submission) carrying the figure-bearing activity blocks. `prn`
+ * is narrowed to just its issued tonnage so both a frozen report's full PrnData
+ * and a freshly generated `{ issuedTonnage }` satisfy it.
  *
  * @typedef {Object} FiguresBearingReport
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
+ * @property {{ issuedTonnage: number } | null} [prn]
  */
 
 /**

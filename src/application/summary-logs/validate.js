@@ -27,6 +27,7 @@ import {
   filterWasteBalanceRecords,
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
+import { computePeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
@@ -48,6 +49,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
@@ -541,7 +543,8 @@ const classifyAndPersistResult = async ({
   version,
   reportsService,
   organisationsRepository,
-  overseasSitesRepository
+  overseasSitesRepository,
+  packagingRecyclingNotesRepository
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
@@ -575,10 +578,26 @@ const classifyAndPersistResult = async ({
     submittedRowStatesByKey
   })
 
+  const periodsRequiringResubmission =
+    await computePeriodsRequiringResubmission({
+      closedPeriods: loadsByReportingPeriod?.closedPeriods ?? [],
+      periodicReports,
+      wasteRecords: wasteRecords ?? [],
+      registration,
+      overseasSites,
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      reportsService,
+      packagingRecyclingNotesRepository,
+      overseasSitesRepository
+    })
+
   await persistValidationResult({
     issues,
     loads,
-    loadsByReportingPeriod,
+    loadsByReportingPeriod: loadsByReportingPeriod
+      ? { ...loadsByReportingPeriod, periodsRequiringResubmission }
+      : null,
     meta,
     status,
     summaryLog,
@@ -599,6 +618,7 @@ const classifyAndPersistResult = async ({
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -611,6 +631,7 @@ export const createSummaryLogsValidator = ({
   ledgerRepository,
   reportsService,
   overseasSitesRepository,
+  packagingRecyclingNotesRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -681,7 +702,8 @@ export const createSummaryLogsValidator = ({
       version,
       reportsService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      packagingRecyclingNotesRepository
     })
 
     logger.info({
