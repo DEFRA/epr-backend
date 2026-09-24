@@ -114,7 +114,7 @@ export const readMarketInsightsFigures = async ({
   )
   const common = { ...shared, logger, year, months, now }
 
-  const [wasteBalance, scopeTables, outstandingReturns] = await Promise.all([
+  const [wasteBalance, scopes, outstandingReturns] = await Promise.all([
     buildWasteBalanceTable({
       ...common,
       ledgerRepository,
@@ -122,19 +122,13 @@ export const readMarketInsightsFigures = async ({
       overseasSitesRepository
     }),
     Promise.all(
-      SCOPES.map((scope) =>
-        buildReprocessorExporterTable({ ...common, regulator: scope.regulator })
-      )
+      SCOPES.map(async ({ name, regulator }) => ({
+        name,
+        table: await buildReprocessorExporterTable({ ...common, regulator })
+      }))
     ),
     buildOutstandingReturnsTable(common)
   ])
 
-  return {
-    wasteBalance,
-    scopes: scopeTables.map((table, index) => ({
-      name: SCOPES[index].name,
-      table
-    })),
-    outstandingReturns
-  }
+  return { wasteBalance, scopes, outstandingReturns }
 }
