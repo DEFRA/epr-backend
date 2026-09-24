@@ -7,6 +7,7 @@ import { testPersistProjectionBehaviour } from './contract/persistProjection.con
 import { testUpdateStatusBehaviour } from './contract/update-status.contract.js'
 import { testUpdateWatermarkBehaviour } from './contract/update-watermark.contract.js'
 import { testPrnNumberUniqueness } from './contract/prn-number-uniqueness.contract.js'
+import { testSumTonnageByAccreditationBehaviour } from './contract/sum-tonnage-by-accreditation.contract.js'
 
 export const testPackagingRecyclingNotesRepositoryContract = (
   repositoryFactory
@@ -21,5 +22,6 @@ export const testPackagingRecyclingNotesRepositoryContract = (
     testUpdateStatusBehaviour(repositoryFactory)
     testUpdateWatermarkBehaviour(repositoryFactory)
     testPrnNumberUniqueness(repositoryFactory)
+    testSumTonnageByAccreditationBehaviour(repositoryFactory)
   })
 }
