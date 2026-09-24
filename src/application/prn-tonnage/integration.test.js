@@ -18,6 +18,8 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
@@ -149,6 +151,8 @@ describe('aggregatePrnTonnage - Integration', () => {
   let ledgerRepository
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let organisationsRepository
+  /** @type {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} */
+  let prnRepository
 
   beforeEach(
     async (
@@ -159,6 +163,9 @@ describe('aggregatePrnTonnage - Integration', () => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
       organisationsRepository = (await createOrganisationsRepository(db))()
+      prnRepository = (await createPackagingRecyclingNotesRepository(db, []))(
+        createMockLogger()
+      )
       await db.collection(PRNS_COLLECTION).deleteMany({})
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
       await ledgerRepository.deleteAllInLedger(ledgerId)
@@ -181,7 +188,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -205,7 +212,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -219,7 +226,11 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(
-      aggregatePrnTonnage(db, organisationsRepository, ledgerRepository)
+      aggregatePrnTonnage(
+        prnRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
     ).rejects.toThrow('Unreportable PRN tonnage row for accreditation acc-1')
   })
 
@@ -233,7 +244,11 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(
-      aggregatePrnTonnage(db, organisationsRepository, ledgerRepository)
+      aggregatePrnTonnage(
+        prnRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
     ).rejects.toThrow('Unreportable PRN tonnage row for accreditation acc-1')
   })
 
@@ -246,7 +261,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -310,7 +325,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -336,7 +351,11 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(
-      aggregatePrnTonnage(db, organisationsRepository, ledgerRepository)
+      aggregatePrnTonnage(
+        prnRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
     ).rejects.toThrow('Unreportable PRN tonnage row for accreditation acc-1')
   })
 
@@ -349,7 +368,11 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(
-      aggregatePrnTonnage(db, organisationsRepository, ledgerRepository)
+      aggregatePrnTonnage(
+        prnRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
     ).rejects.toThrow('registration.reprocessingType')
   })
 
@@ -365,7 +388,11 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     await expect(
-      aggregatePrnTonnage(db, organisationsRepository, ledgerRepository)
+      aggregatePrnTonnage(
+        prnRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
     ).rejects.toThrow('registrationNumber')
   })
 
@@ -388,7 +415,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -424,7 +451,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -449,7 +476,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -470,7 +497,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -489,7 +516,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )
@@ -512,7 +539,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
     const { rows } = await aggregatePrnTonnage(
-      db,
+      prnRepository,
       organisationsRepository,
       ledgerRepository
     )

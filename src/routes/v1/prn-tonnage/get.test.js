@@ -6,10 +6,11 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
-import { createMockDb } from '#test/mock-db.js'
+import { createMockPackagingRecyclingNotesRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 vi.mock(
   '#application/prn-tonnage/aggregate-prn-tonnage.js',
@@ -20,12 +21,16 @@ vi.mock(
 )
 
 describe('getPrnTonnage route handler', () => {
-  const mockDb = createMockDb()
+  const packagingRecyclingNotesRepository =
+    createMockPackagingRecyclingNotesRepository()
   const mockLogger = createMockLogger()
 
   const buildRequest = () =>
-    /** @type {HapiRequest} */ (
-      /** @type {unknown} */ ({ db: mockDb, logger: mockLogger })
+    /** @type {HapiRequest & { packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository }} */ (
+      /** @type {unknown} */ ({
+        packagingRecyclingNotesRepository,
+        logger: mockLogger
+      })
     )
 
   const mockCode = vi.fn()

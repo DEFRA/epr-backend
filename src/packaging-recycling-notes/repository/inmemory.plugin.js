@@ -16,7 +16,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
+/** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -106,6 +106,34 @@ const enforceMonotonicWatermark = (
     throwWatermarkRegression(id, storedEventNumber, incomingEventNumber, logger)
   }
 }
+
+/**
+ * @param {Storage} storage
+ * @returns {(params: SumTonnageByAccreditationParams) => Promise<AccreditationTonnage[]>}
+ */
+const performSumTonnageByAccreditation =
+  (storage) =>
+  async ({ excludeStatuses }) => {
+    /** @type {Map<string, AccreditationTonnage>} */
+    const totals = new Map()
+    for (const prn of storage.values()) {
+      const status = prn.status.currentStatus
+      if (excludeStatuses.includes(status)) {
+        continue
+      }
+      const id = {
+        organisationId: prn.organisation.id,
+        registrationId: prn.registrationId,
+        accreditationId: prn.accreditation.id
+      }
+      const key = JSON.stringify(id)
+      const total = totals.get(key) ?? { id, tonnageByStatus: {} }
+      total.tonnageByStatus[status] =
+        (total.tonnageByStatus[status] ?? 0) + prn.tonnage
+      totals.set(key, total)
+    }
+    return [...totals.values()]
+  }
 
 /**
  * @param {Storage} storage
@@ -385,6 +413,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
+    sumTonnageByAccreditation: performSumTonnageByAccreditation(storage),
     updateStatus: performUpdateStatus(storage, logger),
     updateWatermark: performUpdateWatermark(storage, logger),
     persistProjection: performPersistProjection(storage, logger)

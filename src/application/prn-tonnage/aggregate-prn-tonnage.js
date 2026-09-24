@@ -10,6 +10,7 @@ import { indexAccreditations } from '#waste-balances/application/accreditation-i
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
 
 /**
@@ -21,18 +22,6 @@ import { indexAccreditations } from '#waste-balances/application/accreditation-i
  * @typedef {Object} RegistrationProcessingTypes
  * @property {WasteProcessingTypeValue} wasteProcessingType
  * @property {ReprocessingType} [reprocessingType]
- */
-
-/**
- * One accreditation's PRN tonnages, as the pipeline groups them by id.
- *
- * @typedef {Object} GroupedRow
- * @property {{ organisationId: string, registrationId: string, accId: string }} _id
- * @property {number} awaitingAuthorisationTonnage
- * @property {number} awaitingAcceptanceTonnage
- * @property {number} awaitingCancellationTonnage
- * @property {number} acceptedTonnage
- * @property {number} cancelledTonnage
  */
 
 /**
@@ -54,8 +43,6 @@ import { indexAccreditations } from '#waste-balances/application/accreditation-i
  * @property {number} cancelledTonnage
  */
 
-const PRNS_COLLECTION = 'packaging-recycling-notes'
-
 export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_INPUT: 'REPROCESSOR_INPUT',
   REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
@@ -67,59 +54,34 @@ const ZERO_BALANCES = Object.freeze({
   availableWasteBalance: 0
 })
 
-const AWAITING_AUTHORISATION_STATUSES = [PRN_STATUS.AWAITING_AUTHORISATION]
-const AWAITING_ACCEPTANCE_STATUSES = [PRN_STATUS.AWAITING_ACCEPTANCE]
-const AWAITING_CANCELLATION_STATUSES = [PRN_STATUS.AWAITING_CANCELLATION]
-const ACCEPTED_STATUSES = [PRN_STATUS.ACCEPTED]
-const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
+/**
+ * Deleted and discarded PRNs never counted towards anything, so they are left
+ * out of the totals. Drafts are totalled but reported in no column, so an
+ * accreditation with only drafts still gets a row of zeros.
+ */
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
-const STATUS_FIELD = 'status.currentStatus'
-const STATUS_PATH = `$${STATUS_FIELD}`
 
-/** @param {string[]} statuses */
-const buildStatusTonnageAccumulator = (statuses) => ({
-  $sum: {
-    $cond: [{ $in: [STATUS_PATH, statuses] }, '$tonnage', 0]
-  }
-})
-
-const buildMatchStage = () => ({
-  $match: {
-    [STATUS_FIELD]: {
-      $nin: EXCLUDED_STATUSES
-    }
-  }
+/**
+ * The report's tonnage columns, each fed by one current PRN status.
+ */
+const TONNAGE_COLUMNS = Object.freeze({
+  awaitingAuthorisationTonnage: PRN_STATUS.AWAITING_AUTHORISATION,
+  awaitingAcceptanceTonnage: PRN_STATUS.AWAITING_ACCEPTANCE,
+  awaitingCancellationTonnage: PRN_STATUS.AWAITING_CANCELLATION,
+  acceptedTonnage: PRN_STATUS.ACCEPTED,
+  cancelledTonnage: PRN_STATUS.CANCELLED
 })
 
 /**
- * Keyed on ids alone. A PRN carries the organisation name, accreditation number
- * and material as they stood when it was raised, so keying on those would split
- * one accreditation across rows the ledger — keyed on ids — cannot tell apart,
- * reporting its balance once per row. The names come from the organisations
- * repository instead.
+ * @param {AccreditationTonnage['tonnageByStatus']} tonnageByStatus
  */
-const buildGroupStage = () => ({
-  $group: {
-    _id: {
-      organisationId: '$organisation.id',
-      registrationId: '$registrationId',
-      accId: '$accreditation.id'
-    },
-    awaitingAuthorisationTonnage: buildStatusTonnageAccumulator(
-      AWAITING_AUTHORISATION_STATUSES
-    ),
-    awaitingAcceptanceTonnage: buildStatusTonnageAccumulator(
-      AWAITING_ACCEPTANCE_STATUSES
-    ),
-    awaitingCancellationTonnage: buildStatusTonnageAccumulator(
-      AWAITING_CANCELLATION_STATUSES
-    ),
-    acceptedTonnage: buildStatusTonnageAccumulator(ACCEPTED_STATUSES),
-    cancelledTonnage: buildStatusTonnageAccumulator(CANCELLED_STATUSES)
-  }
-})
-
-const buildAggregationPipeline = () => [buildMatchStage(), buildGroupStage()]
+const toTonnageColumns = (tonnageByStatus) =>
+  Object.fromEntries(
+    Object.entries(TONNAGE_COLUMNS).map(([column, status]) => [
+      column,
+      tonnageByStatus[status] ?? 0
+    ])
+  )
 
 /**
  * What a row must carry to be reportable. A row missing its ledger id would be
@@ -173,14 +135,14 @@ const heldBy = (context, { organisationId, registrationId }) =>
     : undefined
 
 /**
- * Joins a grouped PRN row to the organisation, registration and accreditation
- * it was raised under.
+ * Joins an accreditation's PRN totals to the organisation, registration and
+ * accreditation they were raised under.
  *
- * @param {GroupedRow} groupedRow
+ * @param {AccreditationTonnage} accreditationTonnage
  * @param {AccreditationContext | undefined} context
  */
 const toAggregatedRow = (
-  { _id: { organisationId, registrationId, accId }, ...tonnages },
+  { id: { organisationId, registrationId, accreditationId }, tonnageByStatus },
   context
 ) => {
   const resolved = heldBy(context, { organisationId, registrationId })
@@ -192,12 +154,12 @@ const toAggregatedRow = (
     accreditationNumber: resolved?.accreditation.accreditationNumber,
     material: resolved?.accreditation.material,
     tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
-    ledgerId: { organisationId, registrationId, accreditationId: accId },
+    ledgerId: { organisationId, registrationId, accreditationId },
     registration: {
       wasteProcessingType: resolved?.registration.wasteProcessingType,
       reprocessingType: resolved?.registration.reprocessingType ?? undefined
     },
-    ...tonnages
+    ...toTonnageColumns(tonnageByStatus)
   }
 }
 
@@ -294,29 +256,31 @@ const buildReportRow = async (
  * Test organisations' PRNs are left out of the report, as they are from the
  * other accreditation-level reports built on the same index.
  *
- * @param {import('mongodb').Db} db
+ * @param {PackagingRecyclingNotesRepository} prnRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
 export const aggregatePrnTonnage = async (
-  db,
+  prnRepository,
   organisationsRepository,
   ledgerRepository
 ) => {
-  const [groupedRows, organisations] = await Promise.all([
-    db
-      .collection(PRNS_COLLECTION)
-      .aggregate(buildAggregationPipeline())
-      .toArray(),
+  const [accreditationTonnages, organisations] = await Promise.all([
+    prnRepository.sumTonnageByAccreditation({
+      excludeStatuses: EXCLUDED_STATUSES
+    }),
     organisationsRepository.findAll()
   ])
 
   const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
-  const aggregatedRows = /** @type {GroupedRow[]} */ (groupedRows)
-    .filter(({ _id: { accId } }) => !testOrgAccreditationIds.has(accId))
-    .map((groupedRow) => {
-      const row = toAggregatedRow(groupedRow, index.get(groupedRow._id.accId))
+  const aggregatedRows = accreditationTonnages
+    .filter(({ id }) => !testOrgAccreditationIds.has(id.accreditationId))
+    .map((accreditationTonnage) => {
+      const row = toAggregatedRow(
+        accreditationTonnage,
+        index.get(accreditationTonnage.id.accreditationId)
+      )
       return /** @type {AggregatedRow} */ (
         Joi.attempt(
           row,
