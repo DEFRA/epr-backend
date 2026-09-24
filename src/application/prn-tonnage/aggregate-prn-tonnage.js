@@ -253,8 +253,7 @@ const buildReportRow = async (
 })
 
 /**
- * Test organisations' PRNs are left out of the report, as they are from the
- * other accreditation-level reports built on the same index.
+ * Test organisations' PRNs are reported like any other.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
  * @param {OrganisationsRepository} organisationsRepository
@@ -272,10 +271,11 @@ export const aggregatePrnTonnage = async (
     organisationsRepository.findAll()
   ])
 
-  const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
+  const { index } = indexAccreditations(organisations, {
+    includeTestOrganisations: true
+  })
 
   const aggregatedRows = accreditationTonnages
-    .filter(({ id }) => !testOrgAccreditationIds.has(id.accreditationId))
     .map((accreditationTonnage) => {
       const row = toAggregatedRow(
         accreditationTonnage,

@@ -252,7 +252,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ).rejects.toThrow('Unreportable PRN tonnage row for accreditation acc-1')
   })
 
-  it('excludes prns raised by test organisations', async () => {
+  it('includes prns raised by test organisations', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne({ ...organisationWithRegistration(), orgId: testOrgId })
@@ -266,7 +266,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ledgerRepository
     )
 
-    expect(rows).toStrictEqual([])
+    expect(rows).toStrictEqual([expectedRow({ orgId: String(testOrgId) })])
   })
 
   it('sorts rows by organisation name, then accreditation number', async () => {
