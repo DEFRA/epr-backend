@@ -30,7 +30,7 @@ import {
 } from './cells.js'
 
 /** @import ExcelJS from 'exceljs' */
-/** @import { Frame } from './cells.js' */
+/** @import { TabContents } from './cells.js' */
 
 const OUTSTANDING_RETURNS_FIRST_ROW = 7
 // A month title, the headings, a row per band, then a blank row.
@@ -43,7 +43,7 @@ const OUTSTANDING_RETURNS_MONTH_COLUMNS = 3
  * alongside the last.
  *
  * @param {ExcelJS.Workbook} workbook
- * @param {Frame} frame
+ * @param {TabContents} contents
  */
 export const addOutstandingReturns = (workbook, { months, period, asOf }) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.OUTSTANDING_RETURNS)

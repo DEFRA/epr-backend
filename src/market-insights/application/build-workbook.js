@@ -22,14 +22,14 @@ import { addWasteBalance } from './workbook/waste-balance-tab.js'
  * @param {WorkbookContents} contents
  * @returns {ExcelJS.Workbook}
  */
-const renderWorkbook = ({ months, now }) => {
-  const frame = frameOf({ months, now })
+const renderWorkbook = ({ figures, months, now }) => {
+  const contents = { ...frameOf({ months, now }), figures }
   const workbook = new ExcelJS.Workbook()
-  addWasteBalance(workbook, frame)
+  addWasteBalance(workbook, contents)
   addKey(workbook)
-  addOutstandingReturns(workbook, frame)
-  addNationFigures(workbook, WORKSHEET_NAME.UK, frame)
-  addNationFigures(workbook, WORKSHEET_NAME.ENGLAND, frame)
+  addOutstandingReturns(workbook, contents)
+  addNationFigures(workbook, WORKSHEET_NAME.UK, contents)
+  addNationFigures(workbook, WORKSHEET_NAME.ENGLAND, contents)
   return workbook
 }
 

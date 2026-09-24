@@ -27,7 +27,7 @@ import {
 } from './cells.js'
 
 /** @import ExcelJS from 'exceljs' */
-/** @import { Frame } from './cells.js' */
+/** @import { TabContents } from './cells.js' */
 
 const WASTE_BALANCE_NOTE_LAST_ROW = 3
 const WASTE_BALANCE_BAND_ROW = WASTE_BALANCE_NOTE_LAST_ROW + 1
@@ -35,7 +35,7 @@ const WASTE_BALANCE_HEADING_ROW = 9
 
 /**
  * @param {ExcelJS.Workbook} workbook
- * @param {Frame} frame
+ * @param {TabContents} contents
  */
 export const addWasteBalance = (workbook, { months, period, asOf }) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.WASTE_BALANCE)

@@ -1,13 +1,7 @@
-import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import {
   JANUARY_TO_JUNE_2026,
-  PUBLISHED_EXTRACTION,
+  readParamsFor,
   readPublishedWorkbook,
   reread,
   sheet
@@ -22,18 +16,7 @@ describe('building the published market insights workbook', () => {
 
   beforeAll(async () => {
     generated = await reread(
-      await buildMarketInsightsWorkbook({
-        ledgerRepository: createInMemoryLedgerRepository()(),
-        summaryLogRowStatesRepository:
-          createInMemorySummaryLogRowStatesRepository()(),
-        organisationsRepository: createInMemoryOrganisationsRepository([])(),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-        reportsRepository: createInMemoryReportsRepository()(),
-        logger: createMockLogger(),
-        year: 2026,
-        months: JANUARY_TO_JUNE_2026,
-        now: PUBLISHED_EXTRACTION
-      })
+      await buildMarketInsightsWorkbook(readParamsFor(JANUARY_TO_JUNE_2026))
     )
   })
 

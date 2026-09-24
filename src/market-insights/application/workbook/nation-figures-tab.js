@@ -27,7 +27,7 @@ import {
 } from './cells.js'
 
 /** @import ExcelJS from 'exceljs' */
-/** @import { Frame } from './cells.js' */
+/** @import { TabContents } from './cells.js' */
 
 const NATION_FIGURES_FIRST_ROW = 2
 // A title, the headings, a row per material, the grand total, then a blank row.
@@ -44,7 +44,7 @@ const NATION_FIGURES_WIDTH = Math.max(
  *
  * @param {ExcelJS.Workbook} workbook
  * @param {string} name
- * @param {Frame} frame
+ * @param {TabContents} contents
  */
 export const addNationFigures = (workbook, name, { months }) => {
   const worksheet = workbook.addWorksheet(name)

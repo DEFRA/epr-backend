@@ -4,6 +4,7 @@ import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { MarketInsightsFigures } from '#market-insights/application/read-figures.js' */
 /** @import { Note } from '#market-insights/domain/published-workbook-text.js' */
 
 export const monthName = new Intl.DateTimeFormat('en-GB', {
@@ -37,6 +38,13 @@ export const firstDayOf = (yearMonth) =>
  * @property {YearMonth[]} months
  * @property {string} period - 'January to June 2026', or 'January 2026' for one month
  * @property {string} asOf
+ */
+
+/**
+ * What a tab that carries figures is given: its frame, and the one reading of
+ * the register that every tab is filled from.
+ *
+ * @typedef {Frame & { figures: MarketInsightsFigures }} TabContents
  */
 
 /**

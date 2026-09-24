@@ -2,7 +2,18 @@ import path from 'node:path'
 import ExcelJS from 'exceljs'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { createMockLogger } from '#test/mock-logger.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { frameOf } from './cells.js'
+
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
+/** @import { TabContents } from './cells.js' */
 
 const PUBLISHED_WORKBOOK = path.join(
   import.meta.dirname,
@@ -21,10 +32,35 @@ export const JANUARY_TO_JUNE_2026 = [
 // The published file says its data is as of 10 August 2026.
 export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
-/** The frame the published workbook was laid out for. */
-export const PUBLISHED_FRAME = frameOf({
-  months: JANUARY_TO_JUNE_2026,
+/**
+ * What the shared read is given for a period, over an empty register, taken
+ * when the published figures were.
+ *
+ * @param {YearMonth[]} months
+ * @returns {ReadMarketInsightsFiguresParams}
+ */
+export const readParamsFor = (months) => ({
+  ledgerRepository: createInMemoryLedgerRepository()(),
+  summaryLogRowStatesRepository:
+    createInMemorySummaryLogRowStatesRepository()(),
+  organisationsRepository: createInMemoryOrganisationsRepository([])(),
+  overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+  reportsRepository: createInMemoryReportsRepository()(),
+  logger: createMockLogger(),
+  year: 2026,
+  months,
   now: PUBLISHED_EXTRACTION
+})
+
+/**
+ * What a tab that carries figures is given for a period.
+ *
+ * @param {YearMonth[]} months
+ * @returns {Promise<TabContents>}
+ */
+export const contentsFor = async (months) => ({
+  ...frameOf({ months, now: PUBLISHED_EXTRACTION }),
+  figures: await readMarketInsightsFigures(readParamsFor(months))
 })
 
 // Where the published file has no average to show, it puts a dash. That is a
