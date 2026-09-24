@@ -30,7 +30,7 @@ export const reportCountSchema = Joi.object({
   submitted: Joi.number().integer().min(0).required()
 })
 
-const operatorCount = Joi.number().integer().min(0).required()
+export const operatorCount = Joi.number().integer().min(0).required()
 
 /**
  * The two operator counts every figure carries, as keys to add to its schema.

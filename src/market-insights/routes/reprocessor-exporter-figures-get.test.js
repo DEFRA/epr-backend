@@ -188,7 +188,19 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       totalRevenue: 0,
       averagePricePerTonne: 0,
       operatorCount: 0,
-      submittingOperatorCount: 0
+      submittingOperatorCount: 0,
+      contributingOperatorCounts: {
+        tonnageReceived: 0,
+        tonnageRecycled: 0,
+        tonnageReceivedButNotRecycled: 0,
+        tonnageSentOnTotal: 0,
+        tonnageSentOnToReprocessor: 0,
+        tonnageSentOnToExporter: 0,
+        tonnageSentOnToOtherFacilities: 0,
+        revisedTonnageIssued: 0,
+        totalRevenue: 0,
+        averagePricePerTonne: 0
+      }
     })
     expect(
       january.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
@@ -207,7 +219,22 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
       totalRevenue: 0,
       averagePricePerTonne: 0,
       operatorCount: 0,
-      submittingOperatorCount: 0
+      submittingOperatorCount: 0,
+      contributingOperatorCounts: {
+        tonnageReceived: 0,
+        tonnageExported: 0,
+        tonnageReceivedButNotExported: 0,
+        tonnageStopped: 0,
+        tonnageRefused: 0,
+        tonnageRepatriated: 0,
+        tonnageSentOnTotal: 0,
+        tonnageSentOnToReprocessor: 0,
+        tonnageSentOnToExporter: 0,
+        tonnageSentOnToOtherFacilities: 0,
+        revisedTonnageIssued: 0,
+        totalRevenue: 0,
+        averagePricePerTonne: 0
+      }
     })
   })
 })
