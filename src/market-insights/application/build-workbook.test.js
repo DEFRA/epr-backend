@@ -31,48 +31,6 @@ const JANUARY_TO_JUNE_2026 = [
 // The published file says its data is as of 10 August 2026.
 const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
-/**
- * The hand-made slips on one published tab that a generated workbook does
- * not repeat.
- *
- * @typedef {Object} PublishedSlips
- * @property {number[]} [extraBlankRows] - rows a generated tab does not have
- * @property {Record<string, { published: string, generated: string }>} [corrections] - by published address
- */
-
-const JANUARY_WITH_TRAILING_SPACE = {
-  published: 'January ',
-  generated: 'January'
-}
-const GLASS_RE_MELT_WITH_HYPHEN = {
-  published: 'Glass- re-melt',
-  generated: 'Glass re-melt'
-}
-
-/**
- * Every slip, by tab, so that any other difference fails.
- *
- * @type {Record<string, PublishedSlips>}
- */
-const PUBLISHED_SLIPS = {
-  [WORKSHEET_NAME.UK]: {
-    extraBlankRows: [49, 211, 235, 259],
-    corrections: { A7: GLASS_RE_MELT_WITH_HYPHEN }
-  },
-  [WORKSHEET_NAME.ENGLAND]: {
-    extraBlankRows: [49, 211, 235, 259],
-    corrections: { A7: GLASS_RE_MELT_WITH_HYPHEN }
-  },
-  [WORKSHEET_NAME.OUTSTANDING_RETURNS]: {
-    corrections: Object.fromEntries(
-      [7, 14, 21, 28, 35, 42, 49].map((row) => [
-        `A${row}`,
-        JANUARY_WITH_TRAILING_SPACE
-      ])
-    )
-  }
-}
-
 // Where the published file has no average to show, it puts a dash. That is a
 // figure, and figures are not this workbook's yet.
 const NO_FIGURE = '-'
@@ -96,31 +54,12 @@ const textOf = (cell) => {
 }
 
 /**
- * Where a cell's address falls once a tab's extra blank rows are closed up.
- *
- * @param {string} address - e.g. 'A258'
- * @param {number[]} extraBlankRows
- * @returns {string}
- */
-const closeUp = (address, extraBlankRows) => {
-  const column = address.replace(/\d+$/, '')
-  const row = Number(address.slice(column.length))
-  const shift = extraBlankRows.filter((blank) => blank < row).length
-  return `${column}${row - shift}`
-}
-
-/**
- * Every cell on a tab that is not a figure, keyed by where a generated tab
- * has it.
+ * Every cell on a tab that is not a figure, by address.
  *
  * @param {ExcelJS.Worksheet} worksheet
- * @param {PublishedSlips} [slips] - the extra blank rows are checked to be blank, then closed up
  * @returns {Record<string, ExcelJS.Cell>}
  */
-const wordingCellsOf = (worksheet, { extraBlankRows = [] } = {}) => {
-  for (const blank of extraBlankRows) {
-    expect(worksheet.getRow(blank).hasValues).toBe(false)
-  }
+const wordingCellsOf = (worksheet) => {
   /** @type {Record<string, ExcelJS.Cell>} */
   const cells = {}
   worksheet.eachRow((row) => {
@@ -130,7 +69,7 @@ const wordingCellsOf = (worksheet, { extraBlankRows = [] } = {}) => {
         typeof cell.value !== 'number' &&
         cell.value !== NO_FIGURE
       ) {
-        cells[closeUp(cell.address, extraBlankRows)] = cell
+        cells[cell.address] = cell
       }
     })
   })
@@ -152,19 +91,9 @@ const eachOf = (cells, read) =>
  * Every cell's text on a tab that is not a figure.
  *
  * @param {ExcelJS.Worksheet} worksheet
- * @param {PublishedSlips} [slips] - checked to be as listed, then undone
  * @returns {Record<string, string>}
  */
-const wordingOf = (worksheet, slips = {}) => {
-  const { corrections = {} } = slips
-  return eachOf(wordingCellsOf(worksheet, slips), (cell) => {
-    const correction = corrections[cell.address]
-    if (correction) {
-      expect(textOf(cell)).toBe(correction.published)
-    }
-    return correction?.generated ?? textOf(cell)
-  })
-}
+const wordingOf = (worksheet) => eachOf(wordingCellsOf(worksheet), textOf)
 
 /**
  * @param {ExcelJS.Cell} cell
@@ -184,18 +113,9 @@ const wrappedIn = (cells) =>
 
 /**
  * @param {ExcelJS.Worksheet} worksheet
- * @param {PublishedSlips} [slips]
  * @returns {string[]}
  */
-const mergesOf = (worksheet, { extraBlankRows = [] } = {}) =>
-  worksheet.model.merges
-    .map((range) =>
-      range
-        .split(':')
-        .map((address) => closeUp(address, extraBlankRows))
-        .join(':')
-    )
-    .sort()
+const mergesOf = (worksheet) => [...worksheet.model.merges].sort()
 
 /**
  * @param {ExcelJS.Workbook} workbook
@@ -259,7 +179,7 @@ describe('building the published market insights workbook', () => {
   const TABS = Object.values(WORKSHEET_NAME)
 
   it.each(TABS)('words the %j tab cell for cell as published', (name) => {
-    const expected = wordingOf(sheet(published, name), PUBLISHED_SLIPS[name])
+    const expected = wordingOf(sheet(published, name))
 
     expect(Object.keys(expected)).not.toHaveLength(0)
     expect(wordingOf(sheet(generated, name))).toEqual(expected)
@@ -267,19 +187,14 @@ describe('building the published market insights workbook', () => {
 
   it.each(TABS)('sets the %j tab in the published typeface', (name) => {
     expect(eachOf(wordingCellsOf(sheet(generated, name)), typefaceOf)).toEqual(
-      eachOf(
-        wordingCellsOf(sheet(published, name), PUBLISHED_SLIPS[name]),
-        typefaceOf
-      )
+      eachOf(wordingCellsOf(sheet(published, name)), typefaceOf)
     )
   })
 
   it.each(TABS)(
     'wraps every cell on the %j tab that the published file wraps',
     (name) => {
-      const expected = wrappedIn(
-        wordingCellsOf(sheet(published, name), PUBLISHED_SLIPS[name])
-      )
+      const expected = wrappedIn(wordingCellsOf(sheet(published, name)))
 
       expect(expected).not.toHaveLength(0)
       expect(wrappedIn(wordingCellsOf(sheet(generated, name)))).toEqual(
@@ -290,7 +205,7 @@ describe('building the published market insights workbook', () => {
 
   it.each(TABS)("merges the %j tab's cells as published", (name) => {
     expect(mergesOf(sheet(generated, name))).toEqual(
-      mergesOf(sheet(published, name), PUBLISHED_SLIPS[name])
+      mergesOf(sheet(published, name))
     )
   })
 
