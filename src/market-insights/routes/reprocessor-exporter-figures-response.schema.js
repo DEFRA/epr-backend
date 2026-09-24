@@ -7,18 +7,12 @@ import {
 import {
   byReportingMonth,
   metaSchema,
+  operatorCountKeys,
   recordOf,
   reportCountSchema
 } from './response-schema.js'
 
 const figure = Joi.number()
-
-const operatorCount = Joi.number().integer().min(0).required()
-
-const operatorCounts = {
-  operatorCount,
-  submittingOperatorCount: operatorCount
-}
 
 const TOTALLED_MEASURES = [
   'tonnageReceived',
@@ -52,13 +46,13 @@ const byAccreditationType = (measures) =>
       [...measures, ...REPROCESSOR_ONLY],
       figure
     )
-      .keys(operatorCounts)
+      .keys(operatorCountKeys)
       .required(),
     [WASTE_PROCESSING_TYPE.EXPORTER]: recordOf(
       [...measures, ...EXPORTER_ONLY],
       figure
     )
-      .keys(operatorCounts)
+      .keys(operatorCountKeys)
       .required()
   })
 

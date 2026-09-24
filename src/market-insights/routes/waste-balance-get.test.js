@@ -152,10 +152,15 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
       totalCredited: 0,
       eligibleForWasteBalance: 0,
       sentOnDeductions: 0,
-      netCredit: 0
+      netCredit: 0,
+      operatorCount: 0,
+      submittingOperatorCount: 0
     })
-    expect(body.data.period).toEqual({
-      reports: { expected: 0, submitted: 0 }
-    })
+    expect(body.data.period.reports).toEqual({ expected: 0, submitted: 0 })
+    expect(
+      body.data.period.operatorCounts[MATERIAL.WOOD][
+        WASTE_PROCESSING_TYPE.EXPORTER
+      ]
+    ).toEqual({ operatorCount: 0, submittingOperatorCount: 0 })
   })
 })
