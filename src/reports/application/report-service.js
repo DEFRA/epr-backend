@@ -35,6 +35,7 @@ import {
  * @typedef {object} ReportsService
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
  * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
 
 /**
@@ -49,7 +50,10 @@ export const createReportsService = (reportsRepository) => ({
       since
     ),
 
-  findPeriodicReports: (params) => reportsRepository.findPeriodicReports(params)
+  findPeriodicReports: (params) =>
+    reportsRepository.findPeriodicReports(params),
+
+  findReportById: (reportId) => reportsRepository.findReportById(reportId)
 })
 
 /**

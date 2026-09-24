@@ -34,6 +34,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {ReportsService} reportsService
  * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} packagingRecyclingNotesRepository
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
 
@@ -87,6 +88,7 @@ export const validateSummaryLogCommand = {
       ledgerRepository,
       reportsService,
       overseasSitesRepository,
+      packagingRecyclingNotesRepository,
       summaryLogExtractor
     } = deps
 
@@ -98,6 +100,7 @@ export const validateSummaryLogCommand = {
       ledgerRepository,
       reportsService,
       overseasSitesRepository,
+      packagingRecyclingNotesRepository,
       summaryLogExtractor
     })
 

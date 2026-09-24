@@ -371,7 +371,10 @@ describe('Submission and placeholder tests', () => {
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
         ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+        packagingRecyclingNotesRepository: /** @type {any} */ ({
+          findByAccreditation: async () => []
+        })
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -808,7 +811,10 @@ describe('Submission and placeholder tests', () => {
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
         ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+        packagingRecyclingNotesRepository: /** @type {any} */ ({
+          findByAccreditation: async () => []
+        })
       })
       server = await createTestServer({
         repositories: {
