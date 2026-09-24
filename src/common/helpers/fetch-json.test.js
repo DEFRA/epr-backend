@@ -5,19 +5,19 @@ import { assertPresent } from '#test/type-helpers.js'
 
 const MOCK_TRACE_ID = 'mock-trace-id-1'
 
+vi.mock(import('@defra/hapi-tracing'), () => ({
+  withTraceId: vi.fn((headerName, headers = {}) => {
+    headers[headerName] = 'mock-trace-id-1'
+    return headers
+  }),
+  tracing: {
+    plugin: {}
+  }
+}))
+
 describe('#fetchJson', () => {
   const url = 'http://mock-url'
   const originalFetch = global.fetch
-
-  vi.mock(import('@defra/hapi-tracing'), () => ({
-    withTraceId: vi.fn((headerName, headers = {}) => {
-      headers[headerName] = 'mock-trace-id-1'
-      return headers
-    }),
-    tracing: {
-      plugin: {}
-    }
-  }))
 
   afterEach(() => {
     global.fetch = originalFetch
