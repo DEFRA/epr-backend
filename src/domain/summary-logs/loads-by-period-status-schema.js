@@ -43,7 +43,7 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
  */
 
 /**
- * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[], periodsRequiringResubmission?: PeriodRef[] }} LoadsByReportingPeriod
  */
 
 // Per-bucket cap on listed rows. The producer (period-status.js) truncates to
@@ -94,10 +94,16 @@ const periodStatusByChangeSchema = Joi.object({
 export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
   closedPeriodLoads: periodStatusByChangeSchema.required(),
-  // The closed (submitted) periods this upload added or adjusted loads in, which
-  // drive resubmission detection at submit time. Optional with a default so logs
+  // The closed (submitted) periods this upload added or adjusted loads in.
+  // Retained for rollback; superseded as the resubmission signal by
+  // periodsRequiringResubmission. Optional with a default so logs written
+  // before this field existed still validate on read.
+  closedPeriods: Joi.array().items(periodRefSchema).default([]),
+  // The subset of closed periods whose reported figures actually changed, so
+  // resubmission is genuinely required. Computed at validation time and read by
+  // submit.js to drive the resubmission flag. Optional with a default so logs
   // written before this field existed still validate on read.
-  closedPeriods: Joi.array().items(periodRefSchema).default([])
+  periodsRequiringResubmission: Joi.array().items(periodRefSchema).default([])
 })
 
 // Every bucket carries an empty rows list, matching the uniform populated
@@ -112,5 +118,6 @@ const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 export const emptyLoadsByReportingPeriod = () => ({
   openPeriodLoads: emptyChange(),
   closedPeriodLoads: emptyChange(),
-  closedPeriods: []
+  closedPeriods: [],
+  periodsRequiringResubmission: []
 })
