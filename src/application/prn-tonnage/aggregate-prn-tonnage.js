@@ -164,23 +164,12 @@ const toAggregatedRow = (
 }
 
 /**
- * @param {string} a
- * @param {string} b
- */
-const compareStrings = (a, b) => {
-  if (a < b) {
-    return -1
-  }
-  return a > b ? 1 : 0
-}
-
-/**
  * @param {AggregatedRow} a
  * @param {AggregatedRow} b
  */
 const byOrganisationThenAccreditation = (a, b) =>
-  compareStrings(a.organisationName, b.organisationName) ||
-  compareStrings(a.accreditationNumber, b.accreditationNumber)
+  a.organisationName.localeCompare(b.organisationName) ||
+  a.accreditationNumber.localeCompare(b.accreditationNumber)
 
 /**
  * Mirrors `processingTypeFor`
