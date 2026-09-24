@@ -23,31 +23,31 @@ export const WORKSHEET_NAME = Object.freeze({
  */
 
 /** @type {Note} */
-export const WASTE_BALANCE_NOTE = {
+export const WASTE_BALANCE_NOTE = Object.freeze({
   lead: 'Note',
   body:
     ': This data shows tonnage credited to accredited operators’ waste balances during the reporting month, which is made up of issued PRNs and tonnage eligible for PRN/PERN issuance. Further details are available on this GOV.UK page.\n' +
     '\n' +
     'Data for ‘glass-other’ has not been split by accreditation type to protect commercial data for identifiable operators.'
-}
+})
 
 /** @type {Note} */
-export const OUTSTANDING_RETURNS_NOTE = {
+export const OUTSTANDING_RETURNS_NOTE = Object.freeze({
   lead: 'Note',
   body:
     ': The tonnage bands below refer to the volume of packaging waste, by material category, that a reprocessor or exporter is accredited to issue PRNs or PERNs against.\n' +
     'For reprocessors, this is the tonnage band of packaging waste which the operator is accredited to issue PRNs against at the specified reprocessing site. \n' +
     'For exporters, this is the tonnage band of packaging waste which the operator is accredited to issue PERNs against for the specified waste exports.'
-}
+})
 
 /** @type {Note} */
-export const NATION_FIGURES_NOTE = {
+export const NATION_FIGURES_NOTE = Object.freeze({
   lead: 'Notes',
   body:
     ': Figures are provisional and based on submissions received to date, some data is still expected and will be included in future updates.\n' +
     '\n' +
     'Reported PRN/PERN revenue submissions currently include some anomalies and remain subject to correction by re-submissions from operators.'
-}
+})
 
 /**
  * @param {string} extractionDate - e.g. '10 August 2026'
@@ -140,8 +140,14 @@ const PRN_COLUMNS = Object.freeze([
 ])
 
 /**
+ * @typedef {{ title: string, columns: readonly string[] }} FiguresTable
+ */
+
+/**
  * The four tables each month gets on the UK and England tabs, in the order
  * they appear down the tab.
+ *
+ * @type {Readonly<Record<'reprocessor' | 'exporter' | 'reprocessorPrn' | 'exporterPern', FiguresTable>>}
  */
 export const NATION_FIGURES_TABLES = Object.freeze({
   reprocessor: {

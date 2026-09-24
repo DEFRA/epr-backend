@@ -11,6 +11,9 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { buildMarketInsightsWorkbook } from './build-workbook.js'
 
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
+
 const PUBLISHED_WORKBOOK = path.join(
   import.meta.dirname,
   '../../data/fixtures/market-insights/published-january-to-june-2026.xlsx'
@@ -29,22 +32,43 @@ const JANUARY_TO_JUNE_2026 = [
 const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
 /**
- * The published file's labels are kept by hand, and carry slips a generated
- * workbook does not repeat. Each is listed here so that any other difference
- * fails.
+ * The hand-made slips on one published tab that a generated workbook does
+ * not repeat.
+ *
+ * @typedef {Object} PublishedSlips
+ * @property {number[]} [extraBlankRows] - rows a generated tab does not have
+ * @property {Record<string, { published: string, generated: string }>} [corrections] - by published address
+ */
+
+const JANUARY_WITH_TRAILING_SPACE = {
+  published: 'January ',
+  generated: 'January'
+}
+const GLASS_RE_MELT_WITH_HYPHEN = {
+  published: 'Glass- re-melt',
+  generated: 'Glass re-melt'
+}
+
+/**
+ * Every slip, by tab, so that any other difference fails.
+ *
+ * @type {Record<string, PublishedSlips>}
  */
 const PUBLISHED_SLIPS = {
-  /** @type {Record<string, number[]>} per tab, blank rows a generated tab does not have */
-  extraBlankRows: {
-    [WORKSHEET_NAME.UK]: [49, 211, 235, 259],
-    [WORKSHEET_NAME.ENGLAND]: [49, 211, 235, 259]
+  [WORKSHEET_NAME.UK]: {
+    extraBlankRows: [49, 211, 235, 259],
+    corrections: { A7: GLASS_RE_MELT_WITH_HYPHEN }
   },
-  /** @type {Record<string, Record<string, string>>} per tab, published cells as a generated tab words them */
-  corrections: {
-    [WORKSHEET_NAME.UK]: { A7: 'Glass re-melt' },
-    [WORKSHEET_NAME.ENGLAND]: { A7: 'Glass re-melt' },
-    [WORKSHEET_NAME.OUTSTANDING_RETURNS]: Object.fromEntries(
-      [7, 14, 21, 28, 35, 42, 49].map((row) => [`A${row}`, 'January'])
+  [WORKSHEET_NAME.ENGLAND]: {
+    extraBlankRows: [49, 211, 235, 259],
+    corrections: { A7: GLASS_RE_MELT_WITH_HYPHEN }
+  },
+  [WORKSHEET_NAME.OUTSTANDING_RETURNS]: {
+    corrections: Object.fromEntries(
+      [7, 14, 21, 28, 35, 42, 49].map((row) => [
+        `A${row}`,
+        JANUARY_WITH_TRAILING_SPACE
+      ])
     )
   }
 }
@@ -72,13 +96,16 @@ const textOf = (cell) => {
  * Every cell on a tab that is not a figure, keyed by its address.
  *
  * @param {ExcelJS.Worksheet} worksheet
- * @param {{ extraBlankRows?: number[], corrections?: Record<string, string> }} [slips]
+ * @param {PublishedSlips} [slips] - checked to be as listed, then undone
  * @returns {Record<string, string>}
  */
 const wordingOf = (
   worksheet,
   { extraBlankRows = [], corrections = {} } = {}
 ) => {
+  for (const blank of extraBlankRows) {
+    expect(worksheet.getRow(blank).hasValues).toBe(false)
+  }
   /** @type {Record<string, string>} */
   const wording = {}
   worksheet.eachRow((row) => {
@@ -93,8 +120,12 @@ const wordingOf = (
       const rowNumber = Number(cell.row)
       const shift = extraBlankRows.filter((blank) => blank < rowNumber).length
       const column = cell.address.replace(/\d+$/, '')
+      const correction = corrections[cell.address]
+      if (correction) {
+        expect(textOf(cell)).toBe(correction.published)
+      }
       wording[`${column}${rowNumber - shift}`] =
-        corrections[cell.address] ?? textOf(cell)
+        correction?.generated ?? textOf(cell)
     })
   })
   return wording
@@ -110,6 +141,10 @@ const reread = async (workbook) => {
   return file
 }
 
+/**
+ * @param {YearMonth[]} [months]
+ * @param {Partial<ReadMarketInsightsFiguresParams>} [overrides]
+ */
 const build = async (months = JANUARY_TO_JUNE_2026, overrides = {}) =>
   reread(
     await buildMarketInsightsWorkbook({
@@ -158,12 +193,10 @@ describe('building the published market insights workbook', () => {
   it.each(Object.values(WORKSHEET_NAME))(
     'words the %j tab cell for cell as published',
     (name) => {
-      expect(wordingOf(sheet(generated, name))).toEqual(
-        wordingOf(sheet(published, name), {
-          extraBlankRows: PUBLISHED_SLIPS.extraBlankRows[name],
-          corrections: PUBLISHED_SLIPS.corrections[name]
-        })
-      )
+      const expected = wordingOf(sheet(published, name), PUBLISHED_SLIPS[name])
+
+      expect(Object.keys(expected)).not.toHaveLength(0)
+      expect(wordingOf(sheet(generated, name))).toEqual(expected)
     }
   )
 

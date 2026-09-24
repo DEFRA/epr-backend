@@ -202,7 +202,9 @@ const NATION_FIGURES_FIRST_ROW = 2
 const NATION_FIGURES_TABLE_ROWS = 2 + NATION_FIGURES_MATERIALS.length + 1 + 1
 // A month title over two tables.
 const NATION_FIGURES_SECTION_ROWS = 1 + 2 * NATION_FIGURES_TABLE_ROWS
-const NATION_FIGURES_LAST_COLUMN = 'K'
+const NATION_FIGURES_WIDTH = Math.max(
+  ...Object.values(NATION_FIGURES_TABLES).map(({ columns }) => columns.length)
+)
 
 /**
  * Every month's tonnage tables, then every month's PRN and PERN tables, each
@@ -214,7 +216,7 @@ const NATION_FIGURES_LAST_COLUMN = 'K'
  */
 const addNationFigures = (workbook, name, { months }) => {
   const worksheet = workbook.addWorksheet(name)
-  worksheet.mergeCells(`A1:${NATION_FIGURES_LAST_COLUMN}1`)
+  worksheet.mergeCells(1, 1, 1, NATION_FIGURES_WIDTH)
   worksheet.getCell('A1').value = richNote(NATION_FIGURES_NOTE)
 
   const { reprocessor, exporter, reprocessorPrn, exporterPern } =
@@ -230,7 +232,7 @@ const addNationFigures = (workbook, name, { months }) => {
   sections.forEach(({ month, tables }, sectionIndex) => {
     const top =
       NATION_FIGURES_FIRST_ROW + NATION_FIGURES_SECTION_ROWS * sectionIndex
-    worksheet.mergeCells(`A${top}:${NATION_FIGURES_LAST_COLUMN}${top}`)
+    worksheet.mergeCells(top, 1, top, NATION_FIGURES_WIDTH)
     worksheet.getCell(top, 1).value = monthAndYear.format(firstDayOf(month))
 
     tables.forEach(({ title, columns }, tableIndex) => {
@@ -246,7 +248,14 @@ const addNationFigures = (workbook, name, { months }) => {
 }
 
 /**
- * @param {{ figures: MarketInsightsFigures, months: YearMonth[], now: Date }} params
+ * @typedef {Object} WorkbookContents
+ * @property {MarketInsightsFigures} figures
+ * @property {YearMonth[]} months
+ * @property {Date} now - when the figures were taken
+ */
+
+/**
+ * @param {WorkbookContents} contents
  * @returns {ExcelJS.Workbook}
  */
 const renderWorkbook = ({ months, now }) => {
