@@ -253,8 +253,8 @@ const writeKeyFields = (worksheet, row, cells) => {
 const addKey = (workbook) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.KEY)
   setWidths(worksheet, COLUMN_WIDTHS.KEY)
-  for (const [row, height] of Object.entries(KEY_ROW_HEIGHTS)) {
-    worksheet.getRow(Number(row)).height = height
+  for (const [number, height] of Object.entries(KEY_ROW_HEIGHTS)) {
+    worksheet.getRow(Number(number)).height = height
   }
 
   write(
