@@ -31,6 +31,10 @@ export const WASTE_BALANCE_NOTE = Object.freeze({
     'Data for ‘glass-other’ has not been split by accreditation type to protect commercial data for identifiable operators.'
 })
 
+/** The "GOV.UK page" the waste balance note links to. */
+export const WASTE_BALANCE_GUIDANCE =
+  'https://www.gov.uk/government/publications/packaging-waste-data-reported-by-reprocessors-and-exporters'
+
 /** @type {Note} */
 export const OUTSTANDING_RETURNS_NOTE = Object.freeze({
   lead: 'Note',

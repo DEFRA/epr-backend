@@ -3,6 +3,32 @@ import ExcelJS from 'exceljs'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import {
+  BAND,
+  COLUMN_WIDTHS,
+  COUNT,
+  DATA_AS_OF,
+  FIGURE,
+  GRAND_TOTAL_FIGURE,
+  GRAND_TOTAL_LABEL,
+  INTRODUCTION,
+  KEY_DESCRIPTION,
+  KEY_FIELD,
+  KEY_HEADING,
+  KEY_INTRODUCTION,
+  KEY_ROW_HEIGHTS,
+  LABEL,
+  NATION_FIGURES_HEADING,
+  NATION_FIGURES_MONTH,
+  NATION_FIGURES_TITLE,
+  NOTE,
+  OUTSTANDING_RETURNS_HEADING,
+  OUTSTANDING_RETURNS_MONTH,
+  ROW_HEIGHT,
+  TONNAGE_BAND,
+  WASTE_BALANCE_HEADING,
+  WASTE_BALANCE_MONTH_HEADING
+} from '#market-insights/domain/published-workbook-style.js'
+import {
   dataAsOf,
   GRAND_TOTAL,
   KEY_ROWS,
@@ -16,6 +42,7 @@ import {
   TONNAGE_BANDS,
   UNSUBMITTED_COUNT,
   WASTE_BALANCE_COLUMNS,
+  WASTE_BALANCE_GUIDANCE,
   WASTE_BALANCE_NOTE,
   WASTE_BALANCE_ROWS,
   wasteBalanceIntroduction,
@@ -69,30 +96,57 @@ const periodOf = (months) => {
  */
 const richNote = ({ lead, body }) => ({
   richText: [
-    { font: { bold: true, italic: true }, text: lead },
-    { font: { italic: true }, text: body }
+    { font: { ...NOTE.font, bold: true }, text: lead },
+    { font: NOTE.font, text: body }
   ]
 })
 
 /**
- * @param {ExcelJS.Worksheet} worksheet
- * @param {number} row
- * @param {readonly (string | Date)[]} values - written from column A onwards
+ * @param {ExcelJS.Cell} cell
+ * @param {ExcelJS.CellValue} value
+ * @param {Partial<ExcelJS.Style>} style
  */
-const writeRow = (worksheet, row, values) => {
-  values.forEach((value, index) => {
-    worksheet.getCell(row, index + 1).value = value
-  })
+const write = (cell, value, style) => {
+  cell.value = value
+  cell.style = { ...style }
 }
 
 /**
  * @param {ExcelJS.Worksheet} worksheet
- * @param {number} firstRow
- * @param {readonly string[]} labels - written down column A
+ * @param {number} row
+ * @param {number} firstColumn
+ * @param {readonly (string | Date | null)[]} values - written rightwards
+ * @param {Partial<ExcelJS.Style>} style
  */
-const writeColumn = (worksheet, firstRow, labels) => {
-  labels.forEach((label, index) => {
-    worksheet.getCell(firstRow + index, 1).value = label
+const writeRow = (worksheet, row, firstColumn, values, style) => {
+  values.forEach((value, index) => {
+    write(worksheet.getCell(row, firstColumn + index), value, style)
+  })
+}
+
+/**
+ * Styles cells that hold no text: the bands, and the figure cells, ready for
+ * their figures.
+ *
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {number} row
+ * @param {number} firstColumn
+ * @param {number} count
+ * @param {Partial<ExcelJS.Style>} style
+ */
+const styleEmptyCells = (worksheet, row, firstColumn, count, style) => {
+  const empty = Array.from({ length: count }, () => null)
+  writeRow(worksheet, row, firstColumn, empty, style)
+}
+
+/**
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {readonly number[]} widths
+ * @param {number} [firstColumn]
+ */
+const setWidths = (worksheet, widths, firstColumn = 1) => {
+  widths.forEach((width, index) => {
+    worksheet.getColumn(firstColumn + index).width = width
   })
 }
 
@@ -111,43 +165,94 @@ const WASTE_BALANCE_HEADING_ROW = 9
  */
 const addWasteBalance = (workbook, { months, period, asOf }) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.WASTE_BALANCE)
-  worksheet.mergeCells('A1:M3')
-  worksheet.getCell('A1').value = richNote(WASTE_BALANCE_NOTE)
-  worksheet.getCell('A5').value = wasteBalanceIntroduction(period)
-  worksheet.getCell('A7').value = asOf
+  setWidths(worksheet, COLUMN_WIDTHS.WASTE_BALANCE)
 
-  writeRow(worksheet, WASTE_BALANCE_HEADING_ROW, [
-    ...WASTE_BALANCE_COLUMNS.before,
-    ...months.map(firstDayOf),
-    ...WASTE_BALANCE_COLUMNS.after
-  ])
-  months.forEach((_, index) => {
-    worksheet.getCell(
-      WASTE_BALANCE_HEADING_ROW,
-      WASTE_BALANCE_COLUMNS.before.length + index + 1
-    ).numFmt = 'mmm-yy'
-  })
+  const { lead, body } = WASTE_BALANCE_NOTE
+  write(
+    worksheet.getCell('A1'),
+    { text: `${lead}${body}`, hyperlink: WASTE_BALANCE_GUIDANCE },
+    NOTE
+  )
+  worksheet.mergeCells('A1:M3')
+  worksheet.getRow(3).height = ROW_HEIGHT.WASTE_BALANCE_NOTE
+  write(worksheet.getCell('A4'), null, BAND)
+  worksheet.mergeCells('A4:M4')
+  worksheet.getRow(4).height = ROW_HEIGHT.WASTE_BALANCE_BAND
+  write(worksheet.getCell('A5'), wasteBalanceIntroduction(period), INTRODUCTION)
+  write(worksheet.getCell('A7'), asOf, DATA_AS_OF)
+
+  const { before, after } = WASTE_BALANCE_COLUMNS
+  writeRow(
+    worksheet,
+    WASTE_BALANCE_HEADING_ROW,
+    1,
+    before,
+    WASTE_BALANCE_HEADING
+  )
+  writeRow(
+    worksheet,
+    WASTE_BALANCE_HEADING_ROW,
+    before.length + 1,
+    [...months.map(firstDayOf), ...after],
+    WASTE_BALANCE_MONTH_HEADING
+  )
+  worksheet.getRow(WASTE_BALANCE_HEADING_ROW).height =
+    ROW_HEIGHT.WASTE_BALANCE_HEADINGS
+
   WASTE_BALANCE_ROWS.forEach((labels, index) => {
-    writeRow(worksheet, WASTE_BALANCE_HEADING_ROW + 1 + index, labels)
+    const row = WASTE_BALANCE_HEADING_ROW + 1 + index
+    writeRow(worksheet, row, 1, labels, LABEL)
+    styleEmptyCells(
+      worksheet,
+      row,
+      labels.length + 1,
+      months.length + after.length,
+      FIGURE
+    )
   })
 }
 
 /** Columns A, B, D and E: the Key's two halves, with C between them. */
 const KEY_COLUMNS = [1, 2, 4, 5]
+const KEY_INTRODUCTION_ROW = 2
+const KEY_HEADING_ROWS = [4, 5, 18, 19]
+const KEY_BAND_ROW = 17
+
+/**
+ * @param {number} row
+ * @param {number} index - of the cell among the row's four
+ * @returns {Partial<ExcelJS.Style>}
+ */
+const keyStyleOf = (row, index) => {
+  if (row === KEY_INTRODUCTION_ROW) {
+    return KEY_INTRODUCTION
+  }
+  if (KEY_HEADING_ROWS.includes(row)) {
+    return KEY_HEADING
+  }
+  return index % 2 === 0 ? KEY_FIELD : KEY_DESCRIPTION
+}
 
 /**
  * @param {ExcelJS.Workbook} workbook
  */
 const addKey = (workbook) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.KEY)
+  setWidths(worksheet, COLUMN_WIDTHS.KEY)
+  for (const [row, height] of Object.entries(KEY_ROW_HEIGHTS)) {
+    worksheet.getRow(Number(row)).height = height
+  }
+
   for (const [row, cells] of KEY_ROWS) {
-    cells.forEach((text, index) => {
-      if (text !== null) {
-        worksheet.getCell(row, KEY_COLUMNS[index]).value = text
+    KEY_COLUMNS.forEach((column, index) => {
+      const text = cells[index] ?? null
+      if (text !== null || KEY_HEADING_ROWS.includes(row)) {
+        write(worksheet.getCell(row, column), text, keyStyleOf(row, index))
       }
     })
   }
-  for (const range of ['A4:B4', 'D4:E4', 'A18:B18', 'D18:E18']) {
+  write(worksheet.getCell(KEY_BAND_ROW, 1), null, BAND)
+  for (const range of ['A4:B4', 'D4:E4', 'A17:E17', 'A18:B18', 'D18:E18']) {
     worksheet.mergeCells(range)
   }
 }
@@ -167,31 +272,68 @@ const OUTSTANDING_RETURNS_MONTH_COLUMNS = 3
  */
 const addOutstandingReturns = (workbook, { months, period, asOf }) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.OUTSTANDING_RETURNS)
+  months.forEach((_, index) => {
+    setWidths(
+      worksheet,
+      COLUMN_WIDTHS.OUTSTANDING_RETURNS_MONTH,
+      1 + OUTSTANDING_RETURNS_MONTH_COLUMNS * index
+    )
+  })
+
+  write(worksheet.getCell('A1'), richNote(OUTSTANDING_RETURNS_NOTE), NOTE)
   worksheet.mergeCells('A1:M1')
-  worksheet.getCell('A1').value = richNote(OUTSTANDING_RETURNS_NOTE)
-  worksheet.getCell('A3').value = {
-    richText: [
-      { text: outstandingReturnsIntroduction(period) },
-      {
-        font: { bold: true, italic: true },
-        text: OUTSTANDING_RETURNS_INTRODUCTION_SUFFIX
-      }
-    ]
-  }
-  worksheet.getCell('A5').value = asOf
+  worksheet.getRow(1).height = ROW_HEIGHT.OUTSTANDING_RETURNS_NOTE
+  styleEmptyCells(
+    worksheet,
+    2,
+    1,
+    OUTSTANDING_RETURNS_MONTH_COLUMNS * months.length - 1,
+    BAND
+  )
+  worksheet.getRow(2).height = ROW_HEIGHT.OUTSTANDING_RETURNS_BAND
+  write(
+    worksheet.getCell('A3'),
+    {
+      richText: [
+        { text: outstandingReturnsIntroduction(period) },
+        {
+          font: { ...INTRODUCTION.font, italic: true },
+          text: OUTSTANDING_RETURNS_INTRODUCTION_SUFFIX
+        }
+      ]
+    },
+    INTRODUCTION
+  )
+  write(worksheet.getCell('A5'), asOf, DATA_AS_OF)
 
   OUTSTANDING_RETURNS_MATERIALS.forEach((material, materialIndex) => {
     const top =
       OUTSTANDING_RETURNS_FIRST_ROW +
       OUTSTANDING_RETURNS_BLOCK_ROWS * materialIndex
+    worksheet.getRow(top).height = ROW_HEIGHT.OUTSTANDING_RETURNS_MONTH
+    for (let row = top + 1; row < top + 2 + TONNAGE_BANDS.length; row++) {
+      worksheet.getRow(row).height = ROW_HEIGHT.OUTSTANDING_RETURNS_ROW
+    }
+
     months.forEach((month, monthIndex) => {
       const column = 1 + OUTSTANDING_RETURNS_MONTH_COLUMNS * monthIndex
+      write(
+        worksheet.getCell(top, column),
+        monthName.format(firstDayOf(month)),
+        OUTSTANDING_RETURNS_MONTH
+      )
       worksheet.mergeCells(top, column, top, column + 1)
-      worksheet.getCell(top, column).value = monthName.format(firstDayOf(month))
-      worksheet.getCell(top + 1, column).value = material
-      worksheet.getCell(top + 1, column + 1).value = UNSUBMITTED_COUNT
+      writeRow(
+        worksheet,
+        top + 1,
+        column,
+        [material, UNSUBMITTED_COUNT],
+        OUTSTANDING_RETURNS_HEADING
+      )
       TONNAGE_BANDS.forEach((band, bandIndex) => {
-        worksheet.getCell(top + 2 + bandIndex, column).value = band
+        const row = top + 2 + bandIndex
+        write(worksheet.getCell(row, column), band, TONNAGE_BAND)
+        styleEmptyCells(worksheet, row, column + 1, 1, COUNT)
       })
     })
   })
@@ -216,8 +358,10 @@ const NATION_FIGURES_WIDTH = Math.max(
  */
 const addNationFigures = (workbook, name, { months }) => {
   const worksheet = workbook.addWorksheet(name)
+  setWidths(worksheet, COLUMN_WIDTHS.NATION_FIGURES)
+  write(worksheet.getCell('A1'), richNote(NATION_FIGURES_NOTE), NOTE)
   worksheet.mergeCells(1, 1, 1, NATION_FIGURES_WIDTH)
-  worksheet.getCell('A1').value = richNote(NATION_FIGURES_NOTE)
+  worksheet.getRow(1).height = ROW_HEIGHT.NATION_FIGURES_NOTE
 
   const { reprocessor, exporter, reprocessorPrn, exporterPern } =
     NATION_FIGURES_TABLES
@@ -232,17 +376,27 @@ const addNationFigures = (workbook, name, { months }) => {
   sections.forEach(({ month, tables }, sectionIndex) => {
     const top =
       NATION_FIGURES_FIRST_ROW + NATION_FIGURES_SECTION_ROWS * sectionIndex
+    write(
+      worksheet.getCell(top, 1),
+      monthAndYear.format(firstDayOf(month)),
+      NATION_FIGURES_MONTH
+    )
     worksheet.mergeCells(top, 1, top, NATION_FIGURES_WIDTH)
-    worksheet.getCell(top, 1).value = monthAndYear.format(firstDayOf(month))
 
     tables.forEach(({ title, columns }, tableIndex) => {
       const tableTop = top + 1 + NATION_FIGURES_TABLE_ROWS * tableIndex
-      worksheet.getCell(tableTop, 1).value = title
-      writeRow(worksheet, tableTop + 1, columns)
-      writeColumn(worksheet, tableTop + 2, [
-        ...NATION_FIGURES_MATERIALS,
-        GRAND_TOTAL
-      ])
+      const figureCount = columns.length - 1
+      write(worksheet.getCell(tableTop, 1), title, NATION_FIGURES_TITLE)
+      writeRow(worksheet, tableTop + 1, 1, columns, NATION_FIGURES_HEADING)
+      worksheet.getRow(tableTop + 1).height = ROW_HEIGHT.NATION_FIGURES_HEADINGS
+      NATION_FIGURES_MATERIALS.forEach((material, materialIndex) => {
+        const row = tableTop + 2 + materialIndex
+        write(worksheet.getCell(row, 1), material, LABEL)
+        styleEmptyCells(worksheet, row, 2, figureCount, FIGURE)
+      })
+      const totalRow = tableTop + 2 + NATION_FIGURES_MATERIALS.length
+      write(worksheet.getCell(totalRow, 1), GRAND_TOTAL, GRAND_TOTAL_LABEL)
+      styleEmptyCells(worksheet, totalRow, 2, figureCount, GRAND_TOTAL_FIGURE)
     })
   })
 }
@@ -275,10 +429,10 @@ const renderWorkbook = ({ months, now }) => {
 
 /**
  * The published market insights workbook, "UK Accredited Packaging Waste
- * Monthly Aggregated Data", laid out as the regulators publish it.
+ * Monthly Aggregated Data", laid out and styled as the regulators publish it.
  *
- * Its figures come from the same one read of the register that the export
- * archive takes, so every tab agrees with every other and with the archive.
+ * It reads its figures with the same function the export archive uses, so
+ * every tab is taken from one reading of the register.
  *
  * @param {ReadMarketInsightsFiguresParams} params
  * @returns {Promise<ExcelJS.Workbook>}

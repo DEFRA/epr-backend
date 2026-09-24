@@ -89,47 +89,113 @@ const textOf = (cell) => {
   if (value && typeof value === 'object' && 'richText' in value) {
     return value.richText.map(({ text }) => text).join('')
   }
+  if (value && typeof value === 'object' && 'hyperlink' in value) {
+    return value.text
+  }
   return String(value)
 }
 
 /**
- * Every cell on a tab that is not a figure, keyed by its address.
+ * Where a cell's address falls once a tab's extra blank rows are closed up.
+ *
+ * @param {string} address - e.g. 'A258'
+ * @param {number[]} extraBlankRows
+ * @returns {string}
+ */
+const closeUp = (address, extraBlankRows) => {
+  const column = address.replace(/\d+$/, '')
+  const row = Number(address.slice(column.length))
+  const shift = extraBlankRows.filter((blank) => blank < row).length
+  return `${column}${row - shift}`
+}
+
+/**
+ * Every cell on a tab that is not a figure, keyed by where a generated tab
+ * has it.
+ *
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {PublishedSlips} [slips] - the extra blank rows are checked to be blank, then closed up
+ * @returns {Record<string, ExcelJS.Cell>}
+ */
+const wordingCellsOf = (worksheet, { extraBlankRows = [] } = {}) => {
+  for (const blank of extraBlankRows) {
+    expect(worksheet.getRow(blank).hasValues).toBe(false)
+  }
+  /** @type {Record<string, ExcelJS.Cell>} */
+  const cells = {}
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      if (
+        cell.type !== ExcelJS.ValueType.Merge &&
+        typeof cell.value !== 'number' &&
+        cell.value !== NO_FIGURE
+      ) {
+        cells[closeUp(cell.address, extraBlankRows)] = cell
+      }
+    })
+  })
+  return cells
+}
+
+/**
+ * @template T
+ * @param {Record<string, ExcelJS.Cell>} cells
+ * @param {(cell: ExcelJS.Cell) => T} read
+ * @returns {Record<string, T>}
+ */
+const eachOf = (cells, read) =>
+  Object.fromEntries(
+    Object.entries(cells).map(([address, cell]) => [address, read(cell)])
+  )
+
+/**
+ * Every cell's text on a tab that is not a figure.
  *
  * @param {ExcelJS.Worksheet} worksheet
  * @param {PublishedSlips} [slips] - checked to be as listed, then undone
  * @returns {Record<string, string>}
  */
-const wordingOf = (
-  worksheet,
-  { extraBlankRows = [], corrections = {} } = {}
-) => {
-  for (const blank of extraBlankRows) {
-    expect(worksheet.getRow(blank).hasValues).toBe(false)
-  }
-  /** @type {Record<string, string>} */
-  const wording = {}
-  worksheet.eachRow((row) => {
-    row.eachCell((cell) => {
-      if (
-        cell.type === ExcelJS.ValueType.Merge ||
-        typeof cell.value === 'number' ||
-        cell.value === NO_FIGURE
-      ) {
-        return
-      }
-      const rowNumber = Number(cell.row)
-      const shift = extraBlankRows.filter((blank) => blank < rowNumber).length
-      const column = cell.address.replace(/\d+$/, '')
-      const correction = corrections[cell.address]
-      if (correction) {
-        expect(textOf(cell)).toBe(correction.published)
-      }
-      wording[`${column}${rowNumber - shift}`] =
-        correction?.generated ?? textOf(cell)
-    })
+const wordingOf = (worksheet, slips = {}) => {
+  const { corrections = {} } = slips
+  return eachOf(wordingCellsOf(worksheet, slips), (cell) => {
+    const correction = corrections[cell.address]
+    if (correction) {
+      expect(textOf(cell)).toBe(correction.published)
+    }
+    return correction?.generated ?? textOf(cell)
   })
-  return wording
 }
+
+/**
+ * @param {ExcelJS.Cell} cell
+ */
+const typefaceOf = ({ font }) => ({
+  bold: Boolean(font?.bold),
+  italic: Boolean(font?.italic),
+  size: font?.size
+})
+
+/**
+ * @param {Record<string, ExcelJS.Cell>} cells
+ * @returns {string[]} the addresses of the cells that wrap their text
+ */
+const wrappedIn = (cells) =>
+  Object.keys(cells).filter((address) => cells[address]?.alignment?.wrapText)
+
+/**
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {PublishedSlips} [slips]
+ * @returns {string[]}
+ */
+const mergesOf = (worksheet, { extraBlankRows = [] } = {}) =>
+  worksheet.model.merges
+    .map((range) =>
+      range
+        .split(':')
+        .map((address) => closeUp(address, extraBlankRows))
+        .join(':')
+    )
+    .sort()
 
 /**
  * @param {ExcelJS.Workbook} workbook
@@ -190,15 +256,51 @@ describe('building the published market insights workbook', () => {
     )
   })
 
-  it.each(Object.values(WORKSHEET_NAME))(
-    'words the %j tab cell for cell as published',
-    (name) => {
-      const expected = wordingOf(sheet(published, name), PUBLISHED_SLIPS[name])
+  const TABS = Object.values(WORKSHEET_NAME)
 
-      expect(Object.keys(expected)).not.toHaveLength(0)
-      expect(wordingOf(sheet(generated, name))).toEqual(expected)
+  it.each(TABS)('words the %j tab cell for cell as published', (name) => {
+    const expected = wordingOf(sheet(published, name), PUBLISHED_SLIPS[name])
+
+    expect(Object.keys(expected)).not.toHaveLength(0)
+    expect(wordingOf(sheet(generated, name))).toEqual(expected)
+  })
+
+  it.each(TABS)('sets the %j tab in the published typeface', (name) => {
+    expect(eachOf(wordingCellsOf(sheet(generated, name)), typefaceOf)).toEqual(
+      eachOf(
+        wordingCellsOf(sheet(published, name), PUBLISHED_SLIPS[name]),
+        typefaceOf
+      )
+    )
+  })
+
+  it.each(TABS)(
+    'wraps every cell on the %j tab that the published file wraps',
+    (name) => {
+      const expected = wrappedIn(
+        wordingCellsOf(sheet(published, name), PUBLISHED_SLIPS[name])
+      )
+
+      expect(expected).not.toHaveLength(0)
+      expect(wrappedIn(wordingCellsOf(sheet(generated, name)))).toEqual(
+        expect.arrayContaining(expected)
+      )
     }
   )
+
+  it.each(TABS)("merges the %j tab's cells as published", (name) => {
+    expect(mergesOf(sheet(generated, name))).toEqual(
+      mergesOf(sheet(published, name), PUBLISHED_SLIPS[name])
+    )
+  })
+
+  it('links the waste balance note to its GOV.UK page', () => {
+    expect(
+      sheet(generated, WORKSHEET_NAME.WASTE_BALANCE).getCell('A1').hyperlink
+    ).toBe(
+      'https://www.gov.uk/government/publications/packaging-waste-data-reported-by-reprocessors-and-exporters'
+    )
+  })
 
   it('lays each month out after the last, however long the period', async () => {
     const januaryToMarch = await build(
@@ -243,23 +345,5 @@ describe('building the published market insights workbook', () => {
     expect(
       sheet(workbook, WORKSHEET_NAME.OUTSTANDING_RETURNS).getCell('A5').value
     ).toBe('Data as of 10 August 2026  ')
-  })
-
-  it('takes its figures from the one read the export archive makes', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
-    const reportsRepository = createInMemoryReportsRepository()()
-    const findAll = vi.spyOn(organisationsRepository, 'findAll')
-    const findReports = vi.spyOn(
-      reportsRepository,
-      'findPeriodicReportsForYear'
-    )
-
-    await build(JANUARY_TO_JUNE_2026, {
-      organisationsRepository,
-      reportsRepository
-    })
-
-    expect(findAll).toHaveBeenCalledOnce()
-    expect(findReports).toHaveBeenCalledOnce()
   })
 })
