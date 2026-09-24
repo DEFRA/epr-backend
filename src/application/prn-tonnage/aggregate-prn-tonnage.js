@@ -4,10 +4,13 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
 
 /**
  * The registration's own processing-type fields, the same shape
@@ -21,8 +24,19 @@ import {
  */
 
 /**
- * A row the pipeline resolved all the way down the hierarchy, ready to be
- * reported.
+ * One accreditation's PRN tonnages, as the pipeline groups them by id.
+ *
+ * @typedef {Object} GroupedRow
+ * @property {{ organisationId: string, registrationId: string, accId: string }} _id
+ * @property {number} awaitingAuthorisationTonnage
+ * @property {number} awaitingAcceptanceTonnage
+ * @property {number} awaitingCancellationTonnage
+ * @property {number} acceptedTonnage
+ * @property {number} cancelledTonnage
+ */
+
+/**
+ * A row resolved all the way down the hierarchy, ready to be reported.
  *
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
@@ -41,7 +55,6 @@ import {
  */
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
-const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
 export const REGISTRATION_TYPE = Object.freeze({
   REPROCESSOR_INPUT: 'REPROCESSOR_INPUT',
@@ -62,61 +75,6 @@ const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
 const STATUS_FIELD = 'status.currentStatus'
 const STATUS_PATH = `$${STATUS_FIELD}`
-const GROUPED_ORGANISATION_ID = '$_id.organisationId'
-const GROUPED_REGISTRATION_ID = '$_id.registrationId'
-const GROUPED_ACCREDITATION_ID = '$_id.accId'
-
-/** @param {string} field */
-const fromOrganisation = (field) => ({ $first: `$orgLookup.${field}` })
-
-const buildAccreditedRegistrationStage = () => ({
-  $addFields: {
-    accreditedRegistration: {
-      $first: {
-        $filter: {
-          input: { $ifNull: ['$registrations', []] },
-          as: 'registration',
-          cond: { $eq: ['$$registration.id', '$$regId'] }
-        }
-      }
-    }
-  }
-})
-
-const buildOrganisationLookupStage = () => ({
-  $lookup: {
-    from: ORGANISATIONS_COLLECTION,
-    let: {
-      organisationId: { $toObjectId: GROUPED_ORGANISATION_ID },
-      regId: GROUPED_REGISTRATION_ID,
-      accId: GROUPED_ACCREDITATION_ID
-    },
-    pipeline: [
-      { $match: { $expr: { $eq: ['$_id', '$$organisationId'] } } },
-      buildAccreditedRegistrationStage(),
-      { $unwind: '$accreditations' },
-      {
-        $match: {
-          $expr: { $eq: ['$accreditations.id', '$$accId'] }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          orgId: '$orgId',
-          organisationName: '$companyDetails.name',
-          accreditationNumber: '$accreditations.accreditationNumber',
-          material: '$accreditations.material',
-          tonnageBand: '$accreditations.prnIssuance.tonnageBand',
-          registrationNumber: '$accreditedRegistration.registrationNumber',
-          wasteProcessingType: '$accreditedRegistration.wasteProcessingType',
-          reprocessingType: '$accreditedRegistration.reprocessingType'
-        }
-      }
-    ],
-    as: 'orgLookup'
-  }
-})
 
 /** @param {string[]} statuses */
 const buildStatusTonnageAccumulator = (statuses) => ({
@@ -137,8 +95,8 @@ const buildMatchStage = () => ({
  * Keyed on ids alone. A PRN carries the organisation name, accreditation number
  * and material as they stood when it was raised, so keying on those would split
  * one accreditation across rows the ledger — keyed on ids — cannot tell apart,
- * reporting its balance once per row. The names come from the organisation
- * lookup instead.
+ * reporting its balance once per row. The names come from the organisations
+ * repository instead.
  */
 const buildGroupStage = () => ({
   $group: {
@@ -161,60 +119,7 @@ const buildGroupStage = () => ({
   }
 })
 
-const buildAddFieldsStage = () => ({
-  $addFields: {
-    orgId: { $toString: fromOrganisation('orgId') },
-    organisationName: fromOrganisation('organisationName'),
-    registrationNumber: fromOrganisation('registrationNumber'),
-    accreditationNumber: fromOrganisation('accreditationNumber'),
-    material: fromOrganisation('material'),
-    tonnageBand: fromOrganisation('tonnageBand'),
-    ledgerId: {
-      organisationId: GROUPED_ORGANISATION_ID,
-      registrationId: GROUPED_REGISTRATION_ID,
-      accreditationId: GROUPED_ACCREDITATION_ID
-    },
-    registration: {
-      wasteProcessingType: fromOrganisation('wasteProcessingType'),
-      reprocessingType: fromOrganisation('reprocessingType')
-    }
-  }
-})
-
-const buildProjectStage = () => ({
-  $project: {
-    _id: 0,
-    organisationName: 1,
-    orgId: 1,
-    registrationNumber: 1,
-    accreditationNumber: 1,
-    material: 1,
-    tonnageBand: 1,
-    awaitingAuthorisationTonnage: 1,
-    awaitingAcceptanceTonnage: 1,
-    awaitingCancellationTonnage: 1,
-    acceptedTonnage: 1,
-    cancelledTonnage: 1,
-    ledgerId: 1,
-    registration: 1
-  }
-})
-
-const buildSortStage = () => ({
-  $sort: {
-    organisationName: 1,
-    accreditationNumber: 1
-  }
-})
-
-const buildAggregationPipeline = () => [
-  buildMatchStage(),
-  buildGroupStage(),
-  buildOrganisationLookupStage(),
-  buildAddFieldsStage(),
-  buildProjectStage(),
-  buildSortStage()
-]
+const buildAggregationPipeline = () => [buildMatchStage(), buildGroupStage()]
 
 /**
  * What a row must carry to be reportable. A row missing its ledger id would be
@@ -251,6 +156,69 @@ const aggregatedRowSchema = Joi.object({
   acceptedTonnage: Joi.number().required(),
   cancelledTonnage: Joi.number().required()
 })
+
+/**
+ * The accreditation's context, provided the organisation and registration the
+ * PRNs were raised under still hold it. Anything else leaves the row
+ * unresolved, and the schema refuses to report it.
+ *
+ * @param {AccreditationContext | undefined} context
+ * @param {{ organisationId: string, registrationId: string }} ids
+ * @returns {AccreditationContext | undefined}
+ */
+const heldBy = (context, { organisationId, registrationId }) =>
+  context?.organisation.id === organisationId &&
+  context.registration.id === registrationId
+    ? context
+    : undefined
+
+/**
+ * Joins a grouped PRN row to the organisation, registration and accreditation
+ * it was raised under.
+ *
+ * @param {GroupedRow} groupedRow
+ * @param {AccreditationContext | undefined} context
+ */
+const toAggregatedRow = (
+  { _id: { organisationId, registrationId, accId }, ...tonnages },
+  context
+) => {
+  const resolved = heldBy(context, { organisationId, registrationId })
+
+  return {
+    organisationName: resolved?.organisation.companyDetails.name,
+    orgId: resolved && String(resolved.organisation.orgId),
+    registrationNumber: resolved?.registration.registrationNumber,
+    accreditationNumber: resolved?.accreditation.accreditationNumber,
+    material: resolved?.accreditation.material,
+    tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
+    ledgerId: { organisationId, registrationId, accreditationId: accId },
+    registration: {
+      wasteProcessingType: resolved?.registration.wasteProcessingType,
+      reprocessingType: resolved?.registration.reprocessingType ?? undefined
+    },
+    ...tonnages
+  }
+}
+
+/**
+ * @param {string} a
+ * @param {string} b
+ */
+const compareStrings = (a, b) => {
+  if (a < b) {
+    return -1
+  }
+  return a > b ? 1 : 0
+}
+
+/**
+ * @param {AggregatedRow} a
+ * @param {AggregatedRow} b
+ */
+const byOrganisationThenAccreditation = (a, b) =>
+  compareStrings(a.organisationName, b.organisationName) ||
+  compareStrings(a.accreditationNumber, b.accreditationNumber)
 
 /**
  * Mirrors `processingTypeFor`
@@ -323,28 +291,44 @@ const buildReportRow = async (
 })
 
 /**
+ * Test organisations' PRNs are left out of the report, as they are from the
+ * other accreditation-level reports built on the same index.
+ *
  * @param {import('mongodb').Db} db
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
-export const aggregatePrnTonnage = async (db, ledgerRepository) => {
-  const pipeline = buildAggregationPipeline()
+export const aggregatePrnTonnage = async (
+  db,
+  organisationsRepository,
+  ledgerRepository
+) => {
+  const [groupedRows, organisations] = await Promise.all([
+    db
+      .collection(PRNS_COLLECTION)
+      .aggregate(buildAggregationPipeline())
+      .toArray(),
+    organisationsRepository.findAll()
+  ])
 
-  const aggregatedRows = await db
-    .collection(PRNS_COLLECTION)
-    .aggregate(pipeline)
-    .toArray()
+  const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
 
-  const rows = await Promise.all(
-    aggregatedRows.map((row) =>
-      buildReportRow(
-        ledgerRepository,
+  const aggregatedRows = /** @type {GroupedRow[]} */ (groupedRows)
+    .filter(({ _id: { accId } }) => !testOrgAccreditationIds.has(accId))
+    .map((groupedRow) => {
+      const row = toAggregatedRow(groupedRow, index.get(groupedRow._id.accId))
+      return /** @type {AggregatedRow} */ (
         Joi.attempt(
           row,
           aggregatedRowSchema,
           `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
         )
       )
-    )
+    })
+    .sort(byOrganisationThenAccreditation)
+
+  const rows = await Promise.all(
+    aggregatedRows.map((row) => buildReportRow(ledgerRepository, row))
   )
 
   return {
