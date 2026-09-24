@@ -1,6 +1,8 @@
 import path from 'node:path'
 import ExcelJS from 'exceljs'
+import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -117,7 +119,7 @@ const build = async (months = JANUARY_TO_JUNE_2026, overrides = {}) =>
       organisationsRepository: createInMemoryOrganisationsRepository([])(),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       reportsRepository: createInMemoryReportsRepository()(),
-      logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
+      logger: createMockLogger(),
       year: 2026,
       months,
       now: PUBLISHED_EXTRACTION,
@@ -131,9 +133,7 @@ const build = async (months = JANUARY_TO_JUNE_2026, overrides = {}) =>
  */
 const sheet = (workbook, name) => {
   const worksheet = workbook.getWorksheet(name)
-  if (!worksheet) {
-    throw new Error(`No worksheet named ${JSON.stringify(name)}`)
-  }
+  assertPresent(worksheet)
   return worksheet
 }
 
