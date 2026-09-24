@@ -83,15 +83,18 @@ export const WASTE_BALANCE_COLUMNS = Object.freeze({
 
 export const UNSUBMITTED_COUNT = 'Unsubmitted count'
 
+const GLASS_REMELT = 'Glass re-melt'
+const PAPER_AND_BOARD = 'Paper and board'
+
 /** Material and accreditation type, one pair per row of the waste balance. */
 export const WASTE_BALANCE_ROWS = Object.freeze([
   ['Aluminium', 'Exporter'],
   ['Aluminium', 'Reprocessor'],
   ['Glass-other', 'Exp & Rep'],
-  ['Glass re-melt', 'Exporter'],
-  ['Glass re-melt', 'Reprocessor'],
-  ['Paper and board', 'Exporter'],
-  ['Paper and board', 'Reprocessor'],
+  [GLASS_REMELT, 'Exporter'],
+  [GLASS_REMELT, 'Reprocessor'],
+  [PAPER_AND_BOARD, 'Exporter'],
+  [PAPER_AND_BOARD, 'Reprocessor'],
   ['Plastic', 'Exporter'],
   ['Plastic', 'Reprocessor'],
   ['Steel', 'Exporter'],
@@ -103,8 +106,8 @@ export const WASTE_BALANCE_ROWS = Object.freeze([
 export const OUTSTANDING_RETURNS_MATERIALS = Object.freeze([
   'Aluminium',
   'Glass other',
-  'Glass re-melt',
-  'Paper and board',
+  GLASS_REMELT,
+  PAPER_AND_BOARD,
   'Plastic',
   'Steel',
   'Wood'
@@ -120,8 +123,8 @@ export const TONNAGE_BANDS = Object.freeze([
 export const NATION_FIGURES_MATERIALS = Object.freeze([
   'Aluminium',
   'Glass-other',
-  'Glass re-melt',
-  'Paper and board',
+  GLASS_REMELT,
+  PAPER_AND_BOARD,
   'Plastic',
   'Steel',
   'Wood'
@@ -129,19 +132,42 @@ export const NATION_FIGURES_MATERIALS = Object.freeze([
 
 export const GRAND_TOTAL = 'Grand Total'
 
+/** The column headings of the UK and England tables, which the Key describes. */
+const COLUMN = Object.freeze({
+  MATERIAL: 'Material',
+  RECEIVED_FOR_RECYCLING: 'Tonnage received for recycling',
+  RECYCLED: 'Tonnage recycled',
+  RECEIVED_BUT_UNRECYCLED: 'Tonnage received but unrecycled',
+  SENT_ON_TOTAL: 'Tonnage sent on, total',
+  SENT_ON_TO_REPROCESSOR: 'Tonnage sent on to a reprocessor',
+  SENT_ON_TO_EXPORTER: 'Tonnage sent on to an exporter',
+  SENT_ON_TO_OTHER_FACILITIES: 'Tonnage sent on to other facilities',
+  RECEIVED_FOR_EXPORTING: 'Tonnage received for exporting',
+  EXPORTED_FOR_RECYCLING: 'Tonnage exported for recycling',
+  RECEIVED_BUT_UNEXPORTED: 'Tonnage received but unexported',
+  EXPORTED_STOPPED: 'Tonnage exported that was stopped',
+  EXPORTED_REFUSED: 'Tonnage exported that was refused',
+  REPATRIATED: 'Tonnage repatriated',
+  NOTES_ISSUED: 'Tonnage of PRNs/PERNs issued',
+  NOTES_REVENUE: 'Total revenue from PRNs/PERNs\n(£)',
+  NOTES_AVERAGE_PRICE: 'Average PRN/PERN price per tonne \n(£)'
+})
+
 const TONNAGE_SENT_ON = Object.freeze([
-  'Tonnage sent on, total',
-  'Tonnage sent on to a reprocessor',
-  'Tonnage sent on to an exporter',
-  'Tonnage sent on to other facilities'
+  COLUMN.SENT_ON_TOTAL,
+  COLUMN.SENT_ON_TO_REPROCESSOR,
+  COLUMN.SENT_ON_TO_EXPORTER,
+  COLUMN.SENT_ON_TO_OTHER_FACILITIES
 ])
 
 const PRN_COLUMNS = Object.freeze([
-  'Material',
-  'Tonnage of PRNs/PERNs issued',
-  'Total revenue from PRNs/PERNs\n(£)',
-  'Average PRN/PERN price per tonne \n(£)'
+  COLUMN.MATERIAL,
+  COLUMN.NOTES_ISSUED,
+  COLUMN.NOTES_REVENUE,
+  COLUMN.NOTES_AVERAGE_PRICE
 ])
+
+const REPROCESSOR_DATA = 'Reprocessor Data '
 
 /**
  * @typedef {{ title: string, columns: readonly string[] }} FiguresTable
@@ -155,26 +181,26 @@ const PRN_COLUMNS = Object.freeze([
  */
 export const NATION_FIGURES_TABLES = Object.freeze({
   reprocessor: {
-    title: 'Reprocessor Data ',
+    title: REPROCESSOR_DATA,
     columns: [
-      'Material',
-      'Tonnage received for recycling',
-      'Tonnage recycled',
-      'Tonnage received but unrecycled',
+      COLUMN.MATERIAL,
+      COLUMN.RECEIVED_FOR_RECYCLING,
+      COLUMN.RECYCLED,
+      COLUMN.RECEIVED_BUT_UNRECYCLED,
       ...TONNAGE_SENT_ON
     ]
   },
   exporter: {
     title: 'Exporter Data ',
     columns: [
-      'Material',
-      'Tonnage received for exporting',
-      'Tonnage exported for recycling',
-      'Tonnage received but unexported',
+      COLUMN.MATERIAL,
+      COLUMN.RECEIVED_FOR_EXPORTING,
+      COLUMN.EXPORTED_FOR_RECYCLING,
+      COLUMN.RECEIVED_BUT_UNEXPORTED,
       ...TONNAGE_SENT_ON,
-      'Tonnage exported that was stopped',
-      'Tonnage exported that was refused',
-      'Tonnage repatriated'
+      COLUMN.EXPORTED_STOPPED,
+      COLUMN.EXPORTED_REFUSED,
+      COLUMN.REPATRIATED
     ]
   },
   reprocessorPrn: { title: 'Reprocessor PRN Data ', columns: PRN_COLUMNS },
@@ -182,145 +208,116 @@ export const NATION_FIGURES_TABLES = Object.freeze({
 })
 
 /**
- * The Key tab, row by row: each row's cells in columns A, B, D and E.
+ * A row of a Key table, in columns A, B, D and E: the reprocessor's field and
+ * its description, then the exporter's. A half with no field is null.
  *
- * @type {readonly [number, (string | null)[]][]}
+ * @typedef {readonly [string | null, string | null, string, string]} KeyRow
  */
-export const KEY_ROWS = Object.freeze([
+
+/** @type {readonly KeyRow[]} */
+const KEY_TONNAGE_ROWS = [
   [
-    2,
-    [
-      'The following information is provided to help users understand the data fields included in this report:'
-    ]
-  ],
-  [4, ['Reprocessor Data ', null, 'Exporter Data']],
-  [5, ['Data Field ', 'Description ', 'Data Field ', 'Description ']],
-  [
-    6,
-    [
-      'Material',
-      'Category of packaging waste.',
-      'Material',
-      'Category of packaging waste.'
-    ]
+    COLUMN.MATERIAL,
+    'Category of packaging waste.',
+    COLUMN.MATERIAL,
+    'Category of packaging waste.'
   ],
   [
-    7,
-    [
-      'Tonnage received for recycling',
-      'Eligible packaging waste received for recycling at a reprocessing site. Note, this tonnage does not include operators issuing PRNs on the weight of recycled packaging waste content which is the output of the recycling at a reprocessing site.',
-      'Tonnage received for recycling',
-      'The weight of eligible packaging waste in that category received by the exporter for exporting in each reporting period.'
-    ]
+    COLUMN.RECEIVED_FOR_RECYCLING,
+    'Eligible packaging waste received for recycling at a reprocessing site. Note, this tonnage does not include operators issuing PRNs on the weight of recycled packaging waste content which is the output of the recycling at a reprocessing site.',
+    COLUMN.RECEIVED_FOR_RECYCLING,
+    'The weight of eligible packaging waste in that category received by the exporter for exporting in each reporting period.'
   ],
   [
-    8,
-    [
-      'Tonnage recycled',
-      'Refers to the weight of eligible packaging waste in that category recycled in the reporting period by the reprocessor at the reprocessing site.',
-      'Tonnage exported for recycling',
-      'The weight of eligible packaging waste in that category exported for recycling in the reporting period. ‘Tonnage exported’ is not included in waste balances until the ‘date received by approved overseas reprocessor’ field has been completed within the export summary log.'
-    ]
+    COLUMN.RECYCLED,
+    'Refers to the weight of eligible packaging waste in that category recycled in the reporting period by the reprocessor at the reprocessing site.',
+    COLUMN.EXPORTED_FOR_RECYCLING,
+    'The weight of eligible packaging waste in that category exported for recycling in the reporting period. ‘Tonnage exported’ is not included in waste balances until the ‘date received by approved overseas reprocessor’ field has been completed within the export summary log.'
   ],
   [
-    9,
-    [
-      'Tonnage received but unrecycled',
-      'The weight of packaging waste in that category received at the reprocessing site in the reporting period which was not recycled by the reprocessor at the site ("unrecycled packaging waste"). ',
-      'Tonnage received but unexported',
-      'The weight of packaging waste in that category received by the exporter in the reporting period which has not been exported by the exporter ("unexported packaging waste").'
-    ]
+    COLUMN.RECEIVED_BUT_UNRECYCLED,
+    'The weight of packaging waste in that category received at the reprocessing site in the reporting period which was not recycled by the reprocessor at the site ("unrecycled packaging waste"). ',
+    COLUMN.RECEIVED_BUT_UNEXPORTED,
+    'The weight of packaging waste in that category received by the exporter in the reporting period which has not been exported by the exporter ("unexported packaging waste").'
   ],
   [
-    10,
-    [
-      'Tonnage sent on, total',
-      'The total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to another reprocessor; exported; or sent to any other facility or site.  ',
-      'Tonnage sent on, total',
-      'The total weight of unexported packaging waste in that category which, in the reporting period, was sent to a reprocessor in the United Kingdom; sent to another exporter in the United Kingdom; or sent to any other facility or site in the United Kingdom.'
-    ]
+    COLUMN.SENT_ON_TOTAL,
+    'The total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to another reprocessor; exported; or sent to any other facility or site.  ',
+    COLUMN.SENT_ON_TOTAL,
+    'The total weight of unexported packaging waste in that category which, in the reporting period, was sent to a reprocessor in the United Kingdom; sent to another exporter in the United Kingdom; or sent to any other facility or site in the United Kingdom.'
   ],
   [
-    11,
-    [
-      'Tonnage sent on to a reprocessor',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to another reprocessor.',
-      'Tonnage sent on to a reprocessor',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to a reprocessor in the United Kingdom. '
-    ]
+    COLUMN.SENT_ON_TO_REPROCESSOR,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to another reprocessor.',
+    COLUMN.SENT_ON_TO_REPROCESSOR,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to a reprocessor in the United Kingdom. '
   ],
   [
-    12,
-    [
-      'Tonnage sent on to an exporter',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to an exporter.   ',
-      'Tonnage sent on to an exporter',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to another exporter in the United Kingdom.'
-    ]
+    COLUMN.SENT_ON_TO_EXPORTER,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to an exporter.   ',
+    COLUMN.SENT_ON_TO_EXPORTER,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to another exporter in the United Kingdom.'
   ],
   [
-    13,
-    [
-      'Tonnage sent on to other facilities',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to any other facility or site.  ',
-      'Tonnage sent on to other facilities',
-      'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to any other facility or site in the United Kingdom.'
-    ]
+    COLUMN.SENT_ON_TO_OTHER_FACILITIES,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unrecycled packaging waste in that category which, in the reporting period, was sent to any other facility or site.  ',
+    COLUMN.SENT_ON_TO_OTHER_FACILITIES,
+    'A subset of ‘Tonnage sent on, total’, indicating the total weight of unexported packaging waste in that category which, in the reporting period, was sent to any other facility or site in the United Kingdom.'
   ],
   [
-    14,
-    [
-      null,
-      null,
-      'Tonnage exported that was stopped',
-      'The weight of packaging waste in that category exported for recycling in the reporting period which was stopped during the course of export.'
-    ]
+    null,
+    null,
+    COLUMN.EXPORTED_STOPPED,
+    'The weight of packaging waste in that category exported for recycling in the reporting period which was stopped during the course of export.'
   ],
   [
-    15,
-    [
-      null,
-      null,
-      'Tonnage exported that was refused',
-      'The weight of packaging waste in that category exported for recycling in the reporting period which was refused by the recipient destination.'
-    ]
+    null,
+    null,
+    COLUMN.EXPORTED_REFUSED,
+    'The weight of packaging waste in that category exported for recycling in the reporting period which was refused by the recipient destination.'
   ],
   [
-    16,
-    [
-      null,
-      null,
-      'Tonnage repatriated',
-      'The weight of packaging waste in that category exported for recycling, which was either stopped or refused by the recipient and has been repatriated in the reporting period.'
-    ]
-  ],
-  [18, ['Reprocessor Data ', null, 'Exporter Data']],
-  [19, ['Data Field ', 'Description ', 'Data Field ', 'Description ']],
-  [
-    20,
-    [
-      'Tonnage of PRNs/PERNs issued',
-      'The tonnage of packaging waste for which PRNs were issued by the reprocessor in that month.',
-      'Tonnage of PRNs/PERNs issued',
-      'The tonnage of packaging waste for which PERNs were issued by the exporter in that month.'
-    ]
-  ],
-  [
-    21,
-    [
-      'Total revenue from PRNs/PERNs\n(£)',
-      'The total revenue generated by the reprocessor from the sale of PRNs in that month.',
-      'Total revenue from PRNs/PERNs\n(£)',
-      'The total revenue generated by the exporter from the sale of PERNs in that month.'
-    ]
-  ],
-  [
-    22,
-    [
-      'Average PRN/PERN price per tonne \n(£)',
-      "The average price per tonne of packaging waste received by the reprocessor for the sale of PRNs in that month. Calculated by dividing the sum of 'Total revenue from PRNs/PERNs' / 'Tonnage of PRNs/PERNs issued'",
-      'Average PRN/PERN price per tonne \n(£)',
-      "The average price per tonne of packaging waste received by the exporter for the sale of PERNs in that month. Calculated by dividing the sum of 'Total revenue from PRNs/PERNs' / 'Tonnage of PRNs/PERNs issued'"
-    ]
+    null,
+    null,
+    COLUMN.REPATRIATED,
+    'The weight of packaging waste in that category exported for recycling, which was either stopped or refused by the recipient and has been repatriated in the reporting period.'
   ]
-])
+]
+
+/** @type {readonly KeyRow[]} */
+const KEY_NOTES_ROWS = [
+  [
+    COLUMN.NOTES_ISSUED,
+    'The tonnage of packaging waste for which PRNs were issued by the reprocessor in that month.',
+    COLUMN.NOTES_ISSUED,
+    'The tonnage of packaging waste for which PERNs were issued by the exporter in that month.'
+  ],
+  [
+    COLUMN.NOTES_REVENUE,
+    'The total revenue generated by the reprocessor from the sale of PRNs in that month.',
+    COLUMN.NOTES_REVENUE,
+    'The total revenue generated by the exporter from the sale of PERNs in that month.'
+  ],
+  [
+    COLUMN.NOTES_AVERAGE_PRICE,
+    "The average price per tonne of packaging waste received by the reprocessor for the sale of PRNs in that month. Calculated by dividing the sum of 'Total revenue from PRNs/PERNs' / 'Tonnage of PRNs/PERNs issued'",
+    COLUMN.NOTES_AVERAGE_PRICE,
+    "The average price per tonne of packaging waste received by the exporter for the sale of PERNs in that month. Calculated by dividing the sum of 'Total revenue from PRNs/PERNs' / 'Tonnage of PRNs/PERNs issued'"
+  ]
+]
+
+/**
+ * The Key tab: an introduction, then two tables, each under the same title
+ * and headings. The exporter half of the first table names "Tonnage received
+ * for recycling" where its column is "Tonnage received for exporting", as
+ * published.
+ *
+ * @type {Readonly<{ introduction: string, title: readonly (string | null)[], headings: readonly string[], tables: readonly (readonly KeyRow[])[] }>}
+ */
+export const KEY = Object.freeze({
+  introduction:
+    'The following information is provided to help users understand the data fields included in this report:',
+  title: [REPROCESSOR_DATA, null, 'Exporter Data', null],
+  headings: ['Data Field ', 'Description ', 'Data Field ', 'Description '],
+  tables: [KEY_TONNAGE_ROWS, KEY_NOTES_ROWS]
+})

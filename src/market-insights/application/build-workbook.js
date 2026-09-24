@@ -31,7 +31,7 @@ import {
 import {
   dataAsOf,
   GRAND_TOTAL,
-  KEY_ROWS,
+  KEY,
   NATION_FIGURES_MATERIALS,
   NATION_FIGURES_NOTE,
   NATION_FIGURES_TABLES,
@@ -51,7 +51,7 @@ import {
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { MarketInsightsFigures, ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
-/** @import { Note } from '#market-insights/domain/published-workbook-text.js' */
+/** @import { KeyRow, Note } from '#market-insights/domain/published-workbook-text.js' */
 
 const monthName = new Intl.DateTimeFormat('en-GB', {
   month: 'long',
@@ -141,11 +141,11 @@ const styleEmptyCells = (worksheet, row, firstColumn, count, style) => {
 
 /**
  * @param {ExcelJS.Worksheet} worksheet
- * @param {readonly number[]} widths
+ * @param {Readonly<Record<string, number>>} widths - in column order
  * @param {number} [firstColumn]
  */
 const setWidths = (worksheet, widths, firstColumn = 1) => {
-  widths.forEach((width, index) => {
+  Object.values(widths).forEach((width, index) => {
     worksheet.getColumn(firstColumn + index).width = width
   })
 }
@@ -157,6 +157,8 @@ const setWidths = (worksheet, widths, firstColumn = 1) => {
  * @property {string} asOf
  */
 
+const WASTE_BALANCE_NOTE_LAST_ROW = 3
+const WASTE_BALANCE_BAND_ROW = WASTE_BALANCE_NOTE_LAST_ROW + 1
 const WASTE_BALANCE_HEADING_ROW = 9
 
 /**
@@ -173,11 +175,13 @@ const addWasteBalance = (workbook, { months, period, asOf }) => {
     { text: `${lead}${body}`, hyperlink: WASTE_BALANCE_GUIDANCE },
     NOTE
   )
-  worksheet.mergeCells('A1:M3')
-  worksheet.getRow(3).height = ROW_HEIGHT.WASTE_BALANCE_NOTE
-  write(worksheet.getCell('A4'), null, BAND)
-  worksheet.mergeCells('A4:M4')
-  worksheet.getRow(4).height = ROW_HEIGHT.WASTE_BALANCE_BAND
+  worksheet.mergeCells(`A1:M${WASTE_BALANCE_NOTE_LAST_ROW}`)
+  worksheet.getRow(WASTE_BALANCE_NOTE_LAST_ROW).height =
+    ROW_HEIGHT.WASTE_BALANCE_NOTE
+  write(worksheet.getCell(`A${WASTE_BALANCE_BAND_ROW}`), null, BAND)
+  worksheet.mergeCells(`A${WASTE_BALANCE_BAND_ROW}:M${WASTE_BALANCE_BAND_ROW}`)
+  worksheet.getRow(WASTE_BALANCE_BAND_ROW).height =
+    ROW_HEIGHT.WASTE_BALANCE_BAND
   write(worksheet.getCell('A5'), wasteBalanceIntroduction(period), INTRODUCTION)
   write(worksheet.getCell('A7'), asOf, DATA_AS_OF)
 
@@ -212,25 +216,35 @@ const addWasteBalance = (workbook, { months, period, asOf }) => {
   })
 }
 
-/** Columns A, B, D and E: the Key's two halves, with C between them. */
-const KEY_COLUMNS = [1, 2, 4, 5]
+/** The Key's two halves, with column C between them. */
+const KEY_COLUMNS = ['A', 'B', 'D', 'E']
 const KEY_INTRODUCTION_ROW = 2
-const KEY_HEADING_ROWS = [4, 5, 18, 19]
-const KEY_BAND_ROW = 17
+const KEY_FIRST_TABLE_ROW = 4
 
 /**
+ * @param {ExcelJS.Worksheet} worksheet
  * @param {number} row
- * @param {number} index - of the cell among the row's four
- * @returns {Partial<ExcelJS.Style>}
+ * @param {readonly (string | null)[]} cells - in the Key's columns
  */
-const keyStyleOf = (row, index) => {
-  if (row === KEY_INTRODUCTION_ROW) {
-    return KEY_INTRODUCTION
-  }
-  if (KEY_HEADING_ROWS.includes(row)) {
-    return KEY_HEADING
-  }
-  return index % 2 === 0 ? KEY_FIELD : KEY_DESCRIPTION
+const writeKeyHeadings = (worksheet, row, cells) => {
+  KEY_COLUMNS.forEach((column, index) => {
+    write(worksheet.getCell(`${column}${row}`), cells[index], KEY_HEADING)
+  })
+}
+
+/**
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {number} row
+ * @param {KeyRow} cells
+ */
+const writeKeyFields = (worksheet, row, cells) => {
+  KEY_COLUMNS.forEach((column, index) => {
+    const text = cells[index]
+    if (text !== null) {
+      const style = index % 2 === 0 ? KEY_FIELD : KEY_DESCRIPTION
+      write(worksheet.getCell(`${column}${row}`), text, style)
+    }
+  })
 }
 
 /**
@@ -243,18 +257,27 @@ const addKey = (workbook) => {
     worksheet.getRow(Number(row)).height = height
   }
 
-  for (const [row, cells] of KEY_ROWS) {
-    KEY_COLUMNS.forEach((column, index) => {
-      const text = cells[index] ?? null
-      if (text !== null || KEY_HEADING_ROWS.includes(row)) {
-        write(worksheet.getCell(row, column), text, keyStyleOf(row, index))
-      }
+  write(
+    worksheet.getCell(`A${KEY_INTRODUCTION_ROW}`),
+    KEY.introduction,
+    KEY_INTRODUCTION
+  )
+  let row = KEY_FIRST_TABLE_ROW
+  KEY.tables.forEach((fields, index) => {
+    if (index > 0) {
+      write(worksheet.getCell(`A${row}`), null, BAND)
+      worksheet.mergeCells(`A${row}:E${row}`)
+      row += 1
+    }
+    writeKeyHeadings(worksheet, row, KEY.title)
+    worksheet.mergeCells(`A${row}:B${row}`)
+    worksheet.mergeCells(`D${row}:E${row}`)
+    writeKeyHeadings(worksheet, row + 1, KEY.headings)
+    fields.forEach((cells, offset) => {
+      writeKeyFields(worksheet, row + 2 + offset, cells)
     })
-  }
-  write(worksheet.getCell(KEY_BAND_ROW, 1), null, BAND)
-  for (const range of ['A4:B4', 'D4:E4', 'A17:E17', 'A18:B18', 'D18:E18']) {
-    worksheet.mergeCells(range)
-  }
+    row += 2 + fields.length
+  })
 }
 
 const OUTSTANDING_RETURNS_FIRST_ROW = 7

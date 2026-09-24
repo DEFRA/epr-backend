@@ -196,12 +196,22 @@ export const KEY_ROW_HEIGHTS = Object.freeze({
   22: 65.65
 })
 
-/** Column widths, in characters, from column A. */
+/** Column widths, in characters, in column order. */
 export const COLUMN_WIDTHS = Object.freeze({
-  WASTE_BALANCE: [15.14, 12.86],
-  KEY: [30.43, 50.43, 2.14, 30.43, 50.43],
-  OUTSTANDING_RETURNS_MONTH: [15.43, 15.43, 2.14],
-  NATION_FIGURES: [
-    14.71, 11.86, 12.43, 10.71, 10.71, 10.71, 10.71, 10.71, 10.71, 10.71, 10.71
-  ]
+  WASTE_BALANCE: { A: 15.14, B: 12.86 },
+  KEY: { A: 30.43, B: 50.43, C: 2.14, D: 30.43, E: 50.43 },
+  OUTSTANDING_RETURNS_MONTH: { band: 15.43, count: 15.43, gap: 2.14 },
+  NATION_FIGURES: {
+    A: 14.71,
+    B: 11.86,
+    C: 12.43,
+    D: 10.71,
+    E: 10.71,
+    F: 10.71,
+    G: 10.71,
+    H: 10.71,
+    I: 10.71,
+    J: 10.71,
+    K: 10.71
+  }
 })
