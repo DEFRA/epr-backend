@@ -31,18 +31,26 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
  * cancelled accreditations are indexed too — the row-level classification, not
  * the accreditation's current status, decides eligibility. A registered-only
  * registration (no accreditation) contributes nothing to the index. Test
- * organisations' accreditation ids are collected separately rather than indexed.
+ * organisations' accreditation ids are collected separately rather than indexed,
+ * unless `includeTestOrganisations` asks for them to be indexed like any other.
  *
  * @param {Organisation[]} organisations
+ * @param {{ includeTestOrganisations?: boolean }} [options]
  * @returns {AccreditationIndex}
  */
-export const indexAccreditations = (organisations) => {
+export const indexAccreditations = (
+  organisations,
+  { includeTestOrganisations = false } = {}
+) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   /** @type {Set<string>} */
   const testOrgAccreditationIds = new Set()
   for (const organisation of organisations) {
-    if (TEST_ORGANISATION_IDS.has(organisation.orgId)) {
+    if (
+      !includeTestOrganisations &&
+      TEST_ORGANISATION_IDS.has(organisation.orgId)
+    ) {
       for (const accreditation of organisation.accreditations) {
         testOrgAccreditationIds.add(accreditation.id)
       }
