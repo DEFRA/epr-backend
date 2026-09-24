@@ -76,6 +76,22 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
+ * @typedef {Object} SumTonnageByAccreditationParams
+ * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} excludeStatuses - PRNs currently in any of these statuses are left out of the totals
+ */
+
+/**
+ * One accreditation's PRN tonnage, totalled by the PRNs' current status. Keyed
+ * on ids alone: a PRN carries names as they stood when it was raised, so
+ * keying on those would split one accreditation across several totals. A
+ * status none of the accreditation's PRNs is in is absent, not zero.
+ *
+ * @typedef {Object} AccreditationTonnage
+ * @property {AccreditationId} id
+ * @property {Partial<Record<import('#packaging-recycling-notes/domain/model.js').PrnStatus, number>>} tonnageByStatus
+ */
+
+/**
  * @typedef {Object} PaginatedResult
  * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} items
  * @property {string | null} nextCursor
@@ -101,6 +117,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(accreditationId: AccreditationId) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByIdsParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByIds
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
+ * @property {(params: SumTonnageByAccreditationParams) => Promise<AccreditationTonnage[]>} sumTonnageByAccreditation - Every accreditation with at least one PRN outside `excludeStatuses`, in no particular order
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  * @property {(params: UpdateWatermarkParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateWatermark
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection

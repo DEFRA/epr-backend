@@ -4,6 +4,8 @@ import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -19,9 +21,11 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
  */
 
 /**
- * A real Hapi server whose `request.db` and `request.ledgerRepository` are both
- * backed by one in-memory Mongo, so routes that query mongo directly can be
- * exercised end-to-end through `server.inject`. Seed and assert against the same
+ * A real Hapi server whose `request.db`, `request.ledgerRepository`,
+ * `request.organisationsRepository` and
+ * `request.packagingRecyclingNotesRepository` are all backed by one in-memory
+ * Mongo, so reporting routes can be exercised end-to-end through
+ * `server.inject`. Seed and assert against the same
  * db via `server.db`.
  *
  * This suits the read-model reporting routes (tonnage-monitoring, prn-tonnage,
@@ -41,9 +45,18 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
           const ledgerRepository = (
             await createMongoLedgerRepository(mongoDb)
           )()
+          const organisationsRepository = (
+            await createOrganisationsRepository(mongoDb)
+          )()
+          const packagingRecyclingNotesRepository =
+            await createPackagingRecyclingNotesRepository(mongoDb, [])
           const server = await createTestServer({
             db: mongoDb,
-            repositories: { ledgerRepository }
+            repositories: {
+              ledgerRepository,
+              organisationsRepository,
+              packagingRecyclingNotesRepository
+            }
           })
 
           await use(/** @type {TestServerWithRealDb} */ (server))

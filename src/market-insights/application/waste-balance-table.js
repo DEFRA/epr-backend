@@ -18,6 +18,10 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import {
+  operatorCountsOf,
+  operatorsByFigure
+} from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
@@ -37,11 +41,16 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#domain/organisations/registration.js').Registration} Registration
  * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
+ * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
+ * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
+ * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
  */
 
 /**
  * @typedef {Object} PublishedPartition
  * @property {string} summaryLogId - the partition's latest submission
+ * @property {Organisation} org
  * @property {import('#domain/organisations/registration.js').Registration} registration
  * @property {import('#domain/organisations/accreditation.js').Accreditation} accreditation
  * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
@@ -59,8 +68,9 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>} FiguresByAccreditationType
+ * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
+ * @typedef {Record<Material, Record<WasteProcessingTypeValue, OperatorCounts>>} OperatorCountsByMaterial
  */
 
 /**
@@ -73,9 +83,18 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
+ * The whole period served: the reports it was owed and how many arrived, and
+ * the operators behind each row's total across its months.
+ *
+ * @typedef {Object} PublishedPeriod
+ * @property {ReportCount} reports
+ * @property {OperatorCountsByMaterial} operatorCounts
+ */
+
+/**
  * @typedef {Object} WasteBalanceTable
  * @property {{ generatedAt: string }} meta
- * @property {{ months: Record<YearMonth, PublishedMonth>, period: { reports: ReportCount } }} data
+ * @property {{ months: Record<YearMonth, PublishedMonth>, period: PublishedPeriod }} data
  */
 
 /**
@@ -93,21 +112,59 @@ const cellKey = ({ material, accreditationType, month }) =>
   `${material}::${accreditationType}::${month}`
 
 /**
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType'>} row
+ * @returns {string}
+ */
+const periodKey = ({ material, accreditationType }) =>
+  `${material}::${accreditationType}`
+
+/**
+ * The cell a contribution counts towards, and its row's whole-period total. An
+ * operator counts once in each, however many sites it reports from and
+ * however many months it contributes to.
+ *
+ * @param {Contribution} contribution
+ */
+const figuresOf = ({ month, registration }) => {
+  const row = {
+    material: resolveMaterial(registration),
+    accreditationType: registration.wasteProcessingType
+  }
+  return [cellKey({ ...row, month }), periodKey(row)]
+}
+
+/**
+ * The operators behind each row's whole-period total, for every material and
+ * accreditation type the publication prints.
+ *
+ * @param {OperatorsByFigure} operators
+ * @returns {OperatorCountsByMaterial}
+ */
+const periodOperatorCounts = (operators) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      operatorCountsOf(operators, periodKey({ material, accreditationType }))
+    )
+  )
+
+/**
  * The publication prints every material and accreditation type, so one
  * nothing reported into is still served, at zero.
  *
  * @param {Map<string, WasteBalanceCell>} cells
+ * @param {OperatorsByFigure} operators
  * @param {YearMonth} month
  * @returns {FiguresByMaterial}
  */
-const publishedFigures = (cells, month) =>
+const publishedFigures = (cells, operators, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-      withNetCredit(
-        cells.get(cellKey({ material, accreditationType, month }))?.figures ??
-          NO_FIGURES
-      )
-    )
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => {
+      const key = cellKey({ material, accreditationType, month })
+      return {
+        ...withNetCredit(cells.get(key)?.figures ?? NO_FIGURES),
+        ...operatorCountsOf(operators, key)
+      }
+    })
   )
 
 /**
@@ -154,6 +211,7 @@ const resolvePublishedPartitions = (
     }
     partitions.set(partitionKey(ledgerId), {
       summaryLogId,
+      org: context.organisation,
       registration: context.registration,
       accreditation: context.accreditation,
       overseasSites: buildOverseasSitesContext(context.registration, sitesById)
@@ -193,11 +251,14 @@ const publishedContribution = (rowState, partitions) => {
     }
   )
 
-  return contribution === null ? null : { registration, contribution }
+  return contribution === null
+    ? null
+    : { org: partition.org, registration, contribution }
 }
 
 /**
  * @typedef {Object} PublishedRow
+ * @property {Organisation} org
  * @property {Registration} registration
  * @property {MonthlyContribution} contribution
  */
@@ -246,20 +307,45 @@ const recordUndated = (undated, { deducts, figures }) => {
 }
 
 /**
- * @param {{ cells: Map<string, WasteBalanceCell>, undated: UndatedTally, isPublishedMonth: (month: string) => boolean }} into
+ * Net credit is the only figure published, so an operator's tonnage is in it
+ * only where it is eligible or deducted as sent on.
+ *
+ * @param {WasteBalanceFigures} figures
+ */
+const movesNetCredit = ({ eligibleForWasteBalance, sentOnDeductions }) =>
+  eligibleForWasteBalance !== 0 || sentOnDeductions !== 0
+
+/**
+ * @typedef {Object} Aggregate
+ * @property {Map<string, WasteBalanceCell>} cells
+ * @property {Map<string, Contribution>} contributions - one per registration and month whose tonnage the net credit includes
+ * @property {UndatedTally} undated
+ * @property {(month: string) => month is YearMonth} isPublishedMonth
+ */
+
+/**
+ * @param {Aggregate} into
  * @param {PublishedRow} published
  */
 const recordRow = (
-  { cells, undated, isPublishedMonth },
-  { registration, contribution }
+  { cells, contributions, undated, isPublishedMonth },
+  { org, registration, contribution }
 ) => {
   const { month, figures } = contribution
   if (month === null) {
     recordUndated(undated, contribution)
     return
   }
-  if (isPublishedMonth(month)) {
-    foldIntoCell(cells, registration, month, figures)
+  if (!isPublishedMonth(month)) {
+    return
+  }
+  foldIntoCell(cells, registration, month, figures)
+  if (movesNetCredit(figures)) {
+    contributions.set(`${registration.id}::${month}`, {
+      month,
+      org,
+      registration
+    })
   }
 }
 
@@ -287,6 +373,9 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * future date from being published as supply. Each month also carries the
  * count of monthly reports it was owed and how many were submitted, and the
  * period carries the sum, which says how close the figures are to publication.
+ * Every figure carries how many operators could have contributed to it, and
+ * how many it includes tonnage from, and the period carries the same for each
+ * row's total across its months.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -333,11 +422,12 @@ export const buildWasteBalanceTable = async ({
 
   /** @type {Set<string>} */
   const publishedMonths = new Set(months)
+  /** @type {Aggregate} */
   const into = {
-    /** @type {Map<string, WasteBalanceCell>} */
     cells: new Map(),
+    contributions: new Map(),
     undated: newUndatedTally(),
-    isPublishedMonth: (/** @type {string} */ month) =>
+    isPublishedMonth: /** @returns {month is YearMonth} */ (month) =>
       publishedMonths.has(month)
   }
 
@@ -353,9 +443,14 @@ export const buildWasteBalanceTable = async ({
 
   warnAboutUndatedRows(logger, into.undated)
 
-  const reports = countMonthlyReports(
-    months,
-    owedMonthlyReports({ organisations, periodicReports, months })
+  const owedReports = [
+    ...owedMonthlyReports({ organisations, periodicReports, months })
+  ]
+  const reports = countMonthlyReports(months, owedReports)
+  const operators = operatorsByFigure(
+    owedReports,
+    [...into.contributions.values()],
+    figuresOf
   )
 
   return {
@@ -363,9 +458,12 @@ export const buildWasteBalanceTable = async ({
     data: {
       months: recordOf(months, (month) => ({
         reports: reports.byMonth[month],
-        figures: publishedFigures(into.cells, month)
+        figures: publishedFigures(into.cells, operators, month)
       })),
-      period: { reports: reports.total }
+      period: {
+        reports: reports.total,
+        operatorCounts: periodOperatorCounts(operators)
+      }
     }
   }
 }

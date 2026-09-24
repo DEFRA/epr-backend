@@ -13,7 +13,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
+/** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 export const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -300,6 +300,53 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 }
 
 /**
+ * Totals in two passes: first per accreditation and status, then folding each
+ * accreditation's statuses into one document.
+ *
+ * @param {Db} db
+ * @param {SumTonnageByAccreditationParams} params
+ * @returns {Promise<AccreditationTonnage[]>}
+ */
+const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
+  const totals = await db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      { $match: { 'status.currentStatus': { $nin: excludeStatuses } } },
+      {
+        $group: {
+          _id: {
+            organisationId: '$organisation.id',
+            registrationId: '$registrationId',
+            accreditationId: '$accreditation.id',
+            status: '$status.currentStatus'
+          },
+          tonnage: { $sum: '$tonnage' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            organisationId: '$_id.organisationId',
+            registrationId: '$_id.registrationId',
+            accreditationId: '$_id.accreditationId'
+          },
+          tonnageByStatus: { $push: { k: '$_id.status', v: '$tonnage' } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          id: '$_id',
+          tonnageByStatus: { $arrayToObject: '$tonnageByStatus' }
+        }
+      }
+    ])
+    .toArray()
+
+  return /** @type {AccreditationTonnage[]} */ (totals)
+}
+
+/**
  * CAS guard that lets a write through only when it does not move the watermark
  * backwards. An omitted watermark passes only while the PRN carries none (the
  * pre-migration path); once a PRN has a watermark every write must supply one,
@@ -573,6 +620,8 @@ export const createPackagingRecyclingNotesRepository = async (
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
+    sumTonnageByAccreditation: (params) =>
+      performSumTonnageByAccreditation(db, params),
     updateStatus: (params) => performUpdateStatus(db, logger, params),
     updateWatermark: (params) => performUpdateWatermark(db, logger, params),
     persistProjection: (params) => performPersistProjection(db, logger, params)

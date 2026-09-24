@@ -110,6 +110,7 @@ export const createMockPackagingRecyclingNotesRepository = (
   findByAccreditation: vi.fn(),
   findByIds: vi.fn(),
   findByStatus: vi.fn(),
+  sumTonnageByAccreditation: vi.fn(),
   updateStatus: vi.fn(),
   updateWatermark: vi.fn(),
   persistProjection: vi.fn(),

@@ -7,7 +7,9 @@ import {
 import { recordOf } from '#common/helpers/record-of.js'
 import {
   noMeasures,
-  withPublishedFigures
+  withOperatorCounts,
+  withPublishedFigures,
+  withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { NO_FIGURES, withNetCredit } from './waste-balance-figures.js'
 import {
@@ -42,17 +44,38 @@ const wasteBalanceTable = (months, overrides = {}) => ({
     months: recordOf(months, (month) => ({
       reports: { expected: 0, submitted: 0 },
       figures: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-        recordOf(ACCREDITATION_TYPES, (accreditationType) =>
-          withNetCredit({
+        recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
+          ...withNetCredit({
             ...NO_FIGURES,
             ...overrides[`${month}::${material}::${accreditationType}`]
-          })
-        )
+          }),
+          operatorCount: 0,
+          submittingOperatorCount: 0
+        }))
       )
     })),
-    period: { reports: { expected: 0, submitted: 0 } }
+    period: {
+      reports: { expected: 0, submitted: 0 },
+      operatorCounts: recordOf(TONNAGE_MONITORING_MATERIALS, () =>
+        recordOf(ACCREDITATION_TYPES, () => ({
+          operatorCount: 0,
+          submittingOperatorCount: 0
+        }))
+      )
+    }
   }
 })
+
+/**
+ * @template {Record<string, number>} T
+ * @param {T} figures
+ */
+const withNoOperators = (figures) =>
+  withOperatorCounts(figures, {
+    operatorCount: 0,
+    submittingOperatorCount: 0,
+    contributingOperatorCountOf: () => 0
+  })
 
 /**
  * @param {string[]} months
@@ -64,20 +87,18 @@ const reprocessorExporterTable = (months, overrides = {}) => ({
     months: recordOf(months, (month) => ({
       reports: { expected: 0, submitted: 0 },
       figures: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-        recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
-          ...withPublishedFigures({
-            ...noMeasures(accreditationType),
-            ...overrides[`${month}::${material}::${accreditationType}`]
-          }),
-          operatorCount: 0,
-          submittingOperatorCount: 0
-        }))
+        recordOf(ACCREDITATION_TYPES, (accreditationType) =>
+          withNoOperators(
+            withPublishedFigures({
+              ...noMeasures(accreditationType),
+              ...overrides[`${month}::${material}::${accreditationType}`]
+            })
+          )
+        )
       ),
-      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) => ({
-        ...withPublishedFigures(noMeasures(accreditationType)),
-        operatorCount: 0,
-        submittingOperatorCount: 0
-      }))
+      totals: recordOf(ACCREDITATION_TYPES, (accreditationType) =>
+        withNoOperators(withSentOnTotal(noMeasures(accreditationType)))
+      )
     })),
     period: { reports: { expected: 0, submitted: 0 } }
   }

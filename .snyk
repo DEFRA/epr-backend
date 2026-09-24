@@ -62,3 +62,28 @@ ignore:
           unzipper.Open.buffer (in-memory), never extracts to disk. No upstream
           patch available.
         expires: 2027-02-27T00:00:00.000Z
+  # Prototype Pollution in deepmerge (CVE-2026-93753). This is object-scoped
+  # pollution of the value returned by merge(), NOT global Object.prototype
+  # pollution. The guard bypass depends on the merge TARGET: propertyIsUnsafe
+  # inspects the target object, so it only fails when the target is a
+  # null-prototype object or holds a null/undefined placeholder at the attacked
+  # key. Our three collection factories
+  # (src/common/helpers/collections/factories/{organisation,registration,
+  # accreditation}.js) merge attacker data onto static base templates of the
+  # shape { schemaVersion, answers: {}, rawSubmissionData: {} } — all
+  # normal-prototype objects with empty-object placeholders only, never null or
+  # a null-prototype. deepmerge's built-in propertyIsUnsafe guard blocks every
+  # vector on this call shape. Verified empirically: top-level, nested,
+  # constructor.prototype and answers-value __proto__ payloads through the real
+  # factories all leave both the returned document and Object.prototype clean,
+  # while the documented null-placeholder / null-prototype bypasses reproduce as
+  # expected. deepmerge 4.3.1 is the latest release and has no upstream fix.
+  SNYK-JS-DEEPMERGE-19964053:
+    - '*':
+        reason: >-
+          Object-scoped (not global) pollution; guard bypass needs a
+          null-prototype or null/undefined target. The 3 factories merge onto
+          normal-prototype base templates with empty-object placeholders only,
+          so deepmerge's propertyIsUnsafe guard blocks all vectors — confirmed
+          empirically. No upstream fix (4.3.1 is latest).
+        expires: 2027-02-27T00:00:00.000Z

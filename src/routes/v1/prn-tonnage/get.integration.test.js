@@ -34,6 +34,10 @@ const orgId = 100987
 const accId = 'acc-integ'
 const registrationId = 'reg-integ'
 
+const approvedStatusHistory = [
+  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+]
+
 const ledgerId = {
   organisationId,
   registrationId,
@@ -57,12 +61,14 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
       _id: new ObjectId(organisationId),
       orgId,
       companyDetails: { name: 'Acme Reprocessing' },
+      statusHistory: approvedStatusHistory,
       accreditations: [
         {
           id: accId,
           accreditationNumber: 'ACC-INTEG',
           material: MATERIAL.PLASTIC,
-          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
+          statusHistory: approvedStatusHistory
         }
       ],
       registrations: [
@@ -70,7 +76,8 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
           id: registrationId,
           registrationNumber: 'REG-INTEG',
           accreditationId: accId,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          statusHistory: approvedStatusHistory
         }
       ]
     })

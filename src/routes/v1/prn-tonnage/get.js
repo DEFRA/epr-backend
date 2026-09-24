@@ -9,6 +9,7 @@ import {
 import { prnTonnageResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const prnTonnagePath = '/v1/prn-tonnage'
 
@@ -25,14 +26,25 @@ export const getPrnTonnage = {
     }
   },
   /**
-   * @param {HapiRequest} request
+   * @param {HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
+   * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { db, ledgerRepository, logger } = request
+    const {
+      packagingRecyclingNotesRepository,
+      organisationsRepository,
+      ledgerRepository,
+      logger
+    } = request
 
     try {
-      const result = await aggregatePrnTonnage(db, ledgerRepository)
+      const result = await aggregatePrnTonnage(
+        packagingRecyclingNotesRepository,
+        organisationsRepository,
+        ledgerRepository
+      )
 
       logger.info({
         message: 'PRN tonnage data retrieved successfully',
