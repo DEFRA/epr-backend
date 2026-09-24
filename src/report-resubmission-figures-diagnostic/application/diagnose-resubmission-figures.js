@@ -21,6 +21,11 @@
  * equivalent figures in a different row order still count as identical.
  */
 
+import {
+  extractFigures,
+  figuresAreEquivalent
+} from '#reports/domain/resubmission/figures-equivalence.js'
+
 /** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent, PrnData } from '#reports/repository/port.js' */
 
 /**
@@ -68,70 +73,6 @@
  */
 
 /**
- * The summary-log and PRN activity subset of one submission — the figures a
- * report presents, without the free-text and operator-entered fields. Missing
- * activity blocks collapse to null so present-vs-absent is itself a difference.
- *
- * @param {ResubmissionSubmission} submission
- */
-const extractFigures = (submission) => ({
-  recyclingActivity: submission.recyclingActivity
-    ? {
-        suppliers: submission.recyclingActivity.suppliers,
-        totalTonnageReceived: submission.recyclingActivity.totalTonnageReceived
-      }
-    : null,
-  exportActivity: submission.exportActivity
-    ? {
-        overseasSites: submission.exportActivity.overseasSites,
-        unapprovedOverseasSites:
-          submission.exportActivity.unapprovedOverseasSites,
-        totalTonnageExported: submission.exportActivity.totalTonnageExported,
-        tonnageRefusedAtDestination:
-          submission.exportActivity.tonnageRefusedAtDestination,
-        tonnageStoppedDuringExport:
-          submission.exportActivity.tonnageStoppedDuringExport,
-        totalTonnageRefusedOrStopped:
-          submission.exportActivity.totalTonnageRefusedOrStopped,
-        tonnageRepatriated: submission.exportActivity.tonnageRepatriated
-      }
-    : null,
-  wasteSent: submission.wasteSent
-    ? {
-        tonnageSentToReprocessor: submission.wasteSent.tonnageSentToReprocessor,
-        tonnageSentToExporter: submission.wasteSent.tonnageSentToExporter,
-        tonnageSentToAnotherSite: submission.wasteSent.tonnageSentToAnotherSite,
-        finalDestinations: submission.wasteSent.finalDestinations
-      }
-    : null,
-  prn: submission.prn ? { issuedTonnage: submission.prn.issuedTonnage } : null
-})
-
-/** @param {string} a @param {string} b */
-const byString = (a, b) => a.localeCompare(b)
-
-/**
- * Recursively serialises a value to a stable string with object keys sorted and
- * array elements ordered by their own serialisation, so the result is
- * insensitive to both key order and row order.
- *
- * @param {*} value
- * @returns {string}
- */
-const canonicalise = (value) => {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalise).sort(byString).join(',')}]`
-  }
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.keys(value)
-      .sort(byString)
-      .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
-    return `{${entries.join(',')}}`
-  }
-  return JSON.stringify(value)
-}
-
-/**
  * True when the earlier submission of a pair was flagged for resubmission by
  * the SL-driven closed-period path, so the service forced the resubmission.
  *
@@ -139,16 +80,6 @@ const canonicalise = (value) => {
  */
 const isAutoEnforced = (previous) =>
   Boolean(previous.resubmissionRequired?.closedPeriodRestated)
-
-/**
- * True when two submissions present logically equivalent activity figures.
- *
- * @param {ResubmissionSubmission} previous
- * @param {ResubmissionSubmission} current
- */
-const figuresAreEquivalent = (previous, current) =>
-  canonicalise(extractFigures(previous)) ===
-  canonicalise(extractFigures(current))
 
 const emptySummary = () => ({
   resubmittedPeriods: 0,
@@ -177,7 +108,9 @@ const scanPeriod = (periodGroup, reports, summary) => {
     summary.resubmissionPairs += 1
     if (isAutoEnforced(previous)) {
       summary.autoEnforcedResubmissions += 1
-      if (figuresAreEquivalent(previous, current)) {
+      if (
+        figuresAreEquivalent(extractFigures(previous), extractFigures(current))
+      ) {
         summary.identicalResubmissions += 1
         reports.push({
           organisationId: periodGroup.organisationId,
