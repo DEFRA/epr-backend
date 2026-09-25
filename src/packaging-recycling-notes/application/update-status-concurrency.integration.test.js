@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
@@ -142,6 +142,10 @@ describe('PRN status concurrency against real MongoDB', () => {
   let prnId
 
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
+    // The fixture is a 2026-year accreditation: from 1 Feb 2027 the real
+    // clock falls outside its 31 January relevant-year deadline and the
+    // transitions here would be refused, so tests run on a pinned clock.
+    vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
     database = mongoClient.db(DATABASE_NAME)
     await database.collection(PRNS_COLLECTION).deleteMany({})
     await database
@@ -185,6 +189,10 @@ describe('PRN status concurrency against real MongoDB', () => {
       })
     )
     prnId = id
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const cancel = (repositoryFactory) =>
