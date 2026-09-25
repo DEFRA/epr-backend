@@ -55,10 +55,12 @@ export const packagingRecyclingNotesDecemberEligibility = {
         accreditationId
       )
 
-      // A non-live accreditation (created/rejected/cancelled) carries no
-      // December eligibility and has no validFrom to derive a year from, so
-      // answer `none` rather than reaching deriveAccreditationYear, which
-      // throws on a missing validFrom. Every active status carries validFrom.
+      // Any non-active status carries no December eligibility and has no
+      // validFrom to derive a year from, so answer `none` rather than reaching
+      // deriveAccreditationYear, which throws on a missing validFrom. `approved`
+      // and `suspended` are the active statuses (a suspended accreditation can
+      // still draft), and both are guaranteed a validFrom, so they stay on the
+      // live path below.
       if (!ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)) {
         return h
           .response({

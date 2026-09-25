@@ -183,10 +183,11 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns mode: none for a non-approved accreditation without failing', async () => {
+  it('returns mode: none for a non-active accreditation, even with a validFrom', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
+      validFrom: '2026-01-01',
       status: 'created'
     })
 
@@ -200,6 +201,29 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     expect(JSON.parse(response.payload)).toStrictEqual({
       mode: 'none',
       windowOpen: false
+    })
+  })
+
+  it('treats a suspended accreditation as live and derives its eligibility', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+      id: accreditationId,
+      validFrom: '2026-01-01',
+      status: 'suspended',
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      reprocessingType: REPROCESSING_TYPE.OUTPUT
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      mode: 'manual',
+      windowOpen: true
     })
   })
 
