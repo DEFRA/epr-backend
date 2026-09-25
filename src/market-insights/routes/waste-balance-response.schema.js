@@ -63,10 +63,10 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
  *   its operator does not count.
  *
  * The period carries each material and accreditation type's figures summed
- * across the months served, net credit included, so no reader adds them up.
- * It carries the same two counts for each of those totals. An operator counts
- * once there, however many of those months it contributes to, so a period
- * count is not the sum of the monthly ones.
+ * across the months served, net credit included. It carries the same two
+ * counts for each of those totals. An operator counts once there, however
+ * many of those months it contributes to, so a period count is not the sum of
+ * the monthly ones.
  */
 export const wasteBalanceResponseSchema = Joi.object({
   meta: metaSchema,
