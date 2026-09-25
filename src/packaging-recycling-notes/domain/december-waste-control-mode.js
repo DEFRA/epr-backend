@@ -7,7 +7,8 @@ import { accruesDecember } from './resolve-pool.js'
  */
 export const DECEMBER_WASTE_CONTROL_MODE = Object.freeze({
   SELECT_POOL: 'pool',
-  DECLARE_MANUALLY: 'manual'
+  DECLARE_MANUALLY: 'manual',
+  NONE: 'none'
 })
 
 /**

@@ -183,10 +183,30 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns 500 when the accreditation has no validFrom', async () => {
+  it('returns mode: none for a non-approved accreditation without failing', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
       status: 'created'
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      mode: 'none',
+      windowOpen: false
+    })
+  })
+
+  it('returns 500 if a live accreditation is unexpectedly missing validFrom', async () => {
+    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+      id: accreditationId,
+      status: 'approved'
     })
 
     const response = await server.inject({
