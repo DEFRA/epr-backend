@@ -129,19 +129,20 @@ export const TONNAGE_BANDS = Object.freeze([
 
 /**
  * The rows of the UK and England tables, in published order, by the material
- * each row is.
+ * each row is. A material the published file does not list follows those it
+ * does, so theirs keep their published rows.
  *
  * @type {readonly (readonly [Material, string])[]}
  */
 export const NATION_FIGURES_MATERIALS = Object.freeze([
   [MATERIAL.ALUMINIUM, 'Aluminium'],
-  [MATERIAL.FIBRE, 'Fibre based composite'],
   [GLASS_RECYCLING_PROCESS.GLASS_OTHER, 'Glass-other'],
   [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT, GLASS_REMELT],
   [MATERIAL.PAPER, PAPER_AND_BOARD],
   [MATERIAL.PLASTIC, 'Plastic'],
   [MATERIAL.STEEL, 'Steel'],
-  [MATERIAL.WOOD, 'Wood']
+  [MATERIAL.WOOD, 'Wood'],
+  [MATERIAL.FIBRE, 'Fibre-based composite']
 ])
 
 export const GRAND_TOTAL = 'Grand Total'

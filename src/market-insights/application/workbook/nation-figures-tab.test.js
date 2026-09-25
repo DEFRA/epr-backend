@@ -422,7 +422,7 @@ describe("a UK or England tab's materials", () => {
     ])
   })
 
-  it('take in a material the published file does not list, in alphabetical order', async () => {
+  it('take in a material the published file does not list, after those it does', async () => {
     const worksheet = await renderWith(
       WORKSHEET_NAME.UK,
       await contentsOfRegister({
@@ -441,13 +441,15 @@ describe("a UK or England tab's materials", () => {
       })
     )
 
-    expect(worksheet.getCell('A6').value).toBe('Fibre based composite')
-    expect(worksheet.getCell('A7').value).toBe('Glass-other')
-    expect(worksheet.getCell('A13').value).toBe('Grand Total')
+    expect(valuesIn(worksheet, 'A11', 'A13')).toEqual([
+      ['Wood'],
+      ['Fibre-based composite'],
+      ['Grand Total']
+    ])
     // Each table gains a row, so each month's section gains two.
     expect(worksheet.getCell('A27').value).toBe('February 2026')
     expect(worksheet.getCell('A52').value).toBe('March 2026')
-    expect(valuesIn(worksheet, 'B56', 'D56')).toEqual([[42, 40, 2]])
+    expect(valuesIn(worksheet, 'B62', 'D62')).toEqual([[42, 40, 2]])
     expect(worksheet.rowCount).toBe(150)
   })
 
