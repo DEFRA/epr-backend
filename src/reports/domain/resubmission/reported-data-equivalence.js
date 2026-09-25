@@ -1,9 +1,9 @@
 /**
- * The reported-figures comparison core, shared by the resubmission-figures
+ * The reported-data comparison core, shared by the resubmission-figures
  * diagnostic and the validation-time resubmission gate.
  *
- * `extractFigures` picks exactly the figure-bearing subset a report presents and
- * excludes provenance (`source`), lifecycle metadata (`status`,
+ * `extractReportedData` picks exactly the reported-data subset a report presents
+ * and excludes provenance (`source`), lifecycle metadata (`status`,
  * `resubmissionRequired`), free-text and operator-entered fields
  * (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
  * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`) and
@@ -20,11 +20,11 @@
 /** @import { RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
 /**
- * A report (or submission) carrying the figure-bearing activity blocks. `prn`
+ * A report (or submission) carrying the reported-data activity blocks. `prn`
  * is narrowed to just its issued tonnage so both a frozen report's full PrnData
  * and a freshly generated `{ issuedTonnage }` satisfy it.
  *
- * @typedef {Object} FiguresBearingReport
+ * @typedef {Object} ReportedDataBearingReport
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
@@ -44,13 +44,13 @@ const dropSupplierContact = ({
 }) => rest
 
 /**
- * The summary-log and PRN activity subset of one report — the figures it
+ * The summary-log and PRN activity subset of one report — the reported data it
  * presents, without the free-text and operator-entered fields or supplier
  * contact details.
  *
- * @param {FiguresBearingReport} report
+ * @param {ReportedDataBearingReport} report
  */
-export const extractFigures = (report) => ({
+export const extractReportedData = (report) => ({
   recyclingActivity: report.recyclingActivity
     ? {
         suppliers: report.recyclingActivity.suppliers.map(dropSupplierContact),
@@ -107,10 +107,10 @@ export const canonicalise = (value) => {
 }
 
 /**
- * True when two already-extracted figure sets are logically equivalent.
+ * True when two already-extracted reported-data sets are logically equivalent.
  *
- * @param {ReturnType<typeof extractFigures>} figuresA
- * @param {ReturnType<typeof extractFigures>} figuresB
+ * @param {ReturnType<typeof extractReportedData>} reportedDataA
+ * @param {ReturnType<typeof extractReportedData>} reportedDataB
  */
-export const figuresAreEquivalent = (figuresA, figuresB) =>
-  canonicalise(figuresA) === canonicalise(figuresB)
+export const reportedDataAreEquivalent = (reportedDataA, reportedDataB) =>
+  canonicalise(reportedDataA) === canonicalise(reportedDataB)

@@ -3,9 +3,9 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import {
-  extractFigures,
-  figuresAreEquivalent
-} from '#reports/domain/resubmission/figures-equivalence.js'
+  extractReportedData,
+  reportedDataAreEquivalent
+} from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 
@@ -39,8 +39,8 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
  */
 
 // The after-state is generated from this upload's in-memory rows, not a
-// persisted head, so it has no submission provenance. extractFigures excludes
-// source, so the nulls never reach the diff.
+// persisted head, so it has no submission provenance. extractReportedData
+// excludes source, so the nulls never reach the diff.
 const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
 
 /**
@@ -148,7 +148,10 @@ const periodFiguresChanged = async ({
   const before = await reportsService.findReportById(currentReportId)
   const after = await aggregateAfterFigures({ period, ...afterContext })
 
-  return !figuresAreEquivalent(extractFigures(before), extractFigures(after))
+  return !reportedDataAreEquivalent(
+    extractReportedData(before),
+    extractReportedData(after)
+  )
 }
 
 /**
