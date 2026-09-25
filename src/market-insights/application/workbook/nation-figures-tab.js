@@ -33,8 +33,7 @@ import {
 /** @import { Material, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ScopeFigures } from '#market-insights/application/read-figures.js' */
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
-/** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js' */
-/** @import { FiguresTable } from '#market-insights/domain/published-workbook-text.js' */
+/** @import { ExporterFigure, FiguresTable, ReprocessorFigure } from '#market-insights/domain/published-workbook-text.js' */
 /** @import { TabContents } from './cells.js' */
 
 const NATION_FIGURES_FIRST_ROW = 2
@@ -51,71 +50,34 @@ const UK_SCOPE = 'uk'
  */
 const SCOPE_OF_TAB = new Map([[WORKSHEET_NAME.UK, UK_SCOPE]])
 
-/** @typedef {keyof (ReprocessorMeasures & PublishedExtras)} ReprocessorFigure */
-/** @typedef {keyof (ExporterMeasures & PublishedExtras)} ExporterFigure */
 /** @typedef {ReprocessorFigure | ExporterFigure} Figure */
 
 /**
- * A table on the tab: its wording, the accreditation type it is filled from,
- * and the figure under each of its columns after the material.
+ * A table on the tab: its wording and figures, and the accreditation type it
+ * is filled from.
  *
- * @typedef {FiguresTable & {
- *   accreditationType: WasteProcessingTypeValue,
- *   figures: readonly Figure[]
+ * @typedef {FiguresTable<Figure> & {
+ *   accreditationType: WasteProcessingTypeValue
  * }} NationFiguresTable
  */
-
-/** @type {(ReprocessorFigure & ExporterFigure)[]} */
-const SENT_ON = [
-  'tonnageSentOnTotal',
-  'tonnageSentOnToReprocessor',
-  'tonnageSentOnToExporter',
-  'tonnageSentOnToOtherFacilities'
-]
-
-/** @type {(ReprocessorFigure & ExporterFigure)[]} */
-const NOTES = ['revisedTonnageIssued', 'totalRevenue', 'averagePricePerTonne']
-
-/** @type {ReprocessorFigure[]} */
-const REPROCESSOR_TONNAGES = [
-  'tonnageReceived',
-  'tonnageRecycled',
-  'tonnageReceivedButNotRecycled',
-  ...SENT_ON
-]
-
-/** @type {ExporterFigure[]} */
-const EXPORTER_TONNAGES = [
-  'tonnageReceived',
-  'tonnageExported',
-  'tonnageReceivedButNotExported',
-  ...SENT_ON,
-  'tonnageStopped',
-  'tonnageRefused',
-  'tonnageRepatriated'
-]
 
 /** @type {Readonly<Record<keyof typeof NATION_FIGURES_TABLES, NationFiguresTable>>} */
 const TABLES = {
   reprocessor: {
     ...NATION_FIGURES_TABLES.reprocessor,
-    accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    figures: REPROCESSOR_TONNAGES
+    accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR
   },
   exporter: {
     ...NATION_FIGURES_TABLES.exporter,
-    accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-    figures: EXPORTER_TONNAGES
+    accreditationType: WASTE_PROCESSING_TYPE.EXPORTER
   },
   reprocessorPrn: {
     ...NATION_FIGURES_TABLES.reprocessorPrn,
-    accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    figures: NOTES
+    accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR
   },
   exporterPern: {
     ...NATION_FIGURES_TABLES.exporterPern,
-    accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-    figures: NOTES
+    accreditationType: WASTE_PROCESSING_TYPE.EXPORTER
   }
 }
 
