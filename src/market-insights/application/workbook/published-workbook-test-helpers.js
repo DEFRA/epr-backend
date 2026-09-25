@@ -9,6 +9,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
+import { NO_FIGURE } from '#market-insights/domain/published-workbook-text.js'
 import { frameOf } from './cells.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
@@ -62,10 +63,6 @@ export const contentsFor = async (months) => ({
   ...frameOf({ months, now: PUBLISHED_EXTRACTION }),
   figures: await readMarketInsightsFigures(readParamsFor(months))
 })
-
-// Where the published file has no average to show, it puts a dash. That is a
-// figure, and figures are not this workbook's yet.
-const NO_FIGURE = '-'
 
 /**
  * @returns {Promise<ExcelJS.Workbook>}

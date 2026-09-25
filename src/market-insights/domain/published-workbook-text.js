@@ -8,6 +8,14 @@
  * here.
  */
 
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
+
+/** @import { Material } from '#domain/organisations/model.js' */
+/** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
+
 export const WORKSHEET_NAME = Object.freeze({
   WASTE_BALANCE: 'UK Waste Balance ',
   KEY: 'Key',
@@ -120,17 +128,28 @@ export const TONNAGE_BANDS = Object.freeze([
   'Over 10,000 tonnes'
 ])
 
+/**
+ * The rows of the UK and England tables, in published order, by the material
+ * each row is. A material the published file does not list follows those it
+ * does, so theirs keep their published rows.
+ *
+ * @type {readonly (readonly [Material, string])[]}
+ */
 export const NATION_FIGURES_MATERIALS = Object.freeze([
-  'Aluminium',
-  'Glass-other',
-  GLASS_REMELT,
-  PAPER_AND_BOARD,
-  'Plastic',
-  'Steel',
-  'Wood'
+  [MATERIAL.ALUMINIUM, 'Aluminium'],
+  [GLASS_RECYCLING_PROCESS.GLASS_OTHER, 'Glass-other'],
+  [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT, GLASS_REMELT],
+  [MATERIAL.PAPER, PAPER_AND_BOARD],
+  [MATERIAL.PLASTIC, 'Plastic'],
+  [MATERIAL.STEEL, 'Steel'],
+  [MATERIAL.WOOD, 'Wood'],
+  [MATERIAL.FIBRE, 'Fibre-based composite']
 ])
 
 export const GRAND_TOTAL = 'Grand Total'
+
+/** What the published file prints where a row has no figure. */
+export const NO_FIGURE = '-'
 
 /** The column headings of the UK and England tables, which the Key describes. */
 const COLUMN = Object.freeze({
@@ -153,58 +172,82 @@ const COLUMN = Object.freeze({
   NOTES_AVERAGE_PRICE: 'Average PRN/PERN price per tonne \n(£)'
 })
 
-const TONNAGE_SENT_ON = Object.freeze([
-  COLUMN.SENT_ON_TOTAL,
-  COLUMN.SENT_ON_TO_REPROCESSOR,
-  COLUMN.SENT_ON_TO_EXPORTER,
-  COLUMN.SENT_ON_TO_OTHER_FACILITIES
-])
+/** @typedef {keyof (ReprocessorMeasures & PublishedExtras)} ReprocessorFigure */
+/** @typedef {keyof (ExporterMeasures & PublishedExtras)} ExporterFigure */
 
-const PRN_COLUMNS = Object.freeze([
-  COLUMN.MATERIAL,
-  COLUMN.NOTES_ISSUED,
-  COLUMN.NOTES_REVENUE,
-  COLUMN.NOTES_AVERAGE_PRICE
-])
+/**
+ * A figure column: its heading, and the figure printed under it.
+ *
+ * @template {string} F
+ * @typedef {readonly [string, F]} FigureColumn
+ */
+
+/** @type {readonly FigureColumn<ReprocessorFigure & ExporterFigure>[]} */
+const TONNAGE_SENT_ON = [
+  [COLUMN.SENT_ON_TOTAL, 'tonnageSentOnTotal'],
+  [COLUMN.SENT_ON_TO_REPROCESSOR, 'tonnageSentOnToReprocessor'],
+  [COLUMN.SENT_ON_TO_EXPORTER, 'tonnageSentOnToExporter'],
+  [COLUMN.SENT_ON_TO_OTHER_FACILITIES, 'tonnageSentOnToOtherFacilities']
+]
+
+/** @type {readonly FigureColumn<ReprocessorFigure & ExporterFigure>[]} */
+const NOTES = [
+  [COLUMN.NOTES_ISSUED, 'revisedTonnageIssued'],
+  [COLUMN.NOTES_REVENUE, 'totalRevenue'],
+  [COLUMN.NOTES_AVERAGE_PRICE, 'averagePricePerTonne']
+]
+
+/** @type {readonly FigureColumn<ReprocessorFigure>[]} */
+const REPROCESSOR_TONNAGES = [
+  [COLUMN.RECEIVED_FOR_RECYCLING, 'tonnageReceived'],
+  [COLUMN.RECYCLED, 'tonnageRecycled'],
+  [COLUMN.RECEIVED_BUT_UNRECYCLED, 'tonnageReceivedButNotRecycled'],
+  ...TONNAGE_SENT_ON
+]
+
+/** @type {readonly FigureColumn<ExporterFigure>[]} */
+const EXPORTER_TONNAGES = [
+  [COLUMN.RECEIVED_FOR_EXPORTING, 'tonnageReceived'],
+  [COLUMN.EXPORTED_FOR_RECYCLING, 'tonnageExported'],
+  [COLUMN.RECEIVED_BUT_UNEXPORTED, 'tonnageReceivedButNotExported'],
+  ...TONNAGE_SENT_ON,
+  [COLUMN.EXPORTED_STOPPED, 'tonnageStopped'],
+  [COLUMN.EXPORTED_REFUSED, 'tonnageRefused'],
+  [COLUMN.REPATRIATED, 'tonnageRepatriated']
+]
 
 const REPROCESSOR_DATA = 'Reprocessor Data '
 
 /**
- * @typedef {{ title: string, columns: readonly string[] }} FiguresTable
+ * A table's title, its column headings, and the figure under each heading
+ * after the material's.
+ *
+ * @template {string} F
+ * @typedef {{ title: string, columns: readonly string[], figures: readonly F[] }} FiguresTable
  */
+
+/**
+ * @template {string} F
+ * @param {string} title
+ * @param {readonly FigureColumn<F>[]} figureColumns
+ * @returns {FiguresTable<F>}
+ */
+const figuresTable = (title, figureColumns) =>
+  Object.freeze({
+    title,
+    columns: [COLUMN.MATERIAL, ...figureColumns.map(([heading]) => heading)],
+    figures: figureColumns.map(([, figure]) => figure)
+  })
 
 /**
  * The four tables each month gets on the UK and England tabs, in the order
  * they appear down the tab.
- *
- * @type {Readonly<Record<'reprocessor' | 'exporter' | 'reprocessorPrn' | 'exporterPern', FiguresTable>>}
  */
 export const NATION_FIGURES_TABLES = Object.freeze({
-  reprocessor: {
-    title: REPROCESSOR_DATA,
-    columns: [
-      COLUMN.MATERIAL,
-      COLUMN.RECEIVED_FOR_RECYCLING,
-      COLUMN.RECYCLED,
-      COLUMN.RECEIVED_BUT_UNRECYCLED,
-      ...TONNAGE_SENT_ON
-    ]
-  },
-  exporter: {
-    title: 'Exporter Data ',
-    columns: [
-      COLUMN.MATERIAL,
-      COLUMN.RECEIVED_FOR_EXPORTING,
-      COLUMN.EXPORTED_FOR_RECYCLING,
-      COLUMN.RECEIVED_BUT_UNEXPORTED,
-      ...TONNAGE_SENT_ON,
-      COLUMN.EXPORTED_STOPPED,
-      COLUMN.EXPORTED_REFUSED,
-      COLUMN.REPATRIATED
-    ]
-  },
-  reprocessorPrn: { title: 'Reprocessor PRN Data ', columns: PRN_COLUMNS },
-  exporterPern: { title: 'Exporter PERN Data ', columns: PRN_COLUMNS }
+  reprocessor: figuresTable(REPROCESSOR_DATA, REPROCESSOR_TONNAGES),
+  exporter: figuresTable('Exporter Data ', EXPORTER_TONNAGES),
+  reprocessorPrn: figuresTable('Reprocessor PRN Data ', NOTES),
+  exporterPern: figuresTable('Exporter PERN Data ', NOTES)
 })
 
 /**
