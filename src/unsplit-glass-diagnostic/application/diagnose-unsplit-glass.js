@@ -1,3 +1,4 @@
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
@@ -6,6 +7,7 @@ import { resolveMaterial } from '#domain/organisations/registration-utils.js'
  * @typedef {Object} UnsplitGlassRow
  * @property {string} organisationId
  * @property {number} orgId
+ * @property {boolean} testOrganisation
  * @property {'registration' | 'accreditation'} recordKind
  * @property {string} recordId
  * @property {RegistrationStatus | AccreditationStatus} status
@@ -20,6 +22,8 @@ import { resolveMaterial } from '#domain/organisations/registration-utils.js'
  * @property {number} scannedAccreditations
  * @property {number} unsplitRegistrations
  * @property {number} unsplitAccreditations
+ * @property {number} unsplitInTestOrganisations - of the unsplit records, how
+ *   many belong to test organisations
  */
 
 /**
@@ -75,6 +79,7 @@ export const diagnoseUnsplitGlass = (organisations) => {
     .map(({ organisation, record, recordKind, number }) => ({
       organisationId: organisation.id,
       orgId: organisation.orgId,
+      testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
       recordKind,
       recordId: record.id,
       status: record.status,
@@ -92,7 +97,9 @@ export const diagnoseUnsplitGlass = (organisations) => {
       scannedRegistrations: registrations.length,
       scannedAccreditations: accreditations.length,
       unsplitRegistrations: countOf('registration'),
-      unsplitAccreditations: countOf('accreditation')
+      unsplitAccreditations: countOf('accreditation'),
+      unsplitInTestOrganisations: rows.filter((row) => row.testOrganisation)
+        .length
     }
   }
 }

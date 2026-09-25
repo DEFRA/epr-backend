@@ -84,14 +84,14 @@ describe('runUnsplitGlassDiagnostic', () => {
     await runUnsplitGlassDiagnostic(server)
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Unsplit glass record: organisationId=${organisation.id} orgId=${organisation.orgId} recordKind=registration recordId=${numbered.id} status=created number=R25SR500010GL glassRecyclingProcess=["glass_re_melt","glass_other"]`
+      message: `Unsplit glass record: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordKind=registration recordId=${numbered.id} status=created number=R25SR500010GL glassRecyclingProcess=["glass_re_melt","glass_other"]`
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Unsplit glass record: organisationId=${organisation.id} orgId=${organisation.orgId} recordKind=registration recordId=${unnumbered.id} status=created number=none glassRecyclingProcess=[]`
+      message: `Unsplit glass record: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordKind=registration recordId=${unnumbered.id} status=created number=none glassRecyclingProcess=[]`
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Unsplit glass diagnostic: scannedOrganisations=1 scannedRegistrations=2 scannedAccreditations=0 unsplitRegistrations=2 unsplitAccreditations=0'
+        'Unsplit glass diagnostic: scannedOrganisations=1 scannedRegistrations=2 scannedAccreditations=0 unsplitRegistrations=2 unsplitAccreditations=0 unsplitInTestOrganisations=0'
     })
   })
 

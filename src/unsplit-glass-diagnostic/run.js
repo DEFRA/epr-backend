@@ -13,6 +13,7 @@ const formatUnsplitLine = (r) =>
     'Unsplit glass record:',
     `organisationId=${r.organisationId}`,
     `orgId=${r.orgId}`,
+    `testOrganisation=${r.testOrganisation}`,
     `recordKind=${r.recordKind}`,
     `recordId=${r.recordId}`,
     `status=${r.status}`,
@@ -35,12 +36,12 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `Unsplit glass diagnostic: scannedOrganisations=${summary.scannedOrganisations} scannedRegistrations=${summary.scannedRegistrations} scannedAccreditations=${summary.scannedAccreditations} unsplitRegistrations=${summary.unsplitRegistrations} unsplitAccreditations=${summary.unsplitAccreditations}`
+    message: `Unsplit glass diagnostic: scannedOrganisations=${summary.scannedOrganisations} scannedRegistrations=${summary.scannedRegistrations} scannedAccreditations=${summary.scannedAccreditations} unsplitRegistrations=${summary.unsplitRegistrations} unsplitAccreditations=${summary.unsplitAccreditations} unsplitInTestOrganisations=${summary.unsplitInTestOrganisations}`
   })
 }
 
 /**
- * Read-only startup diagnostic for PAE-2003: lists every stored registration
+ * Read-only startup diagnostic: lists every stored registration
  * and accreditation that applied for glass without carrying exactly one
  * recycling process, so the fix can be sized before regulators find them one
  * page at a time. It writes nothing.

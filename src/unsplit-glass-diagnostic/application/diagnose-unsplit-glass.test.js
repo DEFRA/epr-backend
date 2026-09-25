@@ -5,6 +5,7 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -32,6 +33,8 @@ const asStored = (organisation) => partialMock(organisation)
  */
 const readThroughRepository = async (organisations) =>
   createInMemoryOrganisationsRepository(organisations.map(asStored))().findAll()
+
+const [TEST_ORGANISATION_ID] = TEST_ORGANISATION_IDS
 
 /** @param {Partial<Registration>} [overrides] */
 const unsplitRegistration = (overrides = {}) =>
@@ -67,6 +70,7 @@ describe('diagnoseUnsplitGlass', () => {
       {
         organisationId: organisation.id,
         orgId: organisation.orgId,
+        testOrganisation: false,
         recordKind: 'registration',
         recordId: registration.id,
         status: 'created',
@@ -93,6 +97,7 @@ describe('diagnoseUnsplitGlass', () => {
       {
         organisationId: organisation.id,
         orgId: organisation.orgId,
+        testOrganisation: false,
         recordKind: 'accreditation',
         recordId: accreditation.id,
         status: 'created',
@@ -176,8 +181,30 @@ describe('diagnoseUnsplitGlass', () => {
     expect(rows).toEqual([])
   })
 
+  it('reports an unsplit record in a test organisation and marks it as one', async () => {
+    const registration = unsplitRegistration()
+    const organisation = buildOrganisation({
+      orgId: TEST_ORGANISATION_ID,
+      registrations: [registration],
+      accreditations: []
+    })
+
+    const { rows, summary } = diagnoseUnsplitGlass(
+      await readThroughRepository([organisation])
+    )
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        recordId: registration.id,
+        testOrganisation: true
+      })
+    ])
+    expect(summary.unsplitInTestOrganisations).toBe(1)
+  })
+
   it('totals what it scanned and what it found across every organisation', async () => {
     const first = buildOrganisation({
+      orgId: TEST_ORGANISATION_ID,
       registrations: [unsplitRegistration(), buildRegistration()],
       accreditations: [unsplitAccreditation()]
     })
@@ -195,7 +222,8 @@ describe('diagnoseUnsplitGlass', () => {
       scannedRegistrations: 3,
       scannedAccreditations: 3,
       unsplitRegistrations: 2,
-      unsplitAccreditations: 1
+      unsplitAccreditations: 1,
+      unsplitInTestOrganisations: 2
     })
   })
 })
