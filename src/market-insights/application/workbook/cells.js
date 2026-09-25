@@ -4,7 +4,9 @@ import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { MarketInsightsFigures } from '#market-insights/application/read-figures.js' */
+/** @import { Material } from '#domain/organisations/model.js' */
+/** @import { MarketInsightsFigures, ScopeFigures } from '#market-insights/application/read-figures.js' */
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { Note } from '#market-insights/domain/published-workbook-text.js' */
 
 export const monthName = new Intl.DateTimeFormat('en-GB', {
@@ -122,3 +124,38 @@ export const setWidths = (worksheet, widths, firstColumn = 1) => {
     worksheet.getColumn(firstColumn + index).width = width
   })
 }
+
+export const UK_SCOPE = 'uk'
+
+/**
+ * @param {ScopeFigures[]} scopes
+ * @param {string} name
+ */
+export const tableOf = (scopes, name) => {
+  const scope = scopes.find((candidate) => candidate.name === name)
+  if (scope === undefined) {
+    throw new Error(`The market insights figures have no ${name} scope`)
+  }
+  return scope.table
+}
+
+/**
+ * The UK figures, which decide the materials a tab lists.
+ *
+ * @param {ScopeFigures[]} scopes
+ */
+export const ukTableOf = (scopes) => tableOf(scopes, UK_SCOPE)
+
+/**
+ * Whether any month of the period has an operator accredited for the
+ * material, of either accreditation type.
+ *
+ * @param {ReprocessorExporterTable} table
+ * @param {Material} material
+ */
+export const hasAccreditedOperator = (table, material) =>
+  Object.values(table.data.months).some(({ figures }) =>
+    Object.values(figures[material]).some(
+      ({ operatorCount }) => operatorCount > 0
+    )
+  )

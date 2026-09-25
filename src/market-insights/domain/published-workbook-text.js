@@ -10,10 +10,11 @@
 
 import {
   GLASS_RECYCLING_PROCESS,
-  MATERIAL
+  MATERIAL,
+  TONNAGE_BAND
 } from '#domain/organisations/model.js'
 
-/** @import { Material } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
 
 export const WORKSHEET_NAME = Object.freeze({
@@ -111,21 +112,34 @@ export const WASTE_BALANCE_ROWS = Object.freeze([
   ['Wood', 'Reprocessor']
 ])
 
+/**
+ * Each material the outstanding returns tab counts, and its label, in the
+ * order the blocks run down the tab. The published materials come first, in
+ * their published order, so each keeps its published row whatever follows.
+ *
+ * @type {readonly (readonly [Material, string])[]}
+ */
 export const OUTSTANDING_RETURNS_MATERIALS = Object.freeze([
-  'Aluminium',
-  'Glass other',
-  GLASS_REMELT,
-  PAPER_AND_BOARD,
-  'Plastic',
-  'Steel',
-  'Wood'
+  [MATERIAL.ALUMINIUM, 'Aluminium'],
+  [GLASS_RECYCLING_PROCESS.GLASS_OTHER, 'Glass other'],
+  [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT, GLASS_REMELT],
+  [MATERIAL.PAPER, PAPER_AND_BOARD],
+  [MATERIAL.PLASTIC, 'Plastic'],
+  [MATERIAL.STEEL, 'Steel'],
+  [MATERIAL.WOOD, 'Wood'],
+  [MATERIAL.FIBRE, 'Fibre-based composite']
 ])
 
+/**
+ * Each tonnage band, and its label, in the order the rows run down a block.
+ *
+ * @type {readonly (readonly [TonnageBand, string])[]}
+ */
 export const TONNAGE_BANDS = Object.freeze([
-  'Up to 500 tonnes',
-  'Up to 5,000 tonnes',
-  'Up to 10,000 tonnes',
-  'Over 10,000 tonnes'
+  [TONNAGE_BAND.UP_TO_500, 'Up to 500 tonnes'],
+  [TONNAGE_BAND.UP_TO_5000, 'Up to 5,000 tonnes'],
+  [TONNAGE_BAND.UP_TO_10000, 'Up to 10,000 tonnes'],
+  [TONNAGE_BAND.OVER_10000, 'Over 10,000 tonnes']
 ])
 
 /**
