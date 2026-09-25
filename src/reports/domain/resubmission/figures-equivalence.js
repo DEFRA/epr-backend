@@ -7,8 +7,11 @@
  * `resubmissionRequired`), free-text and operator-entered fields
  * (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
  * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`) and
- * `prn.averagePricePerTonne` (derived from operator-entered revenue). Missing
- * activity blocks collapse to null so present-vs-absent is itself a difference.
+ * `prn.averagePricePerTonne` (derived from operator-entered revenue). It also
+ * drops each supplier's telephone and email: by agreement (PAE-1983) a change
+ * only to a supplier's contact number or address does not require resubmission,
+ * even though the report stores them. Missing activity blocks collapse to null
+ * so present-vs-absent is itself a difference.
  *
  * `canonicalise` sorts object keys and array elements, so the comparison is
  * insensitive to both key order and row order.
@@ -29,15 +32,28 @@
  */
 
 /**
+ * Strips a supplier down to the fields the report compares: its telephone and
+ * email are excluded so a contact-only correction does not read as a change.
+ *
+ * @param {RecyclingActivity['suppliers'][number]} supplier
+ */
+const dropSupplierContact = ({
+  supplierPhone: _supplierPhone,
+  supplierEmail: _supplierEmail,
+  ...rest
+}) => rest
+
+/**
  * The summary-log and PRN activity subset of one report — the figures it
- * presents, without the free-text and operator-entered fields.
+ * presents, without the free-text and operator-entered fields or supplier
+ * contact details.
  *
  * @param {FiguresBearingReport} report
  */
 export const extractFigures = (report) => ({
   recyclingActivity: report.recyclingActivity
     ? {
-        suppliers: report.recyclingActivity.suppliers,
+        suppliers: report.recyclingActivity.suppliers.map(dropSupplierContact),
         totalTonnageReceived: report.recyclingActivity.totalTonnageReceived
       }
     : null,
