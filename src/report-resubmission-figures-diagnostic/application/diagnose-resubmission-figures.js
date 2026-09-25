@@ -10,15 +10,15 @@
  * are user-inflicted, not something the service forced, so they are excluded
  * from the figure analysis.
  *
- * The comparison covers only summary-log and PRN activity data — the figures a
- * report presents. It deliberately excludes: provenance (`source`), lifecycle
- * metadata (`status`, `resubmissionRequired`), free-text and operator-entered
- * fields (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
- * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`), and
- * `prn.averagePricePerTonne` (computed from the operator-entered revenue, so
- * not activity data). `suppliers` and `finalDestinations` are persisted
- * unsorted (see defra-2hq4), so the diff is order-insensitive: logically
- * equivalent figures in a different row order still count as identical.
+ * The comparison covers only the reported-data subset a report presents, via
+ * the shared `extractReportedData`/`reportedDataAreEquivalent` core. See
+ * `reports/domain/resubmission/reported-data-equivalence.js` for the exact set
+ * of excluded fields (provenance, lifecycle metadata, free-text and
+ * operator-entered fields, and each supplier's telephone and email). Reusing
+ * that core keeps this diagnostic's notion of "identical" in step with the
+ * live resubmission gate. `suppliers` and `finalDestinations` are persisted
+ * unsorted, so the diff is order-insensitive: logically equivalent data in a
+ * different row order still counts as identical.
  */
 
 import {

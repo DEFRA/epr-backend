@@ -9,7 +9,7 @@
  * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`) and
  * `prn.averagePricePerTonne` (derived from operator-entered revenue). It also
  * drops each supplier's telephone and email: by agreement (PAE-1983) a change
- * only to a supplier's contact number or address does not require resubmission,
+ * only to a supplier's contact number or email does not require resubmission,
  * even though the report stores them. Missing activity blocks collapse to null
  * so present-vs-absent is itself a difference.
  *
