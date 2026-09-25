@@ -140,13 +140,6 @@ export const tableOf = (scopes, name) => {
 }
 
 /**
- * The UK figures, which decide the materials a tab lists.
- *
- * @param {ScopeFigures[]} scopes
- */
-export const ukTableOf = (scopes) => tableOf(scopes, UK_SCOPE)
-
-/**
  * Whether any month of the period has an operator accredited for the
  * material, of either accreditation type.
  *
