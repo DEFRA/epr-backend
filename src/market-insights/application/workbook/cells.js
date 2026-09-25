@@ -90,7 +90,7 @@ export const write = (cell, value, style) => {
  * @param {ExcelJS.Worksheet} worksheet
  * @param {number} row
  * @param {number} firstColumn
- * @param {readonly (string | Date | null)[]} values - written rightwards
+ * @param {readonly (string | number | Date | null)[]} values - written rightwards
  * @param {Partial<ExcelJS.Style>} style
  */
 export const writeRow = (worksheet, row, firstColumn, values, style) => {
@@ -100,8 +100,7 @@ export const writeRow = (worksheet, row, firstColumn, values, style) => {
 }
 
 /**
- * Styles cells that hold no text: the bands, and the figure cells, ready for
- * their figures.
+ * Styles cells that hold no text, such as a band.
  *
  * @param {ExcelJS.Worksheet} worksheet
  * @param {number} row

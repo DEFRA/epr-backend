@@ -11,17 +11,19 @@ import {
   WASTE_BALANCE_MONTH_HEADING
 } from '#market-insights/domain/published-workbook-style.js'
 import {
+  WASTE_BALANCE_ACCREDITATION_TYPES,
   WASTE_BALANCE_COLUMNS,
   WASTE_BALANCE_GUIDANCE,
+  WASTE_BALANCE_MATERIALS,
   WASTE_BALANCE_NOTE,
-  WASTE_BALANCE_ROWS,
   wasteBalanceIntroduction,
   WORKSHEET_NAME
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
+  hasAccreditedOperator,
   setWidths,
-  styleEmptyCells,
+  ukTableOf,
   write,
   writeRow
 } from './cells.js'
@@ -34,10 +36,17 @@ const WASTE_BALANCE_BAND_ROW = WASTE_BALANCE_NOTE_LAST_ROW + 1
 const WASTE_BALANCE_HEADING_ROW = 9
 
 /**
+ * A row for each accreditation type of each material the period has an
+ * accredited operator for: each month's net credit as served, then the
+ * period's.
+ *
  * @param {ExcelJS.Workbook} workbook
  * @param {TabContents} contents
  */
-export const addWasteBalance = (workbook, { months, period, asOf }) => {
+export const addWasteBalance = (
+  workbook,
+  { months, period, asOf, figures }
+) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.WASTE_BALANCE)
   setWidths(worksheet, COLUMN_WIDTHS.WASTE_BALANCE)
 
@@ -75,15 +84,25 @@ export const addWasteBalance = (workbook, { months, period, asOf }) => {
   worksheet.getRow(WASTE_BALANCE_HEADING_ROW).height =
     ROW_HEIGHT.WASTE_BALANCE_HEADINGS
 
-  WASTE_BALANCE_ROWS.forEach((labels, index) => {
+  const ukTable = ukTableOf(figures.scopes)
+  const served = figures.wasteBalance.data
+  const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
+    hasAccreditedOperator(ukTable, material)
+  ).flatMap(([material, materialLabel]) =>
+    WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, typeLabel]) => ({
+      labels: [materialLabel, typeLabel],
+      netCredits: [
+        ...months.map(
+          (month) => served.months[month].figures[material][type].netCredit
+        ),
+        served.period.figures[material][type].netCredit
+      ]
+    }))
+  )
+
+  rows.forEach(({ labels, netCredits }, index) => {
     const row = WASTE_BALANCE_HEADING_ROW + 1 + index
     writeRow(worksheet, row, 1, labels, LABEL)
-    styleEmptyCells(
-      worksheet,
-      row,
-      labels.length + 1,
-      months.length + after.length,
-      FIGURE
-    )
+    writeRow(worksheet, row, labels.length + 1, netCredits, FIGURE)
   })
 }
