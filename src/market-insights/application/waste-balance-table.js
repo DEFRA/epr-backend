@@ -71,6 +71,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
  * @typedef {Record<Material, Record<WasteProcessingTypeValue, OperatorCounts>>} OperatorCountsByMaterial
+ * @typedef {Record<Material, Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>>} PeriodFiguresByMaterial
  */
 
 /**
@@ -83,11 +84,12 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * The whole period served: the reports it was owed and how many arrived, and
- * the operators behind each row's total across its months.
+ * The whole period served: the reports it was owed and how many arrived, each
+ * row's total across its months, and the operators behind that total.
  *
  * @typedef {Object} PublishedPeriod
  * @property {ReportCount} reports
+ * @property {PeriodFiguresByMaterial} figures
  * @property {OperatorCountsByMaterial} operatorCounts
  */
 
@@ -165,6 +167,29 @@ const publishedFigures = (cells, operators, month) =>
         ...operatorCountsOf(operators, key)
       }
     })
+  )
+
+/**
+ * Each row's figures summed across the months served, so a reader of the
+ * period never adds them up itself.
+ *
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {YearMonth[]} months
+ * @returns {PeriodFiguresByMaterial}
+ */
+const periodFigures = (cells, months) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      withNetCredit(
+        months
+          .map(
+            (month) =>
+              cells.get(cellKey({ material, accreditationType, month }))
+                ?.figures ?? NO_FIGURES
+          )
+          .reduce(addFigures, NO_FIGURES)
+      )
+    )
   )
 
 /**
@@ -462,6 +487,7 @@ export const buildWasteBalanceTable = async ({
       })),
       period: {
         reports: reports.total,
+        figures: periodFigures(into.cells, months),
         operatorCounts: periodOperatorCounts(operators)
       }
     }

@@ -12,22 +12,28 @@ import {
   reportCountSchema
 } from './response-schema.js'
 
-const publishedFiguresSchema = Joi.object({
+const figureKeys = {
   totalCredited: Joi.number().required(),
   eligibleForWasteBalance: Joi.number().required(),
   sentOnDeductions: Joi.number().required(),
-  netCredit: Joi.number().required(),
-  ...operatorCountKeys
-})
+  netCredit: Joi.number().required()
+}
 
-const figuresByMaterialSchema = recordOf(
-  TONNAGE_MONITORING_MATERIALS,
-  recordOf(Object.values(WASTE_PROCESSING_TYPE), publishedFiguresSchema)
+/**
+ * @param {Joi.ObjectSchema} figuresSchema
+ */
+const byMaterialAndType = (figuresSchema) =>
+  recordOf(
+    TONNAGE_MONITORING_MATERIALS,
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), figuresSchema)
+  )
+
+const figuresByMaterialSchema = byMaterialAndType(
+  Joi.object({ ...figureKeys, ...operatorCountKeys })
 )
 
-const operatorCountsByMaterialSchema = recordOf(
-  TONNAGE_MONITORING_MATERIALS,
-  recordOf(Object.values(WASTE_PROCESSING_TYPE), Joi.object(operatorCountKeys))
+const operatorCountsByMaterialSchema = byMaterialAndType(
+  Joi.object(operatorCountKeys)
 )
 
 /**
@@ -56,10 +62,11 @@ const operatorCountsByMaterialSchema = recordOf(
  *   accreditation was suspended, adds to the gross credited tonnage only, so
  *   its operator does not count.
  *
- * The period carries the same two counts for each material and accreditation
- * type's total across the months served. An operator counts once there,
- * however many of those months it contributes to, so a period count is not
- * the sum of the monthly ones.
+ * The period carries each material and accreditation type's figures summed
+ * across the months served, net credit included, so no reader adds them up.
+ * It carries the same two counts for each of those totals. An operator counts
+ * once there, however many of those months it contributes to, so a period
+ * count is not the sum of the monthly ones.
  */
 export const wasteBalanceResponseSchema = Joi.object({
   meta: metaSchema,
@@ -72,6 +79,7 @@ export const wasteBalanceResponseSchema = Joi.object({
     ),
     period: Joi.object({
       reports: reportCountSchema.required(),
+      figures: byMaterialAndType(Joi.object(figureKeys)).required(),
       operatorCounts: operatorCountsByMaterialSchema.required()
     }).required()
   }).required()
