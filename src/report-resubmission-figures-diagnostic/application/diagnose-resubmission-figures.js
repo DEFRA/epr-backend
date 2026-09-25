@@ -22,9 +22,9 @@
  */
 
 import {
-  extractFigures,
-  figuresAreEquivalent
-} from '#reports/domain/resubmission/figures-equivalence.js'
+  extractReportedData,
+  reportedDataAreEquivalent
+} from '#reports/domain/resubmission/reported-data-equivalence.js'
 
 /** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent, PrnData } from '#reports/repository/port.js' */
 
@@ -109,7 +109,10 @@ const scanPeriod = (periodGroup, reports, summary) => {
     if (isAutoEnforced(previous)) {
       summary.autoEnforcedResubmissions += 1
       if (
-        figuresAreEquivalent(extractFigures(previous), extractFigures(current))
+        reportedDataAreEquivalent(
+          extractReportedData(previous),
+          extractReportedData(current)
+        )
       ) {
         summary.identicalResubmissions += 1
         reports.push({

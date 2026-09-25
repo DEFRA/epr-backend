@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractFigures, figuresAreEquivalent } from './figures-equivalence.js'
+import {
+  extractReportedData,
+  reportedDataAreEquivalent
+} from './reported-data-equivalence.js'
 
 /**
  * A report carrying one supplier with every field the stored report holds, so
@@ -23,9 +26,9 @@ const reportWithSupplier = (supplierOverrides = {}) => ({
 })
 
 const equivalent = (a, b) =>
-  figuresAreEquivalent(extractFigures(a), extractFigures(b))
+  reportedDataAreEquivalent(extractReportedData(a), extractReportedData(b))
 
-describe('figuresAreEquivalent — supplier contact exception', () => {
+describe('reportedDataAreEquivalent — supplier contact exception', () => {
   it('treats a supplier telephone-only change as no reported-data change', () => {
     const before = reportWithSupplier()
     const after = reportWithSupplier({ supplierPhone: '09876 543210' })
