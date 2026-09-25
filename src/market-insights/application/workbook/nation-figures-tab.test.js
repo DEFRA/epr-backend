@@ -422,7 +422,7 @@ describe("a UK or England tab's materials", () => {
     ])
   })
 
-  it('take in a material the published file does not list, in its published place', async () => {
+  it('take in a material the published file does not list, in alphabetical order', async () => {
     const worksheet = await renderWith(
       WORKSHEET_NAME.UK,
       await contentsOfRegister({
@@ -476,11 +476,16 @@ describe("a UK or England tab's materials", () => {
     ])
   })
 
-  it("on the England tab are the UK's", async () => {
+  it("on the England tab are the UK's, including those of operators outside England", async () => {
+    const scottishWoodReprocessor = accreditedOperator({
+      material: MATERIAL.WOOD,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      regulator: REGULATOR.SEPA
+    })
     const worksheet = await renderWith(
       WORKSHEET_NAME.ENGLAND,
       await contentsOfRegister({
-        operators: [woodReprocessor, aluminiumExporter],
+        operators: [scottishWoodReprocessor, aluminiumExporter],
         reports: []
       })
     )
@@ -490,5 +495,16 @@ describe("a UK or England tab's materials", () => {
       ['Wood'],
       ['Grand Total']
     ])
+  })
+
+  it('cannot be chosen without the UK figures', async () => {
+    const contents = await contentsOfRegister({ operators: [], reports: [] })
+
+    await expect(
+      renderWith(WORKSHEET_NAME.ENGLAND, {
+        ...contents,
+        figures: { ...contents.figures, scopes: [] }
+      })
+    ).rejects.toThrow('The market insights figures have no uk scope')
   })
 })

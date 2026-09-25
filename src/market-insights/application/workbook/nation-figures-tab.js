@@ -32,6 +32,7 @@ import {
 /** @import ExcelJS from 'exceljs' */
 /** @import { Material, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ScopeFigures } from '#market-insights/application/read-figures.js' */
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js' */
 /** @import { FiguresTable } from '#market-insights/domain/published-workbook-text.js' */
 /** @import { TabContents } from './cells.js' */
@@ -50,11 +51,9 @@ const UK_SCOPE = 'uk'
  */
 const SCOPE_OF_TAB = new Map([[WORKSHEET_NAME.UK, UK_SCOPE]])
 
-/**
- * A figure either accreditation type's table serves.
- *
- * @typedef {keyof (ReprocessorMeasures & PublishedExtras) | keyof (ExporterMeasures & PublishedExtras)} Figure
- */
+/** @typedef {keyof (ReprocessorMeasures & PublishedExtras)} ReprocessorFigure */
+/** @typedef {keyof (ExporterMeasures & PublishedExtras)} ExporterFigure */
+/** @typedef {ReprocessorFigure | ExporterFigure} Figure */
 
 /**
  * A table on the tab: its wording, the accreditation type it is filled from,
@@ -66,7 +65,7 @@ const SCOPE_OF_TAB = new Map([[WORKSHEET_NAME.UK, UK_SCOPE]])
  * }} NationFiguresTable
  */
 
-/** @type {Figure[]} */
+/** @type {(ReprocessorFigure & ExporterFigure)[]} */
 const SENT_ON = [
   'tonnageSentOnTotal',
   'tonnageSentOnToReprocessor',
@@ -74,33 +73,39 @@ const SENT_ON = [
   'tonnageSentOnToOtherFacilities'
 ]
 
-/** @type {Figure[]} */
+/** @type {(ReprocessorFigure & ExporterFigure)[]} */
 const NOTES = ['revisedTonnageIssued', 'totalRevenue', 'averagePricePerTonne']
+
+/** @type {ReprocessorFigure[]} */
+const REPROCESSOR_TONNAGES = [
+  'tonnageReceived',
+  'tonnageRecycled',
+  'tonnageReceivedButNotRecycled',
+  ...SENT_ON
+]
+
+/** @type {ExporterFigure[]} */
+const EXPORTER_TONNAGES = [
+  'tonnageReceived',
+  'tonnageExported',
+  'tonnageReceivedButNotExported',
+  ...SENT_ON,
+  'tonnageStopped',
+  'tonnageRefused',
+  'tonnageRepatriated'
+]
 
 /** @type {Readonly<Record<keyof typeof NATION_FIGURES_TABLES, NationFiguresTable>>} */
 const TABLES = {
   reprocessor: {
     ...NATION_FIGURES_TABLES.reprocessor,
     accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    figures: [
-      'tonnageReceived',
-      'tonnageRecycled',
-      'tonnageReceivedButNotRecycled',
-      ...SENT_ON
-    ]
+    figures: REPROCESSOR_TONNAGES
   },
   exporter: {
     ...NATION_FIGURES_TABLES.exporter,
     accreditationType: WASTE_PROCESSING_TYPE.EXPORTER,
-    figures: [
-      'tonnageReceived',
-      'tonnageExported',
-      'tonnageReceivedButNotExported',
-      ...SENT_ON,
-      'tonnageStopped',
-      'tonnageRefused',
-      'tonnageRepatriated'
-    ]
+    figures: EXPORTER_TONNAGES
   },
   reprocessorPrn: {
     ...NATION_FIGURES_TABLES.reprocessorPrn,
@@ -125,21 +130,29 @@ const TABLES = {
 const publishedFigure = (row, figure) => row[figure] ?? NO_FIGURE
 
 /**
- * Whether any month of the period has a UK operator accredited for the
+ * @param {ScopeFigures[]} scopes
+ * @param {string} name
+ */
+const tableOf = (scopes, name) => {
+  const scope = scopes.find((candidate) => candidate.name === name)
+  if (scope === undefined) {
+    throw new Error(`The market insights figures have no ${name} scope`)
+  }
+  return scope.table
+}
+
+/**
+ * Whether any month of the period has an operator accredited for the
  * material, of either accreditation type.
  *
- * @param {ScopeFigures[]} scopes
+ * @param {ReprocessorExporterTable} table
  * @param {Material} material
  */
-const hasAccreditedOperator = (scopes, material) =>
-  scopes.some(
-    ({ name, table }) =>
-      name === UK_SCOPE &&
-      Object.values(table.data.months).some(({ figures }) =>
-        Object.values(figures[material]).some(
-          ({ operatorCount }) => operatorCount > 0
-        )
-      )
+const hasAccreditedOperator = (table, material) =>
+  Object.values(table.data.months).some(({ figures }) =>
+    Object.values(figures[material]).some(
+      ({ operatorCount }) => operatorCount > 0
+    )
   )
 
 /**
@@ -165,11 +178,11 @@ const writeFigures = (worksheet, row, values, styleOf) => {
  * @param {TabContents} contents
  */
 export const addNationFigures = (workbook, name, { months, figures }) => {
-  const table = figures.scopes.find(
-    (scope) => scope.name === SCOPE_OF_TAB.get(name)
-  )?.table
+  const ukTable = tableOf(figures.scopes, UK_SCOPE)
+  const scope = SCOPE_OF_TAB.get(name)
+  const table = scope === undefined ? undefined : tableOf(figures.scopes, scope)
   const materials = NATION_FIGURES_MATERIALS.filter(([material]) =>
-    hasAccreditedOperator(figures.scopes, material)
+    hasAccreditedOperator(ukTable, material)
   )
   // A title, the headings, a row per material, the grand total, then a blank row.
   const tableRows = 2 + materials.length + 1 + 1
