@@ -276,6 +276,12 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     expect(months['2026-01'].reports).toEqual({ expected: 1, submitted: 1 })
     expect(months['2026-02'].reports).toEqual({ expected: 1, submitted: 0 })
     expect(period.reports).toEqual({ expected: 2, submitted: 1 })
+    expect(period.figures.plastic.reprocessor).toEqual({
+      totalCredited: 100,
+      eligibleForWasteBalance: 100,
+      sentOnDeductions: 30,
+      netCredit: 70
+    })
     expect(period.operatorCounts.plastic.reprocessor).toEqual({
       operatorCount: 1,
       submittingOperatorCount: 1

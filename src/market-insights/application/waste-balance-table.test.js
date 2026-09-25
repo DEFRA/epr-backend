@@ -1143,6 +1143,73 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
+  describe("each row's total across the period", () => {
+    it('sums every month served, with the net credit of the sum', async () => {
+      const operator = makeOperator({ orgId: 500045 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40.25),
+              receivedRow('row-2', '2026-03-10', 100.5),
+              sentOnRow('row-3', '2026-03-25', 30.1)
+            ]
+          }
+        ]
+      })
+
+      expect(
+        table.data.period.figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual({
+        totalCredited: 140.75,
+        eligibleForWasteBalance: 140.75,
+        sentOnDeductions: 30.1,
+        netCredit: 110.65
+      })
+    })
+
+    it('leaves out a month the period does not serve', async () => {
+      const operator = makeOperator({ orgId: 500046 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40),
+              receivedRow('row-2', '2026-07-10', 999)
+            ]
+          }
+        ]
+      })
+
+      expect(
+        table.data.period.figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ].netCredit
+      ).toBe(40)
+    })
+
+    it('is zero for a combination nothing was reported into', async () => {
+      const { table } = await run({ organisations: [], submissions: [] })
+
+      expect(
+        table.data.period.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
+      ).toEqual({
+        totalCredited: 0,
+        eligibleForWasteBalance: 0,
+        sentOnDeductions: 0,
+        netCredit: 0
+      })
+    })
+  })
+
   it('publishes a glass registration the split reached under its process', async () => {
     const operator = makeOperator({
       orgId: 500013,

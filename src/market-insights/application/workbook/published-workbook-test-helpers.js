@@ -199,8 +199,13 @@ const mergesOf = (worksheet) => [...worksheet.model.merges].sort()
  *
  * @param {string} name - of the tab
  * @param {() => Promise<ExcelJS.Worksheet>} renderGenerated
+ * @param {(published: ExcelJS.Worksheet) => void} [departFromPublished] - makes the tab's deliberate departures from the published one
  */
-export const itMatchesThePublishedTab = (name, renderGenerated) => {
+export const itMatchesThePublishedTab = (
+  name,
+  renderGenerated,
+  departFromPublished = () => {}
+) => {
   /** @type {ExcelJS.Worksheet} */
   let published
   /** @type {ExcelJS.Worksheet} */
@@ -208,6 +213,7 @@ export const itMatchesThePublishedTab = (name, renderGenerated) => {
 
   beforeAll(async () => {
     published = sheet(await readPublishedWorkbook(), name)
+    departFromPublished(published)
     generated = await renderGenerated()
   })
 
