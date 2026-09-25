@@ -1,3 +1,4 @@
+import { assert } from 'vitest'
 import {
   WASTE_BALANCE_ACCREDITATION_TYPES,
   WASTE_BALANCE_MATERIALS,
@@ -188,8 +189,9 @@ const render = async (months, register) => {
  */
 const withGlassOtherSplit = (published) => {
   const note = published.getCell('A1')
-  assertPresent(note.value)
-  const { richText } = /** @type {ExcelJS.CellRichTextValue} */ (note.value)
+  const { value } = note
+  assert(value !== null && typeof value === 'object' && 'richText' in value)
+  const { richText } = value
   const glassOtherSentence = richText.at(-1)
   expect(glassOtherSentence?.text).toBe(
     '\nData for ‘glass-other’ has not been split by accreditation type to protect commercial data for identifiable operators.'
@@ -216,6 +218,7 @@ const withGlassOtherSplit = (published) => {
  * @param {ExcelJS.Worksheet} worksheet
  */
 const rowLabels = (worksheet) => {
+  /** @type {ExcelJS.CellValue[][]} */
   const labels = []
   for (
     let row = HEADING_ROW + 1;
