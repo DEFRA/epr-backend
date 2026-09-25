@@ -2,9 +2,7 @@ import archiver from 'archiver'
 import { Readable } from 'node:stream'
 import { writeToString } from '@fast-csv/format'
 
-import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
-import { buildReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js'
-import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
+import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import {
   buildExporterRows,
   buildManifestRow,
@@ -19,9 +17,7 @@ import {
   REPROCESSOR_COLUMNS,
   WASTE_BALANCE_COLUMNS
 } from '#market-insights/domain/export-csv-rows.js'
-import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 
-/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CsvRow } from '#market-insights/domain/export-csv-rows.js' */
 
 /**
@@ -29,20 +25,6 @@ import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-seg
  * @property {string} name
  * @property {string} contents
  */
-
-/**
- * The five scopes the pages cover: the UK, drawn from every regulator, and one
- * per nation.
- *
- * @type {readonly { name: string, regulator?: import('#domain/organisations/model.js').RegulatorValue }[]}
- */
-const EXPORT_SCOPES = Object.freeze([
-  { name: 'uk' },
-  ...Object.entries(REGULATOR_FOR_NATION_SEGMENT).map(([name, regulator]) => ({
-    name,
-    regulator
-  }))
-])
 
 /**
  * @param {string} name
@@ -80,71 +62,14 @@ const zip = (files) => {
 }
 
 /**
- * @typedef {Object} BuildExportArchiveParams
- * @property {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @property {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
- * @property {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
- * @property {import('#common/hapi-types.js').TypedLogger} logger
- * @property {number} year
- * @property {string} cadence
- * @property {number} period
- * @property {YearMonth[]} months - the reporting months to publish, in order
- * @property {Date} now - the one clock reading every file is taken at
+ * @typedef {import('#market-insights/application/read-figures.js').ReadMarketInsightsFiguresParams & {
+ *   cadence: string,
+ *   period: number
+ * }} BuildExportArchiveParams
  */
-
-/**
- * Runs the read once and hands the same promise to everyone who asks.
- *
- * @template T
- * @param {() => Promise<T>} read
- * @returns {() => Promise<T>}
- */
-const readOnce = (read) => {
-  /** @type {Promise<T> | undefined} */
-  let reading
-  return () => (reading ??= read())
-}
-
-/**
- * The repositories as this export reads them: every builder sees the same
- * organisations and the same periodic reports, read once.
- *
- * That is what makes the files agree with each other. Sharing a clock reading
- * never did: seven builders reading in turn would each see the register as it
- * stood when they got to it, so a report submitted mid-build would land in some
- * nation's file and not another's.
- *
- * The memo is scoped to one call, and every builder here is given the same
- * `year`, so the ignored argument cannot hide a different question.
- *
- * @param {Pick<BuildExportArchiveParams, 'organisationsRepository' | 'reportsRepository'>} repositories
- * @param {number} year
- */
-const asReadOnceForThisExport = (
-  { organisationsRepository, reportsRepository },
-  year
-) => ({
-  organisationsRepository: {
-    ...organisationsRepository,
-    findAll: readOnce(() => organisationsRepository.findAll())
-  },
-  reportsRepository: {
-    ...reportsRepository,
-    findPeriodicReportsForYear: readOnce(() =>
-      reportsRepository.findPeriodicReportsForYear({ year })
-    )
-  }
-})
 
 /**
  * Every figure behind the market insights pages, as a zip of CSVs.
- *
- * The builders are called directly rather than over HTTP so that they can be
- * given one reading of the register between them, which is what makes the files
- * agree with each other. They run concurrently, so the wall time is the longest
- * build rather than the sum of seven.
  *
  * The per-month repetition the pages render collapses into a `month` column, so
  * the file count does not grow as the reporting period lengthens.
@@ -156,39 +81,10 @@ const asReadOnceForThisExport = (
  * @param {BuildExportArchiveParams} params
  * @returns {Promise<Readable>}
  */
-export const buildMarketInsightsExportArchive = async ({
-  ledgerRepository,
-  summaryLogRowStatesRepository,
-  organisationsRepository,
-  overseasSitesRepository,
-  reportsRepository,
-  logger,
-  year,
-  cadence,
-  period,
-  months,
-  now
-}) => {
-  const shared = asReadOnceForThisExport(
-    { organisationsRepository, reportsRepository },
-    year
-  )
-  const common = { ...shared, logger, year, months, now }
-
-  const [wasteBalance, scopeTables, outstandingReturns] = await Promise.all([
-    buildWasteBalanceTable({
-      ...common,
-      ledgerRepository,
-      summaryLogRowStatesRepository,
-      overseasSitesRepository
-    }),
-    Promise.all(
-      EXPORT_SCOPES.map((scope) =>
-        buildReprocessorExporterTable({ ...common, regulator: scope.regulator })
-      )
-    ),
-    buildOutstandingReturnsTable(common)
-  ])
+export const buildMarketInsightsExportArchive = async (params) => {
+  const { year, cadence, period, months, now } = params
+  const { wasteBalance, scopes, outstandingReturns } =
+    await readMarketInsightsFigures(params)
 
   const files = await Promise.all([
     csvFile(
@@ -196,14 +92,14 @@ export const buildMarketInsightsExportArchive = async ({
       WASTE_BALANCE_COLUMNS,
       buildWasteBalanceRows(wasteBalance)
     ),
-    ...scopeTables.flatMap((table, index) => [
+    ...scopes.flatMap(({ name, table }) => [
       csvFile(
-        `${EXPORT_SCOPES[index].name}-reprocessor.csv`,
+        `${name}-reprocessor.csv`,
         REPROCESSOR_COLUMNS,
         buildReprocessorRows(table)
       ),
       csvFile(
-        `${EXPORT_SCOPES[index].name}-exporter.csv`,
+        `${name}-exporter.csv`,
         EXPORTER_COLUMNS,
         buildExporterRows(table)
       )
@@ -215,8 +111,8 @@ export const buildMarketInsightsExportArchive = async ({
     ),
     csvFile('reports.csv', REPORTS_COLUMNS, [
       ...buildReportCoverageRows('waste-balance', wasteBalance),
-      ...scopeTables.flatMap((table, index) =>
-        buildReportCoverageRows(EXPORT_SCOPES[index].name, table)
+      ...scopes.flatMap(({ name, table }) =>
+        buildReportCoverageRows(name, table)
       )
     ]),
     csvFile('manifest.csv', MANIFEST_COLUMNS, [
