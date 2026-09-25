@@ -183,11 +183,10 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns mode: none for a non-active accreditation, even with a validFrom', async () => {
+  it('returns mode: none for a registered-only accreditation with no validFrom', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
-      validFrom: '2026-01-01',
       status: 'created'
     })
 
@@ -204,12 +203,12 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
   })
 
-  it('treats a suspended accreditation as live and derives its eligibility', async () => {
+  it('reports the real mode for a cancelled accreditation that retains its validFrom', async () => {
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
       validFrom: '2026-01-01',
-      status: 'suspended',
+      status: 'cancelled',
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       reprocessingType: REPROCESSING_TYPE.OUTPUT
     })
@@ -227,11 +226,10 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     })
   })
 
-  it('returns 500 if a live accreditation is unexpectedly missing validFrom', async () => {
-    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-      id: accreditationId,
-      status: 'approved'
-    })
+  it('returns 500 when the repository fails unexpectedly', async () => {
+    organisationsRepository.findAccreditationById.mockRejectedValueOnce(
+      new Error('database unavailable')
+    )
 
     const response = await server.inject({
       method: 'GET',

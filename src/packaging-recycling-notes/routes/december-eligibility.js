@@ -9,7 +9,6 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
 import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import {
   DECEMBER_WASTE_CONTROL_MODE,
@@ -55,13 +54,13 @@ export const packagingRecyclingNotesDecemberEligibility = {
         accreditationId
       )
 
-      // Any non-active status carries no December eligibility and has no
-      // validFrom to derive a year from, so answer `none` rather than reaching
-      // deriveAccreditationYear, which throws on a missing validFrom. `approved`
-      // and `suspended` are the active statuses (a suspended accreditation can
-      // still draft), and both are guaranteed a validFrom, so they stay on the
-      // live path below.
-      if (!ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)) {
+      // A registered-only accreditation (created or rejected, never approved)
+      // has no validFrom to derive a year from, so answer `none` rather than
+      // reaching deriveAccreditationYear, which throws on a missing validFrom.
+      // Anything that was ever live (approved/suspended, and cancelled, which
+      // retains the window it held) keeps its validFrom and stays on the live
+      // path below, so a cancelled accreditation still reports its real mode.
+      if (!accreditation.validFrom) {
         return h
           .response({
             mode: DECEMBER_WASTE_CONTROL_MODE.NONE,
