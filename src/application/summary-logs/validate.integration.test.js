@@ -134,6 +134,9 @@ describe('SummaryLogsValidator integration', () => {
         findPeriodicReports: async () => []
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+      packagingRecyclingNotesRepository: /** @type {any} */ ({
+        findByAccreditation: async () => []
+      }),
       summaryLogExtractor: extractor
     })
 

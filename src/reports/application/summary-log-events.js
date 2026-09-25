@@ -21,7 +21,7 @@ import {
  *   organisationId: string,
  *   registrationId: string,
  *   summaryLogId: string,
- *   closedPeriods?: PeriodRef[]
+ *   periodsRequiringResubmission?: PeriodRef[]
  * }} SummaryLogUploadedParams
  *
  * @typedef {(params: SummaryLogUploadedParams) => Promise<void>} OnSummaryLogUploaded
@@ -32,7 +32,7 @@ import {
  * stay fixed for the server's lifetime. The returned handler is called after a
  * new summary log is successfully submitted for an org/reg: it marks all active
  * (in_progress / ready_to_submit) reports as stale, and flags the latest
- * submitted report of each closed period the upload restated as requiring
+ * submitted report of each period whose reported data changed as requiring
  * resubmission. Audits each batch in a single call.
  *
  * @param {SummaryLogUploadedRepositories} repositories
@@ -44,7 +44,7 @@ export const createOnSummaryLogUploaded =
     organisationId,
     registrationId,
     summaryLogId,
-    closedPeriods = []
+    periodsRequiringResubmission = []
   }) => {
     const uploadedAt = new Date().toISOString()
 
@@ -84,7 +84,7 @@ export const createOnSummaryLogUploaded =
         registrationId,
         summaryLogId,
         uploadedAt,
-        periods: closedPeriods
+        periods: periodsRequiringResubmission
       })
 
     if (reportsRequiringResubmission.length > 0) {

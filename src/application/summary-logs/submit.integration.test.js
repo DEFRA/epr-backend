@@ -14,6 +14,7 @@ import {
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import {
   REPROCESSOR_RECEIVED_HEADERS,
   createReprocessorReceivedRowValues,
@@ -117,8 +118,14 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#reports/repository/port.js').ReportsRepository} options.reportsRepository
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
+ * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  */
-const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
+const setupSubmit = async ({
+  reportsRepository,
+  createdAt,
+  data,
+  loadsByReportingPeriod
+}) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const logger = createMockLogger()
@@ -136,6 +143,16 @@ const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
   })
   const summaryLogId = `submit-${organisationId}`
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
+
+  // loadsByReportingPeriod is written by validation via update, not insert, so
+  // seed it the same way to mirror the real persisted artefact. The in-memory
+  // read path lags writes, so wait for the seeded version to become visible.
+  if (loadsByReportingPeriod) {
+    await summaryLogsRepository.update(summaryLogId, 1, {
+      loadsByReportingPeriod
+    })
+    await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+  }
 
   const summaryLogExtractor = createInMemorySummaryLogExtractor({
     [summaryLog.file.id]: { meta: META, data: data ?? RECEIVED_DATA }
@@ -268,6 +285,34 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+  })
+})
+
+describe('submitSummaryLog resubmission flag source', () => {
+  it('flags only the figure-changed periods, not every touched closed period', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const january = { year: 2025, cadence: 'monthly', period: 1 }
+    const february = { year: 2025, cadence: 'monthly', period: 2 }
+
+    const { deps, summaryLogId, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        loadsByReportingPeriod: {
+          ...emptyLoadsByReportingPeriod(),
+          // Two closed periods were touched, but only January's figures changed.
+          closedPeriods: [january, february],
+          periodsRequiringResubmission: [january]
+        }
+      })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    expect(deps.onSummaryLogUploaded).toHaveBeenCalledWith({
+      organisationId,
+      registrationId,
+      summaryLogId,
+      periodsRequiringResubmission: [january]
+    })
   })
 })
 

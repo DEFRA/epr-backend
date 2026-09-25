@@ -208,7 +208,7 @@ describe('onSummaryLogUploaded', () => {
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
       summaryLogId: DEFAULT_SL_ID,
-      closedPeriods: [closedPeriod],
+      periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -231,7 +231,7 @@ describe('onSummaryLogUploaded', () => {
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
       summaryLogId: DEFAULT_SL_ID,
-      closedPeriods: [closedPeriod],
+      periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
     })
