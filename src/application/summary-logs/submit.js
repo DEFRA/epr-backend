@@ -149,9 +149,9 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     registrationId: summaryLog.registrationId,
     summaryLogId,
     // The figure-gated subset of closed periods, so resubmission is flagged only
-    // when the reported figures changed (PAE-1983). closedPeriods still carries
-    // the full touched set for rollback until defra-mc60.2 retires it.
-    closedPeriods:
+    // when the reported data changed (PAE-1983). closedPeriods still carries the
+    // full touched set for rollback until defra-mc60.2 retires it.
+    periodsRequiringResubmission:
       summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
   })
 

@@ -311,7 +311,7 @@ describe('submitSummaryLog resubmission flag source', () => {
       organisationId,
       registrationId,
       summaryLogId,
-      closedPeriods: [january]
+      periodsRequiringResubmission: [january]
     })
   })
 })
