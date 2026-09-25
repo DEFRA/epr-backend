@@ -183,11 +183,53 @@ describe(`${packagingRecyclingNotesDecemberEligibilityPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns 500 when the accreditation has no validFrom', async () => {
+  it('returns mode: none for a registered-only accreditation with no validFrom', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
     organisationsRepository.findAccreditationById.mockResolvedValueOnce({
       id: accreditationId,
       status: 'created'
     })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      mode: 'none',
+      windowOpen: false
+    })
+  })
+
+  it('reports the real mode for a cancelled accreditation that retains its validFrom', async () => {
+    vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+    organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+      id: accreditationId,
+      validFrom: '2026-01-01',
+      status: 'cancelled',
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      reprocessingType: REPROCESSING_TYPE.OUTPUT
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      mode: 'manual',
+      windowOpen: true
+    })
+  })
+
+  it('returns 500 when the repository fails unexpectedly', async () => {
+    organisationsRepository.findAccreditationById.mockRejectedValueOnce(
+      new Error('database unavailable')
+    )
 
     const response = await server.inject({
       method: 'GET',
