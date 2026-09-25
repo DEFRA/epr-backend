@@ -28,6 +28,7 @@ import {
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material } from '#domain/organisations/model.js' */
 /** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
+/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -58,6 +59,7 @@ const emptyRegister = () => {
   }
 }
 
+/** @type {SummaryLogRowStateEntry['classification']} */
 const STAMPED_EXCLUDED = {
   outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
   reasons: [],
@@ -70,6 +72,7 @@ const STAMPED_EXCLUDED = {
  * @param {string} rowId
  * @param {string} date
  * @param {number} tonnage
+ * @returns {SummaryLogRowStateEntry}
  */
 const receivedRow = (rowId, date, tonnage) => ({
   rowId,
@@ -97,6 +100,7 @@ const receivedRow = (rowId, date, tonnage) => ({
  * @param {string} rowId
  * @param {string} date
  * @param {number} tonnage
+ * @returns {SummaryLogRowStateEntry}
  */
 const sentOnRow = (rowId, date, tonnage) => ({
   rowId,
@@ -114,7 +118,7 @@ const sentOnRow = (rowId, date, tonnage) => ({
  * given.
  *
  * @param {Register} register
- * @param {{ material: Material, rows?: ReturnType<typeof receivedRow | typeof sentOnRow>[] }} operator
+ * @param {{ material: Material, rows?: SummaryLogRowStateEntry[] }} operator
  */
 const seedOperator = async (
   { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
@@ -254,45 +258,81 @@ const figuresOfRow = (worksheet, months, [material, type]) => {
   )
 }
 
+const TOTAL = 'total'
+
 /**
- * Asserts every row of the tab shows the net credit the waste balance route
- * serves for its material and accreditation type, each month then the period.
+ * Every figure on the tab, read the way a reader of the file would: the
+ * material and accreditation type labelling its row, and the month or total
+ * heading its column.
  *
  * @param {ExcelJS.Worksheet} worksheet
- * @param {YearMonth[]} months
- * @param {Register} register
+ * @returns {Record<string, unknown>} keyed by column, material and type
  */
-const expectTheServedFigures = async (worksheet, months, register) => {
-  const served = await buildWasteBalanceTable({
-    ...readParamsFor(months),
-    ...register
-  })
+const figuresOnTab = (worksheet) => {
   const materialLabelled = new Map(
     WASTE_BALANCE_MATERIALS.map(([material, label]) => [label, material])
   )
   const typeLabelled = new Map(
     WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, label]) => [label, type])
   )
-  const labels = rowLabels(worksheet)
-  expect(labels).not.toHaveLength(0)
-
-  for (const [materialLabel, typeLabel] of labels) {
+  /** @type {Record<string, unknown>} */
+  const figures = {}
+  rowLabels(worksheet).forEach(([materialLabel, typeLabel], index) => {
     const material = materialLabelled.get(String(materialLabel))
     const type = typeLabelled.get(String(typeLabel))
-    assertPresent(material)
-    assertPresent(type)
-    expect(
-      figuresOfRow(worksheet, months, [
-        String(materialLabel),
-        String(typeLabel)
-      ])
-    ).toEqual([
-      ...months.map(
-        (month) => served.data.months[month].figures[material][type].netCredit
-      ),
-      served.data.period.figures[material][type].netCredit
-    ])
-  }
+    const row = HEADING_ROW + 1 + index
+    for (
+      let column = FIRST_FIGURE_COLUMN;
+      worksheet.getCell(HEADING_ROW, column).value !== null;
+      column++
+    ) {
+      const heading = worksheet.getCell(HEADING_ROW, column).value
+      const key =
+        heading instanceof Date ? heading.toISOString().slice(0, 7) : TOTAL
+      figures[`${key} ${material} ${type}`] = worksheet.getCell(
+        row,
+        column
+      ).value
+    }
+  })
+  return figures
+}
+
+/**
+ * Asserts the tab shows every net credit and total the waste balance route
+ * serves for the period, and leaves out only rows at zero throughout.
+ *
+ * @param {ExcelJS.Worksheet} worksheet
+ * @param {YearMonth[]} months
+ * @param {Register} register
+ */
+const expectTheServedFigures = async (worksheet, months, register) => {
+  const { data } = await buildWasteBalanceTable({
+    ...readParamsFor(months),
+    ...register
+  })
+  const columns = [
+    ...months.map((month) => ({
+      key: month,
+      figures: data.months[month].figures
+    })),
+    { key: TOTAL, figures: data.period.figures }
+  ]
+  const servedFigures = Object.fromEntries(
+    columns.flatMap(({ key, figures }) =>
+      Object.entries(figures).flatMap(([material, byType]) =>
+        Object.entries(byType).map(([type, { netCredit }]) => [
+          `${key} ${material} ${type}`,
+          netCredit
+        ])
+      )
+    )
+  )
+  const leftOut = Object.fromEntries(
+    Object.keys(servedFigures).map((key) => [key, 0])
+  )
+
+  expect({ ...leftOut, ...figuresOnTab(worksheet) }).toEqual(servedFigures)
 }
 
 describe('the waste balance tab', () => {

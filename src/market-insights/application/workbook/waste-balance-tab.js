@@ -36,6 +36,13 @@ const WASTE_BALANCE_BAND_ROW = WASTE_BALANCE_NOTE_LAST_ROW + 1
 const WASTE_BALANCE_HEADING_ROW = 9
 
 /**
+ * A row of the waste balance: its material and accreditation type, then its
+ * net credit for each month and for the period.
+ *
+ * @typedef {{ labels: readonly [string, string], netCredits: number[] }} WasteBalanceRow
+ */
+
+/**
  * A row for each accreditation type of each material the period has an
  * accredited operator for: each month's net credit as served, then the
  * period's.
@@ -86,6 +93,7 @@ export const addWasteBalance = (
 
   const ukTable = ukTableOf(figures.scopes)
   const served = figures.wasteBalance.data
+  /** @type {WasteBalanceRow[]} */
   const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
     hasAccreditedOperator(ukTable, material)
   ).flatMap(([material, materialLabel]) =>
