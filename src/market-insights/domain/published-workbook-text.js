@@ -8,6 +8,13 @@
  * here.
  */
 
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
+
+/** @import { Material } from '#domain/organisations/model.js' */
+
 export const WORKSHEET_NAME = Object.freeze({
   WASTE_BALANCE: 'UK Waste Balance ',
   KEY: 'Key',
@@ -120,17 +127,27 @@ export const TONNAGE_BANDS = Object.freeze([
   'Over 10,000 tonnes'
 ])
 
+/**
+ * The rows of the UK and England tables, in published order, by the material
+ * each row is.
+ *
+ * @type {readonly (readonly [Material, string])[]}
+ */
 export const NATION_FIGURES_MATERIALS = Object.freeze([
-  'Aluminium',
-  'Glass-other',
-  GLASS_REMELT,
-  PAPER_AND_BOARD,
-  'Plastic',
-  'Steel',
-  'Wood'
+  [MATERIAL.ALUMINIUM, 'Aluminium'],
+  [MATERIAL.FIBRE, 'Fibre based composite'],
+  [GLASS_RECYCLING_PROCESS.GLASS_OTHER, 'Glass-other'],
+  [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT, GLASS_REMELT],
+  [MATERIAL.PAPER, PAPER_AND_BOARD],
+  [MATERIAL.PLASTIC, 'Plastic'],
+  [MATERIAL.STEEL, 'Steel'],
+  [MATERIAL.WOOD, 'Wood']
 ])
 
 export const GRAND_TOTAL = 'Grand Total'
+
+/** What the published file prints where a row has no figure. */
+export const NO_FIGURE = '-'
 
 /** The column headings of the UK and England tables, which the Key describes. */
 const COLUMN = Object.freeze({

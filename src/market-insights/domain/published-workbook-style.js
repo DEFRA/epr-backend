@@ -155,6 +155,16 @@ export const GRAND_TOTAL_FIGURE = {
 }
 
 /**
+ * A grand total's dash, where it has no figure.
+ *
+ * @type {Partial<Style>}
+ */
+export const GRAND_TOTAL_NO_FIGURE = {
+  ...GRAND_TOTAL_FIGURE,
+  alignment: { horizontal: 'center' }
+}
+
+/**
  * Row heights, in points, as published. The notes sit in merged cells, and
  * Excel never fits a merged cell's rows to its text.
  */
