@@ -22,17 +22,19 @@ import {
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
+  hasAccreditedOperator,
   monthAndYear,
   richNote,
   setWidths,
+  tableOf,
+  UK_SCOPE,
+  ukTableOf,
   write,
   writeRow
 } from './cells.js'
 
 /** @import ExcelJS from 'exceljs' */
-/** @import { Material, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
-/** @import { ScopeFigures } from '#market-insights/application/read-figures.js' */
-/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
+/** @import { WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ExporterFigure, FiguresTable, ReprocessorFigure } from '#market-insights/domain/published-workbook-text.js' */
 /** @import { TabContents } from './cells.js' */
 
@@ -40,8 +42,6 @@ const NATION_FIGURES_FIRST_ROW = 2
 const NATION_FIGURES_WIDTH = Math.max(
   ...Object.values(NATION_FIGURES_TABLES).map(({ columns }) => columns.length)
 )
-
-const UK_SCOPE = 'uk'
 
 /**
  * The scope of the figures each tab is filled from.
@@ -90,39 +90,6 @@ const TABLES = {
  * @returns {number | string}
  */
 const publishedFigure = (row, figure) => row[figure] ?? NO_FIGURE
-
-/**
- * @param {ScopeFigures[]} scopes
- * @param {string} name
- */
-const tableOf = (scopes, name) => {
-  const scope = scopes.find((candidate) => candidate.name === name)
-  if (scope === undefined) {
-    throw new Error(`The market insights figures have no ${name} scope`)
-  }
-  return scope.table
-}
-
-/**
- * The UK figures, which decide the materials a tab lists.
- *
- * @param {ScopeFigures[]} scopes
- */
-export const ukTableOf = (scopes) => tableOf(scopes, UK_SCOPE)
-
-/**
- * Whether any month of the period has an operator accredited for the
- * material, of either accreditation type.
- *
- * @param {ReprocessorExporterTable} table
- * @param {Material} material
- */
-export const hasAccreditedOperator = (table, material) =>
-  Object.values(table.data.months).some(({ figures }) =>
-    Object.values(figures[material]).some(
-      ({ operatorCount }) => operatorCount > 0
-    )
-  )
 
 /**
  * @param {ExcelJS.Worksheet} worksheet

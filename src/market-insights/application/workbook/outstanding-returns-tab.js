@@ -21,14 +21,15 @@ import {
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
+  hasAccreditedOperator,
   monthName,
   richNote,
   setWidths,
   styleEmptyCells,
+  ukTableOf,
   write,
   writeRow
 } from './cells.js'
-import { hasAccreditedOperator, ukTableOf } from './nation-figures-tab.js'
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
