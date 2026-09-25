@@ -30,6 +30,7 @@
     "#server/*": "./src/server/*",
     "#stream-transition-diagnostic/*": "./src/stream-transition-diagnostic/*",
     "#test/*": "./src/test/*",
+    "#unsplit-glass-diagnostic/*": "./src/unsplit-glass-diagnostic/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",
     "#waste-records/*": "./src/waste-records/*",

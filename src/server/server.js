@@ -48,6 +48,7 @@ import { seedDatabase } from '#server/seed/seed-database.js'
 import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
 import { runDecemberLoadsDiagnostic } from '#december-loads-diagnostic/run.js'
 import { runResubmissionFiguresDiagnostic } from '#report-resubmission-figures-diagnostic/run.js'
+import { runUnsplitGlassDiagnostic } from '#unsplit-glass-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -225,6 +226,7 @@ async function createServer(options = {}) {
     runStreamTransitionDiagnostic(startedServer)
     runDecemberLoadsDiagnostic(startedServer)
     runResubmissionFiguresDiagnostic(startedServer)
+    runUnsplitGlassDiagnostic(startedServer)
   })
 
   return server
