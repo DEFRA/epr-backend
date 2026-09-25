@@ -12,7 +12,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 
-/** @import { GlassRecyclingProcess, Material } from '#domain/organisations/model.js' */
+/** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 
 /**
  * What an accredited operator is accredited for, where a test needs other than
@@ -20,6 +20,7 @@ import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
  *
  * @typedef {Object} AccreditedFor
  * @property {Material} [material]
+ * @property {TonnageBand} [tonnageBand]
  */
 
 /**
@@ -52,7 +53,7 @@ export const storedMaterial = (material) =>
 export const insertAccreditedOperator = async (
   organisationsRepository,
   regulator = REGULATOR.EA,
-  { material = MATERIAL.PLASTIC } = {}
+  { material = MATERIAL.PLASTIC, tonnageBand } = {}
 ) => {
   const accreditationId = new ObjectId().toString()
   const accredited = {
@@ -66,6 +67,9 @@ export const insertAccreditedOperator = async (
     id: accreditationId,
     ...accredited
   })
+  if (tonnageBand) {
+    accreditation.prnIssuance = { ...accreditation.prnIssuance, tonnageBand }
+  }
   const organisation = await buildApprovedOrg(
     organisationsRepository,
     { registrations: [registration], accreditations: [accreditation] },

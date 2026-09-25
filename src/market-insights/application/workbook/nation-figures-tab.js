@@ -104,13 +104,20 @@ const tableOf = (scopes, name) => {
 }
 
 /**
+ * The UK figures, which decide the materials a tab lists.
+ *
+ * @param {ScopeFigures[]} scopes
+ */
+export const ukTableOf = (scopes) => tableOf(scopes, UK_SCOPE)
+
+/**
  * Whether any month of the period has an operator accredited for the
  * material, of either accreditation type.
  *
  * @param {ReprocessorExporterTable} table
  * @param {Material} material
  */
-const hasAccreditedOperator = (table, material) =>
+export const hasAccreditedOperator = (table, material) =>
   Object.values(table.data.months).some(({ figures }) =>
     Object.values(figures[material]).some(
       ({ operatorCount }) => operatorCount > 0
@@ -140,7 +147,7 @@ const writeFigures = (worksheet, row, values, styleOf) => {
  * @param {TabContents} contents
  */
 export const addNationFigures = (workbook, name, { months, figures }) => {
-  const ukTable = tableOf(figures.scopes, UK_SCOPE)
+  const ukTable = ukTableOf(figures.scopes)
   const scope = SCOPE_OF_TAB.get(name)
   const table = scope === undefined ? undefined : tableOf(figures.scopes, scope)
   const materials = NATION_FIGURES_MATERIALS.filter(([material]) =>
