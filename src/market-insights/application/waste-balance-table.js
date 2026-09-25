@@ -187,7 +187,7 @@ const periodFigures = (cells, months) =>
               cells.get(cellKey({ material, accreditationType, month }))
                 ?.figures ?? NO_FIGURES
           )
-          .reduce(addFigures, NO_FIGURES)
+          .reduce((sum, figures) => addFigures(sum, figures), NO_FIGURES)
       )
     )
   )
