@@ -18,6 +18,7 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import { accreditedMonths } from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure
@@ -398,9 +399,9 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * future date from being published as supply. Each month also carries the
  * count of monthly reports it was owed and how many were submitted, and the
  * period carries the sum, which says how close the figures are to publication.
- * Every figure carries how many operators could have contributed to it, and
- * how many it includes tonnage from, and the period carries the same for each
- * row's total across its months.
+ * Every figure carries how many operators were accredited for it that month,
+ * and how many it includes tonnage from, and the period carries the same for
+ * each row's total across its months.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -473,7 +474,7 @@ export const buildWasteBalanceTable = async ({
   ]
   const reports = countMonthlyReports(months, owedReports)
   const operators = operatorsByFigure(
-    owedReports,
+    accreditedMonths({ organisations, months }),
     [...into.contributions.values()],
     figuresOf
   )

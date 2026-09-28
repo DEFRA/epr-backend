@@ -72,9 +72,9 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * How many separate operators could have contributed to a row of figures or a
- * grand total, how many of them it includes a report from, and how many of
- * those put something into each of its figures.
+ * How many separate operators were accredited for a row of figures or a grand
+ * total that month, how many it includes a report from, and how many of those
+ * put something into each of its figures.
  *
  * @template {string} F - the figures it serves
  * @typedef {OperatorCounts & { contributingOperatorCounts: Record<F, number> }} FigureOperatorCounts

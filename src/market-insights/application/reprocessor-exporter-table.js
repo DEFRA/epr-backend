@@ -26,6 +26,7 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import { accreditedMonths } from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure,
@@ -55,7 +56,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
+ * @typedef {import('#market-insights/application/accredited-months.js').CoversRegistration} CoversRegistration
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
@@ -398,9 +399,9 @@ const measuresByCell = ({
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
  * was owed and how many were submitted, and the period carries the sum. Every
- * figure and grand total carries how many operators could have contributed to
- * it, how many it includes a report from, and how many of those put something
- * into each of its figures.
+ * figure and grand total carries how many operators were accredited for it
+ * that month, how many it includes a report from, and how many of those put
+ * something into each of its figures.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
@@ -445,7 +446,11 @@ export const buildReprocessorExporterTable = async ({
   ]
   const reports = countMonthlyReports(months, owedReports)
   const operators = {
-    ...operatorsByFigure(owedReports, includedReports, figuresOf),
+    ...operatorsByFigure(
+      accreditedMonths({ organisations, months, covers }),
+      includedReports,
+      figuresOf
+    ),
     contributing: operatorsByKey(includedReports, contributedFiguresOf)
   }
 
