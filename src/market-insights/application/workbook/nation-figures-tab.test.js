@@ -492,6 +492,22 @@ describe("a UK or England tab's materials", () => {
     expect(worksheet.getCell('A12').value).toBe('Grand Total')
   })
 
+  it('on the England tab shows fibre-based composite for an operator accredited there', async () => {
+    const register = newRegister()
+    await seedOperator(register, {
+      material: MATERIAL.FIBRE,
+      regulator: REGULATOR.EA
+    })
+
+    const worksheet = await renderWith(
+      WORKSHEET_NAME.ENGLAND,
+      await contentsOfRegister(register)
+    )
+
+    expect(worksheet.getCell('A12').value).toBe('Fibre-based composite')
+    expect(worksheet.getCell('A13').value).toBe('Grand Total')
+  })
+
   it('cannot be laid out for a month the figures do not cover', async () => {
     const contents = await contentsOfRegister(newRegister())
 

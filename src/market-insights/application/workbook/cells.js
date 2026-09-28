@@ -1,7 +1,9 @@
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
-import { MATERIAL } from '#domain/organisations/model.js'
 import { NOTE } from '#market-insights/domain/published-workbook-style.js'
-import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
+import {
+  CONDITIONALLY_SHOWN_MATERIAL,
+  dataAsOf
+} from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
@@ -156,7 +158,7 @@ export const hasAccreditedOperator = (table, material) =>
 /**
  * Every material a tab shows: the published set unconditionally, so each
  * keeps its row at zero even where the period has no accredited operator for
- * it, plus fibre-based composite only where the period does.
+ * it, plus the conditionally shown material only where the period does.
  *
  * @param {ReprocessorExporterTable} table
  * @param {readonly (readonly [Material, string])[]} materials
@@ -164,5 +166,6 @@ export const hasAccreditedOperator = (table, material) =>
 export const shownMaterials = (table, materials) =>
   materials.filter(
     ([material]) =>
-      material !== MATERIAL.FIBRE || hasAccreditedOperator(table, material)
+      material !== CONDITIONALLY_SHOWN_MATERIAL ||
+      hasAccreditedOperator(table, material)
   )

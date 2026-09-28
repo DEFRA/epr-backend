@@ -100,6 +100,15 @@ const GLASS_REMELT = 'Glass re-melt'
 const PAPER_AND_BOARD = 'Paper and board'
 
 /**
+ * The one material every tab shows only where the period has relevant
+ * accredited data for it. Every other entry in the materials lists below is
+ * shown unconditionally, with a zero row where there is no data.
+ *
+ * @type {Material}
+ */
+export const CONDITIONALLY_SHOWN_MATERIAL = MATERIAL.FIBRE
+
+/**
  * Each material the outstanding returns tab counts, and its label, in the
  * order the blocks run down the tab. The published materials come first, in
  * their published order, so each keeps its published row whatever follows.

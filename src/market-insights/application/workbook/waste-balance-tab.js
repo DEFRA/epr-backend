@@ -44,9 +44,8 @@ const WASTE_BALANCE_HEADING_ROW = 9
  */
 
 /**
- * A row for each accreditation type of each material the period has an
- * accredited operator for: each month's net credit as served, then the
- * period's.
+ * A row for each accreditation type of each material `shownMaterials`
+ * includes: each month's net credit as served, then the period's.
  *
  * @param {ExcelJS.Workbook} workbook
  * @param {TabContents} contents
