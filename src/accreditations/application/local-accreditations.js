@@ -1,22 +1,22 @@
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
-import { LOCALLY_HELD_YEAR, toAccreditationRecord } from '../model.js'
+import { LOCALLY_HELD_YEAR } from '../model.js'
 
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { AccreditationRecord } from '../model.js' */
 
 /**
- * Every accreditation an organisation holds, each through the registration
- * that links to it. An accreditation no registration links to belongs to no
- * registration, so it has no place in the contract and is left out.
+ * Every accreditation an organisation holds, paired with the registration that
+ * links to it. An accreditation no registration links to belongs to no
+ * registration, so it is left out.
  *
  * @param {Organisation} organisation
- * @returns {AccreditationRecord[]}
+ * @returns {{ registrationId: string, accreditation: Accreditation }[]}
  */
-const recordsFor = (organisation) =>
+const heldBy = (organisation) =>
   organisation.registrations.flatMap((registration) =>
     accreditationsForRegistration(registration, organisation).map(
-      (accreditation) => toAccreditationRecord(accreditation, registration.id)
+      (accreditation) => ({ registrationId: registration.id, accreditation })
     )
   )
 
@@ -26,7 +26,7 @@ const recordsFor = (organisation) =>
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {{ registrationId: string, year: number }} params
- * @returns {Promise<AccreditationRecord | null>}
+ * @returns {Promise<Accreditation | null>}
  */
 export const findLocalAccreditation = async (
   organisationsRepository,
@@ -49,9 +49,8 @@ export const findLocalAccreditation = async (
   }
 
   return (
-    recordsFor(organisation).find(
-      (record) => record.registrationId === registrationId
-    ) ?? null
+    heldBy(organisation).find((held) => held.registrationId === registrationId)
+      ?.accreditation ?? null
   )
 }
 
@@ -67,14 +66,15 @@ export const listLocalAccreditations = async (
   organisationsRepository,
   { year, registrationIds, page, pageSize }
 ) => {
-  const records =
+  const held =
     year === LOCALLY_HELD_YEAR
-      ? (await organisationsRepository.findAll()).flatMap(recordsFor)
+      ? (await organisationsRepository.findAll()).flatMap(heldBy)
       : []
 
   const wanted = registrationIds && new Set(registrationIds)
-  const matching = records
-    .filter((record) => !wanted || wanted.has(record.registrationId))
+  const matching = held
+    .filter(({ registrationId }) => !wanted || wanted.has(registrationId))
+    .map(({ accreditation }) => accreditation)
     .sort((a, b) => a.id.localeCompare(b.id))
 
   const start = (page - 1) * pageSize

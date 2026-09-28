@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 import { listLocalAccreditations } from '../application/local-accreditations.js'
-import { accreditationRecordSchema } from '../model.js'
+import { accreditationResponseSchema } from '../model.js'
 import { holdingRepository } from './holding-repository.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -44,7 +44,7 @@ export const accreditationsList = {
     },
     response: {
       schema: Joi.object({
-        items: Joi.array().items(accreditationRecordSchema).required(),
+        items: Joi.array().items(accreditationResponseSchema).required(),
         page: Joi.number().required(),
         pageSize: Joi.number().required(),
         totalItems: Joi.number().required(),

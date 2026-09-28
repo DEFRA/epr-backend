@@ -1,13 +1,10 @@
 import Boom from '@hapi/boom'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { LOCALLY_HELD_YEAR } from '../model.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { AccreditationsSource } from '../port.js' */
-/** @import { AccreditationRecord } from '../model.js' */
 
 /**
  * The scheme year the organisations' accreditations are read for. One year for
@@ -16,73 +13,25 @@ import { LOCALLY_HELD_YEAR } from '../model.js'
 const YEAR = LOCALLY_HELD_YEAR
 
 /**
- * Rebuilds an accreditation from the contract and the registration it belongs
- * to. What the accreditation shares with its registration comes from the
- * registration, and `validTo` from the year.
- *
- * Form-submission detail the contract does not carry — the submission itself,
- * the business plan, uploaded files — is left off, so writing a rebuilt
- * accreditation back fails validation rather than losing it.
- *
- * @param {AccreditationRecord} record
- * @param {Registration} registration
- * @returns {Accreditation}
- */
-const toAccreditation = (record, registration) =>
-  /** @type {Accreditation} */ (
-    /** @type {unknown} */ ({
-      id: record.id,
-      status: record.status,
-      statusHistory: record.statusHistory,
-      accreditationNumber: record.accreditationNumber,
-      ...(record.validFrom && {
-        validFrom: record.validFrom,
-        validTo: `${record.year}-12-31`
-      }),
-      prnIssuance: record.prnIssuance,
-      submitterContactDetails: record.submitterContactDetails,
-      material: registration.material,
-      wasteProcessingType: registration.wasteProcessingType,
-      reprocessingType: registration.reprocessingType,
-      glassRecyclingProcess: registration.glassRecyclingProcess,
-      submittedToRegulator: registration.submittedToRegulator,
-      orgName: registration.orgName,
-      ...(registration.wasteProcessingType ===
-        WASTE_PROCESSING_TYPE.REPROCESSOR && {
-        site: {
-          address: {
-            line1: registration.site.address.line1,
-            postcode: registration.site.address.postcode
-          }
-        }
-      })
-    })
-  )
-
-/**
- * Replaces each organisation's accreditations with those the source holds for
- * its registrations, linking each registration to the one it holds.
+ * Replaces each organisation's accreditations with those the source holds
+ * that its registrations link to.
  *
  * @param {Organisation[]} organisations
- * @param {AccreditationRecord[]} records
+ * @param {Accreditation[]} accreditations
  * @returns {Organisation[]}
  */
-const attach = (organisations, records) => {
-  const byRegistrationId = new Map(records.map((r) => [r.registrationId, r]))
+const attach = (organisations, accreditations) => {
+  const byId = new Map(accreditations.map((a) => [a.id, a]))
 
-  return organisations.map((organisation) => {
-    const accreditations = []
-    const registrations = organisation.registrations.map((registration) => {
-      const record = byRegistrationId.get(registration.id)
-      if (!record) {
-        return registration
+  return organisations.map((organisation) => ({
+    ...organisation,
+    accreditations: organisation.registrations.flatMap(
+      ({ accreditationId }) => {
+        const accreditation = accreditationId && byId.get(accreditationId)
+        return accreditation ? [accreditation] : []
       }
-      accreditations.push(toAccreditation(record, registration))
-      return { ...registration, accreditationId: record.id }
-    })
-
-    return { ...organisation, registrations, accreditations }
-  })
+    )
+  }))
 }
 
 /**

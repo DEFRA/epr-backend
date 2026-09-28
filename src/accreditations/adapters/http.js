@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 
 /** @import { AccreditationsSource } from '../port.js' */
-/** @import { AccreditationRecord } from '../model.js' */
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 /**
  * The most the list endpoint returns in a page.
@@ -47,7 +47,7 @@ export const createHttpAccreditationsSource = ({
 
   /**
    * @param {{ year: number, registrationIds?: string[] }} params
-   * @returns {Promise<AccreditationRecord[]>}
+   * @returns {Promise<Accreditation[]>}
    */
   const listPages = async ({ year, registrationIds = [] }) => {
     const records = []

@@ -1,11 +1,11 @@
 import Joi from 'joi'
 import {
   ACCREDITATION_STATUS,
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  REPROCESSING_TYPE,
   TONNAGE_BAND
 } from '#domain/organisations/model.js'
-
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { AccreditationStatus, TonnageBand } from '#domain/organisations/model.js' */
 
 /**
  * The scheme year every accreditation held in `epr-organisations` belongs to.
@@ -14,113 +14,113 @@ import {
  */
 export const LOCALLY_HELD_YEAR = 2026
 
-/**
- * @typedef {{
- *   fullName: string
- *   email: string
- *   phone?: string
- *   jobTitle?: string
- * }} AccreditationContact
- */
+const DATED_STATUSES = [
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED
+]
+
+/** `Date | string` in the model: a Date at rest, an ISO string over JSON. */
+const dateSchema = Joi.date()
 
 /**
- * An accreditation as REEX reads it from whichever service holds it: the 2026
- * accreditations this service holds, and in time the registration service's
- * 2027 ones, answer in this shape.
- *
- * It carries only what the accreditation itself owns. What it shares with its
- * registration — material, processing type, site, regulator — is read from the
- * registration, and `validTo` is always 31 December of `year`, so neither is
- * repeated here.
- *
- * @typedef {{
- *   id: string
- *   registrationId: string
- *   year: number
- *   status: AccreditationStatus
- *   statusHistory: { status: AccreditationStatus, updatedAt: Date | string }[]
- *   accreditationNumber: string | null
- *   validFrom: string | null
- *   prnIssuance: {
- *     tonnageBand: TonnageBand | null
- *     signatories: AccreditationContact[]
- *   }
- *   submitterContactDetails: AccreditationContact | null
- * }} AccreditationRecord
+ * `User`. Stored contacts also carry the `jobTitle` the forms collect, which
+ * the type leaves out.
  */
-
-/**
- * Picks the contact fields, so nothing else a stored user carries reaches the
- * contract.
- *
- * @param {AccreditationContact} user
- * @returns {AccreditationContact}
- */
-const toContact = ({ fullName, email, phone, jobTitle }) => ({
-  fullName,
-  email,
-  ...(phone && { phone }),
-  ...(jobTitle && { jobTitle })
-})
-
-/**
- * Projects an accreditation this service holds into the contract.
- *
- * @param {Accreditation} accreditation
- * @param {string} registrationId - the registration that links to it
- * @returns {AccreditationRecord}
- */
-export const toAccreditationRecord = (accreditation, registrationId) => ({
-  id: accreditation.id,
-  registrationId,
-  year: LOCALLY_HELD_YEAR,
-  status: accreditation.status,
-  statusHistory: accreditation.statusHistory.map(({ status, updatedAt }) => ({
-    status,
-    updatedAt
-  })),
-  accreditationNumber: accreditation.accreditationNumber ?? null,
-  validFrom: accreditation.validFrom ?? null,
-  prnIssuance: {
-    tonnageBand: accreditation.prnIssuance?.tonnageBand ?? null,
-    signatories: (accreditation.prnIssuance?.signatories ?? []).map(toContact)
-  },
-  submitterContactDetails: accreditation.submitterContactDetails
-    ? toContact(accreditation.submitterContactDetails)
-    : null
-})
-
-const contactSchema = Joi.object({
+const userSchema = Joi.object({
   fullName: Joi.string().required(),
   email: Joi.string().required(),
-  phone: Joi.string(),
+  phone: Joi.string().required(),
+  role: Joi.string(),
+  title: Joi.string(),
   jobTitle: Joi.string()
 })
 
-const statusSchema = Joi.string().valid(...Object.values(ACCREDITATION_STATUS))
+/** `FormFileUpload` */
+const formFileUploadSchema = Joi.object({
+  defraFormUploadedFileId: Joi.string().required(),
+  defraFormUserDownloadLink: Joi.string().required(),
+  s3Uri: Joi.string()
+})
 
-export const accreditationRecordSchema = Joi.object({
-  id: Joi.string().required(),
-  registrationId: Joi.string().required(),
-  year: Joi.number().integer().required(),
-  status: statusSchema.required(),
-  statusHistory: Joi.array()
+/**
+ * `StatusHistoryEntry`. Stored entries may also record who made the change.
+ */
+const statusHistoryEntrySchema = Joi.object({
+  status: Joi.string()
+    .valid(...Object.values(ACCREDITATION_STATUS))
+    .required(),
+  updatedAt: dateSchema.required(),
+  updatedBy: Joi.string()
+})
+
+/** `PrnIssuance` */
+const prnIssuanceSchema = Joi.object({
+  incomeBusinessPlan: Joi.array()
     .items(
       Joi.object({
-        status: statusSchema.required(),
-        updatedAt: Joi.date().required()
+        detailedExplanation: Joi.string().required(),
+        percentIncomeSpent: Joi.number().required(),
+        usageDescription: Joi.string().required()
       })
     )
-    .min(1)
     .required(),
-  accreditationNumber: Joi.string().allow(null).required(),
-  validFrom: Joi.date().allow(null).required(),
-  prnIssuance: Joi.object({
-    tonnageBand: Joi.string()
-      .valid(...Object.values(TONNAGE_BAND))
-      .allow(null)
-      .required(),
-    signatories: Joi.array().items(contactSchema).required()
+  signatories: Joi.array().items(userSchema).required(),
+  tonnageBand: Joi.string()
+    .valid(...Object.values(TONNAGE_BAND))
+    .required()
+})
+
+/**
+ * An approved or suspended accreditation carries its number and validity
+ * window (`AccreditationApproved`); any other may lack them
+ * (`AccreditationOther`), which stored documents record as null.
+ *
+ * @param {Joi.Schema} schema
+ */
+const requiredWhenDated = (schema) =>
+  Joi.when('status', {
+    is: Joi.valid(...DATED_STATUSES),
+    then: schema.required(),
+    otherwise: schema.allow(null)
+  })
+
+/**
+ * `Accreditation` from `#domain/organisations/accreditation.js`: an
+ * accreditation exactly as the organisations model holds it.
+ */
+export const accreditationResponseSchema = Joi.object({
+  id: Joi.string().required(),
+  status: Joi.string()
+    .valid(...Object.values(ACCREDITATION_STATUS))
+    .required(),
+  statusHistory: Joi.array().items(statusHistoryEntrySchema).required(),
+  accreditationNumber: requiredWhenDated(Joi.string()),
+  validFrom: requiredWhenDated(dateSchema),
+  validTo: requiredWhenDated(dateSchema),
+  formSubmission: Joi.object({
+    id: Joi.string().required(),
+    time: dateSchema.required()
   }).required(),
-  submitterContactDetails: contactSchema.allow(null).required()
+  glassRecyclingProcess: Joi.array()
+    .items(Joi.string().valid(...Object.values(GLASS_RECYCLING_PROCESS)))
+    .allow(null),
+  material: Joi.string()
+    .valid(...Object.values(MATERIAL))
+    .required(),
+  orgName: Joi.string().required(),
+  orsFileUploads: Joi.array().items(formFileUploadSchema),
+  prnIssuance: prnIssuanceSchema.required(),
+  reprocessingType: Joi.string().valid(...Object.values(REPROCESSING_TYPE)),
+  samplingInspectionPlanPart2FileUploads: Joi.array()
+    .items(formFileUploadSchema)
+    .required(),
+  site: Joi.object({
+    address: Joi.object({
+      line1: Joi.string().required(),
+      postcode: Joi.string().required()
+    }).required()
+  }),
+  submittedToRegulator: Joi.string().required(),
+  submitterContactDetails: userSchema.required(),
+  wasteProcessingType: Joi.string().required()
 }).label('Accreditation')

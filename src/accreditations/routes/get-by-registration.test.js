@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { afterEach, describe, expect, it } from 'vitest'
 import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   basicAuthHeaders,
   buildAccreditedOrganisation,
@@ -28,7 +29,7 @@ describe('GET /v1/registrations/{registrationId}/accreditation/{year}', () => {
     server = undefined
   })
 
-  it('returns the accreditation the registration holds for 2026', async () => {
+  it('returns the accreditation the registration holds for 2026, as the organisation holds it', async () => {
     const { organisation, registration, accreditation } =
       buildAccreditedOrganisation()
     server = await startServer([organisation])
@@ -40,35 +41,12 @@ describe('GET /v1/registrations/{registrationId}/accreditation/{year}', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({
-      id: accreditation.id,
-      registrationId: registration.id,
-      year: 2026,
-      status: 'approved',
-      statusHistory: [
-        { status: 'created', updatedAt: '2025-08-20T00:00:00.000Z' },
-        { status: 'approved', updatedAt: '2026-01-10T00:00:00.000Z' }
-      ],
-      accreditationNumber: 'A26SR5120384065PA',
-      validFrom: '2026-01-01',
-      prnIssuance: {
-        tonnageBand: 'over_10000',
-        signatories: [
-          {
-            fullName: 'Yoda',
-            email: 'yoda@starwars.com',
-            phone: '1234567890',
-            jobTitle: 'PRN signatory'
-          }
-        ]
-      },
-      submitterContactDetails: {
-        fullName: 'Yoda',
-        email: 'yoda@starwars.com',
-        phone: '1234567890',
-        jobTitle: 'PRN signatory'
-      }
-    })
+    const stored = await createInMemoryOrganisationsRepository(
+      /** @type {any} */ ([organisation])
+    )().findAccreditationById(organisation.id, accreditation.id)
+    expect(JSON.parse(response.payload)).toStrictEqual(
+      JSON.parse(JSON.stringify(stored))
+    )
   })
 
   it('returns 404 for a year this service holds no accreditations for', async () => {

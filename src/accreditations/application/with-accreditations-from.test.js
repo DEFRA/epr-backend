@@ -1,82 +1,65 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildRegistration } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildAccreditedOrganisation } from '../routes/test-helpers.js'
 import { withAccreditationsFrom } from './with-accreditations-from.js'
 
-/** @import { AccreditationRecord } from '../model.js' */
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationsSource } from '../port.js' */
 
 /**
- * @param {Partial<AccreditationRecord>} overrides
- * @returns {AccreditationRecord}
- */
-const recordFor = (overrides) => ({
-  id: 'held-elsewhere',
-  registrationId: 'unknown',
-  year: 2026,
-  status: 'approved',
-  statusHistory: [
-    { status: 'approved', updatedAt: '2026-02-01T00:00:00.000Z' }
-  ],
-  accreditationNumber: 'FROM-SOURCE',
-  validFrom: '2026-02-01',
-  prnIssuance: { tonnageBand: 'up_to_500', signatories: [] },
-  submitterContactDetails: null,
-  ...overrides
-})
-
-/**
- * @param {AccreditationRecord[]} records
+ * @param {Accreditation[]} accreditations
  * @returns {AccreditationsSource & { list: import('vitest').Mock }}
  */
-const sourceHolding = (records) => ({
+const sourceHolding = (accreditations) => ({
   findForRegistration: vi.fn(),
-  list: vi.fn(async ({ registrationIds }) =>
-    records.filter(
-      (record) =>
-        !registrationIds || registrationIds.includes(record.registrationId)
-    )
-  )
+  list: vi.fn(async () => accreditations)
 })
 
 /** @param {Array<Record<string, any>>} organisations */
 const repositoryHolding = (organisations) =>
   createInMemoryOrganisationsRepository(/** @type {any} */ (organisations))()
 
+/**
+ * The organisation's accreditation as the source holds it: a different
+ * number from the stored one, so a read shows which it came from.
+ *
+ * @param {ReturnType<typeof buildAccreditedOrganisation>} accredited
+ * @returns {Accreditation}
+ */
+const heldElsewhere = ({ accreditation }) =>
+  /** @type {Accreditation} */ ({
+    ...accreditation,
+    accreditationNumber: 'FROM-SOURCE'
+  })
+
 describe('withAccreditationsFrom', () => {
   it('replaces stored accreditations with those the source holds', async () => {
-    const { organisation, registration } = buildAccreditedOrganisation()
-    const source = sourceHolding([
-      recordFor({ registrationId: registration.id })
-    ])
+    const accredited = buildAccreditedOrganisation()
     const repository = withAccreditationsFrom(
-      repositoryHolding([organisation]),
-      source
+      repositoryHolding([accredited.organisation]),
+      sourceHolding([heldElsewhere(accredited)])
     )
 
-    const read = await repository.findById(organisation.id)
+    const read = await repository.findById(accredited.organisation.id)
 
-    expect(read.accreditations).toStrictEqual([
-      expect.objectContaining({
-        id: 'held-elsewhere',
-        accreditationNumber: 'FROM-SOURCE',
-        validFrom: '2026-02-01',
-        validTo: '2026-12-31',
-        material: registration.material,
-        wasteProcessingType: registration.wasteProcessingType,
-        orgName: registration.orgName,
-        site: {
-          address: {
-            line1: registration.site.address.line1,
-            postcode: registration.site.address.postcode
-          }
-        }
-      })
+    expect(read.accreditations).toStrictEqual([heldElsewhere(accredited)])
+  })
+
+  it('leaves out accreditations no registration links to', async () => {
+    const accredited = buildAccreditedOrganisation()
+    const repository = withAccreditationsFrom(
+      repositoryHolding([accredited.organisation]),
+      sourceHolding([
+        heldElsewhere(accredited),
+        /** @type {Accreditation} */ ({ ...accredited.accreditation, id: 'x' })
+      ])
+    )
+
+    const read = await repository.findById(accredited.organisation.id)
+
+    expect(read.accreditations.map((a) => a.id)).toStrictEqual([
+      accredited.accreditation.id
     ])
-    expect(
-      read.registrations.find((r) => r.id === registration.id)?.accreditationId
-    ).toBe('held-elsewhere')
   })
 
   it('leaves no accreditations when the source holds none', async () => {
@@ -89,41 +72,6 @@ describe('withAccreditationsFrom', () => {
     const read = await repository.findById(organisation.id)
 
     expect(read.accreditations).toStrictEqual([])
-  })
-
-  it('gives an undated accreditation no validity window', async () => {
-    const { organisation, registration } = buildAccreditedOrganisation()
-    const repository = withAccreditationsFrom(
-      repositoryHolding([organisation]),
-      sourceHolding([
-        recordFor({
-          registrationId: registration.id,
-          status: 'created',
-          validFrom: null
-        })
-      ])
-    )
-
-    const [accreditation] = (await repository.findById(organisation.id))
-      .accreditations
-
-    expect(accreditation).not.toHaveProperty('validFrom')
-    expect(accreditation).not.toHaveProperty('validTo')
-  })
-
-  it('gives an exporter accreditation no site', async () => {
-    const exporter = buildRegistration({ wasteProcessingType: 'exporter' })
-    const { organisation } = buildAccreditedOrganisation()
-    const withExporter = { ...organisation, registrations: [exporter] }
-    const repository = withAccreditationsFrom(
-      repositoryHolding([withExporter]),
-      sourceHolding([recordFor({ registrationId: exporter.id })])
-    )
-
-    const [accreditation] = (await repository.findById(organisation.id))
-      .accreditations
-
-    expect(accreditation).not.toHaveProperty('site')
   })
 
   it('does not ask the source about an organisation with no registrations', async () => {
@@ -144,10 +92,7 @@ describe('withAccreditationsFrom', () => {
   it('asks the source once for everything when reading every organisation', async () => {
     const first = buildAccreditedOrganisation()
     const second = buildAccreditedOrganisation()
-    const source = sourceHolding([
-      recordFor({ id: 'one', registrationId: first.registration.id }),
-      recordFor({ id: 'two', registrationId: second.registration.id })
-    ])
+    const source = sourceHolding([heldElsewhere(first), heldElsewhere(second)])
     const repository = withAccreditationsFrom(
       repositoryHolding([first.organisation, second.organisation]),
       source
@@ -158,13 +103,18 @@ describe('withAccreditationsFrom', () => {
     expect(source.list).toHaveBeenCalledExactlyOnceWith({ year: 2026 })
     expect(
       organisations.map((o) => o.accreditations.map((a) => a.id))
-    ).toStrictEqual(expect.arrayContaining([['one'], ['two']]))
+    ).toStrictEqual(
+      expect.arrayContaining([
+        [first.accreditation.id],
+        [second.accreditation.id]
+      ])
+    )
   })
 
   describe('reads that return organisations', () => {
-    const { organisation, registration } = buildAccreditedOrganisation()
+    const accredited = buildAccreditedOrganisation()
     const withIdentity = {
-      ...organisation,
+      ...accredited.organisation,
       orgId: 612345,
       linkedDefraOrganisation: {
         orgId: 'defra-org',
@@ -175,11 +125,12 @@ describe('withAccreditationsFrom', () => {
     }
     const repository = withAccreditationsFrom(
       repositoryHolding([withIdentity]),
-      sourceHolding([recordFor({ registrationId: registration.id })])
+      sourceHolding([heldElsewhere(accredited)])
     )
 
-    /** @param {{ accreditations: Array<{ id: string }> } | null | undefined} result */
-    const accreditationIds = (result) => result?.accreditations.map((a) => a.id)
+    /** @param {{ accreditations: Array<{ accreditationNumber: string | null }> } | null | undefined} result */
+    const numbers = (result) =>
+      result?.accreditations.map((a) => a.accreditationNumber)
 
     it.each([
       [
@@ -188,7 +139,8 @@ describe('withAccreditationsFrom', () => {
       ],
       [
         'findByIds',
-        async () => (await repository.findByIds([organisation.id]))[0]
+        async () =>
+          (await repository.findByIds([accredited.organisation.id]))[0]
       ],
       [
         'findByLinkedDefraOrgId',
@@ -201,11 +153,13 @@ describe('withAccreditationsFrom', () => {
       [
         'findByRegistrationNumber',
         () =>
-          repository.findByRegistrationNumber(registration.registrationNumber)
+          repository.findByRegistrationNumber(
+            accredited.registration.registrationNumber
+          )
       ],
       ['findByOrgId', () => repository.findByOrgId(612345)]
     ])('%s carries the source’s accreditations', async (_, read) => {
-      expect(accreditationIds(await read())).toStrictEqual(['held-elsewhere'])
+      expect(numbers(await read())).toStrictEqual(['FROM-SOURCE'])
     })
 
     it('findAllLinkableForUser carries the source’s accreditations', async () => {
@@ -221,11 +175,12 @@ describe('withAccreditationsFrom', () => {
   })
 
   describe('registration and accreditation lookups', () => {
-    const { organisation, registration, registeredOnly } =
-      buildAccreditedOrganisation()
+    const accredited = buildAccreditedOrganisation()
+    const { organisation, registration, registeredOnly, accreditation } =
+      accredited
     const repository = withAccreditationsFrom(
       repositoryHolding([organisation]),
-      sourceHolding([recordFor({ registrationId: registration.id })])
+      sourceHolding([heldElsewhere(accredited)])
     )
 
     it('attaches the accreditation the source holds to its registration', async () => {
@@ -234,7 +189,7 @@ describe('withAccreditationsFrom', () => {
         registration.id
       )
 
-      expect(found.accreditation?.id).toBe('held-elsewhere')
+      expect(found.accreditation?.accreditationNumber).toBe('FROM-SOURCE')
     })
 
     it('returns a registration that holds none as it is', async () => {
@@ -252,20 +207,18 @@ describe('withAccreditationsFrom', () => {
       ).rejects.toMatchObject({ output: { statusCode: 404 } })
     })
 
-    it('finds an accreditation by the id the source gives it', async () => {
+    it('finds an accreditation as the source holds it', async () => {
       const found = await repository.findAccreditationById(
         organisation.id,
-        'held-elsewhere'
+        accreditation.id
       )
 
       expect(found.accreditationNumber).toBe('FROM-SOURCE')
     })
 
-    it('throws not found for an accreditation only the organisation document holds', async () => {
-      const stored = organisation.accreditations[0].id
-
+    it('throws not found for an accreditation the source does not hold', async () => {
       await expect(
-        repository.findAccreditationById(organisation.id, stored)
+        repository.findAccreditationById(organisation.id, 'missing')
       ).rejects.toMatchObject({ output: { statusCode: 404 } })
     })
   })

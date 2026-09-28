@@ -44,11 +44,9 @@ describe('GET /v1/accreditations', () => {
       totalPages: 1
     })
     expect(
-      body.items.map(
-        (/** @type {{ registrationId: string }} */ item) => item.registrationId
-      )
+      body.items.map((/** @type {{ id: string }} */ item) => item.id)
     ).toEqual(
-      expect.arrayContaining([first.registration.id, second.registration.id])
+      expect.arrayContaining([first.accreditation.id, second.accreditation.id])
     )
   })
 
@@ -63,10 +61,7 @@ describe('GET /v1/accreditations', () => {
 
     const body = JSON.parse(response.payload)
     expect(body.totalItems).toBe(1)
-    expect(body.items[0]).toMatchObject({
-      id: second.accreditation.id,
-      registrationId: second.registration.id
-    })
+    expect(body.items[0]).toMatchObject({ id: second.accreditation.id })
   })
 
   it('accepts registrationId repeated', async () => {

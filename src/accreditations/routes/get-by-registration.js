@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 import { findLocalAccreditation } from '../application/local-accreditations.js'
-import { accreditationRecordSchema } from '../model.js'
+import { accreditationResponseSchema } from '../model.js'
 import { holdingRepository } from './holding-repository.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -36,7 +36,7 @@ export const registrationAccreditationForYearGet = {
       })
     },
     response: {
-      schema: accreditationRecordSchema
+      schema: accreditationResponseSchema
     }
   },
   /**

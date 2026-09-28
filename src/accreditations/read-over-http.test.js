@@ -18,37 +18,11 @@ const uriOf = (server) =>
 const credentials = { username: 'reg-accred', password: 'changeme' }
 
 /**
- * The fields the contract carries, which must survive the round trip
- * unchanged.
+ * What survives JSON: dates arrive as ISO strings.
  *
- * @param {Record<string, any>} accreditation
+ * @param {unknown} value
  */
-const contractFields = (accreditation) => ({
-  id: accreditation.id,
-  status: accreditation.status,
-  accreditationNumber: accreditation.accreditationNumber,
-  validFrom: accreditation.validFrom,
-  validTo: accreditation.validTo,
-  tonnageBand: accreditation.prnIssuance.tonnageBand,
-  signatories: accreditation.prnIssuance.signatories.map(
-    (
-      /** @type {Record<string, any>} */ { fullName, email, phone, jobTitle }
-    ) => ({
-      fullName,
-      email,
-      phone,
-      jobTitle
-    })
-  ),
-  statusHistory: accreditation.statusHistory.map(
-    (/** @type {{ status: string, updatedAt: Date | string }} */ entry) => ({
-      status: entry.status,
-      updatedAt: new Date(entry.updatedAt).toISOString()
-    })
-  ),
-  material: accreditation.material,
-  wasteProcessingType: accreditation.wasteProcessingType
-})
+const overTheWire = (value) => JSON.parse(JSON.stringify(value))
 
 describe('reading accreditations over HTTP', () => {
   const { getServer } = setupAuthContext()
@@ -116,15 +90,13 @@ describe('reading accreditations over HTTP', () => {
     expect(traceIdsSent).toStrictEqual(['trace-abc-123'])
   })
 
-  it('gives an organisation the accreditations it holds, fetched over HTTP', async () => {
+  it('gives an organisation the accreditations it holds, fetched over HTTP unchanged', async () => {
     const stored = await local.findById(accredited.organisation.id)
 
     const read = await overHttp.findById(accredited.organisation.id)
 
-    expect(read.accreditations.map(contractFields)).toStrictEqual(
-      stored.accreditations
-        .filter((a) => a.id === accredited.accreditation.id)
-        .map(contractFields)
+    expect(read.accreditations).toStrictEqual(
+      overTheWire(stored.accreditations)
     )
   })
 
