@@ -10,10 +10,12 @@ import { createTestServer } from '#test/create-test-server.js'
 const BASIC_AUTH_USERNAME = 'reg-accred'
 const BASIC_AUTH_PASSWORD = 'changeme'
 
-const basicAuthHeader = `Basic ${Buffer.from(`${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}`).toString('base64')}`
+const encodedBasicAuthCredentials = Buffer.from(
+  `${BASIC_AUTH_USERNAME}:${BASIC_AUTH_PASSWORD}`
+).toString('base64')
 
 export const basicAuthHeaders = {
-  Authorization: basicAuthHeader
+  Authorization: `Basic ${encodedBasicAuthCredentials}`
 }
 
 const grantedStatusHistory = [
