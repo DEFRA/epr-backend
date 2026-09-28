@@ -9,17 +9,18 @@ import {
 import { groupByRegistration } from '#reports/application/report-compliance.js'
 import {
   accreditationWindow,
-  getStatusHistoryDateTimes
+  getStatusHistoryDateTimes,
+  statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
-import {
-  grantedRegistrations,
-  isCancelledThroughout
-} from '#market-insights/application/accredited-months.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
 /** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
@@ -39,11 +40,24 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
+ * Whether the accreditation stood cancelled when the period ended. Its report
+ * falls due after the period, and a cancelled operator reports quarterly, so
+ * one cancelled by then can never file it.
+ *
+ * @param {{ endDate: CalendarDate }} period
+ * @param {StatusHistoryDateTime[]} history
+ */
+const isCancelledByEndOf = ({ endDate }, history) =>
+  statusHeldAt(`${endDate}T23:59:59.999Z`, history) ===
+  ACCREDITATION_STATUS.CANCELLED
+
+/**
  * The monthly periods an accreditation owed among the months served: those
- * within its validity window that it did not stand cancelled throughout. A
- * suspended accreditation keeps reporting; a cancelled one stops, and starts
- * again if reinstated. The caller has already settled which months have
- * ended, on the UK calendar, so no clock is consulted here.
+ * within its validity window that it had not been cancelled by the end of. A
+ * suspended accreditation keeps reporting; a cancelled one stops from the
+ * month it was cancelled in, and starts again if reinstated before a month
+ * ends. The caller has already settled which months have ended, on the UK
+ * calendar, so no clock is consulted here.
  *
  * @param {Set<YearMonth>} served
  * @param {number[]} years
@@ -62,7 +76,7 @@ const owedPeriods = (served, years, accreditation) => {
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledThroughout(period, history)
+      !isCancelledByEndOf(period, history)
   )
 }
 
@@ -82,8 +96,8 @@ const owedPeriods = (served, years, accreditation) => {
  * Every monthly report owed among the months served, one per accredited
  * registration and month. Only an accredited registration reports monthly, so
  * a registered-only operator yields nothing. An accreditation owed a report
- * for every month of its window it was not cancelled for, so one since
- * cancelled yields the months before its cancellation.
+ * for every month of its window it had not been cancelled by the end of, so
+ * one since cancelled yields the months before the one it was cancelled in.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
