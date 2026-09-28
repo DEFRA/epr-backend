@@ -101,6 +101,9 @@ export const withAccreditationsFrom = (repository, source) => {
 
     findByIds: async (ids) => hydrate(source, await repository.findByIds(ids)),
 
+    findByRegistrationIds: async (registrationIds) =>
+      hydrate(source, await repository.findByRegistrationIds(registrationIds)),
+
     findById,
 
     findByLinkedDefraOrgId: async (defraOrgId) =>

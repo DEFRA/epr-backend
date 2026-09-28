@@ -143,6 +143,13 @@ describe('withAccreditationsFrom', () => {
           (await repository.findByIds([accredited.organisation.id]))[0]
       ],
       [
+        'findByRegistrationIds',
+        async () =>
+          (
+            await repository.findByRegistrationIds([accredited.registration.id])
+          )[0]
+      ],
+      [
         'findByLinkedDefraOrgId',
         () => repository.findByLinkedDefraOrgId('defra-org')
       ],

@@ -96,6 +96,7 @@
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
  * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
+ * @property {(registrationIds: string[]) => Promise<Organisation[]>} findByRegistrationIds - Find the organisations holding any of these registrations
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(accreditationNumber: string) => Promise<Organisation|null>} findByAccreditationNumber - Find the organisation holding an accreditation with this number, regardless of the accreditation's status

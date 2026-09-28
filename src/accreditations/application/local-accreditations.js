@@ -66,10 +66,14 @@ export const listLocalAccreditations = async (
   organisationsRepository,
   { year, registrationIds }
 ) => {
-  const held =
-    year === LOCALLY_HELD_YEAR
-      ? (await organisationsRepository.findAll()).flatMap(heldBy)
-      : []
+  if (year !== LOCALLY_HELD_YEAR) {
+    return []
+  }
+
+  const organisations = registrationIds
+    ? await organisationsRepository.findByRegistrationIds(registrationIds)
+    : await organisationsRepository.findAll()
+  const held = organisations.flatMap(heldBy)
 
   const wanted = registrationIds && new Set(registrationIds)
   return held

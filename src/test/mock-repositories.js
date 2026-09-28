@@ -25,6 +25,7 @@ export const createMockOrganisationsRepository = (overrides = {}) => ({
   findAllForOverseasSitesAdminList: vi.fn(),
   findPageForOverseasSitesAdminList: vi.fn(),
   findByIds: vi.fn(),
+  findByRegistrationIds: vi.fn(),
   findById: vi.fn(),
   findByLinkedDefraOrgId: vi.fn(),
   findByAccreditationNumber: vi.fn(),
