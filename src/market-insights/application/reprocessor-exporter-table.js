@@ -6,7 +6,6 @@ import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import {
   getReportableRegistrations,
-  resolveAccreditation,
   resolveMaterial
 } from '#domain/organisations/registration-utils.js'
 import {
@@ -26,7 +25,10 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
-import { accreditedMonths } from '#market-insights/application/accredited-months.js'
+import {
+  accreditedMonths,
+  grantedRegistrations
+} from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure,
@@ -282,27 +284,26 @@ const publishedTotals = (cells, operators, month) =>
   )
 
 /**
- * Whether the registration holds a live accreditation and was submitted to the
- * regulator being published. The regulator a registration was submitted to is
- * the one the report-submissions extract prints, and so the one the England
- * tab is filtered on.
+ * Whether the registration was submitted to the regulator being published. The
+ * regulator a registration was submitted to is the one the report-submissions
+ * extract prints, and so the one the England tab is filtered on.
  *
- * This is the one rule that decides both what these figures are made of and
- * which months their coverage count is owed, so the two describe the same
- * operators by sharing it rather than by agreeing separately.
+ * Together with an accreditation having been granted, this is the one rule
+ * that decides what these figures are made of, which months their coverage
+ * count is owed and which operators they count, so all three describe the
+ * same operators by sharing it rather than by agreeing separately.
  *
  * @param {RegulatorValue} [regulator] - every regulator when absent
  * @returns {CoversRegistration}
  */
 const publicationCovers =
   (regulator) =>
-  ({ org, registration }) =>
-    resolveAccreditation(registration, org) !== null &&
-    (regulator === undefined || registration.submittedToRegulator === regulator)
+  ({ registration }) =>
+    regulator === undefined || registration.submittedToRegulator === regulator
 
 /**
  * Every periodic report folded into its cell: the latest monthly submission of
- * each registration the publication covers, summed by material and
+ * each granted registration the publication covers, summed by material and
  * accreditation type within each month served, beside the contribution each
  * folded report made. A report whose registration no longer resolves is
  * logged and left out, unless a test organisation filed it.
@@ -336,6 +337,15 @@ const measuresByCell = ({
       .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
       .map((org) => org.id)
   )
+  const covered = new Set(
+    [...grantedRegistrations(organisations, covers)].map(
+      ({ org, registration }) =>
+        registrationKey({
+          organisationId: org.id,
+          registrationId: registration.id
+        })
+    )
+  )
 
   /**
    * @param {PeriodicReport} periodicReport
@@ -350,7 +360,7 @@ const measuresByCell = ({
       }
       return undefined
     }
-    return covers(entry) ? entry : undefined
+    return covered.has(key) ? entry : undefined
   }
 
   const served = new Set(months)
@@ -392,10 +402,10 @@ const measuresByCell = ({
 /**
  * Aggregate the published reprocessor and exporter figures for the given
  * reporting months: the latest monthly submission of every registration
- * holding a live accreditation, summed by material and accreditation type
- * within each month. An accreditation cancelled since loses the months it
- * filed, as the regulator's workbooks and the report-submissions extract drop
- * them. Quarterly reports belong to registered-only operators and are left
+ * whose accreditation has been granted, summed by material and accreditation
+ * type within each month. An accreditation cancelled since keeps the months
+ * it filed, since a cancellation voids none of the notes issued against that
+ * tonnage. Quarterly reports belong to registered-only operators and are left
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
  * was owed and how many were submitted, and the period carries the sum. Every
@@ -438,9 +448,7 @@ export const buildReprocessorExporterTable = async ({
 
   // Counted over the registrations the figures cover rather than the whole
   // register, so a month cannot report coverage for one set of operators
-  // beside tonnages for another. A cancelled accreditation is the case that
-  // separates them: its submissions are absent from the figures, so its
-  // months are not owed here.
+  // beside tonnages for another.
   const owedReports = [
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
