@@ -23,7 +23,8 @@ import {
   firstDayOf,
   hasAccreditedOperator,
   setWidths,
-  ukTableOf,
+  tableOf,
+  UK_SCOPE,
   write,
   writeRow
 } from './cells.js'
@@ -91,7 +92,7 @@ export const addWasteBalance = (
   worksheet.getRow(WASTE_BALANCE_HEADING_ROW).height =
     ROW_HEIGHT.WASTE_BALANCE_HEADINGS
 
-  const ukTable = ukTableOf(figures.scopes)
+  const ukTable = tableOf(figures.scopes, UK_SCOPE)
   const served = figures.wasteBalance.data
   /** @type {WasteBalanceRow[]} */
   const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
