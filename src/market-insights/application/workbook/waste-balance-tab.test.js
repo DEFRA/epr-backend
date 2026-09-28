@@ -26,7 +26,7 @@ import {
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material } from '#domain/organisations/model.js' */
+/** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 
@@ -115,18 +115,18 @@ const sentOnRow = (rowId, date, tonnage) => ({
 
 /**
  * An accredited reprocessor, which has submitted a summary log of the rows
- * given.
+ * given to its regulator, the Environment Agency unless another is given.
  *
  * @param {Register} register
- * @param {{ material: Material, rows?: SummaryLogRowStateEntry[] }} operator
+ * @param {{ material: Material, regulator?: RegulatorValue, rows?: SummaryLogRowStateEntry[] }} operator
  */
 const seedOperator = async (
   { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
-  { material, rows = [] }
+  { material, regulator = REGULATOR.EA, rows = [] }
 ) => {
   const operator = await insertAccreditedOperator(
     organisationsRepository,
-    REGULATOR.EA,
+    regulator,
     { material }
   )
   const { registrations } = await organisationsRepository.findById(
@@ -423,6 +423,29 @@ describe('the waste balance tab', () => {
     expect(rowLabels(worksheet)).toEqual([
       ['Aluminium', 'Exporter'],
       ['Aluminium', 'Reprocessor'],
+      ['Wood', 'Exporter'],
+      ['Wood', 'Reprocessor']
+    ])
+    await expectTheServedFigures(worksheet, JANUARY_TO_MARCH_2026, register)
+  })
+
+  it('lists the materials of operators in every UK nation', async () => {
+    const register = emptyRegister()
+    await seedOperator(register, {
+      material: MATERIAL.STEEL,
+      regulator: REGULATOR.SEPA,
+      rows: [receivedRow('row-1', '2026-01-15', 9)]
+    })
+    await seedOperator(register, {
+      material: MATERIAL.WOOD,
+      regulator: REGULATOR.NRW
+    })
+
+    const worksheet = await render(JANUARY_TO_MARCH_2026, register)
+
+    expect(rowLabels(worksheet)).toEqual([
+      ['Steel', 'Exporter'],
+      ['Steel', 'Reprocessor'],
       ['Wood', 'Exporter'],
       ['Wood', 'Reprocessor']
     ])
