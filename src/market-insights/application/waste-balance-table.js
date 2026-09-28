@@ -18,6 +18,7 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import { accreditedMonths } from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure
@@ -448,7 +449,7 @@ export const buildWasteBalanceTable = async ({
   ]
   const reports = countMonthlyReports(months, owedReports)
   const operators = operatorsByFigure(
-    owedReports,
+    accreditedMonths({ organisations, months }),
     [...into.contributions.values()],
     figuresOf
   )

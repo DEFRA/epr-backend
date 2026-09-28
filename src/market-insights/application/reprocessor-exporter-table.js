@@ -26,6 +26,7 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import { accreditedMonths } from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure,
@@ -445,7 +446,11 @@ export const buildReprocessorExporterTable = async ({
   ]
   const reports = countMonthlyReports(months, owedReports)
   const operators = {
-    ...operatorsByFigure(owedReports, includedReports, figuresOf),
+    ...operatorsByFigure(
+      accreditedMonths({ organisations, months, covers }),
+      includedReports,
+      figuresOf
+    ),
     contributing: operatorsByKey(includedReports, contributedFiguresOf)
   }
 

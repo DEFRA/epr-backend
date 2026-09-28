@@ -1020,6 +1020,59 @@ describe('buildWasteBalanceTable', () => {
       })
     })
 
+    it('counts an operator in the month its accreditation was cancelled partway through', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500049 }).organisation,
+        '2026-02-10'
+      )
+
+      const { table } = await run({
+        organisations: [cancelled],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('leaves out an operator whose cancelled accreditation holds no validity window', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500050 }).organisation,
+        '2026-02-10'
+      )
+      const withoutWindow = {
+        ...cancelled,
+        accreditations: cancelled.accreditations.map(
+          ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
+            accreditation
+        )
+      }
+
+      const { table } = await run({
+        organisations: [withoutWindow],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({})
+    })
+
+    it('counts an operator in the month its accreditation window ends', async () => {
+      const ending = makeOperator({ orgId: 500048, validTo: '2026-03-10' })
+
+      const { table } = await run({
+        organisations: [ending.organisation],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
+    })
+
     it('counts an operator in each material it reports', async () => {
       const plastic = makeOperator({ orgId: 500039 })
       const paper = makeOperator({ orgId: 500040, material: MATERIAL.PAPER })

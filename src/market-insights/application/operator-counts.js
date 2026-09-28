@@ -48,16 +48,15 @@ export const operatorsByKey = (contributions, keysOf) => {
 }
 
 /**
- * The operators behind every figure. An operator was accredited for a month
- * exactly when it owed that month a report, whatever data the figure includes.
+ * The operators behind every figure.
  *
- * @param {Iterable<Contribution>} owed - the monthly reports owed
+ * @param {Iterable<Contribution>} accredited - the months each registration was accredited for its material
  * @param {Contribution[]} included - what the figures include
  * @param {(contribution: Contribution) => string[]} keysOf - the figures each contribution belongs to
  * @returns {OperatorsByFigure}
  */
-export const operatorsByFigure = (owed, included, keysOf) => ({
-  accredited: operatorsByKey(owed, keysOf),
+export const operatorsByFigure = (accredited, included, keysOf) => ({
+  accredited: operatorsByKey(accredited, keysOf),
   submitting: operatorsByKey(included, keysOf)
 })
 
