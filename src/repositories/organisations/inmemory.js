@@ -323,6 +323,14 @@ const performFindByIds = (staleCache) => async (ids) => {
     .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
 }
 
+const performFindByRegistrationIds =
+  (staleCache) => async (registrationIds) => {
+    const wanted = new Set(registrationIds)
+    return structuredClone(staleCache)
+      .filter((org) => org.registrations.some((reg) => wanted.has(reg.id)))
+      .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+  }
+
 const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   const found = staleCache.find(
     (o) => o.linkedDefraOrganisation?.orgId === defraOrgId
@@ -530,6 +538,7 @@ export const createInMemoryOrganisationsRepository = (
       findAllIds: performFindAllIds(staleCache),
       findById,
       findByIds: performFindByIds(staleCache),
+      findByRegistrationIds: performFindByRegistrationIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
       findByRegistrationNumber: performFindByRegistrationNumber(staleCache),

@@ -22,6 +22,7 @@ describe('mock-repositories', () => {
         'findAllForOverseasSitesAdminList',
         'findPageForOverseasSitesAdminList',
         'findByIds',
+        'findByRegistrationIds',
         'findById',
         'findByLinkedDefraOrgId',
         'findByAccreditationNumber',

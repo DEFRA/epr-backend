@@ -132,6 +132,7 @@
  * @typedef {{
  *   formSubmissionsRepository: FormSubmissionsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
+ *   localOrganisationsRepository: OrganisationsRepository,
  *   nonProdDataReset: NonProdDataReset,
  *   organisationsRepository: OrganisationsRepository,
  *   orsImportsRepository: OrsImportsRepository,
