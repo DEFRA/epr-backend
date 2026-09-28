@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "type": "module",
   "imports": {
+    "#accreditations/*": "./src/accreditations/*",
     "#adapters/*": "./src/adapters/*",
     "#application/*": "./src/application/*",
     "#auditing/*": "./src/auditing/*",

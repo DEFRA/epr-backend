@@ -5,6 +5,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "paths": {
+      "#accreditations/*": ["./src/accreditations/*"],
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],
       "#common/*": ["./src/common/*"],
