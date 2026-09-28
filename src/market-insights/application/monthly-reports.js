@@ -15,13 +15,13 @@ import {
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
+import { endOfDay } from '#common/helpers/date-formatter.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
+/** @import { CoversRegistration, Period } from '#market-insights/application/accredited-months.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -44,12 +44,11 @@ import { recordOf } from '#common/helpers/record-of.js'
  * falls due after the period, and a cancelled operator reports quarterly, so
  * one cancelled by then can never file it.
  *
- * @param {{ endDate: CalendarDate }} period
+ * @param {Period} period
  * @param {StatusHistoryDateTime[]} history
  */
 const isCancelledByEndOf = ({ endDate }, history) =>
-  statusHeldAt(`${endDate}T23:59:59.999Z`, history) ===
-  ACCREDITATION_STATUS.CANCELLED
+  statusHeldAt(endOfDay(endDate), history) === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * The monthly periods an accreditation owed among the months served: those
