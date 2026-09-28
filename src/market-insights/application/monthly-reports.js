@@ -50,8 +50,9 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 const isCancelledByEndOf = (month, history) =>
   history.find(
     ({ updatedAt }) =>
-      toYearMonth(formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)) <=
-      month
+      toYearMonth(
+        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
+      ).localeCompare(month) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
 /**
