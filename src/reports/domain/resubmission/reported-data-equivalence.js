@@ -4,14 +4,17 @@
  *
  * `extractReportedData` picks exactly the reported-data subset a report presents
  * and excludes provenance (`source`), lifecycle metadata (`status`,
- * `resubmissionRequired`), free-text and operator-entered fields
+ * `resubmissionRequired`), and free-text and operator-entered fields
  * (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
- * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`) and
- * `prn.averagePricePerTonne` (derived from operator-entered revenue). It also
- * drops each supplier's telephone and email: by agreement (PAE-1983) a change
- * only to a supplier's contact number or email does not require resubmission,
- * even though the report stores them. Missing activity blocks collapse to null
- * so present-vs-absent is itself a difference.
+ * `tonnageReceivedNotExported`). It also drops each supplier's telephone and
+ * email: by agreement (PAE-1983) a change only to a supplier's contact number
+ * or email does not require resubmission, even though the report stores them.
+ * PRN issued tonnage is excluded entirely: it is not summary-log-derived, so a
+ * summary-log upload — the sole trigger of this comparison — can never be its
+ * cause. A PRN lifecycle change (e.g. a cancellation) that restates a closed
+ * period's issued tonnage is out of scope for the summary-log resubmission gate.
+ * Missing activity blocks collapse to null so present-vs-absent is itself a
+ * difference.
  *
  * `canonicalise` sorts object keys and array elements, so the comparison is
  * insensitive to both key order and row order.
@@ -20,15 +23,12 @@
 /** @import { RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
 /**
- * A report (or submission) carrying the reported-data activity blocks. `prn`
- * is narrowed to just its issued tonnage so both a frozen report's full PrnData
- * and a freshly generated `{ issuedTonnage }` satisfy it.
+ * A report (or submission) carrying the reported-data activity blocks.
  *
  * @typedef {Object} ReportedDataBearingReport
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {{ issuedTonnage: number } | null} [prn]
  */
 
 /**
@@ -44,9 +44,9 @@ const dropSupplierContact = ({
 }) => rest
 
 /**
- * The summary-log and PRN activity subset of one report — the reported data it
- * presents, without the free-text and operator-entered fields or supplier
- * contact details.
+ * The summary-log activity subset of one report — the reported data it presents,
+ * without the free-text and operator-entered fields or supplier contact details.
+ * PRN issued tonnage is deliberately excluded (see the module comment).
  *
  * @param {ReportedDataBearingReport} report
  */
@@ -78,8 +78,7 @@ export const extractReportedData = (report) => ({
         tonnageSentToAnotherSite: report.wasteSent.tonnageSentToAnotherSite,
         finalDestinations: report.wasteSent.finalDestinations
       }
-    : null,
-  prn: report.prn ? { issuedTonnage: report.prn.issuedTonnage } : null
+    : null
 })
 
 /** @param {string} a @param {string} b */

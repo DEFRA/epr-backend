@@ -267,9 +267,6 @@ describe('SummaryLogsValidator', () => {
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-      packagingRecyclingNotesRepository: /** @type {any} */ ({
-        findByAccreditation: async () => []
-      }),
       summaryLogExtractor
     })
   })
@@ -698,9 +695,6 @@ describe('SummaryLogsValidator', () => {
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-      packagingRecyclingNotesRepository: /** @type {any} */ ({
-        findByAccreditation: async () => []
-      }),
       summaryLogExtractor
     })
 
@@ -747,9 +741,6 @@ describe('SummaryLogsValidator', () => {
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
       overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-      packagingRecyclingNotesRepository: /** @type {any} */ ({
-        findByAccreditation: async () => []
-      }),
       summaryLogExtractor
     })
 

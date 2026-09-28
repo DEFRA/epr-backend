@@ -26,7 +26,7 @@ import {
   reportedDataAreEquivalent
 } from '#reports/domain/resubmission/reported-data-equivalence.js'
 
-/** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent, PrnData } from '#reports/repository/port.js' */
+/** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
 /**
  * @typedef {Object} ResubmissionSubmission
@@ -35,7 +35,6 @@ import {
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
  */
 
 /**

@@ -1,5 +1,4 @@
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
-import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import {
@@ -14,7 +13,6 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
-/** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {ReportableWasteRecordState} from '#reports/domain/aggregation/aggregate-report-detail.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -32,10 +30,6 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
  * @property {ReportableWasteRecordState[]} newHeadRowStates
  * @property {OperatorCategory} operatorCategory
  * @property {Map<string, OrsDetails>} orsDetailsMap
- * @property {Registration} registration
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {PackagingRecyclingNotesRepository} packagingRecyclingNotesRepository
  */
 
 // The after-state is generated from this upload's in-memory rows, not a
@@ -87,22 +81,19 @@ const currentReportIdForPeriod = (periodicReports, { year, cadence, period }) =>
 
 /**
  * Generates the reported figures this upload would produce for one period: the
- * summary-log aggregation of the new head plus the current PRN issued tonnage,
- * matching the assembly the stored report was frozen from.
+ * summary-log aggregation of the new head, matching the assembly the stored
+ * report was frozen from. PRN issued tonnage is excluded from the resubmission
+ * comparison (see reported-data-equivalence), so it is not aggregated here.
  *
  * @param {AfterFiguresContext & { period: PeriodRef }} params
  */
-const aggregateAfterFigures = async ({
+const aggregateAfterFigures = ({
   period: { year, cadence, period },
   newHeadRowStates,
   operatorCategory,
-  orsDetailsMap,
-  registration,
-  organisationId,
-  registrationId,
-  packagingRecyclingNotesRepository
-}) => {
-  const detail = aggregateReportDetail(newHeadRowStates, {
+  orsDetailsMap
+}) =>
+  aggregateReportDetail(newHeadRowStates, {
     operatorCategory,
     cadence: /** @type {Cadence} */ (cadence),
     year,
@@ -110,17 +101,6 @@ const aggregateAfterFigures = async ({
     source: NO_SOURCE,
     orsDetailsMap
   })
-
-  const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
-    organisationId,
-    registrationId,
-    accreditationId: registration.accreditationId,
-    startDate: detail.startDate,
-    endDate: detail.endDate
-  })
-
-  return { ...detail, prn }
-}
 
 /**
  * Whether a closed period's reported figures changed between its frozen report
@@ -146,7 +126,7 @@ const periodFiguresChanged = async ({
   }
 
   const before = await reportsService.findReportById(currentReportId)
-  const after = await aggregateAfterFigures({ period, ...afterContext })
+  const after = aggregateAfterFigures({ period, ...afterContext })
 
   return !reportedDataAreEquivalent(
     extractReportedData(before),
@@ -166,10 +146,7 @@ const periodFiguresChanged = async ({
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Registration | undefined} params.registration
  * @param {OverseasSitesContext} params.overseasSites
- * @param {string} params.organisationId
- * @param {string} params.registrationId
  * @param {ReportsService} params.reportsService
- * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @returns {Promise<PeriodRef[]>}
  */
@@ -179,10 +156,7 @@ export const computePeriodsRequiringResubmission = async ({
   wasteRecords,
   registration,
   overseasSites,
-  organisationId,
-  registrationId,
   reportsService,
-  packagingRecyclingNotesRepository,
   overseasSitesRepository
 }) => {
   if (closedPeriods.length === 0) {
@@ -207,11 +181,7 @@ export const computePeriodsRequiringResubmission = async ({
   const afterContext = {
     newHeadRowStates,
     operatorCategory,
-    orsDetailsMap,
-    registration,
-    organisationId,
-    registrationId,
-    packagingRecyclingNotesRepository
+    orsDetailsMap
   }
 
   const changed = await Promise.all(

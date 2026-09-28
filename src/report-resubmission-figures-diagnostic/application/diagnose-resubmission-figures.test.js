@@ -210,29 +210,27 @@ describe('diagnoseResubmissionFigures', () => {
     expect(summary.changedResubmissions).toBe(1)
   })
 
-  it('compares wasteSent and prn issuedTonnage, ignoring derived averagePricePerTonne', () => {
-    // No recyclingActivity: a waste-sent/prn-only report shape.
-    const withWasteAndPrn = (submissionNumber, averagePricePerTonne) =>
+  it('flags a wasteSent figure change as changed', () => {
+    // No recyclingActivity: a waste-sent-only report shape.
+    const withWaste = (submissionNumber, tonnageSentToReprocessor) =>
       submission(submissionNumber, {
         recyclingActivity: undefined,
         wasteSent: {
-          tonnageSentToReprocessor: 5,
+          tonnageSentToReprocessor,
           tonnageSentToExporter: 0,
           tonnageSentToAnotherSite: 2,
           finalDestinations: [{ recipientName: 'Dest', tonnageSentOn: 7 }]
-        },
-        prn: { issuedTonnage: 40, averagePricePerTonne, totalRevenue: 480 }
+        }
       })
 
     const { summary } = diagnoseResubmissionFigures([
-      group({ submissions: [withWasteAndPrn(1, 12), withWasteAndPrn(2, 99)] })
+      group({ submissions: [withWaste(1, 5), withWaste(2, 6)] })
     ])
 
-    expect(summary.identicalResubmissions).toBe(1)
-    expect(summary.changedResubmissions).toBe(0)
+    expect(summary.changedResubmissions).toBe(1)
   })
 
-  it('flags a prn issuedTonnage change as changed', () => {
+  it('ignores a prn issuedTonnage change: PRN is out of scope for the diff', () => {
     const { summary } = diagnoseResubmissionFigures([
       group({
         submissions: [
@@ -242,7 +240,8 @@ describe('diagnoseResubmissionFigures', () => {
       })
     ])
 
-    expect(summary.changedResubmissions).toBe(1)
+    expect(summary.identicalResubmissions).toBe(1)
+    expect(summary.changedResubmissions).toBe(0)
   })
 
   it('classifies every successive auto-enforced pair independently', () => {

@@ -257,7 +257,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ).toBe(1)
   })
 
-  it('flags a closed period when PRN issued tonnage drifted since submission', async () => {
+  it('does not flag a closed period when only PRN issued tonnage drifted since submission', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
@@ -281,7 +281,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await env.packagingRecyclingNotesRepository.create(prn)
 
     // Only a non-figure summary-log edit, so the summary-log figures are
-    // unchanged, but the freshly generated issued tonnage now differs.
+    // unchanged. The freshly issued PRN drifts the issued tonnage, but PRN is
+    // out of scope for the summary-log resubmission gate, so it must not flag.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-prn',
@@ -291,9 +292,10 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
-      JANUARY_2025
-    ])
+    // The upload still restates the closed period, so it is a genuine
+    // figure-gating decision, not a period that was never touched.
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
   it('does not flag when identical figures are uploaded with rows reordered', async () => {

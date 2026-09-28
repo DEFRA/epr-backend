@@ -16,7 +16,6 @@ import { createReportsService } from '#reports/application/report-service.js'
  *   | 'reportsRepository'
  *   | 'systemLogsRepository'
  *   | 'overseasSitesRepository'
- *   | 'packagingRecyclingNotesRepository'
  * >} SummaryLogHandlerSources
  */
 
@@ -37,8 +36,7 @@ export const buildSummaryLogHandlerDeps = ({
   wasteBalanceService,
   reportsRepository,
   systemLogsRepository,
-  overseasSitesRepository,
-  packagingRecyclingNotesRepository
+  overseasSitesRepository
 }) => ({
   summaryLogsRepository,
   organisationsRepository,
@@ -46,7 +44,6 @@ export const buildSummaryLogHandlerDeps = ({
   ledgerRepository,
   wasteBalanceService,
   overseasSitesRepository,
-  packagingRecyclingNotesRepository,
   reportsService: createReportsService(reportsRepository),
   summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
   onSummaryLogUploaded: createOnSummaryLogUploaded({
