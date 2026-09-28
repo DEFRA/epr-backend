@@ -28,7 +28,11 @@ export const marketInsightsWorkbookGet = {
   },
   /**
    * The published market insights workbook for the year up to the requested
-   * period, built within the request, as the export archive is.
+   * period, built within the request.
+   *
+   * Like the export archive, this takes tens of seconds, which is accepted for
+   * the same reason: it is run occasionally, by one regulator who is waiting
+   * for it.
    *
    * @param {HapiRequest & {
    *   params: { year: number, cadence: 'monthly', period: number },
