@@ -232,8 +232,8 @@ jobs:
     name: CDP-build-pre-release-workflow
     needs: journey-tests
     permissions:
-      contents: read
       id-token: write
+      contents: write
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
