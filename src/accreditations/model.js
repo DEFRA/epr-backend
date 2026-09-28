@@ -110,7 +110,10 @@ export const accreditationResponseSchema = Joi.object({
   orgName: Joi.string().required(),
   orsFileUploads: Joi.array().items(formFileUploadSchema),
   prnIssuance: prnIssuanceSchema.required(),
-  reprocessingType: Joi.string().valid(...Object.values(REPROCESSING_TYPE)),
+  // Stored as null until set: the organisations schema defaults it to null
+  reprocessingType: Joi.string()
+    .valid(...Object.values(REPROCESSING_TYPE))
+    .allow(null),
   samplingInspectionPlanPart2FileUploads: Joi.array()
     .items(formFileUploadSchema)
     .required(),

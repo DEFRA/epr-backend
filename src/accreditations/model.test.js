@@ -44,6 +44,16 @@ describe('accreditationResponseSchema', () => {
     ])
   })
 
+  it('accepts a reprocessing type not yet set', () => {
+    const [accreditation] = sample.accreditations
+    const { error } = accreditationResponseSchema.validate({
+      ...asRead(accreditation),
+      reprocessingType: null
+    })
+
+    expect(error).toBeUndefined()
+  })
+
   it('refuses a field the model does not hold', () => {
     const [accreditation] = sample.accreditations
     const { error } = accreditationResponseSchema.validate(
