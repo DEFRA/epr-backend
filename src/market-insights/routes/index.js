@@ -5,3 +5,4 @@ export {
 } from './reprocessor-exporter-figures-get.js'
 export { marketInsightsOutstandingReturnsGet } from './outstanding-returns-get.js'
 export { marketInsightsExportZipGet } from './export-zip-get.js'
+export { marketInsightsWorkbookGet } from './workbook-get.js'
