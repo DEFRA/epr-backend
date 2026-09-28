@@ -56,7 +56,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * @typedef {import('#market-insights/application/monthly-reports.js').CoversRegistration} CoversRegistration
+ * @typedef {import('#market-insights/application/accredited-months.js').CoversRegistration} CoversRegistration
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure

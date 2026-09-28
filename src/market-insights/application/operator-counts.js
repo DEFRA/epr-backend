@@ -1,11 +1,7 @@
 /**
- * @typedef {import('#market-insights/application/monthly-reports.js').OwedReport} OwedReport
- */
-
-/**
- * An operator's registration that could put data into a month's figures.
+ * An operator's registration in a month of the figures.
  *
- * @typedef {Pick<OwedReport, 'month' | 'org' | 'registration'>} Contribution
+ * @typedef {import('#market-insights/application/accredited-months.js').AccreditedMonth} Contribution
  */
 
 /**

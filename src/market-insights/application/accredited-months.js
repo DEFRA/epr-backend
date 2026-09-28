@@ -22,10 +22,31 @@ import {
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { AccreditationWindow, StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { CoversRegistration } from '#market-insights/application/monthly-reports.js' */
 
 /**
  * @typedef {{ startDate: CalendarDate, endDate: CalendarDate }} Period
+ */
+
+/**
+ * A registration and the organisation that holds it.
+ *
+ * @typedef {Object} RegistrationOfOrganisation
+ * @property {Organisation} org
+ * @property {Registration} registration
+ */
+
+/**
+ * Whether a caller's publication covers a registration. A caller publishing
+ * figures over part of the register passes one so its counts describe the
+ * same operators its figures do.
+ *
+ * @typedef {(candidate: RegistrationOfOrganisation) => boolean} CoversRegistration
+ */
+
+/**
+ * A registration whose accreditation has been granted.
+ *
+ * @typedef {RegistrationOfOrganisation & { accreditation: Accreditation }} GrantedRegistration
  */
 
 /**
@@ -48,7 +69,7 @@ import {
  *
  * @param {Accreditation} accreditation
  */
-export const hasBeenGranted = ({ statusHistory }) =>
+const hasBeenGranted = ({ statusHistory }) =>
   statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
 
 /**
@@ -117,6 +138,30 @@ const isAccreditedDuring = (period, window, history) =>
   )
 
 /**
+ * Every registration of the register whose accreditation has been granted,
+ * among those the caller's publication covers. Only an accredited registration
+ * reports monthly, so a registered-only operator yields nothing.
+ *
+ * @param {Organisation[]} organisations
+ * @param {CoversRegistration} covers
+ * @returns {Generator<GrantedRegistration>}
+ */
+export function* grantedRegistrations(organisations, covers) {
+  for (const { org, registration } of getReportableRegistrations(
+    organisations
+  )) {
+    const [accreditation] = accreditationsForRegistration(registration, org)
+    if (
+      accreditation !== undefined &&
+      hasBeenGranted(accreditation) &&
+      covers({ org, registration })
+    ) {
+      yield { org, registration, accreditation }
+    }
+  }
+}
+
+/**
  * Every month served in which a registration was accredited for its material
  * on some day, one per accredited registration and month. A suspended
  * accreditation counts; one cancelled for the whole of the month, or outside
@@ -138,17 +183,10 @@ export function* accreditedMonths({
     .flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year))
     .filter((period) => served.has(toYearMonth(period.startDate)))
 
-  for (const { org, registration } of getReportableRegistrations(
-    organisations
+  for (const { org, registration, accreditation } of grantedRegistrations(
+    organisations,
+    covers
   )) {
-    const [accreditation] = accreditationsForRegistration(registration, org)
-    if (
-      accreditation === undefined ||
-      !hasBeenGranted(accreditation) ||
-      !covers({ org, registration })
-    ) {
-      continue
-    }
     const window = accreditationWindow(accreditation)
     if (window === null) {
       continue
