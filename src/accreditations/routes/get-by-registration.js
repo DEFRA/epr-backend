@@ -46,7 +46,6 @@ export const registrationAccreditationForYearGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    console.log('WAC get by ID')
     const { params } = request
 
     const accreditation = await findLocalAccreditation(

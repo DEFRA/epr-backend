@@ -55,16 +55,16 @@ export const findLocalAccreditation = async (
 }
 
 /**
- * A page of the accreditations held for a year, optionally narrowed to some
- * registrations. Ordered by id, so a page holds the same accreditations
- * however often it is asked for.
+ * Every accreditation held for a year, optionally narrowed to some
+ * registrations, ordered by id.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {{ year: number, registrationIds?: string[], page: number, pageSize: number }} params
+ * @param {{ year: number, registrationIds?: string[] }} params
+ * @returns {Promise<Accreditation[]>}
  */
 export const listLocalAccreditations = async (
   organisationsRepository,
-  { year, registrationIds, page, pageSize }
+  { year, registrationIds }
 ) => {
   const held =
     year === LOCALLY_HELD_YEAR
@@ -72,18 +72,8 @@ export const listLocalAccreditations = async (
       : []
 
   const wanted = registrationIds && new Set(registrationIds)
-  const matching = held
+  return held
     .filter(({ registrationId }) => !wanted || wanted.has(registrationId))
     .map(({ accreditation }) => accreditation)
     .sort((a, b) => a.id.localeCompare(b.id))
-
-  const start = (page - 1) * pageSize
-
-  return {
-    items: matching.slice(start, start + pageSize),
-    page,
-    pageSize,
-    totalItems: matching.length,
-    totalPages: Math.ceil(matching.length / pageSize)
-  }
 }

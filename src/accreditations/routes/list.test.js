@@ -28,7 +28,7 @@ describe('GET /v1/accreditations', () => {
       headers: basicAuthHeaders
     })
 
-  it('lists every accreditation held for 2026 across organisations', async () => {
+  it('lists every accreditation held for 2026 across organisations, ordered by id', async () => {
     const first = buildAccreditedOrganisation({ accreditationNumber: 'ACC-1' })
     const second = buildAccreditedOrganisation({ accreditationNumber: 'ACC-2' })
     server = await startServer([first.organisation, second.organisation])
@@ -36,17 +36,14 @@ describe('GET /v1/accreditations', () => {
     const response = await list('year=2026')
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    const body = JSON.parse(response.payload)
-    expect(body).toMatchObject({
-      page: 1,
-      pageSize: 100,
-      totalItems: 2,
-      totalPages: 1
-    })
     expect(
-      body.items.map((/** @type {{ id: string }} */ item) => item.id)
-    ).toEqual(
-      expect.arrayContaining([first.accreditation.id, second.accreditation.id])
+      JSON.parse(response.payload).map(
+        (/** @type {{ id: string }} */ item) => item.id
+      )
+    ).toStrictEqual(
+      [first.accreditation.id, second.accreditation.id].sort((a, b) =>
+        a.localeCompare(b)
+      )
     )
   })
 
@@ -60,8 +57,8 @@ describe('GET /v1/accreditations', () => {
     )
 
     const body = JSON.parse(response.payload)
-    expect(body.totalItems).toBe(1)
-    expect(body.items[0]).toMatchObject({ id: second.accreditation.id })
+    expect(body).toHaveLength(1)
+    expect(body[0]).toMatchObject({ id: second.accreditation.id })
   })
 
   it('accepts registrationId repeated', async () => {
@@ -78,41 +75,17 @@ describe('GET /v1/accreditations', () => {
       `year=2026&registrationId=${first.registration.id}&registrationId=${third.registration.id}`
     )
 
-    expect(JSON.parse(response.payload).totalItems).toBe(2)
+    expect(JSON.parse(response.payload)).toHaveLength(2)
   })
 
-  it('pages in a stable order', async () => {
-    const organisations = [1, 2, 3].map(() => buildAccreditedOrganisation())
-    server = await startServer(organisations.map((o) => o.organisation))
-
-    const firstPage = JSON.parse((await list('year=2026&pageSize=2')).payload)
-    const secondPage = JSON.parse(
-      (await list('year=2026&pageSize=2&page=2')).payload
-    )
-
-    expect(firstPage).toMatchObject({ totalItems: 3, totalPages: 2 })
-    expect(firstPage.items).toHaveLength(2)
-    expect(secondPage.items).toHaveLength(1)
-    const ids = [...firstPage.items, ...secondPage.items].map(
-      (/** @type {{ id: string }} */ item) => item.id
-    )
-    expect(ids).toStrictEqual([...ids].sort((a, b) => a.localeCompare(b)))
-  })
-
-  it('returns an empty page for a year this service holds no accreditations for', async () => {
+  it('returns an empty list for a year this service holds no accreditations for', async () => {
     const { organisation } = buildAccreditedOrganisation()
     server = await startServer([organisation])
 
     const response = await list('year=2027')
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({
-      items: [],
-      page: 1,
-      pageSize: 100,
-      totalItems: 0,
-      totalPages: 0
-    })
+    expect(JSON.parse(response.payload)).toStrictEqual([])
   })
 
   it('requires a year', async () => {

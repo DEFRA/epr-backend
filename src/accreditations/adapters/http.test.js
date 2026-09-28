@@ -73,27 +73,20 @@ describe('createHttpAccreditationsSource', () => {
   })
 
   describe('list', () => {
-    it('reads every page', async () => {
-      /** @type {string[]} */
-      const pagesAskedFor = []
+    it('returns every accreditation held for the year', async () => {
+      /** @type {string | null} */
+      let year = null
       getServer().use(
         http.get(`${baseUrl}/v1/accreditations`, ({ request }) => {
-          const page = Number(new URL(request.url).searchParams.get('page'))
-          pagesAskedFor.push(String(page))
-          return HttpResponse.json({
-            items: [record(`p${page}`)],
-            page,
-            pageSize: 500,
-            totalItems: 2,
-            totalPages: 2
-          })
+          year = new URL(request.url).searchParams.get('year')
+          return HttpResponse.json([record('1'), record('2')])
         })
       )
 
       const records = await source.list({ year: 2026 })
 
-      expect(records).toStrictEqual([record('p1'), record('p2')])
-      expect(pagesAskedFor).toStrictEqual(['1', '2'])
+      expect(records).toStrictEqual([record('1'), record('2')])
+      expect(year).toBe('2026')
     })
 
     it('asks for many registrations in batches of 100', async () => {
@@ -103,13 +96,7 @@ describe('createHttpAccreditationsSource', () => {
         http.get(`${baseUrl}/v1/accreditations`, ({ request }) => {
           const ids = new URL(request.url).searchParams.getAll('registrationId')
           batchSizes.push(ids.length)
-          return HttpResponse.json({
-            items: ids.map((id) => record(id)),
-            page: 1,
-            pageSize: 500,
-            totalItems: ids.length,
-            totalPages: 1
-          })
+          return HttpResponse.json(ids.map((id) => record(id)))
         })
       )
       const registrationIds = Array.from({ length: 150 }, (_, i) => `${i}`)

@@ -5,11 +5,6 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 /**
- * The most the list endpoint returns in a page.
- */
-const PAGE_SIZE = 500
-
-/**
  * The most registration ids sent in one request, keeping the query string
  * well inside URL length limits.
  */
@@ -49,29 +44,11 @@ export const createHttpAccreditationsSource = ({
    * @param {{ year: number, registrationIds?: string[] }} params
    * @returns {Promise<Accreditation[]>}
    */
-  const listPages = async ({ year, registrationIds = [] }) => {
-    const records = []
-    let page = 1
-    let totalPages = 1
+  const listFor = ({ year, registrationIds = [] }) => {
+    const query = new URLSearchParams({ year: String(year) })
+    registrationIds.forEach((id) => query.append('registrationId', id))
 
-    while (page <= totalPages) {
-      const query = new URLSearchParams({
-        year: String(year),
-        page: String(page),
-        pageSize: String(PAGE_SIZE)
-      })
-      registrationIds.forEach((id) => query.append('registrationId', id))
-
-      const body = await fetchJson(`${baseUrl}/v1/accreditations?${query}`, {
-        headers
-      })
-
-      records.push(...body.items)
-      totalPages = body.totalPages
-      page += 1
-    }
-
-    return records
+    return fetchJson(`${baseUrl}/v1/accreditations?${query}`, { headers })
   }
 
   return {
@@ -91,12 +68,12 @@ export const createHttpAccreditationsSource = ({
 
     list: async ({ year, registrationIds }) => {
       if (!registrationIds) {
-        return listPages({ year })
+        return listFor({ year })
       }
 
       const batches = await Promise.all(
         chunk(registrationIds, REGISTRATION_IDS_PER_REQUEST).map((ids) =>
-          listPages({ year, registrationIds: ids })
+          listFor({ year, registrationIds: ids })
         )
       )
 
