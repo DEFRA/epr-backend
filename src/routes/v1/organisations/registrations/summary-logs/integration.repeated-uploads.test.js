@@ -260,9 +260,6 @@ describe('Repeated uploads of identical data', () => {
         }),
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
-        }),
-        packagingRecyclingNotesRepository: /** @type {any} */ ({
-          findByAccreditation: async () => []
         })
       })
 

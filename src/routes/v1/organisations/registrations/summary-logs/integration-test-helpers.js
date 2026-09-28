@@ -583,9 +583,6 @@ export const createTestInfrastructure = async (
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
 
-  const packagingRecyclingNotesRepository =
-    createInMemoryPackagingRecyclingNotesRepository()(mockLogger)
-
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
@@ -595,7 +592,6 @@ export const createTestInfrastructure = async (
       findPeriodicReports: async () => []
     }),
     overseasSitesRepository,
-    packagingRecyclingNotesRepository,
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -725,7 +721,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
-    packagingRecyclingNotesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })
