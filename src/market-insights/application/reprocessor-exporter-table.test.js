@@ -913,6 +913,28 @@ describe('buildReprocessorExporterTable', () => {
       })
     })
 
+    it('counts an operator in a month its accreditation was cancelled in and reinstated after, though that month owes no report', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          {
+            status: ACCREDITATION_STATUS.CANCELLED,
+            updatedAt: '2026-02-10T09:00:00.000Z'
+          },
+          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-10' }
+        ]
+      })
+
+      const { table } = await run({ organisations: [reinstated] })
+
+      expect(table.data.months['2026-02'].reports).toEqual({
+        expected: 0,
+        submitted: 0
+      })
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
     it('counts an operator in the month its accreditation was cancelled partway through', async () => {
       const reinstated = makeOperator({
         orgId: 1,

@@ -640,7 +640,7 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects reports up to the month the accreditation was cancelled, and counts those it filed', async () => {
+    it('expects reports for the months before the accreditation was cancelled, not the month it was cancelled in, and counts those it filed', async () => {
       const operator = makeOperator({ orgId: 500027 })
 
       const { table } = await run({
@@ -650,7 +650,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0])
+        perMonth([1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0])
       )
     })
 
@@ -668,7 +668,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -689,7 +689,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([1, 0, 0, 1, 1, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -861,6 +861,24 @@ describe('buildWasteBalanceTable', () => {
         '2026-02 plastic reprocessor': 1
       })
       expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
+    it('counts an operator in the month its accreditation was cancelled in, though that month owes no report', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500046 }).organisation,
+        '2026-03-20'
+      )
+
+      const { table } = await run({
+        organisations: [cancelled],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
     })
 
     it('counts as submitting only an operator whose tonnage moves the net credit', async () => {
