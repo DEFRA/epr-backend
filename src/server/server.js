@@ -33,6 +33,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
+import { readAccreditationsOverHttpPlugin } from '#accreditations/read-over-http.plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
@@ -141,6 +142,14 @@ function getProductionPlugins(config) {
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
+
+  /* istanbul ignore next -- gated by feature flag, POC only (PAE-1965) */
+  if (config.get('featureFlags.readAccreditationsOverHttp')) {
+    plugins.push({
+      plugin: readAccreditationsOverHttpPlugin,
+      options: { config }
+    })
+  }
 
   /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
   if (config.get('featureFlags.devEndpoints')) {

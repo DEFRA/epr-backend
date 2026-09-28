@@ -4,6 +4,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 import { listLocalAccreditations } from '../application/local-accreditations.js'
 import { accreditationRecordSchema } from '../model.js'
+import { holdingRepository } from './holding-repository.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
@@ -58,9 +59,10 @@ export const accreditationsList = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository, query } = request
+    console.log('WAC list ')
+    const { query } = request
 
-    const result = await listLocalAccreditations(organisationsRepository, {
+    const result = await listLocalAccreditations(holdingRepository(request), {
       year: query.year,
       registrationIds: query.registrationId,
       page: query.page,
