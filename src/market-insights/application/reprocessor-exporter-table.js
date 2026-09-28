@@ -398,9 +398,9 @@ const measuresByCell = ({
  * out. Every regulator's registrations make the UK figures; one regulator's
  * make that nation's. Each month also carries the count of monthly reports it
  * was owed and how many were submitted, and the period carries the sum. Every
- * figure and grand total carries how many operators could have contributed to
- * it, how many it includes a report from, and how many of those put something
- * into each of its figures.
+ * figure and grand total carries how many operators were accredited for it
+ * that month, how many it includes a report from, and how many of those put
+ * something into each of its figures.
  *
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository

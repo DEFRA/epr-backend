@@ -493,7 +493,7 @@ const submittingOperatorCounts = (table) =>
 
 /**
  * The operator counts of every row's whole-period total that any operator
- * could have contributed to, keyed `material type`.
+ * was accredited for, keyed `material type`.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
@@ -838,6 +838,28 @@ describe('buildWasteBalanceTable', () => {
 
       const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
         everyMonth(1)
+      expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
+    it('leaves an operator out of a month it stood cancelled throughout, though the figure includes tonnage it sent on that month', async () => {
+      const operator = makeOperator({ orgId: 500047 })
+      const reinstated = reinstatedOn(
+        cancelledOn(operator.organisation, '2026-01-20'),
+        '2026-03-01'
+      )
+
+      const { table } = await run({
+        organisations: [reinstated],
+        submissions: [
+          { ...operator, rows: [sentOnRow('row-1', '2026-02-20', 10)] }
+        ]
+      })
+
+      const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
+        everyMonth(1)
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
       expect(operatorCounts(table)).toEqual(otherMonths)
     })
 

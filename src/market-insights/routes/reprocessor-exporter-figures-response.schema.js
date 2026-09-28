@@ -86,12 +86,11 @@ const totalsSchema = byAccreditationType(TOTALLED_MEASURES)
  * operator is a business, and counts once however many sites it has, so one
  * with sites in two nations counts once in each nation and once in the UK.
  *
- * - `operatorCount` is the operators who could have contributed: every
- *   operator owed a report for the month, whether or not it submitted one, and
- *   every operator whose report the figure includes. A suspended operator
+ * - `operatorCount` is the operators accredited for the material on some day
+ *   of the month, whether or not they submitted a report. A suspended operator
  *   counts. One whose accreditation stood cancelled for the whole month does
- *   not, unless the figure includes a report of its all the same, and neither
- *   does one the figures leave out.
+ *   not, even if the figure includes a report of its, and neither does one
+ *   the figures leave out.
  * - `submittingOperatorCount` is the operators whose reports the figure
  *   includes.
  * - `contributingOperatorCounts` holds, for each figure in the row, the
