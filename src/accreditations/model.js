@@ -14,8 +14,8 @@ import {
  */
 export const LOCALLY_HELD_YEAR = 2026
 
-export const MIN_YEAR = new Date('2000-01-01').getFullYear()
-export const MAX_YEAR = new Date('2100-01-01').getFullYear()
+export const MIN_YEAR = new Date('2000-01-01').getUTCFullYear()
+export const MAX_YEAR = new Date('2100-01-01').getUTCFullYear()
 
 const DATED_STATUSES = [
   ACCREDITATION_STATUS.APPROVED,
