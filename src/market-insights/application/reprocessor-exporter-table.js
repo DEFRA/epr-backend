@@ -289,9 +289,9 @@ const publishedTotals = (cells, operators, month) =>
  * extract prints, and so the one the England tab is filtered on.
  *
  * Together with an accreditation having been granted, this is the one rule
- * that decides what these figures are made of, which months their coverage
- * count is owed and which operators they count, so all three describe the
- * same operators by sharing it rather than by agreeing separately.
+ * that decides which registrations these figures, their coverage count and
+ * their operator count are drawn from, so all three draw on the same
+ * registrations by sharing it rather than by agreeing separately.
  *
  * @param {RegulatorValue} [regulator] - every regulator when absent
  * @returns {CoversRegistration}
@@ -337,7 +337,7 @@ const measuresByCell = ({
       .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
       .map((org) => org.id)
   )
-  const covered = new Set(
+  const grantedKeys = new Set(
     [...grantedRegistrations(organisations, covers)].map(
       ({ org, registration }) =>
         registrationKey({
@@ -360,7 +360,7 @@ const measuresByCell = ({
       }
       return undefined
     }
-    return covered.has(key) ? entry : undefined
+    return grantedKeys.has(key) ? entry : undefined
   }
 
   const served = new Set(months)
@@ -447,8 +447,7 @@ export const buildReprocessorExporterTable = async ({
   })
 
   // Counted over the registrations the figures cover rather than the whole
-  // register, so a month cannot report coverage for one set of operators
-  // beside tonnages for another.
+  // register, so coverage and tonnage are drawn from the same registrations.
   const owedReports = [
     ...owedMonthlyReports({ organisations, periodicReports, months, covers })
   ]
