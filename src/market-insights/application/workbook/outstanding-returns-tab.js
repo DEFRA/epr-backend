@@ -26,7 +26,8 @@ import {
   richNote,
   setWidths,
   styleEmptyCells,
-  ukTableOf,
+  tableOf,
+  UK_SCOPE,
   write,
   writeRow
 } from './cells.js'
@@ -138,7 +139,7 @@ export const addOutstandingReturns = (
   )
   write(worksheet.getCell('A5'), asOf, DATA_AS_OF)
 
-  const ukTable = ukTableOf(figures.scopes)
+  const ukTable = tableOf(figures.scopes, UK_SCOPE)
   OUTSTANDING_RETURNS_MATERIALS.filter(([material]) =>
     hasAccreditedOperator(ukTable, material)
   ).forEach((material, materialIndex) => {
