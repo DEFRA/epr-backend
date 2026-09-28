@@ -36,8 +36,9 @@ export const createHttpAccreditationsSource = ({
   username,
   password
 }) => {
+  const basicAuthHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
   const headers = {
-    Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    Authorization: basicAuthHeader
   }
 
   /**

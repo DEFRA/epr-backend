@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 import { findLocalAccreditation } from '../application/local-accreditations.js'
-import { accreditationResponseSchema } from '../model.js'
+import { accreditationResponseSchema, MAX_YEAR, MIN_YEAR } from '../model.js'
 import { holdingRepository } from './holding-repository.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -32,7 +32,7 @@ export const registrationAccreditationForYearGet = {
     validate: {
       params: Joi.object({
         registrationId: Joi.string().required(),
-        year: Joi.number().integer().min(2000).max(2100).required()
+        year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required()
       })
     },
     response: {
