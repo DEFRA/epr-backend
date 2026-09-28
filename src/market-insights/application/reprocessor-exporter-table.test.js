@@ -913,7 +913,62 @@ describe('buildReprocessorExporterTable', () => {
       })
     })
 
-    it('counts an operator whose report the figures include for a month it was not owed', async () => {
+    it('counts an operator in a month its accreditation was cancelled in and reinstated after, though that month owes no report', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          {
+            status: ACCREDITATION_STATUS.CANCELLED,
+            updatedAt: '2026-02-10T09:00:00.000Z'
+          },
+          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-10' }
+        ]
+      })
+
+      const { table } = await run({ organisations: [reinstated] })
+
+      expect(table.data.months['2026-02'].reports).toEqual({
+        expected: 0,
+        submitted: 0
+      })
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
+    it('counts an operator in the month its accreditation was cancelled partway through', async () => {
+      const reinstated = makeOperator({
+        orgId: 1,
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' },
+          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+        ]
+      })
+
+      const { table } = await run({ organisations: [reinstated] })
+
+      expect(operatorCounts(table)).toEqual(everyMonth(1))
+    })
+
+    it('leaves an operator out of a month it stood cancelled on every day of its accreditation window', async () => {
+      const cancelledBeforeItBegan = makeOperator({
+        orgId: 1,
+        validFrom: '2026-02-15',
+        accreditationStatusHistory: [
+          ...approvedHistory,
+          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' },
+          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+        ]
+      })
+
+      const { table } = await run({ organisations: [cancelledBeforeItBegan] })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-03 plastic reprocessor': 1
+      })
+    })
+
+    it('leaves an operator out of a month before its accreditation began, though the figures include its report for that month', async () => {
       const early = makeOperator({ orgId: 1, validFrom: '2026-02-01' })
 
       const { table } = await run({
@@ -924,14 +979,17 @@ describe('buildReprocessorExporterTable', () => {
       expect(reported(table)).toEqual([
         expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
       ])
-      expect(operatorCounts(table)).toEqual(everyMonth(1))
+      expect(operatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
       expect(
         table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
           .operatorCount
-      ).toBe(1)
+      ).toBe(0)
     })
 
-    it('counts an operator in a month it stood cancelled throughout when the figures include its report for that month', async () => {
+    it('leaves an operator out of a month it stood cancelled throughout, though the figures include its report for that month', async () => {
       const reinstated = makeOperator({
         orgId: 1,
         accreditationStatusHistory: cancelledThroughoutFebruary
@@ -945,7 +1003,13 @@ describe('buildReprocessorExporterTable', () => {
       expect(reported(table)).toEqual([
         expect.objectContaining({ month: '2026-02', revisedTonnageIssued: 10 })
       ])
-      expect(operatorCounts(table)).toEqual(everyMonth(1))
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
     })
 
     it('leaves out an operator whose accreditation the figures leave out', async () => {

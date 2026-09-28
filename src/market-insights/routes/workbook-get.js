@@ -1,5 +1,5 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { buildMarketInsightsExportArchive } from '#market-insights/application/build-export-archive.js'
+import { buildMarketInsightsWorkbook } from '#market-insights/application/build-workbook.js'
 import {
   monthlyPeriodParamsSchema,
   publishedMonthsThrough
@@ -8,12 +8,15 @@ import { marketInsightsDownloadDisposition } from './download-disposition.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
-export const marketInsightsExportZipPath =
-  '/v1/market-insights/{year}/{cadence}/{period}/export.zip'
+export const marketInsightsWorkbookPath =
+  '/v1/market-insights/{year}/{cadence}/{period}/workbook.xlsx'
 
-export const marketInsightsExportZipGet = {
+const XLSX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+export const marketInsightsWorkbookGet = {
   method: 'GET',
-  path: marketInsightsExportZipPath,
+  path: marketInsightsWorkbookPath,
   options: {
     auth: {
       scope: [SCOPES.marketDataRead]
@@ -24,11 +27,12 @@ export const marketInsightsExportZipGet = {
     }
   },
   /**
-   * Every figure behind the market insights pages, as a zip of CSVs, built and
-   * streamed within the request.
+   * The published market insights workbook for the year up to the requested
+   * period, built within the request.
    *
-   * This takes tens of seconds. It is accepted: the export is run occasionally,
-   * by one regulator at a time, who is waiting for it.
+   * Like the export archive, this takes tens of seconds, which is accepted for
+   * the same reason: it is run occasionally, by one regulator who is waiting
+   * for it.
    *
    * @param {HapiRequest & {
    *   params: { year: number, cadence: 'monthly', period: number },
@@ -44,10 +48,13 @@ export const marketInsightsExportZipGet = {
     const { params, logger } = request
 
     const now = new Date()
-    // Rejects a period that has not ended, before any figure work starts.
-    const months = publishedMonthsThrough(params, now, 'market_insights_export')
+    const months = publishedMonthsThrough(
+      params,
+      now,
+      'market_insights_workbook'
+    )
 
-    const archive = await buildMarketInsightsExportArchive({
+    const workbook = await buildMarketInsightsWorkbook({
       ledgerRepository: request.ledgerRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
       organisationsRepository: request.organisationsRepository,
@@ -55,18 +62,16 @@ export const marketInsightsExportZipGet = {
       reportsRepository: request.reportsRepository,
       logger,
       year: params.year,
-      cadence: params.cadence,
-      period: params.period,
       months,
       now
     })
 
     return h
-      .response(archive)
-      .type('application/zip')
+      .response(Buffer.from(await workbook.xlsx.writeBuffer()))
+      .type(XLSX_CONTENT_TYPE)
       .header(
         'Content-Disposition',
-        marketInsightsDownloadDisposition(params, now, 'zip')
+        marketInsightsDownloadDisposition(params, now, 'xlsx')
       )
   }
 }

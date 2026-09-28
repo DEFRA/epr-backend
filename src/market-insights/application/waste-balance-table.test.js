@@ -493,7 +493,7 @@ const submittingOperatorCounts = (table) =>
 
 /**
  * The operator counts of every row's whole-period total that any operator
- * could have contributed to, keyed `material type`.
+ * was accredited for, keyed `material type`.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
@@ -640,7 +640,7 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects reports up to the month the accreditation was cancelled, and counts those it filed', async () => {
+    it('expects reports for the months before the accreditation was cancelled, not the month it was cancelled in, and counts those it filed', async () => {
       const operator = makeOperator({ orgId: 500027 })
 
       const { table } = await run({
@@ -650,7 +650,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0])
+        perMonth([1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0])
       )
     })
 
@@ -668,7 +668,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -689,7 +689,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([1, 0, 0, 1, 1, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -839,6 +839,46 @@ describe('buildWasteBalanceTable', () => {
       const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
         everyMonth(1)
       expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
+    it('leaves an operator out of a month it stood cancelled throughout, though the figure includes tonnage it sent on that month', async () => {
+      const operator = makeOperator({ orgId: 500047 })
+      const reinstated = reinstatedOn(
+        cancelledOn(operator.organisation, '2026-01-20'),
+        '2026-03-01'
+      )
+
+      const { table } = await run({
+        organisations: [reinstated],
+        submissions: [
+          { ...operator, rows: [sentOnRow('row-1', '2026-02-20', 10)] }
+        ]
+      })
+
+      const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
+        everyMonth(1)
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+      expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
+    it('counts an operator in the month its accreditation was cancelled in, though that month owes no report', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500046 }).organisation,
+        '2026-03-20'
+      )
+
+      const { table } = await run({
+        organisations: [cancelled],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
     })
 
     it('counts as submitting only an operator whose tonnage moves the net credit', async () => {
@@ -998,6 +1038,59 @@ describe('buildWasteBalanceTable', () => {
       })
     })
 
+    it('counts an operator in the month its accreditation was cancelled partway through', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500049 }).organisation,
+        '2026-02-10'
+      )
+
+      const { table } = await run({
+        organisations: [cancelled],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('leaves out an operator whose cancelled accreditation holds no validity window', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500050 }).organisation,
+        '2026-02-10'
+      )
+      const withoutWindow = {
+        ...cancelled,
+        accreditations: cancelled.accreditations.map(
+          ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
+            accreditation
+        )
+      }
+
+      const { table } = await run({
+        organisations: [withoutWindow],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({})
+    })
+
+    it('counts an operator in the month its accreditation window ends', async () => {
+      const ending = makeOperator({ orgId: 500048, validTo: '2026-03-10' })
+
+      const { table } = await run({
+        organisations: [ending.organisation],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
+      })
+    })
+
     it('counts an operator in each material it reports', async () => {
       const plastic = makeOperator({ orgId: 500039 })
       const paper = makeOperator({ orgId: 500040, material: MATERIAL.PAPER })
@@ -1141,6 +1234,73 @@ describe('buildWasteBalanceTable', () => {
         netCredit: 70
       }
     ])
+  })
+
+  describe("each row's total across the period", () => {
+    it('sums every month served, with the net credit of the sum', async () => {
+      const operator = makeOperator({ orgId: 500045 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40.25),
+              receivedRow('row-2', '2026-03-10', 100.5),
+              sentOnRow('row-3', '2026-03-25', 30.1)
+            ]
+          }
+        ]
+      })
+
+      expect(
+        table.data.period.figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual({
+        totalCredited: 140.75,
+        eligibleForWasteBalance: 140.75,
+        sentOnDeductions: 30.1,
+        netCredit: 110.65
+      })
+    })
+
+    it('leaves out a month the period does not serve', async () => {
+      const operator = makeOperator({ orgId: 500046 })
+
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-02-10', 40),
+              receivedRow('row-2', '2026-07-10', 999)
+            ]
+          }
+        ]
+      })
+
+      expect(
+        table.data.period.figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ].netCredit
+      ).toBe(40)
+    })
+
+    it('is zero for a combination nothing was reported into', async () => {
+      const { table } = await run({ organisations: [], submissions: [] })
+
+      expect(
+        table.data.period.figures[MATERIAL.WOOD][WASTE_PROCESSING_TYPE.EXPORTER]
+      ).toEqual({
+        totalCredited: 0,
+        eligibleForWasteBalance: 0,
+        sentOnDeductions: 0,
+        netCredit: 0
+      })
+    })
   })
 
   it('publishes a glass registration the split reached under its process', async () => {

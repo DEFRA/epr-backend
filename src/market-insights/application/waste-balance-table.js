@@ -18,6 +18,7 @@ import {
   countMonthlyReports,
   owedMonthlyReports
 } from '#market-insights/application/monthly-reports.js'
+import { accreditedMonths } from '#market-insights/application/accredited-months.js'
 import {
   operatorCountsOf,
   operatorsByFigure
@@ -71,6 +72,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures & OperatorCounts>} FiguresByAccreditationType
  * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
  * @typedef {Record<Material, Record<WasteProcessingTypeValue, OperatorCounts>>} OperatorCountsByMaterial
+ * @typedef {Record<Material, Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>>} PeriodFiguresByMaterial
  */
 
 /**
@@ -83,11 +85,12 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * The whole period served: the reports it was owed and how many arrived, and
- * the operators behind each row's total across its months.
+ * The whole period served: the reports it was owed and how many arrived, each
+ * row's total across its months, and the operators behind that total.
  *
  * @typedef {Object} PublishedPeriod
  * @property {ReportCount} reports
+ * @property {PeriodFiguresByMaterial} figures
  * @property {OperatorCountsByMaterial} operatorCounts
  */
 
@@ -165,6 +168,29 @@ const publishedFigures = (cells, operators, month) =>
         ...operatorCountsOf(operators, key)
       }
     })
+  )
+
+/**
+ * Each row's figures summed across the months served, so a reader of the
+ * period never adds them up itself.
+ *
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {YearMonth[]} months
+ * @returns {PeriodFiguresByMaterial}
+ */
+const periodFigures = (cells, months) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+      withNetCredit(
+        months
+          .map(
+            (month) =>
+              cells.get(cellKey({ material, accreditationType, month }))
+                ?.figures ?? NO_FIGURES
+          )
+          .reduce((sum, figures) => addFigures(sum, figures), NO_FIGURES)
+      )
+    )
   )
 
 /**
@@ -373,9 +399,9 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * future date from being published as supply. Each month also carries the
  * count of monthly reports it was owed and how many were submitted, and the
  * period carries the sum, which says how close the figures are to publication.
- * Every figure carries how many operators could have contributed to it, and
- * how many it includes tonnage from, and the period carries the same for each
- * row's total across its months.
+ * Every figure carries how many operators were accredited for it that month,
+ * and how many it includes tonnage from, and the period carries the same for
+ * each row's total across its months.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -448,7 +474,7 @@ export const buildWasteBalanceTable = async ({
   ]
   const reports = countMonthlyReports(months, owedReports)
   const operators = operatorsByFigure(
-    owedReports,
+    accreditedMonths({ organisations, months }),
     [...into.contributions.values()],
     figuresOf
   )
@@ -462,6 +488,7 @@ export const buildWasteBalanceTable = async ({
       })),
       period: {
         reports: reports.total,
+        figures: periodFigures(into.cells, months),
         operatorCounts: periodOperatorCounts(operators)
       }
     }
