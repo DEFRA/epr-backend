@@ -10,6 +10,14 @@ import {
 } from '#market-insights/application/workbook/published-workbook-test-helpers.js'
 import { marketInsightsWorkbookPath } from './workbook-get.js'
 
+/** @import { ServerInjectResponse } from '@hapi/hapi' */
+/** @import { TestServer } from '#test/create-test-server.js' */
+
+/**
+ * @param {number} year
+ * @param {string} cadence
+ * @param {number} period
+ */
 const pathFor = (year, cadence, period) =>
   marketInsightsWorkbookPath
     .replace('{year}', String(year))
@@ -21,6 +29,7 @@ const MARCH = pathFor(2026, 'monthly', 3)
 describe(`GET ${marketInsightsWorkbookPath}`, () => {
   setupAuthContext()
 
+  /** @type {TestServer} */
   let server
 
   beforeAll(async () => {
@@ -35,6 +44,10 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     vi.useRealTimers()
   })
 
+  /**
+   * @param {object} credentials - auth options for server.inject()
+   * @param {string} [url]
+   */
   const request = (credentials, url = MARCH) =>
     server.inject({ method: 'GET', url, ...credentials })
 
@@ -74,6 +87,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
   })
 
   describe('the workbook returned', () => {
+    /** @type {ServerInjectResponse} */
     let response
     /** @type {ExcelJS.Workbook} */
     let workbook
@@ -81,7 +95,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     beforeAll(async () => {
       response = await request(asRegulator())
       workbook = new ExcelJS.Workbook()
-      await workbook.xlsx.load(response.rawPayload)
+      await workbook.xlsx.load(new Uint8Array(response.rawPayload).buffer)
     })
 
     it('is an Excel workbook', () => {
