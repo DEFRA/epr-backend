@@ -45,7 +45,7 @@ export const buildAccreditedOrganisation = ({
     statusHistory: grantedStatusHistory
   })
   const registration = buildRegistration({ accreditationId: accreditation.id })
-  const registeredOnly = buildRegistration({ accreditationId: undefined })
+  const registeredOnly = buildRegistration({ accreditationId: null })
   const organisation = buildOrganisation({
     registrations: [registration, registeredOnly],
     accreditations: [accreditation]

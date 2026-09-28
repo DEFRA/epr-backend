@@ -82,8 +82,8 @@ const hydrateOne = async (source, organisation) =>
 export const withAccreditationsFrom = (repository, source) => {
   /** @type {OrganisationsRepository['findById']} */
   const findById = async (id, minimumVersion) =>
-    /** @type {Organisation} */ (
-      await hydrateOne(source, await repository.findById(id, minimumVersion))
+    /** @type {Promise<Organisation>} */ (
+      hydrateOne(source, await repository.findById(id, minimumVersion))
     )
 
   return {
