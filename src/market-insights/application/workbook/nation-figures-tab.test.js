@@ -38,11 +38,12 @@ import {
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { TabContents } from './cells.js' */
+/** @import { NationFiguresTabName } from './nation-figures-tab.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
 /**
- * @param {string} name
+ * @param {NationFiguresTabName} name
  * @param {TabContents} contents
  */
 const renderWith = (name, contents) =>
@@ -181,7 +182,7 @@ const contentsOfRegister = async (
  * The tab for the months, with nothing reported by an accredited operator for
  * each of the published file's materials.
  *
- * @param {string} name
+ * @param {NationFiguresTabName} name
  * @param {YearMonth[]} months
  */
 const render = async (name, months) => {
@@ -228,7 +229,7 @@ describe('a UK or England tab', () => {
   })
 })
 
-describe("the UK tab's figures", () => {
+describe("the UK and England tabs' figures", () => {
   const paperExporter = accreditedExporter({
     material: MATERIAL.PAPER,
     regulator: REGULATOR.SEPA
@@ -237,11 +238,14 @@ describe("the UK tab's figures", () => {
 
   /** @type {ExcelJS.Worksheet} */
   let worksheet
+  /** @type {ExcelJS.Worksheet} */
+  let england
 
   beforeAll(async () => {
     await seedPublishedMaterialOperators(register)
     const plasticReprocessor = await seedOperator(register, {
-      material: MATERIAL.PLASTIC
+      material: MATERIAL.PLASTIC,
+      regulator: REGULATOR.EA
     })
     await submitMonthlyReport(register, plasticReprocessor, 2, {
       recyclingActivity: {
@@ -295,10 +299,9 @@ describe("the UK tab's figures", () => {
         averagePricePerTonne: 25
       }
     })
-    worksheet = await renderWith(
-      WORKSHEET_NAME.UK,
-      await contentsOfRegister(register)
-    )
+    const contents = await contentsOfRegister(register)
+    worksheet = await renderWith(WORKSHEET_NAME.UK, contents)
+    england = await renderWith(WORKSHEET_NAME.ENGLAND, contents)
   })
 
   it("fills a month's reprocessor table with every material's tonnages and their grand total", () => {
@@ -367,17 +370,24 @@ describe("the UK tab's figures", () => {
     ])
   })
 
-  it("leaves the England tab's figure cells empty", async () => {
-    const england = await renderWith(
-      WORKSHEET_NAME.ENGLAND,
-      await contentsOfRegister(register)
-    )
-    /** @param {number} width */
-    const emptyRows = (width) =>
-      Array.from({ length: 8 }, () => Array.from({ length: width }, () => null))
+  it("on the England tab come from England's operators alone", () => {
+    const nothing = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    expect(valuesIn(england, 'B28', 'H35')).toEqual(emptyRows(7))
-    expect(valuesIn(england, 'B97', 'D104')).toEqual(emptyRows(3))
+    // February's reprocessor table and PRN table, from an English reprocessor.
+    expect(valuesIn(england, 'B28', 'H35')).toEqual(
+      valuesIn(worksheet, 'B28', 'H35')
+    )
+    expect(valuesIn(england, 'B97', 'D104')).toEqual(
+      valuesIn(worksheet, 'B97', 'D104')
+    )
+    // January's exporter table and PERN table, whose only exporter is Scottish.
+    expect(valuesIn(england, 'B16', 'K23')).toEqual(
+      Array.from({ length: 8 }, () => nothing)
+    )
+    expect(valuesIn(england, 'B85', 'D92')).toEqual([
+      ...Array.from({ length: 7 }, () => [0, 0, 0]),
+      [0, 0, '-']
+    ])
   })
 
   it('sets the grand total average dash as published', () => {
@@ -464,7 +474,7 @@ describe("a UK or England tab's materials", () => {
     ])
   })
 
-  it("on the England tab are the UK's, including those of operators outside England", async () => {
+  it("on the England tab are England's, leaving out those of operators outside England", async () => {
     const register = newRegister([
       accreditedExporter({ material: MATERIAL.ALUMINIUM })
     ])
@@ -478,14 +488,24 @@ describe("a UK or England tab's materials", () => {
       await contentsOfRegister(register)
     )
 
-    expect(valuesIn(worksheet, 'A5', 'A7')).toEqual([
+    expect(valuesIn(worksheet, 'A5', 'A6')).toEqual([
       ['Aluminium'],
-      ['Wood'],
       ['Grand Total']
     ])
   })
 
-  it('cannot be chosen without the UK figures', async () => {
+  it('cannot be laid out for a month the figures do not cover', async () => {
+    const contents = await contentsOfRegister(newRegister())
+
+    await expect(
+      renderWith(WORKSHEET_NAME.ENGLAND, {
+        ...contents,
+        months: [...contents.months, toYearMonth('2026-04')]
+      })
+    ).rejects.toThrow('The england market insights figures have no 2026-04')
+  })
+
+  it("cannot be chosen without the tab's own figures", async () => {
     const contents = await contentsOfRegister(newRegister())
 
     await expect(
@@ -493,6 +513,6 @@ describe("a UK or England tab's materials", () => {
         ...contents,
         figures: { ...contents.figures, scopes: [] }
       })
-    ).rejects.toThrow('The market insights figures have no uk scope')
+    ).rejects.toThrow('The market insights figures have no england scope')
   })
 })
