@@ -271,51 +271,47 @@ describe('the outstanding returns tab', () => {
     })
 
     it('counts a return from the month after the last one submitted', () => {
-      expect(worksheet.getCell('A22').value).toBe('Plastic')
-      expect(worksheet.getCell('A26').value).toBe('Over 10,000 tonnes')
-      expect(worksheet.getCell('B26').value).toBe(0)
-      expect(worksheet.getCell('E26').value).toBe(1)
-      expect(worksheet.getCell('H26').value).toBe(1)
+      expect(worksheet.getCell('A36').value).toBe('Plastic')
+      expect(worksheet.getCell('A40').value).toBe('Over 10,000 tonnes')
+      expect(worksheet.getCell('B40').value).toBe(0)
+      expect(worksheet.getCell('E40').value).toBe(1)
+      expect(worksheet.getCell('H40').value).toBe(1)
     })
 
-    it('leaves out each material with no accredited operator in the period', () => {
-      expect(worksheet.getCell('A8').value).toBe('Glass other')
-      expect(worksheet.getCell('A15').value).toBe('Paper and board')
-      expect(worksheet.getCell('A29').value).toBe('Steel')
-      expect(worksheet.getCell('A35').value).toBeNull()
+    it('gives a block to every published material, even with no accredited operator in the period', () => {
+      expect(worksheet.getCell('A8').value).toBe('Aluminium')
+      expect(worksheet.getCell('A22').value).toBe('Glass re-melt')
+      expect(worksheet.getCell('A50').value).toBe('Wood')
+      expect(worksheet.getCell('A57').value).toBeNull()
     })
   })
 
-  it('gives a material beyond the published ones a block after them, at zero where nothing is outstanding', async () => {
+  it('gives fibre-based composite a block after the published materials, at zero where nothing is outstanding', async () => {
     const register = emptyRegister()
     await seedOperator(register, {
       material: MATERIAL.FIBRE,
       tonnageBand: TONNAGE_BAND.UP_TO_500,
       submitted: [1, 2, 3]
     })
-    await seedOperator(register, {
-      material: MATERIAL.WOOD,
-      tonnageBand: TONNAGE_BAND.UP_TO_500
-    })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
-    expect(worksheet.getCell('A8').value).toBe('Wood')
-    expect(worksheet.getCell('A15').value).toBe('Fibre-based composite')
+    expect(worksheet.getCell('A50').value).toBe('Wood')
+    expect(worksheet.getCell('A57').value).toBe('Fibre-based composite')
     await expectTheServedCounts(worksheet, JANUARY_TO_MARCH_2026, register)
   })
 
-  it('gives a material a block for an accredited operator in any UK nation', async () => {
+  it('gives fibre-based composite a block for an accredited operator in any UK nation', async () => {
     const register = emptyRegister()
     await seedOperator(register, {
-      material: MATERIAL.WOOD,
+      material: MATERIAL.FIBRE,
       tonnageBand: TONNAGE_BAND.UP_TO_500,
       regulator: REGULATOR.SEPA
     })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
-    expect(worksheet.getCell('A8').value).toBe('Wood')
-    expect(worksheet.getCell('B9').value).toBe(1)
+    expect(worksheet.getCell('A57').value).toBe('Fibre-based composite')
+    expect(worksheet.getCell('B58').value).toBe(1)
   })
 })

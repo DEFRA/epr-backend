@@ -21,10 +21,10 @@ import {
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
-  hasAccreditedOperator,
   monthName,
   richNote,
   setWidths,
+  shownMaterials,
   styleEmptyCells,
   tableOf,
   UK_SCOPE,
@@ -140,16 +140,16 @@ export const addOutstandingReturns = (
   write(worksheet.getCell('A5'), asOf, DATA_AS_OF)
 
   const ukTable = tableOf(figures.scopes, UK_SCOPE)
-  OUTSTANDING_RETURNS_MATERIALS.filter(([material]) =>
-    hasAccreditedOperator(ukTable, material)
-  ).forEach((material, materialIndex) => {
-    addMaterialBlock(
-      worksheet,
-      OUTSTANDING_RETURNS_FIRST_ROW +
-        OUTSTANDING_RETURNS_BLOCK_ROWS * materialIndex,
-      material,
-      months,
-      figures.outstandingReturns.data.months
-    )
-  })
+  shownMaterials(ukTable, OUTSTANDING_RETURNS_MATERIALS).forEach(
+    (material, materialIndex) => {
+      addMaterialBlock(
+        worksheet,
+        OUTSTANDING_RETURNS_FIRST_ROW +
+          OUTSTANDING_RETURNS_BLOCK_ROWS * materialIndex,
+        material,
+        months,
+        figures.outstandingReturns.data.months
+      )
+    }
+  )
 }

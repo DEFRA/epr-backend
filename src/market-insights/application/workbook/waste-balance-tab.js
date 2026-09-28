@@ -21,8 +21,8 @@ import {
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
-  hasAccreditedOperator,
   setWidths,
+  shownMaterials,
   tableOf,
   UK_SCOPE,
   write,
@@ -95,18 +95,17 @@ export const addWasteBalance = (
   const ukTable = tableOf(figures.scopes, UK_SCOPE)
   const served = figures.wasteBalance.data
   /** @type {WasteBalanceRow[]} */
-  const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
-    hasAccreditedOperator(ukTable, material)
-  ).flatMap(([material, materialLabel]) =>
-    WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, typeLabel]) => ({
-      labels: [materialLabel, typeLabel],
-      netCredits: [
-        ...months.map(
-          (month) => served.months[month].figures[material][type].netCredit
-        ),
-        served.period.figures[material][type].netCredit
-      ]
-    }))
+  const rows = shownMaterials(ukTable, WASTE_BALANCE_MATERIALS).flatMap(
+    ([material, materialLabel]) =>
+      WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, typeLabel]) => ({
+        labels: [materialLabel, typeLabel],
+        netCredits: [
+          ...months.map(
+            (month) => served.months[month].figures[material][type].netCredit
+          ),
+          served.period.figures[material][type].netCredit
+        ]
+      }))
   )
 
   rows.forEach(({ labels, netCredits }, index) => {

@@ -399,19 +399,19 @@ describe("the UK and England tabs' figures", () => {
 })
 
 describe("a UK or England tab's materials", () => {
-  it('are those the period has an accredited operator for, in published order, with zeros where nothing was reported', async () => {
-    const register = newRegister([
-      accreditedExporter({ material: MATERIAL.ALUMINIUM })
-    ])
-    await seedOperator(register, { material: MATERIAL.WOOD })
-
+  it('are the seven published materials, in published order, with zeros where nothing was reported', async () => {
     const worksheet = await renderWith(
       WORKSHEET_NAME.UK,
-      await contentsOfRegister(register)
+      await contentsOfRegister(newRegister())
     )
 
-    expect(valuesIn(worksheet, 'A5', 'D7')).toEqual([
+    expect(valuesIn(worksheet, 'A5', 'D12')).toEqual([
       ['Aluminium', 0, 0, 0],
+      ['Glass-other', 0, 0, 0],
+      ['Glass re-melt', 0, 0, 0],
+      ['Paper and board', 0, 0, 0],
+      ['Plastic', 0, 0, 0],
+      ['Steel', 0, 0, 0],
       ['Wood', 0, 0, 0],
       ['Grand Total', 0, 0, 0]
     ])
@@ -450,10 +450,10 @@ describe("a UK or England tab's materials", () => {
     expect(worksheet.rowCount).toBe(150)
   })
 
-  it('include one first accredited in a later month of the period, in every month', async () => {
+  it('takes in fibre-based composite first accredited in a later month of the period, in every month', async () => {
     const register = newRegister([
       accreditedExporter({
-        material: MATERIAL.ALUMINIUM,
+        material: MATERIAL.FIBRE,
         validFrom: '2026-03-01'
       })
     ])
@@ -464,22 +464,14 @@ describe("a UK or England tab's materials", () => {
     )
 
     // January's reprocessor table, then its exporter table.
-    expect(valuesIn(worksheet, 'A5', 'A6')).toEqual([
-      ['Aluminium'],
-      ['Grand Total']
-    ])
-    expect(valuesIn(worksheet, 'A10', 'A11')).toEqual([
-      ['Aluminium'],
-      ['Grand Total']
-    ])
+    expect(worksheet.getCell('A12').value).toBe('Fibre-based composite')
+    expect(worksheet.getCell('A24').value).toBe('Fibre-based composite')
   })
 
-  it("on the England tab are England's, leaving out those of operators outside England", async () => {
-    const register = newRegister([
-      accreditedExporter({ material: MATERIAL.ALUMINIUM })
-    ])
+  it("on the England tab counts fibre-based composite only from England's own accredited operators", async () => {
+    const register = newRegister()
     await seedOperator(register, {
-      material: MATERIAL.WOOD,
+      material: MATERIAL.FIBRE,
       regulator: REGULATOR.SEPA
     })
 
@@ -488,10 +480,16 @@ describe("a UK or England tab's materials", () => {
       await contentsOfRegister(register)
     )
 
-    expect(valuesIn(worksheet, 'A5', 'A6')).toEqual([
+    expect(valuesIn(worksheet, 'A5', 'A11')).toEqual([
       ['Aluminium'],
-      ['Grand Total']
+      ['Glass-other'],
+      ['Glass re-melt'],
+      ['Paper and board'],
+      ['Plastic'],
+      ['Steel'],
+      ['Wood']
     ])
+    expect(worksheet.getCell('A12').value).toBe('Grand Total')
   })
 
   it('cannot be laid out for a month the figures do not cover', async () => {

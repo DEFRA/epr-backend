@@ -1,4 +1,5 @@
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
+import { MATERIAL } from '#domain/organisations/model.js'
 import { NOTE } from '#market-insights/domain/published-workbook-style.js'
 import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
@@ -150,4 +151,18 @@ export const hasAccreditedOperator = (table, material) =>
     Object.values(figures[material]).some(
       ({ operatorCount }) => operatorCount > 0
     )
+  )
+
+/**
+ * Every material a tab shows: the published set unconditionally, so each
+ * keeps its row at zero even where the period has no accredited operator for
+ * it, plus fibre-based composite only where the period does.
+ *
+ * @param {ReprocessorExporterTable} table
+ * @param {readonly (readonly [Material, string])[]} materials
+ */
+export const shownMaterials = (table, materials) =>
+  materials.filter(
+    ([material]) =>
+      material !== MATERIAL.FIBRE || hasAccreditedOperator(table, material)
   )

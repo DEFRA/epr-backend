@@ -23,10 +23,10 @@ import {
 } from '#market-insights/domain/published-workbook-text.js'
 import {
   firstDayOf,
-  hasAccreditedOperator,
   monthAndYear,
   richNote,
   setWidths,
+  shownMaterials,
   tableOf,
   UK_SCOPE,
   write,
@@ -134,9 +134,7 @@ const writeFigures = (worksheet, row, values, styleOf) => {
 export const addNationFigures = (workbook, name, { months, figures }) => {
   const scope = SCOPE_OF_TAB[name]
   const table = tableOf(figures.scopes, scope)
-  const materials = NATION_FIGURES_MATERIALS.filter(([material]) =>
-    hasAccreditedOperator(table, material)
-  )
+  const materials = shownMaterials(table, NATION_FIGURES_MATERIALS)
   // A title, the headings, a row per material, the grand total, then a blank row.
   const tableRows = 2 + materials.length + 1 + 1
   // A month title over two tables.

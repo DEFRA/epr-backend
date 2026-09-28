@@ -413,58 +413,44 @@ describe('the waste balance tab', () => {
     })
   })
 
-  it('lists only the materials the period has an accredited operator for, each accreditation type at zero where nothing was reported', async () => {
+  const PUBLISHED_MATERIAL_ROW_LABELS = [
+    ['Aluminium', 'Exporter'],
+    ['Aluminium', 'Reprocessor'],
+    ['Glass-other', 'Exporter'],
+    ['Glass-other', 'Reprocessor'],
+    ['Glass re-melt', 'Exporter'],
+    ['Glass re-melt', 'Reprocessor'],
+    ['Paper and board', 'Exporter'],
+    ['Paper and board', 'Reprocessor'],
+    ['Plastic', 'Exporter'],
+    ['Plastic', 'Reprocessor'],
+    ['Steel', 'Exporter'],
+    ['Steel', 'Reprocessor'],
+    ['Wood', 'Exporter'],
+    ['Wood', 'Reprocessor']
+  ]
+
+  it('lists the seven published materials, each accreditation type at zero where nothing was reported', async () => {
     const register = emptyRegister()
-    await seedOperator(register, { material: MATERIAL.WOOD })
-    await seedOperator(register, { material: MATERIAL.ALUMINIUM })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
-    expect(rowLabels(worksheet)).toEqual([
-      ['Aluminium', 'Exporter'],
-      ['Aluminium', 'Reprocessor'],
-      ['Wood', 'Exporter'],
-      ['Wood', 'Reprocessor']
-    ])
+    expect(rowLabels(worksheet)).toEqual(PUBLISHED_MATERIAL_ROW_LABELS)
     await expectTheServedFigures(worksheet, JANUARY_TO_MARCH_2026, register)
   })
 
-  it('lists the materials of operators in every UK nation', async () => {
-    const register = emptyRegister()
-    await seedOperator(register, {
-      material: MATERIAL.STEEL,
-      regulator: REGULATOR.SEPA,
-      rows: [receivedRow('row-1', '2026-01-15', 9)]
-    })
-    await seedOperator(register, {
-      material: MATERIAL.WOOD,
-      regulator: REGULATOR.NRW
-    })
-
-    const worksheet = await render(JANUARY_TO_MARCH_2026, register)
-
-    expect(rowLabels(worksheet)).toEqual([
-      ['Steel', 'Exporter'],
-      ['Steel', 'Reprocessor'],
-      ['Wood', 'Exporter'],
-      ['Wood', 'Reprocessor']
-    ])
-    await expectTheServedFigures(worksheet, JANUARY_TO_MARCH_2026, register)
-  })
-
-  it('lists a material the published file does not, after those it does', async () => {
+  it('lists fibre-based composite for an accredited operator in any UK nation', async () => {
     const register = emptyRegister()
     await seedOperator(register, {
       material: MATERIAL.FIBRE,
+      regulator: REGULATOR.SEPA,
       rows: [receivedRow('row-1', '2026-02-10', 7)]
     })
-    await seedOperator(register, { material: MATERIAL.WOOD })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
     expect(rowLabels(worksheet)).toEqual([
-      ['Wood', 'Exporter'],
-      ['Wood', 'Reprocessor'],
+      ...PUBLISHED_MATERIAL_ROW_LABELS,
       ['Fibre-based composite', 'Exporter'],
       ['Fibre-based composite', 'Reprocessor']
     ])
