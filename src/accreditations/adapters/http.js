@@ -58,7 +58,7 @@ export const createHttpAccreditationsSource = ({
     findForRegistration: async ({ registrationId, year }) => {
       try {
         return await fetchJson(
-          `${baseUrl}/v1/registrations/${encodeURIComponent(registrationId)}/accreditation/${year}`,
+          `${baseUrl}/v1/registrations/${encodeURIComponent(registrationId)}/accreditations/${year}`,
           { headers }
         )
       } catch (error) {

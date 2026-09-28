@@ -23,7 +23,7 @@ describe('createHttpAccreditationsSource', () => {
       let authorization = null
       getServer().use(
         http.get(
-          `${baseUrl}/v1/registrations/reg-1/accreditation/2026`,
+          `${baseUrl}/v1/registrations/reg-1/accreditations/2026`,
           ({ request }) => {
             authorization = request.headers.get('authorization')
             return HttpResponse.json(record('1'))
@@ -45,7 +45,7 @@ describe('createHttpAccreditationsSource', () => {
     it('returns null when the registration holds none', async () => {
       getServer().use(
         http.get(
-          `${baseUrl}/v1/registrations/reg-1/accreditation/2027`,
+          `${baseUrl}/v1/registrations/reg-1/accreditations/2027`,
           () => new HttpResponse(null, { status: 404 })
         )
       )
@@ -61,7 +61,7 @@ describe('createHttpAccreditationsSource', () => {
     it('throws on any other failure', async () => {
       getServer().use(
         http.get(
-          `${baseUrl}/v1/registrations/reg-1/accreditation/2026`,
+          `${baseUrl}/v1/registrations/reg-1/accreditations/2026`,
           () => new HttpResponse(null, { status: 500 })
         )
       )

@@ -16,9 +16,9 @@ import {
  * @param {number} year
  */
 const pathFor = (registrationId, year) =>
-  `/v1/registrations/${registrationId}/accreditation/${year}`
+  `/v1/registrations/${registrationId}/accreditations/${year}`
 
-describe('GET /v1/registrations/{registrationId}/accreditation/{year}', () => {
+describe('GET /v1/registrations/{registrationId}/accreditations/{year}', () => {
   setupAuthContext()
 
   /** @type {TestServer | undefined} */
@@ -119,7 +119,7 @@ describe('GET /v1/registrations/{registrationId}/accreditation/{year}', () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/registrations/${registration.id}/accreditation/next`,
+      url: `/v1/registrations/${registration.id}/accreditations/next`,
       headers: basicAuthHeaders
     })
 

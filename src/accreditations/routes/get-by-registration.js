@@ -10,12 +10,12 @@ import { holdingRepository } from './holding-repository.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 
 export const registrationAccreditationForYearPath =
-  '/v1/registrations/{registrationId}/accreditation/{year}'
+  '/v1/registrations/{registrationId}/accreditations/{year}'
 
 /**
  * The accreditation a registration holds for a scheme year, whatever its
- * status. A registration holds at most one per year, so this is a single
- * resource rather than a collection.
+ * status. A registration holds at most one per year, so the year identifies
+ * one of its accreditations.
  *
  * Service-to-service only: the caller is another service reading accreditation
  * data, never an operator, so only basic auth is accepted.
