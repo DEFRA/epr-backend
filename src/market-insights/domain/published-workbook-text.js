@@ -11,10 +11,11 @@
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  TONNAGE_BAND
+  TONNAGE_BAND,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
-/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
 
 export const WORKSHEET_NAME = Object.freeze({
@@ -31,13 +32,16 @@ export const WORKSHEET_NAME = Object.freeze({
  * @typedef {{ lead: string, body: string }} Note
  */
 
-/** @type {Note} */
+/**
+ * The published note ends by saying glass-other is not split by accreditation
+ * type. This tab splits it until glass-other is amalgamated, so the note
+ * leaves that sentence out.
+ *
+ * @type {Note}
+ */
 export const WASTE_BALANCE_NOTE = Object.freeze({
   lead: 'Note',
-  body:
-    ': This data shows tonnage credited to accredited operators’ waste balances during the reporting month, which is made up of issued PRNs and tonnage eligible for PRN/PERN issuance. Further details are available on this GOV.UK page.\n' +
-    '\n' +
-    'Data for ‘glass-other’ has not been split by accreditation type to protect commercial data for identifiable operators.'
+  body: ': This data shows tonnage credited to accredited operators’ waste balances during the reporting month, which is made up of issued PRNs and tonnage eligible for PRN/PERN issuance. Further details are available on this GOV.UK page.'
 })
 
 /** The "GOV.UK page" the waste balance note links to. */
@@ -95,23 +99,6 @@ export const UNSUBMITTED_COUNT = 'Unsubmitted count'
 const GLASS_REMELT = 'Glass re-melt'
 const PAPER_AND_BOARD = 'Paper and board'
 
-/** Material and accreditation type, one pair per row of the waste balance. */
-export const WASTE_BALANCE_ROWS = Object.freeze([
-  ['Aluminium', 'Exporter'],
-  ['Aluminium', 'Reprocessor'],
-  ['Glass-other', 'Exp & Rep'],
-  [GLASS_REMELT, 'Exporter'],
-  [GLASS_REMELT, 'Reprocessor'],
-  [PAPER_AND_BOARD, 'Exporter'],
-  [PAPER_AND_BOARD, 'Reprocessor'],
-  ['Plastic', 'Exporter'],
-  ['Plastic', 'Reprocessor'],
-  ['Steel', 'Exporter'],
-  ['Steel', 'Reprocessor'],
-  ['Wood', 'Exporter'],
-  ['Wood', 'Reprocessor']
-])
-
 /**
  * Each material the outstanding returns tab counts, and its label, in the
  * order the blocks run down the tab. The published materials come first, in
@@ -158,6 +145,22 @@ export const NATION_FIGURES_MATERIALS = Object.freeze([
   [MATERIAL.STEEL, 'Steel'],
   [MATERIAL.WOOD, 'Wood'],
   [MATERIAL.FIBRE, 'Fibre-based composite']
+])
+
+/**
+ * The materials of the waste balance, in published order, labelled as the UK
+ * and England tables label theirs. Each gets a row per accreditation type.
+ */
+export const WASTE_BALANCE_MATERIALS = NATION_FIGURES_MATERIALS
+
+/**
+ * Each accreditation type, and its label, in the order a material's rows run.
+ *
+ * @type {readonly (readonly [WasteProcessingTypeValue, string])[]}
+ */
+export const WASTE_BALANCE_ACCREDITATION_TYPES = Object.freeze([
+  [WASTE_PROCESSING_TYPE.EXPORTER, 'Exporter'],
+  [WASTE_PROCESSING_TYPE.REPROCESSOR, 'Reprocessor']
 ])
 
 export const GRAND_TOTAL = 'Grand Total'
