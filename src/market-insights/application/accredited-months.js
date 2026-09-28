@@ -126,7 +126,8 @@ const withinWindow = ({ startDate, endDate }, { validFrom, validTo }) => ({
 /**
  * Whether the accreditation was accredited on some day of the period: a day
  * inside its validity window on which it did not stand cancelled. A suspended
- * accreditation is still accredited.
+ * accreditation is still accredited, and so is a day in a window backdated
+ * before the approval, as the figures accept a load dated that day.
  *
  * @param {Period} period
  * @param {AccreditationWindow} window

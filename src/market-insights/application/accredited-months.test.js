@@ -129,6 +129,17 @@ describe('accreditedMonths', () => {
     expect(monthsOf(cancelledBeforeItOpened)).toEqual(['2026-03'])
   })
 
+  it('yields the months of a window backdated before the approval', () => {
+    const backdated = operatorAccredited({
+      statusHistory: [
+        then(ACCREDITATION_STATUS.CREATED, '2025-11-01'),
+        then(ACCREDITATION_STATUS.APPROVED, '2026-02-15')
+      ]
+    })
+
+    expect(monthsOf(backdated)).toEqual(JANUARY_TO_MARCH_2026)
+  })
+
   it('yields nothing for an accreditation never granted', () => {
     const refused = operatorAccredited({
       statusHistory: [
