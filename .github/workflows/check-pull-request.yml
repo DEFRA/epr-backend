@@ -227,3 +227,20 @@ jobs:
             exit 1
           fi
           echo "Journey tests reported '$RESULT'"
+
+  pre-release-build:
+    name: CDP-build-pre-release-workflow
+    needs: journey-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Depth 0 is required for branch-based versioning
+
+      - name: Build and Publish
+        uses: DEFRA/cdp-build-action/build@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          prerelease-suffix: http-accreditations-poc
