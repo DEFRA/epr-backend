@@ -8,27 +8,19 @@ import {
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
 import {
-  accreditationsForRegistration,
-  getReportableRegistrations
-} from '#domain/organisations/registration-utils.js'
-import {
   accreditationWindow,
-  getStatusHistoryDateTimes,
-  statusHeldAt
+  getStatusHistoryDateTimes
 } from '#common/helpers/dates/accreditation.js'
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import {
-  ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES
-} from '#domain/organisations/model.js'
+  grantedRegistrations,
+  isCancelledThroughout
+} from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
-/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
+/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -45,69 +37,6 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {Record<YearMonth, ReportCount>} byMonth - keyed by month served
  * @property {ReportCount} total - summed across every month served
  */
-
-/**
- * A registration the walk reached, and the accreditation it reports under.
- *
- * @typedef {Object} OwedReportCandidate
- * @property {Organisation} org
- * @property {Registration} registration
- */
-
-/**
- * Whether a caller's publication covers the candidate's registration. A caller
- * publishing figures over part of the register passes one so its count
- * describes the same operators its figures do.
- *
- * @typedef {(candidate: OwedReportCandidate) => boolean} CoversRegistration
- */
-
-/**
- * Whether the accreditation has ever been granted, read from its history
- * rather than from the status it holds now. Only a granted accreditation owes
- * monthly reports, and the schema makes the validity dates optional rather
- * than absent for an accreditation still created or since rejected, so one
- * that carries dates must not be walked as though it were live. Reading the
- * history keeps an approval since reverted to draft, and a cancellation, on
- * the months they held, which `owedPeriods` then bounds.
- *
- * @param {Accreditation} accreditation
- */
-const hasBeenGranted = ({ statusHistory }) =>
-  statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
-
-/**
- * Every day of a reporting period, as the bare dates a load can carry.
- *
- * @param {{ startDate: CalendarDate, endDate: CalendarDate }} period
- * @returns {CalendarDate[]}
- */
-const daysOf = ({ startDate, endDate }) => {
-  const days = []
-  for (
-    const day = new Date(startDate);
-    toCalendarDate(day).localeCompare(endDate) <= 0;
-    day.setUTCDate(day.getUTCDate() + 1)
-  ) {
-    days.push(toCalendarDate(day))
-  }
-  return days
-}
-
-/**
- * Whether the accreditation stood cancelled on every day of the period, read
- * from its history exactly as the figures read it for a load dated that day.
- * Asking day by day rather than at each history entry keeps that one answer
- * shared, and costs a year of the register a few hundred thousand lookups
- * over histories of a handful of entries.
- *
- * @param {{ startDate: CalendarDate, endDate: CalendarDate }} period
- * @param {StatusHistoryDateTime[]} history
- */
-const isCancelledThroughout = (period, history) =>
-  daysOf(period).every(
-    (day) => statusHeldAt(day, history) === ACCREDITATION_STATUS.CANCELLED
-  )
 
 /**
  * The monthly periods an accreditation owed among the months served: those
@@ -173,17 +102,10 @@ export function* owedMonthlyReports({
   const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
-  for (const { org, registration } of getReportableRegistrations(
-    organisations
+  for (const { org, registration, accreditation } of grantedRegistrations(
+    organisations,
+    covers
   )) {
-    const [accreditation] = accreditationsForRegistration(registration, org)
-    if (
-      accreditation === undefined ||
-      !hasBeenGranted(accreditation) ||
-      !covers({ org, registration })
-    ) {
-      continue
-    }
     const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =

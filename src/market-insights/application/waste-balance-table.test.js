@@ -493,7 +493,7 @@ const submittingOperatorCounts = (table) =>
 
 /**
  * The operator counts of every row's whole-period total that any operator
- * could have contributed to, keyed `material type`.
+ * was accredited for, keyed `material type`.
  *
  * @param {import('./waste-balance-table.js').WasteBalanceTable} table
  */
@@ -841,6 +841,28 @@ describe('buildWasteBalanceTable', () => {
       expect(operatorCounts(table)).toEqual(otherMonths)
     })
 
+    it('leaves an operator out of a month it stood cancelled throughout, though the figure includes tonnage it sent on that month', async () => {
+      const operator = makeOperator({ orgId: 500047 })
+      const reinstated = reinstatedOn(
+        cancelledOn(operator.organisation, '2026-01-20'),
+        '2026-03-01'
+      )
+
+      const { table } = await run({
+        organisations: [reinstated],
+        submissions: [
+          { ...operator, rows: [sentOnRow('row-1', '2026-02-20', 10)] }
+        ]
+      })
+
+      const { '2026-02 plastic reprocessor': _february, ...otherMonths } =
+        everyMonth(1)
+      expect(submittingOperatorCounts(table)).toEqual({
+        '2026-02 plastic reprocessor': 1
+      })
+      expect(operatorCounts(table)).toEqual(otherMonths)
+    })
+
     it('counts as submitting only an operator whose tonnage moves the net credit', async () => {
       const eligible = makeOperator({ orgId: 500034 })
       const suspendedOperator = makeOperator({ orgId: 500045 })
@@ -995,6 +1017,59 @@ describe('buildWasteBalanceTable', () => {
       })
       expect(periodOperatorCounts(table)).toEqual({
         'plastic reprocessor': { operatorCount: 2, submittingOperatorCount: 0 }
+      })
+    })
+
+    it('counts an operator in the month its accreditation was cancelled partway through', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500049 }).organisation,
+        '2026-02-10'
+      )
+
+      const { table } = await run({
+        organisations: [cancelled],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1
+      })
+    })
+
+    it('leaves out an operator whose cancelled accreditation holds no validity window', async () => {
+      const cancelled = cancelledOn(
+        makeOperator({ orgId: 500050 }).organisation,
+        '2026-02-10'
+      )
+      const withoutWindow = {
+        ...cancelled,
+        accreditations: cancelled.accreditations.map(
+          ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
+            accreditation
+        )
+      }
+
+      const { table } = await run({
+        organisations: [withoutWindow],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({})
+    })
+
+    it('counts an operator in the month its accreditation window ends', async () => {
+      const ending = makeOperator({ orgId: 500048, validTo: '2026-03-10' })
+
+      const { table } = await run({
+        organisations: [ending.organisation],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1,
+        '2026-03 plastic reprocessor': 1
       })
     })
 

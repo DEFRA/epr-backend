@@ -1,16 +1,12 @@
 /**
- * @typedef {import('#market-insights/application/monthly-reports.js').OwedReport} OwedReport
- */
-
-/**
- * An operator's registration that could put data into a month's figures.
+ * An operator's registration in a month of the figures.
  *
- * @typedef {Pick<OwedReport, 'month' | 'org' | 'registration'>} Contribution
+ * @typedef {import('#market-insights/application/accredited-months.js').AccreditedMonth} Contribution
  */
 
 /**
- * How many separate operators could have contributed to a figure, and how many
- * of them it includes data from.
+ * How many separate operators were accredited for a figure's material in its
+ * month, and how many of them it includes data from.
  *
  * @typedef {{ operatorCount: number, submittingOperatorCount: number }} OperatorCounts
  */
@@ -19,7 +15,7 @@
  * The operators behind every figure, each keyed as the figure is.
  *
  * @typedef {Object} OperatorsByFigure
- * @property {Map<string, Set<string>>} possible - those who could have contributed
+ * @property {Map<string, Set<string>>} accredited - those accredited for it on some day of its month
  * @property {Map<string, Set<string>>} submitting - those whose data the figure includes
  */
 
@@ -48,17 +44,15 @@ export const operatorsByKey = (contributions, keysOf) => {
 }
 
 /**
- * The operators behind every figure. Whoever owed the month a report could
- * have contributed to it, and so could whoever the figure includes data from,
- * owed or not.
+ * The operators behind every figure.
  *
- * @param {Iterable<Contribution>} owed - the monthly reports owed
+ * @param {Iterable<Contribution>} accredited - the months each registration was accredited for its material
  * @param {Contribution[]} included - what the figures include
  * @param {(contribution: Contribution) => string[]} keysOf - the figures each contribution belongs to
  * @returns {OperatorsByFigure}
  */
-export const operatorsByFigure = (owed, included, keysOf) => ({
-  possible: operatorsByKey([...owed, ...included], keysOf),
+export const operatorsByFigure = (accredited, included, keysOf) => ({
+  accredited: operatorsByKey(accredited, keysOf),
   submitting: operatorsByKey(included, keysOf)
 })
 
@@ -67,7 +61,7 @@ export const operatorsByFigure = (owed, included, keysOf) => ({
  * @param {string} key
  * @returns {OperatorCounts}
  */
-export const operatorCountsOf = ({ possible, submitting }, key) => ({
-  operatorCount: possible.get(key)?.size ?? 0,
+export const operatorCountsOf = ({ accredited, submitting }, key) => ({
+  operatorCount: accredited.get(key)?.size ?? 0,
   submittingOperatorCount: submitting.get(key)?.size ?? 0
 })

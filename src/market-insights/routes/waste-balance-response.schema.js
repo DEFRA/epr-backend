@@ -44,11 +44,10 @@ const operatorCountsByMaterialSchema = recordOf(
  * counts once however many sites it has, so one with sites in two nations
  * counts once.
  *
- * - `operatorCount` is the operators who could have contributed: every
- *   operator owed a monthly report for the month, whether or not the net
- *   credit includes any of its tonnage, and every operator whose tonnage it
- *   includes. A suspended operator counts. One whose accreditation stood
- *   cancelled for the whole month does not, unless it sent tonnage on that
+ * - `operatorCount` is the operators accredited for the material on some day
+ *   of the month, whether or not the net credit includes any of their
+ *   tonnage. A suspended operator counts. One whose accreditation stood
+ *   cancelled for the whole month does not, even if it sent tonnage on that
  *   month, and neither does one the figures leave out.
  * - `submittingOperatorCount` is the operators whose tonnage the net credit
  *   includes: an eligible load that credits it, or a sent-on load deducted
