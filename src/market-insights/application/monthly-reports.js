@@ -9,19 +9,19 @@ import {
 import { groupByRegistration } from '#reports/application/report-compliance.js'
 import {
   accreditationWindow,
-  getStatusHistoryDateTimes,
-  statusHeldAt
+  getStatusHistoryDateTimes
 } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
-import { endOfDay } from '#common/helpers/date-formatter.js'
+import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
+import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { CoversRegistration, Period } from '#market-insights/application/accredited-months.js' */
+/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -40,15 +40,19 @@ import { endOfDay } from '#common/helpers/date-formatter.js'
  */
 
 /**
- * Whether the accreditation stood cancelled when the period ended. Its report
- * falls due after the period, and a cancelled operator reports quarterly, so
- * one cancelled by then can never file it.
+ * Whether the accreditation stood cancelled when the month ended on the UK
+ * calendar, so that the month's report fell due after the cancellation. The
+ * latest status change dated in or before the month decides it.
  *
- * @param {Period} period
- * @param {StatusHistoryDateTime[]} history
+ * @param {YearMonth} month
+ * @param {StatusHistoryDateTime[]} history - descending
  */
-const isCancelledByEndOf = ({ endDate }, history) =>
-  statusHeldAt(endOfDay(endDate), history) === ACCREDITATION_STATUS.CANCELLED
+const isCancelledByEndOf = (month, history) =>
+  history.find(
+    ({ updatedAt }) =>
+      toYearMonth(formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)) <=
+      month
+  )?.status === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * The monthly periods an accreditation owed among the months served: those
@@ -75,7 +79,7 @@ const owedPeriods = (served, years, accreditation) => {
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledByEndOf(period, history)
+      !isCancelledByEndOf(toYearMonth(period.startDate), history)
   )
 }
 

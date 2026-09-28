@@ -387,6 +387,27 @@ describe('countOutstandingReturns', () => {
     ])
   })
 
+  it('still counts a month when the cancellation falls in the next month on the UK calendar, though not in UTC', async () => {
+    const operator = makeOperator({
+      orgId: 500050,
+      statusHistory: [
+        ...approvedHistory,
+        {
+          status: ACCREDITATION_STATUS.CANCELLED,
+          updatedAt: '2026-03-31T23:30:00.000Z'
+        }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
+  })
+
   it('counts nothing for an accreditation cancelled before the window it was granted for began', async () => {
     const operator = makeOperator({
       orgId: 500049,
