@@ -339,8 +339,11 @@ We are using forward-proxy which is set up by default.
 Node's built-in `fetch` uses it through Node's own proxy support, which reads `NODE_USE_ENV_PROXY`, `HTTPS_PROXY` and
 `NO_PROXY` from the environment. Call `fetch` as normal, with no dispatcher.
 
-Wreck, Axios and similar clients built on Node's http agents use it through `global-agent`, which `setupProxy` starts
-when a proxy URL is configured.
+Wreck, Axios, the AWS SDK and other clients built on Node's `http` and `https` modules use it through `global-agent`,
+which `setupProxy` starts when a proxy URL is configured. It reads `HTTP_PROXY` and overrides any agent a caller passes
+in. It ignores `NO_PROXY`, so these clients always go through the proxy.
+
+CDP's app config supplies the proxy variables. Local runs set none, so nothing is proxied.
 
 ## Docker
 

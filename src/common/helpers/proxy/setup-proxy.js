@@ -9,7 +9,8 @@ import { logger } from '../logging/logger.js'
 
 /**
  * If HTTP_PROXY is set setupProxy() will enable it globally
- * for http clients that use Node's http agents, such as Wreck.
+ * for clients built on Node's http and https modules, such as Wreck and the
+ * AWS SDK. global-agent ignores NO_PROXY, so these always use the proxy.
  * Node's built-in fetch is proxied by Node itself, through NODE_USE_ENV_PROXY,
  * HTTPS_PROXY and NO_PROXY.
  */
