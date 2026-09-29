@@ -71,9 +71,9 @@ const hydrateOne = async (source, organisation) =>
  * - queries that match on accreditation fields (`find` by accreditation id or
  *   number, `findByAccreditationNumber`) — they match stored data, though what
  *   they return is hydrated
- * - `findAllIds`, `findAllLinked` (a projection
- *   without accreditations) and the overseas-sites admin list
- * - every write
+ * - `findAllIds`, whose accreditation ids come from the stored documents
+ * - `findAllLinked`, a projection without accreditations
+ * - every write: `insert`, `replace`, `replaceRegistrationOverseasSites`
  *
  * @param {OrganisationsRepository} repository
  * @param {AccreditationsSource} source
