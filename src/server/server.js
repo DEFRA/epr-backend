@@ -49,6 +49,7 @@ import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run
 import { runDecemberLoadsDiagnostic } from '#december-loads-diagnostic/run.js'
 import { runResubmissionFiguresDiagnostic } from '#report-resubmission-figures-diagnostic/run.js'
 import { runUnsplitGlassDiagnostic } from '#unsplit-glass-diagnostic/run.js'
+import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -227,6 +228,7 @@ async function createServer(options = {}) {
     runDecemberLoadsDiagnostic(startedServer)
     runResubmissionFiguresDiagnostic(startedServer)
     runUnsplitGlassDiagnostic(startedServer)
+    runCancelledAccreditationReportsDiagnostic(startedServer)
   })
 
   return server
