@@ -268,16 +268,6 @@ const performFind =
     return { items, page, pageSize, totalItems, totalPages }
   }
 
-const performFindAllForOverseasSitesAdminList = (staleCache) => async () => {
-  return structuredClone(staleCache).map(
-    ({ orgId, registrations, accreditations }) => ({
-      orgId,
-      registrations,
-      accreditations
-    })
-  )
-}
-
 const toLinkedOrganisationSummary = (org) => ({
   id: org._id.toString(),
   orgId: org.orgId,
@@ -525,8 +515,6 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       findAll: performFindAll(staleCache),
       find: performFind(staleCache),
-      findAllForOverseasSitesAdminList:
-        performFindAllForOverseasSitesAdminList(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,
