@@ -209,14 +209,6 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
-const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find({ schemaVersion })
-    .toArray()
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
-
 /** Matches no organisation, used when a criterion cannot be parsed. */
 const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
 
@@ -556,7 +548,6 @@ export const createOrganisationsRepository = async (
       replace: performReplace(db),
       findById,
       findAll: performFindAll(db),
-      findAllBySchemaVersion: performFindAllBySchemaVersion(db),
       find: performFind(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),

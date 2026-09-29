@@ -1,6 +1,5 @@
 import { testAccreditationLinkValidation } from './contract/accreditation-link.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
-import { testFindAllBySchemaVersionBehaviour } from './contract/find-all-by-schema-version.contract.js'
 import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testFindAllLinkedBehaviour } from './contract/find-all-linked.contract.js'
@@ -19,12 +18,10 @@ import { testRegAccStatusTransitionBehaviour } from './contract/reg-acc-status-t
 
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
-  testFindAllBySchemaVersionBehaviour(repositoryFactory)
   testReplaceBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
   testFindByIdsBehaviour(repositoryFactory)
   testFindAllIdsBehaviour(repositoryFactory)
-  testFindAllBySchemaVersionBehaviour(repositoryFactory)
   testFindAllLinkedBehaviour(repositoryFactory)
   testFindByLinkedDefraOrgIdBehaviour(repositoryFactory)
   testFindByAccreditationNumberBehaviour(repositoryFactory)
