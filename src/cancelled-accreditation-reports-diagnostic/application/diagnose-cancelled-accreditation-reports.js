@@ -17,6 +17,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * @property {number} period
  * @property {number} submissionNumber
  * @property {ReportStatus} status
+ * @property {string | null} submittedAt
  */
 
 /**
@@ -27,6 +28,8 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * @property {string} accreditationId
  * @property {string | null} accreditationNumber
  * @property {Accreditation['material']} material
+ * @property {string | null} validFrom
+ * @property {string | null} validTo
  * @property {string | null} cancelledAt - ISO timestamp of the latest
  *   cancellation in the status history
  * @property {number} linkedRegistrations
@@ -74,7 +77,8 @@ const reportRowsOf = ({ registrationId, year, reports }) =>
           year,
           period: Number(period),
           submissionNumber: report.submissionNumber,
-          status: report.status
+          status: report.status,
+          submittedAt: report.submittedAt
         }))
     )
   )
@@ -131,6 +135,8 @@ export const diagnoseCancelledAccreditationReports = async (
         accreditationId: accreditation.id,
         accreditationNumber: accreditation.accreditationNumber ?? null,
         material: accreditation.material,
+        validFrom: accreditation.validFrom ?? null,
+        validTo: accreditation.validTo ?? null,
         cancelledAt: cancelledAt(accreditation),
         linkedRegistrations: registrations.length,
         reports: periodicReports

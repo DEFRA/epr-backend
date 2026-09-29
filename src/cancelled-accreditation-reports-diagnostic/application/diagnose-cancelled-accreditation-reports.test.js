@@ -23,6 +23,8 @@ const cancelledAccreditation = (overrides = {}) =>
     status: 'cancelled',
     accreditationNumber: 'A26RE000001PA',
     material: 'paper',
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
     statusHistory: [
       { status: 'created', updatedAt: new Date('2026-01-02T09:00:00.000Z') },
       { status: 'approved', updatedAt: new Date('2026-01-05T09:00:00.000Z') },
@@ -85,6 +87,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
         accreditationId: accreditation.id,
         accreditationNumber: 'A26RE000001PA',
         material: 'paper',
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
         cancelledAt: '2026-08-14T10:30:00.000Z',
         linkedRegistrations: 1,
         reports: [
@@ -94,7 +98,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
             year: 2026,
             period: 1,
             submissionNumber: 1,
-            status: 'submitted'
+            status: 'submitted',
+            submittedAt: expect.any(String)
           },
           {
             registrationId: registration.id,
@@ -102,7 +107,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
             year: 2026,
             period: 1,
             submissionNumber: 2,
-            status: 'submitted'
+            status: 'submitted',
+            submittedAt: expect.any(String)
           },
           {
             registrationId: registration.id,
@@ -110,7 +116,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
             year: 2026,
             period: 3,
             submissionNumber: 1,
-            status: 'in_progress'
+            status: 'in_progress',
+            submittedAt: null
           }
         ]
       }
@@ -195,9 +202,11 @@ describe('diagnoseCancelledAccreditationReports', () => {
     expect(rows.map((row) => row.cancelledAt)).toStrictEqual([null])
   })
 
-  it('lists a cancelled accreditation with no linked registration and no reports', async () => {
+  it('lists a cancelled accreditation with no number, window, linked registration or reports', async () => {
     const accreditation = cancelledAccreditation({
-      accreditationNumber: undefined
+      accreditationNumber: undefined,
+      validFrom: undefined,
+      validTo: undefined
     })
     const organisation = buildOrganisation({
       registrations: [],
@@ -207,7 +216,13 @@ describe('diagnoseCancelledAccreditationReports', () => {
     const { rows } = await diagnose([organisation])
 
     expect(rows).toMatchObject([
-      { accreditationNumber: null, linkedRegistrations: 0, reports: [] }
+      {
+        accreditationNumber: null,
+        validFrom: null,
+        validTo: null,
+        linkedRegistrations: 0,
+        reports: []
+      }
     ])
   })
 

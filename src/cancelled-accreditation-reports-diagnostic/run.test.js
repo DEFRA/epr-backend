@@ -10,7 +10,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
-import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  createAndSubmitReport
+} from '#reports/repository/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { runCancelledAccreditationReportsDiagnostic } from './run.js'
@@ -85,6 +88,8 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
       status: 'cancelled',
       accreditationNumber: 'A26RE000001PA',
       material: 'paper',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
       statusHistory: [
         { status: 'approved', updatedAt: new Date('2026-01-05T09:00:00.000Z') },
         { status: 'cancelled', updatedAt: new Date('2026-08-14T10:30:00.000Z') }
@@ -98,25 +103,28 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
       accreditations: [accreditation]
     })
     storeOrganisations([partialMock(organisation)])
-    await createAndSubmitReport(reportsRepositoryFactory(), {
+    const reportsRepository = reportsRepositoryFactory()
+    const reportId = await createAndSubmitReport(reportsRepository, {
       organisationId: organisation.id,
       registrationId: registration.id,
       year: 2026,
       cadence: 'monthly',
       period: 3
     })
+    const submittedAt = (await reportsRepository.findReportById(reportId))
+      .status.submitted?.at
 
     await runCancelledAccreditationReportsDiagnostic(server)
 
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `Cancelled accreditation: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=A26RE000001PA material=paper cancelledAt=2026-08-14T10:30:00.000Z linkedRegistrations=1 reports=1 monthlyReports=1 quarterlyReports=0`
+          message: `Cancelled accreditation: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=A26RE000001PA material=paper validFrom=2026-01-01 validTo=2026-12-31 cancelledAt=2026-08-14T10:30:00.000Z linkedRegistrations=1 reports=1 monthlyReports=1 quarterlyReports=0`
         }
       ],
       [
         {
-          message: `Cancelled accreditation report: organisationId=${organisation.id} accreditationId=${accreditation.id} registrationId=${registration.id} cadence=monthly year=2026 period=3 submissionNumber=1 status=submitted`
+          message: `Cancelled accreditation report: organisationId=${organisation.id} accreditationId=${accreditation.id} registrationId=${registration.id} cadence=monthly year=2026 period=3 submissionNumber=1 status=submitted submittedAt=${submittedAt}`
         }
       ],
       [
@@ -132,6 +140,9 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     const accreditation = buildAccreditation({
       status: 'cancelled',
       accreditationNumber: undefined,
+      material: 'paper',
+      validFrom: undefined,
+      validTo: undefined,
       statusHistory: [
         { status: 'created', updatedAt: new Date('2026-01-02T09:00:00.000Z') }
       ]
@@ -150,8 +161,37 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
-        'accreditationNumber=none material=glass cancelledAt=none linkedRegistrations=0 reports=0'
+        'accreditationNumber=none material=paper validFrom=none validTo=none cancelledAt=none linkedRegistrations=0 reports=0'
       )
+    })
+  })
+
+  it('logs "none" for the submission time of a report not yet submitted', async () => {
+    const accreditation = buildAccreditation({
+      status: 'cancelled',
+      statusHistory: [
+        { status: 'cancelled', updatedAt: new Date('2026-08-14T10:30:00.000Z') }
+      ]
+    })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id
+    })
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    storeOrganisations([partialMock(organisation)])
+    await reportsRepositoryFactory().createReport(
+      buildCreateReportParams({
+        organisationId: organisation.id,
+        registrationId: registration.id
+      })
+    )
+
+    await runCancelledAccreditationReportsDiagnostic(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: expect.stringContaining('status=in_progress submittedAt=none')
     })
   })
 

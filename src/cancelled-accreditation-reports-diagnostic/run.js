@@ -27,6 +27,8 @@ const formatAccreditationLine = (row) =>
     `accreditationId=${row.accreditationId}`,
     `accreditationNumber=${row.accreditationNumber ?? 'none'}`,
     `material=${row.material}`,
+    `validFrom=${row.validFrom ?? 'none'}`,
+    `validTo=${row.validTo ?? 'none'}`,
     `cancelledAt=${row.cancelledAt ?? 'none'}`,
     `linkedRegistrations=${row.linkedRegistrations}`,
     `reports=${row.reports.length}`,
@@ -48,7 +50,8 @@ const formatReportLine = (row, report) =>
     `year=${report.year}`,
     `period=${report.period}`,
     `submissionNumber=${report.submissionNumber}`,
-    `status=${report.status}`
+    `status=${report.status}`,
+    `submittedAt=${report.submittedAt ?? 'none'}`
   ].join(' ')
 
 /** @param {StartedServer} server */
