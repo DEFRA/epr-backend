@@ -334,25 +334,13 @@ Helper methods are also available in `/src/helpers/mongo-lock.js`.
 
 ### Proxy
 
-We are using forward-proxy which is set up by default. To make use of this: `import { fetch } from 'undici'` then
-because of the `setGlobalDispatcher(new ProxyAgent(proxyUrl))` calls will use the ProxyAgent Dispatcher
+We are using forward-proxy which is set up by default.
 
-If you are not using Wreck, Axios or Undici or a similar http that uses `Request`. Then you may have to provide the
-proxy dispatcher:
+Node's built-in `fetch` uses it through Node's own proxy support, which reads `NODE_USE_ENV_PROXY`, `HTTPS_PROXY` and
+`NO_PROXY` from the environment. Call `fetch` as normal, with no dispatcher.
 
-To add the dispatcher to your own client:
-
-```javascript
-import { ProxyAgent } from 'undici'
-
-return await fetch(url, {
-  dispatcher: new ProxyAgent({
-    uri: proxyUrl,
-    keepAliveTimeout: 10,
-    keepAliveMaxTimeout: 10
-  })
-})
-```
+Wreck, Axios and similar clients built on Node's http agents use it through `global-agent`, which `setupProxy` starts
+when a proxy URL is configured.
 
 ## Docker
 
