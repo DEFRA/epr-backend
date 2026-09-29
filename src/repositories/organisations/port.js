@@ -15,27 +15,6 @@
  */
 
 /**
- * @typedef {Object} OrganisationsOverseasSitesAdminListPage
- * @property {Array<{
- *   orgId: number | null,
- *   registrationNumber: string | null,
- *   accreditationNumber: string | null,
- *   orsId: string,
- *   packagingWasteCategory: string | null,
- *   destinationCountry: string,
- *   overseasReprocessorName: string,
- *   addressLine1: string,
- *   addressLine2: string | null,
- *   cityOrTown: string,
- *   stateProvinceOrRegion: string | null,
- *   postcode: string | null,
- *   coordinates: string | null,
- *   validFrom: Date | null
- * }>} rows
- * @property {number} totalItems
- */
-
-/**
  * Organisation replacement payload with identity fields removed.
  * Identity (id, version) is passed as separate parameters to replace().
  *
@@ -69,16 +48,11 @@
  */
 
 /**
- * @typedef {{ page: number, pageSize: number, registrationNumber?: string }} FindPageForOverseasSitesAdminListParams
- */
-
-/**
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
- * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID

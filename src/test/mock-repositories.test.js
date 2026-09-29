@@ -18,7 +18,6 @@ describe('mock-repositories', () => {
         'replace',
         'findAll',
         'find',
-        'findPageForOverseasSitesAdminList',
         'findByIds',
         'findById',
         'findByLinkedDefraOrgId',

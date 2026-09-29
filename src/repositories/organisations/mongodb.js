@@ -13,7 +13,6 @@ import {
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  performFindPageForOrsAdminList,
   prepareForReplace
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
@@ -548,7 +547,6 @@ export const createOrganisationsRepository = async (
       findById,
       findAll: performFindAll(db),
       find: performFind(db),
-      findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),

@@ -450,89 +450,46 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
   })
 }
 
-const defineProjectionSelectionTest = () => {
-  it('uses repository-level pagination when available', async () => {
-    const paginatedRows = [
-      {
-        orgId: 42,
-        registrationNumber: 'REG-123',
-        accreditationNumber: null,
-        orsId: '003',
-        packagingWasteCategory: TEST_PLASTIC_CATEGORY,
-        destinationCountry: 'France',
-        overseasReprocessorName: TEST_REPROCESSOR_NAME,
-        addressLine1: TEST_ADDRESS_LINE1,
-        addressLine2: null,
-        cityOrTown: 'Paris',
-        stateProvinceOrRegion: null,
-        postcode: null,
-        coordinates: null,
-        validFrom: null
-      }
-    ]
-
+const defineBlankRegistrationNumberFilterTest = () => {
+  it('treats blank registrationNumber filters as undefined', async () => {
     const organisationsRepository = {
-      findAll: vi.fn(),
-      findPageForOverseasSitesAdminList: vi.fn().mockResolvedValue({
-        rows: paginatedRows,
-        totalItems: 1
-      })
+      findAll: vi.fn().mockResolvedValue([
+        {
+          orgId: 42,
+          registrations: [
+            {
+              material: TEST_PLASTIC_CATEGORY,
+              registrationNumber: 'REG-123',
+              overseasSites: {
+                '003': { overseasSiteId: 'site-1' }
+              }
+            }
+          ],
+          accreditations: []
+        }
+      ])
     }
 
     const overseasSitesRepository = {
-      findAll: vi.fn()
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: TEST_REPROCESSOR_NAME,
+          address: {
+            line1: TEST_ADDRESS_LINE1,
+            townOrCity: 'Paris'
+          },
+          coordinates: null,
+          validFrom: null
+        }
+      ])
     }
 
     const server = await createTestServer({
       repositories: {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
-      }
-    })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `${adminOverseasSitesListPath}?page=1&pageSize=10&registrationNumber=REG-123`,
-      ...asServiceMaintainer()
-    })
-
-    await server.stop()
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(
-      organisationsRepository.findPageForOverseasSitesAdminList
-    ).toHaveBeenCalledWith({
-      page: 1,
-      pageSize: 10,
-      registrationNumber: 'REG-123'
-    })
-    expect(organisationsRepository.findAll).not.toHaveBeenCalled()
-    expect(overseasSitesRepository.findAll).not.toHaveBeenCalled()
-    expect(JSON.parse(response.payload)).toStrictEqual({
-      rows: paginatedRows,
-      pagination: {
-        page: 1,
-        pageSize: 10,
-        totalItems: 1,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false
-      }
-    })
-  })
-
-  it('treats blank registrationNumber filters as undefined', async () => {
-    const organisationsRepository = {
-      findAll: vi.fn(),
-      findPageForOverseasSitesAdminList: vi.fn().mockResolvedValue({
-        rows: [],
-        totalItems: 0
-      })
-    }
-
-    const server = await createTestServer({
-      repositories: {
-        organisationsRepository: () => organisationsRepository
       }
     })
 
@@ -545,13 +502,11 @@ const defineProjectionSelectionTest = () => {
     await server.stop()
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(
-      organisationsRepository.findPageForOverseasSitesAdminList
-    ).toHaveBeenCalledWith({
-      page: 1,
-      pageSize: 10,
-      registrationNumber: undefined
-    })
+    const body = JSON.parse(response.payload)
+    expect(body.rows.map((row) => row.registrationNumber)).toStrictEqual([
+      'REG-123'
+    ])
+    expect(body.pagination.totalItems).toBe(1)
   })
 }
 
@@ -717,7 +672,7 @@ const defineMissingRegistrationsPropertyTest = () => {
 }
 
 const defineAdditionalEdgeCaseTests = () => {
-  defineProjectionSelectionTest()
+  defineBlankRegistrationNumberFilterTest()
   defineMissingOverseasSiteMappingsTest()
   defineMissingMaterialAndOrgIdTest()
   defineMissingRegistrationsPropertyTest()

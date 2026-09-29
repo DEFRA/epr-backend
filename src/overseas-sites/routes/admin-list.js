@@ -187,38 +187,22 @@ export const adminOverseasSitesList = {
     )
 
     try {
-      let selectedRows
-      let totalItems
+      const [organisations, sites] = await Promise.all([
+        organisationsRepository.findAll(),
+        overseasSitesRepository.findAll()
+      ])
 
-      if (!all && organisationsRepository.findPageForOverseasSitesAdminList) {
-        const pageResult =
-          await organisationsRepository.findPageForOverseasSitesAdminList({
-            page,
-            pageSize,
-            registrationNumber
-          })
+      const sitesById = new Map(sites.map((site) => [site.id, site]))
+      const rows = filterRowsByRegistrationNumber(
+        buildRows(organisations, sitesById),
+        registrationNumber
+      )
+      const startIndex = (page - 1) * pageSize
 
-        selectedRows = pageResult.rows
-        totalItems = pageResult.totalItems
-      } else {
-        const [organisations, sites] = await Promise.all([
-          organisationsRepository.findAll(),
-          overseasSitesRepository.findAll()
-        ])
-
-        const sitesById = new Map(sites.map((site) => [site.id, site]))
-        const rows = filterRowsByRegistrationNumber(
-          buildRows(organisations, sitesById),
-          registrationNumber
-        )
-        const startIndex = (page - 1) * pageSize
-
-        totalItems = rows.length
-        selectedRows = all
-          ? rows
-          : rows.slice(startIndex, startIndex + pageSize)
-      }
-
+      const totalItems = rows.length
+      const selectedRows = all
+        ? rows
+        : rows.slice(startIndex, startIndex + pageSize)
       const selectedPageSize = all ? buildAllPageSize(totalItems) : pageSize
       const pagination = buildPaginationMetadata({
         page: all ? DEFAULT_PAGE : page,
