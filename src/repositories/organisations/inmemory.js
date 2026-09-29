@@ -154,12 +154,6 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
-const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
-  return structuredClone(staleCache)
-    .filter((org) => org.schemaVersion === schemaVersion)
-    .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
-}
-
 /**
  * @param {string} value
  * @returns {(candidate: string | null | undefined) => boolean}
@@ -522,7 +516,6 @@ export const createInMemoryOrganisationsRepository = (
       insert: insertFn,
       replace: replaceFn,
       findAll: performFindAll(staleCache),
-      findAllBySchemaVersion: performFindAllBySchemaVersion(staleCache),
       find: performFind(staleCache),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(staleCache),
