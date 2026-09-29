@@ -14,8 +14,10 @@ import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accreditation-reports.js'
 
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
+/** @param {Partial<Accreditation>} [overrides] */
 const cancelledAccreditation = (overrides = {}) =>
   buildAccreditation({
     status: 'cancelled',

@@ -1,8 +1,10 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { ReportStatus } from '#reports/domain/report-status.js' */
@@ -10,7 +12,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /**
  * @typedef {Object} CancelledAccreditationReportRow
  * @property {string} registrationId
- * @property {string} cadence
+ * @property {Cadence} cadence
  * @property {number} year
  * @property {number} period
  * @property {number} submissionNumber
@@ -24,7 +26,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * @property {boolean} testOrganisation
  * @property {string} accreditationId
  * @property {string | null} accreditationNumber
- * @property {string} material
+ * @property {Accreditation['material']} material
  * @property {string | null} cancelledAt - ISO timestamp of the latest
  *   cancellation in the status history
  * @property {number} linkedRegistrations
@@ -38,6 +40,12 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * @property {number} scannedAccreditations
  * @property {number} cancelledAccreditations
  * @property {number} reports
+ */
+
+/**
+ * @typedef {Object} CancelledAccreditationReportsReport
+ * @property {CancelledAccreditationRow[]} rows
+ * @property {CancelledAccreditationReportsSummary} summary
  */
 
 /**
@@ -56,8 +64,8 @@ const cancelledAt = (accreditation) => {
  * @returns {CancelledAccreditationReportRow[]}
  */
 const reportRowsOf = ({ registrationId, year, reports }) =>
-  Object.entries(reports).flatMap(([cadence, slots]) =>
-    Object.entries(slots).flatMap(([period, slot]) =>
+  Object.values(CADENCE).flatMap((cadence) =>
+    Object.entries(reports[cadence] ?? {}).flatMap(([period, slot]) =>
       [slot.current, ...slot.previousSubmissions]
         .filter((report) => report !== null)
         .map((report) => ({
@@ -90,7 +98,7 @@ const byYearCadencePeriodSubmission = (a, b) =>
  *
  * @param {Organisation[]} organisations
  * @param {ReportsRepository['findPeriodicReports']} findPeriodicReports
- * @returns {Promise<{ rows: CancelledAccreditationRow[], summary: CancelledAccreditationReportsSummary }>}
+ * @returns {Promise<CancelledAccreditationReportsReport>}
  */
 export const diagnoseCancelledAccreditationReports = async (
   organisations,

@@ -1,16 +1,18 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { diagnoseCancelledAccreditationReports } from '#cancelled-accreditation-reports-diagnostic/application/diagnose-cancelled-accreditation-reports.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
+/** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { CancelledAccreditationReportRow, CancelledAccreditationRow } from '#cancelled-accreditation-reports-diagnostic/application/diagnose-cancelled-accreditation-reports.js' */
 
 const LOCK_NAME = 'cancelled-accreditation-reports-diagnostic'
 
 /**
  * @param {CancelledAccreditationRow} row
- * @param {string} cadence
+ * @param {Cadence} cadence
  */
 const countOf = (row, cadence) =>
   row.reports.filter((report) => report.cadence === cadence).length
@@ -28,8 +30,8 @@ const formatAccreditationLine = (row) =>
     `cancelledAt=${row.cancelledAt ?? 'none'}`,
     `linkedRegistrations=${row.linkedRegistrations}`,
     `reports=${row.reports.length}`,
-    `monthlyReports=${countOf(row, 'monthly')}`,
-    `quarterlyReports=${countOf(row, 'quarterly')}`
+    `monthlyReports=${countOf(row, CADENCE.monthly)}`,
+    `quarterlyReports=${countOf(row, CADENCE.quarterly)}`
   ].join(' ')
 
 /**
