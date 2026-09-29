@@ -88,7 +88,21 @@ const mapMappingToRow = (
 }
 
 /**
- * @param {Array<import('#repositories/organisations/port.js').OrganisationsOverseasSitesAdminListItem>} organisations
+ * @typedef {Object} OrganisationsOverseasSitesAdminListItem
+ * @property {number} [orgId]
+ * @property {Array<{
+ *   material?: string,
+ *   registrationNumber?: string,
+ *   accreditationId?: string,
+ *   accreditationNumber?: string,
+ *   accreditation?: { accreditationNumber?: string | null } | null,
+ *   overseasSites?: Record<string, { overseasSiteId: string }>
+ * }>} [registrations]
+ * @property {Array<{ id?: string, accreditationNumber?: string | null }>} [accreditations]
+ */
+
+/**
+ * @param {Array<OrganisationsOverseasSitesAdminListItem>} organisations
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
@@ -188,9 +202,7 @@ export const adminOverseasSitesList = {
         totalItems = pageResult.totalItems
       } else {
         const [organisations, sites] = await Promise.all([
-          organisationsRepository.findAllForOverseasSitesAdminList
-            ? organisationsRepository.findAllForOverseasSitesAdminList()
-            : organisationsRepository.findAll(),
+          organisationsRepository.findAll(),
           overseasSitesRepository.findAll()
         ])
 

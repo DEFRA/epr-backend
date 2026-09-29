@@ -251,18 +251,6 @@ export const prepareForReplace = (existing, updates) => {
 
 const OVERSEAS_SITES_COLLECTION_NAME = 'overseas-sites'
 
-const ORS_ADMIN_LIST_PROJECTION = {
-  orgId: 1,
-  'registrations.material': 1,
-  'registrations.registrationNumber': 1,
-  'registrations.accreditationId': 1,
-  'registrations.accreditationNumber': 1,
-  'registrations.accreditation.accreditationNumber': 1,
-  'registrations.overseasSites': 1,
-  'accreditations.id': 1,
-  'accreditations.accreditationNumber': 1
-}
-
 export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
@@ -441,19 +429,6 @@ const ORS_ADMIN_LIST_ROW_PROJECTION = {
     coordinates: { $ifNull: ['$site.coordinates', null] },
     validFrom: { $ifNull: ['$site.validFrom', null] }
   }
-}
-
-export const performFindAllForOverseasSitesAdminList = (db) => async () => {
-  const docs = await db
-    .collection('epr-organisations')
-    .find({}, { projection: ORS_ADMIN_LIST_PROJECTION })
-    .toArray()
-
-  return docs.map(({ orgId, registrations, accreditations }) => ({
-    orgId,
-    registrations,
-    accreditations
-  }))
 }
 
 export const performFindPageForOrsAdminList =

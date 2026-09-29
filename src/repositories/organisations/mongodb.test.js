@@ -281,33 +281,6 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
-  describe('findAllForOverseasSitesAdminList', () => {
-    it('returns only fields required by the ORS admin list endpoint', async ({
-      organisationsRepository
-    }) => {
-      const repository = organisationsRepository()
-      const organisation = buildOrganisation()
-
-      await repository.insert(organisation)
-
-      const mongoRepository = /** @type {Required<OrganisationsRepository>} */ (
-        repository
-      )
-      const result = await mongoRepository.findAllForOverseasSitesAdminList()
-
-      expect(result).toHaveLength(1)
-      expect(result[0]).toMatchObject({
-        orgId: organisation.orgId,
-        registrations: expect.any(Array),
-        accreditations: expect.any(Array)
-      })
-      const item = /** @type {any} */ (result[0])
-      expect(item.companyDetails).toBeUndefined()
-      expect(item.statusHistory).toBeUndefined()
-      expect(item._id).toBeUndefined()
-    })
-  })
-
   describe('findPageForOverseasSitesAdminList', () => {
     it('returns only the requested page of mapped rows with an exact total', async ({
       organisationsRepository,

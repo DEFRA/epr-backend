@@ -15,20 +15,6 @@
  */
 
 /**
- * @typedef {Object} OrganisationsOverseasSitesAdminListItem
- * @property {number} [orgId]
- * @property {Array<{
- *   material?: string,
- *   registrationNumber?: string,
- *   accreditationId?: string,
- *   accreditationNumber?: string,
- *   accreditation?: { accreditationNumber?: string | null } | null,
- *   overseasSites?: Record<string, { overseasSiteId: string }>
- * }>} [registrations]
- * @property {Array<{ id?: string, accreditationNumber?: string | null }>} [accreditations]
- */
-
-/**
  * @typedef {Object} OrganisationsOverseasSitesAdminListPage
  * @property {Array<{
  *   orgId: number | null,
@@ -92,7 +78,6 @@
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
- * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
  * @property {(params: FindPageForOverseasSitesAdminListParams) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
