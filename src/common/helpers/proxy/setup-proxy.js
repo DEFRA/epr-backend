@@ -1,5 +1,4 @@
 import { bootstrap } from 'global-agent'
-import { ProxyAgent, setGlobalDispatcher } from 'undici'
 
 import { config } from '#root/config.js'
 import {
@@ -10,8 +9,10 @@ import { logger } from '../logging/logger.js'
 
 /**
  * If HTTP_PROXY is set setupProxy() will enable it globally
- * for a number of http clients.
- * Node Fetch will still need to pass a ProxyAgent in on each call.
+ * for clients built on Node's http and https modules, such as Wreck and the
+ * AWS SDK. global-agent ignores NO_PROXY, so these always use the proxy.
+ * Node's built-in fetch is proxied by Node itself, through NODE_USE_ENV_PROXY,
+ * HTTPS_PROXY and NO_PROXY.
  */
 export function setupProxy() {
   const proxyUrl = config.get('httpProxy')
@@ -25,10 +26,7 @@ export function setupProxy() {
       }
     })
 
-    // Undici proxy
-    setGlobalDispatcher(new ProxyAgent(proxyUrl))
-
-    // global-agent (axios/request/and others)
+    // global-agent (Wreck, axios, request and others)
     bootstrap()
     global.GLOBAL_AGENT.HTTP_PROXY = proxyUrl
   }
