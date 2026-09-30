@@ -16,10 +16,6 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import {
-  buildAccreditation,
-  buildAwaitingAcceptancePrn
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -54,6 +50,13 @@ const JANUARY_2025 = {
   cadence: 'monthly',
   period: MONTHLY_PERIODS.January
 }
+
+const FEBRUARY_2025 = {
+  year: 2025,
+  cadence: 'monthly',
+  period: MONTHLY_PERIODS.February
+}
+const FEBRUARY_DATE = '2025-02-15T00:00:00.000Z'
 
 // A registered-only operator has no accreditation, so it reports quarterly; a
 // January-dated export closes against Q1.
@@ -390,45 +393,50 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ).toBe(1)
   })
 
-  it('does not flag a closed period when only PRN issued tonnage drifted since submission', async () => {
+  it('flags only the closed period whose reported figures changed', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
     })
-    // Close January while no PRNs exist, so the frozen report carries zero
-    // issued tonnage.
-    await submitAndCloseJanuary(env)
 
-    // A PRN is now issued in January, after the report was frozen.
-    const prn = buildAwaitingAcceptancePrn({
-      organisation: { id: env.organisationId, name: 'Test Organisation' },
-      registrationId: env.registrationId,
-      accreditation: buildAccreditation({ id: env.accreditationId }),
-      tonnage: 50
-    })
-    prn.status.issued = {
-      at: new Date('2025-01-20T00:00:00.000Z'),
-      by: { id: 'issuer', name: 'Issuer', position: 'Manager' }
-    }
-    await env.packagingRecyclingNotesRepository.create(prn)
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+    await generateAndSubmitReport(env, FEBRUARY_2025)
 
-    // Only a non-figure summary-log edit, so the summary-log figures are
-    // unchanged. The freshly issued PRN drifts the issued tonnage, but PRN is
-    // out of scope for the summary-log resubmission gate, so it must not flag.
+    // Both rows adjust, so both closed periods are restated, but only
+    // February's reported figures change.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
-      'sl-prn',
-      'file-prn',
+      'sl-both',
+      'file-both',
       createUploadData([
-        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN-AMENDED' },
+        { rowId: 1002, tonnageReceived: 250, dateReceived: FEBRUARY_DATE }
       ])
     )
 
-    // The upload still restates the closed period, so it is a genuine
-    // figure-gating decision, not a period that was never touched.
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
-    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      JANUARY_2025,
+      FEBRUARY_2025
+    ])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      FEBRUARY_2025
+    ])
   })
 
   it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {
