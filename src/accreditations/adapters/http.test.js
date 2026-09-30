@@ -89,7 +89,7 @@ describe('createHttpAccreditationsSource', () => {
       expect(year).toBe('2026')
     })
 
-    it('asks for many registrations in batches of 100', async () => {
+    it('asks for many registrations in batches of 40', async () => {
       /** @type {number[]} */
       const batchSizes = []
       getServer().use(
@@ -103,7 +103,7 @@ describe('createHttpAccreditationsSource', () => {
 
       const records = await source.list({ year: 2026, registrationIds })
 
-      expect(batchSizes.sort((a, b) => a - b)).toStrictEqual([50, 100])
+      expect(batchSizes.sort((a, b) => a - b)).toStrictEqual([30, 40, 40, 40])
       expect(records).toHaveLength(150)
     })
   })
