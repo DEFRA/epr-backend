@@ -85,9 +85,23 @@ export const extractReportedData = (report) => ({
 const byString = (a, b) => a.localeCompare(b)
 
 /**
+ * Normalises a reported string so a casing- or whitespace-only edit does not read
+ * as a change: by the contract (PAE-1983) casing, leading/trailing whitespace and
+ * internal whitespace runs are not reported-data changes. Trims, collapses each
+ * run of whitespace to a single space, and lowercases. A genuine edit (a
+ * different supplier name, address or destination) still differs.
+ *
+ * @param {string} value
+ */
+const normaliseString = (value) =>
+  value.trim().replace(/\s+/g, ' ').toLowerCase()
+
+/**
  * Recursively serialises a value to a stable string with object keys sorted and
  * array elements ordered by their own serialisation, so the result is
- * insensitive to both key order and row order.
+ * insensitive to key order and row order. String values are normalised
+ * (see normaliseString) so casing/whitespace-only edits compare equal; object
+ * keys are left as-is.
  *
  * @param {*} value
  * @returns {string}
@@ -101,6 +115,9 @@ export const canonicalise = (value) => {
       .sort(byString)
       .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
     return `{${entries.join(',')}}`
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(normaliseString(value))
   }
   return JSON.stringify(value)
 }

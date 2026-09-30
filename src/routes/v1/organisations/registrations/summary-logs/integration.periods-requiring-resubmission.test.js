@@ -5,7 +5,10 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import {
+  MONTHLY_PERIODS,
+  QUARTERLY_PERIODS
+} from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import {
   REPORT_STATUS,
@@ -23,12 +26,18 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createReprocessorReceivedRowValues,
+  createReprocessorSentOnRowValues,
   createWasteBalanceMeta,
   pollForValidation,
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
+  REPROCESSOR_SENT_ON_HEADERS,
   setupWasteBalanceIntegrationEnvironment
 } from './integration-test-helpers.js'
+
+/**
+ * @typedef {Record<string, { value: unknown, location: { sheet: string, row: number, column: string } }>} SummaryLogMeta
+ */
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
 const TABLE_HEADER_ROW = 7
@@ -41,6 +50,14 @@ const JANUARY_2025 = {
   year: 2025,
   cadence: 'monthly',
   period: MONTHLY_PERIODS.January
+}
+
+// A registered-only operator has no accreditation, so it reports quarterly; a
+// January-dated export closes against Q1.
+const Q1_2025 = {
+  year: 2025,
+  cadence: 'quarterly',
+  period: QUARTERLY_PERIODS.Q1
 }
 
 const CHANGED_BY = { id: 'u1', name: 'Test User', position: 'Officer' }
@@ -58,6 +75,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   const meta = createWasteBalanceMeta('REPROCESSOR_INPUT')
+  const sentOnMeta = createWasteBalanceMeta('REPROCESSOR_OUTPUT')
 
   const createUploadData = (rows) => ({
     RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -70,10 +88,90 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     }
   })
 
-  const upload = async (env, summaryLogId, fileId, uploadData) => {
+  const createSentOnUploadData = (rows) => ({
+    SENT_ON_LOADS: {
+      location: { sheet: 'Sent on', row: TABLE_HEADER_ROW, column: 'A' },
+      headers: REPROCESSOR_SENT_ON_HEADERS,
+      rows: rows.map((row, index) => ({
+        rowNumber: FIRST_DATA_ROW + index,
+        values: createReprocessorSentOnRowValues(row)
+      }))
+    }
+  })
+
+  // Registered-only exporter meta (no accreditation number, quarterly cadence).
+  const registeredOnlyExporterMeta = {
+    REGISTRATION_NUMBER: {
+      value: 'REG-123',
+      location: { sheet: 'Cover', row: 1, column: 'B' }
+    },
+    PROCESSING_TYPE: {
+      value: 'EXPORTER_REGISTERED_ONLY',
+      location: { sheet: 'Cover', row: 2, column: 'B' }
+    },
+    MATERIAL: {
+      value: 'Paper_and_board',
+      location: { sheet: 'Cover', row: 3, column: 'B' }
+    },
+    TEMPLATE_VERSION: {
+      value: 2.1,
+      location: { sheet: 'Cover', row: 4, column: 'B' }
+    }
+  }
+
+  const LOADS_EXPORTED_HEADERS = [
+    'ROW_ID',
+    'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+    'DATE_OF_EXPORT',
+    'OSR_ID',
+    'BASEL_EXPORT_CODE',
+    'WAS_THE_WASTE_REFUSED',
+    'WAS_THE_WASTE_STOPPED',
+    'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+    'OSR_NAME',
+    'OSR_COUNTRY',
+    'CUSTOMS_CODES',
+    'CONTAINER_NUMBER'
+  ]
+
+  // OSR_ID 100 resolves to a registered overseas site, so the report takes the
+  // site's name and country from the ORS registry, not from these cells.
+  const createLoadsExportedUploadData = ({ osrName, osrCountry }) => ({
+    LOADS_EXPORTED: {
+      location: { sheet: 'Exported', row: TABLE_HEADER_ROW, column: 'A' },
+      headers: LOADS_EXPORTED_HEADERS,
+      rows: [
+        {
+          rowNumber: FIRST_DATA_ROW,
+          values: [
+            2001,
+            100,
+            '2025-01-20T00:00:00.000Z',
+            100,
+            'B3020',
+            'No',
+            'No',
+            null,
+            osrName,
+            osrCountry,
+            '123456',
+            'CONT123456'
+          ]
+        }
+      ]
+    }
+  })
+
+  const upload = async (
+    env,
+    summaryLogId,
+    fileId,
+    uploadData,
+    uploadMeta = /** @type {SummaryLogMeta} */ (meta)
+  ) => {
     const { server, fileDataMap, organisationId, registrationId } = env
 
-    fileDataMap[fileId] = { meta, data: uploadData }
+    fileDataMap[fileId] = { meta: uploadMeta, data: uploadData }
 
     await server.inject({
       method: 'POST',
@@ -117,8 +215,14 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     return JSON.parse(response.payload).loadsByReportingPeriod
   }
 
-  const uploadAndValidate = async (env, summaryLogId, fileId, uploadData) => {
-    await upload(env, summaryLogId, fileId, uploadData)
+  const uploadAndValidate = async (
+    env,
+    summaryLogId,
+    fileId,
+    uploadData,
+    uploadMeta = /** @type {SummaryLogMeta} */ (meta)
+  ) => {
+    await upload(env, summaryLogId, fileId, uploadData, uploadMeta)
     return getLoadsByReportingPeriod(env, summaryLogId)
   }
 
@@ -190,6 +294,21 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   // the registration primed for a resubmission upload.
   const submitAndCloseJanuary = async (env) => {
     await upload(env, 'sl-first', 'file-first', createUploadData(FIRST_UPLOAD))
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+  }
+
+  // Same as submitAndCloseJanuary but seeds the closed period from Sent on loads
+  // (reprocessor output), so the frozen report carries wasteSent.finalDestinations
+  // to diff against.
+  const submitAndCloseJanuaryWithSentOn = async (env, rows) => {
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createSentOnUploadData(rows),
+      sentOnMeta
+    )
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, JANUARY_2025)
   }
@@ -331,5 +450,157 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
     expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+  })
+
+  it('does not flag a closed period when only supplier email and phone changed', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    // Supplier telephone and email are stored on the report, but by agreement a
+    // change to them alone is not a reported-data change. Name, address and
+    // tonnage are unchanged, so the report is identical.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-contact',
+      'file-contact',
+      createUploadData([
+        {
+          rowId: 1001,
+          tonnageReceived: 100,
+          supplierEmail: 'changed@example.com',
+          supplierPhone: '0000000000'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('does not flag a closed period when a supplier name differs only by casing and whitespace', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    // The frozen report's supplier name is 'Supplier A'. Re-uploading it with
+    // different casing and internal whitespace is not a reported-data change.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-casing',
+      'file-casing',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, supplierName: 'SUPPLIER  A' }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('flags a closed period when a final destination name changed', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      reprocessingType: 'output',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuaryWithSentOn(env, [
+      { rowId: 5001, tonnageSent: 100, destinationName: 'Dest A' }
+    ])
+
+    // The final destination name is reported data (stored on the report), so
+    // changing it changes the report.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-dest-name',
+      'file-dest-name',
+      createSentOnUploadData([
+        { rowId: 5001, tonnageSent: 100, destinationName: 'Dest B' }
+      ]),
+      sentOnMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+  })
+
+  it('does not flag a closed period when only final destination email and phone changed', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      reprocessingType: 'output',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuaryWithSentOn(env, [
+      { rowId: 5001, tonnageSent: 100, destinationName: 'Dest A' }
+    ])
+
+    // Final destination email and phone are captured on the sheet but never
+    // reach the report, so a change to them alone is not a reported-data change.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-dest-contact',
+      'file-dest-contact',
+      createSentOnUploadData([
+        {
+          rowId: 5001,
+          tonnageSent: 100,
+          destinationName: 'Dest A',
+          destinationEmail: 'changed@example.com',
+          destinationPhone: '0000000000'
+        }
+      ]),
+      sentOnMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('does not flag a closed period when only OSR name and country changed (registered-only exporter)', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accredited: false,
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createLoadsExportedUploadData({
+        osrName: 'Site A',
+        osrCountry: 'Vietnam-VN'
+      }),
+      registeredOnlyExporterMeta
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, Q1_2025)
+
+    // OSR name and country are resolved from the ORS registry by OSR_ID, so the
+    // sheet cells are pass-through: changing them does not change the report.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-osr',
+      'file-osr',
+      createLoadsExportedUploadData({
+        osrName: 'Site B',
+        osrCountry: 'France-FR'
+      }),
+      registeredOnlyExporterMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 })

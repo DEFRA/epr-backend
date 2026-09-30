@@ -64,3 +64,55 @@ describe('reportedDataAreEquivalent — supplier contact exception', () => {
     expect(equivalent(before, after)).toBe(false)
   })
 })
+
+describe('reportedDataAreEquivalent — contact exception must not mask a real change', () => {
+  it('treats a phone change alongside a tonnage change as a reported-data change', () => {
+    const before = reportWithSupplier()
+    const after = reportWithSupplier({
+      supplierPhone: '09876 543210',
+      tonnageReceived: 14
+    })
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+
+  it('treats an email change alongside a name change as a reported-data change', () => {
+    const before = reportWithSupplier()
+    const after = reportWithSupplier({
+      supplierEmail: 'new@acme.example',
+      supplierName: 'Acme Recycling Ltd'
+    })
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+})
+
+describe('reportedDataAreEquivalent — casing/whitespace normalisation', () => {
+  it('treats a supplier name casing-only change as no reported-data change', () => {
+    const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
+    const after = reportWithSupplier({ supplierName: 'ACME PLASTICS LTD' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a supplier name internal-whitespace change as no reported-data change', () => {
+    const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
+    const after = reportWithSupplier({ supplierName: 'Acme  Plastics   Ltd' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a supplier name leading/trailing whitespace change as no reported-data change', () => {
+    const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
+    const after = reportWithSupplier({ supplierName: '  Acme Plastics Ltd  ' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('still treats a genuine supplier name change as a reported-data change', () => {
+    const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
+    const after = reportWithSupplier({ supplierName: 'Beta Plastics Ltd' })
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+})
