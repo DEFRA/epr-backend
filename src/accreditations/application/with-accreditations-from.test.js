@@ -89,6 +89,18 @@ describe('withAccreditationsFrom', () => {
     expect(source.list).not.toHaveBeenCalled()
   })
 
+  it('leaves no stored accreditations on an organisation with no registrations', async () => {
+    const { organisation } = buildAccreditedOrganisation()
+    const repository = withAccreditationsFrom(
+      repositoryHolding([{ ...organisation, registrations: [] }]),
+      sourceHolding([])
+    )
+
+    const read = await repository.findById(organisation.id)
+
+    expect(read.accreditations).toStrictEqual([])
+  })
+
   it('asks the source once for everything when reading every organisation', async () => {
     const first = buildAccreditedOrganisation()
     const second = buildAccreditedOrganisation()

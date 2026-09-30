@@ -44,7 +44,7 @@ const hydrate = async (source, organisations) => {
     organisation.registrations.map((registration) => registration.id)
   )
   if (registrationIds.length === 0) {
-    return organisations
+    return attach(organisations, [])
   }
 
   return attach(
