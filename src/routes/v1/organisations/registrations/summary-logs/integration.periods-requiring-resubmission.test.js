@@ -431,6 +431,46 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
+  it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createUploadData([
+        { rowId: 1001, supplierName: 'Supplier A', tonnageReceived: 100 },
+        { rowId: 1002, supplierName: 'Supplier A', tonnageReceived: 200 }
+      ])
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+
+    // The aggregation now splits Supplier A into two entries (the phone number
+    // differs), but the report presents the same supplier and tonnage.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-split',
+      'file-split',
+      createUploadData([
+        { rowId: 1001, supplierName: 'Supplier A', tonnageReceived: 100 },
+        {
+          rowId: 1002,
+          supplierName: 'Supplier A',
+          supplierPhone: '0000000000',
+          tonnageReceived: 200
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
   it('does not flag when identical figures are uploaded with rows reordered', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',

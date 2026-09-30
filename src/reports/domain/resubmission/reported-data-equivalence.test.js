@@ -299,6 +299,97 @@ describe('extractReportedData — free-text fields are normalised, exact fields 
   })
 })
 
+/**
+ * A report carrying the given suppliers, totalled, so a test can split one
+ * supplier's tonnage across several list entries.
+ *
+ * @param {Array<Record<string, *>>} suppliers
+ * @returns {*}
+ */
+const reportWithSuppliers = (suppliers) => ({
+  recyclingActivity: {
+    suppliers,
+    totalTonnageReceived: suppliers.reduce(
+      (total, { tonnageReceived }) => total + tonnageReceived,
+      0
+    )
+  }
+})
+
+describe('extractReportedData — list entries that compare equal are merged', () => {
+  // The aggregation groups rows on raw values, including ones the comparison
+  // ignores, so editing one of several rows for the same supplier splits its
+  // single entry in two. Merged again, the report presents the same data.
+  const acme = { supplierName: 'Acme', supplierPhone: '0111' }
+
+  it('treats a supplier split only by a contact detail as no reported-data change', () => {
+    const before = reportWithSuppliers([{ ...acme, tonnageReceived: 300 }])
+    const after = reportWithSuppliers([
+      { ...acme, tonnageReceived: 100 },
+      { ...acme, supplierPhone: '0222', tonnageReceived: 200 }
+    ])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a supplier split only by name casing as no reported-data change', () => {
+    const before = reportWithSuppliers([{ ...acme, tonnageReceived: 300 }])
+    const after = reportWithSuppliers([
+      { ...acme, tonnageReceived: 100 },
+      { ...acme, supplierName: 'ACME', tonnageReceived: 200 }
+    ])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('sums merged tonnage exactly, without floating-point drift', () => {
+    const before = reportWithSuppliers([{ ...acme, tonnageReceived: 0.3 }])
+    const after = reportWithSuppliers([
+      { ...acme, tonnageReceived: 0.1 },
+      { ...acme, supplierPhone: '0222', tonnageReceived: 0.2 }
+    ])
+    // The real total is summed as a decimal; only the list merge is under test.
+    after.recyclingActivity.totalTonnageReceived = 0.3
+
+    expect(
+      diffReportedData(extractReportedData(before), extractReportedData(after))
+    ).toEqual([])
+  })
+
+  it('still treats a changed tonnage across the merged entries as a change', () => {
+    const before = reportWithSuppliers([{ ...acme, tonnageReceived: 300 }])
+    const after = reportWithSuppliers([
+      { ...acme, tonnageReceived: 100 },
+      { ...acme, supplierPhone: '0222', tonnageReceived: 150 }
+    ])
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+
+  it('does not merge suppliers that differ in a compared field', () => {
+    const before = reportWithSuppliers([{ ...acme, tonnageReceived: 300 }])
+    const after = reportWithSuppliers([
+      { ...acme, tonnageReceived: 100 },
+      { ...acme, supplierAddress: '2 Mill Lane', tonnageReceived: 200 }
+    ])
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+
+  it('merges final destinations the same way', () => {
+    const before = reportWithFinalDestination({ tonnageSentOn: 7 })
+    const after = reportWithFinalDestination({ tonnageSentOn: 3 })
+    after.wasteSent.finalDestinations.push({
+      recipientName: 'DEST A',
+      facilityType: 'Reprocessor',
+      address: '456 Road, XY9 8ZW',
+      tonnageSentOn: 4
+    })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+})
+
 describe('diffReportedData — which reported fields changed', () => {
   /** @param {*} a @param {*} b */
   const diff = (a, b) =>

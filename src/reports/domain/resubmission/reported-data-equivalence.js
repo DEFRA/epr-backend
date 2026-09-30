@@ -15,6 +15,12 @@
  * normalised on extraction. Figures, identifiers, dropdown values and
  * registry-sourced values are compared exactly.
  *
+ * List entries that compare equal once normalised and stripped of excluded
+ * fields are merged, their `summed` tonnage added. The aggregation groups rows
+ * on raw values (including supplier contact details), so editing one of several
+ * rows for the same supplier splits its entry in two; merged again, the report
+ * presents the same data.
+ *
  * Absent and null compared fields both extract as null. A missing activity block
  * also extracts as null, so present-vs-absent is itself a difference.
  *
@@ -22,6 +28,8 @@
  * insensitive to both key order and row order. It rejects anything that is not
  * plain JSON rather than serialising it ambiguously.
  */
+
+import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 /** @import { RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
@@ -40,10 +48,11 @@
 
 /**
  * How one report field takes part in the comparison: compared exactly,
- * compared as free text, excluded with a reason, a one-entry array whose entry
+ * compared as free text, a list item's tonnage (compared exactly, summed when
+ * equal items merge), excluded with a reason, a one-entry array whose entry
  * classifies each item, or an object that classifies each of its fields.
  *
- * @typedef {'exact' | 'text' | ExcludedField | [FieldSpec] | { [field: string]: FieldSpec }} FieldSpec
+ * @typedef {'exact' | 'text' | 'summed' | ExcludedField | [FieldSpec] | { [field: string]: FieldSpec }} FieldSpec
  */
 
 /**
@@ -52,6 +61,7 @@
 
 const EXACT = 'exact'
 const TEXT = 'text'
+const SUMMED = 'summed'
 
 /**
  * @param {string} reason
@@ -81,7 +91,7 @@ export const REPORTED_DATA_FIELDS = {
         supplierAddress: TEXT,
         supplierPhone: excluded(SUPPLIER_CONTACT),
         supplierEmail: excluded(SUPPLIER_CONTACT),
-        tonnageReceived: EXACT
+        tonnageReceived: SUMMED
       }
     ],
     totalTonnageReceived: EXACT,
@@ -95,11 +105,11 @@ export const REPORTED_DATA_FIELDS = {
         // Resolved from the ORS registry by orsId, not typed by the operator
         siteName: EXACT,
         country: EXACT,
-        tonnageExported: EXACT,
+        tonnageExported: SUMMED,
         approved: EXACT
       }
     ],
-    unapprovedOverseasSites: [{ orsId: EXACT, tonnageExported: EXACT }],
+    unapprovedOverseasSites: [{ orsId: EXACT, tonnageExported: SUMMED }],
     totalTonnageExported: EXACT,
     tonnageRefusedAtDestination: EXACT,
     tonnageStoppedDuringExport: EXACT,
@@ -117,7 +127,7 @@ export const REPORTED_DATA_FIELDS = {
         // A validated dropdown the aggregation itself matches exactly
         facilityType: EXACT,
         address: TEXT,
-        tonnageSentOn: EXACT
+        tonnageSentOn: SUMMED
       }
     ]
   },
@@ -154,8 +164,46 @@ const normaliseText = (value) => {
 }
 
 /**
+ * Merges list items that are equal on every compared field except their
+ * `summed` ones, adding those exactly (as decimals, so 0.1 + 0.2 is 0.3).
+ * Every list item spec has one summed field, its tonnage.
+ *
+ * @param {{ [field: string]: FieldSpec }} itemSpec
+ * @param {Array<{ [field: string]: ReportedDataValue }>} items - already picked
+ * @returns {Array<{ [field: string]: ReportedDataValue }>}
+ */
+const mergeEqualItems = (itemSpec, items) => {
+  const summedFields = Object.keys(itemSpec).filter(
+    (field) => itemSpec[field] === SUMMED
+  )
+  const merged = new Map()
+  for (const item of items) {
+    const identity = canonicalise(
+      Object.fromEntries(
+        Object.entries(item).filter(([field]) => !summedFields.includes(field))
+      )
+    )
+    const existing = merged.get(identity)
+    if (existing) {
+      for (const field of summedFields) {
+        existing[field] = toNumber(
+          add(
+            /** @type {number} */ (existing[field]),
+            /** @type {number} */ (item[field])
+          )
+        )
+      }
+    } else {
+      merged.set(identity, { ...item })
+    }
+  }
+  return [...merged.values()]
+}
+
+/**
  * Picks the compared fields of `value` as `fieldSpec` classifies them,
- * normalising free-text fields. Absent values extract as null.
+ * normalising free-text fields and merging equal list items. Absent values
+ * extract as null.
  *
  * @param {FieldSpec} fieldSpec
  * @param {*} value
@@ -169,8 +217,17 @@ const pickReportedData = (fieldSpec, value) => {
     return normaliseText(value)
   }
   if (Array.isArray(fieldSpec)) {
-    return value.map((/** @type {*} */ item) =>
-      pickReportedData(fieldSpec[0], item)
+    const itemSpec = /** @type {{ [field: string]: FieldSpec }} */ (
+      fieldSpec[0]
+    )
+    return mergeEqualItems(
+      itemSpec,
+      value.map(
+        (/** @type {*} */ item) =>
+          /** @type {{ [field: string]: ReportedDataValue }} */ (
+            pickReportedData(itemSpec, item)
+          )
+      )
     )
   }
   if (typeof fieldSpec === 'object') {
