@@ -7,11 +7,15 @@ import { accreditationResponseSchema } from './model.js'
  * ends on.
  *
  * @param {Record<string, any>} accreditation
+ * @returns {Record<string, any>}
  */
 const asRead = (accreditation) => ({
   ...accreditation,
   status: accreditation.statusHistory.at(-1).status
 })
+
+/** @type {Record<string, any>} */
+const firstAccreditation = /** @type {any} */ (sample.accreditations[0])
 
 describe('accreditationResponseSchema', () => {
   it.each(sample.accreditations.map((a) => [a.id, a]))(
@@ -26,10 +30,9 @@ describe('accreditationResponseSchema', () => {
   )
 
   it('requires an approved accreditation to carry its validity window', () => {
-    const [accreditation] = sample.accreditations
     const { error } = accreditationResponseSchema.validate(
       {
-        ...asRead(accreditation),
+        ...asRead(firstAccreditation),
         status: 'approved',
         accreditationNumber: 'A26SR5120384065PA',
         validFrom: null,
@@ -45,9 +48,8 @@ describe('accreditationResponseSchema', () => {
   })
 
   it('accepts a reprocessing type not yet set', () => {
-    const [accreditation] = sample.accreditations
     const { error } = accreditationResponseSchema.validate({
-      ...asRead(accreditation),
+      ...asRead(firstAccreditation),
       reprocessingType: null
     })
 
@@ -55,8 +57,7 @@ describe('accreditationResponseSchema', () => {
   })
 
   it('accepts fields the model does not hold, at any level', () => {
-    const [accreditation] = sample.accreditations
-    const read = asRead(accreditation)
+    const read = asRead(firstAccreditation)
     const { error } = accreditationResponseSchema.validate({
       ...read,
       unexpected: true,
