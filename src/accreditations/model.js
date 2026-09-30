@@ -105,10 +105,12 @@ export const accreditationResponseSchema = Joi.object({
   accreditationNumber: requiredWhenDated(Joi.string()),
   validFrom: requiredWhenDated(dateSchema),
   validTo: requiredWhenDated(dateSchema),
+  // Required by the organisations schema, but not every stored accreditation
+  // has one - relaxing for POC
   formSubmission: Joi.object({
     id: Joi.string().required(),
     time: dateSchema.required()
-  }).required(),
+  }),
   glassRecyclingProcess: Joi.array()
     .items(Joi.string().valid(...Object.values(GLASS_RECYCLING_PROCESS)))
     .allow(null),

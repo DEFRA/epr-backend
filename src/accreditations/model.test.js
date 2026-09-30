@@ -56,6 +56,14 @@ describe('accreditationResponseSchema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts an accreditation without a form submission', () => {
+    const { formSubmission: _formSubmission, ...read } =
+      asRead(firstAccreditation)
+    const { error } = accreditationResponseSchema.validate(read)
+
+    expect(error).toBeUndefined()
+  })
+
   it('accepts fields the model does not hold, at any level', () => {
     const read = asRead(firstAccreditation)
     const { error } = accreditationResponseSchema.validate({
