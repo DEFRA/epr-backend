@@ -85,6 +85,16 @@ import {
 const isAutoEnforced = (previous) =>
   Boolean(previous.resubmissionRequired?.closedPeriodRestated)
 
+/**
+ * @param {Record<string, number>} changedFieldCounts - accumulator, mutated
+ * @param {string[]} changedFields
+ */
+const countChangedFields = (changedFieldCounts, changedFields) => {
+  for (const field of changedFields) {
+    changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1
+  }
+}
+
 /** @returns {ResubmissionFiguresSummary} */
 const emptySummary = () => ({
   resubmittedPeriods: 0,
@@ -131,10 +141,7 @@ const scanPeriod = (periodGroup, reports, summary) => {
         })
       } else {
         summary.changedResubmissions += 1
-        for (const field of changedFields) {
-          summary.changedFieldCounts[field] =
-            (summary.changedFieldCounts[field] ?? 0) + 1
-        }
+        countChangedFields(summary.changedFieldCounts, changedFields)
       }
     }
   }
