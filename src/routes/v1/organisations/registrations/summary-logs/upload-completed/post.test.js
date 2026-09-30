@@ -289,7 +289,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
   })
 
-  it('stores neither year nor accreditationId — validate.js resolves the registration\'s live accreditation itself when validation runs', async () => {
+  it("stores neither year nor accreditationId — validate.js resolves the registration's live accreditation itself when validation runs", async () => {
     const summaryLogId = randomUUID()
 
     const response = await server.inject({

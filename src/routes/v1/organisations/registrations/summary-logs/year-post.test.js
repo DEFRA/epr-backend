@@ -4,7 +4,10 @@ import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation, buildRegistration } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'

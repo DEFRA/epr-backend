@@ -139,9 +139,8 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     beforeAll(async () => {
       const accreditedSummaryLogsRepositoryFactory =
         createInMemorySummaryLogsRepository()
-      accreditedSummaryLogsRepository = accreditedSummaryLogsRepositoryFactory(
-        createMockLogger()
-      )
+      accreditedSummaryLogsRepository =
+        accreditedSummaryLogsRepositoryFactory(createMockLogger())
 
       const accreditedOrganisationsRepository =
         createInMemoryOrganisationsRepository([

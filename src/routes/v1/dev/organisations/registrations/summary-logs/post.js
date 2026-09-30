@@ -264,7 +264,10 @@ export const devSummaryLogsSubmit = {
       organisationId,
       registrationId
     )
-    const parsed = toParsedSummaryLog(payload, templateFor(payload, registration))
+    const parsed = toParsedSummaryLog(
+      payload,
+      templateFor(payload, registration)
+    )
 
     await insertValidatingLog(
       request,

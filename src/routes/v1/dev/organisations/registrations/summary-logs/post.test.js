@@ -29,10 +29,8 @@ const META = {
   ACCREDITATION_NUMBER: 'ACC-123'
 }
 
-const {
-  ACCREDITATION_NUMBER: _accreditationNumber,
-  ...REGISTERED_ONLY_META
-} = META
+const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
+  META
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
 
@@ -491,11 +489,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await env.server.inject({
       method: 'POST',
-      url: submitUrl(
-        env.organisationId,
-        env.registrationId,
-        ACCREDITED_YEAR
-      ),
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
       payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     })
 
@@ -507,11 +501,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await env.server.inject({
       method: 'POST',
-      url: submitUrl(
-        env.organisationId,
-        env.registrationId,
-        ACCREDITED_YEAR
-      ),
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
       payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
       ...asRegulator()
     })
