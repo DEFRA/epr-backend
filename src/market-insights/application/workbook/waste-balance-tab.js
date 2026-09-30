@@ -1,4 +1,8 @@
 import {
+  CONFIDENTIAL,
+  fromFewOperators
+} from '#market-insights/domain/confidential-figures.js'
+import {
   BAND,
   COLUMN_WIDTHS,
   DATA_AS_OF,
@@ -30,7 +34,8 @@ import {
 } from './cells.js'
 
 /** @import ExcelJS from 'exceljs' */
-/** @import { TabContents } from './cells.js' */
+/** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
+/** @import { RedactableTabContents } from './cells.js' */
 
 const WASTE_BALANCE_NOTE_LAST_ROW = 3
 const WASTE_BALANCE_BAND_ROW = WASTE_BALANCE_NOTE_LAST_ROW + 1
@@ -40,8 +45,23 @@ const WASTE_BALANCE_HEADING_ROW = 9
  * A row of the waste balance: its material and accreditation type, then its
  * net credit for each month and for the period.
  *
- * @typedef {{ labels: readonly [string, string], netCredits: number[] }} WasteBalanceRow
+ * @typedef {{ labels: readonly [string, string], netCredits: (number | string)[] }} WasteBalanceRow
  */
+
+/**
+ * A net credit as published: "[c]" where redacted and too few operators were
+ * accredited for it. Each month's and the period's net credit is judged on its
+ * own operators, as the regulator pages mark them.
+ *
+ * @param {number} netCredit
+ * @param {OperatorCounts} counts
+ * @param {boolean} redacted
+ * @returns {number | string}
+ */
+const publishedNetCredit = (netCredit, counts, redacted) =>
+  redacted && fromFewOperators(counts, netCredit !== 0)
+    ? CONFIDENTIAL
+    : netCredit
 
 /**
  * A row for each accreditation type of each material the period has an
@@ -49,11 +69,11 @@ const WASTE_BALANCE_HEADING_ROW = 9
  * period's.
  *
  * @param {ExcelJS.Workbook} workbook
- * @param {TabContents} contents
+ * @param {RedactableTabContents} contents
  */
 export const addWasteBalance = (
   workbook,
-  { months, period, asOf, figures }
+  { months, period, asOf, figures, redacted }
 ) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.WASTE_BALANCE)
   setWidths(worksheet, COLUMN_WIDTHS.WASTE_BALANCE)
@@ -101,10 +121,15 @@ export const addWasteBalance = (
     WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, typeLabel]) => ({
       labels: [materialLabel, typeLabel],
       netCredits: [
-        ...months.map(
-          (month) => served.months[month].figures[material][type].netCredit
-        ),
-        served.period.figures[material][type].netCredit
+        ...months.map((month) => {
+          const figure = served.months[month].figures[material][type]
+          return publishedNetCredit(figure.netCredit, figure, redacted)
+        }),
+        publishedNetCredit(
+          served.period.figures[material][type].netCredit,
+          served.period.operatorCounts[material][type],
+          redacted
+        )
       ]
     }))
   )

@@ -5,10 +5,12 @@ import {
   KEY_FIELD,
   KEY_HEADING,
   KEY_INTRODUCTION,
-  KEY_ROW_HEIGHTS
+  KEY_ROW_HEIGHTS,
+  ROW_HEIGHT
 } from '#market-insights/domain/published-workbook-style.js'
 import {
   KEY,
+  KEY_CONFIDENTIAL,
   WORKSHEET_NAME
 } from '#market-insights/domain/published-workbook-text.js'
 import { setWidths, write } from './cells.js'
@@ -49,8 +51,9 @@ const writeKeyFields = (worksheet, row, cells) => {
 
 /**
  * @param {ExcelJS.Workbook} workbook
+ * @param {{ redacted: boolean }} options - a redacted workbook's Key also says what "[c]" means
  */
-export const addKey = (workbook) => {
+export const addKey = (workbook, { redacted }) => {
   const worksheet = workbook.addWorksheet(WORKSHEET_NAME.KEY)
   setWidths(worksheet, COLUMN_WIDTHS.KEY)
   for (const [number, height] of Object.entries(KEY_ROW_HEIGHTS)) {
@@ -78,4 +81,16 @@ export const addKey = (workbook) => {
     })
     row += 2 + fields.length
   })
+
+  if (redacted) {
+    const confidentialRow = row + 1
+    const [field, description] = KEY_CONFIDENTIAL
+    write(worksheet.getCell(`A${confidentialRow}`), field, KEY_FIELD)
+    write(
+      worksheet.getCell(`B${confidentialRow}`),
+      description,
+      KEY_DESCRIPTION
+    )
+    worksheet.getRow(confidentialRow).height = ROW_HEIGHT.KEY_CONFIDENTIAL
+  }
 }

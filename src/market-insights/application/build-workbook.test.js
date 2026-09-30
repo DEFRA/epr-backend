@@ -16,7 +16,10 @@ describe('building the published market insights workbook', () => {
 
   beforeAll(async () => {
     generated = await reread(
-      await buildMarketInsightsWorkbook(readParamsFor(JANUARY_TO_JUNE_2026))
+      await buildMarketInsightsWorkbook({
+        ...readParamsFor(JANUARY_TO_JUNE_2026),
+        redacted: true
+      })
     )
   })
 

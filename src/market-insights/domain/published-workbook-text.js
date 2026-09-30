@@ -14,6 +14,7 @@ import {
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { CONFIDENTIAL } from './confidential-figures.js'
 
 /** @import { Material, TonnageBand, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
@@ -365,6 +366,15 @@ const KEY_NOTES_ROWS = [
     "The average price per tonne of packaging waste received by the exporter for the sale of PERNs in that month. Calculated by dividing the sum of 'Total revenue from PRNs/PERNs' / 'Tonnage of PRNs/PERNs issued'"
   ]
 ]
+
+/**
+ * The Key's row saying what "[c]" means, which only a redacted workbook
+ * carries: the shorthand, then its description.
+ */
+export const KEY_CONFIDENTIAL = Object.freeze([
+  CONFIDENTIAL,
+  'Confidential. This figure could reveal an individual operator’s own figures, because fewer than three operators were accredited for it.'
+])
 
 /**
  * The Key tab: an introduction, then two tables, each under the same title

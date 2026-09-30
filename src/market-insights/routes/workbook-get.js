@@ -1,3 +1,4 @@
+import Joi from 'joi'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { buildMarketInsightsWorkbook } from '#market-insights/application/build-workbook.js'
 import {
@@ -23,7 +24,10 @@ export const marketInsightsWorkbookGet = {
     },
     tags: ['api', 'market-insights'],
     validate: {
-      params: monthlyPeriodParamsSchema
+      params: monthlyPeriodParamsSchema,
+      query: Joi.object({
+        unredacted: Joi.boolean().default(false)
+      })
     }
   },
   /**
@@ -34,8 +38,13 @@ export const marketInsightsWorkbookGet = {
    * the same reason: it is run occasionally, by one regulator who is waiting
    * for it.
    *
+   * It is redacted unless asked for unredacted: redacted, it shows "[c]" in
+   * place of every figure from too few operators. The full workbook is for
+   * regulators to compare against.
+   *
    * @param {HapiRequest & {
    *   params: { year: number, cadence: 'monthly', period: number },
+   *   query: { unredacted: boolean },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
@@ -45,7 +54,7 @@ export const marketInsightsWorkbookGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { params, logger } = request
+    const { params, query, logger } = request
 
     const now = new Date()
     const months = publishedMonthsThrough(
@@ -63,7 +72,8 @@ export const marketInsightsWorkbookGet = {
       logger,
       year: params.year,
       months,
-      now
+      now,
+      redacted: !query.unredacted
     })
 
     return h
