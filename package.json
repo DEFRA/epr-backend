@@ -10,6 +10,7 @@
     "#application/*": "./src/application/*",
     "#auditing/*": "./src/auditing/*",
     "#auth/*": "./src/common/helpers/auth/*",
+    "#cancelled-accreditation-reports-diagnostic/*": "./src/cancelled-accreditation-reports-diagnostic/*",
     "#common/*": "./src/common/*",
     "#data/*": "./src/data/*",
     "#domain/*": "./src/domain/*",
