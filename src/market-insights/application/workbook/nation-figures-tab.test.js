@@ -475,6 +475,12 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
       expect(valuesIn(redacted, 'B12', 'K12')).toEqual([confidential(10)])
     })
 
+    it('align "[c]" right, like the numbers beside it', () => {
+      // February's plastic reprocessor row, then January's exporter grand total.
+      expect(redacted.getCell('B21').alignment?.horizontal).toBe('right')
+      expect(redacted.getCell('B15').alignment?.horizontal).toBe('right')
+    })
+
     it('show every figure of a row with three operators accredited', () => {
       // February's wood reprocessor row, then its PRN row.
       expect(valuesIn(full, 'B22', 'H22')).not.toEqual([zeros(7)])

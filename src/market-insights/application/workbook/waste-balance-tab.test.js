@@ -496,6 +496,16 @@ describe('the waste balance tab', () => {
       ).toEqual(['[c]', '[c]', '[c]', '[c]'])
     })
 
+    it('aligns "[c]" right, like the numbers beside it', () => {
+      const index = rowLabels(redacted).findIndex(
+        ([material, type]) => material === 'Steel' && type === 'Reprocessor'
+      )
+      expect(
+        redacted.getCell(HEADING_ROW + 1 + index, FIRST_FIGURE_COLUMN).alignment
+          ?.horizontal
+      ).toBe('right')
+    })
+
     it('shows every net credit and total with three operators accredited', () => {
       expect(
         figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Wood', 'Reprocessor'])

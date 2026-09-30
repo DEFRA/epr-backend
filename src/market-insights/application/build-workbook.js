@@ -42,7 +42,8 @@ const renderWorkbook = ({ figures, months, now, redacted }) => {
  * every tab is taken from one reading of the register.
  *
  * Redacted, it shows "[c]" in place of every figure the regulator pages mark
- * as coming from too few operators, so that none identifies an operator.
+ * as coming from too few operators. A total is judged on its own operators
+ * alone, so it can still give away a figure that was replaced.
  *
  * @param {ReadMarketInsightsFiguresParams & { redacted: boolean }} params
  * @returns {Promise<ExcelJS.Workbook>}

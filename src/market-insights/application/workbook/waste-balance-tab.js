@@ -30,6 +30,7 @@ import {
   tableOf,
   UK_SCOPE,
   write,
+  writeFigure,
   writeRow
 } from './cells.js'
 
@@ -137,6 +138,12 @@ export const addWasteBalance = (
   rows.forEach(({ labels, netCredits }, index) => {
     const row = WASTE_BALANCE_HEADING_ROW + 1 + index
     writeRow(worksheet, row, 1, labels, LABEL)
-    writeRow(worksheet, row, labels.length + 1, netCredits, FIGURE)
+    netCredits.forEach((netCredit, index) => {
+      writeFigure(
+        worksheet.getCell(row, labels.length + 1 + index),
+        netCredit,
+        FIGURE
+      )
+    })
   })
 }
