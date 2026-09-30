@@ -6,14 +6,12 @@ import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-
 import {
   toAccreditationsView,
   toOrganisationView,
-  toOverseasSitesView,
   toRegistrationView
 } from './organisation-view.js'
 import {
   accreditationViewSchema,
   accreditationsViewResponseSchema,
   organisationViewSchema,
-  overseasSitesViewResponseSchema,
   registrationViewSchema,
   registrationsViewSchema
 } from './response.schema.js'
@@ -28,7 +26,6 @@ export const registrationsViewGetPath = `${organisationViewGetPath}/registration
 export const registrationViewGetPath = `${registrationsViewGetPath}/{registrationNumber}`
 export const accreditationsViewGetPath = `${registrationViewGetPath}/accreditations`
 export const accreditationViewGetPath = `${accreditationsViewGetPath}/{year}`
-export const overseasSitesViewGetPath = `${registrationViewGetPath}/overseas-sites`
 
 const auth = { scope: [SCOPES.organisationRead, SCOPES.adminRead] }
 
@@ -193,32 +190,6 @@ export const accreditationViewGet = {
     }
 
     return h.response(accreditation).code(StatusCodes.OK)
-  }
-}
-
-export const overseasSitesViewGet = {
-  method: 'GET',
-  path: overseasSitesViewGetPath,
-  options: {
-    auth,
-    tags: ['api'],
-    validate: { params: Joi.object(registrationParams) },
-    response: { schema: overseasSitesViewResponseSchema }
-  },
-  /**
-   * @param {RegistrationRequest} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { registration } = await findRegistration(request)
-    const overseasSites = await resolveOverseasSiteDetails(
-      request.overseasSitesRepository,
-      registration.overseasSites
-    )
-
-    return h
-      .response({ overseasSites: toOverseasSitesView(overseasSites) })
-      .code(StatusCodes.OK)
   }
 }
 

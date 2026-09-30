@@ -403,14 +403,5 @@ describe('organisation view routes', () => {
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
-
-    it('returns the registration overseas sites keyed by ORS id', async () => {
-      const response = await get(
-        `${base}/${EXPORTER_REGISTRATION_NUMBER}/overseas-sites`
-      )
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(Object.keys(body(response).overseasSites)).toEqual(['001', '002'])
-    })
   })
 })

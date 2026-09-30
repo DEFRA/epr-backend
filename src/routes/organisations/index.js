@@ -3,6 +3,5 @@ export {
   registrationsViewGet,
   registrationViewGet,
   accreditationsViewGet,
-  accreditationViewGet,
-  overseasSitesViewGet
+  accreditationViewGet
 } from './get.js'

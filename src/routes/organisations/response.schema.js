@@ -104,7 +104,3 @@ export const registrationsViewSchema = Joi.object({
 export const accreditationsViewResponseSchema = Joi.object({
   accreditations: accreditationsViewSchema
 })
-
-export const overseasSitesViewResponseSchema = Joi.object({
-  overseasSites: overseasSitesViewSchema
-})

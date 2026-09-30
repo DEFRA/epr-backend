@@ -185,7 +185,7 @@ function toSiteView(registration) {
  * @param {Record<string, OverseasSiteDetail>} overseasSites
  * @returns {Record<string, OverseasSiteView>}
  */
-export function toOverseasSitesView(overseasSites) {
+function toOverseasSitesView(overseasSites) {
   return Object.fromEntries(
     Object.entries(overseasSites).map(([orsId, site]) => [
       orsId,
