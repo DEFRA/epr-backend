@@ -90,6 +90,11 @@ const requiredWhenDated = (schema) =>
 /**
  * `Accreditation` from `#domain/organisations/accreditation.js`: an
  * accreditation exactly as the organisations model holds it.
+ *
+ * Fields the model does not name pass through, at every level: stored data can
+ * differ from the model, and Hapi answers a response that fails its schema with
+ * a 500, so a strict schema would fail every read of an organisation holding
+ * such a field. Loose (via `allowUnknown`) while this is a POC.
  */
 export const accreditationResponseSchema = Joi.object({
   id: Joi.string().required(),
@@ -129,4 +134,6 @@ export const accreditationResponseSchema = Joi.object({
   submittedToRegulator: Joi.string().required(),
   submitterContactDetails: userSchema.required(),
   wasteProcessingType: Joi.string().required()
-}).label('Accreditation')
+})
+  .prefs({ allowUnknown: true })
+  .label('Accreditation')

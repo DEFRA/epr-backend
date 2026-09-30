@@ -54,13 +54,18 @@ describe('accreditationResponseSchema', () => {
     expect(error).toBeUndefined()
   })
 
-  it('refuses a field the model does not hold', () => {
+  it('accepts fields the model does not hold, at any level', () => {
     const [accreditation] = sample.accreditations
-    const { error } = accreditationResponseSchema.validate(
-      { ...asRead(accreditation), unexpected: true },
-      { abortEarly: false }
-    )
+    const read = asRead(accreditation)
+    const { error } = accreditationResponseSchema.validate({
+      ...read,
+      unexpected: true,
+      site: {
+        ...read.site,
+        address: { ...read.site.address, unexpected: true }
+      }
+    })
 
-    expect(error?.message).toBe('"unexpected" is not allowed')
+    expect(error).toBeUndefined()
   })
 })
