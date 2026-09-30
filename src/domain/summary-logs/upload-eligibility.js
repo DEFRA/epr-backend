@@ -1,5 +1,5 @@
 import { isFutureYear } from '#common/helpers/dates/year.js'
-import { isRegistrationActiveInYear } from '#common/helpers/dates/registration.js'
+import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
 
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
