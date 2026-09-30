@@ -77,7 +77,10 @@ const LOCAL_ACCREDITATION_YEAR = 2026
  * @param {Record<string, Record<string, OverseasSiteDetail>>} overseasSitesByRegistrationId
  * @returns {OrganisationView}
  */
-export function toOrganisationView(organisation, overseasSitesByRegistrationId) {
+export function toOrganisationView(
+  organisation,
+  overseasSitesByRegistrationId
+) {
   const { companyDetails, linkedDefraOrganisation } = organisation
 
   return {

@@ -222,7 +222,11 @@ describe('organisation view routes', () => {
       ).registrations
 
       expect(registration.accreditations).toEqual({
-        2026: { id: accreditation.id, accreditationNumber: null, status: 'created' }
+        2026: {
+          id: accreditation.id,
+          accreditationNumber: null,
+          status: 'created'
+        }
       })
     })
 
@@ -342,7 +346,9 @@ describe('organisation view routes', () => {
     })
 
     it('returns the registration accreditations keyed by year', async () => {
-      const response = await get(`${base}/${REGISTRATION_NUMBER}/accreditations`)
+      const response = await get(
+        `${base}/${REGISTRATION_NUMBER}/accreditations`
+      )
 
       expect(body(response)).toEqual({
         accreditations: {
