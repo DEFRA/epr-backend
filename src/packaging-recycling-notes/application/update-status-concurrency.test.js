@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import {
   PRN_STATUS,
@@ -47,6 +47,17 @@ const noopLogger = () => ({
   trace: vi.fn(),
   fatal: vi.fn(),
   child: vi.fn()
+})
+
+// The fixtures are 2026-year accreditations: from 1 Feb 2027 the real clock
+// falls outside their reg 92(1)(c) issuance window and every raise/issue here
+// would be refused, so every test runs on a pinned in-window clock.
+beforeEach(() => {
+  vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
