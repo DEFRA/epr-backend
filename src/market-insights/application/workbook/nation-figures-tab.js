@@ -1,7 +1,7 @@
 import { NATION, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   CONFIDENTIAL,
-  isConfidential
+  fromFewOperators
 } from '#market-insights/domain/confidential-figures.js'
 import { nationSegment } from '#market-insights/domain/nation-segment.js'
 import {
@@ -120,7 +120,7 @@ const holdsData = (row, accreditationType) =>
 
 /**
  * A row or grand total's figures for one table as published, each shown as
- * "[c]" where redacted and the row is confidential. A dash stays a
+ * "[c]" where redacted and the row is from too few operators. A dash stays a
  * dash, since it gives nothing away.
  *
  * @param {ServedRow} row
@@ -130,7 +130,7 @@ const holdsData = (row, accreditationType) =>
  */
 const publishedFigures = (row, { figures, accreditationType }, redacted) => {
   const values = figures.map((figure) => publishedFigure(row, figure))
-  return redacted && isConfidential(row, holdsData(row, accreditationType))
+  return redacted && fromFewOperators(row, holdsData(row, accreditationType))
     ? values.map((value) => (value === NO_FIGURE ? value : CONFIDENTIAL))
     : values
 }

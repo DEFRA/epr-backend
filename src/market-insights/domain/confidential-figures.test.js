@@ -1,27 +1,27 @@
-import { isConfidential } from './confidential-figures.js'
+import { fromFewOperators } from './confidential-figures.js'
 
-describe('a confidential row', () => {
+describe('a row from too few operators', () => {
   it.each([1, 2])(
-    'is one with %i operators accredited, whether or not it holds data',
+    'holds for a row with %i operators accredited, whether or not it holds data',
     (operatorCount) => {
-      expect(isConfidential({ operatorCount }, false)).toBe(true)
-      expect(isConfidential({ operatorCount }, true)).toBe(true)
+      expect(fromFewOperators({ operatorCount }, false)).toBe(true)
+      expect(fromFewOperators({ operatorCount }, true)).toBe(true)
     }
   )
 
   it.each([3, 4])(
-    'is not one with %i operators accredited, whether or not it holds data',
+    'does not hold for a row with %i operators accredited, whether or not it holds data',
     (operatorCount) => {
-      expect(isConfidential({ operatorCount }, false)).toBe(false)
-      expect(isConfidential({ operatorCount }, true)).toBe(false)
+      expect(fromFewOperators({ operatorCount }, false)).toBe(false)
+      expect(fromFewOperators({ operatorCount }, true)).toBe(false)
     }
   )
 
-  it('is one with no operator accredited that still holds data', () => {
-    expect(isConfidential({ operatorCount: 0 }, true)).toBe(true)
+  it('holds for a row with no operator accredited that still holds data', () => {
+    expect(fromFewOperators({ operatorCount: 0 }, true)).toBe(true)
   })
 
-  it('is not one with no operator accredited and nothing in it', () => {
-    expect(isConfidential({ operatorCount: 0 }, false)).toBe(false)
+  it('does not hold for a row with no operator accredited and nothing in it', () => {
+    expect(fromFewOperators({ operatorCount: 0 }, false)).toBe(false)
   })
 })
