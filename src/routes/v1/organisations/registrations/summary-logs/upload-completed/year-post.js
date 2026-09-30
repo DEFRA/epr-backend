@@ -74,9 +74,7 @@ export const summaryLogsUploadCompletedYear = {
         summaryLogId,
         summaryLogUpload,
         logger,
-        organisationId,
-        registrationId,
-        year
+        { organisationId, registrationId, year }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

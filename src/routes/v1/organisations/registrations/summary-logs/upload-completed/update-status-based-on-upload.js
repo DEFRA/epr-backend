@@ -102,9 +102,7 @@ const resolveAccreditationId = async (
  * @param {string} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {number | undefined} year
+ * @param {{ organisationId: string, registrationId: string, year: number | undefined }} location
  * @returns {Promise<string>} The new status
  */
 export const updateStatusBasedOnUpload = async (
@@ -113,9 +111,7 @@ export const updateStatusBasedOnUpload = async (
   summaryLogId,
   upload,
   logger,
-  organisationId,
-  registrationId,
-  year
+  { organisationId, registrationId, year }
 ) => {
   const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
