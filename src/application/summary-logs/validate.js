@@ -584,7 +584,9 @@ const classifyAndPersistResult = async ({
       registration,
       overseasSites,
       reportsService,
-      overseasSitesRepository
+      overseasSitesRepository,
+      summaryLogRowStatesRepository,
+      ledgerId: ledgerIdFor(summaryLog, registration)
     })
 
   await persistValidationResult({

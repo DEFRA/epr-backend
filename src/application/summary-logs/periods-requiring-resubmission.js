@@ -7,6 +7,7 @@ import {
 } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
+import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
@@ -21,20 +22,25 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
+/** @import {ReportSource} from '#reports/repository/port.js' */
+/** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 
 /**
- * The per-period-invariant context aggregateAfterFigures needs, computed once
- * for the whole upload.
+ * The per-period-invariant context the comparison needs, computed once for the
+ * whole upload.
  *
- * @typedef {Object} AfterFiguresContext
+ * @typedef {Object} FiguresContext
  * @property {ReportableWasteRecordState[]} newHeadRowStates
  * @property {OperatorCategory} operatorCategory
  * @property {Map<string, OrsDetails>} orsDetailsMap
+ * @property {WasteBalanceLedgerId} ledgerId
+ * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  */
 
-// The after-state is generated from this upload's in-memory rows, not a
-// persisted head, so it has no submission provenance. extractReportedData
-// excludes source, so the nulls never reach the diff.
+// Both sides are aggregated only to compare them, never persisted, so neither
+// carries submission provenance. extractReportedData excludes source, so the
+// nulls never reach the diff.
 const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
 
 /**
@@ -43,7 +49,8 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * never contribute to a period's figures). Each summary log is a full snapshot,
  * so this upload IS the new head. Rows are projected through the same seam the
  * submit path persists them with, so the data (coerced tonnages, normalised
- * shape) matches the frozen report's head exactly.
+ * shape) matches the persisted row states the report's source head is read
+ * from.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
  * @param {Accreditation | null} accreditation
@@ -80,20 +87,22 @@ const currentReportIdForPeriod = (periodicReports, { year, cadence, period }) =>
 /* v8 ignore stop */
 
 /**
- * Generates the reported figures this upload would produce for one period: the
- * summary-log aggregation of the new head, matching the assembly the stored
- * report was frozen from. PRN issued tonnage is excluded from the resubmission
- * comparison (see reported-data-equivalence), so it is not aggregated here.
+ * Aggregates the figures a period's report presents from a head's row states,
+ * using today's aggregation code and ORS registry. Both sides of the comparison
+ * are built here, so anything that has changed since the report was submitted
+ * (an ORS rename or approval change, an aggregation fix) affects both sides
+ * alike and cannot read as a change this upload caused. PRN issued tonnage is
+ * excluded from the comparison (see reported-data-equivalence), so it is not
+ * aggregated.
  *
- * @param {AfterFiguresContext & { period: PeriodRef }} params
+ * @param {ReportableWasteRecordState[]} rowStates
+ * @param {Pick<FiguresContext, 'operatorCategory' | 'orsDetailsMap'> & { period: PeriodRef }} params
  */
-const aggregateAfterFigures = ({
-  period: { year, cadence, period },
-  newHeadRowStates,
-  operatorCategory,
-  orsDetailsMap
-}) =>
-  aggregateReportDetail(newHeadRowStates, {
+const aggregatePeriodFigures = (
+  rowStates,
+  { period: { year, cadence, period }, operatorCategory, orsDetailsMap }
+) =>
+  aggregateReportDetail(rowStates, {
     operatorCategory,
     cadence: /** @type {Cadence} */ (cadence),
     year,
@@ -103,21 +112,26 @@ const aggregateAfterFigures = ({
   })
 
 /**
- * Whether a closed period's reported figures changed between its frozen report
- * and what this upload would now produce.
+ * Whether this upload changes what a closed period's report would present.
+ *
+ * The before-state is the report rebuilt from the submission it was generated
+ * from (its source summary log), not the report as stored. Row-state history is
+ * retained (ADR-0037), so the source head can be re-read and re-aggregated
+ * alongside the new head, isolating the effect of this upload from drift since
+ * submission. The stored report is read only for its provenance.
  *
  * @param {object} params
  * @param {PeriodRef} params.period
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
- * @param {AfterFiguresContext} params.afterContext
+ * @param {FiguresContext} params.context
  * @returns {Promise<boolean>}
  */
 const periodFiguresChanged = async ({
   period,
   periodicReports,
   reportsService,
-  afterContext
+  context
 }) => {
   const currentReportId = currentReportIdForPeriod(periodicReports, period)
   /* v8 ignore next 3 -- a closed period always has a current stored report */
@@ -125,8 +139,20 @@ const periodFiguresChanged = async ({
     return true
   }
 
-  const before = await reportsService.findReportById(currentReportId)
-  const after = aggregateAfterFigures({ period, ...afterContext })
+  const report = await reportsService.findReportById(currentReportId)
+  // The create schema requires source, so every stored report carries it.
+  const { summaryLogId } = /** @type {ReportSource} */ (report.source)
+  const sourceRowStates = await wasteRecordStatesForHead(
+    context.summaryLogRowStatesRepository,
+    context.ledgerId,
+    summaryLogId
+  )
+
+  const before = aggregatePeriodFigures(sourceRowStates, { period, ...context })
+  const after = aggregatePeriodFigures(context.newHeadRowStates, {
+    period,
+    ...context
+  })
 
   return !reportedDataAreEquivalent(
     extractReportedData(before),
@@ -137,8 +163,9 @@ const periodFiguresChanged = async ({
 /**
  * Narrows the closed periods this upload touched to those whose reported figures
  * actually changed, so resubmission is required only when it carries new
- * information. Reads each period's frozen report as the before-state and
- * compares it against the figures this upload would now produce.
+ * information. For each period it rebuilds the report from the submission the
+ * report was generated from and compares it against what this upload would now
+ * produce, both aggregated the same way.
  *
  * @param {object} params
  * @param {PeriodRef[]} params.closedPeriods
@@ -148,6 +175,9 @@ const periodFiguresChanged = async ({
  * @param {OverseasSitesContext} params.overseasSites
  * @param {ReportsService} params.reportsService
  * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId - the ledger the report's
+ *   source submission was written to
  * @returns {Promise<PeriodRef[]>}
  */
 export const computePeriodsRequiringResubmission = async ({
@@ -157,7 +187,9 @@ export const computePeriodsRequiringResubmission = async ({
   registration,
   overseasSites,
   reportsService,
-  overseasSitesRepository
+  overseasSitesRepository,
+  summaryLogRowStatesRepository,
+  ledgerId
 }) => {
   if (closedPeriods.length === 0) {
     return []
@@ -178,10 +210,12 @@ export const computePeriodsRequiringResubmission = async ({
     overseasSites
   )
 
-  const afterContext = {
+  const context = {
     newHeadRowStates,
     operatorCategory,
-    orsDetailsMap
+    orsDetailsMap,
+    ledgerId,
+    summaryLogRowStatesRepository
   }
 
   const changed = await Promise.all(
@@ -190,7 +224,7 @@ export const computePeriodsRequiringResubmission = async ({
         period,
         periodicReports,
         reportsService,
-        afterContext
+        context
       })
     )
   )

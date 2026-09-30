@@ -809,7 +809,7 @@ const createTestSubmitterWorker = ({
  * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
  * @returns {Object} Test organisation with registrations and accreditations
  */
-const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
+export const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
 const TEST_UNAPPROVED_OVERSEAS_SITE_ID = 'test-overseas-site-200'
 
 const buildComplexTestOrg = ({

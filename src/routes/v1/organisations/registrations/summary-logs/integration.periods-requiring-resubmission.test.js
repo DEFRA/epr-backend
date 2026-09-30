@@ -32,7 +32,8 @@ import {
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
   REPROCESSOR_SENT_ON_HEADERS,
-  setupWasteBalanceIntegrationEnvironment
+  setupWasteBalanceIntegrationEnvironment,
+  TEST_OVERSEAS_SITE_ID
 } from './integration-test-helpers.js'
 
 /**
@@ -596,6 +597,50 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       createLoadsExportedUploadData({
         osrName: 'Site B',
         osrCountry: 'France-FR'
+      }),
+      registeredOnlyExporterMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('does not flag a closed period for registry drift the upload did not cause', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accredited: false,
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createLoadsExportedUploadData({
+        osrName: 'Site A',
+        osrCountry: 'Vietnam-VN'
+      }),
+      registeredOnlyExporterMeta
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, Q1_2025)
+
+    // After Q1 closed, the ORS registry renames the site. The submitted report
+    // shows the old name, but the operator has not changed any reported data:
+    // both the report's source submission and this upload now resolve the new
+    // name, so the upload changes nothing the report would present.
+    await env.overseasSitesRepository.update(TEST_OVERSEAS_SITE_ID, {
+      name: 'Renamed Overseas Site'
+    })
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-after-rename',
+      'file-after-rename',
+      createLoadsExportedUploadData({
+        osrName: 'Site B',
+        osrCountry: 'Vietnam-VN'
       }),
       registeredOnlyExporterMeta
     )
