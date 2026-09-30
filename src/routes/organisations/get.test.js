@@ -267,12 +267,38 @@ describe('organisation view routes', () => {
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    it('returns 400 for an organisation number that is not a number', async () => {
+    it('returns a null trading name for an organisation without one', async () => {
+      const base = buildOrganisation({ registrations: [reprocessor()] })
+      const organisation = {
+        ...base,
+        companyDetails: { name: base.companyDetails.name }
+      }
+      await serve(organisation)
+
+      const response = await get(`/organisations/${organisation.orgId}`)
+
+      expect(body(response).tradingName).toBeNull()
+    })
+
+    it('returns a null registration number for a registration not yet granted', async () => {
+      const organisation = buildOrganisation({
+        registrations: [reprocessor({ registrationNumber: null })]
+      })
+      await serve(organisation)
+
+      const [registration] = body(
+        await get(`/organisations/${organisation.orgId}`)
+      ).registrations
+
+      expect(registration.registrationNumber).toBeNull()
+    })
+
+    it('rejects an organisation number that is not a number', async () => {
       await serve(buildOrganisation())
 
       const response = await get('/organisations/not-a-number')
 
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
     describe('authorisation', () => {
