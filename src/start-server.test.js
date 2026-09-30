@@ -101,10 +101,11 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
           updateMany: vi.fn().mockResolvedValue({ matchedCount: 0 }),
           indexes: vi.fn().mockResolvedValue([])
         }
-        server.decorate('server', 'db', {
-          collection: vi.fn().mockReturnValue(mockCollection)
+        const db = { collection: vi.fn().mockReturnValue(mockCollection) }
+        server.decorate('server', 'db', db)
+        server.decorate('server', 'mongoClient', {
+          db: vi.fn().mockReturnValue(db)
         })
-        server.decorate('server', 'mongoClient', {})
         server.decorate('server', 'locker', {})
       }
     }

@@ -54,6 +54,7 @@
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
+ * @property {(registrationIds: string[]) => Promise<Organisation[]>} findByRegistrationIds - Find the organisations holding any of these registrations
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(accreditationNumber: string) => Promise<Organisation|null>} findByAccreditationNumber - Find the organisation holding an accreditation with this number, regardless of the accreditation's status

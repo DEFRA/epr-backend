@@ -383,6 +383,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_RESUBMISSION_FIGURES_DIAGNOSTIC'
+    },
+    readAccreditationsOverHttp: {
+      doc: 'Feature Flag: POC - read accreditations over HTTP from the accreditation endpoints rather than from the organisation documents (PAE-1965)',
+      format: Boolean,
+      default: true,
+      env: 'FEATURE_FLAG_READ_ACCREDITATIONS_OVER_HTTP'
     }
   },
   formSubmissionOverrides: {

@@ -1,4 +1,5 @@
-import { describe, beforeEach, afterEach, expect } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
@@ -37,7 +38,7 @@ const it = mongoIt.extend({
 })
 
 describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', () => {
-  setupAuthContext()
+  const { getServer } = setupAuthContext()
 
   const organisationId = '6507f1f77bcf86cd79943901'
   const accreditationId1 = '507f1f77bcf86cd799439011'
@@ -106,6 +107,26 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
         })
       ])
 
+      // The server reads accreditations over HTTP from its own endpoints at
+      // APP_BASE_URL. Route those calls back into the server, with the
+      // credentials the endpoints expect.
+      vi.stubEnv('BASIC_AUTH_USERNAME', 'reg-accred')
+      vi.stubEnv('BASIC_AUTH_PASSWORD', 'changeme')
+      getServer().use(
+        http.get('http://localhost:3001/*', async ({ request }) => {
+          const { pathname, search } = new URL(request.url)
+          const response = await server.inject({
+            method: 'GET',
+            url: `${pathname}${search}`,
+            headers: Object.fromEntries(request.headers)
+          })
+          return new HttpResponse(response.payload, {
+            status: response.statusCode,
+            headers: { 'content-type': 'application/json' }
+          })
+        })
+      )
+
       server = await createServer({ mongoUri: globalThis.__MONGO_URI__ })
       await server.initialize()
     }
@@ -113,6 +134,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
 
   afterEach(async () => {
     await server.stop()
+    vi.unstubAllEnvs()
   })
 
   it('fetches waste balances from the ledger for multiple IDs', async () => {

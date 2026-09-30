@@ -360,6 +360,19 @@ const performFindByIds = (db) => async (ids) => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindByRegistrationIds = (db) => async (registrationIds) => {
+  if (registrationIds.length === 0) {
+    return []
+  }
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ 'registrations.id': { $in: registrationIds } })
+    .toArray()
+
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
@@ -549,6 +562,7 @@ export const createOrganisationsRepository = async (
       find: performFind(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
+      findByRegistrationIds: performFindByRegistrationIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       findByAccreditationNumber: performFindByAccreditationNumber(db),

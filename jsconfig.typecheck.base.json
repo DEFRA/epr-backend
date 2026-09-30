@@ -17,6 +17,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
+      "#accreditations/*": ["./src/accreditations/*"],
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],
       "#common/*": ["./src/common/*"],
