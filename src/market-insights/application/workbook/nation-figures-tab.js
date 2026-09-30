@@ -208,8 +208,8 @@ export const addNationFigures = (
     worksheet.mergeCells(top, 1, top, NATION_FIGURES_WIDTH)
     const served = servedMonthOf(table, scope, month)
 
-    tables.forEach((table, index) => {
-      const { title, columns, accreditationType } = table
+    tables.forEach((nationTable, index) => {
+      const { title, columns, accreditationType } = nationTable
       const tableTop = top + 1 + tableRows * index
       write(worksheet.getCell(tableTop, 1), title, NATION_FIGURES_TITLE)
       writeRow(worksheet, tableTop + 1, 1, columns, NATION_FIGURES_HEADING)
@@ -223,7 +223,7 @@ export const addNationFigures = (
           row,
           publishedFigures(
             served.figures[material][accreditationType],
-            table,
+            nationTable,
             redacted
           ),
           () => FIGURE
@@ -235,7 +235,11 @@ export const addNationFigures = (
       writeFigures(
         worksheet,
         totalRow,
-        publishedFigures(served.totals[accreditationType], table, redacted),
+        publishedFigures(
+          served.totals[accreditationType],
+          nationTable,
+          redacted
+        ),
         (value) =>
           value === NO_FIGURE ? GRAND_TOTAL_NO_FIGURE : GRAND_TOTAL_FIGURE
       )
