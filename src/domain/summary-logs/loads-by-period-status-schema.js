@@ -95,9 +95,9 @@ export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
   closedPeriodLoads: periodStatusByChangeSchema.required(),
   // The closed (submitted) periods this upload added or adjusted loads in.
-  // Retained for rollback; superseded as the resubmission signal by
-  // periodsRequiringResubmission. Optional with a default so logs written
-  // before this field existed still validate on read.
+  // Superseded as the resubmission signal by periodsRequiringResubmission.
+  // Optional with a default so logs written before this field existed still
+  // validate on read.
   closedPeriods: Joi.array().items(periodRefSchema).default([]),
   // The subset of closed periods whose reported figures actually changed, so
   // resubmission is genuinely required. Computed at validation time and read by
