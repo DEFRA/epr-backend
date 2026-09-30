@@ -2,22 +2,19 @@
  * The reported-data comparison core, shared by the resubmission-figures
  * diagnostic and the validation-time resubmission gate.
  *
- * `extractReportedData` picks exactly the reported-data subset a report presents
- * and excludes provenance (`source`), lifecycle metadata (`status`,
- * `resubmissionRequired`), and free-text and operator-entered fields
- * (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
- * `tonnageReceivedNotExported`). It also drops each supplier's telephone and
- * email: by agreement (PAE-1983) a change only to a supplier's contact number
- * or email does not require resubmission, even though the report stores them.
- * PRN issued tonnage is excluded entirely: it is not summary-log-derived, so a
- * summary-log upload — the sole trigger of this comparison — can never be its
- * cause. A PRN lifecycle change (e.g. a cancellation) that restates a closed
- * period's issued tonnage is out of scope for the summary-log resubmission gate.
- * Missing activity blocks collapse to null so present-vs-absent is itself a
- * difference.
+ * `REPORTED_DATA_FIELDS` classifies every field a stored report holds as either
+ * compared or excluded (with the reason it is excluded), and
+ * `extractReportedData` picks the compared fields from a report. The
+ * classification is exhaustive by test: a field added to the report schema fails
+ * the build until it is classified here, so a new reported figure can never be
+ * silently left out of the comparison.
+ *
+ * Absent and null compared fields both extract as null. A missing activity block
+ * also extracts as null, so present-vs-absent is itself a difference.
  *
  * `canonicalise` sorts object keys and array elements, so the comparison is
- * insensitive to both key order and row order.
+ * insensitive to both key order and row order. It rejects anything that is not
+ * plain JSON rather than serialising it ambiguously.
  */
 
 /** @import { RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
@@ -32,54 +29,139 @@
  */
 
 /**
- * Strips a supplier down to the fields the report compares: its telephone and
- * email are excluded so a contact-only correction does not read as a change.
- *
- * @param {RecyclingActivity['suppliers'][number]} supplier
+ * @typedef {{ excluded: string }} ExcludedField
  */
-const dropSupplierContact = ({
-  supplierPhone: _supplierPhone,
-  supplierEmail: _supplierEmail,
-  ...rest
-}) => rest
 
 /**
- * The summary-log activity subset of one report — the reported data it presents,
- * without the free-text and operator-entered fields or supplier contact details.
- * PRN issued tonnage is deliberately excluded (see the module comment).
+ * How one report field takes part in the comparison: compared, excluded with a
+ * reason, a one-entry array whose entry classifies each item, or an object that
+ * classifies each of its fields.
+ *
+ * @typedef {'compared' | ExcludedField | [FieldSpec] | { [field: string]: FieldSpec }} FieldSpec
+ */
+
+/**
+ * @typedef {null | boolean | number | string | ReportedDataValue[] | { [field: string]: ReportedDataValue }} ReportedDataValue
+ */
+
+const COMPARED = 'compared'
+
+/**
+ * @param {string} reason
+ * @returns {ExcludedField}
+ */
+const excluded = (reason) => ({ excluded: reason })
+
+const OPERATOR_ENTERED =
+  'Entered by the operator in the reporting journey, not derived from the summary log'
+
+const SUPPLIER_CONTACT =
+  'Agreed exception (PAE-1983): a change only to a supplier contact detail does not require resubmission'
+
+/**
+ * Every field a stored report holds, classified. See the module comment.
+ *
+ * @type {{ [field: string]: FieldSpec }}
+ */
+export const REPORTED_DATA_FIELDS = {
+  source: excluded('Provenance: changes on every upload'),
+  recyclingActivity: {
+    suppliers: [
+      {
+        supplierName: COMPARED,
+        facilityType: COMPARED,
+        supplierAddress: COMPARED,
+        supplierPhone: excluded(SUPPLIER_CONTACT),
+        supplierEmail: excluded(SUPPLIER_CONTACT),
+        tonnageReceived: COMPARED
+      }
+    ],
+    totalTonnageReceived: COMPARED,
+    tonnageRecycled: excluded(OPERATOR_ENTERED),
+    tonnageNotRecycled: excluded(OPERATOR_ENTERED)
+  },
+  exportActivity: {
+    overseasSites: [
+      {
+        orsId: COMPARED,
+        siteName: COMPARED,
+        country: COMPARED,
+        tonnageExported: COMPARED,
+        approved: COMPARED
+      }
+    ],
+    unapprovedOverseasSites: [{ orsId: COMPARED, tonnageExported: COMPARED }],
+    totalTonnageExported: COMPARED,
+    tonnageRefusedAtDestination: COMPARED,
+    tonnageStoppedDuringExport: COMPARED,
+    totalTonnageRefusedOrStopped: COMPARED,
+    tonnageRepatriated: COMPARED,
+    tonnageReceivedNotExported: excluded(OPERATOR_ENTERED)
+  },
+  wasteSent: {
+    tonnageSentToReprocessor: COMPARED,
+    tonnageSentToExporter: COMPARED,
+    tonnageSentToAnotherSite: COMPARED,
+    finalDestinations: [
+      {
+        recipientName: COMPARED,
+        facilityType: COMPARED,
+        address: COMPARED,
+        tonnageSentOn: COMPARED
+      }
+    ]
+  },
+  prn: excluded(
+    'Not summary-log-derived: a summary-log upload, the only trigger of this comparison, cannot cause a PRN change (see defra-fo16)'
+  ),
+  supportingInformation: excluded(OPERATOR_ENTERED)
+}
+
+/**
+ * @param {FieldSpec} fieldSpec
+ * @returns {fieldSpec is ExcludedField}
+ */
+const isExcluded = (fieldSpec) =>
+  typeof fieldSpec === 'object' &&
+  !Array.isArray(fieldSpec) &&
+  'excluded' in fieldSpec
+
+/**
+ * Picks the compared fields of `value` as `fieldSpec` classifies them. Absent
+ * values extract as null.
+ *
+ * @param {FieldSpec} fieldSpec
+ * @param {*} value
+ * @returns {ReportedDataValue}
+ */
+const pickReportedData = (fieldSpec, value) => {
+  if (value === undefined || value === null) {
+    return null
+  }
+  if (Array.isArray(fieldSpec)) {
+    return value.map((/** @type {*} */ item) =>
+      pickReportedData(fieldSpec[0], item)
+    )
+  }
+  if (typeof fieldSpec === 'object') {
+    return Object.fromEntries(
+      Object.entries(fieldSpec)
+        .filter(([, spec]) => !isExcluded(spec))
+        .map(([field, spec]) => [field, pickReportedData(spec, value[field])])
+    )
+  }
+  return value
+}
+
+/**
+ * The compared subset of one report — the reported data it presents, per
+ * `REPORTED_DATA_FIELDS`.
  *
  * @param {ReportedDataBearingReport} report
+ * @returns {ReportedDataValue}
  */
-export const extractReportedData = (report) => ({
-  recyclingActivity: report.recyclingActivity
-    ? {
-        suppliers: report.recyclingActivity.suppliers.map(dropSupplierContact),
-        totalTonnageReceived: report.recyclingActivity.totalTonnageReceived
-      }
-    : null,
-  exportActivity: report.exportActivity
-    ? {
-        overseasSites: report.exportActivity.overseasSites,
-        unapprovedOverseasSites: report.exportActivity.unapprovedOverseasSites,
-        totalTonnageExported: report.exportActivity.totalTonnageExported,
-        tonnageRefusedAtDestination:
-          report.exportActivity.tonnageRefusedAtDestination,
-        tonnageStoppedDuringExport:
-          report.exportActivity.tonnageStoppedDuringExport,
-        totalTonnageRefusedOrStopped:
-          report.exportActivity.totalTonnageRefusedOrStopped,
-        tonnageRepatriated: report.exportActivity.tonnageRepatriated
-      }
-    : null,
-  wasteSent: report.wasteSent
-    ? {
-        tonnageSentToReprocessor: report.wasteSent.tonnageSentToReprocessor,
-        tonnageSentToExporter: report.wasteSent.tonnageSentToExporter,
-        tonnageSentToAnotherSite: report.wasteSent.tonnageSentToAnotherSite,
-        finalDestinations: report.wasteSent.finalDestinations
-      }
-    : null
-})
+export const extractReportedData = (report) =>
+  pickReportedData(REPORTED_DATA_FIELDS, report)
 
 /** @param {string} a @param {string} b */
 const byString = (a, b) => a.localeCompare(b)
@@ -97,11 +179,28 @@ const normaliseString = (value) =>
   value.trim().replace(/\s+/g, ' ').toLowerCase()
 
 /**
+ * True for an object literal (or a prototype-less object): reported data holds
+ * no class instances, so a Date, Map or similar would otherwise serialise as an
+ * empty object and compare equal to any other.
+ *
+ * @param {object} value
+ */
+const isPlainObject = (value) => {
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+/**
  * Recursively serialises a value to a stable string with object keys sorted and
  * array elements ordered by their own serialisation, so the result is
  * insensitive to key order and row order. String values are normalised
  * (see normaliseString) so casing/whitespace-only edits compare equal; object
  * keys are left as-is.
+ *
+ * Accepts only plain JSON: plain objects, arrays, strings, finite numbers,
+ * booleans and null. Anything else (a Date, a class instance, NaN, undefined)
+ * throws, because it would otherwise serialise ambiguously and could make two
+ * different reports compare equal.
  *
  * @param {*} value
  * @returns {string}
@@ -110,7 +209,7 @@ export const canonicalise = (value) => {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalise).sort(byString).join(',')}]`
   }
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === 'object' && isPlainObject(value)) {
     const entries = Object.keys(value)
       .sort(byString)
       .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
@@ -119,14 +218,19 @@ export const canonicalise = (value) => {
   if (typeof value === 'string') {
     return JSON.stringify(normaliseString(value))
   }
-  return JSON.stringify(value)
+  if (value === null || typeof value === 'boolean' || Number.isFinite(value)) {
+    return JSON.stringify(value)
+  }
+  throw new TypeError(
+    `Reported data must be plain JSON: cannot compare ${Object.prototype.toString.call(value)}`
+  )
 }
 
 /**
  * True when two already-extracted reported-data sets are logically equivalent.
  *
- * @param {ReturnType<typeof extractReportedData>} reportedDataA
- * @param {ReturnType<typeof extractReportedData>} reportedDataB
+ * @param {ReportedDataValue} reportedDataA
+ * @param {ReportedDataValue} reportedDataB
  */
 export const reportedDataAreEquivalent = (reportedDataA, reportedDataB) =>
   canonicalise(reportedDataA) === canonicalise(reportedDataB)

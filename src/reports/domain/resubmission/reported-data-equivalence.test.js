@@ -1,9 +1,124 @@
+import Joi from 'joi'
 import { describe, expect, it } from 'vitest'
 
+import { reportDataFieldsSchema } from '#reports/repository/schema.js'
+
 import {
+  canonicalise,
   extractReportedData,
+  REPORTED_DATA_FIELDS,
   reportedDataAreEquivalent
 } from './reported-data-equivalence.js'
+
+/** @param {string} path @param {string} key */
+const joinPath = (path, key) => (path ? `${path}.${key}` : key)
+
+/**
+ * Walks a Joi schema description alongside a field classification, recording
+ * every schema field the classification leaves undecided and every classified
+ * field the schema does not have. An `excluded` entry decides its whole subtree.
+ *
+ * @param {*} schemaNode
+ * @param {*} fieldSpec
+ * @param {string} path
+ * @param {{ unclassified: string[], unknown: string[] }} findings
+ */
+const auditClassification = (schemaNode, fieldSpec, path, findings) => {
+  if (fieldSpec === undefined) {
+    findings.unclassified.push(path)
+    return
+  }
+  if (typeof fieldSpec === 'object' && 'excluded' in fieldSpec) {
+    return
+  }
+  if (schemaNode.type === 'object') {
+    const schemaKeys = Object.keys(schemaNode.keys ?? {})
+    for (const key of schemaKeys) {
+      auditClassification(
+        schemaNode.keys[key],
+        fieldSpec[key],
+        joinPath(path, key),
+        findings
+      )
+    }
+    for (const key of Object.keys(fieldSpec)) {
+      if (!schemaKeys.includes(key)) {
+        findings.unknown.push(joinPath(path, key))
+      }
+    }
+    return
+  }
+  if (schemaNode.type === 'array') {
+    auditClassification(
+      schemaNode.items[0],
+      fieldSpec[0],
+      `${path}[]`,
+      findings
+    )
+    return
+  }
+  if (typeof fieldSpec !== 'string') {
+    findings.unclassified.push(path)
+  }
+}
+
+/** @param {Record<string, import('joi').Schema>} schemaFields */
+const auditReportData = (schemaFields) => {
+  const findings = { unclassified: [], unknown: [] }
+  auditClassification(
+    Joi.object(schemaFields).describe(),
+    REPORTED_DATA_FIELDS,
+    '',
+    findings
+  )
+  return findings
+}
+
+describe('REPORTED_DATA_FIELDS — every stored report field is classified', () => {
+  it('decides every field the report schema stores, and nothing it does not', () => {
+    expect(auditReportData(reportDataFieldsSchema)).toEqual({
+      unclassified: [],
+      unknown: []
+    })
+  })
+
+  it('reports a newly added report field as unclassified until it is decided', () => {
+    const findings = auditReportData({
+      ...reportDataFieldsSchema,
+      newReportedFigure: Joi.number()
+    })
+
+    expect(findings.unclassified).toEqual(['newReportedFigure'])
+  })
+})
+
+describe('canonicalise — reported data must be plain JSON', () => {
+  it('serialises plain objects, arrays, strings, finite numbers, booleans and null', () => {
+    expect(canonicalise({ b: [2, 1], a: null, c: true, d: 'x', e: 1.5 })).toBe(
+      '{"a":null,"b":[1,2],"c":true,"d":"x","e":1.5}'
+    )
+  })
+
+  it('accepts an object with no prototype', () => {
+    expect(canonicalise(Object.assign(Object.create(null), { a: 1 }))).toBe(
+      '{"a":1}'
+    )
+  })
+
+  it('rejects a Date rather than collapsing every date to the same value', () => {
+    expect(() => canonicalise({ at: new Date('2025-01-01') })).toThrow(
+      TypeError
+    )
+  })
+
+  it('rejects a non-finite number rather than serialising it as null', () => {
+    expect(() => canonicalise(Number.NaN)).toThrow(TypeError)
+  })
+
+  it('rejects undefined', () => {
+    expect(() => canonicalise(undefined)).toThrow(TypeError)
+  })
+})
 
 /**
  * A report carrying one supplier with every field the stored report holds, so
@@ -25,6 +140,7 @@ const reportWithSupplier = (supplierOverrides = {}) => ({
   }
 })
 
+/** @param {*} a @param {*} b */
 const equivalent = (a, b) =>
   reportedDataAreEquivalent(extractReportedData(a), extractReportedData(b))
 
@@ -112,6 +228,22 @@ describe('reportedDataAreEquivalent — casing/whitespace normalisation', () => 
   it('still treats a genuine supplier name change as a reported-data change', () => {
     const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
     const after = reportWithSupplier({ supplierName: 'Beta Plastics Ltd' })
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+})
+
+describe('extractReportedData — absent and null fields', () => {
+  it('treats an absent optional field as equivalent to null', () => {
+    const before = reportWithSupplier({ supplierAddress: null })
+    const after = reportWithSupplier({ supplierAddress: undefined })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a missing activity block as different from a present one', () => {
+    const before = reportWithSupplier()
+    const after = { recyclingActivity: undefined }
 
     expect(equivalent(before, after)).toBe(false)
   })
