@@ -219,11 +219,11 @@ async function createServer(options = {}) {
     const startedServer = /** @type {StartedServer} */ (
       /** @type {unknown} */ (server)
     )
-    runFormsDataMigration(startedServer)
-    runOrganisationValidationSweep(startedServer)
-    runReconcileStalePrnProjections(startedServer)
-    runStreamTransitionDiagnostic(startedServer)
-    runResubmissionFiguresDiagnostic(startedServer)
+    void runFormsDataMigration(startedServer)
+    void runOrganisationValidationSweep(startedServer)
+    void runReconcileStalePrnProjections(startedServer)
+    void runStreamTransitionDiagnostic(startedServer)
+    void runResubmissionFiguresDiagnostic(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
   })
 
