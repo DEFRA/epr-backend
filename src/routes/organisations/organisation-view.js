@@ -21,6 +21,7 @@ const LOCAL_ACCREDITATION_YEAR = 2026
  *   id: string
  *   accreditationNumber: string | null
  *   status: string
+ *   overseasSites: Record<string, OverseasSiteView>
  * }} AccreditationView
  */
 
@@ -49,7 +50,6 @@ const LOCAL_ACCREDITATION_YEAR = 2026
  *       postcode?: string
  *     }
  *   } | null
- *   overseasSites: Record<string, OverseasSiteView>
  *   accreditations: Record<string, AccreditationView>
  * }} RegistrationView
  */
@@ -125,24 +125,34 @@ export function toRegistrationView(registration, organisation, overseasSites) {
     reprocessingType: registration.reprocessingType ?? null,
     submittedToRegulator: registration.submittedToRegulator,
     site: toSiteView(registration),
-    overseasSites: toOverseasSitesView(overseasSites),
-    accreditations: toAccreditationsView(registration, organisation)
+    accreditations: toAccreditationsView(
+      registration,
+      organisation,
+      overseasSites
+    )
   }
 }
 
 /**
  * Keyed by scheme year: a registration holds at most one accreditation a year.
+ * Overseas sites belong to the accreditation, but are stored on the
+ * registration until they come from the registration service.
  *
  * @param {Registration} registration
  * @param {Organisation} organisation
+ * @param {Record<string, OverseasSiteDetail>} overseasSites
  * @returns {Record<string, AccreditationView>}
  */
-export function toAccreditationsView(registration, organisation) {
+export function toAccreditationsView(
+  registration,
+  organisation,
+  overseasSites
+) {
   return Object.fromEntries(
     accreditationsForRegistration(registration, organisation).map(
       (accreditation) => [
         String(accreditationYear(accreditation)),
-        toAccreditationView(accreditation)
+        toAccreditationView(accreditation, overseasSites)
       ]
     )
   )
@@ -150,13 +160,15 @@ export function toAccreditationsView(registration, organisation) {
 
 /**
  * @param {Accreditation} accreditation
+ * @param {Record<string, OverseasSiteDetail>} overseasSites
  * @returns {AccreditationView}
  */
-function toAccreditationView(accreditation) {
+function toAccreditationView(accreditation, overseasSites) {
   return {
     id: accreditation.id,
     accreditationNumber: accreditation.accreditationNumber ?? null,
-    status: accreditation.status
+    status: accreditation.status,
+    overseasSites: toOverseasSitesView(overseasSites)
   }
 }
 

@@ -13,20 +13,8 @@ const regulatorSchema = Joi.string()
   .valid(...Object.values(REGULATOR))
   .required()
 
-export const accreditationViewSchema = Joi.object({
-  id: Joi.string().required(),
-  accreditationNumber: Joi.string().allow(null).required(),
-  status: Joi.string()
-    .valid(...Object.values(ACCREDITATION_STATUS))
-    .required()
-})
-
 const yearKey = Joi.string().pattern(/^\d{4}$/)
 const orsIdKey = Joi.string().pattern(/^\d{3}$/)
-
-const accreditationsViewSchema = Joi.object()
-  .pattern(yearKey, accreditationViewSchema)
-  .required()
 
 const overseasSiteViewSchema = Joi.object({
   name: Joi.string().allow(null).required(),
@@ -46,6 +34,19 @@ const overseasSiteViewSchema = Joi.object({
 
 const overseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, overseasSiteViewSchema)
+  .required()
+
+export const accreditationViewSchema = Joi.object({
+  id: Joi.string().required(),
+  accreditationNumber: Joi.string().allow(null).required(),
+  status: Joi.string()
+    .valid(...Object.values(ACCREDITATION_STATUS))
+    .required(),
+  overseasSites: overseasSitesViewSchema
+})
+
+const accreditationsViewSchema = Joi.object()
+  .pattern(yearKey, accreditationViewSchema)
   .required()
 
 export const registrationViewSchema = Joi.object({
@@ -75,7 +76,6 @@ export const registrationViewSchema = Joi.object({
   })
     .allow(null)
     .required(),
-  overseasSites: overseasSitesViewSchema,
   accreditations: accreditationsViewSchema
 })
 

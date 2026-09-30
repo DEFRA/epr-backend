@@ -147,12 +147,8 @@ export const accreditationsViewGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisation, registration } = await findRegistration(request)
-
     return h
-      .response({
-        accreditations: toAccreditationsView(registration, organisation)
-      })
+      .response({ accreditations: await findAccreditations(request) })
       .code(StatusCodes.OK)
   }
 }
@@ -180,8 +176,7 @@ export const accreditationViewGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisation, registration } = await findRegistration(request)
-    const accreditation = toAccreditationsView(registration, organisation)[
+    const accreditation = (await findAccreditations(request))[
       request.params.year
     ]
 
@@ -191,6 +186,19 @@ export const accreditationViewGet = {
 
     return h.response(accreditation).code(StatusCodes.OK)
   }
+}
+
+/**
+ * @param {RegistrationRequest} request
+ */
+async function findAccreditations(request) {
+  const { organisation, registration } = await findRegistration(request)
+  const overseasSites = await resolveOverseasSiteDetails(
+    request.overseasSitesRepository,
+    registration.overseasSites
+  )
+
+  return toAccreditationsView(registration, organisation, overseasSites)
 }
 
 /**
