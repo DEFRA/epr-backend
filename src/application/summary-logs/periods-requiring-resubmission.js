@@ -6,7 +6,6 @@ import {
   diffReportedData,
   extractReportedData
 } from '#reports/domain/resubmission/reported-data-equivalence.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 
@@ -46,12 +45,13 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
 
 /**
  * Maps this upload's validated waste records to the row-state shape the report
- * aggregation reads, excluding IGNORED rows (out of the reporting range, so they
- * never contribute to a period's figures). Each summary log is a full snapshot,
- * so this upload IS the new head. Rows are projected through the same seam the
- * submit path persists them with, so the data (coerced tonnages, normalised
- * shape) matches the persisted row states the report's source head is read
- * from.
+ * aggregation reads. Each summary log is a full snapshot, so this upload IS the
+ * new head. Every record is kept, whatever its waste-balance outcome, because
+ * the submit path persists every record and the report aggregates by date
+ * alone: a row outside the accreditation window (IGNORED) still counts in its
+ * period's report. Rows are projected through the same seam the submit path
+ * persists them with, so the data (coerced tonnages, normalised shape) matches
+ * the persisted row states the report's source head is read from.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
  * @param {Accreditation | null} accreditation
@@ -59,18 +59,16 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * @returns {ReportableWasteRecordState[]}
  */
 const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
-  wasteRecords
-    .filter((wasteRecord) => wasteRecord.outcome !== ROW_OUTCOME.IGNORED)
-    .map((wasteRecord) => ({
-      wasteRecordType: /** @type {WasteRecordType} */ (
-        wasteRecord.wasteRecordType
-      ),
-      data: projectSummaryLogRowState(
-        wasteRecord.record,
-        accreditation,
-        overseasSites
-      ).data
-    }))
+  wasteRecords.map((wasteRecord) => ({
+    wasteRecordType: /** @type {WasteRecordType} */ (
+      wasteRecord.wasteRecordType
+    ),
+    data: projectSummaryLogRowState(
+      wasteRecord.record,
+      accreditation,
+      overseasSites
+    ).data
+  }))
 
 /**
  * The id of the current stored report for a closed period. A closed period

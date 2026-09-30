@@ -618,6 +618,7 @@ export const createTestInfrastructure = async (
  *   registrationId?: string,
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
+ *   accreditationValidFrom?: string,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
@@ -631,6 +632,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   registrationId = new ObjectId().toString(),
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true,
+  accreditationValidFrom = VALID_FROM,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -645,7 +647,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     processingType,
     reprocessingType,
     material,
-    accredited
+    accredited,
+    accreditationValidFrom
   })
   testOrg.id = organisationId
 
@@ -807,6 +810,7 @@ const createTestSubmitterWorker = ({
  * @param {string} options.reprocessingType
  * @param {string} options.material
  * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
+ * @param {string} [options.accreditationValidFrom] - The date the accreditation's window opens
  * @returns {Object} Test organisation with registrations and accreditations
  */
 export const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
@@ -818,7 +822,8 @@ const buildComplexTestOrg = ({
   processingType,
   reprocessingType,
   material,
-  accredited = true
+  accredited = true,
+  accreditationValidFrom = VALID_FROM
 }) => {
   const registration = {
     id: registrationId,
@@ -853,7 +858,7 @@ const buildComplexTestOrg = ({
           partialMock({
             id: accreditationId,
             accreditationNumber: 'ACC-123',
-            validFrom: VALID_FROM,
+            validFrom: accreditationValidFrom,
             validTo: VALID_TO,
             material,
             submittedToRegulator: 'ea',

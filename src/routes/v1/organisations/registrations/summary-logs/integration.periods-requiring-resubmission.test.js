@@ -471,6 +471,44 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
+  it('does not flag a closed period that holds loads outside the accreditation window when nothing reported changed', async () => {
+    // The accreditation opens partway through January, so a load dated before
+    // then is outside it, yet still in January and in January's report.
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      accreditationValidFrom: '2025-01-10',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    const rowOutsideAccreditation = {
+      rowId: 1002,
+      tonnageReceived: 50,
+      dateReceived: '2025-01-05T00:00:00.000Z'
+    }
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createUploadData([...FIRST_UPLOAD, rowOutsideAccreditation])
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-window',
+      'file-window',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' },
+        rowOutsideAccreditation
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
   it('does not flag when identical figures are uploaded with rows reordered', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
