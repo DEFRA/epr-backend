@@ -224,7 +224,7 @@ async function createServer(options = {}) {
     runReconcileStalePrnProjections(startedServer)
     runStreamTransitionDiagnostic(startedServer)
     runResubmissionFiguresDiagnostic(startedServer)
-    runCancelledAccreditationReportsDiagnostic(startedServer)
+    void runCancelledAccreditationReportsDiagnostic(startedServer)
   })
 
   return server

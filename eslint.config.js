@@ -111,6 +111,8 @@ export default [
     rules: {
       curly: ['error', 'all'],
       eqeqeq: ['error', 'always'],
+      // SonarCloud asks for a deliberately un-awaited promise to be marked with `void`.
+      'no-void': ['error', { allowAsStatement: true }],
       'no-unused-vars': [
         'error',
         {
