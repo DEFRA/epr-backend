@@ -97,6 +97,76 @@ const resolveAccreditationId = async (
 }
 
 /**
+ * The prior submission a validating summary log is checked against: only
+ * meaningful while it's about to be validated, since it drives whether that
+ * validation flags restated periods as stale.
+ *
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {string} newStatus
+ * @param {{ organisationId: string, registrationId: string, year: number | undefined, accreditationId: string | null | undefined }} scope
+ * @returns {Promise<string | undefined>}
+ */
+const validatedAgainstSummaryLogIdFor = async (
+  summaryLogsRepository,
+  newStatus,
+  scope
+) => {
+  if (newStatus !== SUMMARY_LOG_STATUS.VALIDATING) {
+    return undefined
+  }
+
+  const latestSubmitted =
+    await summaryLogsRepository.findLatestSubmittedForOrgReg(scope)
+  return latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
+}
+
+/**
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {string} summaryLogId
+ * @param {SummaryLogUpload} upload
+ * @param {string} newStatus
+ * @param {{ organisationId: string, registrationId: string, year: number | undefined }} location
+ */
+const insertNewSummaryLog = async (
+  summaryLogsRepository,
+  organisationsRepository,
+  summaryLogId,
+  upload,
+  newStatus,
+  { organisationId, registrationId, year }
+) => {
+  const accreditationId =
+    year === undefined
+      ? undefined
+      : await resolveAccreditationId(
+          organisationsRepository,
+          organisationId,
+          registrationId
+        )
+
+  const summaryLog = buildSummaryLogData(
+    upload,
+    undefined,
+    organisationId,
+    registrationId,
+    year,
+    accreditationId
+  )
+
+  const validatedAgainstSummaryLogId = await validatedAgainstSummaryLogIdFor(
+    summaryLogsRepository,
+    newStatus,
+    { organisationId, registrationId, year, accreditationId }
+  )
+  if (validatedAgainstSummaryLogId !== undefined) {
+    summaryLog.validatedAgainstSummaryLogId = validatedAgainstSummaryLogId
+  }
+
+  await summaryLogsRepository.insert(summaryLogId, summaryLog)
+}
+
+/**
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} summaryLogId
@@ -111,8 +181,9 @@ export const updateStatusBasedOnUpload = async (
   summaryLogId,
   upload,
   logger,
-  { organisationId, registrationId, year }
+  location
 ) => {
+  const { organisationId, registrationId } = location
   const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
@@ -148,37 +219,14 @@ export const updateStatusBasedOnUpload = async (
     )
     await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {
-    const accreditationId =
-      year === undefined
-        ? undefined
-        : await resolveAccreditationId(
-            organisationsRepository,
-            organisationId,
-            registrationId
-          )
-
-    const summaryLog = buildSummaryLogData(
+    await insertNewSummaryLog(
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogId,
       upload,
-      undefined,
-      organisationId,
-      registrationId,
-      year,
-      accreditationId
+      newStatus,
+      location
     )
-
-    if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
-      const latestSubmitted =
-        await summaryLogsRepository.findLatestSubmittedForOrgReg({
-          organisationId,
-          registrationId,
-          year,
-          accreditationId
-        })
-      summaryLog.validatedAgainstSummaryLogId =
-        latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
-    }
-
-    await summaryLogsRepository.insert(summaryLogId, summaryLog)
   }
 
   return newStatus
