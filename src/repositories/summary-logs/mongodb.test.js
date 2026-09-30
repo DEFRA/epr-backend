@@ -136,6 +136,79 @@ describe('MongoDB summary logs repository', () => {
     })
   })
 
+  describe('submitting-lock index migration', () => {
+    it('drops the pre-year-scoping index and recreates it with year/accreditationId', async () => {
+      const droppedIndexes = []
+      const createdIndexes = []
+
+      const mockDb = createMockDb({
+        indexes: async () => [
+          {
+            name: 'organisationId_1_registrationId_1',
+            key: { organisationId: 1, registrationId: 1 }
+          }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndexes.push(indexName)
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        }
+      })
+
+      await createSummaryLogsRepository(mockDb, mockS3Config)
+
+      expect(droppedIndexes).toContain('organisationId_1_registrationId_1')
+      const lockIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'summary_log_submitting_lock'
+      )
+      expect(lockIndex.fields).toStrictEqual({
+        organisationId: 1,
+        registrationId: 1,
+        year: 1,
+        accreditationId: 1
+      })
+    })
+
+    it('does not drop an index that already carries year', async () => {
+      const droppedIndexes = []
+
+      const mockDb = createMockDb({
+        indexes: async () => [
+          {
+            name: 'summary_log_submitting_lock',
+            key: {
+              organisationId: 1,
+              registrationId: 1,
+              year: 1,
+              accreditationId: 1
+            }
+          }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndexes.push(indexName)
+        },
+        createIndex: async () => {}
+      })
+
+      await createSummaryLogsRepository(mockDb, mockS3Config)
+
+      expect(droppedIndexes).toEqual([])
+    })
+
+    it('re-throws non-NamespaceNotFound errors from indexes()', async () => {
+      const mockDb = createMockDb({
+        indexes: async () => {
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
+        }
+      })
+
+      await expect(
+        createSummaryLogsRepository(mockDb, mockS3Config)
+      ).rejects.toThrow('Connection timeout')
+    })
+  })
+
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = createMockDb({

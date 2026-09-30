@@ -21,6 +21,51 @@ import {
 
 export const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
+
+/**
+ * Migrates the submitting-lock index from its pre-year-scoping shape
+ * (`organisationId, registrationId`, auto-named) to
+ * `organisationId, registrationId, year, accreditationId`, explicitly named
+ * so future migrations can find it by name rather than by shape.
+ *
+ * @param {import('mongodb').Collection} collection
+ */
+async function ensureSubmittingLockIndex(collection) {
+  try {
+    const indexes = await collection.indexes()
+    const legacyIndex = indexes.find(
+      (idx) =>
+        idx.name !== SUBMITTING_LOCK_INDEX_NAME &&
+        idx.key?.organisationId === 1 &&
+        idx.key?.registrationId === 1 &&
+        !('year' in idx.key)
+    )
+
+    if (legacyIndex?.name) {
+      await collection.dropIndex(legacyIndex.name)
+    }
+  } catch (error) {
+    // NamespaceNotFound means the collection doesn't exist yet.
+    // This is fine - createIndex below will create the collection.
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
+  }
+
+  // Enforces at most one summary log in 'submitting' status per
+  // org/reg/year/accreditationId. A legacy document has no `year`, so it
+  // indexes as null and still collides with any other legacy document,
+  // matching today's org/reg-only behaviour until the backfill assigns one.
+  await collection.createIndex(
+    { organisationId: 1, registrationId: 1, year: 1, accreditationId: 1 },
+    {
+      name: SUBMITTING_LOCK_INDEX_NAME,
+      unique: true,
+      partialFilterExpression: { status: 'submitting' }
+    }
+  )
+}
 
 /**
  * Ensures the collection exists with required indexes.
@@ -32,15 +77,7 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
-  // Enforces at most one summary log in 'submitting' status per org/reg pair
-  // This prevents race conditions when two users try to confirm simultaneously
-  await collection.createIndex(
-    { organisationId: 1, registrationId: 1 },
-    {
-      unique: true,
-      partialFilterExpression: { status: 'submitting' }
-    }
-  )
+  await ensureSubmittingLockIndex(collection)
 
   // TTL index for automatic cleanup of non-submitted summary logs
   await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
@@ -49,11 +86,13 @@ async function ensureCollection(db) {
   // reached from the ledger is looked up that way.
   await collection.createIndex({ 'file.id': 1 })
 
-  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
-  // and sorts by submittedAt descending
+  // Optimises findLatestSubmittedForOrgReg query which filters by
+  // org/reg/year/accreditationId/status and sorts by submittedAt descending
   await collection.createIndex({
     organisationId: 1,
     registrationId: 1,
+    year: 1,
+    accreditationId: 1,
     status: 1,
     submittedAt: -1
   })
@@ -124,13 +163,41 @@ const findById = (db) => async (id) => {
   return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
 }
 
+/**
+ * A year/accreditation filter that also matches legacy documents (no
+ * `year`), so they keep counting for every year and accreditation until the
+ * backfill assigns them one. Omitted entirely when the caller doesn't know
+ * the year, keeping the registration-wide behaviour untouched.
+ *
+ * A legacy document has no `year` field at all — insert never writes the key
+ * when it isn't supplied — but is matched on `$in: [null]` as well as
+ * `$exists: false` because MongoDB stores a JS `undefined` property as BSON
+ * `null` rather than omitting it, so either shape must count as legacy.
+ *
+ * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
+ * @returns {any}
+ */
+const yearFilter = ({ year, accreditationId }) =>
+  year === undefined
+    ? {}
+    : {
+        $or: [
+          { year, accreditationId },
+          { year: { $in: [null], $exists: true } },
+          { year: { $exists: false } }
+        ]
+      }
+
 const findLatestSubmittedForOrgReg =
-  (db) => async (organisationId, registrationId) => {
+  (db) =>
+  /** @param {import('./port.js').SummaryLogScope} scope */
+  async ({ organisationId, registrationId, year, accreditationId }) => {
     /** @type {any} */
     const filter = {
       organisationId,
       registrationId,
-      status: SUMMARY_LOG_STATUS.SUBMITTED
+      status: SUMMARY_LOG_STATUS.SUBMITTED,
+      ...yearFilter({ year, accreditationId })
     }
 
     const doc = await db

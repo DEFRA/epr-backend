@@ -51,7 +51,7 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @typedef {Object} SummaryLogContext
  * @property {string} organisationId
  * @property {string} registrationId
- * @property {string} [accreditationId]
+ * @property {string | null} [accreditationId]
  */
 
 const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)

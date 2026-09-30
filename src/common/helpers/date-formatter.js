@@ -108,6 +108,17 @@ export const toCalendarDate = (value) =>
   value instanceof Date ? utcCalendarDate(value) : calendarDate(value)
 
 /**
+ * Whether `date` falls within `[start, end]` inclusive. `CalendarDate`s are
+ * `YYYY-MM-DD` strings, so range membership is a lexicographic comparison.
+ * @param {CalendarDate} date
+ * @param {CalendarDate} start
+ * @param {CalendarDate} end
+ * @returns {boolean}
+ */
+export const isCalendarDateWithin = (date, start, end) =>
+  date.localeCompare(start) >= 0 && date.localeCompare(end) <= 0
+
+/**
  * Expands a calendar-date string (bare YYYY-MM-DD or a full ISO datetime,
  * either accepted) into the Date representing UTC start-of-day
  * (00:00:00.000) for that calendar date.

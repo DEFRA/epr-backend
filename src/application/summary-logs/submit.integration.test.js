@@ -131,6 +131,7 @@ const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
+    accreditationId: 'acc-123',
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })

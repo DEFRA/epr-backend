@@ -1,15 +1,9 @@
-import { randomUUID } from 'node:crypto'
-import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { config } from '#root/config.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { createSummaryLogUpload } from './create-summary-log-upload.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
@@ -21,6 +15,14 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 export const summaryLogsCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
+/**
+ * Deprecated: superseded by the year/accreditation-scoped create route
+ * (`{year}/accreditations/{accreditationId}/summary-logs`). Kept until every
+ * consumer has migrated (tracked separately). It never asked the caller for
+ * a year or accreditation, so it stores neither — the summary log stays
+ * unscoped, and `validate.js` resolves the registration's live accreditation
+ * fresh, at validate time, exactly as it did before scoping existed.
+ */
 export const summaryLogsCreate = {
   method: 'POST',
   path: summaryLogsCreatePath,
@@ -43,61 +45,15 @@ export const summaryLogsCreate = {
     const { organisationId, registrationId } = params
     const { redirectUrl } = payload
 
-    const summaryLogId = randomUUID()
-    const resolvedRedirectUrl = redirectUrl.replace(
-      '{summaryLogId}',
-      summaryLogId
-    )
-    const appBaseUrl = config.get('appBaseUrl')
-    const callbackUrl = `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+    const result = await createSummaryLogUpload({
+      uploadsRepository,
+      logger,
+      organisationId,
+      registrationId,
+      redirectUrl,
+      routePath: summaryLogsCreatePath
+    })
 
-    try {
-      // Initiate upload via CDP Uploader
-      const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId,
-        registrationId,
-        summaryLogId,
-        redirectUrl: resolvedRedirectUrl,
-        callbackUrl
-      })
-
-      logger.info({
-        message: `Summary log initiated: summaryLogId=${summaryLogId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: summaryLogId
-        }
-      })
-
-      return h
-        .response({
-          summaryLogId,
-          uploadId: cdpResponse.uploadId,
-          uploadUrl: cdpResponse.uploadUrl,
-          statusUrl: cdpResponse.statusUrl
-        })
-        .code(StatusCodes.CREATED)
-    } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${summaryLogsCreatePath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
-
-      throw Boom.badImplementation(`Failure on ${summaryLogsCreatePath}`)
-    }
+    return h.response(result).code(StatusCodes.CREATED)
   }
 }

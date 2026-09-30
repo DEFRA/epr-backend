@@ -78,5 +78,7 @@ export const summaryLogResponseSchema = Joi.object({
     otherwise: Joi.string().optional()
   }),
   material: Joi.string().optional(),
-  accreditationNumber: Joi.string().optional()
+  accreditationNumber: Joi.string().optional(),
+  year: Joi.number().integer().optional(),
+  accreditationId: Joi.string().allow(null).optional()
 })

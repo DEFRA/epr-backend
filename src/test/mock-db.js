@@ -11,6 +11,7 @@ import { vi } from 'vitest'
  */
 const defaultCollectionMethods = () => ({
   createIndex: vi.fn(async () => 'index_name'),
+  indexes: vi.fn(async () => []),
   countDocuments: vi.fn(async () => 0),
   findOne: vi.fn(async () => null),
   find: vi.fn(() => ({ toArray: async () => [] })),

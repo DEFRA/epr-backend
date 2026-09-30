@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { summaryLogFactory } from './test-data.js'
+import { withoutYear, summaryLogFactory } from './test-data.js'
 
 const generateOrgReg = () => ({
   organisationId: `org-${randomUUID()}`,
@@ -28,10 +28,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
     it('returns null when no submitted summary logs exist for org/reg', async () => {
       const { organisationId, registrationId } = generateOrgReg()
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).toBeNull()
     })
@@ -49,10 +49,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).not.toBeNull()
       expect(result.summaryLog.status).toBe('submitted')
@@ -84,10 +84,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).not.toBeNull()
       // Should return the more recently submitted log
@@ -121,10 +121,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).not.toBeNull()
       // Should still return the more recently submitted log
@@ -159,10 +159,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).not.toBeNull()
       expect(result.summaryLog.organisationId).toBe(organisationId)
@@ -191,10 +191,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         await repository.insert(logId, summaryLog)
       }
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).toBeNull()
     })
@@ -211,10 +211,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).toBeNull()
     })
@@ -228,14 +228,71 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         summaryLogFactory.submitted({ organisationId, registrationId })
       )
 
-      const result = await repository.findLatestSubmittedForOrgReg(
+      const result = await repository.findLatestSubmittedForOrgReg({
         organisationId,
         registrationId
-      )
+      })
 
       expect(result).not.toBeNull()
       expect(result.id).toBe(logId)
       expect(result.version).toBe(1)
+    })
+
+    it('only returns the submitted log for the given year and accreditationId', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const targetId = `summary-${randomUUID()}`
+      const otherAccreditationId = `summary-${randomUUID()}`
+
+      await repository.insert(
+        targetId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null,
+          submittedAt: new Date('2026-06-01').toISOString()
+        })
+      )
+      await repository.insert(
+        otherAccreditationId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: 'acc-1',
+          submittedAt: new Date('2026-07-01').toISOString()
+        })
+      )
+
+      const result = await repository.findLatestSubmittedForOrgReg({
+        organisationId,
+        registrationId,
+        year: 2026,
+        accreditationId: null
+      })
+
+      expect(result.id).toBe(targetId)
+    })
+
+    it('matches a legacy summary log (no year) for any requested year and accreditation', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const legacyId = `summary-${randomUUID()}`
+
+      await repository.insert(
+        legacyId,
+        withoutYear(
+          summaryLogFactory.submitted({ organisationId, registrationId })
+        )
+      )
+
+      const result = await repository.findLatestSubmittedForOrgReg({
+        organisationId,
+        registrationId,
+        year: 2026,
+        accreditationId: null
+      })
+
+      expect(result.id).toBe(legacyId)
     })
   })
 }

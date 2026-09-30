@@ -154,6 +154,68 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result2.success).toBe(true)
     })
 
+    it('allows concurrent submissions for the same org/reg in different years or accreditations', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const logId1 = `summary-${randomUUID()}`
+      const logId2 = `summary-${randomUUID()}`
+
+      await repository.insert(
+        logId1,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null
+        })
+      )
+      await repository.insert(
+        logId2,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: 'acc-1'
+        })
+      )
+
+      const result1 = await repository.transitionToSubmittingExclusive(logId1)
+      const result2 = await repository.transitionToSubmittingExclusive(logId2)
+
+      expect(result1.success).toBe(true)
+      expect(result2.success).toBe(true)
+    })
+
+    it('blocks a second submission for the same org/reg/year/accreditationId', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const logId1 = `summary-${randomUUID()}`
+      const logId2 = `summary-${randomUUID()}`
+
+      await repository.insert(
+        logId1,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null
+        })
+      )
+      await repository.insert(
+        logId2,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null
+        })
+      )
+
+      const result1 = await repository.transitionToSubmittingExclusive(logId1)
+      const result2 = await repository.transitionToSubmittingExclusive(logId2)
+
+      expect(result1.success).toBe(true)
+      expect(result2.success).toBe(false)
+    })
+
     it('increments version on successful transition', async () => {
       const { organisationId, registrationId } = generateOrgReg()
       const logId = `summary-${randomUUID()}`
