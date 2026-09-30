@@ -487,7 +487,7 @@ describe('the waste balance tab', () => {
       full = await render(JANUARY_TO_MARCH_2026, register)
     })
 
-    it('shows "[c]" for every net credit and total with fewer than three operators accredited, zeros included', () => {
+    it('shows "[c]" for every confidential net credit and total, zeros included', () => {
       expect(
         figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Steel', 'Reprocessor'])
       ).toEqual([0, 0, 5, 5])
@@ -506,13 +506,13 @@ describe('the waste balance tab', () => {
       ).toBe('right')
     })
 
-    it('shows every net credit and total with three operators accredited', () => {
+    it('shows every net credit and total that is not confidential', () => {
       expect(
         figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Wood', 'Reprocessor'])
       ).toEqual([0, 12, 0, 12])
     })
 
-    it("judges each month's net credit on that month's operators, and the total on the period's", () => {
+    it("judges each month's net credit on that month alone, and the total on the whole period", () => {
       // Plastic's third reprocessor is accredited from February.
       expect(
         figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Plastic', 'Reprocessor'])

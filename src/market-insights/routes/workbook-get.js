@@ -39,7 +39,7 @@ export const marketInsightsWorkbookGet = {
    * for it.
    *
    * It is redacted unless asked for unredacted: redacted, it shows "[c]" in
-   * place of every figure from too few operators. The full workbook is for
+   * place of every confidential figure. The full workbook is for
    * regulators to compare against.
    *
    * @param {HapiRequest & {

@@ -52,7 +52,7 @@ export const firstDayOf = (yearMonth) =>
 
 /**
  * What a tab of published figures is given: its contents, and whether it
- * shows a figure from too few operators as "[c]" instead of its value.
+ * shows a confidential figure as "[c]" instead of its value.
  *
  * @typedef {TabContents & { redacted: boolean }} RedactableTabContents
  */

@@ -464,7 +464,7 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
 
     // Each table's rows are Paper and board, Plastic, Wood, then Grand Total.
 
-    it('show "[c]" for every figure of a row with fewer than three operators accredited, zeros included', () => {
+    it('show "[c]" for every figure of a confidential row, zeros included', () => {
       // February's plastic reprocessor row, which one of its two reported into.
       expect(valuesIn(redacted, 'B21', 'H21')).toEqual([confidential(7)])
       expect(valuesIn(redacted, 'B66', 'D66')).toEqual([confidential(3)])
@@ -481,7 +481,7 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
       expect(redacted.getCell('B15').alignment?.horizontal).toBe('right')
     })
 
-    it('show every figure of a row with three operators accredited', () => {
+    it('show every figure of a row that is not confidential', () => {
       // February's wood reprocessor row, then its PRN row.
       expect(valuesIn(full, 'B22', 'H22')).not.toEqual([zeros(7)])
       expect(valuesIn(redacted, 'B22', 'H22')).toEqual(
@@ -498,13 +498,13 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
       expect(valuesIn(redacted, 'B13', 'K13')).toEqual([zeros(10)])
     })
 
-    it('show "[c]" for every figure of a grand total from fewer than three operators, keeping the dash under its average price', () => {
+    it('show "[c]" for every figure of a confidential grand total, keeping the dash under its average price', () => {
       // January's exporter grand total, then its PERN grand total.
       expect(valuesIn(redacted, 'B15', 'K15')).toEqual([confidential(10)])
       expect(valuesIn(redacted, 'B60', 'D60')).toEqual([['[c]', '[c]', '-']])
     })
 
-    it('show a grand total from three or more operators', () => {
+    it('show a grand total that is not confidential', () => {
       // February's reprocessor grand total, then its PRN grand total.
       expect(valuesIn(redacted, 'B23', 'H23')).toEqual(
         valuesIn(full, 'B23', 'H23')

@@ -42,7 +42,7 @@ describe('the Key tab of a redacted workbook', () => {
     expect(redacted.rowCount).toBeGreaterThan(full.rowCount)
     expect(row.getCell('A').value).toBe('[c]')
     expect(row.getCell('B').value).toBe(
-      'Confidential. This figure could reveal an individual operator’s own figures, because fewer than three operators were accredited for it.'
+      'Confidential. This figure is withheld to protect confidentiality.'
     )
   })
 })

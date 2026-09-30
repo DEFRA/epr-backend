@@ -1,6 +1,6 @@
 import {
   CONFIDENTIAL,
-  fromFewOperators
+  isConfidential
 } from '#market-insights/domain/confidential-figures.js'
 import {
   BAND,
@@ -50,9 +50,9 @@ const WASTE_BALANCE_HEADING_ROW = 9
  */
 
 /**
- * A net credit as published: "[c]" where redacted and too few operators were
- * accredited for it. Each month's and the period's net credit is judged on its
- * own operators, as the regulator pages mark them.
+ * A net credit as published: "[c]" where redacted and it is confidential.
+ * Each month's and the period's net credit is judged on its own, as the
+ * regulator pages mark them.
  *
  * @param {number} netCredit
  * @param {OperatorCounts} counts
@@ -60,9 +60,7 @@ const WASTE_BALANCE_HEADING_ROW = 9
  * @returns {number | string}
  */
 const publishedNetCredit = (netCredit, counts, redacted) =>
-  redacted && fromFewOperators(counts, netCredit !== 0)
-    ? CONFIDENTIAL
-    : netCredit
+  redacted && isConfidential(counts, netCredit !== 0) ? CONFIDENTIAL : netCredit
 
 /**
  * A row for each accreditation type of each material the period has an

@@ -178,7 +178,7 @@ export const ROW_HEIGHT = Object.freeze({
   OUTSTANDING_RETURNS_ROW: 27.95,
   NATION_FIGURES_NOTE: 54,
   NATION_FIGURES_HEADINGS: 51.4,
-  KEY_CONFIDENTIAL: 45
+  KEY_CONFIDENTIAL: 30
 })
 
 /** The Key's row heights, in points, by row number, as published. */

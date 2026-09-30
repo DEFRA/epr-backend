@@ -16,7 +16,7 @@ import { addWasteBalance } from './workbook/waste-balance-tab.js'
  * @property {MarketInsightsFigures} figures
  * @property {YearMonth[]} months
  * @property {Date} now - when the figures were taken
- * @property {boolean} redacted - whether a figure from too few operators shows as "[c]"
+ * @property {boolean} redacted - whether a confidential figure shows as "[c]"
  */
 
 /**
@@ -42,8 +42,8 @@ const renderWorkbook = ({ figures, months, now, redacted }) => {
  * every tab is taken from one reading of the register.
  *
  * Redacted, it shows "[c]" in place of every figure the regulator pages mark
- * as coming from too few operators. A total is judged on its own operators
- * alone, so it can still give away a figure that was replaced.
+ * as confidential. A total is judged on its own, so it can still give away a
+ * figure that was replaced.
  *
  * @param {ReadMarketInsightsFiguresParams & { redacted: boolean }} params
  * @returns {Promise<ExcelJS.Workbook>}

@@ -373,7 +373,7 @@ const KEY_NOTES_ROWS = [
  */
 export const KEY_CONFIDENTIAL = Object.freeze([
   CONFIDENTIAL,
-  'Confidential. This figure could reveal an individual operator’s own figures, because fewer than three operators were accredited for it.'
+  'Confidential. This figure is withheld to protect confidentiality.'
 ])
 
 /**
