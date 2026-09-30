@@ -99,6 +99,10 @@ describe('canonicalise — reported data must be plain JSON', () => {
     )
   })
 
+  it('serialises strings verbatim: normalisation belongs to the field, not the serialiser', () => {
+    expect(canonicalise({ d: 'X  Y' })).toBe('{"d":"X  Y"}')
+  })
+
   it('accepts an object with no prototype', () => {
     expect(canonicalise(Object.assign(Object.create(null), { a: 1 }))).toBe(
       '{"a":1}'
@@ -228,6 +232,67 @@ describe('reportedDataAreEquivalent — casing/whitespace normalisation', () => 
   it('still treats a genuine supplier name change as a reported-data change', () => {
     const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
     const after = reportWithSupplier({ supplierName: 'Beta Plastics Ltd' })
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+})
+
+/**
+ * A report carrying one final destination, so a test can vary a single field.
+ */
+const reportWithFinalDestination = (destinationOverrides = {}) => ({
+  wasteSent: {
+    tonnageSentToReprocessor: 7,
+    tonnageSentToExporter: 0,
+    tonnageSentToAnotherSite: 0,
+    finalDestinations: [
+      {
+        recipientName: 'Dest A',
+        facilityType: 'Reprocessor',
+        address: '456 Road, XY9 8ZW',
+        tonnageSentOn: 7,
+        ...destinationOverrides
+      }
+    ]
+  }
+})
+
+describe('extractReportedData — free-text fields are normalised, exact fields are not', () => {
+  it('treats a blank free-text field as equivalent to a null one', () => {
+    const before = reportWithSupplier({ supplierAddress: null })
+    const after = reportWithSupplier({ supplierAddress: '' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a whitespace-only free-text field as equivalent to a null one', () => {
+    const before = reportWithSupplier({ supplierName: null })
+    const after = reportWithSupplier({ supplierName: '   ' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a final destination name casing-only change as no reported-data change', () => {
+    const before = reportWithFinalDestination()
+    const after = reportWithFinalDestination({ recipientName: 'DEST  a' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('compares a non-string free-text value (a numeric cell) as-is', () => {
+    const before = reportWithSupplier({ supplierName: 123 })
+
+    expect(equivalent(before, reportWithSupplier({ supplierName: 123 }))).toBe(
+      true
+    )
+    expect(equivalent(before, reportWithSupplier({ supplierName: 124 }))).toBe(
+      false
+    )
+  })
+
+  it('compares a dropdown value exactly: a final destination facility type casing change is a change', () => {
+    const before = reportWithFinalDestination()
+    const after = reportWithFinalDestination({ facilityType: 'REPROCESSOR' })
 
     expect(equivalent(before, after)).toBe(false)
   })

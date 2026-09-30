@@ -2,12 +2,18 @@
  * The reported-data comparison core, shared by the resubmission-figures
  * diagnostic and the validation-time resubmission gate.
  *
- * `REPORTED_DATA_FIELDS` classifies every field a stored report holds as either
- * compared or excluded (with the reason it is excluded), and
- * `extractReportedData` picks the compared fields from a report. The
- * classification is exhaustive by test: a field added to the report schema fails
- * the build until it is classified here, so a new reported figure can never be
- * silently left out of the comparison.
+ * `REPORTED_DATA_FIELDS` classifies every field a stored report holds as
+ * compared exactly, compared as free text, or excluded (with the reason it is
+ * excluded), and `extractReportedData` picks the compared fields from a report.
+ * The classification is exhaustive by test: a field added to the report schema
+ * fails the build until it is classified here, so a new reported figure can
+ * never be silently left out of the comparison.
+ *
+ * Free-text fields are the ones an operator types (supplier and destination
+ * names and addresses). By the contract (PAE-1983), casing, whitespace and
+ * blank-versus-null edits to them are not reported-data changes, so they are
+ * normalised on extraction. Figures, identifiers, dropdown values and
+ * registry-sourced values are compared exactly.
  *
  * Absent and null compared fields both extract as null. A missing activity block
  * also extracts as null, so present-vs-absent is itself a difference.
@@ -33,18 +39,19 @@
  */
 
 /**
- * How one report field takes part in the comparison: compared, excluded with a
- * reason, a one-entry array whose entry classifies each item, or an object that
- * classifies each of its fields.
+ * How one report field takes part in the comparison: compared exactly,
+ * compared as free text, excluded with a reason, a one-entry array whose entry
+ * classifies each item, or an object that classifies each of its fields.
  *
- * @typedef {'compared' | ExcludedField | [FieldSpec] | { [field: string]: FieldSpec }} FieldSpec
+ * @typedef {'exact' | 'text' | ExcludedField | [FieldSpec] | { [field: string]: FieldSpec }} FieldSpec
  */
 
 /**
  * @typedef {null | boolean | number | string | ReportedDataValue[] | { [field: string]: ReportedDataValue }} ReportedDataValue
  */
 
-const COMPARED = 'compared'
+const EXACT = 'exact'
+const TEXT = 'text'
 
 /**
  * @param {string} reason
@@ -68,46 +75,49 @@ export const REPORTED_DATA_FIELDS = {
   recyclingActivity: {
     suppliers: [
       {
-        supplierName: COMPARED,
-        facilityType: COMPARED,
-        supplierAddress: COMPARED,
+        supplierName: TEXT,
+        // An unvalidated supplementary column, so effectively operator text
+        facilityType: TEXT,
+        supplierAddress: TEXT,
         supplierPhone: excluded(SUPPLIER_CONTACT),
         supplierEmail: excluded(SUPPLIER_CONTACT),
-        tonnageReceived: COMPARED
+        tonnageReceived: EXACT
       }
     ],
-    totalTonnageReceived: COMPARED,
+    totalTonnageReceived: EXACT,
     tonnageRecycled: excluded(OPERATOR_ENTERED),
     tonnageNotRecycled: excluded(OPERATOR_ENTERED)
   },
   exportActivity: {
     overseasSites: [
       {
-        orsId: COMPARED,
-        siteName: COMPARED,
-        country: COMPARED,
-        tonnageExported: COMPARED,
-        approved: COMPARED
+        orsId: EXACT,
+        // Resolved from the ORS registry by orsId, not typed by the operator
+        siteName: EXACT,
+        country: EXACT,
+        tonnageExported: EXACT,
+        approved: EXACT
       }
     ],
-    unapprovedOverseasSites: [{ orsId: COMPARED, tonnageExported: COMPARED }],
-    totalTonnageExported: COMPARED,
-    tonnageRefusedAtDestination: COMPARED,
-    tonnageStoppedDuringExport: COMPARED,
-    totalTonnageRefusedOrStopped: COMPARED,
-    tonnageRepatriated: COMPARED,
+    unapprovedOverseasSites: [{ orsId: EXACT, tonnageExported: EXACT }],
+    totalTonnageExported: EXACT,
+    tonnageRefusedAtDestination: EXACT,
+    tonnageStoppedDuringExport: EXACT,
+    totalTonnageRefusedOrStopped: EXACT,
+    tonnageRepatriated: EXACT,
     tonnageReceivedNotExported: excluded(OPERATOR_ENTERED)
   },
   wasteSent: {
-    tonnageSentToReprocessor: COMPARED,
-    tonnageSentToExporter: COMPARED,
-    tonnageSentToAnotherSite: COMPARED,
+    tonnageSentToReprocessor: EXACT,
+    tonnageSentToExporter: EXACT,
+    tonnageSentToAnotherSite: EXACT,
     finalDestinations: [
       {
-        recipientName: COMPARED,
-        facilityType: COMPARED,
-        address: COMPARED,
-        tonnageSentOn: COMPARED
+        recipientName: TEXT,
+        // A validated dropdown the aggregation itself matches exactly
+        facilityType: EXACT,
+        address: TEXT,
+        tonnageSentOn: EXACT
       }
     ]
   },
@@ -127,8 +137,25 @@ const isExcluded = (fieldSpec) =>
   'excluded' in fieldSpec
 
 /**
- * Picks the compared fields of `value` as `fieldSpec` classifies them. Absent
- * values extract as null.
+ * Normalises an operator-typed value so a casing-, whitespace- or
+ * blank-only edit does not read as a change: trims, collapses each run of
+ * whitespace to a single space and lowercases, and treats a blank as absent. A
+ * genuine edit (a different name or address) still differs.
+ *
+ * @param {*} value
+ * @returns {ReportedDataValue}
+ */
+const normaliseText = (value) => {
+  if (typeof value !== 'string') {
+    return value
+  }
+  const normalised = value.trim().replace(/\s+/g, ' ').toLowerCase()
+  return normalised === '' ? null : normalised
+}
+
+/**
+ * Picks the compared fields of `value` as `fieldSpec` classifies them,
+ * normalising free-text fields. Absent values extract as null.
  *
  * @param {FieldSpec} fieldSpec
  * @param {*} value
@@ -137,6 +164,9 @@ const isExcluded = (fieldSpec) =>
 const pickReportedData = (fieldSpec, value) => {
   if (value === undefined || value === null) {
     return null
+  }
+  if (fieldSpec === TEXT) {
+    return normaliseText(value)
   }
   if (Array.isArray(fieldSpec)) {
     return value.map((/** @type {*} */ item) =>
@@ -167,18 +197,6 @@ export const extractReportedData = (report) =>
 const byString = (a, b) => a.localeCompare(b)
 
 /**
- * Normalises a reported string so a casing- or whitespace-only edit does not read
- * as a change: by the contract (PAE-1983) casing, leading/trailing whitespace and
- * internal whitespace runs are not reported-data changes. Trims, collapses each
- * run of whitespace to a single space, and lowercases. A genuine edit (a
- * different supplier name, address or destination) still differs.
- *
- * @param {string} value
- */
-const normaliseString = (value) =>
-  value.trim().replace(/\s+/g, ' ').toLowerCase()
-
-/**
  * True for an object literal (or a prototype-less object): reported data holds
  * no class instances, so a Date, Map or similar would otherwise serialise as an
  * empty object and compare equal to any other.
@@ -193,9 +211,8 @@ const isPlainObject = (value) => {
 /**
  * Recursively serialises a value to a stable string with object keys sorted and
  * array elements ordered by their own serialisation, so the result is
- * insensitive to key order and row order. String values are normalised
- * (see normaliseString) so casing/whitespace-only edits compare equal; object
- * keys are left as-is.
+ * insensitive to key order and row order. Strings are serialised verbatim:
+ * normalising free text is a per-field decision made on extraction.
  *
  * Accepts only plain JSON: plain objects, arrays, strings, finite numbers,
  * booleans and null. Anything else (a Date, a class instance, NaN, undefined)
@@ -215,10 +232,12 @@ export const canonicalise = (value) => {
       .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
     return `{${entries.join(',')}}`
   }
-  if (typeof value === 'string') {
-    return JSON.stringify(normaliseString(value))
-  }
-  if (value === null || typeof value === 'boolean' || Number.isFinite(value)) {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    Number.isFinite(value)
+  ) {
     return JSON.stringify(value)
   }
   throw new TypeError(
