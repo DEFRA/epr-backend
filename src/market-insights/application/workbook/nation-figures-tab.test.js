@@ -33,7 +33,7 @@ import {
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
@@ -59,18 +59,19 @@ const approvedHistory = [
  * approves only reprocessors, so an exporter is built here for a register to
  * start with.
  *
- * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string }} options
+ * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, statusHistory?: { status: AccreditationStatus, updatedAt: string }[] }} options
  */
 const accreditedExporter = ({
   material,
   regulator = REGULATOR.EA,
-  validFrom = '2026-01-01'
+  validFrom = '2026-01-01',
+  statusHistory = approvedHistory
 }) => {
   const accredited = {
     ...storedMaterial(material),
     wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
     submittedToRegulator: regulator,
-    statusHistory: approvedHistory
+    statusHistory
   }
   const accreditation = buildAccreditation({
     ...accredited,
@@ -508,6 +509,54 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
     })
   }
 )
+
+describe("a redacted UK tab's row with no operator accredited", () => {
+  it('shows "[c]" for every figure of the row where either of its tables holds data', async () => {
+    const cancelledThroughoutFebruary = accreditedExporter({
+      material: MATERIAL.ALUMINIUM,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
+        {
+          status: ACCREDITATION_STATUS.CANCELLED,
+          updatedAt: '2026-01-20T09:00:00.000Z'
+        },
+        { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+      ]
+    })
+    const register = newRegister([cancelledThroughoutFebruary])
+    await submitMonthlyReport(
+      register,
+      cancelledThroughoutFebruary.operator,
+      2,
+      {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.ALUMINIUM,
+        prn: {
+          issuedTonnage: 20,
+          freeTonnage: 0,
+          totalRevenue: 1000,
+          averagePricePerTonne: 50
+        }
+      }
+    )
+
+    const full = await renderWith(
+      WORKSHEET_NAME.UK,
+      await contentsOfRegister(register)
+    )
+    const redacted = await renderWith(
+      WORKSHEET_NAME.UK,
+      await contentsOfRegister(register, JANUARY_TO_MARCH_2026, true)
+    )
+
+    // February's aluminium exporter row, whose PERN row alone holds data.
+    expect(valuesIn(full, 'B21', 'K21')).toEqual([zeros(10)])
+    expect(valuesIn(redacted, 'B21', 'K21')).toEqual([confidential(10)])
+    expect(valuesIn(full, 'B54', 'D54')).toEqual([[20, 1000, 50]])
+    expect(valuesIn(redacted, 'B54', 'D54')).toEqual([confidential(3)])
+  })
+})
 
 describe("a UK or England tab's materials", () => {
   it('are those the period has an accredited operator for, in published order, with zeros where nothing was reported', async () => {
