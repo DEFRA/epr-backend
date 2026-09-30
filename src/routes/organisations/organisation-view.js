@@ -21,14 +21,12 @@ const LOCAL_ACCREDITATION_YEAR = 2026
  *   id: string
  *   accreditationNumber: string | null
  *   status: string
- *   overseasSites: Record<string, OverseasSiteView>
+ *   overseasSites: Record<string, string | null>
  * }} AccreditationView
  */
 
 /**
- * @typedef {Omit<OverseasSiteDetail, 'validFrom'> & {
- *   validFrom: string | null
- * }} OverseasSiteView
+ * @typedef {Omit<OverseasSiteDetail, 'validFrom'>} OverseasSiteView
  */
 
 /**
@@ -50,6 +48,7 @@ const LOCAL_ACCREDITATION_YEAR = 2026
  *       postcode?: string
  *     }
  *   } | null
+ *   overseasSites: Record<string, OverseasSiteView>
  *   accreditations: Record<string, AccreditationView>
  * }} RegistrationView
  */
@@ -125,6 +124,7 @@ export function toRegistrationView(registration, organisation, overseasSites) {
     reprocessingType: registration.reprocessingType ?? null,
     submittedToRegulator: registration.submittedToRegulator,
     site: toSiteView(registration),
+    overseasSites: toOverseasSitesView(overseasSites),
     accreditations: toAccreditationsView(
       registration,
       organisation,
@@ -135,8 +135,8 @@ export function toRegistrationView(registration, organisation, overseasSites) {
 
 /**
  * Keyed by scheme year: a registration holds at most one accreditation a year.
- * Overseas sites belong to the accreditation, but are stored on the
- * registration until they come from the registration service.
+ * Until the registration service supplies per-year site approvals, an
+ * accreditation lists every registration site with the site's stored approval.
  *
  * @param {Registration} registration
  * @param {Organisation} organisation
@@ -168,7 +168,7 @@ function toAccreditationView(accreditation, overseasSites) {
     id: accreditation.id,
     accreditationNumber: accreditation.accreditationNumber ?? null,
     status: accreditation.status,
-    overseasSites: toOverseasSitesView(overseasSites)
+    overseasSites: toOverseasSiteApprovals(overseasSites)
   }
 }
 
@@ -199,9 +199,21 @@ function toSiteView(registration) {
  */
 function toOverseasSitesView(overseasSites) {
   return Object.fromEntries(
-    Object.entries(overseasSites).map(([orsId, site]) => [
+    Object.entries(overseasSites).map(
+      ([orsId, { validFrom: _approval, ...site }]) => [orsId, site]
+    )
+  )
+}
+
+/**
+ * @param {Record<string, OverseasSiteDetail>} overseasSites
+ * @returns {Record<string, string | null>}
+ */
+function toOverseasSiteApprovals(overseasSites) {
+  return Object.fromEntries(
+    Object.entries(overseasSites).map(([orsId, { validFrom }]) => [
       orsId,
-      { ...site, validFrom: site.validFrom?.toISOString() ?? null }
+      validFrom?.toISOString() ?? null
     ])
   )
 }

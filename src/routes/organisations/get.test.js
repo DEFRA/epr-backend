@@ -151,6 +151,7 @@ describe('organisation view routes', () => {
                 postcode: 'SW2A 0AA'
               }
             },
+            overseasSites: {},
             accreditations: {
               2026: {
                 id: accreditation.id,
@@ -164,7 +165,37 @@ describe('organisation view routes', () => {
       })
     })
 
-    it('gives an exporter no site, and its accreditation the overseas sites keyed by ORS id', async () => {
+    it('gives a registered-only exporter no site and the details of every overseas site it uses', async () => {
+      const organisation = buildOrganisation({ registrations: [exporter()] })
+      await serve(organisation)
+
+      const [registration] = body(
+        await get(`/organisations/${organisation.orgId}`)
+      ).registrations
+
+      expect(registration.site).toBeNull()
+      expect(registration.accreditations).toEqual({})
+      expect(registration.overseasSites).toEqual({
+        '001': {
+          name: 'Beta Reprocessor',
+          country: 'Germany',
+          address: {
+            line1: '2 Teststrasse',
+            townOrCity: 'Berlin',
+            postcode: '10115'
+          },
+          coordinates: '52.5200,13.4050'
+        },
+        '002': {
+          name: 'Alpha Reprocessor',
+          country: 'France',
+          address: { line1: '1 Rue de Test', townOrCity: 'Paris' },
+          coordinates: null
+        }
+      })
+    })
+
+    it("gives an accredited exporter's accreditation each overseas site's approval date", async () => {
       const accreditation = exporterAccreditation()
       const organisation = buildOrganisation({
         registrations: [exporter({ accreditationId: accreditation.id })],
@@ -176,27 +207,9 @@ describe('organisation view routes', () => {
         await get(`/organisations/${organisation.orgId}`)
       ).registrations
 
-      expect(registration.site).toBeNull()
-      expect(registration).not.toHaveProperty('overseasSites')
       expect(registration.accreditations[2026].overseasSites).toEqual({
-        '001': {
-          name: 'Beta Reprocessor',
-          country: 'Germany',
-          address: {
-            line1: '2 Teststrasse',
-            townOrCity: 'Berlin',
-            postcode: '10115'
-          },
-          coordinates: '52.5200,13.4050',
-          validFrom: '2026-01-01T00:00:00.000Z'
-        },
-        '002': {
-          name: 'Alpha Reprocessor',
-          country: 'France',
-          address: { line1: '1 Rue de Test', townOrCity: 'Paris' },
-          coordinates: null,
-          validFrom: null
-        }
+        '001': '2026-01-01T00:00:00.000Z',
+        '002': null
       })
     })
 
@@ -372,8 +385,9 @@ describe('organisation view routes', () => {
       expect(body(response)).toMatchObject({
         registrationNumber: EXPORTER_REGISTRATION_NUMBER,
         site: null,
+        overseasSites: { '001': { name: 'Beta Reprocessor' } },
         accreditations: {
-          2026: { overseasSites: { '001': { name: 'Beta Reprocessor' } } }
+          2026: { overseasSites: { '001': '2026-01-01T00:00:00.000Z' } }
         }
       })
     })
@@ -401,7 +415,7 @@ describe('organisation view routes', () => {
       })
     })
 
-    it('returns one accreditation by its year, with its overseas sites', async () => {
+    it('returns one accreditation by its year, with its overseas site approvals', async () => {
       const response = await get(
         `${base}/${EXPORTER_REGISTRATION_NUMBER}/accreditations/2026`
       )
@@ -409,7 +423,7 @@ describe('organisation view routes', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: exportAccreditation.id,
-        overseasSites: { '001': { name: 'Beta Reprocessor' } }
+        overseasSites: { '001': '2026-01-01T00:00:00.000Z', '002': null }
       })
     })
 

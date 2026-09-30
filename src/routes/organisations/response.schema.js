@@ -28,12 +28,15 @@ const overseasSiteViewSchema = Joi.object({
   })
     .allow(null)
     .required(),
-  coordinates: Joi.string().allow(null).required(),
-  validFrom: Joi.string().isoDate().allow(null).required()
+  coordinates: Joi.string().allow(null).required()
 })
 
 const overseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, overseasSiteViewSchema)
+  .required()
+
+const overseasSiteApprovalsSchema = Joi.object()
+  .pattern(orsIdKey, Joi.string().isoDate().allow(null))
   .required()
 
 export const accreditationViewSchema = Joi.object({
@@ -42,7 +45,7 @@ export const accreditationViewSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .required(),
-  overseasSites: overseasSitesViewSchema
+  overseasSites: overseasSiteApprovalsSchema
 })
 
 const accreditationsViewSchema = Joi.object()
@@ -76,6 +79,7 @@ export const registrationViewSchema = Joi.object({
   })
     .allow(null)
     .required(),
+  overseasSites: overseasSitesViewSchema,
   accreditations: accreditationsViewSchema
 })
 
