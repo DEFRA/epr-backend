@@ -52,7 +52,11 @@ export async function getDefraUserRoles(tokenPayload, request) {
  * @param {Organisation} usersLinkedOrg
  */
 const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
-  const { organisationId } = request.params
+  const { organisationId, organisationNumber } = request.params
+
+  if (organisationNumber) {
+    return Number(organisationNumber) === usersLinkedOrg.orgId
+  }
 
   return !!organisationId && organisationId === usersLinkedOrg.id
 }
