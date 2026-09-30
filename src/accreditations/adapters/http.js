@@ -8,7 +8,7 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * The most registration ids sent in one request, keeping the query string
  * well inside URL length limits.
  */
-const REGISTRATION_IDS_PER_REQUEST = 100
+const REGISTRATION_IDS_PER_REQUEST = 40
 
 /**
  * @template T
