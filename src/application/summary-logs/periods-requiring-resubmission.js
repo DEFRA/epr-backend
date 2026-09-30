@@ -1,9 +1,10 @@
+import { logger } from '#common/helpers/logging/logger.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import {
-  extractReportedData,
-  reportedDataAreEquivalent
+  diffReportedData,
+  extractReportedData
 } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
@@ -112,7 +113,8 @@ const aggregatePeriodFigures = (
   })
 
 /**
- * Whether this upload changes what a closed period's report would present.
+ * The reported fields this upload changes in what a closed period's report
+ * would present (empty when it changes none).
  *
  * The before-state is the report rebuilt from the submission it was generated
  * from (its source summary log), not the report as stored. Row-state history is
@@ -125,18 +127,18 @@ const aggregatePeriodFigures = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
  * @param {FiguresContext} params.context
- * @returns {Promise<boolean>}
+ * @returns {Promise<string[]>}
  */
-const periodFiguresChanged = async ({
+const changedFieldsForPeriod = async ({
   period,
   periodicReports,
   reportsService,
   context
 }) => {
   const currentReportId = currentReportIdForPeriod(periodicReports, period)
-  /* v8 ignore next 3 -- a closed period always has a current stored report */
+  /* v8 ignore next 3 -- a closed period always has a current stored report; treat none as wholly changed */
   if (!currentReportId) {
-    return true
+    return ['report']
   }
 
   const report = await reportsService.findReportById(currentReportId)
@@ -154,10 +156,33 @@ const periodFiguresChanged = async ({
     ...context
   })
 
-  return !reportedDataAreEquivalent(
+  return diffReportedData(
     extractReportedData(before),
     extractReportedData(after)
   )
+}
+
+/**
+ * Records whether a closed period this upload restated requires resubmission,
+ * and which reported fields changed. Logs field paths only, never their values,
+ * which can identify suppliers and destinations.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {PeriodRef} period
+ * @param {string[]} changedFields
+ */
+const logPeriodOutcome = (
+  { organisationId, registrationId },
+  { year, cadence, period },
+  changedFields
+) => {
+  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId}`
+  logger.info({
+    message:
+      changedFields.length > 0
+        ? `${subject} requires resubmission: reported data changed in ${changedFields.join(', ')}`
+        : `${subject} does not require resubmission: reported data unchanged`
+  })
 }
 
 /**
@@ -218,16 +243,23 @@ export const computePeriodsRequiringResubmission = async ({
     summaryLogRowStatesRepository
   }
 
-  const changed = await Promise.all(
-    closedPeriods.map((period) =>
-      periodFiguresChanged({
+  const outcomes = await Promise.all(
+    closedPeriods.map(async (period) => ({
+      period,
+      changedFields: await changedFieldsForPeriod({
         period,
         periodicReports,
         reportsService,
         context
       })
-    )
+    }))
   )
 
-  return closedPeriods.filter((_, index) => changed[index])
+  for (const { period, changedFields } of outcomes) {
+    logPeriodOutcome(ledgerId, period, changedFields)
+  }
+
+  return outcomes
+    .filter(({ changedFields }) => changedFields.length > 0)
+    .map(({ period }) => period)
 }

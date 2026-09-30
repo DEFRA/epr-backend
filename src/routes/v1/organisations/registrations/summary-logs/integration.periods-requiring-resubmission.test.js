@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
+import { onTestFinished, vi } from 'vitest'
 
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -300,8 +302,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   }
 
   // Same as submitAndCloseJanuary but seeds the closed period from Sent on loads
-  // (reprocessor output), so the frozen report carries wasteSent.finalDestinations
-  // to diff against.
+  // (reprocessor output), so the report's source submission carries
+  // wasteSent.finalDestinations to diff against.
   const submitAndCloseJanuaryWithSentOn = async (env, rows) => {
     await upload(
       env,
@@ -312,6 +314,17 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, JANUARY_2025)
+  }
+
+  // Captures info log messages from here to the end of the test, so a test can
+  // assert what the gate recorded about each closed period.
+  const captureInfoMessages = () => {
+    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {})
+    onTestFinished(() => infoSpy.mockRestore())
+    return () =>
+      infoSpy.mock.calls.map(
+        ([entry]) => /** @type {{ message?: string }} */ (entry).message
+      )
   }
 
   // Weights are capped at 1000 in the reprocessor received template
@@ -518,6 +531,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // The final destination name is reported data (stored on the report), so
     // changing it changes the report.
+    const infoMessages = captureInfoMessages()
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-dest-name',
@@ -532,6 +546,12 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
+    // The gate records which reported fields changed (paths only, no values).
+    expect(infoMessages()).toContainEqual(
+      expect.stringContaining(
+        'requires resubmission: reported data changed in wasteSent.finalDestinations'
+      )
+    )
   })
 
   it('does not flag a closed period when only final destination email and phone changed', async () => {
@@ -547,6 +567,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // Final destination email and phone are captured on the sheet but never
     // reach the report, so a change to them alone is not a reported-data change.
+    const infoMessages = captureInfoMessages()
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-dest-contact',
@@ -565,6 +586,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+    expect(infoMessages()).toContainEqual(
+      expect.stringContaining(
+        'does not require resubmission: reported data unchanged'
+      )
+    )
   })
 
   it('does not flag a closed period when only OSR name and country changed (registered-only exporter)', async () => {

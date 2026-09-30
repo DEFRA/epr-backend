@@ -71,7 +71,8 @@ describe('diagnoseResubmissionFigures', () => {
       resubmissionPairs: 1,
       autoEnforcedResubmissions: 1,
       identicalResubmissions: 1,
-      changedResubmissions: 0
+      changedResubmissions: 0,
+      changedFieldCounts: {}
     })
     expect(reports).toEqual([
       {
@@ -212,6 +213,7 @@ describe('diagnoseResubmissionFigures', () => {
 
   it('flags a wasteSent figure change as changed', () => {
     // No recyclingActivity: a waste-sent-only report shape.
+    /** @param {number} submissionNumber @param {number} tonnageSentToReprocessor */
     const withWaste = (submissionNumber, tonnageSentToReprocessor) =>
       submission(submissionNumber, {
         recyclingActivity: undefined,
@@ -228,6 +230,24 @@ describe('diagnoseResubmissionFigures', () => {
     ])
 
     expect(summary.changedResubmissions).toBe(1)
+  })
+
+  it('counts which reported fields changed across genuinely changed resubmissions', () => {
+    /** @param {number} submissionNumber */
+    const retonned = (submissionNumber) =>
+      submission(submissionNumber, {
+        recyclingActivity: recyclingBlock({ totalTonnageReceived: 31 })
+      })
+
+    const { summary } = diagnoseResubmissionFigures([
+      group({ submissions: [submission(1), retonned(2)] }),
+      group({ period: 4, submissions: [submission(1), retonned(2)] }),
+      group({ period: 5, submissions: [submission(1), submission(2)] })
+    ])
+
+    expect(summary.changedFieldCounts).toEqual({
+      'recyclingActivity.totalTonnageReceived': 2
+    })
   })
 
   it('ignores a prn issuedTonnage change: PRN is out of scope for the diff', () => {
@@ -289,7 +309,8 @@ describe('diagnoseResubmissionFigures', () => {
       resubmissionPairs: 0,
       autoEnforcedResubmissions: 0,
       identicalResubmissions: 0,
-      changedResubmissions: 0
+      changedResubmissions: 0,
+      changedFieldCounts: {}
     })
   })
 })

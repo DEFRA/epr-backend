@@ -245,6 +245,71 @@ export const canonicalise = (value) => {
   )
 }
 
+/** @param {string} path @param {string} field */
+const joinPath = (path, field) => (path ? `${path}.${field}` : field)
+
+/**
+ * @param {FieldSpec} fieldSpec
+ * @returns {fieldSpec is { [field: string]: FieldSpec }}
+ */
+const isBlockSpec = (fieldSpec) =>
+  typeof fieldSpec === 'object' &&
+  !Array.isArray(fieldSpec) &&
+  !isExcluded(fieldSpec)
+
+/**
+ * @param {ReportedDataValue} value
+ * @returns {value is { [field: string]: ReportedDataValue }}
+ */
+const isRecord = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * The paths of the compared fields that differ between two extracted values
+ * `fieldSpec` classifies. Descends into a block present on both sides; reports
+ * a leaf, a list, or a block present on only one side at its own path. List
+ * items have no stable identity (they are compared as a set), so a changed list
+ * is reported as a whole.
+ *
+ * @param {FieldSpec} fieldSpec
+ * @param {ReportedDataValue} before
+ * @param {ReportedDataValue} after
+ * @param {string} path
+ * @returns {string[]}
+ */
+const changedFieldPaths = (fieldSpec, before, after, path) => {
+  if (canonicalise(before) === canonicalise(after)) {
+    return []
+  }
+  if (isBlockSpec(fieldSpec) && isRecord(before) && isRecord(after)) {
+    // Extraction emits every compared field of a present block, so each is set.
+    return Object.entries(fieldSpec)
+      .filter(([, spec]) => !isExcluded(spec))
+      .flatMap(([field, spec]) =>
+        changedFieldPaths(
+          spec,
+          /** @type {ReportedDataValue} */ (before[field]),
+          /** @type {ReportedDataValue} */ (after[field]),
+          joinPath(path, field)
+        )
+      )
+  }
+  return [path]
+}
+
+/**
+ * The paths of the reported fields that differ between two already-extracted
+ * reported-data sets, sorted (e.g. `['wasteSent.finalDestinations']`). Empty
+ * when they are equivalent. Paths only, never values, so the result is safe to
+ * log.
+ *
+ * @param {ReportedDataValue} before
+ * @param {ReportedDataValue} after
+ * @returns {string[]}
+ */
+export const diffReportedData = (before, after) =>
+  changedFieldPaths(REPORTED_DATA_FIELDS, before, after, '').sort(byString)
+
 /**
  * True when two already-extracted reported-data sets are logically equivalent.
  *
@@ -252,4 +317,4 @@ export const canonicalise = (value) => {
  * @param {ReportedDataValue} reportedDataB
  */
 export const reportedDataAreEquivalent = (reportedDataA, reportedDataB) =>
-  canonicalise(reportedDataA) === canonicalise(reportedDataB)
+  diffReportedData(reportedDataA, reportedDataB).length === 0

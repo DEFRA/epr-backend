@@ -11,19 +11,22 @@
  * from the figure analysis.
  *
  * The comparison covers only the reported-data subset a report presents, via
- * the shared `extractReportedData`/`reportedDataAreEquivalent` core. See
- * `reports/domain/resubmission/reported-data-equivalence.js` for the exact set
- * of excluded fields (provenance, lifecycle metadata, free-text and
- * operator-entered fields, and each supplier's telephone and email). Reusing
- * that core keeps this diagnostic's notion of "identical" in step with the
- * live resubmission gate. `suppliers` and `finalDestinations` are persisted
- * unsorted, so the diff is order-insensitive: logically equivalent data in a
- * different row order still counts as identical.
+ * the shared `extractReportedData`/`diffReportedData` core. See
+ * `reports/domain/resubmission/reported-data-equivalence.js` for how every
+ * report field is classified (compared exactly, compared as free text, or
+ * excluded with a reason). Reusing that core keeps this diagnostic's notion of
+ * "identical" in step with the live resubmission gate. `suppliers` and
+ * `finalDestinations` are persisted unsorted, so the diff is order-insensitive:
+ * logically equivalent data in a different row order still counts as identical.
+ *
+ * For the genuinely changed resubmissions it also counts which reported fields
+ * changed, so the spike shows what drives real restatements, not only how many
+ * were pointless.
  */
 
 import {
-  extractReportedData,
-  reportedDataAreEquivalent
+  diffReportedData,
+  extractReportedData
 } from '#reports/domain/resubmission/reported-data-equivalence.js'
 
 /** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
@@ -69,6 +72,8 @@ import {
  *   are logically equivalent (the pointless ones)
  * @property {number} changedResubmissions - auto-enforced pairs whose figures
  *   genuinely changed
+ * @property {Record<string, number>} changedFieldCounts - for each reported
+ *   field path, how many changed resubmissions it changed in
  */
 
 /**
@@ -80,12 +85,14 @@ import {
 const isAutoEnforced = (previous) =>
   Boolean(previous.resubmissionRequired?.closedPeriodRestated)
 
+/** @returns {ResubmissionFiguresSummary} */
 const emptySummary = () => ({
   resubmittedPeriods: 0,
   resubmissionPairs: 0,
   autoEnforcedResubmissions: 0,
   identicalResubmissions: 0,
-  changedResubmissions: 0
+  changedResubmissions: 0,
+  changedFieldCounts: {}
 })
 
 /**
@@ -107,12 +114,11 @@ const scanPeriod = (periodGroup, reports, summary) => {
     summary.resubmissionPairs += 1
     if (isAutoEnforced(previous)) {
       summary.autoEnforcedResubmissions += 1
-      if (
-        reportedDataAreEquivalent(
-          extractReportedData(previous),
-          extractReportedData(current)
-        )
-      ) {
+      const changedFields = diffReportedData(
+        extractReportedData(previous),
+        extractReportedData(current)
+      )
+      if (changedFields.length === 0) {
         summary.identicalResubmissions += 1
         reports.push({
           organisationId: periodGroup.organisationId,
@@ -125,6 +131,10 @@ const scanPeriod = (periodGroup, reports, summary) => {
         })
       } else {
         summary.changedResubmissions += 1
+        for (const field of changedFields) {
+          summary.changedFieldCounts[field] =
+            (summary.changedFieldCounts[field] ?? 0) + 1
+        }
       }
     }
   }

@@ -5,6 +5,7 @@ import { reportDataFieldsSchema } from '#reports/repository/schema.js'
 
 import {
   canonicalise,
+  diffReportedData,
   extractReportedData,
   REPORTED_DATA_FIELDS,
   reportedDataAreEquivalent
@@ -295,6 +296,42 @@ describe('extractReportedData — free-text fields are normalised, exact fields 
     const after = reportWithFinalDestination({ facilityType: 'REPROCESSOR' })
 
     expect(equivalent(before, after)).toBe(false)
+  })
+})
+
+describe('diffReportedData — which reported fields changed', () => {
+  /** @param {*} a @param {*} b */
+  const diff = (a, b) =>
+    diffReportedData(extractReportedData(a), extractReportedData(b))
+
+  it('reports no fields for reports whose reported data is equivalent', () => {
+    const before = reportWithSupplier()
+    const after = reportWithSupplier({ supplierPhone: '09876 543210' })
+
+    expect(diff(before, after)).toEqual([])
+  })
+
+  it('reports a changed list at the list level, since its items have no stable identity', () => {
+    const before = reportWithSupplier()
+    const after = reportWithSupplier({ tonnageReceived: 14 })
+
+    expect(diff(before, after)).toEqual(['recyclingActivity.suppliers'])
+  })
+
+  it('reports each changed field by path, sorted', () => {
+    const before = reportWithFinalDestination()
+    const after = reportWithFinalDestination({ recipientName: 'Dest B' })
+    after.wasteSent.tonnageSentToReprocessor = 8
+
+    expect(diff(before, after)).toEqual([
+      'wasteSent.finalDestinations',
+      'wasteSent.tonnageSentToReprocessor'
+    ])
+  })
+
+  it('reports an activity block present on only one side at the block level', () => {
+    expect(diff(reportWithSupplier(), {})).toEqual(['recyclingActivity'])
+    expect(diff({}, reportWithSupplier())).toEqual(['recyclingActivity'])
   })
 })
 

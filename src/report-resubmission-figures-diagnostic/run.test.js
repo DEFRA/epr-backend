@@ -25,7 +25,8 @@ const emptyResult = {
     resubmissionPairs: 0,
     autoEnforcedResubmissions: 0,
     identicalResubmissions: 0,
-    changedResubmissions: 0
+    changedResubmissions: 0,
+    changedFieldCounts: {}
   }
 }
 
@@ -104,7 +105,11 @@ describe('runResubmissionFiguresDiagnostic', () => {
         resubmissionPairs: 6,
         autoEnforcedResubmissions: 4,
         identicalResubmissions: 3,
-        changedResubmissions: 1
+        changedResubmissions: 1,
+        changedFieldCounts: {
+          'wasteSent.finalDestinations': 1,
+          'recyclingActivity.suppliers': 2
+        }
       }
     })
     mockQuery.mockResolvedValue({ scanned: 1234, groups: [{}] })
@@ -117,7 +122,7 @@ describe('runResubmissionFiguresDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission figures diagnostic: scannedSubmittedReports=1234 resubmittedPeriods=5 resubmissionPairs=6 autoEnforcedResubmissions=4 identicalResubmissions=3 changedResubmissions=1'
+        'Resubmission figures diagnostic: scannedSubmittedReports=1234 resubmittedPeriods=5 resubmissionPairs=6 autoEnforcedResubmissions=4 identicalResubmissions=3 changedResubmissions=1 changedFields=recyclingActivity.suppliers:2,wasteSent.finalDestinations:1'
     })
   })
 

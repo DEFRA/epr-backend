@@ -22,6 +22,18 @@ const formatIdenticalLine = (r) =>
     `toSubmissionNumber=${r.toSubmissionNumber}`
   ].join(' ')
 
+/**
+ * `path:count` pairs sorted by field path, e.g.
+ * `recyclingActivity.suppliers:2,wasteSent.finalDestinations:1`.
+ *
+ * @param {Record<string, number>} changedFieldCounts
+ */
+const formatChangedFieldCounts = (changedFieldCounts) =>
+  Object.entries(changedFieldCounts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([field, count]) => `${field}:${count}`)
+    .join(',')
+
 /** @param {StartedServer} server */
 const runDiagnostic = async (server) => {
   const query = createResubmissionPairsQuery(server.db)
@@ -34,7 +46,7 @@ const runDiagnostic = async (server) => {
   }
 
   logger.info({
-    message: `Resubmission figures diagnostic: scannedSubmittedReports=${scanned} resubmittedPeriods=${summary.resubmittedPeriods} resubmissionPairs=${summary.resubmissionPairs} autoEnforcedResubmissions=${summary.autoEnforcedResubmissions} identicalResubmissions=${summary.identicalResubmissions} changedResubmissions=${summary.changedResubmissions}`
+    message: `Resubmission figures diagnostic: scannedSubmittedReports=${scanned} resubmittedPeriods=${summary.resubmittedPeriods} resubmissionPairs=${summary.resubmissionPairs} autoEnforcedResubmissions=${summary.autoEnforcedResubmissions} identicalResubmissions=${summary.identicalResubmissions} changedResubmissions=${summary.changedResubmissions} changedFields=${formatChangedFieldCounts(summary.changedFieldCounts)}`
   })
 }
 
