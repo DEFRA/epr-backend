@@ -158,6 +158,17 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     )
   })
 
+  it('names the full workbook as unredacted', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-18T14:15:30.000Z'))
+
+    const response = await request(asRegulator(), `${MARCH}?unredacted=true`)
+
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="market-insights-2026-monthly-3-unredacted-2026-09-18-141530.xlsx"'
+    )
+  })
+
   describe('over a register with an operator owing returns', () => {
     const JANUARY_TO_MARCH = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
     const register = readParamsFor(JANUARY_TO_MARCH)

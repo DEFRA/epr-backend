@@ -81,7 +81,12 @@ export const marketInsightsWorkbookGet = {
       .type(XLSX_CONTENT_TYPE)
       .header(
         'Content-Disposition',
-        marketInsightsDownloadDisposition(params, now, 'xlsx')
+        marketInsightsDownloadDisposition(
+          params,
+          now,
+          'xlsx',
+          query.unredacted ? 'unredacted' : undefined
+        )
       )
   }
 }
