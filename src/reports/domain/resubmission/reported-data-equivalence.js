@@ -1,7 +1,6 @@
 /**
  * The reported-data comparison core, used by the resubmission-figures
- * diagnostic and intended for the planned validation-time resubmission gate
- * (PAE-1983).
+ * diagnostic and intended for the planned validation-time resubmission gate.
  *
  * `REPORTED_DATA_FIELDS` classifies every field in `reportDataFieldsSchema`
  * (the report's data fields, not its identity, period or lifecycle fields) as
@@ -17,7 +16,7 @@
  * registry are excluded: a change to them is not a change the upload made.
  *
  * Free-text fields are the ones an operator types (supplier and destination
- * names and addresses). By the contract (PAE-1983), casing, whitespace and
+ * names and addresses). By the contract, casing, whitespace and
  * blank-versus-null edits to them are not reported-data changes, so they are
  * normalised on extraction. Figures, identifiers and dropdown values are
  * compared exactly.
@@ -80,7 +79,7 @@ const OPERATOR_ENTERED =
   'Entered by the operator in the reporting journey, not derived from the summary log'
 
 const SUPPLIER_CONTACT =
-  'Agreed exception (PAE-1983): a change only to a supplier contact detail does not require resubmission'
+  'Agreed exception: a change only to a supplier contact detail does not require resubmission'
 
 const ORS_REGISTRY =
   'Resolved from the ORS registry by orsId, not the summary log: a registry update between submissions is not a reported-data change'
