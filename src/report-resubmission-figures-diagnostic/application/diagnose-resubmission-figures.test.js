@@ -71,7 +71,8 @@ describe('diagnoseResubmissionFigures', () => {
       resubmissionPairs: 1,
       autoEnforcedResubmissions: 1,
       identicalResubmissions: 1,
-      changedResubmissions: 0
+      changedResubmissions: 0,
+      changedFieldCounts: {}
     })
     expect(reports).toEqual([
       {
@@ -210,29 +211,46 @@ describe('diagnoseResubmissionFigures', () => {
     expect(summary.changedResubmissions).toBe(1)
   })
 
-  it('compares wasteSent and prn issuedTonnage, ignoring derived averagePricePerTonne', () => {
-    // No recyclingActivity: a waste-sent/prn-only report shape.
-    const withWasteAndPrn = (submissionNumber, averagePricePerTonne) =>
+  it('flags a wasteSent figure change as changed', () => {
+    // No recyclingActivity: a waste-sent-only report shape.
+    /** @param {number} submissionNumber @param {number} tonnageSentToReprocessor */
+    const withWaste = (submissionNumber, tonnageSentToReprocessor) =>
       submission(submissionNumber, {
         recyclingActivity: undefined,
         wasteSent: {
-          tonnageSentToReprocessor: 5,
+          tonnageSentToReprocessor,
           tonnageSentToExporter: 0,
           tonnageSentToAnotherSite: 2,
           finalDestinations: [{ recipientName: 'Dest', tonnageSentOn: 7 }]
-        },
-        prn: { issuedTonnage: 40, averagePricePerTonne, totalRevenue: 480 }
+        }
       })
 
     const { summary } = diagnoseResubmissionFigures([
-      group({ submissions: [withWasteAndPrn(1, 12), withWasteAndPrn(2, 99)] })
+      group({ submissions: [withWaste(1, 5), withWaste(2, 6)] })
     ])
 
-    expect(summary.identicalResubmissions).toBe(1)
-    expect(summary.changedResubmissions).toBe(0)
+    expect(summary.changedResubmissions).toBe(1)
   })
 
-  it('flags a prn issuedTonnage change as changed', () => {
+  it('counts which reported fields changed across genuinely changed resubmissions', () => {
+    /** @param {number} submissionNumber */
+    const retonned = (submissionNumber) =>
+      submission(submissionNumber, {
+        recyclingActivity: recyclingBlock({ totalTonnageReceived: 31 })
+      })
+
+    const { summary } = diagnoseResubmissionFigures([
+      group({ submissions: [submission(1), retonned(2)] }),
+      group({ period: 4, submissions: [submission(1), retonned(2)] }),
+      group({ period: 5, submissions: [submission(1), submission(2)] })
+    ])
+
+    expect(summary.changedFieldCounts).toEqual({
+      'recyclingActivity.totalTonnageReceived': 2
+    })
+  })
+
+  it('ignores a prn issuedTonnage change: PRN is out of scope for the diff', () => {
     const { summary } = diagnoseResubmissionFigures([
       group({
         submissions: [
@@ -242,7 +260,8 @@ describe('diagnoseResubmissionFigures', () => {
       })
     ])
 
-    expect(summary.changedResubmissions).toBe(1)
+    expect(summary.identicalResubmissions).toBe(1)
+    expect(summary.changedResubmissions).toBe(0)
   })
 
   it('classifies every successive auto-enforced pair independently', () => {
@@ -290,7 +309,8 @@ describe('diagnoseResubmissionFigures', () => {
       resubmissionPairs: 0,
       autoEnforcedResubmissions: 0,
       identicalResubmissions: 0,
-      changedResubmissions: 0
+      changedResubmissions: 0,
+      changedFieldCounts: {}
     })
   })
 })

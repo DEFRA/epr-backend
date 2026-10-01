@@ -146,7 +146,7 @@ export const staleSchema = Joi.object({
   }).optional()
 })
 
-const reportDataFieldsSchema = {
+export const reportDataFieldsSchema = {
   source: Joi.object({
     summaryLogId: Joi.string().allow(null),
     lastUploadedAt: Joi.string().isoDate().allow(null)

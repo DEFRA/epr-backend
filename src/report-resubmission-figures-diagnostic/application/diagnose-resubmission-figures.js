@@ -10,18 +10,23 @@
  * are user-inflicted, not something the service forced, so they are excluded
  * from the figure analysis.
  *
- * The comparison covers only summary-log and PRN activity data — the figures a
- * report presents. It deliberately excludes: provenance (`source`), lifecycle
- * metadata (`status`, `resubmissionRequired`), free-text and operator-entered
- * fields (`supportingInformation`, `tonnageRecycled`, `tonnageNotRecycled`,
- * `tonnageReceivedNotExported`, `prn.totalRevenue`, `prn.freeTonnage`), and
- * `prn.averagePricePerTonne` (computed from the operator-entered revenue, so
- * not activity data). `suppliers` and `finalDestinations` are persisted
- * unsorted (see defra-2hq4), so the diff is order-insensitive: logically
- * equivalent figures in a different row order still count as identical.
+ * The comparison covers only the reported-data subset a report presents, via
+ * the shared `diffReports` core. See
+ * `reports/domain/resubmission/reported-data-equivalence.js` for how every
+ * report field is classified (compared exactly, compared as free text, or
+ * excluded with a reason). Reusing that core will keep this diagnostic's notion
+ * of "identical" in step with the planned resubmission gate. `suppliers` and
+ * `finalDestinations` are persisted unsorted, so the diff is order-insensitive:
+ * logically equivalent data in a different row order still counts as identical.
+ *
+ * For the genuinely changed resubmissions it also counts which reported fields
+ * changed, so the spike shows what drives real restatements, not only how many
+ * were pointless.
  */
 
-/** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent, PrnData } from '#reports/repository/port.js' */
+import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
+
+/** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
 /**
  * @typedef {Object} ResubmissionSubmission
@@ -30,7 +35,6 @@
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
  */
 
 /**
@@ -65,71 +69,9 @@
  *   are logically equivalent (the pointless ones)
  * @property {number} changedResubmissions - auto-enforced pairs whose figures
  *   genuinely changed
+ * @property {Record<string, number>} changedFieldCounts - for each reported
+ *   field path, how many changed resubmissions it changed in
  */
-
-/**
- * The summary-log and PRN activity subset of one submission — the figures a
- * report presents, without the free-text and operator-entered fields. Missing
- * activity blocks collapse to null so present-vs-absent is itself a difference.
- *
- * @param {ResubmissionSubmission} submission
- */
-const extractFigures = (submission) => ({
-  recyclingActivity: submission.recyclingActivity
-    ? {
-        suppliers: submission.recyclingActivity.suppliers,
-        totalTonnageReceived: submission.recyclingActivity.totalTonnageReceived
-      }
-    : null,
-  exportActivity: submission.exportActivity
-    ? {
-        overseasSites: submission.exportActivity.overseasSites,
-        unapprovedOverseasSites:
-          submission.exportActivity.unapprovedOverseasSites,
-        totalTonnageExported: submission.exportActivity.totalTonnageExported,
-        tonnageRefusedAtDestination:
-          submission.exportActivity.tonnageRefusedAtDestination,
-        tonnageStoppedDuringExport:
-          submission.exportActivity.tonnageStoppedDuringExport,
-        totalTonnageRefusedOrStopped:
-          submission.exportActivity.totalTonnageRefusedOrStopped,
-        tonnageRepatriated: submission.exportActivity.tonnageRepatriated
-      }
-    : null,
-  wasteSent: submission.wasteSent
-    ? {
-        tonnageSentToReprocessor: submission.wasteSent.tonnageSentToReprocessor,
-        tonnageSentToExporter: submission.wasteSent.tonnageSentToExporter,
-        tonnageSentToAnotherSite: submission.wasteSent.tonnageSentToAnotherSite,
-        finalDestinations: submission.wasteSent.finalDestinations
-      }
-    : null,
-  prn: submission.prn ? { issuedTonnage: submission.prn.issuedTonnage } : null
-})
-
-/** @param {string} a @param {string} b */
-const byString = (a, b) => a.localeCompare(b)
-
-/**
- * Recursively serialises a value to a stable string with object keys sorted and
- * array elements ordered by their own serialisation, so the result is
- * insensitive to both key order and row order.
- *
- * @param {*} value
- * @returns {string}
- */
-const canonicalise = (value) => {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalise).sort(byString).join(',')}]`
-  }
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.keys(value)
-      .sort(byString)
-      .map((key) => `${JSON.stringify(key)}:${canonicalise(value[key])}`)
-    return `{${entries.join(',')}}`
-  }
-  return JSON.stringify(value)
-}
 
 /**
  * True when the earlier submission of a pair was flagged for resubmission by
@@ -141,21 +83,23 @@ const isAutoEnforced = (previous) =>
   Boolean(previous.resubmissionRequired?.closedPeriodRestated)
 
 /**
- * True when two submissions present logically equivalent activity figures.
- *
- * @param {ResubmissionSubmission} previous
- * @param {ResubmissionSubmission} current
+ * @param {Record<string, number>} changedFieldCounts - accumulator, mutated
+ * @param {string[]} changedFields
  */
-const figuresAreEquivalent = (previous, current) =>
-  canonicalise(extractFigures(previous)) ===
-  canonicalise(extractFigures(current))
+const countChangedFields = (changedFieldCounts, changedFields) => {
+  for (const field of changedFields) {
+    changedFieldCounts[field] = (changedFieldCounts[field] ?? 0) + 1
+  }
+}
 
+/** @returns {ResubmissionFiguresSummary} */
 const emptySummary = () => ({
   resubmittedPeriods: 0,
   resubmissionPairs: 0,
   autoEnforcedResubmissions: 0,
   identicalResubmissions: 0,
-  changedResubmissions: 0
+  changedResubmissions: 0,
+  changedFieldCounts: {}
 })
 
 /**
@@ -177,7 +121,8 @@ const scanPeriod = (periodGroup, reports, summary) => {
     summary.resubmissionPairs += 1
     if (isAutoEnforced(previous)) {
       summary.autoEnforcedResubmissions += 1
-      if (figuresAreEquivalent(previous, current)) {
+      const changedFields = diffReports(previous, current)
+      if (changedFields.length === 0) {
         summary.identicalResubmissions += 1
         reports.push({
           organisationId: periodGroup.organisationId,
@@ -190,6 +135,7 @@ const scanPeriod = (periodGroup, reports, summary) => {
         })
       } else {
         summary.changedResubmissions += 1
+        countChangedFields(summary.changedFieldCounts, changedFields)
       }
     }
   }
