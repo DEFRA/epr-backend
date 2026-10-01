@@ -149,9 +149,13 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     registrationId: summaryLog.registrationId,
     summaryLogId,
     // The figure-gated subset of closed periods, so resubmission is flagged only
-    // when the reported data changed (PAE-1983).
+    // when the reported data changed (PAE-1983). A log validated before the
+    // gate existed has no such field (reads do not apply the schema default),
+    // so it falls back to every closed period it touched, as before.
     periodsRequiringResubmission:
-      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
+      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
+      summaryLog.loadsByReportingPeriod?.closedPeriods ??
+      []
   })
 
   await summaryLogsRepository.update(

@@ -314,6 +314,46 @@ describe('submitSummaryLog resubmission flag source', () => {
       periodsRequiringResubmission: [january]
     })
   })
+
+  it('falls back to every touched closed period for a log validated before the figure gate existed', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const january = { year: 2025, cadence: 'monthly', period: 1 }
+
+    const { deps, summaryLogId, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        loadsByReportingPeriod: {
+          ...emptyLoadsByReportingPeriod(),
+          closedPeriods: [january]
+        }
+      })
+
+    // Validated before the deploy, so the stored document has no
+    // periodsRequiringResubmission. Writes apply the schema default and reads
+    // do not, so the legacy shape is reproduced on read.
+    const { summaryLogsRepository } = deps
+    const legacyRead = {
+      ...summaryLogsRepository,
+      findById: async (/** @type {string} */ id) => {
+        const stored = await summaryLogsRepository.findById(id)
+        delete stored?.summaryLog.loadsByReportingPeriod
+          ?.periodsRequiringResubmission
+        return stored
+      }
+    }
+
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      summaryLogsRepository: legacyRead
+    })
+
+    expect(deps.onSummaryLogUploaded).toHaveBeenCalledWith({
+      organisationId,
+      registrationId,
+      summaryLogId,
+      periodsRequiringResubmission: [january]
+    })
+  })
 })
 
 describe('submitSummaryLog December waste metric', () => {
