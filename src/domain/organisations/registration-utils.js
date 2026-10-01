@@ -94,10 +94,7 @@ export function activeAccreditationValidFrom(accreditation) {
 }
 
 /**
- * Whether the registration was open for business at some point during
- * `year` — approved, and approved on or before the year ends. A registration
- * never carries a `validTo` (it doesn't expire), so a later cancellation
- * doesn't retroactively close a year it was already approved for.
+ * Whether the registration is approved and active during a specific year
  * @param {Registration} registration
  * @param {number} year
  * @returns {boolean}
