@@ -917,37 +917,103 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
   })
 
-  it('still validates the upload when the gate fails', async () => {
+  it('flags only the period whose comparison failed, and still validates the upload', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
     })
-    await submitAndCloseJanuary(env)
 
-    vi.spyOn(env.reportsRepository, 'findReportById').mockRejectedValue(
-      new Error('reports store unavailable')
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+    await generateAndSubmitReport(env, FEBRUARY_2025)
+
+    const findReportById = env.reportsRepository.findReportById
+    vi.spyOn(env.reportsRepository, 'findReportById').mockImplementation(
+      async (reportId) => {
+        const report = await findReportById(reportId)
+        if (report.period === JANUARY_2025.period) {
+          throw new Error('reports store unavailable')
+        }
+        return report
+      }
     )
 
+    const infoMessages = captureInfoMessages()
     const errorMessages = captureMessages('error')
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
-      'sl-gate-error',
-      'file-gate-error',
+      'sl-period-error',
+      'file-period-error',
       createUploadData([
-        { rowId: 1001, tonnageReceived: 500, bailingWire: 'No' }
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN-2' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB-2'
+        }
       ])
     )
 
-    // The upload still validates, and every closed period it touched requires
-    // resubmission, as before the gate existed.
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      JANUARY_2025,
+      FEBRUARY_2025
+    ])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
     expect(errorMessages()).toContainEqual(
+      expect.stringMatching(
+        /Closed period 2025 monthly 1 .*\(summary log sl-period-error\) requires resubmission: comparison failed/
+      )
+    )
+    expect(infoMessages()).toContainEqual(
+      expect.stringMatching(
+        /Closed period 2025 monthly 2 .* does not require resubmission/
+      )
+    )
+  })
+
+  it('compares against an empty before-state when the report predates any submission', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    // January is reported and submitted before any summary log, so its report
+    // has no source submission.
+    await generateAndSubmitReport(env, JANUARY_2025)
+
+    const infoMessages = captureInfoMessages()
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-first-upload',
+      'file-first-upload',
+      createUploadData(FIRST_UPLOAD)
+    )
+
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+    expect(infoMessages()).toContainEqual(
       expect.stringContaining(
-        'Failed to compute periods requiring resubmission for summary log sl-gate-error'
+        '(summary log sl-first-upload) requires resubmission: reported data changed in'
       )
     )
   })

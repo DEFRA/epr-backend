@@ -6,7 +6,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
@@ -14,7 +14,7 @@ import { ledgerIdFor } from './ledger-id.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {PeriodicReport} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, PeriodicReportSlots} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
@@ -76,29 +76,30 @@ const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
   }))
 
 /**
- * The id of the latest submitted report for a closed period: what the regulator
- * holds, and what submit flags. The current report can be a resubmission draft,
- * so submitted ones are searched newest first. A closed period always has a
- * submitted report, so this resolves in practice; the optional-chaining is a
- * defensive lookup the invariant makes unreachable.
- *
  * @param {PeriodicReport[]} periodicReports
  * @param {PeriodRef} period
- * @returns {string | undefined}
+ * @returns {string}
  */
-/* v8 ignore start -- defensive lookup; the closed-period invariant guarantees a submitted report */
 const latestSubmittedReportIdForPeriod = (
   periodicReports,
   { year, cadence, period }
 ) => {
-  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
-    cadence
-  ]?.[period]
-  return [slot?.current, ...(slot?.previousSubmissions ?? [])].find(
-    (submission) => submission?.status === REPORT_STATUS.SUBMITTED
-  )?.id
+  // Closed periods are derived from these periodic reports, so the slot exists.
+  const periodicReport = /** @type {PeriodicReport} */ (
+    periodicReports.find((pr) => pr.year === year)
+  )
+  const slot = /** @type {PeriodicReportSlots} */ (
+    periodicReport.reports[/** @type {Cadence} */ (cadence)]
+  )[period]
+  const report = latestSubmitted(slot.current, slot.previousSubmissions)
+  /* v8 ignore next 5 -- a closed period always has a submitted report */
+  if (!report) {
+    throw new Error(
+      `No submitted report for closed period ${year} ${cadence} ${period}`
+    )
+  }
+  return report.id
 }
-/* v8 ignore stop */
 
 /**
  * Aggregates the figures a period's report presents from a head's row states,
@@ -151,21 +152,18 @@ const changedFieldsForPeriod = async ({
   reportsService,
   context
 }) => {
-  const reportId = latestSubmittedReportIdForPeriod(periodicReports, period)
-  /* v8 ignore next 3 -- a closed period always has a submitted report; treat none as wholly changed */
-  if (!reportId) {
-    return ['report']
-  }
-
-  const report = await reportsService.findReportById(reportId)
-  // The create schema requires source, so every stored report carries it.
+  const report = await reportsService.findReportById(
+    latestSubmittedReportIdForPeriod(periodicReports, period)
+  )
+  // The create schema requires a source; its id is null for a report generated
+  // before any submission, whose before-state really is empty.
   const { summaryLogId } = /** @type {ReportSource} */ (report.source)
   const sourceRowStates = await wasteRecordStatesForHead(
     context.summaryLogRowStatesRepository,
     context.ledgerId,
     summaryLogId
   )
-  if (sourceRowStates.length === 0) {
+  if (summaryLogId !== null && sourceRowStates.length === 0) {
     return null
   }
 
@@ -179,18 +177,35 @@ const changedFieldsForPeriod = async ({
 }
 
 /**
- * Whether a period's comparison outcome requires resubmission. A period that
- * cannot be compared is flagged, as it was before the gate existed.
- *
- * @param {string[] | null} changedFields
+ * @typedef {{ period: PeriodRef, changedFields: string[] | null } | { period: PeriodRef, error: Error }} PeriodOutcome
  */
-const requiresResubmission = (changedFields) =>
-  changedFields === null || changedFields.length > 0
+
+/**
+ * @param {PeriodRef} period
+ * @param {Omit<Parameters<typeof changedFieldsForPeriod>[0], 'period'>} params
+ * @returns {Promise<PeriodOutcome>}
+ */
+const comparePeriod = async (period, params) => {
+  try {
+    return {
+      period,
+      changedFields: await changedFieldsForPeriod({ period, ...params })
+    }
+  } catch (error) {
+    return { period, error: /** @type {Error} */ (error) }
+  }
+}
+
+// A period that failed or cannot be compared is flagged, as before the gate.
+const requiresResubmission = (/** @type {PeriodOutcome} */ outcome) =>
+  'error' in outcome ||
+  outcome.changedFields === null ||
+  outcome.changedFields.length > 0
 
 /**
  * @param {string[] | null} changedFields
  */
-const describeOutcome = (changedFields) => {
+const describeChange = (changedFields) => {
   if (changedFields === null) {
     return 'requires resubmission: cannot compare, its source submission has no row states'
   }
@@ -200,21 +215,31 @@ const describeOutcome = (changedFields) => {
 }
 
 /**
- * Records whether a closed period this upload restated requires resubmission,
- * and which reported fields changed. Logs field paths only, never their values,
- * which can identify suppliers and destinations.
+ * Logs field paths only, never their values, which can identify suppliers and
+ * destinations.
  *
  * @param {WasteBalanceLedgerId & { summaryLogId: string }} subject
- * @param {PeriodRef} period
- * @param {string[] | null} changedFields
+ * @param {PeriodOutcome} outcome
  */
 const logPeriodOutcome = (
   { organisationId, registrationId, summaryLogId },
-  { year, cadence, period },
-  changedFields
+  outcome
 ) => {
+  const { year, cadence, period } = outcome.period
+  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId})`
+  if ('error' in outcome) {
+    logger.error({
+      err: outcome.error,
+      message: `${subject} requires resubmission: comparison failed`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+    return
+  }
   logger.info({
-    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}) ${describeOutcome(changedFields)}`
+    message: `${subject} ${describeChange(outcome.changedFields)}`
   })
 }
 
@@ -256,7 +281,7 @@ const computePeriodsRequiringResubmission = async ({
   }
   /* v8 ignore next 3 -- closed periods only arise for a classified registration */
   if (!registration) {
-    return []
+    throw new Error('Closed periods without a registration')
   }
 
   const operatorCategory = getOperatorCategory(registration)
@@ -279,24 +304,16 @@ const computePeriodsRequiringResubmission = async ({
   }
 
   const outcomes = await Promise.all(
-    closedPeriods.map(async (period) => ({
-      period,
-      changedFields: await changedFieldsForPeriod({
-        period,
-        periodicReports,
-        reportsService,
-        context
-      })
-    }))
+    closedPeriods.map((period) =>
+      comparePeriod(period, { periodicReports, reportsService, context })
+    )
   )
 
-  for (const { period, changedFields } of outcomes) {
-    logPeriodOutcome({ ...ledgerId, summaryLogId }, period, changedFields)
+  for (const outcome of outcomes) {
+    logPeriodOutcome({ ...ledgerId, summaryLogId }, outcome)
   }
 
-  return outcomes
-    .filter(({ changedFields }) => requiresResubmission(changedFields))
-    .map(({ period }) => period)
+  return outcomes.filter(requiresResubmission).map(({ period }) => period)
 }
 
 /**
