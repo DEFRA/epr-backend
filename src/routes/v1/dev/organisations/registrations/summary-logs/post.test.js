@@ -175,7 +175,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
   })
 
-  it('uses the registered-only template when the payload carries no ACCREDITATION_NUMBER, but still resolves the accreditation that covers the whole year', async () => {
+  it('uses the registered-only template when the payload carries no ACCREDITATION_NUMBER, but still stamps the registration accreditation', async () => {
     const env = await createEnvironment()
 
     const response = await env.server.inject({

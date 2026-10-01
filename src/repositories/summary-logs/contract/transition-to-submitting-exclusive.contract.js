@@ -154,7 +154,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result2.success).toBe(true)
     })
 
-    it('allows concurrent submissions for the same org/reg in different years or accreditations', async () => {
+    it('allows concurrent submissions for the same org/reg and year in different accreditations', async () => {
       const { organisationId, registrationId } = generateOrgReg()
       const logId1 = `summary-${randomUUID()}`
       const logId2 = `summary-${randomUUID()}`
@@ -174,6 +174,37 @@ export const testTransitionToSubmittingExclusive = (it) => {
           organisationId,
           registrationId,
           year: 2026,
+          accreditationId: 'acc-1'
+        })
+      )
+
+      const result1 = await repository.transitionToSubmittingExclusive(logId1)
+      const result2 = await repository.transitionToSubmittingExclusive(logId2)
+
+      expect(result1.success).toBe(true)
+      expect(result2.success).toBe(true)
+    })
+
+    it('allows concurrent submissions for the same org/reg/accreditation in different years', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const logId1 = `summary-${randomUUID()}`
+      const logId2 = `summary-${randomUUID()}`
+
+      await repository.insert(
+        logId1,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: 'acc-1'
+        })
+      )
+      await repository.insert(
+        logId2,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2027,
           accreditationId: 'acc-1'
         })
       )

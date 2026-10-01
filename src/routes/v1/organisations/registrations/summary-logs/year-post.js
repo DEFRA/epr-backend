@@ -22,9 +22,9 @@ export const summaryLogsYearCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{year}'
 
 /**
- * Which accreditation the upload belongs to isn't asked for here: the file
- * itself names it, via its ACCREDITATION_NUMBER and template type, so
- * resolving it happens at validate time instead.
+ * Which accreditation the upload belongs to isn't asked for here: it is
+ * stamped at upload-completed from the registration's current accreditation
+ * link.
  */
 export const summaryLogsYearCreate = {
   method: 'POST',

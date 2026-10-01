@@ -23,33 +23,32 @@ export const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
 
+const LEGACY_INDEX_NAMES = [
+  // Pre-year-scoping submitting lock
+  'organisationId_1_registrationId_1',
+  // Pre-year-scoping findLatestSubmittedForOrgReg index
+  'organisationId_1_registrationId_1_status_1_submittedAt_-1'
+]
+const IGNORABLE_DROP_INDEX_ERRORS = new Set([
+  'IndexNotFound',
+  // The collection doesn't exist yet; createIndex below will create it.
+  'NamespaceNotFound'
+])
+
 /**
- * Migrates the submitting-lock index from its pre-year-scoping shape
- * (`organisationId, registrationId`, auto-named) to
- * `organisationId, registrationId, year, accreditationId`, explicitly named
- * so future migrations can find it by name rather than by shape.
+ * Drops the pre-year-scoping indexes by name, then creates the submitting
+ * lock over `organisationId, registrationId, year, accreditationId`.
  *
  * @param {import('mongodb').Collection} collection
  */
 async function ensureSubmittingLockIndex(collection) {
-  try {
-    const indexes = await collection.indexes()
-    const legacyIndex = indexes.find(
-      (idx) =>
-        idx.name !== SUBMITTING_LOCK_INDEX_NAME &&
-        idx.key?.organisationId === 1 &&
-        idx.key?.registrationId === 1 &&
-        !('year' in idx.key)
-    )
-
-    if (legacyIndex?.name) {
-      await collection.dropIndex(legacyIndex.name)
-    }
-  } catch (error) {
-    // NamespaceNotFound means the collection doesn't exist yet.
-    // This is fine - createIndex below will create the collection.
-    if (error.codeName !== 'NamespaceNotFound') {
-      throw error
+  for (const name of LEGACY_INDEX_NAMES) {
+    try {
+      await collection.dropIndex(name)
+    } catch (error) {
+      if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
+        throw error
+      }
     }
   }
 
@@ -340,8 +339,9 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
         returnDocument: 'before'
       })
   } catch (error) {
-    // The unique partial index on (organisationId, registrationId) where
-    // status='submitting' refuses a second submitting document per org/reg
+    // The unique partial index on (organisationId, registrationId, year,
+    // accreditationId) where status='submitting' refuses a second submitting
+    // document per org/reg/year/accreditation
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       return { success: false }
     }

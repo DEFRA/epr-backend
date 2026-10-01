@@ -136,18 +136,17 @@ describe('MongoDB summary logs repository', () => {
     })
   })
 
-  describe('submitting-lock index migration', () => {
-    it('drops the pre-year-scoping index and recreates it with year/accreditationId', async () => {
+  describe('legacy index migration', () => {
+    const LEGACY_INDEX_NAMES = [
+      'organisationId_1_registrationId_1',
+      'organisationId_1_registrationId_1_status_1_submittedAt_-1'
+    ]
+
+    it('drops both pre-year-scoping indexes by name and recreates the lock with year/accreditationId', async () => {
       const droppedIndexes = []
       const createdIndexes = []
 
       const mockDb = createMockDb({
-        indexes: async () => [
-          {
-            name: 'organisationId_1_registrationId_1',
-            key: { organisationId: 1, registrationId: 1 }
-          }
-        ],
         dropIndex: async (indexName) => {
           droppedIndexes.push(indexName)
         },
@@ -158,7 +157,7 @@ describe('MongoDB summary logs repository', () => {
 
       await createSummaryLogsRepository(mockDb, mockS3Config)
 
-      expect(droppedIndexes).toContain('organisationId_1_registrationId_1')
+      expect(droppedIndexes).toEqual(LEGACY_INDEX_NAMES)
       const lockIndex = createdIndexes.find(
         (idx) => idx.options.name === 'summary_log_submitting_lock'
       )
@@ -170,35 +169,25 @@ describe('MongoDB summary logs repository', () => {
       })
     })
 
-    it('does not drop an index that already carries year', async () => {
-      const droppedIndexes = []
+    it.each(['IndexNotFound', 'NamespaceNotFound'])(
+      'ignores %s when dropping a legacy index',
+      async (codeName) => {
+        const mockDb = createMockDb({
+          dropIndex: async () => {
+            throw createMongoError('index missing', { codeName })
+          },
+          createIndex: async () => {}
+        })
 
+        await expect(
+          createSummaryLogsRepository(mockDb, mockS3Config)
+        ).resolves.toBeDefined()
+      }
+    )
+
+    it('re-throws other errors from dropIndex', async () => {
       const mockDb = createMockDb({
-        indexes: async () => [
-          {
-            name: 'summary_log_submitting_lock',
-            key: {
-              organisationId: 1,
-              registrationId: 1,
-              year: 1,
-              accreditationId: 1
-            }
-          }
-        ],
-        dropIndex: async (indexName) => {
-          droppedIndexes.push(indexName)
-        },
-        createIndex: async () => {}
-      })
-
-      await createSummaryLogsRepository(mockDb, mockS3Config)
-
-      expect(droppedIndexes).toEqual([])
-    })
-
-    it('re-throws non-NamespaceNotFound errors from indexes()', async () => {
-      const mockDb = createMockDb({
-        indexes: async () => {
+        dropIndex: async () => {
           throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
         }
       })

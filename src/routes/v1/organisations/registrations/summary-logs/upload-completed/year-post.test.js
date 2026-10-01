@@ -249,7 +249,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('rejects a second submitting transition with a conflict, sharing the state machine with the legacy callback', async () => {
+  it('rejects a callback arriving after the log has moved on from validating, sharing the state machine with the legacy callback', async () => {
     const summaryLogId = randomUUID()
 
     await server.inject({

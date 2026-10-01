@@ -16,8 +16,8 @@ export const summaryLogsCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
 /**
- * Deprecated: superseded by the year/accreditation-scoped create route
- * (`{year}/accreditations/{accreditationId}/summary-logs`). Kept until every
+ * Deprecated: superseded by the year-scoped create route
+ * (`summary-logs/{year}`). Kept until every
  * consumer has migrated (tracked separately). It never asked the caller for
  * a year or accreditation, so it stores neither — the summary log stays
  * unscoped, and `validate.js` resolves the registration's live accreditation
