@@ -340,6 +340,7 @@ export const withPeriodsRequiringResubmission = async ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
+    // Set explicitly: an omitted field is stored as the schema default, [].
     return {
       ...loadsByReportingPeriod,
       periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
