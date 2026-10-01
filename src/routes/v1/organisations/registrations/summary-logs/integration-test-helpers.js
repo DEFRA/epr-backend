@@ -772,7 +772,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     ledgerRepository,
     summaryLogRowStatesRepository,
     systemLogsForBalanceAudit,
-    reportsRepository
+    reportsRepository,
+    validateSummaryLog
   }
 }
 

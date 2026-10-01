@@ -1,7 +1,3 @@
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -158,29 +154,12 @@ const compareWithLatestSubmittedReport = async ({
 }
 
 /**
- * @typedef {({ period: PeriodRef } & Comparison) | { period: PeriodRef, error: Error }} PeriodOutcome
+ * @typedef {{ period: PeriodRef } & Comparison} PeriodOutcome
  */
 
-/**
- * @param {PeriodRef} period
- * @param {Omit<Parameters<typeof compareWithLatestSubmittedReport>[0], 'period'>} params
- * @returns {Promise<PeriodOutcome>}
- */
-const comparePeriod = async (period, params) => {
-  try {
-    return {
-      period,
-      ...(await compareWithLatestSubmittedReport({ period, ...params }))
-    }
-  } catch (error) {
-    return { period, error: /** @type {Error} */ (error) }
-  }
-}
-
+// A period that cannot be compared is flagged: no retry would change that.
 const requiresResubmission = (/** @type {PeriodOutcome} */ outcome) =>
-  'error' in outcome ||
-  outcome.changedFields === null ||
-  outcome.changedFields.length > 0
+  outcome.changedFields === null || outcome.changedFields.length > 0
 
 /**
  * @param {string[] | null} changedFields
@@ -216,20 +195,8 @@ const logPeriodOutcome = (
   outcome
 ) => {
   const { year, cadence, period } = outcome.period
-  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId}`
-  if ('error' in outcome) {
-    logger.error({
-      err: outcome.error,
-      message: `${subject} (summary log ${summaryLogId}) requires resubmission: comparison failed`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-    return
-  }
   logger.info({
-    message: `${subject} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome.changedFields)}`
+    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome.changedFields)}`
   })
 }
 
@@ -287,9 +254,15 @@ const computePeriodsRequiringResubmission = async ({
   }
 
   const outcomes = await Promise.all(
-    closedPeriods.map((period) =>
-      comparePeriod(period, { periodicReports, reportsService, context })
-    )
+    closedPeriods.map(async (period) => ({
+      period,
+      ...(await compareWithLatestSubmittedReport({
+        period,
+        periodicReports,
+        reportsService,
+        context
+      }))
+    }))
   )
 
   for (const outcome of outcomes) {
@@ -301,7 +274,8 @@ const computePeriodsRequiringResubmission = async ({
 
 /**
  * Shadow mode: submit still flags every closed period, so the result is only
- * stored and logged for now.
+ * stored and logged for now. A failure propagates so the queue retries the
+ * validation rather than guessing a verdict.
  *
  * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
@@ -320,30 +294,14 @@ export const withPeriodsRequiringResubmission = async ({
     return null
   }
 
-  try {
-    const periodsRequiringResubmission =
-      await computePeriodsRequiringResubmission({
-        ...params,
-        closedPeriods: loadsByReportingPeriod.closedPeriods,
-        // classifyLoads yields a loadsByReportingPeriod only for present records.
-        wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
-        ledgerId: ledgerIdFor(summaryLog, params.registration)
-      })
-
-    return { ...loadsByReportingPeriod, periodsRequiringResubmission }
-  } catch (error) {
-    logger.error({
-      err: error,
-      message: `Failed to compute periods requiring resubmission for summary log ${params.summaryLogId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
+  const periodsRequiringResubmission =
+    await computePeriodsRequiringResubmission({
+      ...params,
+      closedPeriods: loadsByReportingPeriod.closedPeriods,
+      // classifyLoads yields a loadsByReportingPeriod only for present records.
+      wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
+      ledgerId: ledgerIdFor(summaryLog, params.registration)
     })
-    // Set explicitly: an omitted field is stored as the schema default, [].
-    return {
-      ...loadsByReportingPeriod,
-      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
-    }
-  }
+
+  return { ...loadsByReportingPeriod, periodsRequiringResubmission }
 }

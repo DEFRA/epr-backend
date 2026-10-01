@@ -345,17 +345,16 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateAndSubmitReport(env, JANUARY_2025)
   }
 
-  // Captures log messages at a level from here to the end of the test, so a
-  // test can assert what the gate recorded about each closed period.
-  const captureMessages = (/** @type {'info' | 'error'} */ level) => {
-    const spy = vi.spyOn(logger, level).mockImplementation(() => {})
-    onTestFinished(() => spy.mockRestore())
+  // Captures info log messages from here to the end of the test, so a test can
+  // assert what the gate recorded about each closed period.
+  const captureInfoMessages = () => {
+    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {})
+    onTestFinished(() => infoSpy.mockRestore())
     return () =>
-      spy.mock.calls.map(
+      infoSpy.mock.calls.map(
         ([entry]) => /** @type {{ message?: string }} */ (entry).message
       )
   }
-  const captureInfoMessages = () => captureMessages('info')
 
   // Weights are capped at 1000 in the reprocessor received template
   // (grossWeight = tonnage + 150), so tonnages stay well under that.
@@ -922,76 +921,46 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
   })
 
-  it('flags only the period whose comparison failed, and still validates the upload', async () => {
+  it('leaves the upload validating for a retry when a comparison fails, rather than flagging', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
     })
+    await submitAndCloseJanuary(env)
+
+    vi.spyOn(env.reportsRepository, 'findReportById').mockRejectedValueOnce(
+      new Error('reports store unavailable')
+    )
 
     await upload(
       env,
-      'sl-first',
-      'file-first',
+      'sl-retry',
+      'file-retry',
       createUploadData([
-        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
-        {
-          rowId: 1002,
-          tonnageReceived: 200,
-          dateReceived: FEBRUARY_DATE,
-          yourReference: 'REF-FEB'
-        }
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
       ])
     )
-    await submitAndPoll(env, 'sl-first')
-    await generateAndSubmitReport(env, JANUARY_2025)
-    await generateAndSubmitReport(env, FEBRUARY_2025)
 
-    const findReportById = env.reportsRepository.findReportById
-    vi.spyOn(env.reportsRepository, 'findReportById').mockImplementation(
-      async (reportId) => {
-        const report = await findReportById(reportId)
-        if (report.period === JANUARY_2025.period) {
-          throw new Error('reports store unavailable')
-        }
-        return report
-      }
+    const afterFailure = await env.summaryLogsRepository.findById('sl-retry')
+    expect(afterFailure?.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
+    expect(afterFailure?.summaryLog.loadsByReportingPeriod).toBeUndefined()
+
+    // As the queue would on redelivery.
+    await env.validateSummaryLog('sl-retry')
+    await pollForValidation(
+      env.server,
+      env.organisationId,
+      env.registrationId,
+      'sl-retry'
     )
 
-    const infoMessages = captureInfoMessages()
-    const errorMessages = captureMessages('error')
-    const loadsByReportingPeriod = await uploadAndValidate(
+    const loadsByReportingPeriod = await getLoadsByReportingPeriod(
       env,
-      'sl-period-error',
-      'file-period-error',
-      createUploadData([
-        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN-2' },
-        {
-          rowId: 1002,
-          tonnageReceived: 200,
-          dateReceived: FEBRUARY_DATE,
-          yourReference: 'REF-FEB-2'
-        }
-      ])
+      'sl-retry'
     )
-
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      JANUARY_2025,
-      FEBRUARY_2025
-    ])
-    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
-      JANUARY_2025
-    ])
-    expect(errorMessages()).toContainEqual(
-      expect.stringMatching(
-        /Closed period 2025 monthly 1 .*\(summary log sl-period-error\) requires resubmission: comparison failed/
-      )
-    )
-    expect(infoMessages()).toContainEqual(
-      expect.stringMatching(
-        /Closed period 2025 monthly 2 .* does not require resubmission/
-      )
-    )
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
   it('compares against an empty before-state when the report predates any submission', async () => {
