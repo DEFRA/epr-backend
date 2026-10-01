@@ -444,14 +444,12 @@ export const classifyByPeriodStatus = ({
     const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (
-      outcome === ROW_OUTCOME.IGNORED ||
-      status === RECORD_CHANGE.UNCHANGED ||
-      !schema
-    ) {
+    if (status === RECORD_CHANGE.UNCHANGED || !schema) {
       continue
     }
 
+    // Reports aggregate by date alone, so a row outside the accreditation
+    // window still changes the closed periods it moves between.
     closedPeriodRefsForRecord(
       record,
       status,
@@ -460,6 +458,10 @@ export const classifyByPeriodStatus = ({
       submittedPeriods,
       cadence
     ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
+
+    if (outcome === ROW_OUTCOME.IGNORED) {
+      continue
+    }
 
     if (status === RECORD_CHANGE.ADDED) {
       const period = classifyPeriodStatus(

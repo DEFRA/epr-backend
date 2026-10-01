@@ -403,6 +403,50 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ])
   })
 
+  it('records the closed period a load leaves when re-dated outside the accreditation window', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    await closeJanuary2025(env)
+
+    await upload(
+      env,
+      'sl-out-of-window-original',
+      'file-out-of-window-original',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+          exportDate: '2025-01-20T00:00:00.000Z'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-out-of-window-original')
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-out-of-window-reupload',
+      'file-out-of-window-reupload',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2024-12-15T00:00:00.000Z',
+          dateReceivedByOsr: '2024-12-18T00:00:00.000Z',
+          exportDate: '2024-12-20T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+    ])
+  })
+
   it('applies closed-wins when one date field is closed and another is open', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
