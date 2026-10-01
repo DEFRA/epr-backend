@@ -12,6 +12,7 @@ import {
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -23,9 +24,11 @@ import {
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
+  createExporterRowValues,
   createReprocessorReceivedRowValues,
   createReprocessorSentOnRowValues,
   createWasteBalanceMeta,
+  EXPORTER_HEADERS,
   pollForValidation,
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
@@ -47,7 +50,7 @@ const SUBMIT_MAX_POLL_ATTEMPTS = 10
 // against the January monthly period.
 const JANUARY_2025 = {
   year: 2025,
-  cadence: 'monthly',
+  cadence: /** @type {const} */ ('monthly'),
   period: MONTHLY_PERIODS.January
 }
 
@@ -82,6 +85,20 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
   const meta = createWasteBalanceMeta('REPROCESSOR_INPUT')
   const sentOnMeta = createWasteBalanceMeta('REPROCESSOR_OUTPUT')
+  const exporterMeta = /** @type {SummaryLogMeta} */ (
+    createWasteBalanceMeta('EXPORTER')
+  )
+
+  const createExporterUploadData = (rows) => ({
+    RECEIVED_LOADS_FOR_EXPORT: {
+      location: { sheet: 'Received', row: TABLE_HEADER_ROW, column: 'A' },
+      headers: EXPORTER_HEADERS,
+      rows: rows.map((row, index) => ({
+        rowNumber: FIRST_DATA_ROW + index,
+        values: createExporterRowValues(row)
+      }))
+    }
+  })
 
   const createUploadData = (rows) => ({
     RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -254,16 +271,18 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   }
 
   // Generates the period's report from the just-submitted head via the real
-  // report path, then advances it to submitted so the period closes with the
-  // exact frozen figures the head produces. This is the before-state the
-  // figure-diff compares against.
-  const generateAndSubmitReport = async (env, { year, cadence, period }) => {
+  // report path, leaving it in progress.
+  const generateReport = async (
+    env,
+    { year, cadence, period },
+    submissionNumber = 1
+  ) => {
     const registration = await env.organisationsRepository.findRegistrationById(
       env.organisationId,
       env.registrationId
     )
 
-    const report = await createReportForPeriod({
+    return createReportForPeriod({
       reportsRepository: env.reportsRepository,
       ledgerRepository: env.ledgerRepository,
       summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
@@ -275,9 +294,16 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       year,
       cadence,
       period,
-      submissionNumber: 1,
+      submissionNumber,
       changedBy: CHANGED_BY
     })
+  }
+
+  // Generates the period's report, then advances it to submitted so the period
+  // closes with the exact frozen figures the head produces. This is the
+  // before-state the figure-diff compares against.
+  const generateAndSubmitReport = async (env, period) => {
+    const report = await generateReport(env, period)
 
     await env.reportsRepository.updateReportStatus({
       reportId: report.id,
@@ -319,16 +345,17 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateAndSubmitReport(env, JANUARY_2025)
   }
 
-  // Captures info log messages from here to the end of the test, so a test can
-  // assert what the gate recorded about each closed period.
-  const captureInfoMessages = () => {
-    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {})
-    onTestFinished(() => infoSpy.mockRestore())
+  // Captures log messages at a level from here to the end of the test, so a
+  // test can assert what the gate recorded about each closed period.
+  const captureMessages = (/** @type {'info' | 'error'} */ level) => {
+    const spy = vi.spyOn(logger, level).mockImplementation(() => {})
+    onTestFinished(() => spy.mockRestore())
     return () =>
-      infoSpy.mock.calls.map(
+      spy.mock.calls.map(
         ([entry]) => /** @type {{ message?: string }} */ (entry).message
       )
   }
+  const captureInfoMessages = () => captureMessages('info')
 
   // Weights are capped at 1000 in the reprocessor received template
   // (grossWeight = tonnage + 150), so tonnages stay well under that.
@@ -632,10 +659,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
-    // The gate records which reported fields changed (paths only, no values).
+    // The gate records which reported fields changed (paths only, no values),
+    // against the upload that changed them.
     expect(infoMessages()).toContainEqual(
       expect.stringContaining(
-        'requires resubmission: reported data changed in wasteSent.finalDestinations'
+        '(summary log sl-dest-name) requires resubmission: reported data changed in wasteSent.finalDestinations'
       )
     )
   })
@@ -674,7 +702,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
     expect(infoMessages()).toContainEqual(
       expect.stringContaining(
-        'does not require resubmission: reported data unchanged'
+        '(summary log sl-dest-contact) does not require resubmission: reported data unchanged'
       )
     )
   })
@@ -717,7 +745,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
-  it('does not flag a closed period for registry drift the upload did not cause', async () => {
+  it('does not flag a closed period when the registry renames the site (excluded registry fields)', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
@@ -738,10 +766,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, Q1_2025)
 
-    // After Q1 closed, the ORS registry renames the site. The submitted report
-    // shows the old name, but the operator has not changed any reported data:
-    // both the report's source submission and this upload now resolve the new
-    // name, so the upload changes nothing the report would present.
+    // After Q1 closed, the ORS registry renames the site. Site name and country
+    // are excluded from the comparison, so a rename never reaches the diff.
     await env.overseasSitesRepository.update(TEST_OVERSEAS_SITE_ID, {
       name: 'Renamed Overseas Site'
     })
@@ -759,5 +785,170 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('does not flag a closed period when the registry stops resolving the site after it closed', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createExporterUploadData([{ rowId: 1001 }]),
+      exporterMeta
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+
+    // After January closed, the site leaves the registry, so its tonnage moves
+    // from overseasSites to unapprovedOverseasSites. Both lists are compared, so
+    // this would read as a change against the stored report; rebuilt with
+    // today's registry on both sides, the upload changes nothing.
+    await env.overseasSitesRepository.remove(TEST_OVERSEAS_SITE_ID)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-after-removal',
+      'file-after-removal',
+      createExporterUploadData([{ rowId: 1001, yourReference: 'REF-AMENDED' }]),
+      exporterMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+  })
+
+  it('compares against the latest submitted report, not a resubmission draft', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    // A later submission changes January's tonnage, and the operator starts
+    // resubmitting January from it: submission 2 is in progress, so the
+    // regulator still holds submission 1 (100 tonnes).
+    await upload(
+      env,
+      'sl-second',
+      'file-second',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 500, bailingWire: 'No' }
+      ])
+    )
+    await submitAndPoll(env, 'sl-second')
+    await requestOperatorResubmission({
+      reportsRepository: env.reportsRepository,
+      organisationId: env.organisationId,
+      registrationId: env.registrationId,
+      ...JANUARY_2025,
+      submissionNumber: 1,
+      requestedBy: CHANGED_BY
+    })
+    await generateReport(env, JANUARY_2025, 2)
+
+    // Matches the draft's figures, but not the submitted report's.
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-third',
+      'file-third',
+      createUploadData([
+        {
+          rowId: 1001,
+          tonnageReceived: 500,
+          bailingWire: 'No',
+          yourReference: 'REF-THIRD'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+  })
+
+  it('flags a closed period it cannot compare because the source submission has no row states', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    // The stored report names a source submission with no row states, as a
+    // report generated before row states were recorded would.
+    const findReportById = env.reportsRepository.findReportById
+    vi.spyOn(env.reportsRepository, 'findReportById').mockImplementation(
+      async (reportId) => {
+        const report = await findReportById(reportId)
+        return {
+          ...report,
+          source: {
+            summaryLogId: 'sl-without-row-states',
+            lastUploadedAt: report.source?.lastUploadedAt ?? null
+          }
+        }
+      }
+    )
+
+    const infoMessages = captureInfoMessages()
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-no-source',
+      'file-no-source',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+    expect(infoMessages()).toContainEqual(
+      expect.stringContaining(
+        '(summary log sl-no-source) requires resubmission: cannot compare, its source submission has no row states'
+      )
+    )
+  })
+
+  it('still validates the upload when the gate fails', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    vi.spyOn(env.reportsRepository, 'findReportById').mockRejectedValue(
+      new Error('reports store unavailable')
+    )
+
+    const errorMessages = captureMessages('error')
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-gate-error',
+      'file-gate-error',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 500, bailingWire: 'No' }
+      ])
+    )
+
+    // The upload still validates, and every closed period it touched requires
+    // resubmission, as before the gate existed.
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+    expect(errorMessages()).toContainEqual(
+      expect.stringContaining(
+        'Failed to compute periods requiring resubmission for summary log sl-gate-error'
+      )
+    )
   })
 })

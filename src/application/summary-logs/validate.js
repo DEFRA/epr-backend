@@ -586,6 +586,7 @@ const classifyAndPersistResult = async ({
       registration,
       overseasSites,
       summaryLog,
+      summaryLogId,
       reportsService,
       overseasSitesRepository,
       summaryLogRowStatesRepository

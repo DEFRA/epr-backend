@@ -1,7 +1,12 @@
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
@@ -71,25 +76,35 @@ const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
   }))
 
 /**
- * The id of the current stored report for a closed period. A closed period
- * always has a submitted current report, so this resolves in practice; the
- * optional-chaining is a defensive lookup the invariant makes unreachable.
+ * The id of the latest submitted report for a closed period: what the regulator
+ * holds, and what submit flags. The current report can be a resubmission draft,
+ * so submitted ones are searched newest first. A closed period always has a
+ * submitted report, so this resolves in practice; the optional-chaining is a
+ * defensive lookup the invariant makes unreachable.
  *
  * @param {PeriodicReport[]} periodicReports
  * @param {PeriodRef} period
  * @returns {string | undefined}
  */
-/* v8 ignore start -- defensive lookup; the closed-period invariant guarantees the slot */
-const currentReportIdForPeriod = (periodicReports, { year, cadence, period }) =>
-  periodicReports.find((pr) => pr.year === year)?.reports?.[cadence]?.[period]
-    ?.current?.id
+/* v8 ignore start -- defensive lookup; the closed-period invariant guarantees a submitted report */
+const latestSubmittedReportIdForPeriod = (
+  periodicReports,
+  { year, cadence, period }
+) => {
+  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
+    cadence
+  ]?.[period]
+  return [slot?.current, ...(slot?.previousSubmissions ?? [])].find(
+    (submission) => submission?.status === REPORT_STATUS.SUBMITTED
+  )?.id
+}
 /* v8 ignore stop */
 
 /**
  * Aggregates the figures a period's report presents from a head's row states,
  * using today's aggregation code and ORS registry. Both sides of the comparison
  * are built here, so anything that has changed since the report was submitted
- * (an ORS rename or approval change, an aggregation fix) affects both sides
+ * (the registry no longer resolving a site, an aggregation fix) affects both sides
  * alike and cannot read as a change this upload caused. PRN issued tonnage is
  * excluded from the comparison (see reported-data-equivalence), so it is not
  * aggregated.
@@ -112,7 +127,10 @@ const aggregatePeriodFigures = (
 
 /**
  * The reported fields this upload changes in what a closed period's report
- * would present (empty when it changes none).
+ * would present (empty when it changes none), or null when the report's source
+ * submission has no row states to rebuild it from, as for a report generated
+ * before row states were recorded. An empty before-state would read as every
+ * figure changed, so it is reported as not comparable instead.
  *
  * The before-state is the report rebuilt from the submission it was generated
  * from (its source summary log), not the report as stored. Row-state history is
@@ -125,7 +143,7 @@ const aggregatePeriodFigures = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
  * @param {FiguresContext} params.context
- * @returns {Promise<string[]>}
+ * @returns {Promise<string[] | null>}
  */
 const changedFieldsForPeriod = async ({
   period,
@@ -133,13 +151,13 @@ const changedFieldsForPeriod = async ({
   reportsService,
   context
 }) => {
-  const currentReportId = currentReportIdForPeriod(periodicReports, period)
-  /* v8 ignore next 3 -- a closed period always has a current stored report; treat none as wholly changed */
-  if (!currentReportId) {
+  const reportId = latestSubmittedReportIdForPeriod(periodicReports, period)
+  /* v8 ignore next 3 -- a closed period always has a submitted report; treat none as wholly changed */
+  if (!reportId) {
     return ['report']
   }
 
-  const report = await reportsService.findReportById(currentReportId)
+  const report = await reportsService.findReportById(reportId)
   // The create schema requires source, so every stored report carries it.
   const { summaryLogId } = /** @type {ReportSource} */ (report.source)
   const sourceRowStates = await wasteRecordStatesForHead(
@@ -147,6 +165,9 @@ const changedFieldsForPeriod = async ({
     context.ledgerId,
     summaryLogId
   )
+  if (sourceRowStates.length === 0) {
+    return null
+  }
 
   const before = aggregatePeriodFigures(sourceRowStates, { period, ...context })
   const after = aggregatePeriodFigures(context.newHeadRowStates, {
@@ -158,25 +179,42 @@ const changedFieldsForPeriod = async ({
 }
 
 /**
+ * Whether a period's comparison outcome requires resubmission. A period that
+ * cannot be compared is flagged, as it was before the gate existed.
+ *
+ * @param {string[] | null} changedFields
+ */
+const requiresResubmission = (changedFields) =>
+  changedFields === null || changedFields.length > 0
+
+/**
+ * @param {string[] | null} changedFields
+ */
+const describeOutcome = (changedFields) => {
+  if (changedFields === null) {
+    return 'requires resubmission: cannot compare, its source submission has no row states'
+  }
+  return changedFields.length > 0
+    ? `requires resubmission: reported data changed in ${changedFields.join(', ')}`
+    : 'does not require resubmission: reported data unchanged'
+}
+
+/**
  * Records whether a closed period this upload restated requires resubmission,
  * and which reported fields changed. Logs field paths only, never their values,
  * which can identify suppliers and destinations.
  *
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {WasteBalanceLedgerId & { summaryLogId: string }} subject
  * @param {PeriodRef} period
- * @param {string[]} changedFields
+ * @param {string[] | null} changedFields
  */
 const logPeriodOutcome = (
-  { organisationId, registrationId },
+  { organisationId, registrationId, summaryLogId },
   { year, cadence, period },
   changedFields
 ) => {
-  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId}`
   logger.info({
-    message:
-      changedFields.length > 0
-        ? `${subject} requires resubmission: reported data changed in ${changedFields.join(', ')}`
-        : `${subject} does not require resubmission: reported data unchanged`
+    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}) ${describeOutcome(changedFields)}`
   })
 }
 
@@ -198,9 +236,11 @@ const logPeriodOutcome = (
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId - the ledger the report's
  *   source submission was written to
+ * @param {string} params.summaryLogId - this upload, for the outcome logs
  * @returns {Promise<PeriodRef[]>}
  */
 const computePeriodsRequiringResubmission = async ({
+  summaryLogId,
   closedPeriods,
   periodicReports,
   wasteRecords,
@@ -251,18 +291,20 @@ const computePeriodsRequiringResubmission = async ({
   )
 
   for (const { period, changedFields } of outcomes) {
-    logPeriodOutcome(ledgerId, period, changedFields)
+    logPeriodOutcome({ ...ledgerId, summaryLogId }, period, changedFields)
   }
 
   return outcomes
-    .filter(({ changedFields }) => changedFields.length > 0)
+    .filter(({ changedFields }) => requiresResubmission(changedFields))
     .map(({ period }) => period)
 }
 
 /**
  * Adds the closed periods whose reported figures this upload changes to its
  * loads-by-reporting-period summary. Shadow mode: stored and logged, but submit
- * still flags every closed period.
+ * still flags every closed period. A failure is logged and falls back to every
+ * closed period, as before the gate existed, rather than failing the operator's
+ * upload.
  *
  * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
@@ -281,14 +323,29 @@ export const withPeriodsRequiringResubmission = async ({
     return null
   }
 
-  const periodsRequiringResubmission =
-    await computePeriodsRequiringResubmission({
-      ...params,
-      closedPeriods: loadsByReportingPeriod.closedPeriods,
-      // classifyLoads yields a loadsByReportingPeriod only for present records.
-      wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
-      ledgerId: ledgerIdFor(summaryLog, params.registration)
-    })
+  try {
+    const periodsRequiringResubmission =
+      await computePeriodsRequiringResubmission({
+        ...params,
+        closedPeriods: loadsByReportingPeriod.closedPeriods,
+        // classifyLoads yields a loadsByReportingPeriod only for present records.
+        wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
+        ledgerId: ledgerIdFor(summaryLog, params.registration)
+      })
 
-  return { ...loadsByReportingPeriod, periodsRequiringResubmission }
+    return { ...loadsByReportingPeriod, periodsRequiringResubmission }
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: `Failed to compute periods requiring resubmission for summary log ${params.summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+    return {
+      ...loadsByReportingPeriod,
+      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
+    }
+  }
 }
