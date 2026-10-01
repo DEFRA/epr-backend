@@ -11,7 +11,7 @@
  * from the figure analysis.
  *
  * The comparison covers only the reported-data subset a report presents, via
- * the shared `extractReportedData`/`diffReportedData` core. See
+ * the shared `diffReports` core. See
  * `reports/domain/resubmission/reported-data-equivalence.js` for how every
  * report field is classified (compared exactly, compared as free text, or
  * excluded with a reason). Reusing that core keeps this diagnostic's notion of
@@ -24,10 +24,7 @@
  * were pointless.
  */
 
-import {
-  diffReportedData,
-  extractReportedData
-} from '#reports/domain/resubmission/reported-data-equivalence.js'
+import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
 
 /** @import { ReportResubmissionRequired, RecyclingActivity, ExportActivity, WasteSent } from '#reports/repository/port.js' */
 
@@ -124,10 +121,7 @@ const scanPeriod = (periodGroup, reports, summary) => {
     summary.resubmissionPairs += 1
     if (isAutoEnforced(previous)) {
       summary.autoEnforcedResubmissions += 1
-      const changedFields = diffReportedData(
-        extractReportedData(previous),
-        extractReportedData(current)
-      )
+      const changedFields = diffReports(previous, current)
       if (changedFields.length === 0) {
         summary.identicalResubmissions += 1
         reports.push({

@@ -265,7 +265,7 @@ const pickReportedData = (fieldSpec, value) => {
  * @param {ReportedDataBearingReport} report
  * @returns {ReportedDataValue}
  */
-export const extractReportedData = (report) =>
+const extractReportedData = (report) =>
   pickReportedData(REPORTED_DATA_FIELDS, report)
 
 /** @param {string} a @param {string} b */
@@ -373,23 +373,20 @@ const changedFieldPaths = (fieldSpec, before, after, path) => {
 }
 
 /**
- * The paths of the reported fields that differ between two already-extracted
- * reported-data sets, sorted (e.g. `['wasteSent.finalDestinations']`). Empty
- * when they are equivalent. Paths only, never values, so the result is safe to
- * log.
+ * The paths of the reported fields that differ between two reports, sorted
+ * (e.g. `['wasteSent.finalDestinations']`). Empty when their reported data is
+ * equivalent. Takes whole reports and extracts the compared subset itself, so
+ * no caller can skip the exclusions, normalisation or merging. Paths only,
+ * never values, so the result is safe to log.
  *
- * @param {ReportedDataValue} before
- * @param {ReportedDataValue} after
+ * @param {ReportedDataBearingReport} previous
+ * @param {ReportedDataBearingReport} current
  * @returns {string[]}
  */
-export const diffReportedData = (before, after) =>
-  changedFieldPaths(REPORTED_DATA_FIELDS, before, after, '').sort(byString)
-
-/**
- * True when two already-extracted reported-data sets are logically equivalent.
- *
- * @param {ReportedDataValue} reportedDataA
- * @param {ReportedDataValue} reportedDataB
- */
-export const reportedDataAreEquivalent = (reportedDataA, reportedDataB) =>
-  diffReportedData(reportedDataA, reportedDataB).length === 0
+export const diffReports = (previous, current) =>
+  changedFieldPaths(
+    REPORTED_DATA_FIELDS,
+    extractReportedData(previous),
+    extractReportedData(current),
+    ''
+  ).sort(byString)

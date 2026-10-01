@@ -6,10 +6,8 @@ import { reportDataFieldsSchema } from '#reports/repository/schema.js'
 
 import {
   canonicalise,
-  diffReportedData,
-  extractReportedData,
-  REPORTED_DATA_FIELDS,
-  reportedDataAreEquivalent
+  diffReports,
+  REPORTED_DATA_FIELDS
 } from './reported-data-equivalence.js'
 
 /** @param {string} path @param {string} key */
@@ -129,6 +127,8 @@ describe('canonicalise — reported data must be plain JSON', () => {
 /**
  * A report carrying one supplier with every field the stored report holds, so
  * a test can vary a single field and assert whether it counts as reported data.
+ *
+ * @returns {*}
  */
 const reportWithSupplier = (supplierOverrides = {}) => ({
   recyclingActivity: {
@@ -147,10 +147,9 @@ const reportWithSupplier = (supplierOverrides = {}) => ({
 })
 
 /** @param {*} a @param {*} b */
-const equivalent = (a, b) =>
-  reportedDataAreEquivalent(extractReportedData(a), extractReportedData(b))
+const equivalent = (a, b) => diffReports(a, b).length === 0
 
-describe('reportedDataAreEquivalent — supplier contact exception', () => {
+describe('diffReports — supplier contact exception', () => {
   it('treats a supplier telephone-only change as no reported-data change', () => {
     const before = reportWithSupplier()
     const after = reportWithSupplier({ supplierPhone: '09876 543210' })
@@ -187,7 +186,7 @@ describe('reportedDataAreEquivalent — supplier contact exception', () => {
   })
 })
 
-describe('reportedDataAreEquivalent — contact exception must not mask a real change', () => {
+describe('diffReports — contact exception must not mask a real change', () => {
   it('treats a phone change alongside a tonnage change as a reported-data change', () => {
     const before = reportWithSupplier()
     const after = reportWithSupplier({
@@ -209,7 +208,7 @@ describe('reportedDataAreEquivalent — contact exception must not mask a real c
   })
 })
 
-describe('reportedDataAreEquivalent — casing/whitespace normalisation', () => {
+describe('diffReports — casing/whitespace normalisation', () => {
   it('treats a supplier name casing-only change as no reported-data change', () => {
     const before = reportWithSupplier({ supplierName: 'Acme Plastics Ltd' })
     const after = reportWithSupplier({ supplierName: 'ACME PLASTICS LTD' })
@@ -259,7 +258,7 @@ const reportWithFinalDestination = (destinationOverrides = {}) => ({
   }
 })
 
-describe('extractReportedData — free-text fields are normalised, exact fields are not', () => {
+describe('diffReports — free-text fields are normalised, exact fields are not', () => {
   it('treats a blank free-text field as equivalent to a null one', () => {
     const before = reportWithSupplier({ supplierAddress: null })
     const after = reportWithSupplier({ supplierAddress: '' })
@@ -363,7 +362,7 @@ const reportWithSuppliers = (suppliers) => ({
   }
 })
 
-describe('extractReportedData — list entries that compare equal are merged', () => {
+describe('diffReports — list entries that compare equal are merged', () => {
   // The aggregation groups rows on raw values, including ones the comparison
   // ignores, so editing one of several rows for the same supplier splits its
   // single entry in two. Merged again, the report presents the same data.
@@ -398,9 +397,7 @@ describe('extractReportedData — list entries that compare equal are merged', (
     // The real total is summed as a decimal; only the list merge is under test.
     after.recyclingActivity.totalTonnageReceived = 0.3
 
-    expect(
-      diffReportedData(extractReportedData(before), extractReportedData(after))
-    ).toEqual([])
+    expect(diffReports(before, after)).toEqual([])
   })
 
   it('still treats a changed tonnage across the merged entries as a change', () => {
@@ -465,7 +462,7 @@ const overseasSite = (overrides = {}) => ({
   ...overrides
 })
 
-describe('extractReportedData — ORS registry fields are excluded', () => {
+describe('diffReports — ORS registry fields are excluded', () => {
   // A summary-log upload cannot change what the ORS registry holds, so a
   // registry update between submissions is not a reported-data change.
   it('treats an ORS site name change as no reported-data change', () => {
@@ -520,23 +517,19 @@ describe('extractReportedData — ORS registry fields are excluded', () => {
   })
 })
 
-describe('diffReportedData — which reported fields changed', () => {
-  /** @param {*} a @param {*} b */
-  const diff = (a, b) =>
-    diffReportedData(extractReportedData(a), extractReportedData(b))
-
+describe('diffReports — which reported fields changed', () => {
   it('reports no fields for reports whose reported data is equivalent', () => {
     const before = reportWithSupplier()
     const after = reportWithSupplier({ supplierPhone: '09876 543210' })
 
-    expect(diff(before, after)).toEqual([])
+    expect(diffReports(before, after)).toEqual([])
   })
 
   it('reports a changed list at the list level, since its items have no stable identity', () => {
     const before = reportWithSupplier()
     const after = reportWithSupplier({ tonnageReceived: 14 })
 
-    expect(diff(before, after)).toEqual(['recyclingActivity.suppliers'])
+    expect(diffReports(before, after)).toEqual(['recyclingActivity.suppliers'])
   })
 
   it('reports each changed field by path, sorted', () => {
@@ -544,19 +537,19 @@ describe('diffReportedData — which reported fields changed', () => {
     const after = reportWithFinalDestination({ recipientName: 'Dest B' })
     after.wasteSent.tonnageSentToReprocessor = 8
 
-    expect(diff(before, after)).toEqual([
+    expect(diffReports(before, after)).toEqual([
       'wasteSent.finalDestinations',
       'wasteSent.tonnageSentToReprocessor'
     ])
   })
 
   it('reports an activity block present on only one side at the block level', () => {
-    expect(diff(reportWithSupplier(), {})).toEqual(['recyclingActivity'])
-    expect(diff({}, reportWithSupplier())).toEqual(['recyclingActivity'])
+    expect(diffReports(reportWithSupplier(), {})).toEqual(['recyclingActivity'])
+    expect(diffReports({}, reportWithSupplier())).toEqual(['recyclingActivity'])
   })
 })
 
-describe('extractReportedData — absent and null fields', () => {
+describe('diffReports — absent and null fields', () => {
   it('treats an absent optional field as equivalent to null', () => {
     const before = reportWithSupplier({ supplierAddress: null })
     const after = reportWithSupplier({ supplierAddress: undefined })
