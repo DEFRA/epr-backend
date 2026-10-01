@@ -98,11 +98,7 @@ export const loadsByReportingPeriodSchema = Joi.object({
   // drive resubmission detection at submit time. Optional with a default so logs
   // written before this field existed still validate on read.
   closedPeriods: Joi.array().items(periodRefSchema).default([]),
-  // The subset of closed periods whose reported figures actually changed, so
-  // resubmission is genuinely required. Computed at validation time but not yet
-  // read: closedPeriods still drives the flag until the gate goes live. Optional
-  // with a default so logs written before this field existed still validate on
-  // read.
+  // Defaulted so logs written before this field existed still validate on read.
   periodsRequiringResubmission: Joi.array().items(periodRefSchema).default([])
 })
 

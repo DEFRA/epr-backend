@@ -32,9 +32,6 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 
 /**
- * The per-period-invariant context the comparison needs, computed once for the
- * whole upload.
- *
  * @typedef {Object} FiguresContext
  * @property {ReportableWasteRecordState[]} newHeadRowStates
  * @property {OperatorCategory} operatorCategory
@@ -43,20 +40,12 @@ import { ledgerIdFor } from './ledger-id.js'
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  */
 
-// Both sides are aggregated only to compare them, never persisted, so neither
-// carries submission provenance. diffReports excludes source, so the nulls
-// never reach the diff.
+// Neither side is persisted, and diffReports ignores source.
 const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
 
 /**
- * Maps this upload's validated waste records to the row-state shape the report
- * aggregation reads. Each summary log is a full snapshot, so this upload IS the
- * new head. Every record is kept, whatever its waste-balance outcome, because
- * the submit path persists every record and the report aggregates by date
- * alone: a row outside the accreditation window (IGNORED) still counts in its
- * period's report. Rows are projected through the same seam the submit path
- * persists them with, so the data (coerced tonnages, normalised shape) matches
- * the persisted row states the report's source head is read from.
+ * Projected as the submit path persists rows, so both sides of the comparison
+ * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
  * @param {Accreditation | null} accreditation
@@ -102,14 +91,6 @@ const latestSubmittedReportIdForPeriod = (
 }
 
 /**
- * Aggregates the figures a period's report presents from a head's row states,
- * using today's aggregation code and ORS registry. Both sides of the comparison
- * are built here, so anything that has changed since the report was submitted
- * (the registry no longer resolving a site, an aggregation fix) affects both sides
- * alike and cannot read as a change this upload caused. PRN issued tonnage is
- * excluded from the comparison (see reported-data-equivalence), so it is not
- * aggregated.
- *
  * @param {ReportableWasteRecordState[]} rowStates
  * @param {Pick<FiguresContext, 'operatorCategory' | 'orsDetailsMap'> & { period: PeriodRef }} params
  */
@@ -127,24 +108,15 @@ const aggregatePeriodFigures = (
   })
 
 /**
- * The reported fields this upload changes in what a closed period's report
- * would present (empty when it changes none), or null when the report's source
- * submission has no row states to rebuild it from, as for a report generated
- * before row states were recorded. An empty before-state would read as every
- * figure changed, so it is reported as not comparable instead.
- *
- * The before-state is the report rebuilt from the submission it was generated
- * from (its source summary log), not the report as stored. Row-state history is
- * retained (ADR-0037), so the source head can be re-read and re-aggregated
- * alongside the new head, isolating the effect of this upload from drift since
- * submission. The stored report is read only for its provenance.
+ * The before-state is rebuilt from the report's source submission, not read
+ * from the stored report, so drift since submission affects both sides alike.
  *
  * @param {object} params
  * @param {PeriodRef} params.period
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
  * @param {FiguresContext} params.context
- * @returns {Promise<string[] | null>}
+ * @returns {Promise<string[] | null>} null when the source cannot be rebuilt
  */
 const changedFieldsForPeriod = async ({
   period,
@@ -155,8 +127,7 @@ const changedFieldsForPeriod = async ({
   const report = await reportsService.findReportById(
     latestSubmittedReportIdForPeriod(periodicReports, period)
   )
-  // The create schema requires a source; its id is null for a report generated
-  // before any submission, whose before-state really is empty.
+  // The create schema requires a source.
   const { summaryLogId } = /** @type {ReportSource} */ (report.source)
   const sourceRowStates = await wasteRecordStatesForHead(
     context.summaryLogRowStatesRepository,
@@ -196,7 +167,6 @@ const comparePeriod = async (period, params) => {
   }
 }
 
-// A period that failed or cannot be compared is flagged, as before the gate.
 const requiresResubmission = (/** @type {PeriodOutcome} */ outcome) =>
   'error' in outcome ||
   outcome.changedFields === null ||
@@ -215,8 +185,7 @@ const describeChange = (changedFields) => {
 }
 
 /**
- * Logs field paths only, never their values, which can identify suppliers and
- * destinations.
+ * Field paths only: values can identify suppliers and destinations.
  *
  * @param {WasteBalanceLedgerId & { summaryLogId: string }} subject
  * @param {PeriodOutcome} outcome
@@ -244,12 +213,6 @@ const logPeriodOutcome = (
 }
 
 /**
- * Narrows the closed periods this upload touched to those whose reported figures
- * actually changed, so resubmission is required only when it carries new
- * information. For each period it rebuilds the report from the submission the
- * report was generated from and compares it against what this upload would now
- * produce, both aggregated the same way.
- *
  * @param {object} params
  * @param {PeriodRef[]} params.closedPeriods
  * @param {PeriodicReport[]} params.periodicReports
@@ -259,9 +222,8 @@ const logPeriodOutcome = (
  * @param {ReportsService} params.reportsService
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {WasteBalanceLedgerId} params.ledgerId - the ledger the report's
- *   source submission was written to
- * @param {string} params.summaryLogId - this upload, for the outcome logs
+ * @param {WasteBalanceLedgerId} params.ledgerId
+ * @param {string} params.summaryLogId
  * @returns {Promise<PeriodRef[]>}
  */
 const computePeriodsRequiringResubmission = async ({
@@ -317,11 +279,8 @@ const computePeriodsRequiringResubmission = async ({
 }
 
 /**
- * Adds the closed periods whose reported figures this upload changes to its
- * loads-by-reporting-period summary. Shadow mode: stored and logged, but submit
- * still flags every closed period. A failure is logged and falls back to every
- * closed period, as before the gate existed, rather than failing the operator's
- * upload.
+ * Shadow mode: submit still flags every closed period, so the result is only
+ * stored and logged for now.
  *
  * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
