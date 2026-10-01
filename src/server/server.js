@@ -46,7 +46,6 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
-import { runResubmissionFiguresDiagnostic } from '#report-resubmission-figures-diagnostic/run.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -223,7 +222,6 @@ async function createServer(options = {}) {
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
     void runStreamTransitionDiagnostic(startedServer)
-    void runResubmissionFiguresDiagnostic(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
   })
 
