@@ -1,38 +1,7 @@
 /**
- * The reported-data comparison core, used by the resubmission-figures
- * diagnostic and intended for the planned validation-time resubmission gate.
- *
- * `REPORTED_DATA_FIELDS` classifies every field in `reportDataFieldsSchema`
- * (the report's data fields, not its identity, period or lifecycle fields) as
- * compared exactly, compared as free text, or excluded (with the reason it is
- * excluded), and `diffReports` compares two reports on the compared fields.
- * The classification is exhaustive by test: a field added to
- * `reportDataFieldsSchema` fails the build until it is classified here, so a
- * new reported figure added there can never be silently left out of the
- * comparison.
- *
- * A field is compared only when a summary-log upload can change it. Fields
- * entered in the reporting journey, PRN data and values resolved from the ORS
- * registry are excluded: a change to them is not a change the upload made.
- *
- * Free-text fields are the ones an operator types (supplier and destination
- * names and addresses). By the contract, casing, whitespace and
- * blank-versus-null edits to them are not reported-data changes, so they are
- * normalised on extraction. Figures, identifiers and dropdown values are
- * compared exactly.
- *
- * List entries that compare equal once normalised and stripped of excluded
- * fields are merged, their `summed` tonnage added. The aggregation groups rows
- * on raw values (including supplier contact details), so editing one of several
- * rows for the same supplier splits its entry in two; merged again, the report
- * presents the same data.
- *
- * Absent and null compared fields both extract as null. A missing activity block
- * also extracts as null, so present-vs-absent is itself a difference.
- *
- * `canonicalise` sorts object keys and array elements, so the comparison is
- * insensitive to both key order and row order. It rejects anything that is not
- * plain JSON rather than serialising it ambiguously.
+ * What counts as a change to a report's reported data, used by the
+ * resubmission-figures diagnostic and intended for the planned resubmission
+ * gate. The tests are the specification.
  */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
@@ -85,7 +54,7 @@ const ORS_REGISTRY =
   'Resolved from the ORS registry by orsId, not the summary log: a registry update between submissions is not a reported-data change'
 
 /**
- * Every field in `reportDataFieldsSchema`, classified. See the module comment.
+ * Every field in `reportDataFieldsSchema`, classified.
  *
  * @type {{ [field: string]: FieldSpec }}
  */
@@ -95,7 +64,6 @@ export const REPORTED_DATA_FIELDS = {
     suppliers: [
       {
         supplierName: TEXT,
-        // An unvalidated supplementary column, so effectively operator text
         facilityType: TEXT,
         supplierAddress: TEXT,
         supplierPhone: excluded(SUPPLIER_CONTACT),
@@ -114,8 +82,6 @@ export const REPORTED_DATA_FIELDS = {
         siteName: excluded(ORS_REGISTRY),
         country: excluded(ORS_REGISTRY),
         tonnageExported: SUMMED,
-        // Turns on the registry's validFrom date, so a registry update alone
-        // can flip it
         approved: excluded(ORS_REGISTRY)
       }
     ],
@@ -134,7 +100,6 @@ export const REPORTED_DATA_FIELDS = {
     finalDestinations: [
       {
         recipientName: TEXT,
-        // A validated dropdown the aggregation itself matches exactly
         facilityType: EXACT,
         address: TEXT,
         tonnageSentOn: SUMMED
@@ -157,15 +122,9 @@ const isExcluded = (fieldSpec) =>
   'excluded' in fieldSpec
 
 /**
- * Normalises an operator-typed value so a casing-, whitespace- or
- * blank-only edit does not read as a change: trims, collapses each run of
- * whitespace to a single space and lowercases, and treats a blank as absent. A
- * genuine edit (a different name or address) still differs.
- *
- * Each comma-separated part is tidied on its own and blank parts are dropped.
- * Addresses are stored as `formatAddress(address, postcode)` joined over the
- * raw cells, so stray whitespace in either cell lands next to the joining
- * comma, and a whitespace-only cell leaves an empty part behind.
+ * Normalises operator-typed text so a casing-, whitespace- or blank-only edit
+ * does not read as a change. Works per comma-separated part, because addresses
+ * are joined from untrimmed cells by `formatAddress`.
  *
  * @param {*} value
  * @returns {ReportedDataValue}
@@ -184,9 +143,9 @@ const normaliseText = (value) => {
 }
 
 /**
- * Merges list items that are equal on every compared field except their
- * `summed` ones, adding those exactly (as decimals, so 0.1 + 0.2 is 0.3).
- * Every list item spec has one summed field, its tonnage.
+ * Merges list items equal on every field but their `summed` ones, adding those
+ * as decimals. The aggregation groups rows on raw values, including ones the
+ * comparison ignores, so one entry can arrive split in two.
  *
  * @param {{ [field: string]: FieldSpec }} itemSpec
  * @param {Array<{ [field: string]: ReportedDataValue }>} items - already picked
@@ -221,9 +180,7 @@ const mergeEqualItems = (itemSpec, items) => {
 }
 
 /**
- * Picks the compared fields of `value` as `fieldSpec` classifies them,
- * normalising free-text fields and merging equal list items. Absent values
- * extract as null.
+ * Picks the compared fields of `value` as `fieldSpec` classifies them.
  *
  * @param {FieldSpec} fieldSpec
  * @param {*} value
@@ -261,8 +218,7 @@ const pickReportedData = (fieldSpec, value) => {
 }
 
 /**
- * The compared subset of one report — the reported data it presents, per
- * `REPORTED_DATA_FIELDS`.
+ * The compared subset of one report, per `REPORTED_DATA_FIELDS`.
  *
  * @param {ReportedDataBearingReport} report
  * @returns {ReportedDataValue}
@@ -274,9 +230,7 @@ const extractReportedData = (report) =>
 const byString = (a, b) => a.localeCompare(b)
 
 /**
- * True for an object literal (or a prototype-less object): reported data holds
- * no class instances, so a Date, Map or similar would otherwise serialise as an
- * empty object and compare equal to any other.
+ * True for an object literal or a prototype-less object.
  *
  * @param {object} value
  */
@@ -286,15 +240,8 @@ const isPlainObject = (value) => {
 }
 
 /**
- * Recursively serialises a value to a stable string with object keys sorted and
- * array elements ordered by their own serialisation, so the result is
- * insensitive to key order and row order. Strings are serialised verbatim:
- * normalising free text is a per-field decision made on extraction.
- *
- * Accepts only plain JSON: plain objects, arrays, strings, finite numbers,
- * booleans and null. Anything else (a Date, a class instance, NaN, undefined)
- * throws, because it would otherwise serialise ambiguously and could make two
- * different reports compare equal.
+ * Serialises plain JSON to a string insensitive to key order and row order.
+ * Throws on anything else, which would otherwise serialise ambiguously.
  *
  * @param {*} value
  * @returns {string}
@@ -342,11 +289,8 @@ const isRecord = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
 /**
- * The paths of the compared fields that differ between two extracted values
- * `fieldSpec` classifies. Descends into a block present on both sides; reports
- * a leaf, a list, or a block present on only one side at its own path. List
- * items have no stable identity (they are compared as a set), so a changed list
- * is reported as a whole.
+ * The paths of the compared fields that differ between two extracted values.
+ * List items have no stable identity, so a changed list is reported whole.
  *
  * @param {FieldSpec} fieldSpec
  * @param {ReportedDataValue} before
@@ -375,11 +319,10 @@ const changedFieldPaths = (fieldSpec, before, after, path) => {
 }
 
 /**
- * The paths of the reported fields that differ between two reports, sorted
- * (e.g. `['wasteSent.finalDestinations']`). Empty when their reported data is
- * equivalent. Takes whole reports and extracts the compared subset itself, so
- * no caller can skip the exclusions, normalisation or merging. Paths only,
- * never values, so the result is safe to log.
+ * The sorted paths of the reported fields that differ between two reports
+ * (e.g. `['wasteSent.finalDestinations']`), empty when equivalent. Paths only,
+ * never values, so the result is safe to log. Extracts internally so no caller
+ * can skip the exclusions, normalisation or merging.
  *
  * @param {ReportedDataBearingReport} previous
  * @param {ReportedDataBearingReport} current
