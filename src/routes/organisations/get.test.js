@@ -19,11 +19,14 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
-const REGISTRATION_NUMBER = 'R26ER5001180041PL'
-const EXPORTER_REGISTRATION_NUMBER = 'R26EX5001180042PL'
+const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
+const EXPORTER_NUMBER = 'R26EX5001180042PL'
+const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
+const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
 
 const APPROVED_SITE_ID = new ObjectId().toString()
-const UNAPPROVED_SITE_ID = new ObjectId().toString()
+const PENDING_SITE_ID = new ObjectId().toString()
+const MISSING_SITE_ID = new ObjectId().toString()
 
 const approvedSite = {
   id: APPROVED_SITE_ID,
@@ -36,47 +39,73 @@ const approvedSite = {
   updatedAt: new Date()
 }
 
-const unapprovedSite = {
-  id: UNAPPROVED_SITE_ID,
+const pendingSite = {
+  id: PENDING_SITE_ID,
   name: 'Alpha Reprocessor',
   country: 'France',
-  address: { line1: '1 Rue de Test', townOrCity: 'Paris' },
+  address: { line1: '1 Rue de Test', townOrCity: 'Paris', line2: null },
   createdAt: new Date(),
   updatedAt: new Date()
 }
 
-const approvedAccreditation = (overrides = {}) =>
+const granted = (status) => [
+  { status: 'created', updatedAt: '2026-01-01' },
+  { status, updatedAt: '2026-02-01' }
+]
+
+const accreditation = (overrides = {}) =>
   buildAccreditation({
-    accreditationNumber: 'A26ER5001180114PL',
+    accreditationNumber: ACCREDITATION_NUMBER,
     validFrom: '2026-07-01',
     validTo: '2026-12-31',
-    statusHistory: [
-      { status: 'created', updatedAt: '2026-01-01' },
-      { status: 'approved', updatedAt: '2026-02-01' }
-    ],
+    statusHistory: granted('approved'),
+    ...overrides
+  })
+
+const exporterAccreditation = (overrides = {}) =>
+  accreditation({
+    wasteProcessingType: 'exporter',
+    accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
     ...overrides
   })
 
 const reprocessor = (overrides = {}) =>
   buildRegistration({
-    registrationNumber: REGISTRATION_NUMBER,
+    registrationNumber: REPROCESSOR_NUMBER,
     reprocessingType: 'input',
+    validFrom: '2026-02-01',
+    statusHistory: granted('approved'),
     ...overrides
   })
 
 const exporter = (overrides = {}) =>
   buildRegistration({
     wasteProcessingType: 'exporter',
-    registrationNumber: EXPORTER_REGISTRATION_NUMBER,
+    registrationNumber: EXPORTER_NUMBER,
+    validFrom: '2026-02-01',
+    statusHistory: granted('approved'),
     overseasSites: {
       '001': { overseasSiteId: APPROVED_SITE_ID },
-      '002': { overseasSiteId: UNAPPROVED_SITE_ID }
+      '002': { overseasSiteId: PENDING_SITE_ID }
     },
     ...overrides
   })
 
-const exporterAccreditation = () =>
-  approvedAccreditation({ wasteProcessingType: 'exporter' })
+const approvedSiteView = {
+  name: 'Beta Reprocessor',
+  address: {
+    line1: '2 Teststrasse',
+    townOrCity: 'Berlin',
+    postcode: '10115',
+    country: 'Germany'
+  },
+  coordinates: '52.5200,13.4050'
+}
+
+const pendingSiteView = {
+  name: 'Alpha Reprocessor',
+  address: { line1: '1 Rue de Test', townOrCity: 'Paris', country: 'France' }
+}
 
 describe('organisation view routes', () => {
   setupAuthContext()
@@ -99,7 +128,7 @@ describe('organisation view routes', () => {
         ]),
         overseasSitesRepository: createInMemoryOverseasSitesRepository([
           approvedSite,
-          unapprovedSite
+          pendingSite
         ])
       }
     })
@@ -114,13 +143,20 @@ describe('organisation view routes', () => {
 
   const body = (response) => JSON.parse(response.payload)
 
+  /**
+   * @param {{ orgId: number }} organisation
+   */
+  const registrationsOf = async (organisation) => {
+    await serve(organisation)
+    return body(await get(`/organisations/${organisation.orgId}`)).registrations
+  }
+
   describe('GET /organisations/{organisationNumber}', () => {
-    it('returns only the fields the frontends use, with accreditations keyed by year', async () => {
-      const accreditation = approvedAccreditation()
-      const registration = reprocessor({ accreditationId: accreditation.id })
+    it('returns the organisation with granted registrations keyed by number and accreditations by year', async () => {
+      const granted2026 = accreditation()
       const organisation = buildOrganisation({
-        registrations: [registration],
-        accreditations: [accreditation]
+        registrations: [reprocessor({ accreditationId: granted2026.id })],
+        accreditations: [granted2026]
       })
       await serve(organisation)
 
@@ -128,22 +164,19 @@ describe('organisation view routes', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toEqual({
-        id: organisation.id,
-        orgId: organisation.orgId,
+        organisationNumber: organisation.orgId,
         name: 'ACME ltd',
         tradingName: 'ACME ltd',
         status: 'created',
-        submittedToRegulator: 'ea',
-        registrations: [
-          {
-            id: registration.id,
-            registrationNumber: REGISTRATION_NUMBER,
-            status: 'created',
-            validFrom: null,
+        submittedToRegulator: { code: 'ea' },
+        registrations: {
+          [REPROCESSOR_NUMBER]: {
+            status: 'approved',
+            validFrom: '2026-02-01',
             material: 'glass_re_melt',
+            submittedToRegulator: { code: 'ea' },
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            submittedToRegulator: 'ea',
             site: {
               address: {
                 line1: '7 Glass processing site',
@@ -151,120 +184,89 @@ describe('organisation view routes', () => {
                 postcode: 'SW2A 0AA'
               }
             },
-            overseasSites: {},
             accreditations: {
               2026: {
-                id: accreditation.id,
-                accreditationNumber: 'A26ER5001180114PL',
-                status: 'approved',
-                overseasSites: {}
+                accreditationNumber: ACCREDITATION_NUMBER,
+                status: 'approved'
               }
             }
           }
-        ]
-      })
-    })
-
-    it('gives a registered-only exporter no site and the details of every overseas site it uses', async () => {
-      const organisation = buildOrganisation({ registrations: [exporter()] })
-      await serve(organisation)
-
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
-
-      expect(registration.site).toBeNull()
-      expect(registration.accreditations).toEqual({})
-      expect(registration.overseasSites).toEqual({
-        '001': {
-          name: 'Beta Reprocessor',
-          country: 'Germany',
-          address: {
-            line1: '2 Teststrasse',
-            townOrCity: 'Berlin',
-            postcode: '10115'
-          },
-          coordinates: '52.5200,13.4050'
-        },
-        '002': {
-          name: 'Alpha Reprocessor',
-          country: 'France',
-          address: { line1: '1 Rue de Test', townOrCity: 'Paris' },
-          coordinates: null
         }
       })
     })
 
-    it("gives an accredited exporter's accreditation each overseas site's approval date", async () => {
-      const accreditation = exporterAccreditation()
-      const organisation = buildOrganisation({
-        registrations: [exporter({ accreditationId: accreditation.id })],
-        accreditations: [accreditation]
+    it('gives an exporter the details of every overseas site it uses, and no site or reprocessing type', async () => {
+      const registrations = await registrationsOf(
+        buildOrganisation({ registrations: [exporter()] })
+      )
+
+      expect(registrations[EXPORTER_NUMBER]).toEqual({
+        status: 'approved',
+        validFrom: '2026-02-01',
+        material: 'plastic',
+        submittedToRegulator: { code: 'ea' },
+        wasteProcessingType: 'exporter',
+        overseasSites: { '001': approvedSiteView, '002': pendingSiteView },
+        accreditations: {}
       })
-      await serve(organisation)
+    })
 
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
+    it("records on an exporter's accreditation whether each overseas site is approved", async () => {
+      const accredited = exporterAccreditation()
+      const registrations = await registrationsOf(
+        buildOrganisation({
+          registrations: [exporter({ accreditationId: accredited.id })],
+          accreditations: [accredited]
+        })
+      )
 
-      expect(registration.accreditations[2026].overseasSites).toEqual({
-        '001': '2026-01-01T00:00:00.000Z',
-        '002': null
+      expect(registrations[EXPORTER_NUMBER].accreditations[2026]).toEqual({
+        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+        status: 'approved',
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2026-01-01' },
+          '002': { status: 'pending' }
+        }
       })
     })
 
     it('keys an accreditation by the year of its validFrom', async () => {
-      const accreditation = approvedAccreditation({
+      const granted2027 = accreditation({
         validFrom: '2027-01-01',
         validTo: '2027-12-31'
       })
-      const organisation = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: accreditation.id })],
-        accreditations: [accreditation]
-      })
-      await serve(organisation)
+      const registrations = await registrationsOf(
+        buildOrganisation({
+          registrations: [reprocessor({ accreditationId: granted2027.id })],
+          accreditations: [granted2027]
+        })
+      )
 
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
-
-      expect(Object.keys(registration.accreditations)).toEqual(['2027'])
+      expect(
+        Object.keys(registrations[REPROCESSOR_NUMBER].accreditations)
+      ).toEqual(['2027'])
     })
 
-    it('keys an accreditation not yet granted by the 2026 scheme year', async () => {
-      const accreditation = buildAccreditation()
-      const organisation = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: accreditation.id })],
-        accreditations: [accreditation]
-      })
-      await serve(organisation)
+    it('gives an exporter with no overseas sites an empty map', async () => {
+      const registrations = await registrationsOf(
+        buildOrganisation({
+          registrations: [exporter({ overseasSites: undefined })]
+        })
+      )
 
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
-
-      expect(registration.accreditations).toEqual({
-        2026: {
-          id: accreditation.id,
-          accreditationNumber: null,
-          status: 'created',
-          overseasSites: {}
-        }
-      })
+      expect(registrations[EXPORTER_NUMBER].overseasSites).toEqual({})
     })
 
-    it('gives a registration without an accreditation an empty map', async () => {
-      const organisation = buildOrganisation({ registrations: [reprocessor()] })
-      await serve(organisation)
+    it('leaves out the trading name when the organisation has none', async () => {
+      const base = buildOrganisation({ registrations: [reprocessor()] })
+      await serve({ ...base, companyDetails: { name: 'ACME ltd' } })
 
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
+      const response = await get(`/organisations/${base.orgId}`)
 
-      expect(registration.accreditations).toEqual({})
+      expect(body(response)).not.toHaveProperty('tradingName')
     })
 
-    it('includes the linked Defra organisation, with only the linker email', async () => {
+    it('groups the linked Defra ID organisation apart from who linked it and when', async () => {
       const linked = buildLinkedDefraOrg('defra-org-1', 'Defra Org')
       const organisation = buildOrganisation({
         registrations: [reprocessor()],
@@ -275,10 +277,87 @@ describe('organisation view routes', () => {
       const response = await get(`/organisations/${organisation.orgId}`)
 
       expect(body(response).linkedDefraOrganisation).toEqual({
-        orgId: 'defra-org-1',
-        orgName: 'Defra Org',
+        defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
         linkedAt: linked.linkedAt,
         linkedBy: { email: 'linker@example.com' }
+      })
+    })
+
+    describe('records it cannot serve', () => {
+      it('leaves out a registration without a number', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [
+              reprocessor(),
+              exporter({ registrationNumber: null })
+            ]
+          })
+        )
+
+        expect(Object.keys(registrations)).toEqual([REPROCESSOR_NUMBER])
+      })
+
+      it('leaves out a registration without validFrom', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor({ validFrom: null })]
+          })
+        )
+
+        expect(registrations).toEqual({})
+      })
+
+      it('leaves out a reprocessor without a reprocessing type', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor({ reprocessingType: null })]
+          })
+        )
+
+        expect(registrations).toEqual({})
+      })
+
+      it('leaves out an accreditation without a number', async () => {
+        const ungranted = buildAccreditation()
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor({ accreditationId: ungranted.id })],
+            accreditations: [ungranted]
+          })
+        )
+
+        expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
+      })
+
+      it('leaves out an accreditation without validFrom', async () => {
+        const undated = accreditation({ validFrom: undefined })
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor({ accreditationId: undated.id })],
+            accreditations: [undated]
+          })
+        )
+
+        expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
+      })
+
+      it('leaves out an overseas site whose site record no longer exists', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [
+              exporter({
+                overseasSites: {
+                  '001': { overseasSiteId: APPROVED_SITE_ID },
+                  '003': { overseasSiteId: MISSING_SITE_ID }
+                }
+              })
+            ]
+          })
+        )
+
+        expect(
+          Object.keys(registrations[EXPORTER_NUMBER].overseasSites)
+        ).toEqual(['001'])
       })
     })
 
@@ -288,32 +367,6 @@ describe('organisation view routes', () => {
       const response = await get('/organisations/500002')
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-
-    it('returns a null trading name for an organisation without one', async () => {
-      const base = buildOrganisation({ registrations: [reprocessor()] })
-      const organisation = {
-        ...base,
-        companyDetails: { name: base.companyDetails.name }
-      }
-      await serve(organisation)
-
-      const response = await get(`/organisations/${organisation.orgId}`)
-
-      expect(body(response).tradingName).toBeNull()
-    })
-
-    it('returns a null registration number for a registration not yet granted', async () => {
-      const organisation = buildOrganisation({
-        registrations: [reprocessor({ registrationNumber: null })]
-      })
-      await serve(organisation)
-
-      const [registration] = body(
-        await get(`/organisations/${organisation.orgId}`)
-      ).registrations
-
-      expect(registration.registrationNumber).toBeNull()
     })
 
     it('rejects an organisation number that is not a number', async () => {
@@ -353,86 +406,122 @@ describe('organisation view routes', () => {
     })
   })
 
-  describe('registration sub-resources', () => {
-    const accreditation = approvedAccreditation()
+  describe('sub-resources', () => {
+    const reprocessorAccreditation = accreditation()
     const exportAccreditation = exporterAccreditation()
     const organisation = buildOrganisation({
       registrations: [
-        reprocessor({ accreditationId: accreditation.id }),
+        reprocessor({ accreditationId: reprocessorAccreditation.id }),
         exporter({ accreditationId: exportAccreditation.id })
       ],
-      accreditations: [accreditation, exportAccreditation]
+      accreditations: [reprocessorAccreditation, exportAccreditation]
     })
-    const base = `/organisations/${organisation.orgId}/registrations`
+    const registrations = `/organisations/${organisation.orgId}/registrations`
+    const reprocessorPath = `${registrations}/${REPROCESSOR_NUMBER}`
+    const exporterPath = `${registrations}/${EXPORTER_NUMBER}`
 
     beforeEach(async () => {
       await serve(organisation)
     })
 
-    it('lists every registration in the organisation view shape', async () => {
-      const response = await get(base)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(
-        body(response).registrations.map((r) => r.registrationNumber)
-      ).toEqual([REGISTRATION_NUMBER, EXPORTER_REGISTRATION_NUMBER])
-    })
-
-    it('returns one registration by its registration number', async () => {
-      const response = await get(`${base}/${EXPORTER_REGISTRATION_NUMBER}`)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toMatchObject({
-        registrationNumber: EXPORTER_REGISTRATION_NUMBER,
-        site: null,
-        overseasSites: { '001': { name: 'Beta Reprocessor' } },
-        accreditations: {
-          2026: { overseasSites: { '001': '2026-01-01T00:00:00.000Z' } }
-        }
-      })
-    })
-
-    it('returns 404 for an unknown registration number', async () => {
-      const response = await get(`${base}/R26XX0000000000PL`)
+    it.each([
+      ['an unknown registration', `${registrations}/R26XX0000000000PL`],
+      [
+        'an unknown accreditation year',
+        `${reprocessorPath}/accreditations/2027`
+      ],
+      ['an unknown overseas site', `${exporterPath}/overseas-sites/099`],
+      [
+        'an unknown accredited overseas site',
+        `${exporterPath}/accreditations/2026/overseas-sites/099`
+      ],
+      ["a reprocessor's overseas sites", `${reprocessorPath}/overseas-sites`],
+      [
+        "a reprocessor accreditation's overseas sites",
+        `${reprocessorPath}/accreditations/2026/overseas-sites`
+      ]
+    ])('returns 404 for %s', async (_, url) => {
+      const response = await get(url)
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    it('returns the registration accreditations keyed by year', async () => {
-      const response = await get(
-        `${base}/${REGISTRATION_NUMBER}/accreditations`
-      )
+    it('lists the granted registrations keyed by number', async () => {
+      const response = await get(registrations)
+
+      expect(Object.keys(body(response).registrations)).toEqual([
+        REPROCESSOR_NUMBER,
+        EXPORTER_NUMBER
+      ])
+    })
+
+    it('returns one registration by its number', async () => {
+      const response = await get(exporterPath)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(body(response)).toMatchObject({
+        wasteProcessingType: 'exporter',
+        overseasSites: { '001': approvedSiteView }
+      })
+    })
+
+    it("returns a registration's overseas sites", async () => {
+      const response = await get(`${exporterPath}/overseas-sites`)
+
+      expect(body(response)).toEqual({
+        overseasSites: { '001': approvedSiteView, '002': pendingSiteView }
+      })
+    })
+
+    it('returns one overseas site by its ORS id', async () => {
+      const response = await get(`${exporterPath}/overseas-sites/002`)
+
+      expect(body(response)).toEqual(pendingSiteView)
+    })
+
+    it("returns a registration's accreditations keyed by year", async () => {
+      const response = await get(`${reprocessorPath}/accreditations`)
 
       expect(body(response)).toEqual({
         accreditations: {
           2026: {
-            id: accreditation.id,
-            accreditationNumber: 'A26ER5001180114PL',
-            status: 'approved',
-            overseasSites: {}
+            accreditationNumber: ACCREDITATION_NUMBER,
+            status: 'approved'
           }
         }
       })
     })
 
-    it('returns one accreditation by its year, with its overseas site approvals', async () => {
-      const response = await get(
-        `${base}/${EXPORTER_REGISTRATION_NUMBER}/accreditations/2026`
-      )
+    it('returns one accreditation by its year', async () => {
+      const response = await get(`${exporterPath}/accreditations/2026`)
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
-        id: exportAccreditation.id,
-        overseasSites: { '001': '2026-01-01T00:00:00.000Z', '002': null }
+        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
       })
     })
 
-    it('returns 404 for a year the registration holds no accreditation for', async () => {
+    it("returns an accreditation's overseas sites", async () => {
       const response = await get(
-        `${base}/${REGISTRATION_NUMBER}/accreditations/2027`
+        `${exporterPath}/accreditations/2026/overseas-sites`
       )
 
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(body(response)).toEqual({
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2026-01-01' },
+          '002': { status: 'pending' }
+        }
+      })
+    })
+
+    it('returns one accredited overseas site by its ORS id', async () => {
+      const response = await get(
+        `${exporterPath}/accreditations/2026/overseas-sites/001`
+      )
+
+      expect(body(response)).toEqual({
+        status: 'approved',
+        approvedOn: '2026-01-01'
+      })
     })
   })
 })

@@ -8,101 +8,96 @@ import {
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { OverseasSiteDetail } from '#overseas-sites/application/resolve-overseas-site-details.js' */
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
 /**
- * Every accreditation held locally is for the 2026 scheme year (ADR-0034).
- * Only used for an accreditation not yet granted, which has no validFrom.
+ * @typedef {(message: string) => void} OnDrop
  */
-const LOCAL_ACCREDITATION_YEAR = 2026
+
+/**
+ * @typedef {{ code: string }} RegulatorView
+ */
 
 /**
  * @typedef {{
- *   id: string
- *   accreditationNumber: string | null
+ *   name: string
+ *   address: Record<string, string>
+ *   coordinates?: string
+ * }} OverseasSiteView
+ */
+
+/**
+ * @typedef {{ status: 'pending' } | { status: 'approved', approvedOn: string }} AccreditedOverseasSiteView
+ */
+
+/**
+ * @typedef {{
+ *   accreditationNumber: string
  *   status: string
- *   overseasSites: Record<string, string | null>
+ *   overseasSites?: Record<string, AccreditedOverseasSiteView>
  * }} AccreditationView
  */
 
 /**
- * @typedef {Omit<OverseasSiteDetail, 'validFrom'>} OverseasSiteView
- */
-
-/**
  * @typedef {{
- *   id: string
- *   registrationNumber: string | null
  *   status: string
- *   validFrom: string | null
+ *   validFrom: string
  *   material: string
+ *   submittedToRegulator: RegulatorView
  *   wasteProcessingType: string
- *   reprocessingType: string | null
- *   submittedToRegulator: string
- *   site: {
- *     address: {
- *       line1?: string
- *       line2?: string
- *       town?: string
- *       county?: string
- *       postcode?: string
- *     }
- *   } | null
- *   overseasSites: Record<string, OverseasSiteView>
+ *   reprocessingType?: string
+ *   site?: { address: Record<string, string> }
+ *   overseasSites?: Record<string, OverseasSiteView>
  *   accreditations: Record<string, AccreditationView>
  * }} RegistrationView
  */
 
 /**
  * @typedef {{
- *   id: string
- *   orgId: number
+ *   organisationNumber: number
  *   name: string
- *   tradingName: string | null
+ *   tradingName?: string
  *   status: string
- *   submittedToRegulator: string
+ *   submittedToRegulator: RegulatorView
  *   linkedDefraOrganisation?: {
- *     orgId: string
- *     orgName: string
+ *     defraOrganisation: { id: string, name: string }
  *     linkedAt: string
  *     linkedBy: { email: string }
  *   }
- *   registrations: RegistrationView[]
+ *   registrations: Record<string, RegistrationView>
  * }} OrganisationView
  */
 
 /**
+ * Serves only registrations and accreditations granted a number. A record the
+ * view cannot represent is dropped and reported through `onDrop`.
+ *
  * @param {Organisation} organisation
- * @param {Record<string, Record<string, OverseasSiteDetail>>} overseasSitesByRegistrationId
+ * @param {Map<string, OverseasSite>} overseasSitesById
+ * @param {OnDrop} onDrop
  * @returns {OrganisationView}
  */
-export function toOrganisationView(
-  organisation,
-  overseasSitesByRegistrationId
-) {
+export function toOrganisationView(organisation, overseasSitesById, onDrop) {
   const { companyDetails, linkedDefraOrganisation } = organisation
 
   return {
-    id: organisation.id,
-    orgId: organisation.orgId,
+    organisationNumber: organisation.orgId,
     name: companyDetails.name,
-    tradingName: companyDetails.tradingName ?? null,
+    ...omitNullish({ tradingName: companyDetails.tradingName }),
     status: organisation.status,
-    submittedToRegulator: organisation.submittedToRegulator,
+    submittedToRegulator: { code: organisation.submittedToRegulator },
     ...(linkedDefraOrganisation && {
       linkedDefraOrganisation: {
-        orgId: linkedDefraOrganisation.orgId,
-        orgName: linkedDefraOrganisation.orgName,
+        defraOrganisation: {
+          id: linkedDefraOrganisation.orgId,
+          name: linkedDefraOrganisation.orgName
+        },
         linkedAt: linkedDefraOrganisation.linkedAt,
         linkedBy: { email: linkedDefraOrganisation.linkedBy.email }
       }
     }),
-    registrations: organisation.registrations.map((registration) =>
-      toRegistrationView(
-        registration,
-        organisation,
-        overseasSitesByRegistrationId[registration.id]
-      )
+    registrations: keyedViews(organisation.registrations, (registration) =>
+      toRegistrationEntry(registration, organisation, overseasSitesById, onDrop)
     )
   }
 }
@@ -110,110 +105,183 @@ export function toOrganisationView(
 /**
  * @param {Registration} registration
  * @param {Organisation} organisation
- * @param {Record<string, OverseasSiteDetail>} overseasSites
- * @returns {RegistrationView}
+ * @param {Map<string, OverseasSite>} overseasSitesById
+ * @param {OnDrop} onDrop
+ * @returns {[string, RegistrationView] | null}
  */
-export function toRegistrationView(registration, organisation, overseasSites) {
-  return {
-    id: registration.id,
-    registrationNumber: registration.registrationNumber ?? null,
-    status: registration.status,
-    validFrom: registration.validFrom ?? null,
-    material: resolveMaterial(registration),
-    wasteProcessingType: registration.wasteProcessingType,
-    reprocessingType: registration.reprocessingType ?? null,
-    submittedToRegulator: registration.submittedToRegulator,
-    site: toSiteView(registration),
-    overseasSites: toOverseasSitesView(overseasSites),
-    accreditations: toAccreditationsView(
-      registration,
-      organisation,
-      overseasSites
-    )
-  }
-}
-
-/**
- * Keyed by scheme year: a registration holds at most one accreditation a year.
- * Until the registration service supplies per-year site approvals, an
- * accreditation lists every registration site with the site's stored approval.
- *
- * @param {Registration} registration
- * @param {Organisation} organisation
- * @param {Record<string, OverseasSiteDetail>} overseasSites
- * @returns {Record<string, AccreditationView>}
- */
-export function toAccreditationsView(
+function toRegistrationEntry(
   registration,
   organisation,
-  overseasSites
+  overseasSitesById,
+  onDrop
 ) {
-  return Object.fromEntries(
-    accreditationsForRegistration(registration, organisation).map(
-      (accreditation) => [
-        String(accreditationYear(accreditation)),
-        toAccreditationView(accreditation, overseasSites)
-      ]
-    )
-  )
-}
-
-/**
- * @param {Accreditation} accreditation
- * @param {Record<string, OverseasSiteDetail>} overseasSites
- * @returns {AccreditationView}
- */
-function toAccreditationView(accreditation, overseasSites) {
-  return {
-    id: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber ?? null,
-    status: accreditation.status,
-    overseasSites: toOverseasSiteApprovals(overseasSites)
+  const { registrationNumber } = registration
+  if (!registrationNumber) {
+    onDrop(`Registration ${registration.id} has no registration number`)
+    return null
   }
-}
-
-/**
- * @param {Accreditation} accreditation
- */
-function accreditationYear(accreditation) {
-  return accreditation.validFrom
-    ? deriveAccreditationYear(accreditation)
-    : LOCAL_ACCREDITATION_YEAR
-}
-
-/**
- * @param {Registration} registration
- */
-function toSiteView(registration) {
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+  if (!registration.validFrom) {
+    onDrop(`Registration ${registrationNumber} has no validFrom`)
     return null
   }
 
-  const { line1, line2, town, county, postcode } = registration.site.address
-  return { address: { line1, line2, town, county, postcode } }
+  const isExporter =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+  if (!isExporter && !registration.reprocessingType) {
+    onDrop(`Registration ${registrationNumber} has no reprocessing type`)
+    return null
+  }
+
+  const overseasSites = isExporter
+    ? toOverseasSites(registration, overseasSitesById, onDrop)
+    : undefined
+
+  const common = {
+    status: registration.status,
+    validFrom: registration.validFrom,
+    material: resolveMaterial(registration),
+    submittedToRegulator: { code: registration.submittedToRegulator },
+    wasteProcessingType: registration.wasteProcessingType,
+    accreditations: keyedViews(
+      accreditationsForRegistration(registration, organisation),
+      (accreditation) =>
+        toAccreditationEntry(accreditation, overseasSites, onDrop)
+    )
+  }
+
+  return [
+    registrationNumber,
+    overseasSites
+      ? { ...common, overseasSites: mapValues(overseasSites, toSiteView) }
+      : {
+          ...common,
+          reprocessingType: registration.reprocessingType,
+          site: { address: toUkAddress(registration.site.address) }
+        }
+  ]
 }
 
 /**
- * @param {Record<string, OverseasSiteDetail>} overseasSites
- * @returns {Record<string, OverseasSiteView>}
+ * Until per-year approvals come from the registration service, an exporter's
+ * accreditation lists every registration site with the site's stored approval.
+ *
+ * @param {Accreditation} accreditation
+ * @param {Record<string, OverseasSite> | undefined} overseasSites
+ * @param {OnDrop} onDrop
+ * @returns {[string, AccreditationView] | null}
  */
-function toOverseasSitesView(overseasSites) {
+function toAccreditationEntry(accreditation, overseasSites, onDrop) {
+  const { accreditationNumber } = accreditation
+  if (!accreditationNumber) {
+    onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
+    return null
+  }
+  if (!accreditation.validFrom) {
+    onDrop(`Accreditation ${accreditationNumber} has no validFrom`)
+    return null
+  }
+
+  return [
+    String(deriveAccreditationYear(accreditation)),
+    {
+      accreditationNumber,
+      status: accreditation.status,
+      ...(overseasSites && {
+        overseasSites: mapValues(overseasSites, toAccreditedSiteView)
+      })
+    }
+  ]
+}
+
+/**
+ * @param {Registration} registration
+ * @param {Map<string, OverseasSite>} overseasSitesById
+ * @param {OnDrop} onDrop
+ * @returns {Record<string, OverseasSite>}
+ */
+function toOverseasSites(registration, overseasSitesById, onDrop) {
+  const entries = Object.entries(registration.overseasSites ?? {}).flatMap(
+    ([orsId, { overseasSiteId }]) => {
+      const site = overseasSitesById.get(overseasSiteId)
+      if (!site) {
+        onDrop(
+          `Registration ${registration.registrationNumber} ORS ${orsId} names a missing overseas site`
+        )
+        return []
+      }
+      return [[orsId, site]]
+    }
+  )
+  return Object.fromEntries(entries)
+}
+
+/**
+ * @param {OverseasSite} site
+ * @returns {OverseasSiteView}
+ */
+function toSiteView(site) {
+  return {
+    name: site.name,
+    address: omitNullish({ ...site.address, country: site.country }),
+    ...omitNullish({ coordinates: site.coordinates })
+  }
+}
+
+/**
+ * @param {OverseasSite} site
+ * @returns {AccreditedOverseasSiteView}
+ */
+function toAccreditedSiteView(site) {
+  return site.validFrom
+    ? {
+        status: 'approved',
+        approvedOn: site.validFrom.toISOString().slice(0, 10)
+      }
+    : { status: 'pending' }
+}
+
+/**
+ * @param {Record<string, string | undefined>} address
+ */
+function toUkAddress({ line1, line2, town, county, postcode }) {
+  return omitNullish({ line1, line2, town, county, postcode })
+}
+
+/**
+ * @template T, V
+ * @param {T[]} items
+ * @param {(item: T) => [string, V] | null} toEntry
+ * @returns {Record<string, V>}
+ */
+function keyedViews(items, toEntry) {
   return Object.fromEntries(
-    Object.entries(overseasSites).map(
-      ([orsId, { validFrom: _approval, ...site }]) => [orsId, site]
-    )
+    items.map(toEntry).filter((entry) => entry !== null)
   )
 }
 
 /**
- * @param {Record<string, OverseasSiteDetail>} overseasSites
- * @returns {Record<string, string | null>}
+ * @template T, V
+ * @param {Record<string, T>} record
+ * @param {(value: T) => V} map
+ * @returns {Record<string, V>}
  */
-function toOverseasSiteApprovals(overseasSites) {
+function mapValues(record, map) {
   return Object.fromEntries(
-    Object.entries(overseasSites).map(([orsId, { validFrom }]) => [
-      orsId,
-      validFrom?.toISOString() ?? null
-    ])
+    Object.entries(record).map(([key, value]) => [key, map(value)])
+  )
+}
+
+/**
+ * @template {Record<string, unknown>} T
+ * @param {T} record
+ * @returns {{ [K in keyof T]?: NonNullable<T[K]> }}
+ */
+function omitNullish(record) {
+  return /** @type {{ [K in keyof T]?: NonNullable<T[K]> }} */ (
+    Object.fromEntries(
+      Object.entries(record).filter(
+        ([, value]) => value !== null && value !== undefined
+      )
+    )
   )
 }

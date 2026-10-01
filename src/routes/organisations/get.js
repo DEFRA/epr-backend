@@ -2,256 +2,210 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-overseas-site-details.js'
-import {
-  toAccreditationsView,
-  toOrganisationView,
-  toRegistrationView
-} from './organisation-view.js'
+import { toOrganisationView } from './organisation-view.js'
 import {
   accreditationViewSchema,
   accreditationsViewResponseSchema,
+  accreditedOverseasSiteViewSchema,
+  accreditedOverseasSitesViewResponseSchema,
   organisationViewSchema,
+  overseasSiteViewSchema,
+  overseasSitesViewResponseSchema,
   registrationViewSchema,
-  registrationsViewSchema
+  registrationsViewResponseSchema
 } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OrganisationView } from './organisation-view.js' */
 
-export const organisationViewGetPath = '/organisations/{organisationNumber}'
-export const registrationsViewGetPath = `${organisationViewGetPath}/registrations`
-export const registrationViewGetPath = `${registrationsViewGetPath}/{registrationNumber}`
-export const accreditationsViewGetPath = `${registrationViewGetPath}/accreditations`
-export const accreditationViewGetPath = `${accreditationsViewGetPath}/{year}`
+const organisationPath = '/organisations/{organisationNumber}'
+const registrationsPath = `${organisationPath}/registrations`
+const registrationPath = `${registrationsPath}/{registrationNumber}`
+const registrationSitesPath = `${registrationPath}/overseas-sites`
+const accreditationsPath = `${registrationPath}/accreditations`
+const accreditationPath = `${accreditationsPath}/{year}`
+const accreditationSitesPath = `${accreditationPath}/overseas-sites`
 
-const auth = { scope: [SCOPES.organisationRead, SCOPES.adminRead] }
-
-const organisationParams = {
-  organisationNumber: Joi.number().integer().positive().required()
-}
-
-const registrationParams = {
-  ...organisationParams,
-  registrationNumber: Joi.string().required()
+const params = {
+  organisationNumber: Joi.number().integer().positive().required(),
+  registrationNumber: Joi.string(),
+  year: Joi.string().pattern(/^\d{4}$/),
+  orsId: Joi.string().pattern(/^\d{3}$/)
 }
 
 /**
  * @typedef {HapiRequest & {
  *   overseasSitesRepository: OverseasSitesRepository,
- *   params: { organisationNumber: number }
- * }} OrganisationRequest
+ *   params: {
+ *     organisationNumber: number,
+ *     registrationNumber: string,
+ *     year: string,
+ *     orsId: string
+ *   }
+ * }} ViewRequest
+ *
+ * Each route reads only the path parameters its own path declares.
  */
 
 /**
- * @typedef {HapiRequest & {
- *   overseasSitesRepository: OverseasSitesRepository,
- *   params: { organisationNumber: number, registrationNumber: string }
- * }} RegistrationRequest
+ * @param {string} path
+ * @param {Joi.Schema} schema
+ * @param {(view: OrganisationView, params: ViewRequest['params']) => object} select
  */
-
-export const organisationViewGet = {
+const viewRoute = (path, schema, select) => ({
   method: 'GET',
-  path: organisationViewGetPath,
+  path,
   options: {
-    auth,
+    auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
-    validate: { params: Joi.object(organisationParams) },
-    response: { schema: organisationViewSchema }
+    validate: { params: Joi.object(params) },
+    response: { schema }
   },
   /**
-   * @param {OrganisationRequest} request
+   * @param {ViewRequest} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const organisation = await findOrganisation(request)
-    const overseasSites = await resolveOrganisationOverseasSites(
-      request.overseasSitesRepository,
-      organisation
+    const view = await loadView(request)
+    return h.response(select(view, request.params)).code(StatusCodes.OK)
+  }
+})
+
+/**
+ * @param {OrganisationView} view
+ * @param {ViewRequest['params']} params
+ */
+const registration = (view, { registrationNumber }) =>
+  found(view.registrations, registrationNumber, 'Registration')
+
+/**
+ * @param {OrganisationView} view
+ * @param {ViewRequest['params']} params
+ */
+const accreditation = (view, params) =>
+  found(registration(view, params).accreditations, params.year, 'Accreditation')
+
+/**
+ * Only an exporter has overseas sites.
+ *
+ * @template T
+ * @param {Record<string, T> | undefined} overseasSites
+ * @returns {Record<string, T>}
+ */
+const exporterSites = (overseasSites) => {
+  if (!overseasSites) {
+    throw Boom.notFound('Overseas sites not found')
+  }
+  return overseasSites
+}
+
+export const organisationViewGet = viewRoute(
+  organisationPath,
+  organisationViewSchema,
+  (view) => view
+)
+
+export const registrationsViewGet = viewRoute(
+  registrationsPath,
+  registrationsViewResponseSchema,
+  (view) => ({ registrations: view.registrations })
+)
+
+export const registrationViewGet = viewRoute(
+  registrationPath,
+  registrationViewSchema,
+  registration
+)
+
+export const registrationOverseasSitesViewGet = viewRoute(
+  registrationSitesPath,
+  overseasSitesViewResponseSchema,
+  (view, p) => ({
+    overseasSites: exporterSites(registration(view, p).overseasSites)
+  })
+)
+
+export const registrationOverseasSiteViewGet = viewRoute(
+  `${registrationSitesPath}/{orsId}`,
+  overseasSiteViewSchema,
+  (view, p) =>
+    found(
+      exporterSites(registration(view, p).overseasSites),
+      p.orsId,
+      'Overseas site'
     )
+)
 
-    return h
-      .response(toOrganisationView(organisation, overseasSites))
-      .code(StatusCodes.OK)
-  }
-}
+export const accreditationsViewGet = viewRoute(
+  accreditationsPath,
+  accreditationsViewResponseSchema,
+  (view, p) => ({ accreditations: registration(view, p).accreditations })
+)
 
-export const registrationsViewGet = {
-  method: 'GET',
-  path: registrationsViewGetPath,
-  options: {
-    auth,
-    tags: ['api'],
-    validate: { params: Joi.object(organisationParams) },
-    response: { schema: registrationsViewSchema }
-  },
-  /**
-   * @param {OrganisationRequest} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const organisation = await findOrganisation(request)
-    const overseasSites = await resolveOrganisationOverseasSites(
-      request.overseasSitesRepository,
-      organisation
+export const accreditationViewGet = viewRoute(
+  accreditationPath,
+  accreditationViewSchema,
+  accreditation
+)
+
+export const accreditationOverseasSitesViewGet = viewRoute(
+  accreditationSitesPath,
+  accreditedOverseasSitesViewResponseSchema,
+  (view, p) => ({
+    overseasSites: exporterSites(accreditation(view, p).overseasSites)
+  })
+)
+
+export const accreditationOverseasSiteViewGet = viewRoute(
+  `${accreditationSitesPath}/{orsId}`,
+  accreditedOverseasSiteViewSchema,
+  (view, p) =>
+    found(
+      exporterSites(accreditation(view, p).overseasSites),
+      p.orsId,
+      'Overseas site'
     )
+)
 
-    return h
-      .response({
-        registrations: toOrganisationView(organisation, overseasSites)
-          .registrations
-      })
-      .code(StatusCodes.OK)
+/**
+ * @template T
+ * @param {Record<string, T>} record
+ * @param {string} key
+ * @param {string} what
+ * @returns {T}
+ */
+function found(record, key, what) {
+  if (!Object.hasOwn(record, key)) {
+    throw Boom.notFound(`${what} not found`)
   }
-}
-
-export const registrationViewGet = {
-  method: 'GET',
-  path: registrationViewGetPath,
-  options: {
-    auth,
-    tags: ['api'],
-    validate: { params: Joi.object(registrationParams) },
-    response: { schema: registrationViewSchema }
-  },
-  /**
-   * @param {RegistrationRequest} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { organisation, registration } = await findRegistration(request)
-    const overseasSites = await resolveOverseasSiteDetails(
-      request.overseasSitesRepository,
-      registration.overseasSites
-    )
-
-    return h
-      .response(toRegistrationView(registration, organisation, overseasSites))
-      .code(StatusCodes.OK)
-  }
-}
-
-export const accreditationsViewGet = {
-  method: 'GET',
-  path: accreditationsViewGetPath,
-  options: {
-    auth,
-    tags: ['api'],
-    validate: { params: Joi.object(registrationParams) },
-    response: { schema: accreditationsViewResponseSchema }
-  },
-  /**
-   * @param {RegistrationRequest} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    return h
-      .response({ accreditations: await findAccreditations(request) })
-      .code(StatusCodes.OK)
-  }
-}
-
-export const accreditationViewGet = {
-  method: 'GET',
-  path: accreditationViewGetPath,
-  options: {
-    auth,
-    tags: ['api'],
-    validate: {
-      params: Joi.object({
-        ...registrationParams,
-        year: Joi.string()
-          .pattern(/^\d{4}$/)
-          .required()
-      })
-    },
-    response: { schema: accreditationViewSchema }
-  },
-  /**
-   * @param {RegistrationRequest & {
-   *   params: { year: string }
-   * }} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const accreditation = (await findAccreditations(request))[
-      request.params.year
-    ]
-
-    if (!accreditation) {
-      throw Boom.notFound('Accreditation not found')
-    }
-
-    return h.response(accreditation).code(StatusCodes.OK)
-  }
+  return record[key]
 }
 
 /**
- * @param {RegistrationRequest} request
+ * @param {ViewRequest} request
+ * @returns {Promise<OrganisationView>}
  */
-async function findAccreditations(request) {
-  const { organisation, registration } = await findRegistration(request)
-  const overseasSites = await resolveOverseasSiteDetails(
-    request.overseasSitesRepository,
-    registration.overseasSites
-  )
+async function loadView(request) {
+  const { organisationsRepository, overseasSitesRepository, logger } = request
 
-  return toAccreditationsView(registration, organisation, overseasSites)
-}
-
-/**
- * @param {OrganisationRequest} request
- * @returns {Promise<Organisation>}
- */
-async function findOrganisation(request) {
-  const organisation = await request.organisationsRepository.findByOrgId(
+  const organisation = await organisationsRepository.findByOrgId(
     request.params.organisationNumber
   )
-
   if (!organisation) {
     throw Boom.notFound('Organisation not found')
   }
 
-  return organisation
-}
-
-/**
- * @param {RegistrationRequest} request
- * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
- */
-async function findRegistration(request) {
-  const organisation = await findOrganisation(request)
-  const registration = organisation.registrations.find(
-    (candidate) =>
-      candidate.registrationNumber === request.params.registrationNumber
+  const siteIds = organisation.registrations.flatMap((reg) =>
+    Object.values(reg.overseasSites ?? {}).map(
+      ({ overseasSiteId }) => overseasSiteId
+    )
   )
+  const sites = await overseasSitesRepository.findByIds(siteIds)
 
-  if (!registration) {
-    throw Boom.notFound('Registration not found')
-  }
-
-  return { organisation, registration }
-}
-
-/**
- * @param {OverseasSitesRepository} overseasSitesRepository
- * @param {Organisation} organisation
- */
-async function resolveOrganisationOverseasSites(
-  overseasSitesRepository,
-  organisation
-) {
-  const resolved = await Promise.all(
-    organisation.registrations.map(async (registration) => [
-      registration.id,
-      await resolveOverseasSiteDetails(
-        overseasSitesRepository,
-        registration.overseasSites
-      )
-    ])
+  return toOrganisationView(
+    organisation,
+    new Map(sites.map((site) => [site.id, site])),
+    (message) => logger.warn({ message })
   )
-
-  return Object.fromEntries(resolved)
 }
