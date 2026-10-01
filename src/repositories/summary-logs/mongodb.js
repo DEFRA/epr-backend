@@ -78,13 +78,22 @@ async function ensureCollection(db) {
   // reached from the ledger is looked up that way.
   await collection.createIndex({ 'file.id': 1 })
 
-  // Optimises findLatestSubmittedForOrgReg query which filters by
-  // org/reg/year/accreditationId/status and sorts by submittedAt descending
+  // Optimises the year-scoped findLatestSubmittedForOrgReg query, which filters
+  // by org/reg/year/accreditationId/status and sorts by submittedAt descending
   await collection.createIndex({
     organisationId: 1,
     registrationId: 1,
     year: 1,
     accreditationId: 1,
+    status: 1,
+    submittedAt: -1
+  })
+
+  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
+  // and sorts by submittedAt descending
+  await collection.createIndex({
+    organisationId: 1,
+    registrationId: 1,
     status: 1,
     submittedAt: -1
   })
