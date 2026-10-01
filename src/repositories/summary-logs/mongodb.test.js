@@ -137,27 +137,28 @@ describe('MongoDB summary logs repository', () => {
   })
 
   describe('legacy index migration', () => {
-    const LEGACY_INDEX_NAMES = [
-      'organisationId_1_registrationId_1',
-      'organisationId_1_registrationId_1_status_1_submittedAt_-1'
-    ]
-
-    it('drops both pre-year-scoping indexes by name and recreates the lock with year/accreditationId', async () => {
-      const droppedIndexes = []
+    it('creates the year-scoped lock before dropping only the pre-year-scoping lock', async () => {
+      const calls = []
       const createdIndexes = []
 
       const mockDb = createMockDb({
         dropIndex: async (indexName) => {
-          droppedIndexes.push(indexName)
+          calls.push(`drop:${indexName}`)
         },
         createIndex: async (fields, options) => {
+          calls.push(`create:${options?.name}`)
           createdIndexes.push({ fields, options })
         }
       })
 
       await createSummaryLogsRepository(mockDb, mockS3Config)
 
-      expect(droppedIndexes).toEqual(LEGACY_INDEX_NAMES)
+      expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
+        'drop:organisationId_1_registrationId_1'
+      ])
+      expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
+        calls.indexOf('drop:organisationId_1_registrationId_1')
+      )
       const lockIndex = createdIndexes.find(
         (idx) => idx.options.name === 'summary_log_submitting_lock'
       )
@@ -170,7 +171,7 @@ describe('MongoDB summary logs repository', () => {
     })
 
     it.each(['IndexNotFound', 'NamespaceNotFound'])(
-      'ignores %s when dropping a legacy index',
+      'ignores %s when dropping the legacy lock index',
       async (codeName) => {
         const mockDb = createMockDb({
           dropIndex: async () => {

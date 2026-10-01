@@ -23,35 +23,20 @@ export const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
 
-const LEGACY_INDEX_NAMES = [
-  // Pre-year-scoping submitting lock
-  'organisationId_1_registrationId_1',
-  // Pre-year-scoping findLatestSubmittedForOrgReg index
-  'organisationId_1_registrationId_1_status_1_submittedAt_-1'
-]
+const LEGACY_SUBMITTING_LOCK_INDEX_NAME = 'organisationId_1_registrationId_1'
 const IGNORABLE_DROP_INDEX_ERRORS = new Set([
   'IndexNotFound',
-  // The collection doesn't exist yet; createIndex below will create it.
   'NamespaceNotFound'
 ])
 
 /**
- * Drops the pre-year-scoping indexes by name, then creates the submitting
- * lock over `organisationId, registrationId, year, accreditationId`.
+ * Creates the submitting lock over
+ * `organisationId, registrationId, year, accreditationId`, then drops the
+ * pre-year-scoping lock by name. Creating first leaves no window without a lock.
  *
  * @param {import('mongodb').Collection} collection
  */
 async function ensureSubmittingLockIndex(collection) {
-  for (const name of LEGACY_INDEX_NAMES) {
-    try {
-      await collection.dropIndex(name)
-    } catch (error) {
-      if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
-        throw error
-      }
-    }
-  }
-
   // Enforces at most one summary log in 'submitting' status per
   // org/reg/year/accreditationId. A legacy document has no `year`, so it
   // indexes as null and still collides with any other legacy document,
@@ -64,6 +49,14 @@ async function ensureSubmittingLockIndex(collection) {
       partialFilterExpression: { status: 'submitting' }
     }
   )
+
+  try {
+    await collection.dropIndex(LEGACY_SUBMITTING_LOCK_INDEX_NAME)
+  } catch (error) {
+    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
+      throw error
+    }
+  }
 }
 
 /**
