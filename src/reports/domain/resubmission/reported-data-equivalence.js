@@ -142,7 +142,7 @@ export const REPORTED_DATA_FIELDS = {
     ]
   },
   prn: excluded(
-    'Not summary-log-derived: a summary-log upload, the only trigger of this comparison, cannot cause a PRN change (see defra-fo16)'
+    'Not summary-log-derived: a summary-log upload, the only trigger of this comparison, cannot cause a PRN change'
   ),
   supportingInformation: excluded(OPERATOR_ENTERED)
 }
