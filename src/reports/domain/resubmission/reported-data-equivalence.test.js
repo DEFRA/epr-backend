@@ -437,6 +437,89 @@ describe('extractReportedData — list entries that compare equal are merged', (
   })
 })
 
+/**
+ * A report carrying the given overseas sites, so a test can vary the fields
+ * resolved from the ORS registry independently of the summary-log ones.
+ *
+ * @param {Array<Record<string, *>>} overseasSites
+ * @returns {*}
+ */
+const reportWithOverseasSites = (overseasSites) => ({
+  exportActivity: {
+    overseasSites,
+    unapprovedOverseasSites: [],
+    totalTonnageExported: 15,
+    tonnageRefusedAtDestination: 0,
+    tonnageStoppedDuringExport: 0,
+    totalTonnageRefusedOrStopped: 0,
+    tonnageRepatriated: 0
+  }
+})
+
+const overseasSite = (overrides = {}) => ({
+  orsId: '001',
+  siteName: 'Rotterdam Recycling BV',
+  country: 'Netherlands',
+  approved: true,
+  tonnageExported: 15,
+  ...overrides
+})
+
+describe('extractReportedData — ORS registry fields are excluded', () => {
+  // A summary-log upload cannot change what the ORS registry holds, so a
+  // registry update between submissions is not a reported-data change.
+  it('treats an ORS site name change as no reported-data change', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([
+      overseasSite({ siteName: 'Rotterdam Recycling Holdings BV' })
+    ])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats an ORS country change as no reported-data change', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([
+      overseasSite({ country: 'Belgium' })
+    ])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats an ORS approval change as no reported-data change', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([overseasSite({ approved: false })])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('merges a site split by approval back into one entry', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([
+      overseasSite({ tonnageExported: 10 }),
+      overseasSite({ approved: false, tonnageExported: 5 })
+    ])
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('still treats a changed tonnage exported to a site as a change', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([
+      overseasSite({ tonnageExported: 16 })
+    ])
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+
+  it('still treats a different ORS ID as a change', () => {
+    const before = reportWithOverseasSites([overseasSite()])
+    const after = reportWithOverseasSites([overseasSite({ orsId: '002' })])
+
+    expect(equivalent(before, after)).toBe(false)
+  })
+})
+
 describe('diffReportedData — which reported fields changed', () => {
   /** @param {*} a @param {*} b */
   const diff = (a, b) =>

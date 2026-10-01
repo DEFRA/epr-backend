@@ -9,6 +9,10 @@
  * fails the build until it is classified here, so a new reported figure can
  * never be silently left out of the comparison.
  *
+ * A field is compared only when a summary-log upload can change it. Fields
+ * entered in the reporting journey, PRN data and values resolved from the ORS
+ * registry are excluded: a change to them is not a change the upload made.
+ *
  * Free-text fields are the ones an operator types (supplier and destination
  * names and addresses). By the contract (PAE-1983), casing, whitespace and
  * blank-versus-null edits to them are not reported-data changes, so they are
@@ -75,6 +79,9 @@ const OPERATOR_ENTERED =
 const SUPPLIER_CONTACT =
   'Agreed exception (PAE-1983): a change only to a supplier contact detail does not require resubmission'
 
+const ORS_REGISTRY =
+  'Resolved from the ORS registry by orsId, not the summary log: a registry update between submissions is not a reported-data change'
+
 /**
  * Every field a stored report holds, classified. See the module comment.
  *
@@ -102,11 +109,12 @@ export const REPORTED_DATA_FIELDS = {
     overseasSites: [
       {
         orsId: EXACT,
-        // Resolved from the ORS registry by orsId, not typed by the operator
-        siteName: EXACT,
-        country: EXACT,
+        siteName: excluded(ORS_REGISTRY),
+        country: excluded(ORS_REGISTRY),
         tonnageExported: SUMMED,
-        approved: EXACT
+        // Turns on the registry's validFrom date, so a registry update alone
+        // can flip it
+        approved: excluded(ORS_REGISTRY)
       }
     ],
     unapprovedOverseasSites: [{ orsId: EXACT, tonnageExported: SUMMED }],
