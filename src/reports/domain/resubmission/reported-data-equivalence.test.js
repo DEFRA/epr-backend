@@ -337,6 +337,13 @@ describe('diffReports — free-text fields are normalised, exact fields are not'
     expect(equivalent(before, after)).toBe(false)
   })
 
+  it('treats a supplier facility type casing-only change as no change: it is an unvalidated column, so operator text', () => {
+    const before = reportWithSupplier({ facilityType: 'Sorting facility' })
+    const after = reportWithSupplier({ facilityType: 'SORTING  FACILITY' })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
   it('compares a dropdown value exactly: a final destination facility type casing change is a change', () => {
     const before = reportWithFinalDestination()
     const after = reportWithFinalDestination({ facilityType: 'REPROCESSOR' })
@@ -514,6 +521,76 @@ describe('diffReports — ORS registry fields are excluded', () => {
     const after = reportWithOverseasSites([overseasSite({ orsId: '002' })])
 
     expect(equivalent(before, after)).toBe(false)
+  })
+})
+
+/**
+ * A report carrying every excluded field alongside compared ones, so a test can
+ * change only an excluded field.
+ *
+ * @returns {*}
+ */
+const reportWithExcludedFields = () => {
+  const report = {
+    source: {
+      summaryLogId: 'summary-log-1',
+      lastUploadedAt: '2025-01-01T00:00:00.000Z'
+    },
+    ...reportWithSupplier(),
+    ...reportWithOverseasSites([overseasSite()]),
+    prn: { issuedTonnage: 40, totalRevenue: 480, freeTonnage: 0 },
+    supportingInformation: 'Plant shut for maintenance in week 2'
+  }
+  report.recyclingActivity.tonnageRecycled = 10
+  report.recyclingActivity.tonnageNotRecycled = 2
+  report.exportActivity.tonnageReceivedNotExported = 1
+  return report
+}
+
+describe('diffReports — a field is compared only when a summary-log upload can change it', () => {
+  it.each([
+    [
+      'provenance',
+      (report) => {
+        report.source.summaryLogId = 'summary-log-2'
+      }
+    ],
+    [
+      'PRN data',
+      (report) => {
+        report.prn.issuedTonnage = 41
+      }
+    ],
+    [
+      'supporting information entered in the reporting journey',
+      (report) => {
+        report.supportingInformation = 'No shutdowns this period'
+      }
+    ],
+    [
+      'tonnage recycled entered in the reporting journey',
+      (report) => {
+        report.recyclingActivity.tonnageRecycled = 11
+      }
+    ],
+    [
+      'tonnage not recycled entered in the reporting journey',
+      (report) => {
+        report.recyclingActivity.tonnageNotRecycled = 3
+      }
+    ],
+    [
+      'tonnage received but not exported entered in the reporting journey',
+      (report) => {
+        report.exportActivity.tonnageReceivedNotExported = 4
+      }
+    ]
+  ])('ignores a change to %s', (_, change) => {
+    const before = reportWithExcludedFields()
+    const after = reportWithExcludedFields()
+    change(after)
+
+    expect(diffReports(before, after)).toEqual([])
   })
 })
 
