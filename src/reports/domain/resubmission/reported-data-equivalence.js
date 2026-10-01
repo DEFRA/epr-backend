@@ -1,13 +1,16 @@
 /**
- * The reported-data comparison core, shared by the resubmission-figures
- * diagnostic and the validation-time resubmission gate.
+ * The reported-data comparison core, used by the resubmission-figures
+ * diagnostic and intended for the planned validation-time resubmission gate
+ * (PAE-1983).
  *
- * `REPORTED_DATA_FIELDS` classifies every field a stored report holds as
+ * `REPORTED_DATA_FIELDS` classifies every field in `reportDataFieldsSchema`
+ * (the report's data fields, not its identity, period or lifecycle fields) as
  * compared exactly, compared as free text, or excluded (with the reason it is
- * excluded), and `extractReportedData` picks the compared fields from a report.
- * The classification is exhaustive by test: a field added to the report schema
- * fails the build until it is classified here, so a new reported figure can
- * never be silently left out of the comparison.
+ * excluded), and `diffReports` compares two reports on the compared fields.
+ * The classification is exhaustive by test: a field added to
+ * `reportDataFieldsSchema` fails the build until it is classified here, so a
+ * new reported figure added there can never be silently left out of the
+ * comparison.
  *
  * A field is compared only when a summary-log upload can change it. Fields
  * entered in the reporting journey, PRN data and values resolved from the ORS
@@ -16,8 +19,8 @@
  * Free-text fields are the ones an operator types (supplier and destination
  * names and addresses). By the contract (PAE-1983), casing, whitespace and
  * blank-versus-null edits to them are not reported-data changes, so they are
- * normalised on extraction. Figures, identifiers, dropdown values and
- * registry-sourced values are compared exactly.
+ * normalised on extraction. Figures, identifiers and dropdown values are
+ * compared exactly.
  *
  * List entries that compare equal once normalised and stripped of excluded
  * fields are merged, their `summed` tonnage added. The aggregation groups rows
@@ -83,7 +86,7 @@ const ORS_REGISTRY =
   'Resolved from the ORS registry by orsId, not the summary log: a registry update between submissions is not a reported-data change'
 
 /**
- * Every field a stored report holds, classified. See the module comment.
+ * Every field in `reportDataFieldsSchema`, classified. See the module comment.
  *
  * @type {{ [field: string]: FieldSpec }}
  */

@@ -14,8 +14,8 @@
  * the shared `diffReports` core. See
  * `reports/domain/resubmission/reported-data-equivalence.js` for how every
  * report field is classified (compared exactly, compared as free text, or
- * excluded with a reason). Reusing that core keeps this diagnostic's notion of
- * "identical" in step with the live resubmission gate. `suppliers` and
+ * excluded with a reason). Reusing that core will keep this diagnostic's notion
+ * of "identical" in step with the planned resubmission gate. `suppliers` and
  * `finalDestinations` are persisted unsorted, so the diff is order-insensitive:
  * logically equivalent data in a different row order still counts as identical.
  *

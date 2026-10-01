@@ -74,8 +74,8 @@ const auditReportData = (schemaFields) => {
   return findings
 }
 
-describe('REPORTED_DATA_FIELDS — every stored report field is classified', () => {
-  it('decides every field the report schema stores, and nothing it does not', () => {
+describe('REPORTED_DATA_FIELDS — every report data field is classified', () => {
+  it('decides every field in reportDataFieldsSchema, and nothing it does not', () => {
     expect(auditReportData(reportDataFieldsSchema)).toEqual({
       unclassified: [],
       unknown: []
