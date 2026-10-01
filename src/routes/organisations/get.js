@@ -27,7 +27,7 @@ const accreditationsPath = `${registrationPath}/accreditations`
 const accreditationPath = `${accreditationsPath}/{year}`
 const accreditationSitesPath = `${accreditationPath}/overseas-sites`
 
-const params = {
+const pathParams = {
   organisationNumber: Joi.number().integer().positive().required(),
   registrationNumber: Joi.string(),
   year: Joi.string().pattern(/^\d{4}$/),
@@ -59,7 +59,7 @@ const viewRoute = (path, schema, select) => ({
   options: {
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
-    validate: { params: Joi.object(params) },
+    validate: { params: Joi.object(pathParams) },
     response: { schema }
   },
   /**
