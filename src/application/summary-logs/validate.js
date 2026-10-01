@@ -27,6 +27,7 @@ import {
   filterWasteBalanceRecords,
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
+import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
@@ -578,7 +579,17 @@ const classifyAndPersistResult = async ({
   await persistValidationResult({
     issues,
     loads,
-    loadsByReportingPeriod,
+    loadsByReportingPeriod: await withPeriodsRequiringResubmission({
+      loadsByReportingPeriod,
+      periodicReports,
+      wasteRecords,
+      registration,
+      overseasSites,
+      summaryLog,
+      reportsService,
+      overseasSitesRepository,
+      summaryLogRowStatesRepository
+    }),
     meta,
     status,
     summaryLog,
