@@ -659,11 +659,10 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
-    // The gate records which reported fields changed (paths only, no values),
-    // against the upload that changed them.
+    // Paths only, never values: they can identify destinations.
     expect(infoMessages()).toContainEqual(
-      expect.stringContaining(
-        '(summary log sl-dest-name) requires resubmission: reported data changed in wasteSent.finalDestinations'
+      expect.stringMatching(
+        /\(summary log sl-dest-name, compared with report \S+ submission 1 from file file-first\) requires resubmission: reported data changed in wasteSent\.finalDestinations$/
       )
     )
   })
@@ -701,8 +700,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
     expect(infoMessages()).toContainEqual(
-      expect.stringContaining(
-        '(summary log sl-dest-contact) does not require resubmission: reported data unchanged'
+      expect.stringMatching(
+        /\(summary log sl-dest-contact, compared with report \S+ submission 1 from file file-first\) does not require resubmission: reported data unchanged$/
       )
     )
   })
@@ -853,6 +852,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateReport(env, JANUARY_2025, 2)
 
     // Matches the draft's figures, but not the submitted report's.
+    const infoMessages = captureInfoMessages()
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-third',
@@ -871,6 +871,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
+    expect(infoMessages()).toContainEqual(
+      expect.stringContaining(
+        'submission 1 from file file-first) requires resubmission'
+      )
+    )
   })
 
   it('flags a closed period it cannot compare because the source submission has no row states', async () => {
@@ -890,7 +895,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         return {
           ...report,
           source: {
-            summaryLogId: 'sl-without-row-states',
+            summaryLogId: 'file-without-row-states',
             lastUploadedAt: report.source?.lastUploadedAt ?? null
           }
         }
@@ -911,8 +916,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       JANUARY_2025
     ])
     expect(infoMessages()).toContainEqual(
-      expect.stringContaining(
-        '(summary log sl-no-source) requires resubmission: cannot compare, its source submission has no row states'
+      expect.stringMatching(
+        /\(summary log sl-no-source, compared with report \S+ submission 1 from file file-without-row-states\) requires resubmission: cannot compare, its source submission has no row states$/
       )
     )
   })
@@ -1012,8 +1017,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       JANUARY_2025
     ])
     expect(infoMessages()).toContainEqual(
-      expect.stringContaining(
-        '(summary log sl-first-upload) requires resubmission: reported data changed in'
+      expect.stringMatching(
+        /\(summary log sl-first-upload, compared with report \S+ submission 1 from no submission\) requires resubmission: reported data changed in /
       )
     )
   })

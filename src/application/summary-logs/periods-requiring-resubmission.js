@@ -108,6 +108,11 @@ const aggregatePeriodFigures = (
   })
 
 /**
+ * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId: string | null }} Baseline
+ * @typedef {{ baseline: Baseline, changedFields: string[] | null }} Comparison
+ */
+
+/**
  * The before-state is rebuilt from the report's source submission, not read
  * from the stored report, so drift since submission affects both sides alike.
  *
@@ -116,9 +121,9 @@ const aggregatePeriodFigures = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
  * @param {FiguresContext} params.context
- * @returns {Promise<string[] | null>} null when the source cannot be rebuilt
+ * @returns {Promise<Comparison>} changedFields is null when the source cannot be rebuilt
  */
-const changedFieldsForPeriod = async ({
+const compareWithLatestSubmittedReport = async ({
   period,
   periodicReports,
   reportsService,
@@ -129,13 +134,18 @@ const changedFieldsForPeriod = async ({
   )
   // The create schema requires a source.
   const { summaryLogId } = /** @type {ReportSource} */ (report.source)
+  const baseline = {
+    reportId: report.id,
+    submissionNumber: report.submissionNumber,
+    sourceSummaryLogId: summaryLogId
+  }
   const sourceRowStates = await wasteRecordStatesForHead(
     context.summaryLogRowStatesRepository,
     context.ledgerId,
     summaryLogId
   )
   if (summaryLogId !== null && sourceRowStates.length === 0) {
-    return null
+    return { baseline, changedFields: null }
   }
 
   const before = aggregatePeriodFigures(sourceRowStates, { period, ...context })
@@ -144,23 +154,23 @@ const changedFieldsForPeriod = async ({
     ...context
   })
 
-  return diffReports(before, after)
+  return { baseline, changedFields: diffReports(before, after) }
 }
 
 /**
- * @typedef {{ period: PeriodRef, changedFields: string[] | null } | { period: PeriodRef, error: Error }} PeriodOutcome
+ * @typedef {({ period: PeriodRef } & Comparison) | { period: PeriodRef, error: Error }} PeriodOutcome
  */
 
 /**
  * @param {PeriodRef} period
- * @param {Omit<Parameters<typeof changedFieldsForPeriod>[0], 'period'>} params
+ * @param {Omit<Parameters<typeof compareWithLatestSubmittedReport>[0], 'period'>} params
  * @returns {Promise<PeriodOutcome>}
  */
 const comparePeriod = async (period, params) => {
   try {
     return {
       period,
-      changedFields: await changedFieldsForPeriod({ period, ...params })
+      ...(await compareWithLatestSubmittedReport({ period, ...params }))
     }
   } catch (error) {
     return { period, error: /** @type {Error} */ (error) }
@@ -185,6 +195,17 @@ const describeChange = (changedFields) => {
 }
 
 /**
+ * A report's source summaryLogId is the submission's file id, as the ledger and
+ * row states are keyed, so it is labelled as a file.
+ *
+ * @param {Baseline} baseline
+ */
+const describeBaseline = ({ reportId, submissionNumber, sourceSummaryLogId }) =>
+  `compared with report ${reportId} submission ${submissionNumber} from ${
+    sourceSummaryLogId === null ? 'no submission' : `file ${sourceSummaryLogId}`
+  }`
+
+/**
  * Field paths only: values can identify suppliers and destinations.
  *
  * @param {WasteBalanceLedgerId & { summaryLogId: string }} subject
@@ -195,11 +216,11 @@ const logPeriodOutcome = (
   outcome
 ) => {
   const { year, cadence, period } = outcome.period
-  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId})`
+  const subject = `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId}`
   if ('error' in outcome) {
     logger.error({
       err: outcome.error,
-      message: `${subject} requires resubmission: comparison failed`,
+      message: `${subject} (summary log ${summaryLogId}) requires resubmission: comparison failed`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -208,7 +229,7 @@ const logPeriodOutcome = (
     return
   }
   logger.info({
-    message: `${subject} ${describeChange(outcome.changedFields)}`
+    message: `${subject} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome.changedFields)}`
   })
 }
 
