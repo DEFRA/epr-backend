@@ -152,6 +152,11 @@ const isExcluded = (fieldSpec) =>
  * whitespace to a single space and lowercases, and treats a blank as absent. A
  * genuine edit (a different name or address) still differs.
  *
+ * Each comma-separated part is tidied on its own and blank parts are dropped.
+ * Addresses are stored as `formatAddress(address, postcode)` joined over the
+ * raw cells, so stray whitespace in either cell lands next to the joining
+ * comma, and a whitespace-only cell leaves an empty part behind.
+ *
  * @param {*} value
  * @returns {ReportedDataValue}
  */
@@ -159,7 +164,12 @@ const normaliseText = (value) => {
   if (typeof value !== 'string') {
     return value
   }
-  const normalised = value.trim().replace(/\s+/g, ' ').toLowerCase()
+  const normalised = value
+    .split(',')
+    .map((part) => part.trim().replace(/\s+/g, ' '))
+    .filter((part) => part !== '')
+    .join(', ')
+    .toLowerCase()
   return normalised === '' ? null : normalised
 }
 

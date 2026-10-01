@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { describe, expect, it } from 'vitest'
 
+import { formatAddress } from '#reports/domain/aggregation/helpers.js'
 import { reportDataFieldsSchema } from '#reports/repository/schema.js'
 
 import {
@@ -289,6 +290,52 @@ describe('extractReportedData — free-text fields are normalised, exact fields 
     expect(equivalent(before, reportWithSupplier({ supplierName: 124 }))).toBe(
       false
     )
+  })
+
+  // Addresses are stored as `formatAddress(address, postcode)` over the raw,
+  // untrimmed cells, so stray whitespace lands next to the joining comma.
+  it('treats a trailing space on a supplier address cell as no reported-data change', () => {
+    const before = reportWithSupplier({
+      supplierAddress: formatAddress('1 Mill Lane', 'LS1 1AA')
+    })
+    const after = reportWithSupplier({
+      supplierAddress: formatAddress('1 Mill Lane ', 'LS1 1AA')
+    })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a whitespace-only address cell as equivalent to an empty one', () => {
+    const before = reportWithSupplier({
+      supplierAddress: formatAddress(null, 'LS1 1AA')
+    })
+    const after = reportWithSupplier({
+      supplierAddress: formatAddress('   ', 'LS1 1AA')
+    })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('treats a whitespace-only postcode cell as equivalent to an empty one', () => {
+    const before = reportWithFinalDestination({
+      address: formatAddress('456 Road', null)
+    })
+    const after = reportWithFinalDestination({
+      address: formatAddress('456 Road', '  ')
+    })
+
+    expect(equivalent(before, after)).toBe(true)
+  })
+
+  it('still treats a changed postcode as a reported-data change', () => {
+    const before = reportWithSupplier({
+      supplierAddress: formatAddress('1 Mill Lane', 'LS1 1AA')
+    })
+    const after = reportWithSupplier({
+      supplierAddress: formatAddress('1 Mill Lane', 'LS1 1AB')
+    })
+
+    expect(equivalent(before, after)).toBe(false)
   })
 
   it('compares a dropdown value exactly: a final destination facility type casing change is a change', () => {
