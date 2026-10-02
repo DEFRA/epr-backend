@@ -32,7 +32,7 @@ import {
  * stay fixed for the server's lifetime. The returned handler is called after a
  * new summary log is successfully submitted for an org/reg: it marks all active
  * (in_progress / ready_to_submit) reports as stale, and flags the latest
- * submitted report of each period whose reported data changed as requiring
+ * submitted report of each period in periodsRequiringResubmission as requiring
  * resubmission. Audits each batch in a single call.
  *
  * @param {SummaryLogUploadedRepositories} repositories
