@@ -619,7 +619,6 @@ export const createTestInfrastructure = async (
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
- *   resubmissionFigureGateEnabled?: boolean,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
@@ -634,7 +633,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true,
   accreditationValidFrom = VALID_FROM,
-  resubmissionFigureGateEnabled = false,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -727,8 +725,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
-    logger: mockLogger,
-    resubmissionFigureGateEnabled
+    logger: mockLogger
   })
 
   const syncWasteRecords = syncFromSummaryLog({
