@@ -14,6 +14,9 @@ import {
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import {
   REPROCESSOR_RECEIVED_HEADERS,
   createReprocessorReceivedRowValues,
@@ -117,8 +120,14 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#reports/repository/port.js').ReportsRepository} options.reportsRepository
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
+ * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  */
-const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
+const setupSubmit = async ({
+  reportsRepository,
+  createdAt,
+  data,
+  loadsByReportingPeriod
+}) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const logger = createMockLogger()
@@ -137,6 +146,14 @@ const setupSubmit = async ({ reportsRepository, createdAt, data }) => {
   })
   const summaryLogId = `submit-${organisationId}`
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
+
+  // Validation writes this artefact via update, not insert, so seed it the same way.
+  if (loadsByReportingPeriod) {
+    await summaryLogsRepository.update(summaryLogId, 1, {
+      loadsByReportingPeriod
+    })
+    await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+  }
 
   const summaryLogExtractor = createInMemorySummaryLogExtractor({
     [summaryLog.file.id]: { meta: META, data: data ?? RECEIVED_DATA }
@@ -269,6 +286,79 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+  })
+})
+
+describe('submitSummaryLog resubmission flag source', () => {
+  const january = { year: 2025, cadence: 'monthly', period: 1 }
+  const february = { year: 2025, cadence: 'monthly', period: 2 }
+
+  /**
+   * Submits a log over submitted January and February reports, through the
+   * real summary-log-uploaded handler, and reports which ended up flagged.
+   *
+   * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} loadsByReportingPeriod
+   */
+  const submitOverJanuaryAndFebruaryReports = async (
+    loadsByReportingPeriod
+  ) => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const { deps, summaryLogId, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        // After any real submission, so the staleness guard does not fire.
+        createdAt: '2099-01-01T00:00:00.000Z',
+        loadsByReportingPeriod
+      })
+
+    const submitReportFor = ({ year, period }) =>
+      createAndSubmitReport(reportsRepository, {
+        organisationId,
+        registrationId,
+        year,
+        period
+      })
+    const januaryReportId = await submitReportFor(january)
+    const februaryReportId = await submitReportFor(february)
+
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+      })
+    })
+
+    const isFlagged = async (/** @type {string} */ reportId) =>
+      (await reportsRepository.findReportById(reportId))
+        .resubmissionRequired !== undefined
+
+    return {
+      january: await isFlagged(januaryReportId),
+      february: await isFlagged(februaryReportId)
+    }
+  }
+
+  it('flags only the report for the figure-changed period, not every touched closed period', async () => {
+    const flagged = await submitOverJanuaryAndFebruaryReports({
+      ...emptyLoadsByReportingPeriod(),
+      closedPeriods: [january, february],
+      periodsRequiringResubmission: [january]
+    })
+
+    expect(flagged).toEqual({ january: true, february: false })
+  })
+
+  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
+    const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
+
+    const flagged = await submitOverJanuaryAndFebruaryReports({
+      openPeriodLoads,
+      closedPeriodLoads,
+      closedPeriods: [january, february]
+    })
+
+    expect(flagged).toEqual({ january: true, february: true })
   })
 })
 
