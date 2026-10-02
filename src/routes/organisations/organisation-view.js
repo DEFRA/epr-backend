@@ -1,11 +1,29 @@
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
   resolveMaterial
 } from '#domain/organisations/registration-utils.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
+
+/** @type {readonly RegistrationStatus[]} */
+export const SERVED_REGISTRATION_STATUSES = Object.freeze([
+  REGISTRATION_STATUS.APPROVED,
+  REGISTRATION_STATUS.CANCELLED
+])
+
+/** @type {readonly AccreditationStatus[]} */
+export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED,
+  ACCREDITATION_STATUS.CANCELLED
+])
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
@@ -120,6 +138,12 @@ function toRegistrationEntry(
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
+  if (!SERVED_REGISTRATION_STATUSES.includes(registration.status)) {
+    onDrop(
+      `Registration ${registrationNumber} has status ${registration.status}`
+    )
+    return null
+  }
   if (!registration.validFrom) {
     onDrop(`Registration ${registrationNumber} has no validFrom`)
     return null
@@ -174,6 +198,12 @@ function toAccreditationEntry(accreditation, overseasSites, onDrop) {
   const { accreditationNumber } = accreditation
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
+    return null
+  }
+  if (!SERVED_ACCREDITATION_STATUSES.includes(accreditation.status)) {
+    onDrop(
+      `Accreditation ${accreditationNumber} has status ${accreditation.status}`
+    )
     return null
   }
   if (!accreditation.validFrom) {

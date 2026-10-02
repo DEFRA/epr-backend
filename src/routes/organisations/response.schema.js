@@ -1,13 +1,15 @@
 import Joi from 'joi'
 import {
-  ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
-  REGISTRATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
+import {
+  SERVED_ACCREDITATION_STATUSES,
+  SERVED_REGISTRATION_STATUSES
+} from './organisation-view.js'
 
 const regulatorSchema = Joi.object({
   code: Joi.string()
@@ -52,11 +54,7 @@ export const accreditedOverseasSitesViewSchema = Joi.object()
 export const accreditationViewSchema = Joi.object({
   accreditationNumber: Joi.string().required(),
   status: Joi.string()
-    .valid(
-      ACCREDITATION_STATUS.APPROVED,
-      ACCREDITATION_STATUS.SUSPENDED,
-      ACCREDITATION_STATUS.CANCELLED
-    )
+    .valid(...SERVED_ACCREDITATION_STATUSES)
     .required(),
   overseasSites: accreditedOverseasSitesViewSchema.optional()
 })
@@ -67,7 +65,7 @@ export const accreditationsViewSchema = Joi.object()
 
 const registrationCommon = {
   status: Joi.string()
-    .valid(REGISTRATION_STATUS.APPROVED, REGISTRATION_STATUS.CANCELLED)
+    .valid(...SERVED_REGISTRATION_STATUSES)
     .required(),
   validFrom: isoDate.required(),
   material: materialSchema.required(),

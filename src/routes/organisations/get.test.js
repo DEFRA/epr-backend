@@ -307,6 +307,19 @@ describe('organisation view routes', () => {
         expect(registrations).toEqual({})
       })
 
+      it('leaves out a numbered registration that is not approved or cancelled', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [
+              reprocessor(),
+              exporter({ statusHistory: granted('rejected') })
+            ]
+          })
+        )
+
+        expect(Object.keys(registrations)).toEqual([REPROCESSOR_NUMBER])
+      })
+
       it('leaves out a reprocessor without a reprocessing type', async () => {
         const registrations = await registrationsOf(
           buildOrganisation({
@@ -323,6 +336,18 @@ describe('organisation view routes', () => {
           buildOrganisation({
             registrations: [reprocessor({ accreditationId: ungranted.id })],
             accreditations: [ungranted]
+          })
+        )
+
+        expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
+      })
+
+      it('leaves out a numbered accreditation that is not approved, suspended or cancelled', async () => {
+        const rejected = accreditation({ statusHistory: granted('rejected') })
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor({ accreditationId: rejected.id })],
+            accreditations: [rejected]
           })
         )
 
