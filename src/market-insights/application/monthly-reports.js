@@ -21,6 +21,7 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
@@ -40,48 +41,55 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  */
 
 /**
- * Whether the accreditation stood cancelled when the month ended on the UK
- * calendar, so that the month's report fell due after the cancellation. The
- * latest status change dated in or before the month decides it.
+ * Whether the accreditation stood cancelled when the given day ended on the UK
+ * calendar. The latest status change dated on or before the day decides it.
  *
- * @param {YearMonth} month
+ * @param {CalendarDate} day
  * @param {StatusHistoryDateTime[]} history - descending
  */
-const isCancelledByEndOf = (month, history) =>
+const isCancelledAtEndOf = (day, history) =>
   history.find(
     ({ updatedAt }) =>
-      toYearMonth(
-        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
-      ).localeCompare(month) <= 0
+      formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
+        .slice(0, day.length)
+        .localeCompare(day) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
 /**
- * The monthly periods an accreditation owed among the months served: those
- * within its validity window that it had not been cancelled by the end of. A
- * suspended accreditation keeps reporting; a cancelled one stops from the
- * month it was cancelled in, and starts again if reinstated before a month
- * ends. The caller has already settled which months have ended, on the UK
- * calendar, so no clock is consulted here.
+ * Whether the accreditation owed the period's report. It owed it if it had not
+ * been cancelled by the time the report fell due, since a cancelled
+ * accreditation can no longer file monthly. A report filed in the time
+ * between the month ending and a cancellation still counts. A suspended
+ * accreditation keeps reporting, and a reinstated one owes any report not yet
+ * due when it was reinstated.
+ *
+ * @param {{ endDate: CalendarDate, dueDate: CalendarDate }} period
+ * @param {boolean} submitted
+ * @param {StatusHistoryDateTime[]} history - descending
+ */
+const isOwed = ({ endDate, dueDate }, submitted, history) =>
+  !isCancelledAtEndOf(dueDate, history) ||
+  (submitted && !isCancelledAtEndOf(endDate, history))
+
+/**
+ * The monthly periods among the months served that fall within the
+ * accreditation's validity window. The caller has already settled which months
+ * have ended, on the UK calendar, so no clock is consulted here.
  *
  * @param {Set<YearMonth>} served
  * @param {number[]} years
  * @param {Accreditation} accreditation
  */
-const owedPeriods = (served, years, accreditation) => {
+const periodsInWindow = (served, years, accreditation) => {
   const window = accreditationWindow(accreditation)
   if (window === null) {
     return []
   }
-  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
   return filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
     window.validTo
-  ).filter(
-    (period) =>
-      served.has(toYearMonth(period.startDate)) &&
-      !isCancelledByEndOf(toYearMonth(period.startDate), history)
-  )
+  ).filter((period) => served.has(toYearMonth(period.startDate)))
 }
 
 /**
@@ -100,8 +108,8 @@ const owedPeriods = (served, years, accreditation) => {
  * Every monthly report owed among the months served, one per accredited
  * registration and month. Only an accredited registration reports monthly, so
  * a registered-only operator yields nothing. An accreditation owed a report
- * for every month of its window it had not been cancelled by the end of, so
- * one since cancelled yields the months before the one it was cancelled in.
+ * for every month of its window whose report fell due before any
+ * cancellation, or that it filed before being cancelled.
  *
  * @param {Object} params
  * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
@@ -124,33 +132,32 @@ export function* owedMonthlyReports({
     organisations,
     covers
   )) {
-    const owed = owedPeriods(served, years, accreditation)
-    const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
+    const inWindow = periodsInWindow(served, years, accreditation)
+    const windowMonths = new Set(inWindow.map((p) => toYearMonth(p.startDate)))
+    const history = getStatusHistoryDateTimes(accreditation.statusHistory)
     const reports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
 
-    // The merge also appends any report the operator submitted for a month it
-    // does not owe, and those count for nothing.
+    // The merge also appends any report the operator submitted for a month
+    // outside its window, and those count for nothing.
     for (const period of mergeReportingPeriods(
-      owed,
+      inWindow,
       reports,
       CADENCE.monthly
     )) {
       const month = toYearMonth(period.startDate)
-      if (!owedMonths.has(month)) {
+      if (!windowMonths.has(month)) {
         continue
       }
-      const submissions = selectSubmittedReports({
-        current: period.report,
-        previousSubmissions: period.previousSubmissions
-      })
-      yield {
-        month,
-        org,
-        registration,
-        accreditation,
-        submitted: submissions.length > 0
+      const submitted =
+        selectSubmittedReports({
+          current: period.report,
+          previousSubmissions: period.previousSubmissions
+        }).length > 0
+      if (!isOwed(period, submitted, history)) {
+        continue
       }
+      yield { month, org, registration, accreditation, submitted }
     }
   }
 }
