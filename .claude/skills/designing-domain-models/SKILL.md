@@ -1,6 +1,6 @@
 ---
 name: designing-domain-models
-description: Use when defining or changing the domain types a service works with internally, the code that turns stored records into them, or code that takes a domain value. Also use when deciding whether a thing is owned or shared, or whether a property may be absent.
+description: Use when defining or changing the domain types a service works with internally, the code that turns stored records into them, or deciding what a function asks for when it takes a domain value. Also use when deciding whether a thing is owned or shared, or whether a property may be absent.
 ---
 
 # Designing domain models
@@ -22,7 +22,8 @@ The examples use a service where a customer owns its orders and an order owns it
 1. **Make invalid states unrepresentable.** Be pedantic. A precise type lets code drop the checks for states that cannot happen.
    - Each state a thing can be in is its own shape, discriminated by its status, and carries exactly the fields that state has. A field that only exists in some states belongs to the shapes for those states, not an optional field on every state. Never use `null` to mean "does not apply". The state may come from history rather than the current status: an order keeps its dispatch date after it is returned.
    - A property that may or may not be set needs a reason in the domain, such as a customer who genuinely may have no phone number. Without one, the property is required, or it belongs to a state's shape.
-   - A keyed collection inside a thing is a map, not a list, keyed by whatever the domain says is unique within the parent, so a duplicate cannot be held. A contract's renewals are keyed by year. When the key is the item's identity, the value does not repeat it. When the key is some other field, the value keeps that field.
+   - A keyed collection inside a thing is an object keyed by whatever the domain says is unique within the parent, so a duplicate cannot be held. A contract's renewals are keyed by year.
+   - The store's own identifier, such as a database id, is not a field of the domain object, because domain logic seldom depends on which record it is working on. The repository takes it beside the object and returns it beside the object, with anything else the store tracks, such as a version. A key the domain issues, such as an order number, is domain data and stays in the object.
    - Keys that form one value go in one object. `validFrom` and `validTo` are a period.
    - Group every key under what owns it. A name that only reads correctly because of its prefix, such as `customerName` outside a `customer`, is doing work that structure should do.
 
