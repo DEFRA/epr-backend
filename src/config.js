@@ -377,12 +377,6 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_STREAM_TRANSITION_DIAGNOSTIC'
-    },
-    resubmissionFigureGate: {
-      doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_RESUBMISSION_FIGURE_GATE'
     }
   },
   formSubmissionOverrides: {
