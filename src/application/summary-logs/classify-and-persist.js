@@ -24,7 +24,7 @@ import {
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
-/** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
+/** @import {ClassifiedLoadsByReportingPeriod} from './period-status.js' */
 /** @typedef {string} ProcessingType */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
@@ -53,7 +53,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
- * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
+ * @returns {{ loads: Loads | null, loadsByReportingPeriod: ClassifiedLoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
   processingType,

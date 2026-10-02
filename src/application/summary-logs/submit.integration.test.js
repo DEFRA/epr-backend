@@ -342,23 +342,25 @@ describe('submitSummaryLog resubmission flag source', () => {
   it('flags only the report for the figure-changed period, not every touched closed period', async () => {
     const flagged = await submitOverJanuaryAndFebruaryReports({
       ...emptyLoadsByReportingPeriod(),
-      closedPeriods: [january, february],
       periodsRequiringResubmission: [january]
     })
 
     expect(flagged).toEqual({ january: true, february: false })
   })
 
-  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
+  it('flags no report for a log validated before periodsRequiringResubmission existed', async () => {
     const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
-
-    const flagged = await submitOverJanuaryAndFebruaryReports({
+    const legacyLoadsByReportingPeriod = {
       openPeriodLoads,
       closedPeriodLoads,
       closedPeriods: [january, february]
-    })
+    }
 
-    expect(flagged).toEqual({ january: true, february: true })
+    const flagged = await submitOverJanuaryAndFebruaryReports(
+      legacyLoadsByReportingPeriod
+    )
+
+    expect(flagged).toEqual({ january: false, february: false })
   })
 })
 

@@ -161,7 +161,6 @@ describe('Summary logs upload lifecycle', () => {
                 nonBalanceAffecting: { count: 0, rows: [] }
               }
             },
-            closedPeriods: [],
             periodsRequiringResubmission: []
           },
           processingType: 'REPROCESSOR_INPUT',

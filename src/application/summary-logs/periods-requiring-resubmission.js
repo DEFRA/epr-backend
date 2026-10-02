@@ -23,6 +23,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
+/** @import {ClassifiedLoadsByReportingPeriod} from './period-status.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
@@ -302,7 +303,7 @@ const computePeriodsRequiringResubmission = async ({
  * guessing a verdict.
  *
  * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId' | 'logger'> & {
- *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
+ *   loadsByReportingPeriod: ClassifiedLoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
  *   summaryLog: SubmittedSummaryLog,
  *   gate: { enabled: boolean, logger: TypedLogger }
@@ -319,23 +320,21 @@ export const withPeriodsRequiringResubmission = async ({
   if (!loadsByReportingPeriod) {
     return null
   }
+  const { closedPeriods, ...loads } = loadsByReportingPeriod
   // Stored rather than omitted so submit and the frontend act on the same set.
   if (!gate.enabled) {
-    return {
-      ...loadsByReportingPeriod,
-      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
-    }
+    return { ...loads, periodsRequiringResubmission: closedPeriods }
   }
 
   const periodsRequiringResubmission =
     await computePeriodsRequiringResubmission({
       ...params,
       logger: gate.logger,
-      closedPeriods: loadsByReportingPeriod.closedPeriods,
+      closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
       ledgerId: ledgerIdFor(summaryLog, params.registration)
     })
 
-  return { ...loadsByReportingPeriod, periodsRequiringResubmission }
+  return { ...loads, periodsRequiringResubmission }
 }
