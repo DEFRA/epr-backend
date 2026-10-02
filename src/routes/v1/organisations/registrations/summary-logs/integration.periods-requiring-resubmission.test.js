@@ -1,8 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
-import { onTestFinished, vi } from 'vitest'
+import { vi } from 'vitest'
 
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -352,15 +351,15 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateAndSubmitReport(env, JANUARY_2025)
   }
 
-  // Captures info log messages from here to the end of the test, so a test can
-  // assert what the gate recorded about each closed period.
-  const captureInfoMessages = () => {
-    const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {})
-    onTestFinished(() => infoSpy.mockRestore())
+  // Captures what the validator logs from here to the end of the test, so a
+  // test can assert what the gate recorded about each closed period.
+  const captureInfoMessages = (env) => {
+    const info = vi.mocked(env.logger.info)
+    const callsBefore = info.mock.calls.length
     return () =>
-      infoSpy.mock.calls.map(
-        ([entry]) => /** @type {{ message?: string }} */ (entry).message
-      )
+      info.mock.calls
+        .slice(callsBefore)
+        .map(([entry]) => /** @type {{ message?: string }} */ (entry).message)
   }
 
   // Weights are capped at 1000 in the reprocessor received template
@@ -405,7 +404,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     })
     await submitAndCloseJanuary(env)
 
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-gate-off',
@@ -676,7 +675,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // The final destination name is reported data (stored on the report), so
     // changing it changes the report.
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-dest-name',
@@ -712,7 +711,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // Final destination email and phone are captured on the sheet but never
     // reach the report, so a change to them alone is not a reported-data change.
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-dest-contact',
@@ -884,7 +883,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateReport(env, JANUARY_2025, 2)
 
     // Matches the draft's figures, but not the submitted report's.
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-third',
@@ -934,7 +933,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       }
     )
 
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-no-source',
@@ -971,7 +970,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       }
     )
 
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-no-source-recorded',
@@ -1044,7 +1043,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     // has no source submission.
     await generateAndSubmitReport(env, JANUARY_2025)
 
-    const infoMessages = captureInfoMessages()
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-first-upload',

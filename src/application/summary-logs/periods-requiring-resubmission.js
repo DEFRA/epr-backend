@@ -1,4 +1,3 @@
-import { logger } from '#common/helpers/logging/logger.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
@@ -25,6 +24,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 
 /**
  * @typedef {Object} FiguresContext
@@ -208,10 +208,12 @@ const describeBaseline = ({ reportId, submissionNumber, sourceSummaryLogId }) =>
 /**
  * Field paths only: values can identify suppliers and destinations.
  *
+ * @param {TypedLogger} logger
  * @param {WasteBalanceLedgerId & { summaryLogId: string }} subject
  * @param {PeriodOutcome} outcome
  */
 const logPeriodOutcome = (
+  logger,
   { organisationId, registrationId, summaryLogId },
   outcome
 ) => {
@@ -233,9 +235,11 @@ const logPeriodOutcome = (
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
+ * @param {TypedLogger} params.logger
  * @returns {Promise<PeriodRef[]>}
  */
 const computePeriodsRequiringResubmission = async ({
+  logger,
   summaryLogId,
   closedPeriods,
   periodicReports,
@@ -287,22 +291,21 @@ const computePeriodsRequiringResubmission = async ({
   )
 
   for (const outcome of outcomes) {
-    logPeriodOutcome({ ...ledgerId, summaryLogId }, outcome)
+    logPeriodOutcome(logger, { ...ledgerId, summaryLogId }, outcome)
   }
 
   return outcomes.filter(requiresResubmission).map(({ period }) => period)
 }
 
 /**
- * Shadow mode: submit still flags every closed period, so the result is only
- * stored and logged for now. A failure propagates so the queue retries the
- * validation rather than guessing a verdict.
+ * A failure propagates so the queue retries the validation rather than
+ * guessing a verdict.
  *
- * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
+ * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId' | 'logger'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
  *   summaryLog: SubmittedSummaryLog,
- *   gateEnabled: boolean
+ *   gate: { enabled: boolean, logger: TypedLogger }
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
  */
@@ -310,14 +313,14 @@ export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
   summaryLog,
-  gateEnabled,
+  gate,
   ...params
 }) => {
   if (!loadsByReportingPeriod) {
     return null
   }
   // Omitting the key would let the schema default [] read as nothing to resubmit.
-  if (!gateEnabled) {
+  if (!gate.enabled) {
     return {
       ...loadsByReportingPeriod,
       periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
@@ -327,6 +330,7 @@ export const withPeriodsRequiringResubmission = async ({
   const periodsRequiringResubmission =
     await computePeriodsRequiringResubmission({
       ...params,
+      logger: gate.logger,
       closedPeriods: loadsByReportingPeriod.closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
