@@ -229,7 +229,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
         added: emptyChange(),
         adjusted: emptyChange()
       },
-      closedPeriods: []
+      closedPeriods: [],
+      periodsRequiringResubmission: []
     })
   })
 
