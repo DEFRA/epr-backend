@@ -1,5 +1,4 @@
 import Joi from 'joi'
-import { onTestFinished } from 'vitest'
 
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 
@@ -7,7 +6,6 @@ vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
 vi.mock('#application/summary-logs/mark-as-failed.js')
 
-const { config } = await import('#root/config.js')
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
 const { submitSummaryLog } = await import('#application/summary-logs/submit.js')
@@ -107,25 +105,9 @@ describe('summaryLogCommandHandlers', () => {
           summaryLogsRepository: deps.summaryLogsRepository,
           organisationsRepository: deps.organisationsRepository,
           reportsService: deps.reportsService,
-          summaryLogExtractor: deps.summaryLogExtractor,
-          resubmissionFigureGateEnabled: false
+          summaryLogExtractor: deps.summaryLogExtractor
         })
         expect(mockValidator).toHaveBeenCalledWith('log-123')
-      })
-
-      it('enables the resubmission figure gate from its feature flag', async () => {
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
-        const getConfig = vi.spyOn(config, 'get').mockReturnValue(true)
-        onTestFinished(() => getConfig.mockRestore())
-
-        await handler.execute({ summaryLogId: 'log-123' }, deps)
-
-        expect(getConfig).toHaveBeenCalledWith(
-          'featureFlags.resubmissionFigureGate'
-        )
-        expect(createSummaryLogsValidator).toHaveBeenCalledWith(
-          expect.objectContaining({ resubmissionFigureGateEnabled: true })
-        )
       })
     })
 
