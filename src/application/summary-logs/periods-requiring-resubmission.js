@@ -21,7 +21,6 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
-/** @import {ReportSource} from '#reports/repository/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
@@ -104,8 +103,10 @@ const aggregatePeriodFigures = (
   })
 
 /**
- * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId: string | null }} Baseline
- * @typedef {{ baseline: Baseline, changedFields: string[] | null }} Comparison
+ * sourceSummaryLogId is undefined when the report records no source at all.
+ *
+ * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId?: string | null }} Baseline
+ * @typedef {{ baseline: Baseline, changedFields: string[] } | { baseline: Baseline, cannotCompare: string }} Comparison
  */
 
 /**
@@ -117,7 +118,7 @@ const aggregatePeriodFigures = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ReportsService} params.reportsService
  * @param {FiguresContext} params.context
- * @returns {Promise<Comparison>} changedFields is null when the source cannot be rebuilt
+ * @returns {Promise<Comparison>}
  */
 const compareWithLatestSubmittedReport = async ({
   period,
@@ -128,20 +129,27 @@ const compareWithLatestSubmittedReport = async ({
   const report = await reportsService.findReportById(
     latestSubmittedReportIdForPeriod(periodicReports, period)
   )
-  // The create schema requires a source.
-  const { summaryLogId } = /** @type {ReportSource} */ (report.source)
   const baseline = {
     reportId: report.id,
-    submissionNumber: report.submissionNumber,
-    sourceSummaryLogId: summaryLogId
+    submissionNumber: report.submissionNumber
   }
+  // Reports stored before source was required carry none.
+  if (!report.source) {
+    return { baseline, cannotCompare: 'its report records no source' }
+  }
+
+  const { summaryLogId } = report.source
+  const sourcedBaseline = { ...baseline, sourceSummaryLogId: summaryLogId }
   const sourceRowStates = await wasteRecordStatesForHead(
     context.summaryLogRowStatesRepository,
     context.ledgerId,
     summaryLogId
   )
   if (summaryLogId !== null && sourceRowStates.length === 0) {
-    return { baseline, changedFields: null }
+    return {
+      baseline: sourcedBaseline,
+      cannotCompare: 'its source submission has no row states'
+    }
   }
 
   const before = aggregatePeriodFigures(sourceRowStates, { period, ...context })
@@ -150,7 +158,10 @@ const compareWithLatestSubmittedReport = async ({
     ...context
   })
 
-  return { baseline, changedFields: diffReports(before, after) }
+  return {
+    baseline: sourcedBaseline,
+    changedFields: diffReports(before, after)
+  }
 }
 
 /**
@@ -159,18 +170,30 @@ const compareWithLatestSubmittedReport = async ({
 
 // A period that cannot be compared is flagged: no retry would change that.
 const requiresResubmission = (/** @type {PeriodOutcome} */ outcome) =>
-  outcome.changedFields === null || outcome.changedFields.length > 0
+  'cannotCompare' in outcome || outcome.changedFields.length > 0
 
 /**
- * @param {string[] | null} changedFields
+ * @param {Comparison} comparison
  */
-const describeChange = (changedFields) => {
-  if (changedFields === null) {
-    return 'requires resubmission: cannot compare, its source submission has no row states'
+const describeChange = (comparison) => {
+  if ('cannotCompare' in comparison) {
+    return `requires resubmission: cannot compare, ${comparison.cannotCompare}`
   }
-  return changedFields.length > 0
-    ? `requires resubmission: reported data changed in ${changedFields.join(', ')}`
+  return comparison.changedFields.length > 0
+    ? `requires resubmission: reported data changed in ${comparison.changedFields.join(', ')}`
     : 'does not require resubmission: reported data unchanged'
+}
+
+/**
+ * @param {Baseline['sourceSummaryLogId']} sourceSummaryLogId
+ */
+const describeSource = (sourceSummaryLogId) => {
+  if (sourceSummaryLogId === undefined) {
+    return 'no recorded source'
+  }
+  return sourceSummaryLogId === null
+    ? 'no submission'
+    : `file ${sourceSummaryLogId}`
 }
 
 /**
@@ -180,9 +203,7 @@ const describeChange = (changedFields) => {
  * @param {Baseline} baseline
  */
 const describeBaseline = ({ reportId, submissionNumber, sourceSummaryLogId }) =>
-  `compared with report ${reportId} submission ${submissionNumber} from ${
-    sourceSummaryLogId === null ? 'no submission' : `file ${sourceSummaryLogId}`
-  }`
+  `compared with report ${reportId} submission ${submissionNumber} from ${describeSource(sourceSummaryLogId)}`
 
 /**
  * Field paths only: values can identify suppliers and destinations.
@@ -196,7 +217,7 @@ const logPeriodOutcome = (
 ) => {
   const { year, cadence, period } = outcome.period
   logger.info({
-    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome.changedFields)}`
+    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome)}`
   })
 }
 

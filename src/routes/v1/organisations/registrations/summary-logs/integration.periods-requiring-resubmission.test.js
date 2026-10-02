@@ -954,6 +954,43 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
   })
 
+  it('flags a closed period it cannot compare because its report records no source', async () => {
+    const env = await setupGateEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    // Reports stored before source was required carry none.
+    const findReportById = env.reportsRepository.findReportById
+    vi.spyOn(env.reportsRepository, 'findReportById').mockImplementation(
+      async (reportId) => {
+        const { source: _source, ...report } = await findReportById(reportId)
+        return report
+      }
+    )
+
+    const infoMessages = captureInfoMessages()
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-no-source-recorded',
+      'file-no-source-recorded',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+    expect(infoMessages()).toContainEqual(
+      expect.stringMatching(
+        /\(summary log sl-no-source-recorded, compared with report \S+ submission 1 from no recorded source\) requires resubmission: cannot compare, its report records no source$/
+      )
+    )
+  })
+
   it('leaves the upload validating for a retry when a comparison fails, rather than flagging', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',
