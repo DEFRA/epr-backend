@@ -51,17 +51,29 @@ export const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
-export const accreditationViewSchema = Joi.object({
+const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
   status: Joi.string()
     .valid(...SERVED_ACCREDITATION_STATUSES)
-    .required(),
-  overseasSites: accreditedOverseasSitesViewSchema.optional()
+    .required()
+}
+
+const reprocessorAccreditationSchema = Joi.object(accreditationCommon)
+
+const exporterAccreditationSchema = Joi.object({
+  ...accreditationCommon,
+  overseasSites: accreditedOverseasSitesViewSchema
 })
 
-export const accreditationsViewSchema = Joi.object()
-  .pattern(yearKey, accreditationViewSchema)
-  .required()
+/**
+ * @param {Joi.Schema} schema
+ */
+const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
+
+export const accreditationViewSchema = Joi.alternatives().try(
+  reprocessorAccreditationSchema,
+  exporterAccreditationSchema
+)
 
 const registrationCommon = {
   status: Joi.string()
@@ -69,8 +81,7 @@ const registrationCommon = {
     .required(),
   validFrom: isoDate.required(),
   material: materialSchema.required(),
-  submittedToRegulator: regulatorSchema,
-  accreditations: accreditationsViewSchema
+  submittedToRegulator: regulatorSchema
 }
 
 export const registrationViewSchema = Joi.alternatives().try(
@@ -90,14 +101,16 @@ export const registrationViewSchema = Joi.alternatives().try(
         county: Joi.string(),
         postcode: Joi.string()
       }).required()
-    }).required()
+    }).required(),
+    accreditations: keyedByYear(reprocessorAccreditationSchema)
   }),
   Joi.object({
     ...registrationCommon,
     wasteProcessingType: Joi.string()
       .valid(WASTE_PROCESSING_TYPE.EXPORTER)
       .required(),
-    overseasSites: overseasSitesViewSchema
+    overseasSites: overseasSitesViewSchema,
+    accreditations: keyedByYear(exporterAccreditationSchema)
   })
 )
 
@@ -128,9 +141,10 @@ export const registrationsViewResponseSchema = Joi.object({
   registrations: registrationsViewSchema
 })
 
-export const accreditationsViewResponseSchema = Joi.object({
-  accreditations: accreditationsViewSchema
-})
+export const accreditationsViewResponseSchema = Joi.alternatives().try(
+  Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) }),
+  Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) })
+)
 
 export const overseasSitesViewResponseSchema = Joi.object({
   overseasSites: overseasSitesViewSchema

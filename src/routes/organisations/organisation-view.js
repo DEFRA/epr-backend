@@ -52,8 +52,13 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
  * @typedef {{
  *   accreditationNumber: string
  *   status: string
- *   overseasSites?: Record<string, AccreditedOverseasSiteView>
  * }} AccreditationView
+ */
+
+/**
+ * @typedef {AccreditationView & {
+ *   overseasSites: Record<string, AccreditedOverseasSiteView>
+ * }} ExporterAccreditationView
  */
 
 /**
@@ -62,12 +67,28 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
  *   validFrom: string
  *   material: string
  *   submittedToRegulator: RegulatorView
- *   wasteProcessingType: string
- *   reprocessingType?: string
- *   site?: { address: Record<string, string> }
- *   overseasSites?: Record<string, OverseasSiteView>
+ * }} RegistrationViewCommon
+ */
+
+/**
+ * @typedef {RegistrationViewCommon & {
+ *   wasteProcessingType: 'reprocessor'
+ *   reprocessingType: string
+ *   site: { address: Record<string, string> }
  *   accreditations: Record<string, AccreditationView>
- * }} RegistrationView
+ * }} ReprocessorRegistrationView
+ */
+
+/**
+ * @typedef {RegistrationViewCommon & {
+ *   wasteProcessingType: 'exporter'
+ *   overseasSites: Record<string, OverseasSiteView>
+ *   accreditations: Record<string, ExporterAccreditationView>
+ * }} ExporterRegistrationView
+ */
+
+/**
+ * @typedef {ReprocessorRegistrationView | ExporterRegistrationView} RegistrationView
  */
 
 /**
@@ -149,39 +170,49 @@ function toRegistrationEntry(
     return null
   }
 
-  const isExporter =
-    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-  if (!isExporter && !registration.reprocessingType) {
-    onDrop(`Registration ${registrationNumber} has no reprocessing type`)
-    return null
-  }
-
-  const overseasSites = isExporter
-    ? toOverseasSites(registration, overseasSitesById, onDrop)
-    : undefined
-
   const common = {
     status: registration.status,
     validFrom: registration.validFrom,
     material: resolveMaterial(registration),
-    submittedToRegulator: { code: registration.submittedToRegulator },
-    wasteProcessingType: registration.wasteProcessingType,
-    accreditations: keyedViews(
-      accreditationsForRegistration(registration, organisation),
-      (accreditation) =>
-        toAccreditationEntry(accreditation, overseasSites, onDrop)
+    submittedToRegulator: { code: registration.submittedToRegulator }
+  }
+  const accreditations = keyedViews(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, onDrop)
+  )
+
+  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+    const overseasSites = toOverseasSites(
+      registration,
+      overseasSitesById,
+      onDrop
     )
+    return [
+      registrationNumber,
+      {
+        ...common,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        overseasSites: mapValues(overseasSites, toSiteView),
+        accreditations: withAccreditedSites(accreditations, overseasSites)
+      }
+    ]
+  }
+
+  const { reprocessingType } = registration
+  if (!reprocessingType) {
+    onDrop(`Registration ${registrationNumber} has no reprocessing type`)
+    return null
   }
 
   return [
     registrationNumber,
-    overseasSites
-      ? { ...common, overseasSites: mapValues(overseasSites, toSiteView) }
-      : {
-          ...common,
-          reprocessingType: registration.reprocessingType,
-          site: { address: toUkAddress(registration.site.address) }
-        }
+    {
+      ...common,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      reprocessingType,
+      site: { address: toUkAddress(registration.site.address) },
+      accreditations
+    }
   ]
 }
 
@@ -189,12 +220,23 @@ function toRegistrationEntry(
  * Until per-year approvals come from the registration service, an exporter's
  * accreditation lists every registration site with the site's stored approval.
  *
+ * @param {Record<string, AccreditationView>} accreditations
+ * @param {Record<string, OverseasSite>} overseasSites
+ * @returns {Record<string, ExporterAccreditationView>}
+ */
+function withAccreditedSites(accreditations, overseasSites) {
+  return mapValues(accreditations, (accreditation) => ({
+    ...accreditation,
+    overseasSites: mapValues(overseasSites, toAccreditedSiteView)
+  }))
+}
+
+/**
  * @param {Accreditation} accreditation
- * @param {Record<string, OverseasSite> | undefined} overseasSites
  * @param {OnDrop} onDrop
  * @returns {[string, AccreditationView] | null}
  */
-function toAccreditationEntry(accreditation, overseasSites, onDrop) {
+function toAccreditationEntry(accreditation, onDrop) {
   const { accreditationNumber } = accreditation
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
@@ -213,13 +255,7 @@ function toAccreditationEntry(accreditation, overseasSites, onDrop) {
 
   return [
     String(deriveAccreditationYear(accreditation)),
-    {
-      accreditationNumber,
-      status: accreditation.status,
-      ...(overseasSites && {
-        overseasSites: mapValues(overseasSites, toAccreditedSiteView)
-      })
-    }
+    { accreditationNumber, status: accreditation.status }
   ]
 }
 

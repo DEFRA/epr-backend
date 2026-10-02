@@ -90,14 +90,14 @@ const accreditation = (view, params) =>
  * Only an exporter has overseas sites.
  *
  * @template T
- * @param {Record<string, T> | undefined} overseasSites
+ * @param {object | { overseasSites: Record<string, T> }} resource
  * @returns {Record<string, T>}
  */
-const exporterSites = (overseasSites) => {
-  if (!overseasSites) {
+const exporterSites = (resource) => {
+  if (!('overseasSites' in resource)) {
     throw Boom.notFound('Overseas sites not found')
   }
-  return overseasSites
+  return resource.overseasSites
 }
 
 export const organisationViewGet = viewRoute(
@@ -122,7 +122,7 @@ export const registrationOverseasSitesViewGet = viewRoute(
   registrationSitesPath,
   overseasSitesViewResponseSchema,
   (view, p) => ({
-    overseasSites: exporterSites(registration(view, p).overseasSites)
+    overseasSites: exporterSites(registration(view, p))
   })
 )
 
@@ -130,11 +130,7 @@ export const registrationOverseasSiteViewGet = viewRoute(
   `${registrationSitesPath}/{orsId}`,
   overseasSiteViewSchema,
   (view, p) =>
-    found(
-      exporterSites(registration(view, p).overseasSites),
-      p.orsId,
-      'Overseas site'
-    )
+    found(exporterSites(registration(view, p)), p.orsId, 'Overseas site')
 )
 
 export const accreditationsViewGet = viewRoute(
@@ -153,7 +149,7 @@ export const accreditationOverseasSitesViewGet = viewRoute(
   accreditationSitesPath,
   accreditedOverseasSitesViewResponseSchema,
   (view, p) => ({
-    overseasSites: exporterSites(accreditation(view, p).overseasSites)
+    overseasSites: exporterSites(accreditation(view, p))
   })
 )
 
@@ -161,11 +157,7 @@ export const accreditationOverseasSiteViewGet = viewRoute(
   `${accreditationSitesPath}/{orsId}`,
   accreditedOverseasSiteViewSchema,
   (view, p) =>
-    found(
-      exporterSites(accreditation(view, p).overseasSites),
-      p.orsId,
-      'Overseas site'
-    )
+    found(exporterSites(accreditation(view, p)), p.orsId, 'Overseas site')
 )
 
 /**
