@@ -280,7 +280,8 @@ const computePeriodsRequiringResubmission = async ({
  * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
- *   summaryLog: SubmittedSummaryLog
+ *   summaryLog: SubmittedSummaryLog,
+ *   gateEnabled: boolean
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
  */
@@ -288,10 +289,18 @@ export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
   summaryLog,
+  gateEnabled,
   ...params
 }) => {
   if (!loadsByReportingPeriod) {
     return null
+  }
+  // Omitting the key would let the schema default [] read as nothing to resubmit.
+  if (!gateEnabled) {
+    return {
+      ...loadsByReportingPeriod,
+      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
+    }
   }
 
   const periodsRequiringResubmission =

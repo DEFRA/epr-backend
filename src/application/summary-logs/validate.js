@@ -542,7 +542,8 @@ const classifyAndPersistResult = async ({
   version,
   reportsService,
   organisationsRepository,
-  overseasSitesRepository
+  overseasSitesRepository,
+  resubmissionFigureGateEnabled
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
@@ -589,7 +590,8 @@ const classifyAndPersistResult = async ({
       summaryLogId,
       reportsService,
       overseasSitesRepository,
-      summaryLogRowStatesRepository
+      summaryLogRowStatesRepository,
+      gateEnabled: resubmissionFigureGateEnabled
     }),
     meta,
     status,
@@ -611,7 +613,8 @@ const classifyAndPersistResult = async ({
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
- *   summaryLogExtractor: SummaryLogExtractor
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   resubmissionFigureGateEnabled?: boolean
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
  */
@@ -623,7 +626,8 @@ export const createSummaryLogsValidator = ({
   ledgerRepository,
   reportsService,
   overseasSitesRepository,
-  summaryLogExtractor
+  summaryLogExtractor,
+  resubmissionFigureGateEnabled = false
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
 
@@ -693,7 +697,8 @@ export const createSummaryLogsValidator = ({
       version,
       reportsService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      resubmissionFigureGateEnabled
     })
 
     logger.info({
