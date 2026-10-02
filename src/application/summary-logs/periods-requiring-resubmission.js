@@ -2,6 +2,7 @@ import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-ma
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
+import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
@@ -9,7 +10,7 @@ import { ledgerIdFor } from './ledger-id.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {PeriodicReport, PeriodicReportSlots} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, ReportPerPeriod} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
@@ -61,20 +62,15 @@ const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
 
 /**
  * @param {PeriodicReport[]} periodicReports
- * @param {PeriodRef} period
+ * @param {PeriodRef} periodRef
  * @returns {string}
  */
-const latestSubmittedReportIdForPeriod = (
-  periodicReports,
-  { year, cadence, period }
-) => {
+const latestSubmittedReportIdForPeriod = (periodicReports, periodRef) => {
+  const { year, cadence, period } = periodRef
   // Closed periods are derived from these periodic reports, so the slot exists.
-  const periodicReport = /** @type {PeriodicReport} */ (
-    periodicReports.find((pr) => pr.year === year)
+  const slot = /** @type {ReportPerPeriod} */ (
+    findPeriodSlot(periodicReports, periodRef)
   )
-  const slot = /** @type {PeriodicReportSlots} */ (
-    periodicReport.reports[/** @type {Cadence} */ (cadence)]
-  )[period]
   const report = latestSubmitted(slot.current, slot.previousSubmissions)
   /* v8 ignore next 5 -- a closed period always has a submitted report */
   if (!report) {

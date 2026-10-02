@@ -1,3 +1,5 @@
+import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
+
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
@@ -20,9 +22,7 @@ export function findSubmissionByNumber(
   period,
   submissionNumber
 ) {
-  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
-    cadence
-  ]?.[period]
+  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
   if (!slot) {
     return null
   }

@@ -6,6 +6,7 @@ import {
   resubmissionIneligibleReasonToErrorCode
 } from '#reports/domain/resubmission.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
@@ -73,9 +74,7 @@ export function isLatestSubmissionOf(
   period,
   submissionNumber
 ) {
-  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
-    cadence
-  ]?.[period]
+  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
   const submissions = [
     slot?.current,
     ...(slot?.previousSubmissions ?? [])
