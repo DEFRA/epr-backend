@@ -23,6 +23,7 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
+/** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -63,7 +64,7 @@ const isCancelledAtEndOf = (day, history) =>
  * accreditation keeps reporting, and a reinstated one owes any report not yet
  * due when it was reinstated.
  *
- * @param {{ endDate: CalendarDate, dueDate: CalendarDate }} period
+ * @param {Pick<MergedPeriod, 'endDate' | 'dueDate'>} period
  * @param {boolean} submitted
  * @param {StatusHistoryDateTime[]} history - descending
  */
