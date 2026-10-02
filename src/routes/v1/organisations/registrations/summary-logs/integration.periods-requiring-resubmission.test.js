@@ -369,7 +369,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-ORIGINAL' }
   ]
 
-  it('does not flag a closed period when only a non-figure field changed', async () => {
+  it('does not flag a closed period when only a non-figure field changed, and still shows the adjustment', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
@@ -390,7 +390,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
-    // Display and closed-period detection remain intact (AC3 regression).
     expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.nonBalanceAffecting
