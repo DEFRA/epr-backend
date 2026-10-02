@@ -14,6 +14,8 @@ import {
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import {
   REPROCESSOR_RECEIVED_HEADERS,
@@ -291,51 +293,72 @@ describe('submitSummaryLog resubmission flag source', () => {
   const january = { year: 2025, cadence: 'monthly', period: 1 }
   const february = { year: 2025, cadence: 'monthly', period: 2 }
 
-  it('flags only the figure-changed periods, not every touched closed period', async () => {
+  /**
+   * Submits a log over submitted January and February reports, through the
+   * real summary-log-uploaded handler, and reports which ended up flagged.
+   *
+   * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} loadsByReportingPeriod
+   */
+  const submitOverJanuaryAndFebruaryReports = async (
+    loadsByReportingPeriod
+  ) => {
     const reportsRepository = createInMemoryReportsRepository()()
-
     const { deps, summaryLogId, organisationId, registrationId } =
       await setupSubmit({
         reportsRepository,
-        loadsByReportingPeriod: {
-          ...emptyLoadsByReportingPeriod(),
-          closedPeriods: [january, february],
-          periodsRequiringResubmission: [january]
-        }
+        // After any real submission, so the staleness guard does not fire.
+        createdAt: '2099-01-01T00:00:00.000Z',
+        loadsByReportingPeriod
       })
 
-    await submitSummaryLog(summaryLogId, deps)
+    const submitReportFor = ({ year, period }) =>
+      createAndSubmitReport(reportsRepository, {
+        organisationId,
+        registrationId,
+        year,
+        period
+      })
+    const januaryReportId = await submitReportFor(january)
+    const februaryReportId = await submitReportFor(february)
 
-    expect(deps.onSummaryLogUploaded).toHaveBeenCalledWith({
-      organisationId,
-      registrationId,
-      summaryLogId,
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+      })
+    })
+
+    const isFlagged = async (/** @type {string} */ reportId) =>
+      (await reportsRepository.findReportById(reportId))
+        .resubmissionRequired !== undefined
+
+    return {
+      january: await isFlagged(januaryReportId),
+      february: await isFlagged(februaryReportId)
+    }
+  }
+
+  it('flags only the report for the figure-changed period, not every touched closed period', async () => {
+    const flagged = await submitOverJanuaryAndFebruaryReports({
+      ...emptyLoadsByReportingPeriod(),
+      closedPeriods: [january, february],
       periodsRequiringResubmission: [january]
     })
+
+    expect(flagged).toEqual({ january: true, february: false })
   })
 
-  it('falls back to every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
-    const reportsRepository = createInMemoryReportsRepository()()
+  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
     const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
 
-    const { deps, summaryLogId, organisationId, registrationId } =
-      await setupSubmit({
-        reportsRepository,
-        loadsByReportingPeriod: {
-          openPeriodLoads,
-          closedPeriodLoads,
-          closedPeriods: [january, february]
-        }
-      })
-
-    await submitSummaryLog(summaryLogId, deps)
-
-    expect(deps.onSummaryLogUploaded).toHaveBeenCalledWith({
-      organisationId,
-      registrationId,
-      summaryLogId,
-      periodsRequiringResubmission: [january, february]
+    const flagged = await submitOverJanuaryAndFebruaryReports({
+      openPeriodLoads,
+      closedPeriodLoads,
+      closedPeriods: [january, february]
     })
+
+    expect(flagged).toEqual({ january: true, february: true })
   })
 })
 
