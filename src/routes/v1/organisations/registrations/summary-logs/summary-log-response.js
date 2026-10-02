@@ -19,5 +19,9 @@ export const toSummaryLogResponse = (summaryLog) => ({
     loadsByReportingPeriod:
       summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
   }),
+  ...(summaryLog.year !== undefined && { year: summaryLog.year }),
+  ...(summaryLog.accreditationId !== undefined && {
+    accreditationId: summaryLog.accreditationId
+  }),
   ...extractResponseMetaFields(summaryLog.meta)
 })

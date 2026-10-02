@@ -7,7 +7,10 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  withoutYear
+} from '#repositories/summary-logs/contract/test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { summaryLogsListPath } from './get.js'
@@ -65,23 +68,27 @@ describe(`${summaryLogsListPath} route`, () => {
 
       await summaryLogsRepository.insert(
         submittedId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          submittedAt: '2026-02-01T10:00:00.000Z',
-          createdAt: '2026-02-01T09:55:00.000Z',
-          file: { name: 'january.xlsx' }
-        })
+        withoutYear(
+          summaryLogFactory.submitted({
+            organisationId,
+            registrationId,
+            submittedAt: '2026-02-01T10:00:00.000Z',
+            createdAt: '2026-02-01T09:55:00.000Z',
+            file: { name: 'january.xlsx' }
+          })
+        )
       )
 
       await summaryLogsRepository.insert(
         failedId,
-        summaryLogFactory.validationFailed({
-          organisationId,
-          registrationId,
-          createdAt: '2026-02-02T11:00:00.000Z',
-          file: { name: 'february.xlsx' }
-        })
+        withoutYear(
+          summaryLogFactory.validationFailed({
+            organisationId,
+            registrationId,
+            createdAt: '2026-02-02T11:00:00.000Z',
+            file: { name: 'february.xlsx' }
+          })
+        )
       )
 
       const response = await server.inject({
@@ -109,6 +116,57 @@ describe(`${summaryLogsListPath} route`, () => {
           }
         ]
       })
+    })
+
+    it('includes year and accreditationId when present', async () => {
+      const organisationId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+      const submittedId = new ObjectId().toString()
+
+      await summaryLogsRepository.insert(
+        submittedId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: 'acc-1'
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor(organisationId, registrationId),
+        ...asServiceMaintainer()
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.summaryLogs[0]).toMatchObject({
+        year: 2026,
+        accreditationId: 'acc-1'
+      })
+    })
+
+    it('omits year and accreditationId for a legacy log carrying neither', async () => {
+      const organisationId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+      const submittedId = new ObjectId().toString()
+
+      await summaryLogsRepository.insert(
+        submittedId,
+        withoutYear(
+          summaryLogFactory.submitted({ organisationId, registrationId })
+        )
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor(organisationId, registrationId),
+        ...asServiceMaintainer()
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.summaryLogs[0]).not.toHaveProperty('year')
+      expect(payload.summaryLogs[0]).not.toHaveProperty('accreditationId')
     })
 
     it('excludes intermediate statuses from the list', async () => {

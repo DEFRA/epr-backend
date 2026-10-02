@@ -11,7 +11,9 @@ import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -20,7 +22,10 @@ import {
   validateSummaryLogCommand
 } from '#server/queue-consumer/summary-log-commands.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
-import { summaryLogContentPayloadSchema } from './post.schema.js'
+import {
+  summaryLogContentParamsSchema,
+  summaryLogContentPayloadSchema
+} from './post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
@@ -104,7 +109,7 @@ const naming = (error, summaryLogId) => {
 
 /**
  * @typedef {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
- *   params: { organisationId: string, registrationId: string },
+ *   params: { organisationId: string, registrationId: string, year: number },
  *   systemLogsRepository: SystemLogsRepository
  * }} SubmitRequest
  */
@@ -115,16 +120,25 @@ const naming = (error, summaryLogId) => {
  *
  * @param {SubmitRequest} request
  * @param {string} summaryLogId
+ * @param {number} year
+ * @param {string | null} accreditationId
  */
-const insertValidatingLog = async (request, summaryLogId) => {
+const insertValidatingLog = async (
+  request,
+  summaryLogId,
+  year,
+  accreditationId
+) => {
   const { summaryLogsRepository } = request
   const { organisationId, registrationId } = request.params
 
   const latestSubmitted =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg(
+    await summaryLogsRepository.findLatestSubmittedForOrgReg({
       organisationId,
-      registrationId
-    )
+      registrationId,
+      year,
+      accreditationId
+    })
   await summaryLogsRepository.insert(summaryLogId, {
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
@@ -132,6 +146,8 @@ const insertValidatingLog = async (request, summaryLogId) => {
     file: { id: summaryLogId, name: 'summary-log.json' },
     organisationId,
     registrationId,
+    year,
+    accreditationId,
     validatedAgainstSummaryLogId: latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
   })
 }
@@ -185,7 +201,41 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
 }
 
 export const devSummaryLogsSubmitPath =
-  '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
+  '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{year}'
+
+/**
+ * The template a payload's own meta picks: an ACCREDITATION_NUMBER means
+ * accredited, its absence means registered-only — mirroring how a real
+ * summary log declares its own template, independent of the route's params.
+ *
+ * @param {SummaryLogContentPayload} payload
+ * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @returns {ReturnType<typeof templateForRegistration>}
+ */
+const templateFor = (payload, registration) =>
+  templateForRegistration({
+    ...registration,
+    accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+      ? {
+          accreditationNumber: String(
+            payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+          )
+        }
+      : null
+  })
+
+/**
+ * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @returns {string | null}
+ */
+const accreditationIdFor = (registration) => {
+  if (!isRegistrationAccredited(registration)) {
+    return null
+  }
+
+  return /** @type {{ accreditation: { id: string } }} */ (registration)
+    .accreditation.id
+}
 
 export const devSummaryLogsSubmit = {
   method: 'POST',
@@ -195,6 +245,7 @@ export const devSummaryLogsSubmit = {
     tags: ['api'],
     payload: { maxBytes: MAX_PAYLOAD_BYTES },
     validate: {
+      params: summaryLogContentParamsSchema,
       payload: summaryLogContentPayloadSchema
     }
   },
@@ -205,7 +256,7 @@ export const devSummaryLogsSubmit = {
   handler: async (request, h) => {
     const { summaryLogsRepository, organisationsRepository, payload, logger } =
       request
-    const { organisationId, registrationId } = request.params
+    const { organisationId, registrationId, year } = request.params
     const user = extractUser(request)
     const summaryLogId = randomUUID()
 
@@ -215,10 +266,15 @@ export const devSummaryLogsSubmit = {
     )
     const parsed = toParsedSummaryLog(
       payload,
-      templateForRegistration(registration)
+      templateFor(payload, registration)
     )
 
-    await insertValidatingLog(request, summaryLogId)
+    await insertValidatingLog(
+      request,
+      summaryLogId,
+      year,
+      accreditationIdFor(registration)
+    )
 
     const deps = {
       logger,

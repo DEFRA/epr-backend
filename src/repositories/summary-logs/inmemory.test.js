@@ -85,7 +85,13 @@ describe('In-memory summary logs repository', () => {
 
       await repository.insert(id, summaryLogFactory.validating())
 
-      const updates = summaryLogFactory.validated({
+      // year/accreditationId are set once at insert time and forbidden on
+      // update, so they're excluded here even though the factory sets them.
+      const {
+        year: _y,
+        accreditationId: _a,
+        ...updates
+      } = summaryLogFactory.validated({
         file: { name: 'updated.xlsx' }
       })
       await repository.update(id, 1, updates)

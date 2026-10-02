@@ -19,7 +19,7 @@ export const MAX_VALIDATION_ISSUES = 100
  * @typedef {SummaryLog & {
  *   organisationId: string,
  *   registrationId: string,
- *   accreditationId?: string,
+ *   accreditationId?: string | null,
  *   file: StoredFile
  * }} SubmittedSummaryLog
  */
