@@ -1,7 +1,5 @@
 /**
- * What counts as a change to a report's reported data, used by the
- * resubmission-figures diagnostic and intended for the planned resubmission
- * gate. The tests are the specification.
+ * What counts as a change to a report's reported data.
  */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
