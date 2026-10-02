@@ -149,9 +149,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     registrationId: summaryLog.registrationId,
     summaryLogId,
     periodsRequiringResubmission:
-      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
-      summaryLog.loadsByReportingPeriod?.closedPeriods ??
-      []
+      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
   })
 
   await summaryLogsRepository.update(

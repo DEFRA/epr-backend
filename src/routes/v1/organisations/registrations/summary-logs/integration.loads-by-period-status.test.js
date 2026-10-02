@@ -229,7 +229,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
         added: emptyChange(),
         adjusted: emptyChange()
       },
-      closedPeriods: [],
       periodsRequiringResubmission: []
     })
   })
@@ -379,7 +378,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
-  it('persists closedPeriods for a closed-period load even while the feature is off', async () => {
+  it('does not persist closedPeriods for a closed-period load', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const env = await setupWasteBalanceIntegrationEnvironment({
@@ -389,8 +388,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
     await closeJanuary2025(env)
 
-    // The flag is off (default) at validate time, but closedPeriods must still
-    // be persisted so it survives to submit time when the flag flips on.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-closed-refs',
@@ -398,9 +395,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
-    ])
+    expect(loadsByReportingPeriod).not.toHaveProperty('closedPeriods')
   })
 
   it('applies closed-wins when one date field is closed and another is open', async () => {

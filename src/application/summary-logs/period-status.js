@@ -30,6 +30,8 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
+/** @typedef {LoadsByReportingPeriod & { closedPeriods: PeriodRef[] }} ClassifiedLoadsByReportingPeriod */
+
 /**
  * @typedef {Object} ClassificationContext
  * @property {Accreditation | null} accreditation
@@ -67,8 +69,7 @@ const emptyChange = () => ({
 /** @returns {LoadsByReportingPeriod} */
 const emptyResult = () => ({
   openPeriodLoads: emptyChange(),
-  closedPeriodLoads: emptyChange(),
-  closedPeriods: []
+  closedPeriodLoads: emptyChange()
 })
 
 /**
@@ -420,7 +421,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {Cadence} params.cadence
  * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
- * @returns {LoadsByReportingPeriod}
+ * @returns {ClassifiedLoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
   wasteRecords,

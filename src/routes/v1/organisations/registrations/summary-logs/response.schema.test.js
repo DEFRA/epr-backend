@@ -44,4 +44,18 @@ describe('summaryLogResponseSchema', () => {
       expect(error).toBeUndefined()
     })
   })
+
+  describe('loadsByReportingPeriod', () => {
+    it('should accept a submitted log stored before closedPeriods was retired', () => {
+      const { error } = summaryLogResponseSchema.validate({
+        status: SUMMARY_LOG_STATUS.SUBMITTED,
+        loadsByReportingPeriod: {
+          ...emptyLoadsByReportingPeriod(),
+          closedPeriods: [{ year: 2025, cadence: 'monthly', period: 1 }]
+        }
+      })
+
+      expect(error).toBeUndefined()
+    })
+  })
 })

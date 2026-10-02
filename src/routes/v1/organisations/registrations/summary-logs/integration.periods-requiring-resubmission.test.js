@@ -389,7 +389,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.nonBalanceAffecting
         .count
@@ -414,7 +413,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
@@ -445,7 +443,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       JANUARY_2025
     ])
     // The closed-period display still reflects the balance-affecting adjustment.
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting.count
     ).toBe(1)
@@ -469,7 +466,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
@@ -517,10 +513,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      JANUARY_2025,
-      FEBRUARY_2025
-    ])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       FEBRUARY_2025
     ])
@@ -562,7 +554,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -600,7 +591,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -636,7 +626,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
   })
 
   it('does not flag a closed period when only supplier email and phone changed', async () => {
@@ -664,7 +653,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -687,7 +675,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -715,7 +702,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       sentOnMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
@@ -757,7 +743,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       sentOnMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
     expect(infoMessages()).toContainEqual(
       expect.stringMatching(
@@ -800,7 +785,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       registeredOnlyExporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -842,7 +826,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       registeredOnlyExporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -877,7 +860,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       exporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -927,7 +909,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2025
     ])
@@ -1057,7 +1038,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env,
       'sl-retry'
     )
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
