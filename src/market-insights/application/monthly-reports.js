@@ -16,6 +16,7 @@ import { grantedRegistrations } from '#market-insights/application/accredited-mo
 import { recordOf } from '#common/helpers/record-of.js'
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -51,9 +52,9 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 const isCancelledAtEndOf = (day, history) =>
   history.find(
     ({ updatedAt }) =>
-      formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
-        .slice(0, day.length)
-        .localeCompare(day) <= 0
+      calendarDate(
+        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
+      ).localeCompare(day) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
 /**

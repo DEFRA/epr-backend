@@ -397,7 +397,10 @@ describe('countOutstandingReturns', () => {
       orgId: 500052,
       statusHistory: [
         ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-20' }
+        {
+          status: ACCREDITATION_STATUS.CANCELLED,
+          updatedAt: '2026-03-20T15:00:00.000Z'
+        }
       ]
     })
 
