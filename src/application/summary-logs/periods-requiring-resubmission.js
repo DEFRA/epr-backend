@@ -319,7 +319,7 @@ export const withPeriodsRequiringResubmission = async ({
   if (!loadsByReportingPeriod) {
     return null
   }
-  // Omitting the key would let the schema default [] read as nothing to resubmit.
+  // Stored rather than omitted so submit and the frontend act on the same set.
   if (!gate.enabled) {
     return {
       ...loadsByReportingPeriod,

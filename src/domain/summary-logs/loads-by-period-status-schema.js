@@ -98,8 +98,9 @@ export const loadsByReportingPeriodSchema = Joi.object({
   // drive resubmission detection at submit time. Optional with a default so logs
   // written before this field existed still validate on read.
   closedPeriods: Joi.array().items(periodRefSchema).default([]),
-  // Defaulted so logs written before this field existed still validate on read.
-  periodsRequiringResubmission: Joi.array().items(periodRefSchema).default([])
+  // No default: absent means not computed, and readers fall back on it. A
+  // default [] would read as nothing to resubmit.
+  periodsRequiringResubmission: Joi.array().items(periodRefSchema)
 })
 
 // Every bucket carries an empty rows list, matching the uniform populated
