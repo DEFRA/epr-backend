@@ -63,6 +63,8 @@
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,
  *   registrationId?: string,
+ *   year?: number,
+ *   accreditationId?: string | null,
  *   status: SummaryLogStatus,
  *   submittedAt?: string,
  *   validatedAgainstSummaryLogId?: string,

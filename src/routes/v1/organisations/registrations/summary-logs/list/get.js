@@ -46,7 +46,11 @@ export const summaryLogsList = {
         summaryLogId: id,
         filename: summaryLog.file.name,
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
-        status: summaryLog.status
+        status: summaryLog.status,
+        ...(summaryLog.year !== undefined && { year: summaryLog.year }),
+        ...(summaryLog.accreditationId !== undefined && {
+          accreditationId: summaryLog.accreditationId
+        })
       }))
 
       logger.info({

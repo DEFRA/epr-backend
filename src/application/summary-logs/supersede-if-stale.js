@@ -32,10 +32,12 @@ export const supersedeIfStale = async ({
   version
 }) => {
   const currentLatest =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg(
+    await summaryLogsRepository.findLatestSubmittedForOrgReg({
       organisationId,
-      registrationId
-    )
+      registrationId,
+      year: summaryLog.year,
+      accreditationId: summaryLog.accreditationId
+    })
 
   const baseline = summaryLog.validatedAgainstSummaryLogId
   const current = currentLatest?.id ?? NO_PRIOR_SUBMISSION

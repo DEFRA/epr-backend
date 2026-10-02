@@ -6,11 +6,15 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  withoutYear
+} from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}', () => {
   setupAuthContext()
@@ -262,6 +266,72 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload).not.toHaveProperty('processingType')
       expect(payload).not.toHaveProperty('material')
       expect(payload).not.toHaveProperty('accreditationNumber')
+    })
+  })
+
+  describe('year and accreditationId in response', () => {
+    it('includes year and accreditationId when present', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: 'acc-1',
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
+      )
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.year).toBe(2026)
+      expect(payload.accreditationId).toBe('acc-1')
+    })
+
+    it('includes a null accreditationId for a registered-only accreditation', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null,
+          meta: { PROCESSING_TYPE: 'EXPORTER' }
+        })
+      )
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.accreditationId).toBeNull()
+    })
+
+    it('omits year and accreditationId for a legacy summary log carrying neither', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        partialMock(
+          withoutYear(
+            summaryLogFactory.validated({ organisationId, registrationId })
+          )
+        )
+      )
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        meta: { PROCESSING_TYPE: 'EXPORTER' }
+      })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload).not.toHaveProperty('year')
+      expect(payload).not.toHaveProperty('accreditationId')
     })
   })
 

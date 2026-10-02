@@ -10,8 +10,10 @@ import {
   formatS3Info,
   updateStatusBasedOnUpload
 } from './update-status-based-on-upload.js'
-
-import { uploadCompletedPayloadSchema } from './post.schema.js'
+import {
+  uploadCompletedPayloadSchema,
+  uploadCompletedYearParamsSchema
+} from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
@@ -23,29 +25,29 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  */
 
-export const summaryLogsUploadCompletedPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
+export const summaryLogsUploadCompletedYearPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{year}/{summaryLogId}/upload-completed'
 
 /**
- * Deprecated: superseded by the year-scoped callback route
- * (`summary-logs/{year}/{summaryLogId}/upload-completed`). Kept until every
- * consumer of the legacy create route has migrated (tracked separately). An
- * upload that started via the legacy create route never had a year, so this
- * summary log is stored without one — `validate.js` resolves the
- * registration's live accreditation itself, fresh, when validation runs.
+ * The callback for an upload that started via the year-scoped create route.
+ * `year` is carried on the path rather than a query string, since every
+ * upload reaching this route already knows it at create time. Which
+ * accreditation the upload belongs to isn't carried either — it's the
+ * registration's current live link, fetched here.
  */
-export const summaryLogsUploadCompleted = {
+export const summaryLogsUploadCompletedYear = {
   method: 'POST',
-  path: summaryLogsUploadCompletedPath,
+  path: summaryLogsUploadCompletedYearPath,
   options: {
     auth: false,
     validate: {
+      params: uploadCompletedYearParamsSchema,
       payload: uploadCompletedPayloadSchema
     }
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
@@ -62,7 +64,7 @@ export const summaryLogsUploadCompleted = {
       logger
     } = request
 
-    const { summaryLogId, organisationId, registrationId } = params
+    const { summaryLogId, organisationId, registrationId, year } = params
     const { summaryLogUpload } = payload.form
 
     try {
@@ -72,7 +74,7 @@ export const summaryLogsUploadCompleted = {
         summaryLogId,
         summaryLogUpload,
         logger,
-        { organisationId, registrationId, year: undefined }
+        { organisationId, registrationId, year }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })
@@ -100,7 +102,7 @@ export const summaryLogsUploadCompleted = {
 
       logger.error({
         err: error,
-        message: `Failure on ${summaryLogsUploadCompletedPath}`,
+        message: `Failure on ${summaryLogsUploadCompletedYearPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -113,7 +115,7 @@ export const summaryLogsUploadCompleted = {
       })
 
       throw Boom.badImplementation(
-        `Failure on ${summaryLogsUploadCompletedPath}`
+        `Failure on ${summaryLogsUploadCompletedYearPath}`
       )
     }
   }

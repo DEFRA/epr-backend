@@ -32,6 +32,14 @@
  */
 
 /**
+ * @typedef {Object} SummaryLogScope
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {number} [year] - Absent matches every year (today's behaviour)
+ * @property {string|null} [accreditationId] - `null` for registered-only
+ */
+
+/**
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
@@ -42,7 +50,7 @@
  * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
- * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
+ * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
