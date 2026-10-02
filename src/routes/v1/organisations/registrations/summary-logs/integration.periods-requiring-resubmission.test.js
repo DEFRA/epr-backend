@@ -451,6 +451,35 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ).toBe(1)
   })
 
+  it('flags a closed period when a load is re-dated out of it into an open period', async () => {
+    const env = await setupGateEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    const infoMessages = captureInfoMessages(env)
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-redated',
+      'file-redated',
+      createUploadData([
+        { rowId: 1001, tonnageReceived: 100, dateReceived: FEBRUARY_DATE }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+    expect(infoMessages()).toContainEqual(
+      expect.stringMatching(
+        /^Closed period 2025 monthly 1 .*\(summary log sl-redated, .*\) requires resubmission: reported data changed in /
+      )
+    )
+  })
+
   it('flags only the closed period whose reported figures changed', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',
