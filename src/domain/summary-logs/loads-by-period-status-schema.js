@@ -43,7 +43,7 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
  */
 
 /**
- * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[] }} LoadsByReportingPeriod
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange, closedPeriods: PeriodRef[], periodsRequiringResubmission?: PeriodRef[] }} LoadsByReportingPeriod
  */
 
 // Per-bucket cap on listed rows. The producer (period-status.js) truncates to
@@ -97,7 +97,10 @@ export const loadsByReportingPeriodSchema = Joi.object({
   // The closed (submitted) periods this upload added or adjusted loads in, which
   // drive resubmission detection at submit time. Optional with a default so logs
   // written before this field existed still validate on read.
-  closedPeriods: Joi.array().items(periodRefSchema).default([])
+  closedPeriods: Joi.array().items(periodRefSchema).default([]),
+  // No default: absent means not computed, and readers fall back on it. A
+  // default [] would read as nothing to resubmit.
+  periodsRequiringResubmission: Joi.array().items(periodRefSchema)
 })
 
 // Every bucket carries an empty rows list, matching the uniform populated
@@ -112,5 +115,6 @@ const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 export const emptyLoadsByReportingPeriod = () => ({
   openPeriodLoads: emptyChange(),
   closedPeriodLoads: emptyChange(),
-  closedPeriods: []
+  closedPeriods: [],
+  periodsRequiringResubmission: []
 })

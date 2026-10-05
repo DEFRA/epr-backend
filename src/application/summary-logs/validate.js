@@ -27,6 +27,7 @@ import {
   filterWasteBalanceRecords,
   resolveOverseasSitesContext
 } from './classify-and-persist.js'
+import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
@@ -541,7 +542,8 @@ const classifyAndPersistResult = async ({
   version,
   reportsService,
   organisationsRepository,
-  overseasSitesRepository
+  overseasSitesRepository,
+  resubmissionGate
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
@@ -578,7 +580,19 @@ const classifyAndPersistResult = async ({
   await persistValidationResult({
     issues,
     loads,
-    loadsByReportingPeriod,
+    loadsByReportingPeriod: await withPeriodsRequiringResubmission({
+      loadsByReportingPeriod,
+      periodicReports,
+      wasteRecords,
+      registration,
+      overseasSites,
+      summaryLog,
+      summaryLogId,
+      reportsService,
+      overseasSitesRepository,
+      summaryLogRowStatesRepository,
+      gate: resubmissionGate
+    }),
     meta,
     status,
     summaryLog,
@@ -599,7 +613,8 @@ const classifyAndPersistResult = async ({
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
- *   summaryLogExtractor: SummaryLogExtractor
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   resubmissionFigureGateEnabled?: boolean
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
  */
@@ -611,9 +626,11 @@ export const createSummaryLogsValidator = ({
   ledgerRepository,
   reportsService,
   overseasSitesRepository,
-  summaryLogExtractor
+  summaryLogExtractor,
+  resubmissionFigureGateEnabled = false
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
+  const resubmissionGate = { enabled: resubmissionFigureGateEnabled, logger }
 
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
@@ -681,7 +698,8 @@ export const createSummaryLogsValidator = ({
       version,
       reportsService,
       organisationsRepository,
-      overseasSitesRepository
+      overseasSitesRepository,
+      resubmissionGate
     })
 
     logger.info({
