@@ -408,7 +408,7 @@ const classifyAdjustedWasteRecord = ({
 
 /**
  * The closed (submitted) periods whose reports the added and adjusted records
- * touch, regardless of how each row counts towards the waste balance.
+ * touch.
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
