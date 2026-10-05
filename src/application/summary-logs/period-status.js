@@ -407,6 +407,51 @@ const classifyAdjustedWasteRecord = ({
 }
 
 /**
+ * The closed (submitted) periods whose reports the added and adjusted records
+ * touch, regardless of how each row counts towards the waste balance.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
+ * @param {Map<string, RecordChange>} params.recordChanges
+ * @param {Set<string>} params.submittedPeriods
+ * @param {Cadence} params.cadence
+ * @param {ProcessingTypeSchemas} params.tableSchemas
+ * @returns {PeriodRef[]}
+ */
+const closedPeriodsTouched = ({
+  wasteRecords,
+  submittedRowStatesByKey,
+  recordChanges,
+  submittedPeriods,
+  cadence,
+  tableSchemas
+}) => {
+  /** @type {Map<string, PeriodRef>} */
+  const closedPeriodsByKey = new Map()
+
+  for (const { record, tableName } of wasteRecords) {
+    const status = recordChangeFor(recordChanges, record)
+    const schema = tableSchemas[tableName]
+
+    if (status === RECORD_CHANGE.UNCHANGED || !schema) {
+      continue
+    }
+
+    closedPeriodRefsForRecord(
+      record,
+      status,
+      schema,
+      submittedRowStatesByKey,
+      submittedPeriods,
+      cadence
+    ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
+  }
+
+  return [...closedPeriodsByKey.values()]
+}
+
+/**
  * Classifies waste records by reporting period status (open/closed).
  *
  * Each record produces 0-2 fold entries which are then reduced into the
@@ -436,30 +481,16 @@ export const classifyByPeriodStatus = ({
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
-  /** @type {Map<string, PeriodRef>} */
-  const closedPeriodsByKey = new Map()
-
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
     const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (status === RECORD_CHANGE.UNCHANGED || !schema) {
-      continue
-    }
-
-    // Reports aggregate by date alone, so a row outside the accreditation
-    // window still changes the closed periods it moves between.
-    closedPeriodRefsForRecord(
-      record,
-      status,
-      schema,
-      submittedRowStatesByKey,
-      submittedPeriods,
-      cadence
-    ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
-
-    if (outcome === ROW_OUTCOME.IGNORED) {
+    if (
+      outcome === ROW_OUTCOME.IGNORED ||
+      status === RECORD_CHANGE.UNCHANGED ||
+      !schema
+    ) {
       continue
     }
 
@@ -501,6 +532,13 @@ export const classifyByPeriodStatus = ({
 
   return {
     ...reduceEntries(entries),
-    closedPeriods: [...closedPeriodsByKey.values()]
+    closedPeriods: closedPeriodsTouched({
+      wasteRecords,
+      submittedRowStatesByKey,
+      recordChanges,
+      submittedPeriods,
+      cadence,
+      tableSchemas
+    })
   }
 }
