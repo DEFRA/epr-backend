@@ -480,6 +480,32 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
   })
 
+  it('flags a closed period when a load is re-dated out of it to before the accreditation window', async () => {
+    const env = await setupGateEnvironment({
+      processingType: 'reprocessor',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    await submitAndCloseJanuary(env)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-pre-accreditation',
+      'file-pre-accreditation',
+      createUploadData([
+        {
+          rowId: 1001,
+          tonnageReceived: 100,
+          dateReceived: '2024-12-15T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      JANUARY_2025
+    ])
+  })
+
   it('flags only the closed period whose reported figures changed', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',
