@@ -19,6 +19,8 @@ import {
 
 import { devSummaryLogsSubmitPath } from './post.js'
 
+const ACCREDITED_YEAR = 2025
+
 const DEV_ENDPOINTS_ON = { featureFlags: { devEndpoints: true } }
 
 const META = {
@@ -26,6 +28,9 @@ const META = {
   MATERIAL: 'Paper_and_board',
   ACCREDITATION_NUMBER: 'ACC-123'
 }
+
+const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
+  META
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
 
@@ -52,9 +57,10 @@ const payloadWithReceived = (rows) => ({
 /**
  * @param {string} organisationId
  * @param {string} registrationId
+ * @param {number} year
  */
-const submitUrl = (organisationId, registrationId) =>
-  `/v1/dev/organisations/${organisationId}/registrations/${registrationId}/summary-logs`
+const submitUrl = (organisationId, registrationId, year) =>
+  `/v1/dev/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${year}`
 
 const createEnvironment = () =>
   setupWasteBalanceIntegrationEnvironment({
@@ -66,11 +72,12 @@ const createEnvironment = () =>
 /**
  * @param {Environment} env
  * @param {object} payload
+ * @param {{year?: number}} [scope]
  */
-const submit = (env, payload) =>
+const submit = (env, payload, { year = ACCREDITED_YEAR } = {}) =>
   env.server.inject({
     method: 'POST',
-    url: submitUrl(env.organisationId, env.registrationId),
+    url: submitUrl(env.organisationId, env.registrationId, year),
     payload,
     ...asOperator()
   })
@@ -152,13 +159,115 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
+  it('stores the year given in the URL, and resolves accreditationId from the payload', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      { year: ACCREDITED_YEAR }
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
+    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+  })
+
+  it('uses the registered-only template when the payload carries no ACCREDITATION_NUMBER, but still stamps the registration accreditation', async () => {
+    const env = await createEnvironment()
+
+    const response = await env.server.inject({
+      method: 'POST',
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
+      payload: {
+        meta: REGISTERED_ONLY_META,
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            headers: REPROCESSOR_RECEIVED_HEADERS,
+            rows: [
+              createReprocessorReceivedRowValues({
+                rowId: '1001',
+                tonnageReceived: 100,
+                dateReceived: DATE_RECEIVED
+              })
+            ]
+          }
+        }
+      },
+      ...asOperator()
+    })
+
+    // The registration's accreditation covers the whole of ACCREDITED_YEAR,
+    // so there was no day in it a registered-only upload could have been
+    // for — validateProcessingType reports that mismatch, and the
+    // registered-only template uses a different table shape from the
+    // fixture above besides, so this always lands on invalid. The
+    // assertions below are only about which template and accreditationId
+    // were resolved.
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+  })
+
+  it('stores a null accreditationId for a registration with no accreditation', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'reprocessor',
+      reprocessingType: 'input',
+      accredited: false,
+      config: DEV_ENDPOINTS_ON
+    })
+
+    const response = await env.server.inject({
+      method: 'POST',
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
+      payload: {
+        meta: REGISTERED_ONLY_META,
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            headers: REPROCESSOR_RECEIVED_HEADERS,
+            rows: [
+              createReprocessorReceivedRowValues({
+                rowId: '1001',
+                tonnageReceived: 100,
+                dateReceived: DATE_RECEIVED
+              })
+            ]
+          }
+        }
+      },
+      ...asOperator()
+    })
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationId).toBeNull()
+  })
+
+  it('returns 422 for an invalid year', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      { year: /** @type {*} */ ('not-a-year') }
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
   it('answers with a conflict when another submission for the registration is in progress', async () => {
     const env = await createEnvironment()
     await env.summaryLogsRepository.insert(
       'another-submission',
       summaryLogFactory.submitting({
         organisationId: env.organisationId,
-        registrationId: env.registrationId
+        registrationId: env.registrationId,
+        year: ACCREDITED_YEAR,
+        accreditationId: env.accreditationId
       })
     )
 
@@ -233,7 +342,9 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
         'landed-meanwhile',
         summaryLogFactory.submitted({
           organisationId: env.organisationId,
-          registrationId: env.registrationId
+          registrationId: env.registrationId,
+          year: ACCREDITED_YEAR,
+          accreditationId: env.accreditationId
         })
       )
     )
@@ -343,7 +454,11 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await env.server.inject({
       method: 'POST',
-      url: submitUrl(env.organisationId, 'no-such-registration'),
+      url: submitUrl(
+        env.organisationId,
+        'no-such-registration',
+        ACCREDITED_YEAR
+      ),
       payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
       ...asOperator()
     })
@@ -374,7 +489,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await env.server.inject({
       method: 'POST',
-      url: submitUrl(env.organisationId, env.registrationId),
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
       payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
     })
 
@@ -386,7 +501,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const response = await env.server.inject({
       method: 'POST',
-      url: submitUrl(env.organisationId, env.registrationId),
+      url: submitUrl(env.organisationId, env.registrationId, ACCREDITED_YEAR),
       payload: payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
       ...asRegulator()
     })

@@ -136,6 +136,69 @@ describe('MongoDB summary logs repository', () => {
     })
   })
 
+  describe('legacy index migration', () => {
+    it('creates the year-scoped lock before dropping only the pre-year-scoping lock', async () => {
+      const calls = []
+      const createdIndexes = []
+
+      const mockDb = createMockDb({
+        dropIndex: async (indexName) => {
+          calls.push(`drop:${indexName}`)
+        },
+        createIndex: async (fields, options) => {
+          calls.push(`create:${options?.name}`)
+          createdIndexes.push({ fields, options })
+        }
+      })
+
+      await createSummaryLogsRepository(mockDb, mockS3Config)
+
+      expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
+        'drop:organisationId_1_registrationId_1'
+      ])
+      expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
+        calls.indexOf('drop:organisationId_1_registrationId_1')
+      )
+      const lockIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'summary_log_submitting_lock'
+      )
+      expect(lockIndex.fields).toStrictEqual({
+        organisationId: 1,
+        registrationId: 1,
+        year: 1,
+        accreditationId: 1
+      })
+    })
+
+    it.each(['IndexNotFound', 'NamespaceNotFound'])(
+      'ignores %s when dropping the legacy lock index',
+      async (codeName) => {
+        const mockDb = createMockDb({
+          dropIndex: async () => {
+            throw createMongoError('index missing', { codeName })
+          },
+          createIndex: async () => {}
+        })
+
+        await expect(
+          createSummaryLogsRepository(mockDb, mockS3Config)
+        ).resolves.toBeDefined()
+      }
+    )
+
+    it('re-throws other errors from dropIndex', async () => {
+      const mockDb = createMockDb({
+        dropIndex: async () => {
+          throw createMongoError('Connection timeout', { code: 'ETIMEOUT' })
+        }
+      })
+
+      await expect(
+        createSummaryLogsRepository(mockDb, mockS3Config)
+      ).rejects.toThrow('Connection timeout')
+    })
+  })
+
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = createMockDb({

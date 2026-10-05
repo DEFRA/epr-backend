@@ -127,8 +127,14 @@ const prepareRowsForTransformation = (parsedData) => {
   }
 }
 
+/**
+ * The accreditation a submit writes to: the summary log's own
+ * `accreditationId` when it carries one (including `null`, which means
+ * registered-only), otherwise (a legacy summary log, from before this field
+ * existed) the registration's current link.
+ */
 const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
-  if (summaryLog.accreditationId) {
+  if (summaryLog.accreditationId !== undefined) {
     return summaryLog.accreditationId
   }
 

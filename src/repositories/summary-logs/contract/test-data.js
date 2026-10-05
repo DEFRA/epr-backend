@@ -4,6 +4,7 @@ import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 
 export const generateFileId = () => `file-${randomUUID()}`
 
@@ -63,12 +64,27 @@ const createFactory = (status, getDefaults = () => ({})) => {
       status,
       expiresAt: calculateExpiresAt(status),
       createdAt: DEFAULT_CREATED_AT,
+      year: currentUtcYear(),
+      accreditationId: null,
       ...defaults,
       ...(file && { file }),
       ...rest
     }
   }
 }
+
+/**
+ * Strips `year`/`accreditationId` from a factory-built summary log, so the
+ * result has neither key at all — matching a real pre-migration document,
+ * which was inserted before either field existed. Setting the keys to
+ * `undefined` instead would not do this: MongoDB stores an `undefined`
+ * object property as BSON `null`, not as an absent field.
+ *
+ * @template {{year?: number, accreditationId?: string | null}} T
+ * @param {T} summaryLog
+ * @returns {Omit<T, 'year' | 'accreditationId'>}
+ */
+export const withoutYear = ({ year: _y, accreditationId: _a, ...rest }) => rest
 
 export const summaryLogFactory = {
   /**
@@ -135,6 +151,8 @@ export const summaryLogFactory = {
       file,
       createdAt: DEFAULT_CREATED_AT,
       submittedAt: DEFAULT_SUBMITTED_AT,
+      year: currentUtcYear(),
+      accreditationId: null,
       ...rest
     }
   },
