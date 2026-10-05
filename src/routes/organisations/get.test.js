@@ -91,6 +91,11 @@ const exporter = (overrides = {}) =>
     ...overrides
   })
 
+const reprocessorAt = (address) => {
+  const registration = reprocessor()
+  return { ...registration, site: { ...registration.site, address } }
+}
+
 const approvedSiteView = {
   name: 'Beta Reprocessor',
   address: {
@@ -247,6 +252,27 @@ describe('organisation view routes', () => {
       ).toEqual(['2027'])
     })
 
+    it('serves the site address as submitted when ingest could not find its town', async () => {
+      const fullAddress =
+        '7 Glass site, Unit 4, Industrial Estate, London, SW2A 0AA'
+      const registrations = await registrationsOf(
+        buildOrganisation({
+          registrations: [
+            reprocessorAt({
+              line1: '7 Glass site',
+              postcode: 'SW2A 0AA',
+              fullAddress,
+              country: 'UK'
+            })
+          ]
+        })
+      )
+
+      expect(registrations[REPROCESSOR_NUMBER].site).toEqual({
+        address: { fullAddress }
+      })
+    })
+
     it('gives an exporter with no overseas sites an empty map', async () => {
       const registrations = await registrationsOf(
         buildOrganisation({
@@ -328,6 +354,26 @@ describe('organisation view routes', () => {
         )
 
         expect(registrations).toEqual({})
+      })
+
+      it('leaves out a reprocessor whose site address has neither its parts nor the submitted address', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessorAt({ line1: '7 Glass site' })]
+          })
+        )
+
+        expect(registrations).toEqual({})
+      })
+
+      it('leaves out every registration that shares its number with another', async () => {
+        const registrations = await registrationsOf(
+          buildOrganisation({
+            registrations: [reprocessor(), reprocessor(), exporter()]
+          })
+        )
+
+        expect(Object.keys(registrations)).toEqual([EXPORTER_NUMBER])
       })
 
       it('leaves out an accreditation without a number', async () => {

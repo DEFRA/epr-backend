@@ -75,6 +75,17 @@ export const accreditationViewSchema = Joi.alternatives().try(
   exporterAccreditationSchema
 )
 
+const ukAddressSchema = Joi.alternatives().try(
+  Joi.object({
+    line1: Joi.string().required(),
+    line2: Joi.string(),
+    town: Joi.string().required(),
+    county: Joi.string(),
+    postcode: Joi.string().required()
+  }),
+  Joi.object({ fullAddress: Joi.string().required() })
+)
+
 const registrationCommon = {
   status: Joi.string()
     .valid(...SERVED_REGISTRATION_STATUSES)
@@ -94,13 +105,7 @@ export const registrationViewSchema = Joi.alternatives().try(
       .valid(...Object.values(REPROCESSING_TYPE))
       .required(),
     site: Joi.object({
-      address: Joi.object({
-        line1: Joi.string(),
-        line2: Joi.string(),
-        town: Joi.string(),
-        county: Joi.string(),
-        postcode: Joi.string()
-      }).required()
+      address: ukAddressSchema.required()
     }).required(),
     accreditations: keyedByYear(reprocessorAccreditationSchema)
   }),

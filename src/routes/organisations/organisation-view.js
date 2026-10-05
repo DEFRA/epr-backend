@@ -9,22 +9,30 @@ import {
   resolveMaterial
 } from '#domain/organisations/registration-utils.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Material, Organisation, OrganisationStatus, RegulatorValue, ReprocessingType } from '#domain/organisations/model.js' */
 /** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
 
-/** @type {readonly RegistrationStatus[]} */
+/**
+ * @typedef {Extract<RegistrationStatus, 'approved' | 'cancelled'>} ServedRegistrationStatus
+ */
+
+/**
+ * @typedef {Extract<AccreditationStatus, 'approved' | 'suspended' | 'cancelled'>} ServedAccreditationStatus
+ */
+
+/** @type {readonly ServedRegistrationStatus[]} */
 export const SERVED_REGISTRATION_STATUSES = Object.freeze([
   REGISTRATION_STATUS.APPROVED,
   REGISTRATION_STATUS.CANCELLED
 ])
 
-/** @type {readonly AccreditationStatus[]} */
+/** @type {readonly ServedAccreditationStatus[]} */
 export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
   ACCREDITATION_STATUS.APPROVED,
   ACCREDITATION_STATUS.SUSPENDED,
   ACCREDITATION_STATUS.CANCELLED
 ])
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
@@ -33,13 +41,36 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
  */
 
 /**
- * @typedef {{ code: string }} RegulatorView
+ * @typedef {{ code: RegulatorValue }} RegulatorView
+ */
+
+/**
+ * The parsed address, or the address as submitted when it could not be parsed.
+ *
+ * @typedef {{
+ *   line1: string
+ *   line2?: string
+ *   town: string
+ *   county?: string
+ *   postcode: string
+ * } | { fullAddress: string }} UkAddressView
+ */
+
+/**
+ * @typedef {{
+ *   line1: string
+ *   line2?: string
+ *   townOrCity: string
+ *   stateOrRegion?: string
+ *   postcode?: string
+ *   country: string
+ * }} OverseasAddressView
  */
 
 /**
  * @typedef {{
  *   name: string
- *   address: Record<string, string>
+ *   address: OverseasAddressView
  *   coordinates?: string
  * }} OverseasSiteView
  */
@@ -51,7 +82,7 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
 /**
  * @typedef {{
  *   accreditationNumber: string
- *   status: string
+ *   status: ServedAccreditationStatus
  * }} AccreditationView
  */
 
@@ -63,9 +94,9 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
 
 /**
  * @typedef {{
- *   status: string
+ *   status: ServedRegistrationStatus
  *   validFrom: string
- *   material: string
+ *   material: Material
  *   submittedToRegulator: RegulatorView
  * }} RegistrationViewCommon
  */
@@ -73,8 +104,8 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
 /**
  * @typedef {RegistrationViewCommon & {
  *   wasteProcessingType: 'reprocessor'
- *   reprocessingType: string
- *   site: { address: Record<string, string> }
+ *   reprocessingType: ReprocessingType
+ *   site: { address: UkAddressView }
  *   accreditations: Record<string, AccreditationView>
  * }} ReprocessorRegistrationView
  */
@@ -96,7 +127,7 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
  *   organisationNumber: number
  *   name: string
  *   tradingName?: string
- *   status: string
+ *   status: OrganisationStatus
  *   submittedToRegulator: RegulatorView
  *   linkedDefraOrganisation?: {
  *     defraOrganisation: { id: string, name: string }
@@ -135,8 +166,17 @@ export function toOrganisationView(organisation, overseasSitesById, onDrop) {
         linkedBy: { email: linkedDefraOrganisation.linkedBy.email }
       }
     }),
-    registrations: keyedViews(organisation.registrations, (registration) =>
-      toRegistrationEntry(registration, organisation, overseasSitesById, onDrop)
+    registrations: keyedViews(
+      organisation.registrations,
+      (registration) =>
+        toRegistrationEntry(
+          registration,
+          organisation,
+          overseasSitesById,
+          onDrop
+        ),
+      'Registration number',
+      onDrop
     )
   }
 }
@@ -154,31 +194,32 @@ function toRegistrationEntry(
   overseasSitesById,
   onDrop
 ) {
-  const { registrationNumber } = registration
+  const { registrationNumber, status, validFrom } = registration
   if (!registrationNumber) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  if (!SERVED_REGISTRATION_STATUSES.includes(registration.status)) {
-    onDrop(
-      `Registration ${registrationNumber} has status ${registration.status}`
-    )
+  if (!isOneOf(SERVED_REGISTRATION_STATUSES, status)) {
+    onDrop(`Registration ${registrationNumber} has status ${status}`)
     return null
   }
-  if (!registration.validFrom) {
+  if (!validFrom) {
     onDrop(`Registration ${registrationNumber} has no validFrom`)
     return null
   }
 
+  /** @type {RegistrationViewCommon} */
   const common = {
-    status: registration.status,
-    validFrom: registration.validFrom,
+    status,
+    validFrom,
     material: resolveMaterial(registration),
     submittedToRegulator: { code: registration.submittedToRegulator }
   }
   const accreditations = keyedViews(
     accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, onDrop)
+    (accreditation) => toAccreditationEntry(accreditation, onDrop),
+    `Registration ${registrationNumber} accreditation year`,
+    onDrop
   )
 
   if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
@@ -203,6 +244,11 @@ function toRegistrationEntry(
     onDrop(`Registration ${registrationNumber} has no reprocessing type`)
     return null
   }
+  const address = toUkAddress(registration.site.address)
+  if (!address) {
+    onDrop(`Registration ${registrationNumber} has no usable site address`)
+    return null
+  }
 
   return [
     registrationNumber,
@@ -210,7 +256,7 @@ function toRegistrationEntry(
       ...common,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       reprocessingType,
-      site: { address: toUkAddress(registration.site.address) },
+      site: { address },
       accreditations
     }
   ]
@@ -237,15 +283,13 @@ function withAccreditedSites(accreditations, overseasSites) {
  * @returns {[string, AccreditationView] | null}
  */
 function toAccreditationEntry(accreditation, onDrop) {
-  const { accreditationNumber } = accreditation
+  const { accreditationNumber, status } = accreditation
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  if (!SERVED_ACCREDITATION_STATUSES.includes(accreditation.status)) {
-    onDrop(
-      `Accreditation ${accreditationNumber} has status ${accreditation.status}`
-    )
+  if (!isOneOf(SERVED_ACCREDITATION_STATUSES, status)) {
+    onDrop(`Accreditation ${accreditationNumber} has status ${status}`)
     return null
   }
   if (!accreditation.validFrom) {
@@ -255,7 +299,7 @@ function toAccreditationEntry(accreditation, onDrop) {
 
   return [
     String(deriveAccreditationYear(accreditation)),
-    { accreditationNumber, status: accreditation.status }
+    { accreditationNumber, status }
   ]
 }
 
@@ -286,9 +330,15 @@ function toOverseasSites(registration, overseasSitesById, onDrop) {
  * @returns {OverseasSiteView}
  */
 function toSiteView(site) {
+  const { line1, line2, townOrCity, stateOrRegion, postcode } = site.address
   return {
     name: site.name,
-    address: omitNullish({ ...site.address, country: site.country }),
+    address: {
+      line1,
+      townOrCity,
+      country: site.country,
+      ...omitNullish({ line2, stateOrRegion, postcode })
+    },
     ...omitNullish({ coordinates: site.coordinates })
   }
 }
@@ -307,22 +357,51 @@ function toAccreditedSiteView(site) {
 }
 
 /**
- * @param {Record<string, string | undefined>} address
+ * Ingest keeps the submitted string as `fullAddress` when it cannot find the
+ * town.
+ *
+ * @param {RegistrationAddress} address
+ * @returns {UkAddressView | null}
  */
-function toUkAddress({ line1, line2, town, county, postcode }) {
-  return omitNullish({ line1, line2, town, county, postcode })
+function toUkAddress({ line1, line2, town, county, postcode, fullAddress }) {
+  if (line1 && town && postcode) {
+    return { line1, town, postcode, ...omitNullish({ line2, county }) }
+  }
+  if (fullAddress) {
+    return { fullAddress }
+  }
+  return null
 }
 
 /**
+ * Records sharing a key are all dropped, since the view cannot tell which is
+ * right.
+ *
  * @template T, V
  * @param {T[]} items
  * @param {(item: T) => [string, V] | null} toEntry
+ * @param {string} keyName
+ * @param {OnDrop} onDrop
  * @returns {Record<string, V>}
  */
-function keyedViews(items, toEntry) {
-  return Object.fromEntries(
-    items.map(toEntry).filter((entry) => entry !== null)
-  )
+function keyedViews(items, toEntry, keyName, onDrop) {
+  const entries = items.map(toEntry).filter((entry) => entry !== null)
+  const keys = entries.map(([key]) => key)
+  const clashes = new Set(keys.filter((key, i) => keys.indexOf(key) !== i))
+  for (const key of clashes) {
+    onDrop(`${keyName} ${key} is shared by more than one record`)
+  }
+  return Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+}
+
+/**
+ * @template {string} T
+ * @param {readonly T[]} values
+ * @param {string} value
+ * @returns {value is T}
+ */
+function isOneOf(values, value) {
+  return /** @type {readonly string[]} */ (values).includes(value)
 }
 
 /**

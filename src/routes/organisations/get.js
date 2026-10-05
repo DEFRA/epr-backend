@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toOrganisationView } from './organisation-view.js'
 import {
   accreditationViewSchema,
@@ -17,7 +18,7 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationView } from './organisation-view.js' */
+/** @import { ExporterRegistrationView, OrganisationView } from './organisation-view.js' */
 
 const organisationPath = '/organisations/{organisationNumber}'
 const registrationsPath = `${organisationPath}/registrations`
@@ -89,16 +90,28 @@ const accreditation = (view, params) =>
 /**
  * Only an exporter has overseas sites.
  *
- * @template T
- * @param {object | { overseasSites: Record<string, T> }} resource
- * @returns {Record<string, T>}
+ * @param {OrganisationView} view
+ * @param {ViewRequest['params']} params
+ * @returns {ExporterRegistrationView}
  */
-const exporterSites = (resource) => {
-  if (!('overseasSites' in resource)) {
+const exporterRegistration = (view, params) => {
+  const registrationView = registration(view, params)
+  if (registrationView.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER) {
     throw Boom.notFound('Overseas sites not found')
   }
-  return resource.overseasSites
+  return registrationView
 }
+
+/**
+ * @param {OrganisationView} view
+ * @param {ViewRequest['params']} params
+ */
+const exporterAccreditation = (view, params) =>
+  found(
+    exporterRegistration(view, params).accreditations,
+    params.year,
+    'Accreditation'
+  )
 
 export const organisationViewGet = viewRoute(
   organisationPath,
@@ -122,7 +135,7 @@ export const registrationOverseasSitesViewGet = viewRoute(
   registrationSitesPath,
   overseasSitesViewResponseSchema,
   (view, p) => ({
-    overseasSites: exporterSites(registration(view, p))
+    overseasSites: exporterRegistration(view, p).overseasSites
   })
 )
 
@@ -130,7 +143,7 @@ export const registrationOverseasSiteViewGet = viewRoute(
   `${registrationSitesPath}/{orsId}`,
   overseasSiteViewSchema,
   (view, p) =>
-    found(exporterSites(registration(view, p)), p.orsId, 'Overseas site')
+    found(exporterRegistration(view, p).overseasSites, p.orsId, 'Overseas site')
 )
 
 export const accreditationsViewGet = viewRoute(
@@ -149,7 +162,7 @@ export const accreditationOverseasSitesViewGet = viewRoute(
   accreditationSitesPath,
   accreditedOverseasSitesViewResponseSchema,
   (view, p) => ({
-    overseasSites: exporterSites(accreditation(view, p))
+    overseasSites: exporterAccreditation(view, p).overseasSites
   })
 )
 
@@ -157,7 +170,11 @@ export const accreditationOverseasSiteViewGet = viewRoute(
   `${accreditationSitesPath}/{orsId}`,
   accreditedOverseasSiteViewSchema,
   (view, p) =>
-    found(exporterSites(accreditation(view, p)), p.orsId, 'Overseas site')
+    found(
+      exporterAccreditation(view, p).overseasSites,
+      p.orsId,
+      'Overseas site'
+    )
 )
 
 /**
