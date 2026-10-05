@@ -1,5 +1,8 @@
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import {
+  emptyLoadsByReportingPeriod,
+  loadsByReportingPeriodSchema
+} from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 import { summaryLogResponseSchema } from './response.schema.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
@@ -42,6 +45,38 @@ describe('summaryLogResponseSchema', () => {
       })
 
       expect(error).toBeUndefined()
+    })
+  })
+
+  describe('loadsByReportingPeriod.closedPeriods', () => {
+    const closedPeriods = () =>
+      loadsByReportingPeriodSchema.extract('closedPeriods')
+
+    it('is documented as deprecated in favour of periodsRequiringResubmission', () => {
+      expect(closedPeriods().describe()).toMatchObject({
+        flags: {
+          description: expect.stringMatching(
+            /^Deprecated: use periodsRequiringResubmission\./
+          )
+        },
+        metas: [{ deprecated: true }]
+      })
+    })
+
+    it('is still returned for a validated summary log', () => {
+      const period = { year: 2025, cadence: 'monthly', period: 1 }
+
+      const { error, value } = summaryLogResponseSchema.validate({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'EXPORTER',
+        loadsByReportingPeriod: {
+          ...emptyLoadsByReportingPeriod(),
+          closedPeriods: [period]
+        }
+      })
+
+      expect(error).toBeUndefined()
+      expect(value.loadsByReportingPeriod.closedPeriods).toEqual([period])
     })
   })
 })
