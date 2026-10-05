@@ -500,16 +500,6 @@ describe('organisation view routes', () => {
       [
         'an unknown accreditation year',
         `${reprocessorPath}/accreditations/2027`
-      ],
-      ['an unknown overseas site', `${exporterPath}/overseas-sites/099`],
-      [
-        'an unknown accredited overseas site',
-        `${exporterPath}/accreditations/2026/overseas-sites/099`
-      ],
-      ["a reprocessor's overseas sites", `${reprocessorPath}/overseas-sites`],
-      [
-        "a reprocessor accreditation's overseas sites",
-        `${reprocessorPath}/accreditations/2026/overseas-sites`
       ]
     ])('returns 404 for %s', async (_, url) => {
       const response = await get(url)
@@ -536,20 +526,6 @@ describe('organisation view routes', () => {
       })
     })
 
-    it("returns a registration's overseas sites", async () => {
-      const response = await get(`${exporterPath}/overseas-sites`)
-
-      expect(body(response)).toEqual({
-        overseasSites: { '001': approvedSiteView, '002': pendingSiteView }
-      })
-    })
-
-    it('returns one overseas site by its ORS id', async () => {
-      const response = await get(`${exporterPath}/overseas-sites/002`)
-
-      expect(body(response)).toEqual(pendingSiteView)
-    })
-
     it("returns a registration's accreditations keyed by year", async () => {
       const response = await get(`${reprocessorPath}/accreditations`)
 
@@ -563,35 +539,16 @@ describe('organisation view routes', () => {
       })
     })
 
-    it('returns one accreditation by its year', async () => {
+    it('returns one accreditation by its year, with its overseas sites embedded', async () => {
       const response = await get(`${exporterPath}/accreditations/2026`)
 
-      expect(body(response)).toMatchObject({
-        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
-      })
-    })
-
-    it("returns an accreditation's overseas sites", async () => {
-      const response = await get(
-        `${exporterPath}/accreditations/2026/overseas-sites`
-      )
-
       expect(body(response)).toEqual({
+        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+        status: 'approved',
         overseasSites: {
           '001': { status: 'approved', approvedOn: '2026-01-01' },
           '002': { status: 'pending' }
         }
-      })
-    })
-
-    it('returns one accredited overseas site by its ORS id', async () => {
-      const response = await get(
-        `${exporterPath}/accreditations/2026/overseas-sites/001`
-      )
-
-      expect(body(response)).toEqual({
-        status: 'approved',
-        approvedOn: '2026-01-01'
       })
     })
   })

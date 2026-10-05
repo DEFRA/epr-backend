@@ -22,7 +22,7 @@ const orsIdKey = Joi.string().pattern(/^\d{3}$/)
 
 const isoDate = Joi.string().isoDate()
 
-export const overseasSiteViewSchema = Joi.object({
+const overseasSiteViewSchema = Joi.object({
   name: Joi.string().required(),
   address: Joi.object({
     line1: Joi.string().required(),
@@ -35,11 +35,11 @@ export const overseasSiteViewSchema = Joi.object({
   coordinates: Joi.string()
 })
 
-export const overseasSitesViewSchema = Joi.object()
+const overseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, overseasSiteViewSchema)
   .required()
 
-export const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
+const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
   Joi.object({ status: Joi.string().valid('pending').required() }),
   Joi.object({
     status: Joi.string().valid('approved').required(),
@@ -47,7 +47,7 @@ export const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
   })
 )
 
-export const accreditedOverseasSitesViewSchema = Joi.object()
+const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
@@ -150,11 +150,3 @@ export const accreditationsViewResponseSchema = Joi.alternatives().try(
   Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) }),
   Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) })
 )
-
-export const overseasSitesViewResponseSchema = Joi.object({
-  overseasSites: overseasSitesViewSchema
-})
-
-export const accreditedOverseasSitesViewResponseSchema = Joi.object({
-  overseasSites: accreditedOverseasSitesViewSchema
-})

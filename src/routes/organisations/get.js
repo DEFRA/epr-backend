@@ -2,37 +2,29 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toOrganisationView } from './organisation-view.js'
 import {
   accreditationViewSchema,
   accreditationsViewResponseSchema,
-  accreditedOverseasSiteViewSchema,
-  accreditedOverseasSitesViewResponseSchema,
   organisationViewSchema,
-  overseasSiteViewSchema,
-  overseasSitesViewResponseSchema,
   registrationViewSchema,
   registrationsViewResponseSchema
 } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { ExporterRegistrationView, OrganisationView } from './organisation-view.js' */
+/** @import { OrganisationView } from './organisation-view.js' */
 
 const organisationPath = '/organisations/{organisationNumber}'
 const registrationsPath = `${organisationPath}/registrations`
 const registrationPath = `${registrationsPath}/{registrationNumber}`
-const registrationSitesPath = `${registrationPath}/overseas-sites`
 const accreditationsPath = `${registrationPath}/accreditations`
 const accreditationPath = `${accreditationsPath}/{year}`
-const accreditationSitesPath = `${accreditationPath}/overseas-sites`
 
 const pathParams = {
   organisationNumber: Joi.number().integer().positive().required(),
   registrationNumber: Joi.string(),
-  year: Joi.string().pattern(/^\d{4}$/),
-  orsId: Joi.string().pattern(/^\d{3}$/)
+  year: Joi.string().pattern(/^\d{4}$/)
 }
 
 /**
@@ -41,8 +33,7 @@ const pathParams = {
  *   params: {
  *     organisationNumber: number,
  *     registrationNumber: string,
- *     year: string,
- *     orsId: string
+ *     year: string
  *   }
  * }} ViewRequest
  *
@@ -87,32 +78,6 @@ const registration = (view, { registrationNumber }) =>
 const accreditation = (view, params) =>
   found(registration(view, params).accreditations, params.year, 'Accreditation')
 
-/**
- * Only an exporter has overseas sites.
- *
- * @param {OrganisationView} view
- * @param {ViewRequest['params']} params
- * @returns {ExporterRegistrationView}
- */
-const exporterRegistration = (view, params) => {
-  const registrationView = registration(view, params)
-  if (registrationView.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER) {
-    throw Boom.notFound('Overseas sites not found')
-  }
-  return registrationView
-}
-
-/**
- * @param {OrganisationView} view
- * @param {ViewRequest['params']} params
- */
-const exporterAccreditation = (view, params) =>
-  found(
-    exporterRegistration(view, params).accreditations,
-    params.year,
-    'Accreditation'
-  )
-
 export const organisationViewGet = viewRoute(
   organisationPath,
   organisationViewSchema,
@@ -131,21 +96,6 @@ export const registrationViewGet = viewRoute(
   registration
 )
 
-export const registrationOverseasSitesViewGet = viewRoute(
-  registrationSitesPath,
-  overseasSitesViewResponseSchema,
-  (view, p) => ({
-    overseasSites: exporterRegistration(view, p).overseasSites
-  })
-)
-
-export const registrationOverseasSiteViewGet = viewRoute(
-  `${registrationSitesPath}/{orsId}`,
-  overseasSiteViewSchema,
-  (view, p) =>
-    found(exporterRegistration(view, p).overseasSites, p.orsId, 'Overseas site')
-)
-
 export const accreditationsViewGet = viewRoute(
   accreditationsPath,
   accreditationsViewResponseSchema,
@@ -156,25 +106,6 @@ export const accreditationViewGet = viewRoute(
   accreditationPath,
   accreditationViewSchema,
   accreditation
-)
-
-export const accreditationOverseasSitesViewGet = viewRoute(
-  accreditationSitesPath,
-  accreditedOverseasSitesViewResponseSchema,
-  (view, p) => ({
-    overseasSites: exporterAccreditation(view, p).overseasSites
-  })
-)
-
-export const accreditationOverseasSiteViewGet = viewRoute(
-  `${accreditationSitesPath}/{orsId}`,
-  accreditedOverseasSiteViewSchema,
-  (view, p) =>
-    found(
-      exporterAccreditation(view, p).overseasSites,
-      p.orsId,
-      'Overseas site'
-    )
 )
 
 /**
