@@ -5,13 +5,21 @@ import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
 const MIN_YEAR = 2024
 const MAX_YEAR = 2100
 
+export const yearSchema = Joi.number()
+  .integer()
+  .min(MIN_YEAR)
+  .max(MAX_YEAR)
+  .required()
+
+export const submissionNumberSchema = Joi.number().integer().min(1).required()
+
 export const periodParamsSchema = Joi.object({
   organisationId: Joi.string().required(),
   registrationId: Joi.string().required(),
-  year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
+  year: yearSchema,
   cadence: cadenceSchema,
   period: periodSchema,
-  submissionNumber: Joi.number().integer().min(1).required()
+  submissionNumber: submissionNumberSchema
 })
 
 /**
