@@ -369,8 +369,6 @@ const classifyAdjustedWasteRecord = ({
     submittedPeriods,
     cadence
   )
-  // An ignored row's open-period date lies outside the accreditation, so that
-  // side moves neither the balance nor a submitted report.
   const newPeriod =
     outcome === ROW_OUTCOME.IGNORED && newSidePeriod === PERIOD_STATUS.OPEN
       ? null
@@ -464,8 +462,8 @@ const closedPeriodsTouched = ({
  * @param {{ submittedRowStatesByKey: Map<string, WasteRecordState>, submittedPeriods: Set<string>, cadence: Cadence }} periodContext
  * @returns {schema is TableSchema}
  */
-const isListedOnCheckPage = (
-  wasteRecord,
+const contributesLoadLegs = (
+  { record, outcome },
   status,
   schema,
   { submittedRowStatesByKey, submittedPeriods, cadence }
@@ -473,12 +471,16 @@ const isListedOnCheckPage = (
   if (status === RECORD_CHANGE.UNCHANGED || !schema) {
     return false
   }
-  if (wasteRecord.outcome !== ROW_OUTCOME.IGNORED) {
+  if (outcome !== ROW_OUTCOME.IGNORED) {
+    return true
+  }
+  const existing = submittedRowStatesByKey.get(`${record.type}:${record.rowId}`)
+  if (existing && getTargetAmount(existing.classification) !== 0) {
     return true
   }
   return (
     closedPeriodRefsForRecord(
-      wasteRecord.record,
+      record,
       status,
       schema,
       submittedRowStatesByKey,
@@ -524,7 +526,7 @@ export const classifyByPeriodStatus = ({
     const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (!isListedOnCheckPage(wasteRecord, status, schema, periodContext)) {
+    if (!contributesLoadLegs(wasteRecord, status, schema, periodContext)) {
       continue
     }
 
