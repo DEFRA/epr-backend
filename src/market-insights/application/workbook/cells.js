@@ -1,4 +1,5 @@
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
+import { CONFIDENTIAL } from '#market-insights/domain/confidential-figures.js'
 import { NOTE } from '#market-insights/domain/published-workbook-style.js'
 import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
@@ -50,6 +51,13 @@ export const firstDayOf = (yearMonth) =>
  */
 
 /**
+ * What a tab of published figures is given: its contents, and whether it
+ * shows a figure from too few operators as "[c]" instead of its value.
+ *
+ * @typedef {TabContents & { redacted: boolean }} RedactableTabContents
+ */
+
+/**
  * @param {{ months: YearMonth[], now: Date }} params - now is when the figures were taken
  * @returns {Frame}
  */
@@ -85,6 +93,23 @@ export const write = (cell, value, style) => {
   cell.value = value
   cell.style = { ...style }
 }
+
+/**
+ * Writes a figure, aligning "[c]" right where it stands in for one, as the
+ * numbers beside it are.
+ *
+ * @param {ExcelJS.Cell} cell
+ * @param {number | string} value
+ * @param {Partial<ExcelJS.Style>} style
+ */
+export const writeFigure = (cell, value, style) =>
+  write(
+    cell,
+    value,
+    value === CONFIDENTIAL
+      ? { ...style, alignment: { ...style.alignment, horizontal: 'right' } }
+      : style
+  )
 
 /**
  * @param {ExcelJS.Worksheet} worksheet
