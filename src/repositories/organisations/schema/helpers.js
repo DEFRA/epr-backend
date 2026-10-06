@@ -244,7 +244,7 @@ export function validateAccreditationLinkMatches(
     )
     .join('; ')
   throw Boom.badData(
-    `Registrations are linked to accreditations that do not match their type, material, or site: ${details}`
+    `Registrations are linked to accreditations that do not match their type, material, site, or regulator: ${details}`
   )
 }
 

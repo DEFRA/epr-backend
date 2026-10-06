@@ -57,6 +57,19 @@ describe('invalidAccreditationLinkRule', () => {
     expect(issues[0].message).toContain('key=')
   })
 
+  it('flags and names both regulators when only the regulator differs', () => {
+    const org = organisation(
+      [{ ...exporterReg('reg-1', 'acc-1'), submittedToRegulator: 'ea' }],
+      [{ ...exporterAcc('acc-1'), submittedToRegulator: 'sepa' }]
+    )
+
+    const issues = invalidAccreditationLinkRule.evaluate(org)
+
+    expect(issues).toHaveLength(1)
+    expect(issues[0].message).toContain('regulator=ea')
+    expect(issues[0].message).toContain('regulator=sepa')
+  })
+
   it('does not flag a registration with a fully matching accreditation link', () => {
     const org = organisation(
       [exporterReg('reg-1', 'acc-1')],

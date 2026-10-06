@@ -12,6 +12,7 @@ import { siteKey } from '#formsubmission/parsing-common/site.js'
  *   site?: object;
  *   reprocessingType?: string;
  *   glassRecyclingProcess?: string[] | null;
+ *   submittedToRegulator?: string;
  * }} RegAccKeyFields
  */
 
@@ -56,7 +57,7 @@ function getRegAccKeyValuePairs(item) {
 }
 
 /**
- * Check if an accreditation matches a registration based on type, material, and site
+ * Check if an accreditation matches a registration based on type, material, site and regulator
  * @param {RegAccKeyFields} accreditation - The accreditation to check
  * @param {RegAccKeyFields} registration - The registration to match against
  * @returns {boolean} True if the accreditation matches the registration
@@ -69,6 +70,7 @@ export function isAccreditationForRegistration(accreditation, registration) {
   const regKeys = Object.keys(regFields)
 
   return (
+    accreditation.submittedToRegulator === registration.submittedToRegulator &&
     accKeys.length === regKeys.length &&
     accKeys.every(
       (key) => accFields[key] !== undefined && accFields[key] === regFields[key]
