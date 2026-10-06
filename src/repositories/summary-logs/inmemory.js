@@ -155,13 +155,16 @@ const findById = (staleCache) => async (id) => {
  * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
  * @returns {boolean}
  */
-const matchesYear = (summaryLog, { year, accreditationId }) =>
-  year === undefined ||
-  summaryLog.year === undefined ||
-  summaryLog.year === null ||
-  (summaryLog.year === year &&
+const matchesYear = (summaryLog, { year, accreditationId }) => {
+  if (year === undefined || (summaryLog.year ?? null) === null) {
+    return true
+  }
+  return (
+    summaryLog.year === year &&
     (summaryLog.accreditationId === undefined ||
-      (summaryLog.accreditationId ?? null) === (accreditationId ?? null)))
+      (summaryLog.accreditationId ?? null) === (accreditationId ?? null))
+  )
+}
 
 const findLatestSubmittedForOrgReg =
   (staleCache) =>

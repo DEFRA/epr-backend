@@ -101,6 +101,28 @@ const backfillOne = async (
   return { year, auditFailed: false }
 }
 
+const FAILED = Symbol('failed')
+
+/**
+ * Failures are logged and swallowed so one bad summary log never stops the sweep.
+ *
+ * @param {Parameters<typeof backfillOne>[0]} repositories
+ * @param {string} id
+ * @param {boolean} isDryRun
+ * @param {TypedLogger} logger
+ */
+const backfillOneSafely = async (repositories, id, isDryRun, logger) => {
+  try {
+    return await backfillOne(repositories, id, isDryRun, logger)
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: `Failed to backfill year for summary log ${id}`
+    })
+    return FAILED
+  }
+}
+
 /**
  * @param {{
  *   summaryLogsRepository: SummaryLogsRepository,
@@ -123,20 +145,12 @@ export const backfillSummaryLogYear = async (
   let auditFailed = 0
 
   for (const id of ids) {
-    try {
-      const result = await backfillOne(repositories, id, isDryRun, logger)
-      if (result !== null) {
-        years[result.year] = (years[result.year] ?? 0) + 1
-        if (result.auditFailed) {
-          auditFailed++
-        }
-      }
-    } catch (error) {
+    const outcome = await backfillOneSafely(repositories, id, isDryRun, logger)
+    if (outcome === FAILED) {
       failed++
-      logger.error({
-        err: error,
-        message: `Failed to backfill year for summary log ${id}`
-      })
+    } else if (outcome !== null) {
+      years[outcome.year] = (years[outcome.year] ?? 0) + 1
+      auditFailed += outcome.auditFailed ? 1 : 0
     }
   }
 
