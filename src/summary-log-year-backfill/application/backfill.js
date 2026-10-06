@@ -148,7 +148,9 @@ export const backfillSummaryLogYear = async (
     const outcome = await backfillOneSafely(repositories, id, isDryRun, logger)
     if (outcome === FAILED) {
       failed++
-    } else if (outcome !== null) {
+      continue
+    }
+    if (outcome !== null) {
       years[outcome.year] = (years[outcome.year] ?? 0) + 1
       auditFailed += outcome.auditFailed ? 1 : 0
     }
