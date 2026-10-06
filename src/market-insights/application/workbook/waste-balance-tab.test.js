@@ -118,16 +118,16 @@ const sentOnRow = (rowId, date, tonnage) => ({
  * given to its regulator, the Environment Agency unless another is given.
  *
  * @param {Register} register
- * @param {{ material: Material, regulator?: RegulatorValue, rows?: SummaryLogRowStateEntry[] }} operator
+ * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, rows?: SummaryLogRowStateEntry[] }} operator
  */
 const seedOperator = async (
   { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
-  { material, regulator = REGULATOR.EA, rows = [] }
+  { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
   const operator = await insertAccreditedOperator(
     organisationsRepository,
     regulator,
-    { material }
+    { material, validFrom }
   )
   const { registrations } = await organisationsRepository.findById(
     operator.organisationId
@@ -170,16 +170,20 @@ const publishedRegister = async () => {
 }
 
 /**
+ * The tab for the months, in full unless asked for redacted.
+ *
  * @param {YearMonth[]} months
  * @param {Register} register
+ * @param {boolean} [redacted]
  */
-const render = async (months, register) => {
+const render = async (months, register, redacted = false) => {
   const contents = {
     ...frameOf({ months, now: PUBLISHED_EXTRACTION }),
     figures: await readMarketInsightsFigures({
       ...readParamsFor(months),
       ...register
-    })
+    }),
+    redacted
   }
   return renderTab((workbook) => addWasteBalance(workbook, contents))
 }
@@ -450,6 +454,82 @@ describe('the waste balance tab', () => {
       ['Wood', 'Reprocessor']
     ])
     await expectTheServedFigures(worksheet, JANUARY_TO_MARCH_2026, register)
+  })
+
+  describe('redacted', () => {
+    /** @type {ExcelJS.Worksheet} */
+    let redacted
+    /** @type {ExcelJS.Worksheet} */
+    let full
+
+    beforeAll(async () => {
+      const register = emptyRegister()
+      await seedOperator(register, {
+        material: MATERIAL.PLASTIC,
+        rows: [receivedRow('row-1', '2026-02-10', 40.25)]
+      })
+      await seedOperator(register, { material: MATERIAL.PLASTIC })
+      await seedOperator(register, {
+        material: MATERIAL.PLASTIC,
+        validFrom: '2026-02-01'
+      })
+      await seedOperator(register, {
+        material: MATERIAL.STEEL,
+        rows: [receivedRow('row-1', '2026-03-10', 5)]
+      })
+      await seedOperator(register, {
+        material: MATERIAL.WOOD,
+        rows: [receivedRow('row-1', '2026-02-10', 12)]
+      })
+      await seedOperator(register, { material: MATERIAL.WOOD })
+      await seedOperator(register, { material: MATERIAL.WOOD })
+      redacted = await render(JANUARY_TO_MARCH_2026, register, true)
+      full = await render(JANUARY_TO_MARCH_2026, register)
+    })
+
+    it('shows "[c]" for every net credit and total with fewer than three operators accredited, zeros included', () => {
+      expect(
+        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Steel', 'Reprocessor'])
+      ).toEqual([0, 0, 5, 5])
+      expect(
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Steel', 'Reprocessor'])
+      ).toEqual(['[c]', '[c]', '[c]', '[c]'])
+    })
+
+    it('aligns "[c]" right, like the numbers beside it', () => {
+      const index = rowLabels(redacted).findIndex(
+        ([material, type]) => material === 'Steel' && type === 'Reprocessor'
+      )
+      expect(
+        redacted.getCell(HEADING_ROW + 1 + index, FIRST_FIGURE_COLUMN).alignment
+          ?.horizontal
+      ).toBe('right')
+    })
+
+    it('shows every net credit and total with three operators accredited', () => {
+      expect(
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Wood', 'Reprocessor'])
+      ).toEqual([0, 12, 0, 12])
+    })
+
+    it("judges each month's net credit on that month's operators, and the total on the period's", () => {
+      // Plastic's third reprocessor is accredited from February.
+      expect(
+        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Plastic', 'Reprocessor'])
+      ).toEqual([0, 40.25, 0, 40.25])
+      expect(
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, [
+          'Plastic',
+          'Reprocessor'
+        ])
+      ).toEqual(['[c]', 40.25, 0, 40.25])
+    })
+
+    it('shows a net credit and total with no operator accredited and nothing in it', () => {
+      expect(
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Steel', 'Exporter'])
+      ).toEqual([0, 0, 0, 0])
+    })
   })
 
   it('lists a material the published file does not, after those it does', async () => {

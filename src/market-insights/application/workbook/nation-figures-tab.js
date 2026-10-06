@@ -1,4 +1,8 @@
 import { NATION, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  CONFIDENTIAL,
+  fromFewOperators
+} from '#market-insights/domain/confidential-figures.js'
 import { nationSegment } from '#market-insights/domain/nation-segment.js'
 import {
   COLUMN_WIDTHS,
@@ -30,6 +34,7 @@ import {
   tableOf,
   UK_SCOPE,
   write,
+  writeFigure,
   writeRow
 } from './cells.js'
 
@@ -38,7 +43,8 @@ import {
 /** @import { WasteProcessingTypeValue } from '#domain/organisations/model.js' */
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { ExporterFigure, FiguresTable, ReprocessorFigure } from '#market-insights/domain/published-workbook-text.js' */
-/** @import { TabContents } from './cells.js' */
+/** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
+/** @import { RedactableTabContents } from './cells.js' */
 
 const NATION_FIGURES_FIRST_ROW = 2
 const NATION_FIGURES_WIDTH = Math.max(
@@ -98,6 +104,37 @@ const TABLES = {
  */
 const publishedFigure = (row, figure) => row[figure] ?? NO_FIGURE
 
+/** @typedef {Partial<Record<Figure, number>> & OperatorCounts} ServedRow */
+
+/**
+ * Whether any figure a row prints, across both of its accreditation type's
+ * tables, holds data.
+ *
+ * @param {ServedRow} row
+ * @param {WasteProcessingTypeValue} accreditationType
+ */
+const holdsData = (row, accreditationType) =>
+  Object.values(TABLES)
+    .filter((table) => table.accreditationType === accreditationType)
+    .some(({ figures }) => figures.some((figure) => (row[figure] ?? 0) !== 0))
+
+/**
+ * A row or grand total's figures for one table as published, each shown as
+ * "[c]" where redacted and the row is from too few operators. A dash stays a
+ * dash, since it gives nothing away.
+ *
+ * @param {ServedRow} row
+ * @param {NationFiguresTable} table
+ * @param {boolean} redacted
+ * @returns {(number | string)[]}
+ */
+const publishedFigures = (row, { figures, accreditationType }, redacted) => {
+  const values = figures.map((figure) => publishedFigure(row, figure))
+  return redacted && fromFewOperators(row, holdsData(row, accreditationType))
+    ? values.map((value) => (value === NO_FIGURE ? value : CONFIDENTIAL))
+    : values
+}
+
 /**
  * @param {ReprocessorExporterTable} table
  * @param {string} scope
@@ -119,7 +156,7 @@ const servedMonthOf = (table, scope, month) => {
  */
 const writeFigures = (worksheet, row, values, styleOf) => {
   values.forEach((value, index) => {
-    write(worksheet.getCell(row, 2 + index), value, styleOf(value))
+    writeFigure(worksheet.getCell(row, 2 + index), value, styleOf(value))
   })
 }
 
@@ -129,9 +166,13 @@ const writeFigures = (worksheet, row, values, styleOf) => {
  *
  * @param {ExcelJS.Workbook} workbook
  * @param {NationFiguresTabName} name
- * @param {TabContents} contents
+ * @param {RedactableTabContents} contents
  */
-export const addNationFigures = (workbook, name, { months, figures }) => {
+export const addNationFigures = (
+  workbook,
+  name,
+  { months, figures, redacted }
+) => {
   const scope = SCOPE_OF_TAB[name]
   const table = tableOf(figures.scopes, scope)
   const materials = NATION_FIGURES_MATERIALS.filter(([material]) =>
@@ -167,37 +208,41 @@ export const addNationFigures = (workbook, name, { months, figures }) => {
     worksheet.mergeCells(top, 1, top, NATION_FIGURES_WIDTH)
     const served = servedMonthOf(table, scope, month)
 
-    tables.forEach(
-      ({ title, columns, accreditationType, figures: tableFigures }, index) => {
-        const tableTop = top + 1 + tableRows * index
-        write(worksheet.getCell(tableTop, 1), title, NATION_FIGURES_TITLE)
-        writeRow(worksheet, tableTop + 1, 1, columns, NATION_FIGURES_HEADING)
-        worksheet.getRow(tableTop + 1).height =
-          ROW_HEIGHT.NATION_FIGURES_HEADINGS
+    tables.forEach((nationTable, index) => {
+      const { title, columns, accreditationType } = nationTable
+      const tableTop = top + 1 + tableRows * index
+      write(worksheet.getCell(tableTop, 1), title, NATION_FIGURES_TITLE)
+      writeRow(worksheet, tableTop + 1, 1, columns, NATION_FIGURES_HEADING)
+      worksheet.getRow(tableTop + 1).height = ROW_HEIGHT.NATION_FIGURES_HEADINGS
 
-        materials.forEach(([material, label], materialIndex) => {
-          const row = tableTop + 2 + materialIndex
-          const figuresRow = served.figures[material][accreditationType]
-          write(worksheet.getCell(row, 1), label, LABEL)
-          writeFigures(
-            worksheet,
-            row,
-            tableFigures.map((figure) => publishedFigure(figuresRow, figure)),
-            () => FIGURE
-          )
-        })
-
-        const totalRow = tableTop + 2 + materials.length
-        const total = served.totals[accreditationType]
-        write(worksheet.getCell(totalRow, 1), GRAND_TOTAL, GRAND_TOTAL_LABEL)
+      materials.forEach(([material, label], materialIndex) => {
+        const row = tableTop + 2 + materialIndex
+        write(worksheet.getCell(row, 1), label, LABEL)
         writeFigures(
           worksheet,
-          totalRow,
-          tableFigures.map((figure) => publishedFigure(total, figure)),
-          (value) =>
-            value === NO_FIGURE ? GRAND_TOTAL_NO_FIGURE : GRAND_TOTAL_FIGURE
+          row,
+          publishedFigures(
+            served.figures[material][accreditationType],
+            nationTable,
+            redacted
+          ),
+          () => FIGURE
         )
-      }
-    )
+      })
+
+      const totalRow = tableTop + 2 + materials.length
+      write(worksheet.getCell(totalRow, 1), GRAND_TOTAL, GRAND_TOTAL_LABEL)
+      writeFigures(
+        worksheet,
+        totalRow,
+        publishedFigures(
+          served.totals[accreditationType],
+          nationTable,
+          redacted
+        ),
+        (value) =>
+          value === NO_FIGURE ? GRAND_TOTAL_NO_FIGURE : GRAND_TOTAL_FIGURE
+      )
+    })
   })
 }
