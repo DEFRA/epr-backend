@@ -1,4 +1,3 @@
-export { summaryLogsCreate } from './post.js'
 export { summaryLogsYearCreate } from './year-post.js'
 export { summaryLogsGet } from './get.js'
 export { summaryLogDocument } from './document/get.js'
