@@ -16,17 +16,18 @@ import { addWasteBalance } from './workbook/waste-balance-tab.js'
  * @property {MarketInsightsFigures} figures
  * @property {YearMonth[]} months
  * @property {Date} now - when the figures were taken
+ * @property {boolean} redacted - whether a figure from too few operators shows as "[c]"
  */
 
 /**
  * @param {WorkbookContents} contents
  * @returns {ExcelJS.Workbook}
  */
-const renderWorkbook = ({ figures, months, now }) => {
-  const contents = { ...frameOf({ months, now }), figures }
+const renderWorkbook = ({ figures, months, now, redacted }) => {
+  const contents = { ...frameOf({ months, now }), figures, redacted }
   const workbook = new ExcelJS.Workbook()
   addWasteBalance(workbook, contents)
-  addKey(workbook)
+  addKey(workbook, { redacted })
   addOutstandingReturns(workbook, contents)
   addNationFigures(workbook, WORKSHEET_NAME.UK, contents)
   addNationFigures(workbook, WORKSHEET_NAME.ENGLAND, contents)
@@ -40,7 +41,11 @@ const renderWorkbook = ({ figures, months, now }) => {
  * It reads its figures with the same function the export archive uses, so
  * every tab is taken from one reading of the register.
  *
- * @param {ReadMarketInsightsFiguresParams} params
+ * Redacted, it shows "[c]" in place of every figure the regulator pages mark
+ * as coming from too few operators. A total is judged on its own operators
+ * alone, so it can still give away a figure that was replaced.
+ *
+ * @param {ReadMarketInsightsFiguresParams & { redacted: boolean }} params
  * @returns {Promise<ExcelJS.Workbook>}
  */
 export const buildMarketInsightsWorkbook = async (params) =>

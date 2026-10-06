@@ -2,20 +2,25 @@ import { buildDownloadDisposition } from '#repositories/summary-logs/download-di
 
 /**
  * Names a market insights download for the period it holds and the second it
- * was taken.
+ * was taken, with a label after the period where the download needs telling
+ * apart from the usual one.
  *
  * @param {{ year: number, cadence: string, period: number }} params
  * @param {Date} now
  * @param {string} extension
+ * @param {string} [label]
  * @returns {string} the Content-Disposition header value
  */
 export const marketInsightsDownloadDisposition = (
   { year, cadence, period },
   now,
-  extension
+  extension,
+  label
 ) =>
   buildDownloadDisposition(
-    `market-insights-${year}-${cadence}-${period}`,
+    [`market-insights-${year}-${cadence}-${period}`, label]
+      .filter(Boolean)
+      .join('-'),
     now.toISOString(),
     extension
   )

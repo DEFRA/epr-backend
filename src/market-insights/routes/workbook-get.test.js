@@ -158,6 +158,17 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     )
   })
 
+  it('names the full workbook as unredacted', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-18T14:15:30.000Z'))
+
+    const response = await request(asRegulator(), `${MARCH}?unredacted=true`)
+
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="market-insights-2026-monthly-3-unredacted-2026-09-18-141530.xlsx"'
+    )
+  })
+
   describe('over a register with an operator owing returns', () => {
     const JANUARY_TO_MARCH = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
     const register = readParamsFor(JANUARY_TO_MARCH)
@@ -190,22 +201,49 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
       await seededServer.stop()
     })
 
-    it('serves the workbook built from that register, taken when requested', async () => {
+    /**
+     * @param {string} url
+     */
+    const download = async (url) => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(PUBLISHED_EXTRACTION)
-
       const response = await seededServer.inject({
         method: 'GET',
-        url: MARCH,
+        url,
         ...asRegulator()
       })
-      const built = await reread(await buildMarketInsightsWorkbook(register))
-      const empty = await reread(
-        await buildMarketInsightsWorkbook(readParamsFor(JANUARY_TO_MARCH))
+      return cellsOf(await workbookIn(response))
+    }
+
+    /**
+     * @param {typeof register} params
+     * @param {boolean} redacted
+     */
+    const built = async (params, redacted) =>
+      cellsOf(
+        await reread(await buildMarketInsightsWorkbook({ ...params, redacted }))
       )
 
-      expect(cellsOf(built)).not.toEqual(cellsOf(empty))
-      expect(cellsOf(await workbookIn(response))).toEqual(cellsOf(built))
+    it('serves the redacted workbook built from that register, taken when requested', async () => {
+      const redacted = await built(register, true)
+
+      expect(redacted).not.toEqual(
+        await built(readParamsFor(JANUARY_TO_MARCH), true)
+      )
+      expect(redacted).not.toEqual(await built(register, false))
+      expect(await download(MARCH)).toEqual(redacted)
+    })
+
+    it('serves the full workbook built from that register when asked for it unredacted', async () => {
+      expect(await download(`${MARCH}?unredacted=true`)).toEqual(
+        await built(register, false)
+      )
+    })
+
+    it('serves the redacted workbook when asked for it not unredacted', async () => {
+      expect(await download(`${MARCH}?unredacted=false`)).toEqual(
+        await built(register, true)
+      )
     })
   })
 })
