@@ -15,7 +15,7 @@ import {
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, Organisation, OverseasSite, Registration, RegistrationCommon, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
@@ -177,20 +177,45 @@ function toRegistrationEntry(registration, organisation, context) {
     onDrop
   )
 
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
-    const overseasSites = toStoredOverseasSites(registration, context)
-    return [
-      registrationNumber,
-      {
-        ...common,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        overseasSites: mapValues(overseasSites, toOverseasSite),
-        accreditations: withAccreditedSites(accreditations, overseasSites)
-      }
-    ]
-  }
+  const converted =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+      ? toExporterRegistration(registration, common, accreditations, context)
+      : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
-  const { reprocessingType } = registration
+  return converted && [registrationNumber, converted]
+}
+
+/**
+ * @param {StoredRegistration} registration
+ * @param {RegistrationCommon} common
+ * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Context} context
+ * @returns {ExporterRegistration}
+ */
+function toExporterRegistration(registration, common, accreditations, context) {
+  const overseasSites = toStoredOverseasSites(registration, context)
+  return {
+    ...common,
+    wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+    overseasSites: mapValues(overseasSites, toOverseasSite),
+    accreditations: withAccreditedSites(accreditations, overseasSites)
+  }
+}
+
+/**
+ * @param {StoredRegistration} registration
+ * @param {RegistrationCommon} common
+ * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {OnDrop} onDrop
+ * @returns {ReprocessorRegistration | null}
+ */
+function toReprocessorRegistration(
+  registration,
+  common,
+  accreditations,
+  onDrop
+) {
+  const { registrationNumber, reprocessingType } = registration
   if (!reprocessingType) {
     onDrop(`Registration ${registrationNumber} has no reprocessing type`)
     return null
@@ -202,16 +227,13 @@ function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  return [
-    registrationNumber,
-    {
-      ...common,
-      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      reprocessingType,
-      site: { address: { ...address, ...omitNullish({ country, region }) } },
-      accreditations
-    }
-  ]
+  return {
+    ...common,
+    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    reprocessingType,
+    site: { address: { ...address, ...omitNullish({ country, region }) } },
+    accreditations
+  }
 }
 
 /**

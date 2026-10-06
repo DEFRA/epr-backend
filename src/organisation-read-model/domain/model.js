@@ -139,8 +139,8 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  */
 export const statusOn = (timeline, date) => {
   const day = Object.keys(timeline)
-    .filter((key) => key <= date)
-    .sort()
+    .filter((key) => key.localeCompare(date) <= 0)
+    .sort((a, b) => a.localeCompare(b))
     .at(-1)
   return day === undefined ? undefined : timeline[day].status
 }
