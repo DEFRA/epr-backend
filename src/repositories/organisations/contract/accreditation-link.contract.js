@@ -2,6 +2,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REGISTRATION_STATUS,
+  REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -158,7 +159,7 @@ export const testAccreditationLinkValidation = (it) => {
         await expect(
           repository.replace(organisation.id, 1, prepareOrgUpdate(inserted, {}))
         ).rejects.toThrow(
-          /Registrations are linked to accreditations that do not match their type, material, or site/
+          /Registrations are linked to accreditations that do not match their type, material, site, or regulator/
         )
       })
 
@@ -187,7 +188,7 @@ export const testAccreditationLinkValidation = (it) => {
         await expect(
           repository.replace(organisation.id, 1, prepareOrgUpdate(inserted, {}))
         ).rejects.toThrow(
-          /Registrations are linked to accreditations that do not match their type, material, or site/
+          /Registrations are linked to accreditations that do not match their type, material, site, or regulator/
         )
       })
 
@@ -214,7 +215,7 @@ export const testAccreditationLinkValidation = (it) => {
             })
           )
         ).rejects.toThrow(
-          /Registrations are linked to accreditations that do not match their type, material, or site/
+          /Registrations are linked to accreditations that do not match their type, material, site, or regulator/
         )
       })
 
@@ -263,6 +264,28 @@ export const testAccreditationLinkValidation = (it) => {
         ).resolves.not.toThrow()
       })
 
+      it('rejects when a registration links to an accreditation submitted to a different regulator', async () => {
+        const accId = new ObjectId().toString()
+        const registration = buildRegistration({ accreditationId: accId })
+        const organisation = buildOrganisation({
+          registrations: [registration],
+          accreditations: [
+            buildAccreditation({
+              id: accId,
+              submittedToRegulator: REGULATOR.SEPA
+            })
+          ]
+        })
+        await repository.insert(organisation)
+        const inserted = await repository.findById(organisation.id)
+
+        await expect(
+          repository.replace(organisation.id, 1, prepareOrgUpdate(inserted, {}))
+        ).rejects.toThrow(
+          `Registrations are linked to accreditations that do not match their type, material, site, or regulator: registration ${registration.id} -> accreditation ${accId}`
+        )
+      })
+
       it('rejects when registration and accreditation have different glassRecyclingProcess', async () => {
         const accId = new ObjectId().toString()
         const organisation = buildOrganisation({
@@ -296,7 +319,7 @@ export const testAccreditationLinkValidation = (it) => {
         await expect(
           repository.replace(organisation.id, 1, prepareOrgUpdate(inserted, {}))
         ).rejects.toThrow(
-          /Registrations are linked to accreditations that do not match their type, material, or site/
+          /Registrations are linked to accreditations that do not match their type, material, site, or regulator/
         )
       })
 

@@ -228,6 +228,15 @@ describe('SummaryLogsValidator', () => {
             { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
           ]
         }
+      }),
+      findAccreditationById: vi.fn().mockResolvedValue({
+        accreditationNumber: 'ACC12345',
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+        ]
       })
     }
 

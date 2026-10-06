@@ -44,7 +44,7 @@ const evaluate = (org) => {
         code: CODE,
         severity: SEVERITY_LEVEL,
         target: registrationTarget(reg.id),
-        message: `Registration ${reg.id} (key=${getRegAccKey(/** @type {RegistrationOrAccreditation} */ (/** @type {unknown} */ (reg)))}) is linked to accreditation ${accreditation.id} (key=${getRegAccKey(/** @type {RegistrationOrAccreditation} */ (/** @type {unknown} */ (accreditation)))}) which does not match`
+        message: `Registration ${reg.id} (key=${getRegAccKey(/** @type {RegistrationOrAccreditation} */ (/** @type {unknown} */ (reg)))}, regulator=${reg.submittedToRegulator}) is linked to accreditation ${accreditation.id} (key=${getRegAccKey(/** @type {RegistrationOrAccreditation} */ (/** @type {unknown} */ (accreditation)))}, regulator=${accreditation.submittedToRegulator}) which does not match`
       })
     ]
   })

@@ -360,15 +360,19 @@ const classifyAdjustedWasteRecord = ({
   cadence,
   context
 }) => {
-  const { record } = wasteRecord
+  const { record, outcome } = wasteRecord
   const { reportingDateFields } = schema
 
-  const newPeriod = classifyPeriodStatus(
+  const newSidePeriod = classifyPeriodStatus(
     record.data,
     reportingDateFields,
     submittedPeriods,
     cadence
   )
+  const newPeriod =
+    outcome === ROW_OUTCOME.IGNORED && newSidePeriod === PERIOD_STATUS.OPEN
+      ? null
+      : newSidePeriod
   const existingKey = `${record.type}:${record.rowId}`
   const existing = submittedRowStatesByKey.get(existingKey)
   const oldPeriod = existing
@@ -407,6 +411,86 @@ const classifyAdjustedWasteRecord = ({
 }
 
 /**
+ * The closed (submitted) periods whose reports the added and adjusted records
+ * touch.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
+ * @param {Map<string, RecordChange>} params.recordChanges
+ * @param {Set<string>} params.submittedPeriods
+ * @param {Cadence} params.cadence
+ * @param {ProcessingTypeSchemas} params.tableSchemas
+ * @returns {PeriodRef[]}
+ */
+const closedPeriodsTouched = ({
+  wasteRecords,
+  submittedRowStatesByKey,
+  recordChanges,
+  submittedPeriods,
+  cadence,
+  tableSchemas
+}) => {
+  /** @type {Map<string, PeriodRef>} */
+  const closedPeriodsByKey = new Map()
+
+  for (const { record, tableName } of wasteRecords) {
+    const status = recordChangeFor(recordChanges, record)
+    const schema = tableSchemas[tableName]
+
+    if (status === RECORD_CHANGE.UNCHANGED || !schema) {
+      continue
+    }
+
+    closedPeriodRefsForRecord(
+      record,
+      status,
+      schema,
+      submittedRowStatesByKey,
+      submittedPeriods,
+      cadence
+    ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
+  }
+
+  return [...closedPeriodsByKey.values()]
+}
+
+/**
+ * @param {ValidatedWasteRecord} wasteRecord
+ * @param {RecordChange} status
+ * @param {TableSchema | undefined} schema
+ * @param {{ submittedRowStatesByKey: Map<string, WasteRecordState>, submittedPeriods: Set<string>, cadence: Cadence }} periodContext
+ * @returns {schema is TableSchema}
+ */
+const contributesLoadLegs = (
+  { record, outcome },
+  status,
+  schema,
+  { submittedRowStatesByKey, submittedPeriods, cadence }
+) => {
+  if (status === RECORD_CHANGE.UNCHANGED || !schema) {
+    return false
+  }
+  if (outcome !== ROW_OUTCOME.IGNORED) {
+    return true
+  }
+  const existing = submittedRowStatesByKey.get(`${record.type}:${record.rowId}`)
+  if (existing && getTargetAmount(existing.classification) !== 0) {
+    return true
+  }
+  return (
+    closedPeriodRefsForRecord(
+      record,
+      status,
+      schema,
+      submittedRowStatesByKey,
+      submittedPeriods,
+      cadence
+    ).length > 0
+  )
+}
+
+/**
  * Classifies waste records by reporting period status (open/closed).
  *
  * Each record produces 0-2 fold entries which are then reduced into the
@@ -432,34 +516,19 @@ export const classifyByPeriodStatus = ({
   classificationContext
 }) => {
   const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
+  const periodContext = { submittedRowStatesByKey, submittedPeriods, cadence }
 
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
-  /** @type {Map<string, PeriodRef>} */
-  const closedPeriodsByKey = new Map()
-
   for (const wasteRecord of wasteRecords) {
-    const { record, outcome } = wasteRecord
+    const { record } = wasteRecord
     const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (
-      outcome === ROW_OUTCOME.IGNORED ||
-      status === RECORD_CHANGE.UNCHANGED ||
-      !schema
-    ) {
+    if (!contributesLoadLegs(wasteRecord, status, schema, periodContext)) {
       continue
     }
-
-    closedPeriodRefsForRecord(
-      record,
-      status,
-      schema,
-      submittedRowStatesByKey,
-      submittedPeriods,
-      cadence
-    ).forEach((ref) => closedPeriodsByKey.set(periodKey(ref), ref))
 
     if (status === RECORD_CHANGE.ADDED) {
       const period = classifyPeriodStatus(
@@ -499,6 +568,13 @@ export const classifyByPeriodStatus = ({
 
   return {
     ...reduceEntries(entries),
-    closedPeriods: [...closedPeriodsByKey.values()]
+    closedPeriods: closedPeriodsTouched({
+      wasteRecords,
+      submittedRowStatesByKey,
+      recordChanges,
+      submittedPeriods,
+      cadence,
+      tableSchemas
+    })
   }
 }
