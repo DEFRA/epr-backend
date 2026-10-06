@@ -19,6 +19,7 @@
     "#glass-migration/*": "./src/glass-migration/*",
     "#market-insights/*": "./src/market-insights/*",
     "#non-prod-data-reset/*": "./src/non-prod-data-reset/*",
+    "#organisation-read-model/*": "./src/organisation-read-model/*",
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",

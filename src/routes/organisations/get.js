@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { toOrganisationView } from './organisation-view.js'
 import {
   accreditationViewSchema,
   accreditationsViewResponseSchema,
@@ -12,8 +11,8 @@ import {
 } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationView } from './organisation-view.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 const organisationPath = '/organisations/{organisationNumber}'
 const registrationsPath = `${organisationPath}/registrations`
@@ -42,18 +41,20 @@ const accreditationParams = {
 /**
  * @template {OrganisationParams} P
  * @typedef {HapiRequest & {
- *   overseasSitesRepository: OverseasSitesRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   params: P
  * }} ViewRequest
  */
 
 /**
+ * The response schemas strip the fields that are not served.
+ *
  * @template {OrganisationParams} P
  * @template R
  * @param {string} path
  * @param {Joi.StrictSchemaMap<P>} params
  * @param {Joi.Schema} schema
- * @param {(view: OrganisationView, params: P) => R} select
+ * @param {(organisation: Organisation, params: P) => R} select
  */
 const viewRoute = (path, params, schema, select) => ({
   method: 'GET',
@@ -62,52 +63,56 @@ const viewRoute = (path, params, schema, select) => ({
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
     validate: { params: Joi.object(params) },
-    response: { schema }
+    response: { schema, modify: true, options: { stripUnknown: true } }
   },
   /**
    * @param {ViewRequest<P>} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const view = await loadView(request)
-    return h.response(select(view, request.params)).code(StatusCodes.OK)
+    const organisation = await findOrganisation(request)
+    return h.response(select(organisation, request.params)).code(StatusCodes.OK)
   }
 })
 
 /**
- * @param {OrganisationView} view
+ * @param {Organisation} organisation
  * @param {RegistrationParams} params
  */
-const registration = (view, { registrationNumber }) =>
-  found(view.registrations, registrationNumber, 'Registration')
+const registration = (organisation, { registrationNumber }) =>
+  found(organisation.registrations, registrationNumber, 'Registration')
 
 /**
- * @param {OrganisationView} view
+ * @param {Organisation} organisation
  * @param {RegistrationParams} params
  */
-const accreditations = (view, params) => ({
-  accreditations: registration(view, params).accreditations
+const accreditations = (organisation, params) => ({
+  accreditations: registration(organisation, params).accreditations
 })
 
 /**
- * @param {OrganisationView} view
+ * @param {Organisation} organisation
  * @param {AccreditationParams} params
  */
-const accreditation = (view, params) =>
-  found(registration(view, params).accreditations, params.year, 'Accreditation')
+const accreditation = (organisation, params) =>
+  found(
+    registration(organisation, params).accreditations,
+    params.year,
+    'Accreditation'
+  )
 
 export const organisationViewGet = viewRoute(
   organisationPath,
   organisationParams,
   organisationViewSchema,
-  (view) => view
+  (organisation) => organisation
 )
 
 export const registrationsViewGet = viewRoute(
   registrationsPath,
   organisationParams,
   registrationsViewResponseSchema,
-  (view) => ({ registrations: view.registrations })
+  (organisation) => ({ registrations: organisation.registrations })
 )
 
 export const registrationViewGet = viewRoute(
@@ -148,28 +153,15 @@ function found(record, key, what) {
 
 /**
  * @param {ViewRequest<OrganisationParams>} request
- * @returns {Promise<OrganisationView>}
+ * @returns {Promise<Organisation>}
  */
-async function loadView(request) {
-  const { organisationsRepository, overseasSitesRepository, logger } = request
-
-  const organisation = await organisationsRepository.findByOrgId(
-    request.params.organisationNumber
-  )
+async function findOrganisation(request) {
+  const organisation =
+    await request.organisationReadRepository.findByOrganisationNumber(
+      request.params.organisationNumber
+    )
   if (!organisation) {
     throw Boom.notFound('Organisation not found')
   }
-
-  const siteIds = organisation.registrations.flatMap((reg) =>
-    Object.values(reg.overseasSites ?? {}).map(
-      ({ overseasSiteId }) => overseasSiteId
-    )
-  )
-  const sites = await overseasSitesRepository.findByIds(siteIds)
-
-  return toOrganisationView(
-    organisation,
-    new Map(sites.map((site) => [site.id, site])),
-    (message) => logger.warn({ message })
-  )
+  return organisation
 }
