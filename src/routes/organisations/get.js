@@ -21,41 +21,51 @@ const registrationPath = `${registrationsPath}/{registrationNumber}`
 const accreditationsPath = `${registrationPath}/accreditations`
 const accreditationPath = `${accreditationsPath}/{year}`
 
-const pathParams = {
-  organisationNumber: Joi.number().integer().positive().required(),
-  registrationNumber: Joi.string(),
-  year: Joi.string().pattern(/^\d{4}$/)
+/** @typedef {{ organisationNumber: number }} OrganisationParams */
+/** @typedef {OrganisationParams & { registrationNumber: string }} RegistrationParams */
+/** @typedef {RegistrationParams & { year: string }} AccreditationParams */
+
+const organisationParams = {
+  organisationNumber: Joi.number().integer().positive().required()
+}
+const registrationParams = {
+  ...organisationParams,
+  registrationNumber: Joi.string().required()
+}
+const accreditationParams = {
+  ...registrationParams,
+  year: Joi.string()
+    .pattern(/^\d{4}$/)
+    .required()
 }
 
 /**
+ * @template {OrganisationParams} P
  * @typedef {HapiRequest & {
  *   overseasSitesRepository: OverseasSitesRepository,
- *   params: {
- *     organisationNumber: number,
- *     registrationNumber: string,
- *     year: string
- *   }
+ *   params: P
  * }} ViewRequest
- *
- * Each route reads only the path parameters its own path declares.
  */
 
 /**
+ * @template {OrganisationParams} P
+ * @template R
  * @param {string} path
+ * @param {Joi.StrictSchemaMap<P>} params
  * @param {Joi.Schema} schema
- * @param {(view: OrganisationView, params: ViewRequest['params']) => object} select
+ * @param {(view: OrganisationView, params: P) => R} select
  */
-const viewRoute = (path, schema, select) => ({
+const viewRoute = (path, params, schema, select) => ({
   method: 'GET',
   path,
   options: {
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
-    validate: { params: Joi.object(pathParams) },
+    validate: { params: Joi.object(params) },
     response: { schema }
   },
   /**
-   * @param {ViewRequest} request
+   * @param {ViewRequest<P>} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -66,44 +76,57 @@ const viewRoute = (path, schema, select) => ({
 
 /**
  * @param {OrganisationView} view
- * @param {ViewRequest['params']} params
+ * @param {RegistrationParams} params
  */
 const registration = (view, { registrationNumber }) =>
   found(view.registrations, registrationNumber, 'Registration')
 
 /**
  * @param {OrganisationView} view
- * @param {ViewRequest['params']} params
+ * @param {RegistrationParams} params
+ */
+const accreditations = (view, params) => ({
+  accreditations: registration(view, params).accreditations
+})
+
+/**
+ * @param {OrganisationView} view
+ * @param {AccreditationParams} params
  */
 const accreditation = (view, params) =>
   found(registration(view, params).accreditations, params.year, 'Accreditation')
 
 export const organisationViewGet = viewRoute(
   organisationPath,
+  organisationParams,
   organisationViewSchema,
   (view) => view
 )
 
 export const registrationsViewGet = viewRoute(
   registrationsPath,
+  organisationParams,
   registrationsViewResponseSchema,
   (view) => ({ registrations: view.registrations })
 )
 
 export const registrationViewGet = viewRoute(
   registrationPath,
+  registrationParams,
   registrationViewSchema,
   registration
 )
 
 export const accreditationsViewGet = viewRoute(
   accreditationsPath,
+  registrationParams,
   accreditationsViewResponseSchema,
-  (view, p) => ({ accreditations: registration(view, p).accreditations })
+  accreditations
 )
 
 export const accreditationViewGet = viewRoute(
   accreditationPath,
+  accreditationParams,
   accreditationViewSchema,
   accreditation
 )
@@ -116,14 +139,15 @@ export const accreditationViewGet = viewRoute(
  * @returns {T}
  */
 function found(record, key, what) {
-  if (!Object.hasOwn(record, key)) {
+  const value = Object.hasOwn(record, key) ? record[key] : undefined
+  if (value === undefined) {
     throw Boom.notFound(`${what} not found`)
   }
-  return record[key]
+  return value
 }
 
 /**
- * @param {ViewRequest} request
+ * @param {ViewRequest<OrganisationParams>} request
  * @returns {Promise<OrganisationView>}
  */
 async function loadView(request) {

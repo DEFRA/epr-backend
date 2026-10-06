@@ -48,35 +48,35 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
  * The parsed address, or the address as submitted when it could not be parsed.
  *
  * @typedef {{
+ *   county?: string
  *   line1: string
  *   line2?: string
- *   town: string
- *   county?: string
  *   postcode: string
+ *   town: string
  * } | { fullAddress: string }} UkAddressView
  */
 
 /**
  * @typedef {{
+ *   country: string
  *   line1: string
  *   line2?: string
- *   townOrCity: string
- *   stateOrRegion?: string
  *   postcode?: string
- *   country: string
+ *   stateOrRegion?: string
+ *   townOrCity: string
  * }} OverseasAddressView
  */
 
 /**
  * @typedef {{
- *   name: string
  *   address: OverseasAddressView
  *   coordinates?: string
+ *   name: string
  * }} OverseasSiteView
  */
 
 /**
- * @typedef {{ status: 'pending' } | { status: 'approved', approvedOn: string }} AccreditedOverseasSiteView
+ * @typedef {{ status: 'pending' } | { approvedOn: string, status: 'approved' }} AccreditedOverseasSiteView
  */
 
 /**
@@ -94,27 +94,27 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
 
 /**
  * @typedef {{
- *   status: ServedRegistrationStatus
- *   validFrom: string
  *   material: Material
+ *   status: ServedRegistrationStatus
  *   submittedToRegulator: RegulatorView
+ *   validFrom: string
  * }} RegistrationViewCommon
  */
 
 /**
  * @typedef {RegistrationViewCommon & {
- *   wasteProcessingType: 'reprocessor'
+ *   accreditations: Record<string, AccreditationView>
  *   reprocessingType: ReprocessingType
  *   site: { address: UkAddressView }
- *   accreditations: Record<string, AccreditationView>
+ *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistrationView
  */
 
 /**
  * @typedef {RegistrationViewCommon & {
- *   wasteProcessingType: 'exporter'
- *   overseasSites: Record<string, OverseasSiteView>
  *   accreditations: Record<string, ExporterAccreditationView>
+ *   overseasSites: Record<string, OverseasSiteView>
+ *   wasteProcessingType: 'exporter'
  * }} ExporterRegistrationView
  */
 
@@ -124,17 +124,17 @@ export const SERVED_ACCREDITATION_STATUSES = Object.freeze([
 
 /**
  * @typedef {{
- *   organisationNumber: number
- *   name: string
- *   tradingName?: string
- *   status: OrganisationStatus
- *   submittedToRegulator: RegulatorView
  *   linkedDefraOrganisation?: {
  *     defraOrganisation: { id: string, name: string }
  *     linkedAt: string
  *     linkedBy: { email: string }
  *   }
+ *   name: string
+ *   organisationNumber: number
  *   registrations: Record<string, RegistrationView>
+ *   status: OrganisationStatus
+ *   submittedToRegulator: RegulatorView
+ *   tradingName?: string
  * }} OrganisationView
  */
 

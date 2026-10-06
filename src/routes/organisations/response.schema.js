@@ -6,6 +6,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
+import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
   SERVED_ACCREDITATION_STATUSES,
   SERVED_REGISTRATION_STATUSES
@@ -20,19 +21,23 @@ const regulatorSchema = Joi.object({
 const yearKey = Joi.string().pattern(/^\d{4}$/)
 const orsIdKey = Joi.string().pattern(/^\d{3}$/)
 
-const isoDate = Joi.string().isoDate()
+const isoDate = isoDateString()
+
+const isoDateTime = Joi.string()
+  .isoDate()
+  .pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
 
 const overseasSiteViewSchema = Joi.object({
-  name: Joi.string().required(),
   address: Joi.object({
+    country: Joi.string().required(),
     line1: Joi.string().required(),
     line2: Joi.string(),
-    townOrCity: Joi.string().required(),
-    stateOrRegion: Joi.string(),
     postcode: Joi.string(),
-    country: Joi.string().required()
+    stateOrRegion: Joi.string(),
+    townOrCity: Joi.string().required()
   }).required(),
-  coordinates: Joi.string()
+  coordinates: Joi.string(),
+  name: Joi.string().required()
 })
 
 const overseasSitesViewSchema = Joi.object()
@@ -42,8 +47,8 @@ const overseasSitesViewSchema = Joi.object()
 const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
   Joi.object({ status: Joi.string().valid('pending').required() }),
   Joi.object({
-    status: Joi.string().valid('approved').required(),
-    approvedOn: isoDate.required()
+    approvedOn: isoDate.required(),
+    status: Joi.string().valid('approved').required()
   })
 )
 
@@ -77,45 +82,45 @@ export const accreditationViewSchema = Joi.alternatives().try(
 
 const ukAddressSchema = Joi.alternatives().try(
   Joi.object({
+    county: Joi.string(),
     line1: Joi.string().required(),
     line2: Joi.string(),
-    town: Joi.string().required(),
-    county: Joi.string(),
-    postcode: Joi.string().required()
+    postcode: Joi.string().required(),
+    town: Joi.string().required()
   }),
   Joi.object({ fullAddress: Joi.string().required() })
 )
 
 const registrationCommon = {
+  material: materialSchema.required(),
   status: Joi.string()
     .valid(...SERVED_REGISTRATION_STATUSES)
     .required(),
-  validFrom: isoDate.required(),
-  material: materialSchema.required(),
-  submittedToRegulator: regulatorSchema
+  submittedToRegulator: regulatorSchema,
+  validFrom: isoDate.required()
 }
 
 export const registrationViewSchema = Joi.alternatives().try(
   Joi.object({
+    accreditations: keyedByYear(reprocessorAccreditationSchema),
     ...registrationCommon,
-    wasteProcessingType: Joi.string()
-      .valid(WASTE_PROCESSING_TYPE.REPROCESSOR)
-      .required(),
     reprocessingType: Joi.string()
       .valid(...Object.values(REPROCESSING_TYPE))
       .required(),
     site: Joi.object({
       address: ukAddressSchema.required()
     }).required(),
-    accreditations: keyedByYear(reprocessorAccreditationSchema)
+    wasteProcessingType: Joi.string()
+      .valid(WASTE_PROCESSING_TYPE.REPROCESSOR)
+      .required()
   }),
   Joi.object({
+    accreditations: keyedByYear(exporterAccreditationSchema),
     ...registrationCommon,
+    overseasSites: overseasSitesViewSchema,
     wasteProcessingType: Joi.string()
       .valid(WASTE_PROCESSING_TYPE.EXPORTER)
-      .required(),
-    overseasSites: overseasSitesViewSchema,
-    accreditations: keyedByYear(exporterAccreditationSchema)
+      .required()
   })
 )
 
@@ -124,22 +129,22 @@ const registrationsViewSchema = Joi.object()
   .required()
 
 export const organisationViewSchema = Joi.object({
-  organisationNumber: Joi.number().integer().required(),
-  name: Joi.string().required(),
-  tradingName: Joi.string(),
-  status: Joi.string()
-    .valid(...Object.values(ORGANISATION_STATUS))
-    .required(),
-  submittedToRegulator: regulatorSchema,
   linkedDefraOrganisation: Joi.object({
     defraOrganisation: Joi.object({
       id: Joi.string().required(),
       name: Joi.string().required()
     }).required(),
-    linkedAt: Joi.date().iso().required(),
+    linkedAt: isoDateTime.required(),
     linkedBy: Joi.object({ email: Joi.string().required() }).required()
   }),
-  registrations: registrationsViewSchema
+  name: Joi.string().required(),
+  organisationNumber: Joi.number().integer().required(),
+  registrations: registrationsViewSchema,
+  status: Joi.string()
+    .valid(...Object.values(ORGANISATION_STATUS))
+    .required(),
+  submittedToRegulator: regulatorSchema,
+  tradingName: Joi.string()
 })
 
 export const registrationsViewResponseSchema = Joi.object({
