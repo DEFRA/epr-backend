@@ -7,6 +7,7 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -842,7 +843,7 @@ const buildComplexTestOrg = ({
     wasteProcessingType: processingType,
     reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
-    submittedToRegulator: 'ea',
+    submittedToRegulator: REGULATOR.EA,
     validFrom: VALID_FROM,
     // A registered-only operator has no accreditation, which makes the
     // registration report on a quarterly cadence rather than monthly.
