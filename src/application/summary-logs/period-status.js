@@ -360,15 +360,21 @@ const classifyAdjustedWasteRecord = ({
   cadence,
   context
 }) => {
-  const { record } = wasteRecord
+  const { record, outcome } = wasteRecord
   const { reportingDateFields } = schema
 
-  const newPeriod = classifyPeriodStatus(
+  const newSidePeriod = classifyPeriodStatus(
     record.data,
     reportingDateFields,
     submittedPeriods,
     cadence
   )
+  // An ignored row's open-period date lies outside the accreditation, so that
+  // side moves neither the balance nor a submitted report.
+  const newPeriod =
+    outcome === ROW_OUTCOME.IGNORED && newSidePeriod === PERIOD_STATUS.OPEN
+      ? null
+      : newSidePeriod
   const existingKey = `${record.type}:${record.rowId}`
   const existing = submittedRowStatesByKey.get(existingKey)
   const oldPeriod = existing
@@ -452,6 +458,37 @@ const closedPeriodsTouched = ({
 }
 
 /**
+ * @param {ValidatedWasteRecord} wasteRecord
+ * @param {RecordChange} status
+ * @param {TableSchema | undefined} schema
+ * @param {{ submittedRowStatesByKey: Map<string, WasteRecordState>, submittedPeriods: Set<string>, cadence: Cadence }} periodContext
+ * @returns {schema is TableSchema}
+ */
+const isListedOnCheckPage = (
+  wasteRecord,
+  status,
+  schema,
+  { submittedRowStatesByKey, submittedPeriods, cadence }
+) => {
+  if (status === RECORD_CHANGE.UNCHANGED || !schema) {
+    return false
+  }
+  if (wasteRecord.outcome !== ROW_OUTCOME.IGNORED) {
+    return true
+  }
+  return (
+    closedPeriodRefsForRecord(
+      wasteRecord.record,
+      status,
+      schema,
+      submittedRowStatesByKey,
+      submittedPeriods,
+      cadence
+    ).length > 0
+  )
+}
+
+/**
  * Classifies waste records by reporting period status (open/closed).
  *
  * Each record produces 0-2 fold entries which are then reduced into the
@@ -477,20 +514,17 @@ export const classifyByPeriodStatus = ({
   classificationContext
 }) => {
   const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
+  const periodContext = { submittedRowStatesByKey, submittedPeriods, cadence }
 
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
   for (const wasteRecord of wasteRecords) {
-    const { record, outcome } = wasteRecord
+    const { record } = wasteRecord
     const status = recordChangeFor(recordChanges, record)
     const schema = tableSchemas[wasteRecord.tableName]
 
-    if (
-      outcome === ROW_OUTCOME.IGNORED ||
-      status === RECORD_CHANGE.UNCHANGED ||
-      !schema
-    ) {
+    if (!isListedOnCheckPage(wasteRecord, status, schema, periodContext)) {
       continue
     }
 

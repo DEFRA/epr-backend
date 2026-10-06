@@ -445,6 +445,66 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(loadsByReportingPeriod.closedPeriods).toEqual([
       { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
     ])
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({
+      count: 1,
+      tonnageDelta: -100,
+      rows: [
+        {
+          rowId: '1001',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [
+            CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+          ],
+          tonnageDelta: -100
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.openPeriodLoads.adjusted).toEqual(
+      emptyChange()
+    )
+  })
+
+  it('lists a load added to a closed period from before the accreditation window', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accreditationValidFrom: '2025-01-10'
+    })
+    await closeJanuary2025(env)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-added-pre-accreditation',
+      'file-added-pre-accreditation',
+      createUploadData([
+        {
+          rowId: 1002,
+          osrId: 100,
+          exportTonnage: 50,
+          dateReceived: '2025-01-05T00:00:00.000Z',
+          dateReceivedByOsr: '2025-01-06T00:00:00.000Z',
+          exportDate: '2025-01-07T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.added.nonBalanceAffecting
+    ).toEqual({
+      count: 1,
+      rows: [
+        {
+          rowId: '1002',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [
+            CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+          ],
+          tonnageDelta: 0
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
   })
 
   it('applies closed-wins when one date field is closed and another is open', async () => {

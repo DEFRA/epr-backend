@@ -347,7 +347,7 @@ describe('classifyByPeriodStatus', () => {
   })
 
   describe('skipped records', () => {
-    it('keeps IGNORED records out of the load buckets', () => {
+    it('keeps IGNORED records that touch no closed period out of the load buckets', () => {
       const result = run({
         wasteRecords: [buildWasteRecord({ outcome: ROW_OUTCOME.IGNORED })]
       })
