@@ -1,10 +1,9 @@
 import Boom from '@hapi/boom'
 
-import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
-  SERVED_ACCREDITATION_STATUSES,
-  SERVED_REGISTRATION_STATUSES
+  toAccreditationEntry,
+  toRegistrationEntry
 } from './organisation-view.js'
 
 /**
@@ -13,6 +12,13 @@ import {
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  */
+
+/**
+ * Finding a record needs only its key. Overseas sites and the reasons a record
+ * is not served matter to the view alone.
+ */
+const NO_SITES = new Map()
+const ignoreDrop = () => {}
 
 /**
  * Finds the stored registration a route names by its natural keys. Only a
@@ -38,8 +44,12 @@ export async function findRegistrationByNumber(
   const registration = onlyOne(
     organisation.registrations.filter(
       (candidate) =>
-        candidate.registrationNumber === registrationNumber &&
-        isOneOf(SERVED_REGISTRATION_STATUSES, candidate.status)
+        toRegistrationEntry(
+          candidate,
+          organisation,
+          NO_SITES,
+          ignoreDrop
+        )?.[0] === registrationNumber
     ),
     'Registration'
   )
@@ -49,7 +59,7 @@ export async function findRegistrationByNumber(
 
 /**
  * Finds a registration's accreditation for a year, the slot the accredited
- * routes address.
+ * routes address, by the read model's rules.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
@@ -60,18 +70,15 @@ export function findAccreditationForYear(organisation, registration, year) {
   return onlyOne(
     accreditationsForRegistration(registration, organisation).filter(
       (candidate) =>
-        candidate.accreditationNumber &&
-        candidate.validFrom &&
-        isOneOf(SERVED_ACCREDITATION_STATUSES, candidate.status) &&
-        deriveAccreditationYear(candidate) === year
+        toAccreditationEntry(candidate, ignoreDrop)?.[0] === String(year)
     ),
     'Accreditation'
   )
 }
 
 /**
- * A number shared by more than one record names none of them, as in the read
- * model.
+ * A key shared by more than one served record names none of them, as in the
+ * read model.
  *
  * @template T
  * @param {T[]} matches
@@ -84,12 +91,4 @@ function onlyOne(matches, what) {
     throw Boom.notFound(`${what} not found`)
   }
   return match
-}
-
-/**
- * @param {readonly string[]} values
- * @param {string} value
- */
-function isOneOf(values, value) {
-  return values.includes(value)
 }

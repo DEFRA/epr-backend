@@ -22,6 +22,7 @@ import { reportsUnsubmit } from './unsubmit.js'
 import { submissionNumberSchema, yearSchema } from './shared.js'
 
 /**
+ * @import { RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -32,7 +33,7 @@ import { submissionNumberSchema, yearSchema } from './shared.js'
  *
  * @typedef {{
  *   method: string,
- *   options: { validate: object },
+ *   options: { validate: RouteOptionsValidate },
  *   handler(request: HapiRequest, h: HapiResponseToolkit): Promise<unknown>
  * }} ReportRoute
  */

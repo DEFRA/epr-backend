@@ -13,12 +13,12 @@ import {
 } from './natural-keys.js'
 
 /**
- * @param {object} organisation
+ * @param {ReturnType<typeof buildOrganisation>} organisation
  */
 const findIn = (organisation) =>
   findRegistrationByNumber(
     createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-    /** @type {{ orgId: number }} */ (organisation).orgId,
+    organisation.orgId,
     REPROCESSOR_NUMBER
   )
 
@@ -50,17 +50,32 @@ describe('findRegistrationByNumber', () => {
         })
       ]
     ],
+    [
+      'a registration the read model cannot show',
+      [reprocessor({ validFrom: undefined })]
+    ],
     ['a number two registrations share', [reprocessor(), reprocessor()]]
   ])('rejects %s', async (_, registrations) => {
     await expect(
       findIn(buildOrganisation({ registrations }))
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
+
+  it('finds the served registration when an unserved one shares its number', async () => {
+    const served = reprocessor()
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ validFrom: undefined }), served]
+    })
+
+    const found = await findIn(organisation)
+
+    expect(found.registration.id).toBe(served.id)
+  })
 })
 
 describe('findAccreditationForYear', () => {
   /**
-   * @param {object} overrides
+   * @param {Parameters<typeof accreditation>[0]} [overrides]
    */
   const accreditedRegistration = async (overrides = {}) => {
     const accredited = accreditation(overrides)
