@@ -21,6 +21,7 @@ import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
  * @typedef {Object} AccreditedFor
  * @property {Material} [material]
  * @property {TonnageBand} [tonnageBand]
+ * @property {string} [validFrom] - when in 2026 the accreditation starts, 1 January unless told otherwise
  */
 
 /**
@@ -53,7 +54,7 @@ export const storedMaterial = (material) =>
 export const insertAccreditedOperator = async (
   organisationsRepository,
   regulator = REGULATOR.EA,
-  { material = MATERIAL.PLASTIC, tonnageBand } = {}
+  { material = MATERIAL.PLASTIC, tonnageBand, validFrom = '2026-01-01' } = {}
 ) => {
   const accreditationId = new ObjectId().toString()
   const accredited = {
@@ -73,7 +74,7 @@ export const insertAccreditedOperator = async (
   const organisation = await buildApprovedOrg(
     organisationsRepository,
     { registrations: [registration], accreditations: [accreditation] },
-    { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+    { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
   )
 
   return { organisationId: organisation.id, registrationId: registration.id }
