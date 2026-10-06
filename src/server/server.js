@@ -47,7 +47,6 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
-import { runRegulatorMismatchDiagnostic } from '#regulator-mismatch-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -224,7 +223,6 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runStreamTransitionDiagnostic(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
-    void runRegulatorMismatchDiagnostic(startedServer)
   })
 
   return server

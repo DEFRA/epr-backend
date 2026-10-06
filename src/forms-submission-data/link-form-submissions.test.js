@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import {
   MATERIAL,
   ORGANISATION_STATUS,
+  REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
@@ -474,6 +475,41 @@ describe('linkRegistrationToAccreditations', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Registrations : 0/2 linked to accreditations'
     })
+  })
+
+  it('dont link registration to accreditation submitted to a different regulator', () => {
+    const regId = new ObjectId().toString()
+    const accId = new ObjectId().toString()
+    const organisations = /** @type {LinkableOrgFixture[]} */ ([
+      {
+        id: new ObjectId().toString(),
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: regId,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            submittedToRegulator: REGULATOR.EA,
+            formSubmission: { id: regId, time: oneDayAgo }
+          }
+        ],
+        accreditations: [
+          {
+            id: accId,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            submittedToRegulator: REGULATOR.NRW,
+            formSubmission: { id: accId, time: oneDayAgo }
+          }
+        ]
+      }
+    ])
+
+    const result = /** @type {any[]} */ (
+      linkRegistrationToAccreditations(/** @type {any} */ (organisations))
+    )
+    expect(result[0].registrations[0].accreditationId).toBeUndefined()
   })
 
   it('caps unlinked accreditations log at 10 items', () => {
