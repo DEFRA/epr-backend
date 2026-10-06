@@ -89,8 +89,26 @@ const findById = (staleCache) => async (id) => {
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
+/**
+ * A year/accreditation match that also matches legacy documents (no
+ * `year`), so they keep counting for every year and accreditation until the
+ * backfill assigns them one. When the caller doesn't know the year
+ * (`year === undefined`), every document matches, keeping the
+ * registration-wide behaviour untouched.
+ *
+ * @param {import('#domain/summary-logs/model.js').SummaryLog} summaryLog
+ * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
+ * @returns {boolean}
+ */
+const matchesYear = (summaryLog, { year, accreditationId }) =>
+  year === undefined ||
+  summaryLog.year === undefined ||
+  (summaryLog.year === year && summaryLog.accreditationId === accreditationId)
+
 const findLatestSubmittedForOrgReg =
-  (staleCache) => async (organisationId, registrationId) => {
+  (staleCache) =>
+  /** @param {import('./port.js').SummaryLogScope} scope */
+  async ({ organisationId, registrationId, year, accreditationId }) => {
     /** @type {{ id: string, doc: any, submittedAt: string } | null} */
     let latest = null
 
@@ -98,7 +116,8 @@ const findLatestSubmittedForOrgReg =
       if (
         doc.summaryLog.organisationId === organisationId &&
         doc.summaryLog.registrationId === registrationId &&
-        doc.summaryLog.status === 'submitted'
+        doc.summaryLog.status === 'submitted' &&
+        matchesYear(doc.summaryLog, { year, accreditationId })
       ) {
         const { submittedAt } = doc.summaryLog
 
@@ -216,6 +235,32 @@ const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   return signDownload(doc, validatedId)
 }
 
+/**
+ * Whether `candidate` collides with `subject` for the submitting-lock check:
+ * same org/reg, already submitting, and the same year and accreditation. A
+ * legacy document (no `year`) only collides with another legacy document,
+ * matching today's org/reg-only behaviour until the backfill assigns every
+ * document a year.
+ */
+const collidesOnSubmittingLock = (candidate, subject) => {
+  if (
+    candidate.organisationId !== subject.organisationId ||
+    candidate.registrationId !== subject.registrationId ||
+    candidate.status !== 'submitting'
+  ) {
+    return false
+  }
+
+  if (subject.year === undefined) {
+    return candidate.year === undefined
+  }
+
+  return (
+    candidate.year === subject.year &&
+    candidate.accreditationId === subject.accreditationId
+  )
+}
+
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
     const validatedId = validateId(logId)
@@ -233,18 +278,14 @@ const transitionToSubmittingExclusive =
       )
     }
 
-    const { organisationId, registrationId } = existing.summaryLog
-
-    // Pre-check: is another log for same org/reg already submitting?
-    // Read from storage (strong consistency) - in single-threaded JS,
-    // true race conditions can't occur like they can in MongoDB with
-    // network I/O interleaving.
+    // Pre-check: is another log for the same org/reg/year/accreditationId
+    // already submitting? Read from storage (strong consistency) - in
+    // single-threaded JS, true race conditions can't occur like they can in
+    // MongoDB with network I/O interleaving.
     for (const [id, doc] of storage) {
       if (
         id !== validatedId &&
-        doc.summaryLog.organisationId === organisationId &&
-        doc.summaryLog.registrationId === registrationId &&
-        doc.summaryLog.status === 'submitting'
+        collidesOnSubmittingLock(doc.summaryLog, existing.summaryLog)
       ) {
         return { success: false }
       }

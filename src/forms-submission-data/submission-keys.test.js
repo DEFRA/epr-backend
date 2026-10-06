@@ -6,6 +6,7 @@ import {
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
+  REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -366,6 +367,40 @@ describe('isAccreditationForRegistration', () => {
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         material: MATERIAL.GLASS,
         glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+  })
+
+  describe('regulator', () => {
+    it('matches when submittedToRegulator is the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC,
+        submittedToRegulator: REGULATOR.EA
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC,
+        submittedToRegulator: REGULATOR.EA
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when submittedToRegulator differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC,
+        submittedToRegulator: REGULATOR.SEPA
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC,
+        submittedToRegulator: REGULATOR.EA
       }
       expect(isAccreditationForRegistration(accreditation, registration)).toBe(
         false

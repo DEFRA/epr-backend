@@ -5,20 +5,17 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
-  calculateExpiresAt,
-  createRejectedValidation,
-  determineStatusFromUpload,
-  NO_PRIOR_SUBMISSION,
-  SUMMARY_LOG_STATUS,
-  transitionStatus,
-  UPLOAD_STATUS
-} from '#domain/summary-logs/status.js'
+  formatS3Info,
+  updateStatusBasedOnUpload
+} from './update-status-based-on-upload.js'
 
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
-/** @import { HapiRequest, TypedLogger } from '#common/hapi-types.js' */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './post.schema.js' */
 
@@ -26,128 +23,17 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  */
 
-const buildFileData = (upload, existingFile) => {
-  const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
-
-  const fileData = existingFile
-    ? { ...existingFile, id: fileId, name: filename, status: fileStatus }
-    : { id: fileId, name: filename, status: fileStatus }
-
-  if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-    fileData.uri = `s3://${s3Bucket}/${s3Key}`
-  }
-
-  return fileData
-}
-
-const buildSummaryLogData = (
-  upload,
-  existingFile,
-  organisationId,
-  registrationId
-) => {
-  const status = determineStatusFromUpload(upload.fileStatus)
-
-  const data = {
-    status,
-    expiresAt: calculateExpiresAt(status),
-    createdAt: new Date().toISOString(),
-    file: buildFileData(upload, existingFile),
-    organisationId,
-    registrationId
-  }
-
-  if (status === SUMMARY_LOG_STATUS.REJECTED) {
-    data.validation = createRejectedValidation(upload.errorMessage)
-  }
-
-  return data
-}
-
-/**
- * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {string} summaryLogId
- * @param {SummaryLogUpload} upload
- * @param {TypedLogger} logger
- * @param {string} organisationId
- * @param {string} registrationId
- * @returns {Promise<string>} The new status
- */
-const updateStatusBasedOnUpload = async (
-  summaryLogsRepository,
-  summaryLogId,
-  upload,
-  logger,
-  organisationId,
-  registrationId
-) => {
-  const existing = await summaryLogsRepository.findById(summaryLogId)
-  const newStatus = determineStatusFromUpload(upload.fileStatus)
-
-  if (existing) {
-    const { version, summaryLog } = existing
-    try {
-      transitionStatus(summaryLog, newStatus)
-    } catch (error) {
-      logger.error({
-        message: error.message,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
-          reference: summaryLogId
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.CONFLICT
-          }
-        }
-      })
-
-      throw Boom.conflict(error.message)
-    }
-
-    const updates = buildSummaryLogData(
-      upload,
-      summaryLog.file,
-      organisationId,
-      registrationId
-    )
-    await summaryLogsRepository.update(summaryLogId, version, updates)
-  } else {
-    const summaryLog = buildSummaryLogData(
-      upload,
-      undefined,
-      organisationId,
-      registrationId
-    )
-
-    // Capture baseline for staleness detection when entering validating status
-    if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
-      const latestSubmitted =
-        await summaryLogsRepository.findLatestSubmittedForOrgReg(
-          organisationId,
-          registrationId
-        )
-      summaryLog.validatedAgainstSummaryLogId =
-        latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
-    }
-
-    await summaryLogsRepository.insert(summaryLogId, summaryLog)
-  }
-
-  return newStatus
-}
-
-const formatS3Info = (upload) =>
-  upload.fileStatus === UPLOAD_STATUS.COMPLETE &&
-  upload.s3Bucket &&
-  upload.s3Key
-    ? `, s3Bucket=${upload.s3Bucket}, s3Key=${upload.s3Key}`
-    : ''
-
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
 
+/**
+ * Deprecated: superseded by the year-scoped callback route
+ * (`summary-logs/{year}/{summaryLogId}/upload-completed`). Kept until every
+ * consumer of the legacy create route has migrated (tracked separately). An
+ * upload that started via the legacy create route never had a year, so this
+ * summary log is stored without one — `validate.js` resolves the
+ * registration's live accreditation itself, fresh, when validation runs.
+ */
 export const summaryLogsUploadCompleted = {
   method: 'POST',
   path: summaryLogsUploadCompletedPath,
@@ -161,6 +47,7 @@ export const summaryLogsUploadCompleted = {
    * @param {HapiRequest<UploadCompletedPayload> & {
    *   params: { organisationId: string, registrationId: string, summaryLogId: string },
    *   summaryLogsRepository: SummaryLogsRepository,
+   *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -168,6 +55,7 @@ export const summaryLogsUploadCompleted = {
   handler: async (request, h) => {
     const {
       summaryLogsRepository,
+      organisationsRepository,
       summaryLogsWorker,
       payload,
       params,
@@ -180,11 +68,11 @@ export const summaryLogsUploadCompleted = {
     try {
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
+        organisationsRepository,
         summaryLogId,
         summaryLogUpload,
         logger,
-        organisationId,
-        registrationId
+        { organisationId, registrationId, year: undefined }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

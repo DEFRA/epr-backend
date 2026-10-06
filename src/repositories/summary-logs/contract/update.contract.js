@@ -5,6 +5,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { buildFile, buildPendingFile, summaryLogFactory } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
@@ -161,6 +162,32 @@ export const testUpdateBehaviour = (it) => {
           expect(found.summaryLog.hackerField).toBeUndefined()
           expect(found.summaryLog.evilField).toBeUndefined()
           expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        })
+
+        it('leaves periodsRequiringResubmission absent when an update omits it', async () => {
+          const id = `contract-no-resubmission-periods-${randomUUID()}`
+          await repository.insert(id, summaryLogFactory.validating())
+          const current = await repository.findById(id)
+          const { periodsRequiringResubmission: _omitted, ...loads } =
+            emptyLoadsByReportingPeriod()
+
+          await repository.update(id, current.version, {
+            ...transitionStatus(
+              current.summaryLog,
+              SUMMARY_LOG_STATUS.VALIDATED
+            ),
+            loadsByReportingPeriod: loads
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.loadsByReportingPeriod).toBeDefined()
+          expect(found.summaryLog.loadsByReportingPeriod).not.toHaveProperty(
+            'periodsRequiringResubmission'
+          )
         })
 
         it('rejects update with invalid status', async () => {

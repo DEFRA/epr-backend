@@ -7,6 +7,7 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -618,6 +619,8 @@ export const createTestInfrastructure = async (
  *   registrationId?: string,
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
+ *   accreditationValidFrom?: string,
+ *   resubmissionFigureGateEnabled?: boolean,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
@@ -631,6 +634,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   registrationId = new ObjectId().toString(),
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true,
+  accreditationValidFrom = VALID_FROM,
+  resubmissionFigureGateEnabled = false,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -645,7 +650,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     processingType,
     reprocessingType,
     material,
-    accredited
+    accredited,
+    accreditationValidFrom
   })
   testOrg.id = organisationId
 
@@ -709,6 +715,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     }
   ])()
 
+  const packagingRecyclingNotesRepositoryFactory =
+    createInMemoryPackagingRecyclingNotesRepository()
+  const packagingRecyclingNotesRepository =
+    packagingRecyclingNotesRepositoryFactory(mockLogger)
+
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
@@ -717,7 +728,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     reportsService: createReportsService(reportsRepository),
     overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
-    logger: mockLogger
+    logger: mockLogger,
+    resubmissionFigureGateEnabled
   })
 
   const syncWasteRecords = syncFromSummaryLog({
@@ -729,11 +741,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     ledgerRepository,
     logger: mockLogger
   })
-
-  const packagingRecyclingNotesRepositoryFactory =
-    createInMemoryPackagingRecyclingNotesRepository()
-  const packagingRecyclingNotesRepository =
-    packagingRecyclingNotesRepositoryFactory(mockLogger)
 
   const server = await createTestServer({
     config,
@@ -769,7 +776,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     ledgerRepository,
     summaryLogRowStatesRepository,
     systemLogsForBalanceAudit,
-    reportsRepository
+    reportsRepository,
+    validateSummaryLog,
+    logger: mockLogger
   }
 }
 
@@ -807,9 +816,10 @@ const createTestSubmitterWorker = ({
  * @param {string} options.reprocessingType
  * @param {string} options.material
  * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
+ * @param {string} [options.accreditationValidFrom] - The date the accreditation's window opens
  * @returns {Object} Test organisation with registrations and accreditations
  */
-const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
+export const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
 const TEST_UNAPPROVED_OVERSEAS_SITE_ID = 'test-overseas-site-200'
 
 const buildComplexTestOrg = ({
@@ -818,7 +828,8 @@ const buildComplexTestOrg = ({
   processingType,
   reprocessingType,
   material,
-  accredited = true
+  accredited = true,
+  accreditationValidFrom = VALID_FROM
 }) => {
   const registration = {
     id: registrationId,
@@ -832,7 +843,7 @@ const buildComplexTestOrg = ({
     wasteProcessingType: processingType,
     reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
-    submittedToRegulator: 'ea',
+    submittedToRegulator: REGULATOR.EA,
     validFrom: VALID_FROM,
     // A registered-only operator has no accreditation, which makes the
     // registration report on a quarterly cadence rather than monthly.
@@ -853,7 +864,7 @@ const buildComplexTestOrg = ({
           partialMock({
             id: accreditationId,
             accreditationNumber: 'ACC-123',
-            validFrom: VALID_FROM,
+            validFrom: accreditationValidFrom,
             validTo: VALID_TO,
             material,
             submittedToRegulator: 'ea',

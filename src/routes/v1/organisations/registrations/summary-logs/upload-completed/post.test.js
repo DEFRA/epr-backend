@@ -289,6 +289,21 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
   })
 
+  it("stores neither year nor accreditationId — validate.js resolves the registration's live accreditation itself when validation runs", async () => {
+    const summaryLogId = randomUUID()
+
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedUrl(summaryLogId),
+      payload: createCompletePayload('file-legacy')
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    expect(stored.summaryLog).not.toHaveProperty('year')
+    expect(stored.summaryLog).not.toHaveProperty('accreditationId')
+  })
+
   describe('payload validation', () => {
     it('returns 400 if payload is not an object', async () => {
       const response = await server.inject({
