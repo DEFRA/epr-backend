@@ -162,7 +162,7 @@ export function toOrganisationView(organisation, overseasSitesById, onDrop) {
           id: linkedDefraOrganisation.orgId,
           name: linkedDefraOrganisation.orgName
         },
-        linkedAt: linkedDefraOrganisation.linkedAt,
+        linkedAt: new Date(linkedDefraOrganisation.linkedAt).toISOString(),
         linkedBy: { email: linkedDefraOrganisation.linkedBy.email }
       }
     }),
