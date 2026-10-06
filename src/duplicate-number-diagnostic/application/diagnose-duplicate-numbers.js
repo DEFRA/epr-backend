@@ -35,9 +35,17 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
  */
 
 /**
+ * @typedef {Object} NumberedRecord
+ * @property {string} id
+ * @property {RegOrAccStatus} status
+ * @property {string | null | undefined} number
+ */
+
+/**
  * @param {Organisation[]} organisations
  * @param {DuplicateNumberRow['recordType']} recordType
- * @param {(organisation: Organisation) => Array<{ id: string, status: RegOrAccStatus, number: string | null | undefined }>} numberedRecordsOf
+ * @param {(organisation: Organisation) => NumberedRecord[]} numberedRecordsOf
+ * @returns {{ numbered: number, rows: DuplicateNumberRow[] }}
  */
 const findDuplicates = (organisations, recordType, numberedRecordsOf) => {
   const holders = organisations.flatMap((organisation) =>
