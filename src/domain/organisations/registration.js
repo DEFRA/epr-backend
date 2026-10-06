@@ -1,5 +1,5 @@
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, ReprocessingType, TimeScale, User, WastePermitType} from '#domain/organisations/model.js' */
+/** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -139,11 +139,11 @@
  *  plantEquipmentDetails?: string;
  *  samplingInspectionPlanPart1FileUploads: FormFileUpload[];
  *  site: RegistrationSite;
- *  submittedToRegulator: string;
+ *  submittedToRegulator: RegulatorValue;
  *  submitterContactDetails: User;
  *  suppliers: string;
  *  wasteManagementPermits?: WasteManagementPermit[];
- *  wasteProcessingType: string;
+ *  wasteProcessingType: WasteProcessingTypeValue;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;
  *  yearlyMetrics?: YearlyMetrics[];

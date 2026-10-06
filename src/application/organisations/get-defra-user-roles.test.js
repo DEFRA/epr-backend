@@ -193,6 +193,42 @@ describe('#getDefraUserRoles', () => {
       ])
     })
 
+    test('assigns standard user scope when the request names the linked organisation by its number', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue({
+        ...mockLinkedEprOrg,
+        orgId: 500123
+      })
+
+      const result = await getDefraUserRoles(tokenPayload, {
+        ...mockRequest,
+        params: { organisationNumber: '500123' }
+      })
+
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite,
+        SCOPES.organisationRead,
+        SCOPES.organisationWrite
+      ])
+    })
+
+    test('does not assign standard user scope when the request names a different organisation number', async () => {
+      mockGetOrgMatchingUsersToken.mockResolvedValue({
+        ...mockLinkedEprOrg,
+        orgId: 500123
+      })
+
+      const result = await getDefraUserRoles(tokenPayload, {
+        ...mockRequest,
+        params: { organisationNumber: '500999' }
+      })
+
+      expect(result.scopes).toEqual([
+        SCOPES.organisationLinkedRead,
+        SCOPES.organisationLinkedWrite
+      ])
+    })
+
     test('does not assign standard user scope when user is linked to an active organisation, but request does not specify an organisation', async () => {
       mockGetOrgMatchingUsersToken.mockResolvedValue(mockLinkedEprOrg)
 
