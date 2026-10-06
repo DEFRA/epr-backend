@@ -349,7 +349,7 @@ describe('submitSummaryLog resubmission flag source', () => {
     expect(flagged).toEqual({ january: true, february: false })
   })
 
-  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
+  it('flags no report for a log validated before periodsRequiringResubmission existed', async () => {
     const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
 
     const flagged = await submitOverJanuaryAndFebruaryReports({
@@ -358,7 +358,7 @@ describe('submitSummaryLog resubmission flag source', () => {
       closedPeriods: [january, february]
     })
 
-    expect(flagged).toEqual({ january: true, february: true })
+    expect(flagged).toEqual({ january: false, february: false })
   })
 })
 

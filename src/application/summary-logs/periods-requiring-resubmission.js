@@ -297,11 +297,10 @@ const computePeriodsRequiringResubmission = async ({
  * A failure propagates so the queue retries the validation rather than
  * guessing a verdict.
  *
- * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId' | 'logger'> & {
+ * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
- *   summaryLog: SubmittedSummaryLog,
- *   gate: { enabled: boolean, logger: TypedLogger }
+ *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
  */
@@ -309,24 +308,15 @@ export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
   summaryLog,
-  gate,
   ...params
 }) => {
   if (!loadsByReportingPeriod) {
     return null
   }
-  // Stored rather than omitted so submit and the frontend act on the same set.
-  if (!gate.enabled) {
-    return {
-      ...loadsByReportingPeriod,
-      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
-    }
-  }
 
   const periodsRequiringResubmission =
     await computePeriodsRequiringResubmission({
       ...params,
-      logger: gate.logger,
       closedPeriods: loadsByReportingPeriod.closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
