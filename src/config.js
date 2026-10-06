@@ -378,12 +378,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_YEAR_BACKFILL'
     },
-    streamTransitionDiagnostic: {
-      doc: 'Feature Flag: Run the startup diagnostic reporting organisations that have switched between the registered-only and accredited summary-log streams (PAE-1924)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_STREAM_TRANSITION_DIAGNOSTIC'
-    },
     resubmissionFigureGate: {
       doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',
       format: Boolean,
