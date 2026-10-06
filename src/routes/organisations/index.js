@@ -1,7 +1,9 @@
+export { organisationViewGet } from './get.organisation.js'
 export {
-  organisationViewGet,
   registrationsViewGet,
-  registrationViewGet,
+  registrationViewGet
+} from './get.registration.js'
+export {
   accreditationsViewGet,
   accreditationViewGet
-} from './get.js'
+} from './get.accreditation.js'

@@ -303,6 +303,28 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
     })
 
+    it('gives the time the organisation was linked as an ISO date-time when it is stored as a date', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const linked = buildLinkedDefraOrg('defra-org-1', 'Defra Org')
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        linkedDefraOrganisation: {
+          ...linked,
+          linkedAt: new Date('2026-03-04T05:06:07.000Z')
+        }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(repository, stored.orgId)
+
+      expect(organisation.linkedDefraOrganisation?.linkedAt).toBe(
+        '2026-03-04T05:06:07.000Z'
+      )
+    })
+
     it('leaves out a contact phone number that was never given', async ({
       organisationReadRepositoryWith
     }) => {

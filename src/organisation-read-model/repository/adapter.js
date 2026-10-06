@@ -110,7 +110,7 @@ function toOrganisation(stored, context) {
           id: linkedDefraOrganisation.orgId,
           name: linkedDefraOrganisation.orgName
         },
-        linkedAt: linkedDefraOrganisation.linkedAt,
+        linkedAt: new Date(linkedDefraOrganisation.linkedAt).toISOString(),
         linkedBy: {
           email: linkedDefraOrganisation.linkedBy.email,
           id: linkedDefraOrganisation.linkedBy.id
