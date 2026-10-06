@@ -78,7 +78,7 @@ const findDuplicates = (organisations, recordType, numberedRecordsOf) => {
       ).size,
       holders: entries.map(({ holder }) => holder)
     }))
-    .filter(({ holders }) => holders.length > 1)
+    .filter((row) => row.holders.length > 1)
 
   return { numbered: holders.length, rows }
 }
