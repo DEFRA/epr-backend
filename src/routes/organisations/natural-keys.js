@@ -44,12 +44,9 @@ export async function findRegistrationByNumber(
   const registration = onlyOne(
     organisation.registrations.filter(
       (candidate) =>
-        toRegistrationEntry(
-          candidate,
-          organisation,
-          NO_SITES,
-          ignoreDrop
-        )?.[0] === registrationNumber
+        candidate.registrationNumber === registrationNumber &&
+        toRegistrationEntry(candidate, organisation, NO_SITES, ignoreDrop) !==
+          null
     ),
     'Registration'
   )

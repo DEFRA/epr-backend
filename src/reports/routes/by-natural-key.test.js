@@ -51,6 +51,7 @@ const streams = [
     stream: 'registered-only',
     registration: registeredOnlyRegistration,
     cadence: 'quarterly',
+    periods: { inProgress: 1, submitted: 2, created: 3 },
     seeded: { inProgress: '', submitted: '' },
     reports: `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/${YEAR}/quarterly`
   },
@@ -58,14 +59,11 @@ const streams = [
     stream: 'accredited',
     registration: accreditedRegistration,
     cadence: 'monthly',
+    periods: { inProgress: 7, submitted: 8, created: 9 },
     seeded: { inProgress: '', submitted: '' },
     reports: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/monthly`
   }
 ]
-
-const IN_PROGRESS_PERIOD = 1
-const SUBMITTED_PERIOD = 2
-const NEW_PERIOD = 3
 
 const COMPLETE_REPORT = {
   recyclingActivity: {
@@ -89,7 +87,7 @@ describe('report routes by natural key', () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     reportsRepository = reportsRepositoryFactory()
 
-    for (const { registration, cadence, seeded } of streams) {
+    for (const { registration, cadence, periods, seeded } of streams) {
       /** @param {number} period */
       const forPeriod = (period) => ({
         organisationId: organisation.id,
@@ -100,13 +98,13 @@ describe('report routes by natural key', () => {
       })
       const inProgress = await reportsRepository.createReport(
         buildCreateReportParams({
-          ...forPeriod(IN_PROGRESS_PERIOD),
+          ...forPeriod(periods.inProgress),
           ...COMPLETE_REPORT
         })
       )
       const submitted = await createAndSubmitReport(
         reportsRepository,
-        forPeriod(SUBMITTED_PERIOD)
+        forPeriod(periods.submitted)
       )
       seeded.inProgress = inProgress.id
       seeded.submitted = submitted
@@ -134,14 +132,14 @@ describe('report routes by natural key', () => {
 
   describe.each(streams)(
     'for the $stream stream',
-    ({ registration, reports, seeded }) => {
-      const inProgress = submission(reports, IN_PROGRESS_PERIOD)
-      const submitted = submission(reports, SUBMITTED_PERIOD)
+    ({ registration, reports, periods, seeded }) => {
+      const inProgress = submission(reports, periods.inProgress)
+      const submitted = submission(reports, periods.submitted)
 
       it('creates a report', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: submission(reports, NEW_PERIOD),
+          url: submission(reports, periods.created),
           ...asOperator()
         })
 
@@ -152,7 +150,7 @@ describe('report routes by natural key', () => {
         expect(report).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          period: NEW_PERIOD
+          period: periods.created
         })
       })
 

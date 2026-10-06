@@ -29,7 +29,9 @@ import { submissionNumberSchema, yearSchema } from './shared.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { RegistrationParams } from '#routes/organisations/view-route.js'
  *
- * @typedef {(organisation: Organisation, registration: Registration, year: number) => void} RequireStream
+ * @typedef {RegistrationParams & { year: number }} SubmissionParams
+ *
+ * @typedef {(organisation: Organisation, registration: Registration, params: SubmissionParams) => void} RequireStream
  *
  * @typedef {{
  *   method: string,
@@ -42,7 +44,7 @@ import { submissionNumberSchema, yearSchema } from './shared.js'
 const registeredOnly = () => {}
 
 /** @type {RequireStream} */
-const accredited = (organisation, registration, year) => {
+const accredited = (organisation, registration, { year }) => {
   findAccreditationForYear(organisation, registration, year)
 }
 
@@ -85,10 +87,11 @@ const submissionRoutes = [
  * Serves an existing report route at a natural-key path. The keys resolve to
  * the stored ids the existing handler reads, so both paths behave the same.
  *
+ * @template {RegistrationParams} P
  * @param {ReportRoute} route
  * @param {string} path
  * @param {Joi.PartialSchemaMap} params
- * @param {RequireStream} requireStream
+ * @param {(organisation: Organisation, registration: Registration, params: P) => void} [requireStream]
  */
 const atNaturalKeys = (route, path, params, requireStream) => ({
   ...route,
@@ -98,17 +101,17 @@ const atNaturalKeys = (route, path, params, requireStream) => ({
     validate: { ...route.options.validate, params: Joi.object(params) }
   },
   /**
-   * @param {HapiRequest & { params: RegistrationParams & { year?: number } }} request
+   * @param {HapiRequest & { params: P }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationNumber, registrationNumber, year } = request.params
+    const { organisationNumber, registrationNumber } = request.params
     const { organisation, registration } = await findRegistrationByNumber(
       request.organisationsRepository,
       organisationNumber,
       registrationNumber
     )
-    requireStream(organisation, registration, Number(year))
+    requireStream?.(organisation, registration, request.params)
 
     request.params = {
       ...request.params,
@@ -128,7 +131,6 @@ export const reportRoutesByNaturalKey = [
   atNaturalKeys(
     reportsGet,
     `${registrationPath}/reports/calendar`,
-    registrationParams,
-    registeredOnly
+    registrationParams
   )
 ]

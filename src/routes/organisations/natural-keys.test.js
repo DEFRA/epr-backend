@@ -71,6 +71,24 @@ describe('findRegistrationByNumber', () => {
 
     expect(found.registration.id).toBe(served.id)
   })
+
+  it("finds a registration beside another the read model can't show", async () => {
+    const registration = reprocessor()
+    const organisation = buildOrganisation({
+      registrations: [
+        registration,
+        reprocessor({
+          registrationNumber: 'R26ER5001180099GL',
+          material: 'glass',
+          glassRecyclingProcess: []
+        })
+      ]
+    })
+
+    const found = await findIn(organisation)
+
+    expect(found.registration.id).toBe(registration.id)
+  })
 })
 
 describe('findAccreditationForYear', () => {
