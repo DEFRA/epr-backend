@@ -1,6 +1,10 @@
 import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 
-const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
+// A string, instantiated per build rather than held as a module-scope Date:
+// suites that fake the clock (vi.setSystemTime) swap the global Date class,
+// and an instance of the original class would then fail the ledger schema's
+// date validation when appended under the faked clock.
+const DEFAULT_CREATED_AT = '2026-01-15T10:00:00.000Z'
 
 /**
  * Build the id of a waste balance ledger. Defaults match `buildLedgerEvent`, so
@@ -33,7 +37,7 @@ export const buildLedgerEvent = (overrides = {}) => ({
   },
   openingBalance: { amount: 0, availableAmount: 0 },
   closingBalance: { amount: 100, availableAmount: 100 },
-  createdAt: DEFAULT_CREATED_AT,
+  createdAt: new Date(DEFAULT_CREATED_AT),
   createdBy: { id: 'user-1', name: 'Test User' },
   ...overrides
 })
