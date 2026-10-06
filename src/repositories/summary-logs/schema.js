@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 
 const commonMessages = {
   'any.required': '{#label} is required',
@@ -64,6 +65,8 @@ export const summaryLogInsertSchema = Joi.object({
   }),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
+  year: yearSchema().optional(),
+  accreditationId: Joi.string().allow(null).optional(),
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
   createdAt: Joi.string().isoDate().required(),
@@ -95,7 +98,10 @@ export const summaryLogUpdateSchema = Joi.object({
   expiresAt: Joi.date().allow(null).optional(),
   submittedAt: Joi.string().isoDate().optional(),
   // Set once at insert time - must not be included in updates
-  validatedAgainstSummaryLogId: Joi.forbidden()
+  validatedAgainstSummaryLogId: Joi.forbidden(),
+  // Set once at insert time - the year/accreditation a summary log belongs to is fixed
+  year: Joi.forbidden(),
+  accreditationId: Joi.forbidden()
 })
   .with('status', 'expiresAt')
   .with('expiresAt', 'status')

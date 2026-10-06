@@ -81,7 +81,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(stored).toBeNull()
     })
 
-    it('initiates upload via uploads repository', async () => {
+    it('initiates upload via uploads repository, without a year/accreditationId on the callback', async () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
@@ -223,8 +223,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         ...asOperator(),
         payload: {
-          redirectUrl:
-            '/organisations/org-123/registrations/reg-456/summary-logs/sl-789'
+          redirectUrl: `/organisations/${organisationId}/registrations/${registrationId}/summary-logs/sl-789`
         }
       })
 

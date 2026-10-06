@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 
 const cell = Joi.alternatives()
   .try(Joi.string(), Joi.number(), Joi.boolean())
@@ -21,6 +22,12 @@ const tableSchema = Joi.object({
     )
     .min(1)
     .required()
+})
+
+export const summaryLogContentParamsSchema = Joi.object({
+  organisationId: Joi.string().required(),
+  registrationId: Joi.string().required(),
+  year: yearSchema().required()
 })
 
 export const summaryLogContentPayloadSchema = Joi.object({
