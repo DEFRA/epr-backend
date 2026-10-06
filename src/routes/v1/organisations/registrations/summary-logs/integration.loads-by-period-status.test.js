@@ -403,6 +403,172 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ])
   })
 
+  it('records the closed period a load leaves when re-dated outside the accreditation window', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    await closeJanuary2025(env)
+
+    await upload(
+      env,
+      'sl-out-of-window-original',
+      'file-out-of-window-original',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2025-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+          exportDate: '2025-01-20T00:00:00.000Z'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-out-of-window-original')
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-out-of-window-reupload',
+      'file-out-of-window-reupload',
+      createUploadData([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 100,
+          dateReceived: '2024-12-15T00:00:00.000Z',
+          dateReceivedByOsr: '2024-12-18T00:00:00.000Z',
+          exportDate: '2024-12-20T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+    ])
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({
+      count: 1,
+      tonnageDelta: -100,
+      rows: [
+        {
+          rowId: '1001',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [
+            CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+          ],
+          tonnageDelta: -100
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.openPeriodLoads.adjusted).toEqual(
+      emptyChange()
+    )
+  })
+
+  it('lists a load added to a closed period from before the accreditation window', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accreditationValidFrom: '2025-01-10'
+    })
+    await closeJanuary2025(env)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-added-pre-accreditation',
+      'file-added-pre-accreditation',
+      createUploadData([
+        {
+          rowId: 1002,
+          osrId: 100,
+          exportTonnage: 50,
+          dateReceived: '2025-01-05T00:00:00.000Z',
+          dateReceivedByOsr: '2025-01-06T00:00:00.000Z',
+          exportDate: '2025-01-07T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.added.nonBalanceAffecting
+    ).toEqual({
+      count: 1,
+      rows: [
+        {
+          rowId: '1002',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [
+            CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+          ],
+          tonnageDelta: 0
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+    ])
+  })
+
+  it('reverses a counted open-period load re-dated to before the accreditation window', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+
+    await upload(
+      env,
+      'sl-open-out-of-window-original',
+      'file-open-out-of-window-original',
+      createUploadData([
+        {
+          rowId: 1003,
+          osrId: 100,
+          exportTonnage: 80,
+          dateReceived: '2025-02-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-02-18T00:00:00.000Z',
+          exportDate: '2025-02-20T00:00:00.000Z'
+        }
+      ])
+    )
+    await submitAndPoll(env, 'sl-open-out-of-window-original')
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-open-out-of-window-reupload',
+      'file-open-out-of-window-reupload',
+      createUploadData([
+        {
+          rowId: 1003,
+          osrId: 100,
+          exportTonnage: 80,
+          dateReceived: '2024-12-15T00:00:00.000Z',
+          dateReceivedByOsr: '2024-12-18T00:00:00.000Z',
+          exportDate: '2024-12-20T00:00:00.000Z'
+        }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.balanceAffecting
+    ).toEqual({
+      count: 1,
+      tonnageDelta: -80,
+      rows: [
+        {
+          rowId: '1003',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [
+            CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+          ],
+          tonnageDelta: -80
+        }
+      ]
+    })
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.adjusted.nonBalanceAffecting
+    ).toEqual({ count: 0, rows: [] })
+  })
+
   it('applies closed-wins when one date field is closed and another is open', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
