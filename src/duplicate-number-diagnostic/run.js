@@ -10,6 +10,7 @@ const LOCK_NAME = 'duplicate-number-diagnostic'
 /** @param {NumberHolder} holder */
 const formatHolder = (holder) =>
   [
+    `number=${JSON.stringify(holder.number)}`,
     `organisationId=${holder.organisationId}`,
     `orgId=${holder.orgId}`,
     `testOrganisation=${holder.testOrganisation}`,
@@ -21,9 +22,9 @@ const formatHolder = (holder) =>
 const formatDuplicateLine = (row) =>
   [
     `Duplicate ${row.recordType} number:`,
-    `number=${row.number}`,
+    `number=${JSON.stringify(row.number)}`,
     `holders=${row.holders.length}`,
-    `organisations=${row.organisations}`,
+    `organisationCount=${row.organisationCount}`,
     row.holders.map((holder) => `[${formatHolder(holder)}]`).join(' ')
   ].join(' ')
 

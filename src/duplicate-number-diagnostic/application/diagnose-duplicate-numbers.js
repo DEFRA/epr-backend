@@ -4,6 +4,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 
 /**
  * @typedef {Object} NumberHolder
+ * @property {string} number - as stored
  * @property {string} organisationId
  * @property {number} orgId
  * @property {boolean} testOrganisation
@@ -14,8 +15,8 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 /**
  * @typedef {Object} DuplicateNumberRow
  * @property {'accreditation' | 'registration'} recordType
- * @property {string} number
- * @property {number} organisations - 1 when every holder is in the same organisation
+ * @property {string} number - trimmed and upper-cased, so holders whose stored numbers differ only by case or surrounding space are grouped together
+ * @property {number} organisationCount - 1 when every holder is in the same organisation
  * @property {NumberHolder[]} holders
  */
 
@@ -50,11 +51,12 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 const findDuplicates = (organisations, recordType, numberedRecordsOf) => {
   const holders = organisations.flatMap((organisation) =>
     numberedRecordsOf(organisation).flatMap(({ id, status, number }) =>
-      typeof number === 'string'
+      typeof number === 'string' && number.trim() !== ''
         ? [
             {
-              number,
+              key: number.trim().toUpperCase(),
               holder: {
+                number,
                 organisationId: organisation.id,
                 orgId: organisation.orgId,
                 testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
@@ -67,12 +69,13 @@ const findDuplicates = (organisations, recordType, numberedRecordsOf) => {
     )
   )
 
-  const rows = [...Map.groupBy(holders, ({ number }) => number)]
+  const rows = [...Map.groupBy(holders, ({ key }) => key)]
     .map(([number, entries]) => ({
       recordType,
       number,
-      organisations: new Set(entries.map(({ holder }) => holder.organisationId))
-        .size,
+      organisationCount: new Set(
+        entries.map(({ holder }) => holder.organisationId)
+      ).size,
       holders: entries.map(({ holder }) => holder)
     }))
     .filter(({ holders }) => holders.length > 1)
@@ -83,7 +86,8 @@ const findDuplicates = (organisations, recordType, numberedRecordsOf) => {
 /**
  * Lists every accreditation number and every registration number held by more
  * than one record, whether the records are in different organisations or the
- * same one. Records without a number are ignored.
+ * same one. Numbers are compared ignoring case and surrounding space, and a
+ * blank number counts as no number.
  *
  * @param {Organisation[]} organisations
  * @returns {DuplicateNumbersReport}

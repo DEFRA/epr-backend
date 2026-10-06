@@ -80,12 +80,12 @@ describe('runDuplicateNumberDiagnostic', () => {
     const holder = (
       /** @type {ReturnType<typeof buildOrganisation>} */ organisation
     ) =>
-      `[organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordId=${organisation.accreditations[0].id} status=created]`
+      `[number="ACC-1" organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordId=${organisation.accreditations[0].id} status=created]`
 
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `Duplicate accreditation number: number=ACC-1 holders=2 organisations=2 ${holder(first)} ${holder(second)}`
+          message: `Duplicate accreditation number: number="ACC-1" holders=2 organisationCount=2 ${holder(first)} ${holder(second)}`
         }
       ],
       [
@@ -97,7 +97,7 @@ describe('runDuplicateNumberDiagnostic', () => {
     ])
   })
 
-  it('releases the lock and logs an error when reading the organisations fails', async () => {
+  it('releases the lock and logs an error when the repository cannot be created', async () => {
     const error = new Error('mongo unavailable')
     vi.mocked(createOrganisationsRepository).mockRejectedValue(error)
 

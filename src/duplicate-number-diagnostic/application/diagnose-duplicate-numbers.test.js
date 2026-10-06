@@ -7,15 +7,20 @@ import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseDuplicateNumbers } from './diagnose-duplicate-numbers.js'
 
+const TEST_ORG_ID = 999999
+
 /**
  * @param {Array<string | null>} accreditationNumbers
  * @param {Array<string | null>} [registrationNumbers]
+ * @param {Record<string, unknown>} [overrides]
  */
 const organisationNumbering = (
   accreditationNumbers,
-  registrationNumbers = []
+  registrationNumbers = [],
+  overrides = {}
 ) =>
   buildOrganisation({
+    ...overrides,
     accreditations: accreditationNumbers.map((accreditationNumber) =>
       buildAccreditation({ accreditationNumber })
     ),
@@ -41,8 +46,9 @@ describe('diagnoseDuplicateNumbers', () => {
       {
         recordType: 'accreditation',
         number: 'ACC-1',
-        organisations: 2,
+        organisationCount: 2,
         holders: [first, second].map((organisation) => ({
+          number: 'ACC-1',
           organisationId: organisation.id,
           orgId: organisation.orgId,
           testOrganisation: false,
@@ -60,7 +66,7 @@ describe('diagnoseDuplicateNumbers', () => {
       expect.objectContaining({
         recordType: 'accreditation',
         number: 'ACC-1',
-        organisations: 1,
+        organisationCount: 1,
         holders: [expect.anything(), expect.anything()]
       })
     ])
@@ -76,11 +82,58 @@ describe('diagnoseDuplicateNumbers', () => {
       expect.objectContaining({
         recordType: 'registration',
         number: 'REG-1',
-        organisations: 2,
+        organisationCount: 2,
         holders: [
           expect.objectContaining({ recordId: first.registrations[0].id }),
           expect.objectContaining({ recordId: first.registrations[1].id }),
           expect.objectContaining({ recordId: second.registrations[0].id })
+        ]
+      })
+    ])
+  })
+
+  it('groups numbers that differ only by case or surrounding space, keeping each as stored', () => {
+    const { rows } = diagnose([
+      organisationNumbering(['ACC-1']),
+      organisationNumbering([' acc-1 '])
+    ])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({
+        number: 'ACC-1',
+        holders: [
+          expect.objectContaining({ number: 'ACC-1' }),
+          expect.objectContaining({ number: ' acc-1 ' })
+        ]
+      })
+    ])
+  })
+
+  it('treats a blank number as no number', () => {
+    const { rows, summary } = diagnose([
+      organisationNumbering(['', '  '], ['  '])
+    ])
+
+    expect(rows).toStrictEqual([])
+    expect(summary).toStrictEqual(
+      expect.objectContaining({
+        numberedAccreditations: 0,
+        numberedRegistrations: 0
+      })
+    )
+  })
+
+  it('marks a holder in a test organisation', () => {
+    const { rows } = diagnose([
+      organisationNumbering(['ACC-1'], [], { orgId: TEST_ORG_ID }),
+      organisationNumbering(['ACC-1'])
+    ])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({
+        holders: [
+          expect.objectContaining({ testOrganisation: true }),
+          expect.objectContaining({ testOrganisation: false })
         ]
       })
     ])
