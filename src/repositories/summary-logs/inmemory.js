@@ -8,6 +8,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -42,6 +43,54 @@ const insert = (storage, staleCache) => async (id, summaryLog) => {
   // Insert is immediately visible (no lag simulation for inserts)
   staleCache.set(validatedId, structuredClone(newDoc))
 }
+
+const isUnset = (year) => year === undefined || year === null
+
+const findIdsWithoutYear = (storage) => async () =>
+  [...storage]
+    .filter(([, { summaryLog }]) => isUnset(summaryLog.year))
+    .map(([id]) => id)
+
+const assignYear =
+  (storage, staleCache, logger) => async (id, version, year) => {
+    const validatedId = validateId(id)
+    const { error, value: validatedYear } = yearSchema()
+      .required()
+      .validate(year)
+    if (error) {
+      throw Boom.badData(error.message)
+    }
+    const existing = storage.get(validatedId)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    if (existing.version !== version || !isUnset(existing.summaryLog.year)) {
+      const conflictError = new Error(
+        `Version conflict: attempted to assign year with version ${version} but current version is ${existing.version}, year is ${existing.summaryLog.year ?? 'unset'}`
+      )
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    storage.set(validatedId, {
+      version: existing.version + 1,
+      summaryLog: structuredClone({
+        ...existing.summaryLog,
+        year: validatedYear
+      })
+    })
+    scheduleStaleCacheSync(storage, staleCache)
+  }
 
 const update =
   (storage, staleCache, logger) => async (id, version, updates) => {
@@ -90,11 +139,17 @@ const findById = (staleCache) => async (id) => {
 }
 
 /**
- * A year/accreditation match that also matches legacy documents (no
- * `year`), so they keep counting for every year and accreditation until the
- * backfill assigns them one. When the caller doesn't know the year
- * (`year === undefined`), every document matches, keeping the
- * registration-wide behaviour untouched.
+ * A year/accreditation match that also matches legacy documents, so they
+ * keep counting until the backfill assigns them a scope. When the caller
+ * doesn't know the year (`year === undefined`), every document matches,
+ * keeping the registration-wide behaviour untouched.
+ *
+ * - No `year`: matches every year and accreditation.
+ * - A `year` but no `accreditationId`: a backfilled legacy document, which
+ *   matches any accreditation in its year. Year-scoped inserts always write
+ *   it (`null` for registered-only), so undefined only means it predates it.
+ *
+ * `null` and `undefined` are the same value, as in MongoDB.
  *
  * @param {import('#domain/summary-logs/model.js').SummaryLog} summaryLog
  * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
@@ -103,7 +158,10 @@ const findById = (staleCache) => async (id) => {
 const matchesYear = (summaryLog, { year, accreditationId }) =>
   year === undefined ||
   summaryLog.year === undefined ||
-  (summaryLog.year === year && summaryLog.accreditationId === accreditationId)
+  summaryLog.year === null ||
+  (summaryLog.year === year &&
+    (summaryLog.accreditationId === undefined ||
+      (summaryLog.accreditationId ?? null) === (accreditationId ?? null)))
 
 const findLatestSubmittedForOrgReg =
   (staleCache) =>
@@ -328,6 +386,8 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
+    findIdsWithoutYear: findIdsWithoutYear(storage),
+    assignYear: assignYear(storage, staleCache, logger),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     findAllByOrgReg: findAllByOrgReg(staleCache),
     findAllSummaryLogStatsByRegistrationId:
