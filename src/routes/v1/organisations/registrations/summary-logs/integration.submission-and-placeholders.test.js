@@ -813,7 +813,8 @@ describe('Submission and placeholder tests', () => {
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
+          uploadsRepository,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
