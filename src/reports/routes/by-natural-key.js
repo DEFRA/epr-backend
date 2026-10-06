@@ -1,5 +1,6 @@
 import Joi from 'joi'
 
+import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodSchema } from '#reports/repository/schema.js'
 import {
@@ -19,7 +20,7 @@ import { reportsPost } from './post.js'
 import { reportsRequestResubmission } from './request-resubmission.js'
 import { reportsStatus } from './status.js'
 import { reportsUnsubmit } from './unsubmit.js'
-import { submissionNumberSchema, yearSchema } from './shared.js'
+import { submissionNumberSchema } from './shared.js'
 
 /**
  * @import { RouteOptionsValidate } from '@hapi/hapi'
@@ -53,7 +54,7 @@ const accredited = (organisation, registration, { year }) => {
  */
 const submissionParams = (cadence) => ({
   ...registrationParams,
-  year: yearSchema,
+  year: yearSchema().required(),
   cadence: Joi.string().valid(cadence).required(),
   period: periodSchema,
   submissionNumber: submissionNumberSchema
