@@ -40,6 +40,7 @@ export const summaryLogsYearCreate = {
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
    *   params: { organisationId: string, registrationId: string, year: number },
+   *   app: { summaryLogCallbackUrl?: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository,
    *   organisationsRepository: OrganisationsRepository
    * }} request
@@ -81,7 +82,8 @@ export const summaryLogsYearCreate = {
       registrationId,
       year,
       redirectUrl,
-      routePath: summaryLogsYearCreatePath
+      routePath: summaryLogsYearCreatePath,
+      callbackUrlFor: request.app.summaryLogCallbackUrl
     })
 
     return h.response(result).code(StatusCodes.CREATED)
