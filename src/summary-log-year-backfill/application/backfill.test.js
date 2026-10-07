@@ -175,23 +175,33 @@ describe('backfillSummaryLogYear', () => {
     ).toBe(2026)
   })
 
-  it('fails a summary log with neither a validFrom nor a createdAt, leaving it unchanged', async () => {
+  it('defaults to 2026 and logs when there is neither a validFrom nor a createdAt', async () => {
     await summaryLogsRepository.insert('sl-1', legacy())
     const withoutCreatedAt = { ...legacy(), createdAt: undefined }
     vi.spyOn(summaryLogsRepository, 'findById').mockResolvedValue({
       version: 1,
       summaryLog: withoutCreatedAt
     })
+    vi.spyOn(summaryLogsRepository, 'assignYear').mockResolvedValue(undefined)
     organisationsRepository.findRegistrationById.mockResolvedValue({})
 
     expect(await run(false)).toEqual({
       legacy: 1,
-      updated: 0,
-      failed: 1,
+      updated: 1,
+      failed: 0,
       auditFailed: 0,
-      years: {}
+      years: { 2026: 1 }
     })
-    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+    expect(summaryLogsRepository.assignYear).toHaveBeenCalledWith(
+      'sl-1',
+      1,
+      2026
+    )
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: expect.stringContaining(
+        'summary log sl-1 has no createdAt: defaulting year to 2026'
+      )
+    })
   })
 
   it('fails a summary log with no registration reference', async () => {
