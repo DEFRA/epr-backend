@@ -247,6 +247,10 @@ const findStatusHistoryViolation = (
     return `${label} ${id} status history dates must be in date order`
   }
 
+  if (incoming.some(({ updatedAt }) => toTimestamp(updatedAt) > Date.now())) {
+    return `${label} ${id} status history dates cannot be in the future`
+  }
+
   const invalidTransition = findInvalidTransition(incoming, isValidTransition)
   if (invalidTransition) {
     return `${label} ${id} status history contains an invalid transition from ${invalidTransition.from} to ${invalidTransition.to}`
@@ -299,11 +303,12 @@ const collectStatusHistoryErrors = (
  * A registration or accreditation status history may have its entry statuses
  * and updatedAt dates corrected through this endpoint (PAE-1809). Entries
  * cannot be added, removed or reattributed, the history must still start at
- * created, corrected dates must stay strictly ascending, and the resulting
- * sequence must be a walk of the domain transition table. Correcting the last
- * entry changes the item's derived status directly — deliberately, per the
- * ticket — without the dedicated transition endpoints' side effects (no
- * cascade cancel, no grant fields, no approval-uniqueness check).
+ * created, corrected dates must stay strictly ascending and not in the future,
+ * and the resulting sequence must be a walk of the domain transition table.
+ * Correcting the last entry changes the item's derived status directly —
+ * deliberately, per the ticket — without the dedicated transition endpoints'
+ * side effects (no cascade cancel, no grant fields, no approval-uniqueness
+ * check).
  *
  * @param {Organisation} initial - the stored organisation (findById throws 404 when the id is unknown)
  * @param {OrganisationReplacement} updates
