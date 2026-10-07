@@ -134,15 +134,17 @@ const registrationsViewSchema = Joi.object()
   .pattern(Joi.string(), registrationViewSchema)
   .required()
 
+export const linkedDefraOrganisationViewSchema = Joi.object({
+  defraOrganisation: Joi.object({
+    id: Joi.string().required(),
+    name: Joi.string().required()
+  }).required(),
+  linkedAt: isoDateTime.required(),
+  linkedBy: Joi.object({ email: Joi.string().required() }).required()
+})
+
 export const organisationViewSchema = Joi.object({
-  linkedDefraOrganisation: Joi.object({
-    defraOrganisation: Joi.object({
-      id: Joi.string().required(),
-      name: Joi.string().required()
-    }).required(),
-    linkedAt: isoDateTime.required(),
-    linkedBy: Joi.object({ email: Joi.string().required() }).required()
-  }),
+  linkedDefraOrganisation: linkedDefraOrganisationViewSchema,
   name: Joi.string().required(),
   organisationNumber: Joi.number().integer().required(),
   registrations: registrationsViewSchema,
