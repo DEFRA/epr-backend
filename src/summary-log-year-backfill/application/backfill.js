@@ -20,15 +20,16 @@ const hasYear = ({ year }) => year !== undefined && year !== null
 
 /**
  * The registration's start year, matching the year the year-scoped routes
- * are called with.
+ * are called with. A registration without a `validFrom` (cancelled before it
+ * was set) falls back to the year the summary log was created in.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {{ organisationId?: string, registrationId?: string }} summaryLog
+ * @param {{ organisationId?: string, registrationId?: string, createdAt?: string }} summaryLog
  * @returns {Promise<number>}
  */
-const registrationStartYear = async (
+const deriveYear = async (
   organisationsRepository,
-  { organisationId, registrationId }
+  { organisationId, registrationId, createdAt }
 ) => {
   if (!organisationId || !registrationId) {
     throw new Error('Summary log has no organisation or registration')
@@ -37,10 +38,15 @@ const registrationStartYear = async (
     organisationId,
     registrationId
   )
-  if (!validFrom) {
-    throw new Error(`Registration ${registrationId} has no validFrom`)
+  if (validFrom) {
+    return startOfDay(validFrom).getUTCFullYear()
   }
-  return startOfDay(validFrom).getUTCFullYear()
+  if (!createdAt) {
+    throw new Error(
+      `Registration ${registrationId} has no validFrom and the summary log has no createdAt`
+    )
+  }
+  return new Date(createdAt).getUTCFullYear()
 }
 
 /**
@@ -71,10 +77,7 @@ const backfillOne = async (
     return null
   }
 
-  const year = await registrationStartYear(
-    organisationsRepository,
-    before.summaryLog
-  )
+  const year = await deriveYear(organisationsRepository, before.summaryLog)
   if (isDryRun) {
     return { year, auditFailed: false }
   }

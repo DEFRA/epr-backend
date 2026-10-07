@@ -7,6 +7,7 @@ import {
   createMockSystemLogsRepository
 } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 import { backfillSummaryLogYear } from './backfill.js'
 
@@ -155,8 +156,32 @@ describe('backfillSummaryLogYear', () => {
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
-  it('fails a summary log whose registration has no validFrom, leaving it unchanged', async () => {
+  it('falls back to the creation year when the registration has no validFrom', async () => {
+    await summaryLogsRepository.insert('sl-1', {
+      ...legacy(),
+      createdAt: '2026-03-05T10:00:00.000Z'
+    })
+    organisationsRepository.findRegistrationById.mockResolvedValue({})
+
+    expect(await run(false)).toEqual({
+      legacy: 1,
+      updated: 1,
+      failed: 0,
+      auditFailed: 0,
+      years: { 2026: 1 }
+    })
+    expect(
+      (await waitForVersion(summaryLogsRepository, 'sl-1', 2)).summaryLog.year
+    ).toBe(2026)
+  })
+
+  it('fails a summary log with neither a validFrom nor a createdAt, leaving it unchanged', async () => {
     await summaryLogsRepository.insert('sl-1', legacy())
+    const withoutCreatedAt = { ...legacy(), createdAt: undefined }
+    vi.spyOn(summaryLogsRepository, 'findById').mockResolvedValue({
+      version: 1,
+      summaryLog: withoutCreatedAt
+    })
     organisationsRepository.findRegistrationById.mockResolvedValue({})
 
     expect(await run(false)).toEqual({
@@ -166,7 +191,6 @@ describe('backfillSummaryLogYear', () => {
       auditFailed: 0,
       years: {}
     })
-    expect((await summaryLogsRepository.findById('sl-1')).version).toBe(1)
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
