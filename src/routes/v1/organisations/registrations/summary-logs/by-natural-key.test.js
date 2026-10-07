@@ -53,12 +53,14 @@ const kinds = [
   {
     kind: 'registered-only',
     summaryLogs: registeredOnly,
-    registration: registeredOnlyRegistration
+    registration: registeredOnlyRegistration,
+    accreditationId: null
   },
   {
     kind: 'accredited',
     summaryLogs: accreditedSummaryLog,
-    registration: accreditedRegistration
+    registration: accreditedRegistration,
+    accreditationId: accredited.id
   }
 ]
 
@@ -152,10 +154,14 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(kinds)(
     'a $kind summary log',
-    ({ summaryLogs, registration }) => {
+    ({ summaryLogs, registration, accreditationId }) => {
       /** @param {object} [overrides] */
       const seedOwn = (overrides = {}) =>
-        seedValidated({ registrationId: registration.id, ...overrides })
+        seedValidated({
+          registrationId: registration.id,
+          accreditationId,
+          ...overrides
+        })
 
       it('is created with its upload-completed callback under the same address', async () => {
         const response = await server.inject({
@@ -206,9 +212,9 @@ describe('summary-log routes by natural key', () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(JSON.parse(response.payload).status).toBe(
-          SUMMARY_LOG_STATUS.VALIDATED
-        )
+        const body = JSON.parse(response.payload)
+        expect(body.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(body).not.toHaveProperty('accreditationId')
       })
 
       it('reads as the default status while its upload is in progress', async () => {
@@ -259,6 +265,11 @@ describe('summary-log routes by natural key', () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({ year: YEAR, status: 'validated' })
+        expect(body).not.toHaveProperty('organisationId')
+        expect(body).not.toHaveProperty('registrationId')
+        expect(body).not.toHaveProperty('accreditationId')
       })
 
       it.each([

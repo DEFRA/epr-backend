@@ -94,6 +94,29 @@ const submitLocatedAtNaturalKeys = (accredited) => ({
 })
 
 /**
+ * Answers without the database ids the stored summary log carries: these
+ * routes address the organisation, registration and accreditation by their
+ * domain keys.
+ *
+ * @param {NaturalKeyRoute} route
+ * @param {string[]} ids
+ * @returns {NaturalKeyRoute}
+ */
+const withoutDatabaseIds = (route, ids) => ({
+  ...route,
+  handler: async (request, h) => {
+    const response = /** @type {ResponseObject} */ (
+      await route.handler(request, h)
+    )
+    const body = /** @type {Record<string, unknown>} */ (response.source)
+    for (const id of ids) {
+      delete body[id]
+    }
+    return response
+  }
+})
+
+/**
  * Summary-log routes addressed by organisation number, registration number
  * and year (ADR 0053), served beside the id-based routes.
  */
@@ -113,7 +136,7 @@ export const summaryLogRoutesByNaturalKey = [
         { accredited }
       ),
       atNaturalKeys(
-        summaryLogsGet,
+        withoutDatabaseIds(summaryLogsGet, ['accreditationId']),
         summaryLog,
         summaryLogParams,
         ownSummaryLog
@@ -131,7 +154,11 @@ export const summaryLogRoutesByNaturalKey = [
         ownSummaryLog
       ),
       atNaturalKeys(
-        summaryLogDocument,
+        withoutDatabaseIds(summaryLogDocument, [
+          'organisationId',
+          'registrationId',
+          'accreditationId'
+        ]),
         `${summaryLog}/document`,
         summaryLogParams,
         ownSummaryLog
