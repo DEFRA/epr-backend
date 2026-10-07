@@ -45,8 +45,8 @@ const buildCallbackUrl = ({
  * org/registration-scoped one. The scoped route has already validated
  * eligibility for a specific `year`, so it passes it through here to mint the
  * year-scoped callback, letting the eventual insert know which year it
- * belongs to — the accreditation is stamped at upload-completed from the
- * registration's current accreditation link. The legacy route never asked for a specific year, so it
+ * belongs to — the accreditation is stamped at upload-completed. The legacy
+ * route never asked for a specific year, so it
  * omits it — the summary log is then stored unscoped, and `validate.js`
  * resolves the registration's live accreditation itself, fresh, when
  * validation runs.

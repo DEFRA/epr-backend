@@ -12,7 +12,10 @@ import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/ta
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  withoutYear
+} from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -28,25 +31,38 @@ describe('SummaryLogsValidator integration', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   })
 
+  const buildAccreditation = (
+    wasteProcessingType,
+    accreditationNumber,
+    reprocessingType = 'input'
+  ) => {
+    const accreditationId = randomUUID()
+    return {
+      id: accreditationId,
+      accreditationNumber,
+      material: 'paper',
+      wasteProcessingType,
+      ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
+      formSubmission: { id: accreditationId, time: new Date() },
+      submittedToRegulator: 'ea'
+    }
+  }
+
   const createTestOrg = (
     wasteProcessingType,
     registrationNumber,
     accreditationNumber,
-    reprocessingType = 'input'
+    reprocessingType = 'input',
+    unlinkedAccreditations = []
   ) => {
     const registrationId = randomUUID()
 
-    const accreditationId = randomUUID()
     const accreditation = accreditationNumber
-      ? {
-          id: accreditationId,
-          accreditationNumber,
-          material: 'paper',
+      ? buildAccreditation(
           wasteProcessingType,
-          ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
-          formSubmission: { id: accreditationId, time: new Date() },
-          submittedToRegulator: 'ea'
-        }
+          accreditationNumber,
+          reprocessingType
+        )
       : undefined
 
     const registration = {
@@ -63,7 +79,10 @@ describe('SummaryLogsValidator integration', () => {
     return {
       ...buildOrganisation({
         registrations: [registration],
-        accreditations: accreditation ? [accreditation] : []
+        accreditations: [
+          ...(accreditation ? [accreditation] : []),
+          ...unlinkedAccreditations
+        ]
       }),
       status: ORGANISATION_STATUS.ACTIVE
     }
@@ -78,21 +97,25 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg) =>
+  const createSummaryLog = (testOrg, accreditationId) =>
     summaryLogFactory.validating({
       organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id
+      registrationId: testOrg.registrations[0].id,
+      accreditationId
     })
 
   /**
    * @typedef {{
-   *   registrationType: WasteProcessingTypeValue;
-   *   registrationWRN: string;
+   *   registrationType?: WasteProcessingTypeValue;
+   *   registrationWRN?: string;
    *   accreditationNumber?: string;
    *   reprocessingType?: 'input' | 'output';
    *   metadata?: Record<string, MetadataEntry>;
    *   data?: Record<string, DataSection>;
    *   summaryLogExtractor?: SummaryLogExtractor;
+   *   testOrg?: ReturnType<typeof createTestOrg>;
+   *   storedAccreditationId?: string | null;
+   *   legacy?: boolean;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -103,18 +126,26 @@ describe('SummaryLogsValidator integration', () => {
     reprocessingType = 'input',
     metadata,
     data,
-    summaryLogExtractor
-  }) => {
-    const testOrg = createTestOrg(
+    summaryLogExtractor,
+    testOrg = createTestOrg(
       registrationType,
       registrationWRN,
       accreditationNumber,
       reprocessingType
-    )
+    ),
+    storedAccreditationId = testOrg.registrations[0].accreditationId ?? null,
+    legacy = false
+  }) => {
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
-    const summaryLog = createSummaryLog(testOrg)
+    const yearScopedSummaryLog = createSummaryLog(
+      testOrg,
+      storedAccreditationId
+    )
+    const summaryLog = legacy
+      ? withoutYear(yearScopedSummaryLog)
+      : yearScopedSummaryLog
     const summaryLogId = randomUUID()
 
     const extractor =
@@ -690,6 +721,131 @@ describe('SummaryLogsValidator integration', () => {
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+  })
+
+  describe('when the summary log stores its accreditation', () => {
+    const exporterMetadata = (processingType, accreditationNumber) => ({
+      REGISTRATION_NUMBER: {
+        value: 'REG-456',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: processingType,
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: processingType === 'EXPORTER' ? 5 : 2.1,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      },
+      ...(accreditationNumber && {
+        ACCREDITATION_NUMBER: {
+          value: accreditationNumber,
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
+      })
+    })
+
+    it('rejects a registered-only template when the stored accreditation is not the registration’s', async () => {
+      const accreditation = buildAccreditation('exporter', '22222222')
+
+      const { updated } = await runValidation({
+        testOrg: createTestOrg('exporter', 'REG-456', undefined, 'input', [
+          accreditation
+        ]),
+        storedAccreditationId: accreditation.id,
+        metadata: exporterMetadata('EXPORTER_REGISTERED_ONLY')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_MISMATCH' })
+        ])
+      )
+    })
+
+    it('rejects an accredited template when the stored accreditation is null on an accredited registration', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-456',
+        accreditationNumber: '11111111',
+        storedAccreditationId: null,
+        metadata: exporterMetadata('EXPORTER', '11111111')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_MISMATCH' })
+        ])
+      )
+    })
+
+    it('accepts a registered-only template when the stored accreditation is null on an accredited registration', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-456',
+        accreditationNumber: '11111111',
+        storedAccreditationId: null,
+        metadata: exporterMetadata('EXPORTER_REGISTERED_ONLY')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+
+    it('rejects an accredited template whose number does not match the stored accreditation', async () => {
+      const storedAccreditation = buildAccreditation('exporter', '22222222')
+
+      const { updated } = await runValidation({
+        testOrg: createTestOrg('exporter', 'REG-456', '11111111', 'input', [
+          storedAccreditation
+        ]),
+        storedAccreditationId: storedAccreditation.id,
+        metadata: exporterMetadata('EXPORTER', '11111111')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ACCREDITATION_MISMATCH' })
+        ])
+      )
+    })
+
+    it('validates a legacy summary log against the registration’s current accreditation', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-456',
+        accreditationNumber: '11111111',
+        legacy: true,
+        metadata: exporterMetadata('EXPORTER', '11111111')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+
+    it('fails with a system error when the stored accreditation cannot be found', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-456',
+        accreditationNumber: '11111111',
+        storedAccreditationId: randomUUID(),
+        metadata: exporterMetadata('EXPORTER', '11111111')
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
+        ])
+      )
     })
   })
 

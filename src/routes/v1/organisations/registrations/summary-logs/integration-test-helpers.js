@@ -8,7 +8,11 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildReadOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -831,7 +835,13 @@ const buildComplexTestOrg = ({
   accredited = true,
   accreditationValidFrom = VALID_FROM
 }) => {
+  // Built on the full fixtures so the read model serves them, letting the
+  // natural-key routes find them. The fixture's own accreditation link is
+  // dropped: `accredited` decides it.
+  const { accreditationId: _fixtureLink, ...servableRegistration } =
+    buildRegistration({ wasteProcessingType: processingType })
   const registration = {
+    ...servableRegistration,
     id: registrationId,
     registrationNumber: 'REG-123',
     status: /** @type {'approved'} */ ('approved'),
@@ -862,6 +872,7 @@ const buildComplexTestOrg = ({
     accreditations: accredited
       ? [
           partialMock({
+            ...buildAccreditation({ wasteProcessingType: processingType }),
             id: accreditationId,
             accreditationNumber: 'ACC-123',
             validFrom: accreditationValidFrom,
