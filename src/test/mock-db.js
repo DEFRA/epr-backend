@@ -19,7 +19,6 @@ const defaultCollectionMethods = () => ({
   insertOne: vi.fn(async () => ({ insertedId: { toHexString: () => '' } })),
   insertMany: vi.fn(async () => ({ insertedIds: {} })),
   updateOne: vi.fn(async () => ({ matchedCount: 0, modifiedCount: 0 })),
-  updateMany: vi.fn(async () => ({ matchedCount: 0, modifiedCount: 0 })),
   replaceOne: vi.fn(async () => ({ matchedCount: 0, modifiedCount: 0 })),
   deleteOne: vi.fn(async () => ({ deletedCount: 0 })),
   deleteMany: vi.fn(async () => ({ deletedCount: 0 })),

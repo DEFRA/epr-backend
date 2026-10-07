@@ -39,8 +39,7 @@ export async function buildApprovedOrg(
     {
       ...org.accreditations[0],
       status: ACCREDITATION_STATUS.APPROVED,
-      accreditationNumber:
-        org.accreditations[0].accreditationNumber || `ACC${org.orgId}`,
+      accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
       validFrom: VALID_FROM,
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validTo: VALID_TO

@@ -52,56 +52,6 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       expect(result.accreditations[1].accreditationNumber).toBeNull()
     })
 
-    it('refuses to insert an organisation whose accreditation number another organisation holds', async () => {
-      await repository.insert(organisationWithNumbers('ACC100001'))
-
-      await expect(
-        repository.insert(organisationWithNumbers('ACC100001'))
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 409,
-          payload: {
-            message: expect.stringContaining(
-              'accreditations.accreditationNumber'
-            )
-          }
-        }
-      })
-    })
-
-    it('refuses to give an accreditation a number another organisation holds', async () => {
-      await repository.insert(organisationWithNumbers('ACC100002'))
-      const second = organisationWithNumbers(null)
-      await repository.insert(second)
-      const inserted = await repository.findById(second.id)
-
-      await expect(
-        repository.replace(
-          second.id,
-          1,
-          prepareOrgUpdate(inserted, {
-            accreditations: [
-              {
-                ...inserted.accreditations[0],
-                accreditationNumber: 'ACC100002'
-              }
-            ]
-          })
-        )
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: {
-          statusCode: 409,
-          payload: {
-            message: expect.stringContaining(
-              'accreditations.accreditationNumber'
-            )
-          }
-        }
-      })
-    })
-
     it('refuses an organisation holding the same accreditation number twice', async () => {
       await expect(
         repository.insert(organisationWithNumbers('ACC100003', 'ACC100003'))

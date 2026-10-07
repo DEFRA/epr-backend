@@ -1,14 +1,14 @@
-import { classifierTail } from '#common/helpers/logging/cdp-boom.js'
+import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { errorCodes } from './enums/error-codes.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
-  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
@@ -47,18 +47,6 @@ async function ensureCollection(db) {
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
 
-  // An unnumbered accreditation once stored an explicit null, which a sparse
-  // index still indexes, so every null would collide with every other
-  await collection.updateMany(
-    { 'accreditations.accreditationNumber': { $type: 'null' } },
-    { $unset: { 'accreditations.$[unnumbered].accreditationNumber': '' } },
-    { arrayFilters: [{ 'unnumbered.accreditationNumber': { $type: 'null' } }] }
-  )
-  await collection.createIndex(
-    { 'accreditations.accreditationNumber': 1 },
-    { unique: true, sparse: true }
-  )
-
   return collection
 }
 // Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
@@ -94,10 +82,7 @@ const performInsert = (db) => async (organisation) => {
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      if (error.keyPattern?._id) {
-        throw Boom.conflict(`Organisation with ${id} already exists`)
-      }
-      throwCuratedDuplicateKeyBoom(error, id, 'inserting')
+      throw Boom.conflict(`Organisation with ${id} already exists`)
     }
     throw error
   }
@@ -106,20 +91,23 @@ const performInsert = (db) => async (organisation) => {
 /**
  * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
  * @param {string} id
- * @param {'inserting' | 'updating'} operation
  * @returns {never}
  */
-const throwCuratedDuplicateKeyBoom = (error, id, operation) => {
+const throwCuratedDuplicateKeyBoom = (error, id) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
 
-  throw duplicateKeyConflict({
-    operation,
-    id,
-    conflictFields,
-    reason: `fields=${conflictFields} ${classifierTail(error)}`
-  })
+  throw conflict(
+    `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
+    errorCodes.organisationDuplicateKey,
+    {
+      event: {
+        action: 'update_organisation',
+        reason: `fields=${conflictFields} ${classifierTail(error)}`
+      }
+    }
+  )
 }
 
 const performReplace = (db) => async (id, version, updates) => {
@@ -142,7 +130,7 @@ const performReplace = (db) => async (id, version, updates) => {
       )
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throwCuratedDuplicateKeyBoom(error, validatedId, 'updating')
+      throwCuratedDuplicateKeyBoom(error, validatedId)
     }
     throw error
   }

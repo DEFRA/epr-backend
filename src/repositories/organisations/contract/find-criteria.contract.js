@@ -429,11 +429,13 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it('counts and pages only the organisations matching a criterion', async () => {
         for (const name of ['Shared A', 'Shared B', 'Shared C']) {
-          await repository.insert(buildOrgWithCriteria({ name }))
+          await repository.insert(
+            buildOrgWithCriteria({ name, accreditationNumber: 'ACC777' })
+          )
         }
 
         const result = await repository.find({
-          search: 'Shared',
+          accreditationNumber: 'ACC777',
           page: 2,
           pageSize: 2
         })

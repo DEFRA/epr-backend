@@ -10,7 +10,6 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
-  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
@@ -44,45 +43,6 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
   })
 }
 
-/**
- * Stands in for the unique index the MongoDB adapter holds on the
- * accreditation number, which spans organisations.
- *
- * @param {Array<{ _id: string, accreditations: Array<{ accreditationNumber?: string | null }> }>} storage
- * @param {string} id - the organisation being written
- * @param {Array<{ accreditationNumber?: string | null }>} accreditations - as it will be stored
- * @param {'inserting' | 'updating'} operation
- */
-const assertAccreditationNumbersUnheld = (
-  storage,
-  id,
-  accreditations,
-  operation
-) => {
-  const heldElsewhere = new Set(
-    storage
-      .filter((org) => org._id !== id)
-      .flatMap((org) => org.accreditations)
-      .map((acc) => acc.accreditationNumber)
-      .filter((number) => typeof number === 'string')
-  )
-
-  if (
-    accreditations.some(
-      ({ accreditationNumber }) =>
-        typeof accreditationNumber === 'string' &&
-        heldElsewhere.has(accreditationNumber)
-    )
-  ) {
-    throw duplicateKeyConflict({
-      operation,
-      id,
-      conflictFields: 'accreditations.accreditationNumber',
-      reason: 'fields=accreditations.accreditationNumber'
-    })
-  }
-}
-
 const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
@@ -94,7 +54,6 @@ const performInsert = (storage, staleCache) => async (organisation) => {
 
   const registrations = initializeItems(orgFields.registrations)
   const accreditations = initializeItems(orgFields.accreditations)
-  assertAccreditationNumbersUnheld(storage, id, accreditations, 'inserting')
 
   const newOrg = structuredClone({
     _id: id,
@@ -134,12 +93,6 @@ const performReplace =
       updates
     )
 
-    assertAccreditationNumbersUnheld(
-      storage,
-      existing._id,
-      replaced.accreditations,
-      'updating'
-    )
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update

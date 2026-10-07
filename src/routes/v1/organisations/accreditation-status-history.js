@@ -21,9 +21,10 @@ export const accreditationStatusHistoryPath =
  * Grant-only validations. Granting sets the whole validity window from the
  * supplied dates, so reject a window that would be inverted. Granting also
  * issues the accreditation number, which must not already be in use by any
- * accreditation in any organisation, whatever its status. Checking here gives
- * the caller a clear message; the repository refuses a concurrent grant of the
- * same number that gets past this check.
+ * accreditation in any organisation, whatever its status. This uniqueness is
+ * enforced here only: there is no unique index on
+ * accreditations.accreditationNumber, so concurrent grants of the same
+ * number are not blocked by the database.
  * @param {OrganisationsRepository} organisationsRepository
  * @param {{ validFrom: string, validTo: string, accreditationNumber: string }} grant
  * @returns {Promise<void>}

@@ -19,8 +19,6 @@ import {
   assertAccreditationStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
-import { conflict } from '#common/helpers/logging/cdp-boom.js'
-import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
@@ -125,34 +123,6 @@ export const updateStatusHistoryForItems = (
     return remainingFields
   })
 }
-
-/**
- * @param {{
- *   operation: 'inserting' | 'updating',
- *   id: string,
- *   conflictFields: string,
- *   reason: string
- * }} params
- */
-export const duplicateKeyConflict = ({
-  operation,
-  id,
-  conflictFields,
-  reason
-}) =>
-  conflict(
-    `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
-    errorCodes.organisationDuplicateKey,
-    {
-      event: {
-        action:
-          operation === 'inserting'
-            ? 'insert_organisation'
-            : 'update_organisation',
-        reason
-      }
-    }
-  )
 
 export const mapDocumentWithCurrentStatuses = (org) => {
   const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
