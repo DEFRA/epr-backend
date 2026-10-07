@@ -188,7 +188,7 @@ export function toOrganisationView(organisation, overseasSitesById, onDrop) {
  * @param {OnDrop} onDrop
  * @returns {[string, RegistrationView] | null}
  */
-function toRegistrationEntry(
+export function toRegistrationEntry(
   registration,
   organisation,
   overseasSitesById,
@@ -282,7 +282,7 @@ function withAccreditedSites(accreditations, overseasSites) {
  * @param {OnDrop} onDrop
  * @returns {[string, AccreditationView] | null}
  */
-function toAccreditationEntry(accreditation, onDrop) {
+export function toAccreditationEntry(accreditation, onDrop) {
   const { accreditationNumber, status } = accreditation
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
