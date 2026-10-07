@@ -31,9 +31,9 @@ import {
 import {
   REPROCESSOR_NUMBER,
   accreditation,
-  body,
   reprocessor
-} from '#routes/organisations/organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'

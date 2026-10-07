@@ -5,7 +5,7 @@ import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
-} from './organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   accreditationIds,
   organisationIds,
