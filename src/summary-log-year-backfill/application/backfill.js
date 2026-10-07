@@ -15,21 +15,29 @@ import { auditSummaryLogYearBackfill } from './audit.js'
  * @property {Record<number, number>} years - summary logs per derived year (would be, on a dry run)
  */
 
+const DEFAULT_YEAR = 2026
+
 /** @param {{ year?: number | null }} summaryLog */
 const hasYear = ({ year }) => year !== undefined && year !== null
 
 /**
  * The registration's start year, matching the year the year-scoped routes
  * are called with. A registration without a `validFrom` (cancelled before it
- * was set) falls back to the year the summary log was created in.
+ * was set) falls back to the year the summary log was created in. Summary
+ * logs created before `createdAt` was introduced (PAE-1014, 13 Feb 2026) have
+ * none, so those default to 2026 and are logged.
  *
  * @param {OrganisationsRepository} organisationsRepository
+ * @param {string} id
  * @param {{ organisationId?: string, registrationId?: string, createdAt?: string }} summaryLog
+ * @param {TypedLogger} logger
  * @returns {Promise<number>}
  */
 const deriveYear = async (
   organisationsRepository,
-  { organisationId, registrationId, createdAt }
+  id,
+  { organisationId, registrationId, createdAt },
+  logger
 ) => {
   if (!organisationId || !registrationId) {
     throw new Error('Summary log has no organisation or registration')
@@ -42,9 +50,10 @@ const deriveYear = async (
     return startOfDay(validFrom).getUTCFullYear()
   }
   if (!createdAt) {
-    throw new Error(
-      `Registration ${registrationId} has no validFrom and the summary log has no createdAt`
-    )
+    logger.warn({
+      message: `Registration ${registrationId} has no validFrom and summary log ${id} has no createdAt: defaulting year to ${DEFAULT_YEAR}`
+    })
+    return DEFAULT_YEAR
   }
   return new Date(createdAt).getUTCFullYear()
 }
@@ -77,7 +86,12 @@ const backfillOne = async (
     return null
   }
 
-  const year = await deriveYear(organisationsRepository, before.summaryLog)
+  const year = await deriveYear(
+    organisationsRepository,
+    id,
+    before.summaryLog,
+    logger
+  )
   if (isDryRun) {
     return { year, auditFailed: false }
   }
