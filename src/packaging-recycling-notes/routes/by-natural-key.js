@@ -12,6 +12,11 @@ import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancel
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  GLASS_RECYCLING_PROCESS,
+  REGULATOR,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import {
   accreditationIds,
   atNaturalKeys
 } from '#routes/organisations/by-natural-key.js'
@@ -36,11 +41,16 @@ import { createStatusesValidator } from './validation.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { AppliedForMaterial } from '#domain/organisations/model.js'
- * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import {
+ *   AppliedForMaterial,
+ *   GlassRecyclingProcess,
+ *   RegulatorValue,
+ *   WasteProcessingTypeValue
+ * } from '#domain/organisations/model.js'
+ * @import { AccreditationSnapshot, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { ResolveIds, Route } from '#routes/organisations/by-natural-key.js'
- * @import { AccreditationParams } from '#routes/organisations/view-route.js'
+ * @import { AccreditationParams, RegistrationParams } from '#routes/organisations/view-route.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
  * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
@@ -61,8 +71,22 @@ import { createStatusesValidator } from './validation.js'
  *     tradingName?: string,
  *     registrationType?: string
  *   },
+ *   issuedByOrganisation: {
+ *     organisationNumber: number,
+ *     name: string,
+ *     tradingName?: string
+ *   },
+ *   registration: { registrationNumber: string },
+ *   accreditation: {
+ *     accreditationNumber: string,
+ *     accreditationYear: number,
+ *     wasteProcessingType: WasteProcessingTypeValue,
+ *     material: AppliedForMaterial,
+ *     glassRecyclingProcess?: GlassRecyclingProcess,
+ *     submittedToRegulator: { code: RegulatorValue },
+ *     siteAddress?: AccreditationSnapshot['siteAddress']
+ *   },
  *   tonnage: number,
- *   material: AppliedForMaterial,
  *   processToBeUsed: string | null,
  *   isDecemberWaste: boolean,
  *   obligationYear: number,
@@ -108,8 +132,39 @@ const prnSchema = Joi.object({
     tradingName: Joi.string(),
     registrationType: Joi.string()
   }).required(),
+  issuedByOrganisation: Joi.object({
+    organisationNumber: Joi.number().integer().required(),
+    name: Joi.string().required(),
+    tradingName: Joi.string()
+  }).required(),
+  registration: Joi.object({
+    registrationNumber: Joi.string().required()
+  }).required(),
+  accreditation: Joi.object({
+    accreditationNumber: Joi.string().required(),
+    accreditationYear: Joi.number().integer().required(),
+    wasteProcessingType: Joi.string()
+      .valid(...Object.values(WASTE_PROCESSING_TYPE))
+      .required(),
+    material: appliedForMaterialSchema.required(),
+    glassRecyclingProcess: Joi.string().valid(
+      ...Object.values(GLASS_RECYCLING_PROCESS)
+    ),
+    submittedToRegulator: Joi.object({
+      code: Joi.string()
+        .valid(...Object.values(REGULATOR))
+        .required()
+    }).required(),
+    siteAddress: Joi.object({
+      line1: Joi.string().required(),
+      line2: Joi.string(),
+      town: Joi.string(),
+      county: Joi.string(),
+      postcode: Joi.string().required(),
+      country: Joi.string()
+    })
+  }).required(),
   tonnage: Joi.number().required(),
-  material: appliedForMaterialSchema.required(),
   processToBeUsed: Joi.string().required(),
   isDecemberWaste: Joi.boolean().required(),
   obligationYear: Joi.number().integer().required(),
@@ -123,14 +178,54 @@ const prnSchema = Joi.object({
 })
 
 /**
+ * The accreditation as it stood when the PRN was raised, which the PRN states
+ * as a certificate does.
+ *
+ * @param {PackagingRecyclingNote} prn
+ * @returns {PrnResource['accreditation']}
+ */
+const toAccreditationSnapshot = ({ accreditation, isExport }) => {
+  const { siteAddress, glassRecyclingProcess } = accreditation
+  return {
+    accreditationNumber: accreditation.accreditationNumber,
+    accreditationYear: accreditation.accreditationYear,
+    wasteProcessingType: isExport
+      ? WASTE_PROCESSING_TYPE.EXPORTER
+      : WASTE_PROCESSING_TYPE.REPROCESSOR,
+    material: accreditation.material,
+    ...(glassRecyclingProcess && { glassRecyclingProcess }),
+    submittedToRegulator: { code: accreditation.submittedToRegulator },
+    ...(siteAddress && {
+      siteAddress: {
+        line1: siteAddress.line1,
+        ...(siteAddress.line2 && { line2: siteAddress.line2 }),
+        ...(siteAddress.town && { town: siteAddress.town }),
+        ...(siteAddress.county && { county: siteAddress.county }),
+        postcode: siteAddress.postcode,
+        ...(siteAddress.country && { country: siteAddress.country })
+      }
+    })
+  }
+}
+
+/**
  * A PRN as the accreditation serves it. Its number is a field, present once
  * the PRN is issued, and a client finds a PRN by it through the collection.
  *
+ * The PRN stores the database ids of its organisation and registration, not
+ * their numbers, so the numbers come from the path. Neither is ever reassigned,
+ * and the route has proved the PRN is theirs.
+ *
  * @param {PackagingRecyclingNote} prn
+ * @param {RegistrationParams} keys
  * @param {Date} now
  * @returns {PrnResource}
  */
-const toPrnResource = (prn, now) => {
+const toPrnResource = (
+  prn,
+  { organisationNumber, registrationNumber },
+  now
+) => {
   const { id, name, tradingName, registrationType } = prn.issuedToOrganisation
   const { issued } = prn.status
   return {
@@ -143,8 +238,16 @@ const toPrnResource = (prn, now) => {
       ...(tradingName && { tradingName }),
       ...(registrationType && { registrationType })
     },
+    issuedByOrganisation: {
+      organisationNumber,
+      name: prn.organisation.name,
+      ...(prn.organisation.tradingName && {
+        tradingName: prn.organisation.tradingName
+      })
+    },
+    registration: { registrationNumber },
+    accreditation: toAccreditationSnapshot(prn),
     tonnage: prn.tonnage,
-    material: prn.accreditation.material,
     processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
     obligationYear: prn.obligationYear,
@@ -194,7 +297,7 @@ const prnsList = {
    * caught up to the ledger, and the filters are applied in memory.
    *
    * @param {PrnRequest & {
-   *   params: AccreditationIds,
+   *   params: AccreditationParams & AccreditationIds,
    *   query: { statuses?: PrnStatus[], prnNumber?: string }
    * }} request
    * @param {HapiResponseToolkit} h
@@ -222,7 +325,7 @@ const prnsList = {
           (!prnNumber || prn.prnNumber === prnNumber)
       )
       .sort(newestFirst)
-      .map((prn) => toPrnResource(prn, now))
+      .map((prn) => toPrnResource(prn, request.params, now))
 
     return h.response({ items }).code(StatusCodes.OK)
   }
@@ -236,7 +339,7 @@ const prnGet = {
     response: { schema: prnSchema }
   },
   /**
-   * @param {PrnRequest & { params: AccreditationIds & { prnId: string } }} request
+   * @param {PrnRequest & { params: PrnParams & AccreditationIds }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -250,7 +353,9 @@ const prnGet = {
     if (!isServedUnder(prn, params)) {
       throw Boom.notFound('PRN not found')
     }
-    return h.response(toPrnResource(prn, new Date())).code(StatusCodes.OK)
+    return h
+      .response(toPrnResource(prn, params, new Date()))
+      .code(StatusCodes.OK)
   }
 }
 
@@ -264,8 +369,28 @@ const prnIds = async (request) => ({
   id: request.params.prnId
 })
 
-/** @param {PackagingRecyclingNote} prn */
-const servePrn = (prn) => toPrnResource(prn, new Date())
+/**
+ * @param {{ params: RegistrationParams }} request
+ * @returns {(prn: PackagingRecyclingNote) => PrnResource}
+ */
+const servingPrnFor =
+  ({ params }) =>
+  (prn) =>
+    toPrnResource(prn, params, new Date())
+
+/**
+ * @param {Parameters<ReturnType<typeof createPrn>>[0] & { params: RegistrationParams }} request
+ * @param {HapiResponseToolkit} h
+ */
+const createServingPrn = (request, h) =>
+  createPrn(servingPrnFor(request))(request, h)
+
+/**
+ * @param {Parameters<ReturnType<typeof updatePrnStatusHandler>>[0] & { params: RegistrationParams }} request
+ * @param {HapiResponseToolkit} h
+ */
+const updateStatusServingPrn = (request, h) =>
+  updatePrnStatusHandler(servingPrnFor(request))(request, h)
 
 /**
  * @param {Route} route
@@ -278,14 +403,12 @@ const declaringResponse = (route, schema, handler = route.handler) => ({
   handler
 })
 
-const cancelServingPrn = cancelPrnHandler(servePrn)
-
 /**
  * The existing cancel command takes any PRN by its id, so the PRN is first
  * proved to be the accreditation's own.
  *
- * @param {Parameters<typeof cancelServingPrn>[0] & {
- *   params: AccreditationIds
+ * @param {Parameters<ReturnType<typeof cancelPrnHandler>>[0] & {
+ *   params: RegistrationParams & AccreditationIds
  * }} request
  * @param {HapiResponseToolkit} h
  */
@@ -295,7 +418,7 @@ const cancelOwnPrn = async (request, h) => {
   if (!isServedUnder(prn, params)) {
     throw Boom.notFound('PRN not found')
   }
-  return cancelServingPrn(request, h)
+  return cancelPrnHandler(servingPrnFor(request))(request, h)
 }
 
 const decemberEligibilitySchema = Joi.object({
@@ -311,7 +434,7 @@ export const prnRoutesByNaturalKey = [
     declaringResponse(
       packagingRecyclingNotesCreate,
       prnSchema,
-      createPrn(servePrn)
+      createServingPrn
     ),
     prnsPath,
     accreditationParams,
@@ -331,7 +454,7 @@ export const prnRoutesByNaturalKey = [
     declaringResponse(
       packagingRecyclingNotesUpdateStatus,
       prnSchema,
-      updatePrnStatusHandler(servePrn)
+      updateStatusServingPrn
     ),
     `${prnPath}/status`,
     prnParams,

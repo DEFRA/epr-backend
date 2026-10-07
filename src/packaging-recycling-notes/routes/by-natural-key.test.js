@@ -14,7 +14,9 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  buildAccreditation,
   buildAwaitingAcceptancePrn,
+  buildCancelledPrn,
   buildDeletedPrn,
   buildDraftPrn,
   underAccreditation
@@ -59,6 +61,15 @@ const otherIds = {
   accreditationId: new ObjectId().toString()
 }
 
+const fullSiteAddress = {
+  line1: '1 Test Street',
+  line2: 'Unit 4',
+  town: 'Testville',
+  county: 'Testshire',
+  postcode: 'SW1A 1AA',
+  country: 'England'
+}
+
 const draft = {
   id: new ObjectId().toString(),
   ...buildDraftPrn({
@@ -67,6 +78,7 @@ const draft = {
     notes: 'For the spring run'
   })
 }
+draft.accreditation.siteAddress = fullSiteAddress
 const issued = {
   id: new ObjectId().toString(),
   ...buildAwaitingAcceptancePrn({
@@ -78,6 +90,25 @@ const issued = {
       tradingName: 'Producer',
       registrationType: 'COMPLIANCE_SCHEME'
     }
+  })
+}
+const exported = {
+  id: new ObjectId().toString(),
+  ...buildCancelledPrn({
+    ...underAccreditation(ownIds),
+    organisation: {
+      id: ownIds.organisationId,
+      name: 'Test Organisation',
+      tradingName: 'Test Trading'
+    },
+    accreditation: buildAccreditation({
+      id: ownIds.accreditationId,
+      material: 'glass',
+      glassRecyclingProcess: 'glass_re_melt',
+      siteAddress: undefined
+    }),
+    isExport: true,
+    createdAt: new Date('2026-02-01T10:00:00Z')
   })
 }
 const deleted = {
@@ -92,6 +123,11 @@ const elsewhere = {
 /** @param {{ payload: string }} response */
 const idsOf = (response) =>
   body(response).items.map((/** @type {{ id: string }} */ { id }) => id)
+
+const issuedBy = {
+  organisationNumber: organisation.orgId,
+  name: 'Test Organisation'
+}
 
 const prns = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
@@ -111,6 +147,7 @@ describe('PRN routes by natural key', () => {
       createInMemoryPackagingRecyclingNotesRepository([
         draft,
         issued,
+        exported,
         deleted,
         elsewhere
       ])
@@ -157,7 +194,7 @@ describe('PRN routes by natural key', () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(idsOf(response)).toStrictEqual([issued.id, draft.id])
+      expect(idsOf(response)).toStrictEqual([issued.id, draft.id, exported.id])
     })
 
     it('serves an issued PRN with its number and issue', async () => {
@@ -173,8 +210,17 @@ describe('PRN routes by natural key', () => {
           tradingName: 'Producer',
           registrationType: 'COMPLIANCE_SCHEME'
         },
+        issuedByOrganisation: issuedBy,
+        registration: { registrationNumber: REPROCESSOR_NUMBER },
+        accreditation: {
+          accreditationNumber: issued.accreditation.accreditationNumber,
+          accreditationYear: 2026,
+          wasteProcessingType: 'reprocessor',
+          material: 'plastic',
+          submittedToRegulator: { code: 'ea' },
+          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+        },
         tonnage: issued.tonnage,
-        material: 'plastic',
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
@@ -198,8 +244,17 @@ describe('PRN routes by natural key', () => {
           name: draft.issuedToOrganisation.name,
           tradingName: draft.issuedToOrganisation.tradingName
         },
+        issuedByOrganisation: issuedBy,
+        registration: { registrationNumber: REPROCESSOR_NUMBER },
+        accreditation: {
+          accreditationNumber: draft.accreditation.accreditationNumber,
+          accreditationYear: 2026,
+          wasteProcessingType: 'reprocessor',
+          material: 'plastic',
+          submittedToRegulator: { code: 'ea' },
+          siteAddress: fullSiteAddress
+        },
         tonnage: draft.tonnage,
-        material: 'plastic',
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: draft.obligationYear,
@@ -207,6 +262,26 @@ describe('PRN routes by natural key', () => {
         createdAt: '2026-03-01T10:00:00.000Z',
         regulatorCancellable: false
       })
+    })
+
+    it("serves an exporter's PRN with its trading name and glass process", async () => {
+      const response = await server.inject({ url: prns, ...asOperator() })
+
+      expect(body(response).items[2]).toMatchObject({
+        issuedByOrganisation: {
+          organisationNumber: organisation.orgId,
+          name: 'Test Organisation',
+          tradingName: 'Test Trading'
+        },
+        accreditation: {
+          wasteProcessingType: 'exporter',
+          material: 'glass',
+          glassRecyclingProcess: 'glass_re_melt'
+        }
+      })
+      expect(body(response).items[2].accreditation).not.toHaveProperty(
+        'siteAddress'
+      )
     })
 
     describe('when the ledger is ahead of a stored PRN', () => {
@@ -263,7 +338,7 @@ describe('PRN routes by natural key', () => {
 
         const response = await server.inject({ url: prns, ...asOperator() })
 
-        expect(idsOf(response)).toStrictEqual([issued.id])
+        expect(idsOf(response)).toStrictEqual([issued.id, exported.id])
       })
     })
 
@@ -273,7 +348,7 @@ describe('PRN routes by natural key', () => {
         ...asOperator()
       })
 
-      expect(idsOf(response)).toStrictEqual([draft.id])
+      expect(idsOf(response)).toStrictEqual([draft.id, exported.id])
     })
 
     it('refuses to filter by a status it never serves', async () => {
@@ -383,8 +458,16 @@ describe('PRN routes by natural key', () => {
         id: expect.any(String),
         status: PRN_STATUS.DRAFT,
         issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
+        issuedByOrganisation: expect.objectContaining({
+          organisationNumber: organisation.orgId
+        }),
+        registration: { registrationNumber: REPROCESSOR_NUMBER },
+        accreditation: expect.objectContaining({
+          accreditationNumber: accredited.accreditationNumber,
+          wasteProcessingType: 'reprocessor',
+          material: accredited.material
+        }),
         tonnage: 10,
-        material: accredited.material,
         processToBeUsed: expect.any(String),
         isDecemberWaste: false,
         obligationYear: 2026,
