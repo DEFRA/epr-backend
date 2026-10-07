@@ -8,7 +8,10 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { createTestServer } from '#test/create-test-server.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
+import {
+  defraIdMockAuthTokens,
+  generateValidTokenWith
+} from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -113,6 +116,19 @@ describe('organisation actions by organisation number', () => {
       expect(updated.users).toContainEqual(
         expect.objectContaining({ email: newUser.email })
       )
+    })
+
+    it("refuses an operator acting on another organisation's number", async () => {
+      await buildActiveOrg(organisationsRepository)
+      const other = await buildApprovedOrg(organisationsRepository)
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/organisations/${other.orgId}/user`,
+        headers: { Authorization: `Bearer ${defraIdMockAuthTokens.validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
   })
 })

@@ -30,17 +30,6 @@ import { submissionNumberSchema } from './shared.js'
  */
 
 /**
- * The accredited stream needs the accreditation slot filled, but its routes
- * are scoped by registration alone.
- *
- * @param {Parameters<typeof accreditationIds>[0]} request
- */
-const accreditedRegistrationIds = async (request) => {
-  const { organisationId, registrationId } = await accreditationIds(request)
-  return { organisationId, registrationId }
-}
-
-/**
  * @param {Cadence} cadence
  */
 const submissionParams = (cadence) => ({
@@ -82,7 +71,7 @@ export const reportRoutesByNaturalKey = [
   ...submissionRoutesAt(
     `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
     submissionParams(CADENCE.monthly),
-    accreditedRegistrationIds
+    accreditationIds
   ),
   atNaturalKeys(
     reportsGet,

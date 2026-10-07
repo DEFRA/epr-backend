@@ -114,7 +114,9 @@ const createServer = async ({
       organisationsRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
         findById: vi.fn().mockResolvedValue(organisation),
-        findByOrgId: vi.fn().mockResolvedValue(organisation),
+        findByOrgId: vi.fn((orgId) =>
+          Promise.resolve(orgId === organisation.orgId ? organisation : null)
+        ),
         findRegistrationById: vi.fn(findRegistrationById)
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
@@ -289,16 +291,25 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(byNumber.statusCode).toBe(StatusCodes.OK)
     expect(byNumber.payload).toBe(byId.payload)
     expect(byNumber.headers['content-disposition']).toMatch(
-      /^attachment; filename="R26ER5000000002PA-/
+      new RegExp(`^attachment; filename="${approved.registrationNumber}-`)
     )
   })
 
-  it('returns 404 for a registration number the organisation does not serve', async () => {
+  it.each([
+    [
+      'an unknown organisation number',
+      `/organisations/999999/registrations/${approved.registrationNumber}/waste-records/export.csv`
+    ],
+    [
+      'a registration number the organisation does not serve',
+      `${registrations}/R26XX0000000000PL/waste-records/export.csv`
+    ]
+  ])('returns 404 for %s', async (_, exportUrl) => {
     const server = await createServer({ registration: approved })
 
     const response = await server.inject({
       method: 'GET',
-      url: `${registrations}/R26XX0000000000PL/waste-records/export.csv`,
+      url: exportUrl,
       ...asServiceMaintainer()
     })
 
