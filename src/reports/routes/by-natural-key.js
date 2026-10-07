@@ -72,7 +72,9 @@ const assertPeriodWithinAccreditation = async (request) => {
   )
 
   // The read model only serves an accreditation with a validFrom.
-  if (endDate < toCalendarDate(/** @type {string} */ (validFrom))) {
+  if (
+    endDate.localeCompare(toCalendarDate(/** @type {string} */ (validFrom))) < 0
+  ) {
     throw Boom.notFound('Report period is before the accreditation started')
   }
 }
