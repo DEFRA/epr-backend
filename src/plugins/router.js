@@ -21,6 +21,10 @@ import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/r
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
+import {
+  prnCancelByNaturalKey,
+  prnRoutesByNaturalKey
+} from '#packaging-recycling-notes/routes/by-natural-key.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
@@ -55,7 +59,7 @@ const router = {
       const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
         'featureFlags.prnAdminCancellation'
       )
-        ? [adminPackagingRecyclingNotesCancel]
+        ? [adminPackagingRecyclingNotesCancel, prnCancelByNaturalKey]
         : []
 
       server.route([
@@ -80,6 +84,7 @@ const router = {
         packagingRecyclingNotesAccept,
         packagingRecyclingNotesList,
         packagingRecyclingNotesReject,
+        ...prnRoutesByNaturalKey,
         ...summaryLogUploadsReportRoutes,
         adminAccreditationPackagingRecyclingNotesList,
         adminPackagingRecyclingNotesList,

@@ -19,6 +19,20 @@ export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{prnId}'
 
 /**
+ * Whether a PRN is one the accreditation serves. A deleted PRN is served by
+ * no one.
+ *
+ * @param {PackagingRecyclingNote | null} prn
+ * @param {{ organisationId: string, accreditationId: string }} ids
+ * @returns {prn is PackagingRecyclingNote}
+ */
+export const isServedUnder = (prn, { organisationId, accreditationId }) =>
+  prn !== null &&
+  prn.organisation.id === organisationId &&
+  prn.accreditation.id === accreditationId &&
+  prn.status.currentStatus !== PRN_STATUS.DELETED
+
+/**
  * @param {PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
  * @returns {GetPrnResponse}
@@ -80,15 +94,7 @@ export const packagingRecyclingNoteById = {
         )
       ])
 
-      if (!prn) {
-        throw Boom.notFound('PRN not found')
-      }
-
-      if (
-        prn.organisation.id !== organisationId ||
-        prn.accreditation.id !== accreditationId ||
-        prn.status.currentStatus === PRN_STATUS.DELETED
-      ) {
+      if (!isServedUnder(prn, { organisationId, accreditationId })) {
         throw Boom.notFound('PRN not found')
       }
 
