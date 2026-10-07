@@ -68,7 +68,11 @@ const assertAccreditationNumbersUnheld = (
   )
 
   if (
-    accreditations.some((acc) => heldElsewhere.has(acc.accreditationNumber))
+    accreditations.some(
+      ({ accreditationNumber }) =>
+        typeof accreditationNumber === 'string' &&
+        heldElsewhere.has(accreditationNumber)
+    )
   ) {
     throw duplicateKeyConflict({
       operation,
