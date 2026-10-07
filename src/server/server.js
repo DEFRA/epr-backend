@@ -49,6 +49,7 @@ import { runSummaryLogYearBackfill } from '#summary-log-year-backfill/run.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runApplicationContactDiagnostic } from '#application-contact-diagnostic/run.js'
 import { runDuplicateNumberDiagnostic } from '#duplicate-number-diagnostic/run.js'
+import { runFutureStatusDateDiagnostic } from '#future-status-date-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -227,6 +228,7 @@ async function createServer(options = {}) {
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runApplicationContactDiagnostic(startedServer)
     void runDuplicateNumberDiagnostic(startedServer)
+    void runFutureStatusDateDiagnostic(startedServer)
   })
 
   return server
