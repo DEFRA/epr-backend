@@ -140,7 +140,13 @@ describe('PRN routes by natural key', () => {
     })
   }
 
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-01T00:00:00.000Z'))
+  })
+
   afterEach(async () => {
+    vi.useRealTimers()
     await server.stop()
   })
 
@@ -270,6 +276,15 @@ describe('PRN routes by natural key', () => {
       expect(idsOf(response)).toStrictEqual([draft.id])
     })
 
+    it('refuses to filter by a status it never serves', async () => {
+      const response = await server.inject({
+        url: `${prns}?statuses=deleted`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
     it('finds a PRN by its number', async () => {
       const response = await server.inject({
         url: `${prns}?prnNumber=${issued.prnNumber}`,
@@ -353,6 +368,31 @@ describe('PRN routes by natural key', () => {
       })
     })
 
+    it('serves the created PRN', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: prns,
+        payload: {
+          issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
+          tonnage: 10
+        },
+        ...asOperator()
+      })
+
+      expect(body(response)).toStrictEqual({
+        id: expect.any(String),
+        status: PRN_STATUS.DRAFT,
+        issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
+        tonnage: 10,
+        material: accredited.material,
+        processToBeUsed: expect.any(String),
+        isDecemberWaste: false,
+        obligationYear: 2026,
+        createdAt: '2026-06-01T00:00:00.000Z',
+        regulatorCancellable: false
+      })
+    })
+
     it("changes a PRN's status", async () => {
       const response = await server.inject({
         method: 'POST',
@@ -364,8 +404,10 @@ describe('PRN routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: draft.id,
-        status: PRN_STATUS.AWAITING_AUTHORISATION
+        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        notes: 'For the spring run'
       })
+      expect(body(response)).not.toHaveProperty('prnNumber')
     })
 
     it("refuses a status change to another accreditation's PRN", async () => {
@@ -386,7 +428,10 @@ describe('PRN routes by natural key', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toHaveProperty('mode')
+      expect(body(response)).toStrictEqual({
+        mode: expect.any(String),
+        windowOpen: false
+      })
     })
   })
 
@@ -403,7 +448,9 @@ describe('PRN routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: issued.id,
-        status: PRN_STATUS.CANCELLED
+        prnNumber: issued.prnNumber,
+        status: PRN_STATUS.CANCELLED,
+        regulatorCancellable: false
       })
     })
 

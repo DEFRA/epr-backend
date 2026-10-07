@@ -21,7 +21,7 @@ import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { HapiRequest, TypedLogger } from '#common/hapi-types.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
@@ -121,22 +121,14 @@ const mapUpdateStatusError = (error, path, logger) => {
   return Boom.badImplementation(`Failure on ${path}`)
 }
 
-export const packagingRecyclingNotesUpdateStatus = {
-  method: 'POST',
-  path: packagingRecyclingNotesUpdateStatusPath,
-  options: {
-    auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required(),
-        accreditationId: Joi.string().required(),
-        id: Joi.string().hex().length(24).required()
-      }),
-      payload: updateStatusPayloadSchema
-    }
-  },
+/**
+ * Moves a PRN to a new status and responds with the body that `respond`
+ * builds from the updated PRN.
+ *
+ * @param {(prn: PackagingRecyclingNote) => object} respond
+ */
+export const updatePrnStatusHandler =
+  (respond) =>
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -145,7 +137,7 @@ export const packagingRecyclingNotesUpdateStatus = {
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       ledgerRepository,
@@ -199,7 +191,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         }
       })
 
-      return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
+      return h.response(respond(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
       throw mapUpdateStatusError(
         error,
@@ -208,4 +200,22 @@ export const packagingRecyclingNotesUpdateStatus = {
       )
     }
   }
+
+export const packagingRecyclingNotesUpdateStatus = {
+  method: 'POST',
+  path: packagingRecyclingNotesUpdateStatusPath,
+  options: {
+    auth: getAuthConfig([SCOPES.organisationWrite]),
+    tags: ['api'],
+    validate: {
+      params: Joi.object({
+        organisationId: Joi.string().required(),
+        registrationId: Joi.string().required(),
+        accreditationId: Joi.string().required(),
+        id: Joi.string().hex().length(24).required()
+      }),
+      payload: updateStatusPayloadSchema
+    }
+  },
+  handler: updatePrnStatusHandler(buildResponse)
 }

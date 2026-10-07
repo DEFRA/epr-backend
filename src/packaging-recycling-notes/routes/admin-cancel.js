@@ -21,6 +21,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
+ * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { HapiRequest, TypedLogger } from '#common/hapi-types.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
@@ -91,8 +92,20 @@ const findCancellablePrnOrThrow = async (repository, id, logger) => {
 }
 
 /**
+ * @param {PackagingRecyclingNote} prn
+ */
+const buildResponse = (prn) => ({
+  id: prn.id,
+  prnNumber: prn.prnNumber,
+  status: prn.status.currentStatus,
+  tonnage: prn.tonnage,
+  obligationYear: prn.obligationYear,
+  updatedAt: prn.updatedAt
+})
+
+/**
  * Transitions the given PRN to cancelled, audits the change, logs success and
- * builds the 200 response body.
+ * responds 200 with the body that `respond` builds from the cancelled PRN.
  *
  * @param {HapiRequest & {
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -101,8 +114,9 @@ const findCancellablePrnOrThrow = async (repository, id, logger) => {
  * @param {*} previousPrn
  * @param {string} id
  * @param {Object} h - Hapi response toolkit
+ * @param {(prn: PackagingRecyclingNote) => object} respond
  */
-const performCancellation = async (request, previousPrn, id, h) => {
+const performCancellation = async (request, previousPrn, id, h, respond) => {
   const {
     packagingRecyclingNotesRepository,
     ledgerRepository,
@@ -145,16 +159,7 @@ const performCancellation = async (request, previousPrn, id, h) => {
     }
   })
 
-  return h
-    .response({
-      id: updatedPrn.id,
-      prnNumber: updatedPrn.prnNumber,
-      status: updatedPrn.status.currentStatus,
-      tonnage: updatedPrn.tonnage,
-      obligationYear: updatedPrn.obligationYear,
-      updatedAt: updatedPrn.updatedAt
-    })
-    .code(StatusCodes.OK)
+  return h.response(respond(updatedPrn)).code(StatusCodes.OK)
 }
 
 /**
@@ -213,18 +218,14 @@ const mapAdminCancelError = (error, path, id, logger) => {
   return Boom.badImplementation(`Failure on ${path}`)
 }
 
-export const adminPackagingRecyclingNotesCancel = {
-  method: 'POST',
-  path: adminPackagingRecyclingNotesCancelPath,
-  options: {
-    auth: getAuthConfig([SCOPES.adminWrite]),
-    tags: ['api', 'admin'],
-    validate: {
-      params: Joi.object({
-        id: Joi.string().hex().length(24).required()
-      })
-    }
-  },
+/**
+ * Cancels a PRN as an admin and responds with the body that `respond` builds
+ * from the cancelled PRN.
+ *
+ * @param {(prn: PackagingRecyclingNote) => object} respond
+ */
+export const cancelPrnHandler =
+  (respond) =>
   /**
    * @param {HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -233,7 +234,7 @@ export const adminPackagingRecyclingNotesCancel = {
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const { packagingRecyclingNotesRepository, params, logger } = request
     const { id } = params
 
@@ -253,7 +254,7 @@ export const adminPackagingRecyclingNotesCancel = {
         logger
       )
 
-      return await performCancellation(request, previousPrn, id, h)
+      return await performCancellation(request, previousPrn, id, h, respond)
     } catch (error) {
       throw mapAdminCancelError(
         error,
@@ -263,4 +264,18 @@ export const adminPackagingRecyclingNotesCancel = {
       )
     }
   }
+
+export const adminPackagingRecyclingNotesCancel = {
+  method: 'POST',
+  path: adminPackagingRecyclingNotesCancelPath,
+  options: {
+    auth: getAuthConfig([SCOPES.adminWrite]),
+    tags: ['api', 'admin'],
+    validate: {
+      params: Joi.object({
+        id: Joi.string().hex().length(24).required()
+      })
+    }
+  },
+  handler: cancelPrnHandler(buildResponse)
 }

@@ -19,11 +19,18 @@ import {
   accreditationParams,
   accreditationPath
 } from '#routes/organisations/view-route.js'
-import { adminPackagingRecyclingNotesCancel } from './admin-cancel.js'
+import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
+import {
+  adminPackagingRecyclingNotesCancel,
+  cancelPrnHandler
+} from './admin-cancel.js'
 import { packagingRecyclingNotesDecemberEligibility } from './december-eligibility.js'
 import { isServedUnder } from './get-by-id.js'
-import { packagingRecyclingNotesCreate } from './post.js'
-import { packagingRecyclingNotesUpdateStatus } from './status.js'
+import { createPrn, packagingRecyclingNotesCreate } from './post.js'
+import {
+  packagingRecyclingNotesUpdateStatus,
+  updatePrnStatusHandler
+} from './status.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createStatusesValidator } from './validation.js'
 
@@ -32,7 +39,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { AppliedForMaterial } from '#domain/organisations/model.js'
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { ResolveIds } from '#routes/organisations/by-natural-key.js'
+ * @import { ResolveIds, Route } from '#routes/organisations/by-natural-key.js'
  * @import { AccreditationParams } from '#routes/organisations/view-route.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
@@ -72,11 +79,26 @@ const prnPath = `${prnsPath}/{prnId}`
 const prnIdSchema = Joi.string().hex().length(24).required()
 const prnParams = { ...accreditationParams, prnId: prnIdSchema }
 
+const servedStatuses = Object.values(PRN_STATUS).filter(
+  (status) => status !== PRN_STATUS.DELETED
+)
+
+const issuedStatuses = [
+  PRN_STATUS.AWAITING_ACCEPTANCE,
+  PRN_STATUS.ACCEPTED,
+  PRN_STATUS.AWAITING_CANCELLATION,
+  PRN_STATUS.CANCELLED
+]
+const onceIssued = Joi.valid(...issuedStatuses)
+
 const isoDateTime = Joi.string().isoDate().required()
 
 const prnSchema = Joi.object({
   id: Joi.string().required(),
-  prnNumber: Joi.string(),
+  prnNumber: Joi.string().when('status', {
+    not: onceIssued,
+    then: Joi.forbidden()
+  }),
   status: Joi.string()
     .valid(...Object.values(PRN_STATUS))
     .required(),
@@ -96,7 +118,7 @@ const prnSchema = Joi.object({
   issued: Joi.object({
     at: isoDateTime,
     by: Joi.object({ name: Joi.string(), position: Joi.string() }).required()
-  }),
+  }).when('status', { not: onceIssued, then: Joi.forbidden() }),
   regulatorCancellable: Joi.boolean().required()
 })
 
@@ -159,7 +181,7 @@ const prnsList = {
     tags: ['api'],
     validate: {
       query: Joi.object({
-        statuses: createStatusesValidator(Object.values(PRN_STATUS)).optional(),
+        statuses: createStatusesValidator(servedStatuses).optional(),
         prnNumber: Joi.string()
       })
     },
@@ -242,45 +264,75 @@ const prnIds = async (request) => ({
   id: request.params.prnId
 })
 
+/** @param {PackagingRecyclingNote} prn */
+const servePrn = (prn) => toPrnResource(prn, new Date())
+
+/**
+ * @param {Route} route
+ * @param {Joi.Schema} schema
+ * @param {Route['handler']} [handler]
+ */
+const declaringResponse = (route, schema, handler = route.handler) => ({
+  ...route,
+  options: { ...route.options, response: { schema } },
+  handler
+})
+
+const cancelServingPrn = cancelPrnHandler(servePrn)
+
 /**
  * The existing cancel command takes any PRN by its id, so the PRN is first
  * proved to be the accreditation's own.
+ *
+ * @param {Parameters<typeof cancelServingPrn>[0] & {
+ *   params: AccreditationIds
+ * }} request
+ * @param {HapiResponseToolkit} h
  */
-const servedPrnCancel = {
-  ...adminPackagingRecyclingNotesCancel,
-  /**
-   * @param {Parameters<typeof adminPackagingRecyclingNotesCancel.handler>[0] & {
-   *   params: AccreditationIds
-   * }} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, params } = request
-    const prn = await packagingRecyclingNotesRepository.findById(params.id)
-    if (!isServedUnder(prn, params)) {
-      throw Boom.notFound('PRN not found')
-    }
-    return adminPackagingRecyclingNotesCancel.handler(request, h)
+const cancelOwnPrn = async (request, h) => {
+  const { packagingRecyclingNotesRepository, params } = request
+  const prn = await packagingRecyclingNotesRepository.findById(params.id)
+  if (!isServedUnder(prn, params)) {
+    throw Boom.notFound('PRN not found')
   }
+  return cancelServingPrn(request, h)
 }
+
+const decemberEligibilitySchema = Joi.object({
+  mode: Joi.string()
+    .valid(...Object.values(DECEMBER_WASTE_CONTROL_MODE))
+    .required(),
+  windowOpen: Joi.boolean().required()
+})
 
 export const prnRoutesByNaturalKey = [
   atNaturalKeys(prnsList, prnsPath, accreditationParams, accreditationIds),
   atNaturalKeys(
-    packagingRecyclingNotesCreate,
+    declaringResponse(
+      packagingRecyclingNotesCreate,
+      prnSchema,
+      createPrn(servePrn)
+    ),
     prnsPath,
     accreditationParams,
     accreditationIds
   ),
   atNaturalKeys(
-    packagingRecyclingNotesDecemberEligibility,
+    declaringResponse(
+      packagingRecyclingNotesDecemberEligibility,
+      decemberEligibilitySchema
+    ),
     `${prnsPath}/december-prn-eligibility`,
     accreditationParams,
     accreditationIds
   ),
   atNaturalKeys(prnGet, prnPath, prnParams, accreditationIds),
   atNaturalKeys(
-    packagingRecyclingNotesUpdateStatus,
+    declaringResponse(
+      packagingRecyclingNotesUpdateStatus,
+      prnSchema,
+      updatePrnStatusHandler(servePrn)
+    ),
     `${prnPath}/status`,
     prnParams,
     prnIds
@@ -288,7 +340,11 @@ export const prnRoutesByNaturalKey = [
 ]
 
 export const prnCancelByNaturalKey = atNaturalKeys(
-  servedPrnCancel,
+  declaringResponse(
+    adminPackagingRecyclingNotesCancel,
+    prnSchema,
+    cancelOwnPrn
+  ),
   `${prnPath}/cancel`,
   prnParams,
   prnIds

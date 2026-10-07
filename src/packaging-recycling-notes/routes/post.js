@@ -258,16 +258,13 @@ const buildOrganisationSnapshot = ({
   ...(tradingName && { tradingName })
 })
 
-export const packagingRecyclingNotesCreate = {
-  method: 'POST',
-  path: packagingRecyclingNotesCreatePath,
-  options: {
-    auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      payload: packagingRecyclingNotesCreatePayloadSchema
-    }
-  },
+/**
+ * Creates a draft PRN and responds with the body that `respond` builds from it.
+ *
+ * @param {(prn: PackagingRecyclingNote, accreditation: { wasteProcessingType: string }) => object} respond
+ */
+export const createPrn =
+  (respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
    *   organisationsRepository: OrganisationsRepository,
@@ -276,7 +273,7 @@ export const packagingRecyclingNotesCreate = {
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
@@ -354,11 +351,21 @@ export const packagingRecyclingNotesCreate = {
         }
       })
 
-      return h
-        .response(buildResponse(prn, accreditation))
-        .code(StatusCodes.CREATED)
+      return h.response(respond(prn, accreditation)).code(StatusCodes.CREATED)
     } catch (error) {
       throwCreatePrnError(error, logger)
     }
   }
+
+export const packagingRecyclingNotesCreate = {
+  method: 'POST',
+  path: packagingRecyclingNotesCreatePath,
+  options: {
+    auth: getAuthConfig([SCOPES.organisationWrite]),
+    tags: ['api'],
+    validate: {
+      payload: packagingRecyclingNotesCreatePayloadSchema
+    }
+  },
+  handler: createPrn(buildResponse)
 }
