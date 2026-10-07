@@ -372,6 +372,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
+    summaryLogYearBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write each registration start year onto summary logs created before year-scoped routes, rather than only counting them (PAE-2027)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOG_YEAR_BACKFILL'
+    },
     streamTransitionDiagnostic: {
       doc: 'Feature Flag: Run the startup diagnostic reporting organisations that have switched between the registered-only and accredited summary-log streams (PAE-1924)',
       format: Boolean,
