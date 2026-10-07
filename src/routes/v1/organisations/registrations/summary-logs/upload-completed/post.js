@@ -13,13 +13,13 @@ import {
 import {
   uploadCompletedPayloadSchema,
   uploadCompletedYearParamsSchema
-} from './year-post.schema.js'
+} from './post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SummaryLogUpload } from './year-post.schema.js' */
+/** @import { SummaryLogUpload } from './post.schema.js' */
 
 /**
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
