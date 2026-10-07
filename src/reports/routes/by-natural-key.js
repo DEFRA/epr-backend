@@ -25,7 +25,8 @@ import { submissionNumberSchema } from './shared.js'
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { Route } from '#routes/organisations/by-natural-key.js'
+ * @import { ResolveIds, Route } from '#routes/organisations/by-natural-key.js'
+ * @import { RegistrationParams } from '#routes/organisations/view-route.js'
  */
 
 /**
@@ -50,19 +51,6 @@ const submissionParams = (cadence) => ({
   submissionNumber: submissionNumberSchema
 })
 
-const streams = [
-  {
-    path: `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
-    params: submissionParams(CADENCE.quarterly),
-    resolveIds: registrationIds
-  },
-  {
-    path: `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
-    params: submissionParams(CADENCE.monthly),
-    resolveIds: accreditedRegistrationIds
-  }
-]
-
 /** @type {[Route, string][]} */
 const submissionRoutes = [
   [reportsGetDetail, ''],
@@ -74,11 +62,27 @@ const submissionRoutes = [
   [reportsRequestResubmission, '/request-resubmission']
 ]
 
+/**
+ * @template {RegistrationParams} P
+ * @param {string} path
+ * @param {Joi.PartialSchemaMap} params
+ * @param {ResolveIds<P>} resolveIds
+ */
+const submissionRoutesAt = (path, params, resolveIds) =>
+  submissionRoutes.map(([route, action]) =>
+    atNaturalKeys(route, `${path}${action}`, params, resolveIds)
+  )
+
 export const reportRoutesByNaturalKey = [
-  ...streams.flatMap(({ path, params, resolveIds }) =>
-    submissionRoutes.map(([route, action]) =>
-      atNaturalKeys(route, `${path}${action}`, params, resolveIds)
-    )
+  ...submissionRoutesAt(
+    `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
+    submissionParams(CADENCE.quarterly),
+    registrationIds
+  ),
+  ...submissionRoutesAt(
+    `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
+    submissionParams(CADENCE.monthly),
+    accreditedRegistrationIds
   ),
   atNaturalKeys(
     reportsGet,

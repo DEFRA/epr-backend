@@ -20,6 +20,10 @@ import {
  *   options: { validate?: RouteOptionsValidate, [option: string]: unknown },
  *   handler(request: HapiRequest, h: ResponseToolkit | HapiResponseToolkit): Promise<unknown>
  * }} Route
+ *
+ * @typedef {{ organisationId: string }} OrganisationIds
+ * @typedef {OrganisationIds & { registrationId: string }} RegistrationIds
+ * @typedef {RegistrationIds & { accreditationId: string }} AccreditationIds
  */
 
 /**
@@ -54,7 +58,10 @@ export const atNaturalKeys = (route, path, params, resolveIds) => ({
   }
 })
 
-/** @type {ResolveIds<OrganisationParams>} */
+/**
+ * @param {HapiRequest & { params: OrganisationParams }} request
+ * @returns {Promise<OrganisationIds>}
+ */
 export const organisationIds = async ({ organisationsRepository, params }) => {
   const organisation = await findOrganisationByNumber(
     organisationsRepository,
@@ -63,7 +70,10 @@ export const organisationIds = async ({ organisationsRepository, params }) => {
   return { organisationId: organisation.id }
 }
 
-/** @type {ResolveIds<RegistrationParams>} */
+/**
+ * @param {HapiRequest & { params: RegistrationParams }} request
+ * @returns {Promise<RegistrationIds>}
+ */
 export const registrationIds = async ({ organisationsRepository, params }) => {
   const { organisation, registration } = await findRegistrationByNumber(
     organisationsRepository,
@@ -73,7 +83,10 @@ export const registrationIds = async ({ organisationsRepository, params }) => {
   return { organisationId: organisation.id, registrationId: registration.id }
 }
 
-/** @type {ResolveIds<AccreditationParams>} */
+/**
+ * @param {HapiRequest & { params: AccreditationParams }} request
+ * @returns {Promise<AccreditationIds>}
+ */
 export const accreditationIds = async ({ organisationsRepository, params }) => {
   const { organisation, registration } = await findRegistrationByNumber(
     organisationsRepository,
