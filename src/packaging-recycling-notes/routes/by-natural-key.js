@@ -27,9 +27,12 @@ import { createStatusesValidator } from './validation.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { ResolveIds } from '#routes/organisations/by-natural-key.js'
+ * @import { AccreditationParams } from '#routes/organisations/view-route.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
  * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
+ * @typedef {AccreditationParams & { prnId: string }} PrnParams
  *
  * @typedef {HapiRequest & {
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -95,9 +98,7 @@ const toPrnResource = (prn, now) => {
     },
     tonnage: prn.tonnage,
     material: prn.accreditation.material,
-    processToBeUsed: /** @type {string} */ (
-      getProcessCode(prn.accreditation.material)
-    ),
+    processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
     obligationYear: prn.obligationYear,
     ...(prn.notes && { notes: prn.notes }),
@@ -204,7 +205,7 @@ const prnGet = {
 /**
  * The existing PRN commands name the PRN `id`.
  *
- * @param {HapiRequest & { params: { prnId: string } }} request
+ * @type {ResolveIds<PrnParams>}
  */
 const prnIds = async (request) => ({
   ...(await accreditationIds(request)),
@@ -214,16 +215,23 @@ const prnIds = async (request) => ({
 /**
  * The existing cancel command takes any PRN by its id, so the PRN is first
  * proved to be the accreditation's own.
- *
- * @param {PrnRequest & { params: { prnId: string } }} request
  */
-const servedPrnIds = async (request) => {
-  const ids = await prnIds(request)
-  const prn = await request.packagingRecyclingNotesRepository.findById(ids.id)
-  if (!isServedUnder(prn, ids)) {
-    throw Boom.notFound('PRN not found')
+const servedPrnCancel = {
+  ...adminPackagingRecyclingNotesCancel,
+  /**
+   * @param {Parameters<typeof adminPackagingRecyclingNotesCancel.handler>[0] & {
+   *   params: AccreditationIds
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const { packagingRecyclingNotesRepository, params } = request
+    const prn = await packagingRecyclingNotesRepository.findById(params.id)
+    if (!isServedUnder(prn, params)) {
+      throw Boom.notFound('PRN not found')
+    }
+    return adminPackagingRecyclingNotesCancel.handler(request, h)
   }
-  return ids
 }
 
 export const prnRoutesByNaturalKey = [
@@ -250,8 +258,8 @@ export const prnRoutesByNaturalKey = [
 ]
 
 export const prnCancelByNaturalKey = atNaturalKeys(
-  adminPackagingRecyclingNotesCancel,
+  servedPrnCancel,
   `${prnPath}/cancel`,
   prnParams,
-  servedPrnIds
+  prnIds
 )

@@ -6,17 +6,31 @@ import {
 } from './natural-keys.js'
 
 /**
- * PROVISIONAL: stands in for the shared wrapper until its branch is pushed,
- * then is replaced by that file verbatim.
- *
+ * @import { ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { AccreditationParams, OrganisationParams } from './view-route.js'
+ *
+ * @typedef {{
+ *   method: string,
+ *   options: { validate?: RouteOptionsValidate, [option: string]: unknown },
+ *   handler(request: HapiRequest, h: ResponseToolkit | HapiResponseToolkit): Promise<unknown>
+ * }} Route
  */
 
 /**
- * @param {any} route
+ * @template {OrganisationParams} P
+ * @typedef {(request: HapiRequest & { params: P }) => Promise<Record<string, string>>} ResolveIds
+ */
+
+/**
+ * Serves an existing route at a natural-key path. The keys resolve to the
+ * stored ids the existing handler reads, so both paths behave the same.
+ *
+ * @template {OrganisationParams} P
+ * @param {Route} route
  * @param {string} path
  * @param {Joi.PartialSchemaMap} params
- * @param {(request: any) => Promise<object>} resolveIds
+ * @param {ResolveIds<P>} resolveIds
  */
 export const atNaturalKeys = (route, path, params, resolveIds) => ({
   ...route,
@@ -26,8 +40,8 @@ export const atNaturalKeys = (route, path, params, resolveIds) => ({
     validate: { ...route.options.validate, params: Joi.object(params) }
   },
   /**
-   * @param {HapiRequest & { params: any }} request
-   * @param {HapiResponseToolkit} h
+   * @param {HapiRequest & { params: P }} request
+   * @param {ResponseToolkit} h
    */
   handler: async (request, h) => {
     request.params = { ...request.params, ...(await resolveIds(request)) }
@@ -35,17 +49,17 @@ export const atNaturalKeys = (route, path, params, resolveIds) => ({
   }
 })
 
-/** @param {any} request */
-export const accreditationIds = async (request) => {
+/** @type {ResolveIds<AccreditationParams>} */
+export const accreditationIds = async ({ organisationsRepository, params }) => {
   const { organisation, registration } = await findRegistrationByNumber(
-    request.organisationsRepository,
-    request.params.organisationNumber,
-    request.params.registrationNumber
+    organisationsRepository,
+    params.organisationNumber,
+    params.registrationNumber
   )
   const accreditation = findAccreditationForYear(
     organisation,
     registration,
-    Number(request.params.year)
+    Number(params.year)
   )
   return {
     organisationId: organisation.id,
