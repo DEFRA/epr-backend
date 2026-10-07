@@ -3,10 +3,7 @@ import Joi from 'joi'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodSchema } from '#reports/repository/schema.js'
-import {
-  findAccreditationForYear,
-  findRegistrationByNumber
-} from '#routes/organisations/natural-keys.js'
+import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams,
@@ -23,31 +20,9 @@ import { reportsUnsubmit } from './unsubmit.js'
 import { submissionNumberSchema } from './shared.js'
 
 /**
- * @import { RouteOptionsValidate } from '@hapi/hapi'
- * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { Organisation } from '#domain/organisations/model.js'
- * @import { Registration } from '#domain/organisations/registration.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { RegistrationParams } from '#routes/organisations/view-route.js'
- *
- * @typedef {RegistrationParams & { year: number }} SubmissionParams
- *
- * @typedef {(organisation: Organisation, registration: Registration, params: SubmissionParams) => void} RequireStream
- *
- * @typedef {{
- *   method: string,
- *   options: { validate: RouteOptionsValidate },
- *   handler(request: HapiRequest, h: HapiResponseToolkit): Promise<unknown>
- * }} ReportRoute
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  */
-
-/** @type {RequireStream} */
-const registeredOnly = () => {}
-
-/** @type {RequireStream} */
-const accredited = (organisation, registration, { year }) => {
-  findAccreditationForYear(organisation, registration, year)
-}
 
 /**
  * @param {Cadence} cadence
@@ -64,16 +39,16 @@ const streams = [
   {
     path: `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
     params: submissionParams(CADENCE.quarterly),
-    requireStream: registeredOnly
+    accredited: false
   },
   {
     path: `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
     params: submissionParams(CADENCE.monthly),
-    requireStream: accredited
+    accredited: true
   }
 ]
 
-/** @type {[ReportRoute, string][]} */
+/** @type {[NaturalKeyRoute, string][]} */
 const submissionRoutes = [
   [reportsGetDetail, ''],
   [reportsPost, ''],
@@ -84,49 +59,10 @@ const submissionRoutes = [
   [reportsRequestResubmission, '/request-resubmission']
 ]
 
-/**
- * Serves an existing report route at a natural-key path. The keys resolve to
- * the stored ids the existing handler reads, so both paths behave the same.
- *
- * @template {RegistrationParams} P
- * @param {ReportRoute} route
- * @param {string} path
- * @param {Joi.PartialSchemaMap} params
- * @param {(organisation: Organisation, registration: Registration, params: P) => void} [requireStream]
- */
-const atNaturalKeys = (route, path, params, requireStream) => ({
-  ...route,
-  path,
-  options: {
-    ...route.options,
-    validate: { ...route.options.validate, params: Joi.object(params) }
-  },
-  /**
-   * @param {HapiRequest & { params: P }} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { organisationNumber, registrationNumber } = request.params
-    const { organisation, registration } = await findRegistrationByNumber(
-      request.organisationsRepository,
-      organisationNumber,
-      registrationNumber
-    )
-    requireStream?.(organisation, registration, request.params)
-
-    request.params = {
-      ...request.params,
-      organisationId: organisation.id,
-      registrationId: registration.id
-    }
-    return route.handler(request, h)
-  }
-})
-
 export const reportRoutesByNaturalKey = [
-  ...streams.flatMap(({ path, params, requireStream }) =>
+  ...streams.flatMap(({ path, params, accredited }) =>
     submissionRoutes.map(([route, action]) =>
-      atNaturalKeys(route, `${path}${action}`, params, requireStream)
+      atNaturalKeys(route, `${path}${action}`, params, { accredited })
     )
   ),
   atNaturalKeys(

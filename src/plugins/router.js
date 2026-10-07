@@ -23,6 +23,7 @@ import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/l
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
+import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
@@ -62,6 +63,7 @@ const router = {
         ...apply,
         ...Object.values(meRoutes),
         ...Object.values(summaryLogsRoutes),
+        ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
         ...Object.values(organisationRoutes),
         ...Object.values(organisationViewRoutes),
