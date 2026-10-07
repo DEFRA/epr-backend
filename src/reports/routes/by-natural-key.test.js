@@ -15,14 +15,21 @@ import {
   buildCreateReportParams,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/**
+ * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +60,7 @@ const streams = [
     cadence: 'quarterly',
     periods: { inProgress: 1, submitted: 2, created: 3 },
     seeded: { inProgress: '', submitted: '' },
+    prn: null,
     reports: `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/${YEAR}/quarterly`
   },
   {
@@ -61,6 +69,7 @@ const streams = [
     cadence: 'monthly',
     periods: { inProgress: 7, submitted: 8, created: 9 },
     seeded: { inProgress: '', submitted: '' },
+    prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 },
     reports: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/monthly`
   }
 ]
@@ -71,9 +80,17 @@ const COMPLETE_REPORT = {
     totalTonnageReceived: 0,
     tonnageRecycled: 0,
     tonnageNotRecycled: 0
-  },
-  prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 }
+  }
 }
+
+const NEVER_SERVED = [
+  'id',
+  'organisationId',
+  'registrationId',
+  'details',
+  'diagnostics',
+  'operatorCategory'
+]
 
 describe('report routes by natural key', () => {
   setupAuthContext()
@@ -87,7 +104,7 @@ describe('report routes by natural key', () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     reportsRepository = reportsRepositoryFactory()
 
-    for (const { registration, cadence, periods, seeded } of streams) {
+    for (const { registration, cadence, periods, seeded, prn } of streams) {
       /** @param {number} period */
       const forPeriod = (period) => ({
         organisationId: organisation.id,
@@ -99,7 +116,8 @@ describe('report routes by natural key', () => {
       const inProgress = await reportsRepository.createReport(
         buildCreateReportParams({
           ...forPeriod(periods.inProgress),
-          ...COMPLETE_REPORT
+          ...COMPLETE_REPORT,
+          prn
         })
       )
       const submitted = await createAndSubmitReport(
@@ -132,11 +150,11 @@ describe('report routes by natural key', () => {
 
   describe.each(streams)(
     'for the $stream stream',
-    ({ registration, reports, periods, seeded }) => {
+    ({ registration, cadence, reports, periods, seeded }) => {
       const inProgress = submission(reports, periods.inProgress)
       const submitted = submission(reports, periods.submitted)
 
-      it('creates a report', async () => {
+      it('creates a report and serves it by its period', async () => {
         const response = await server.inject({
           method: 'POST',
           url: submission(reports, periods.created),
@@ -144,17 +162,31 @@ describe('report routes by natural key', () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CREATED)
-        const report = await reportsRepository.findReportById(
-          JSON.parse(response.payload).id
-        )
-        expect(report).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
-          period: periods.created
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          year: YEAR,
+          cadence,
+          period: periods.created,
+          submissionNumber: 1,
+          status: REPORT_STATUS.IN_PROGRESS,
+          canRequestResubmission: false
         })
+        for (const key of NEVER_SERVED) {
+          expect(body).not.toHaveProperty(key)
+        }
+        const report = await fetchReportBySubmissionNumber(
+          reportsRepository,
+          organisation.id,
+          registration.id,
+          YEAR,
+          /** @type {Cadence} */ (cadence),
+          periods.created,
+          1
+        )
+        expect(report?.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
       })
 
-      it('reads a report', async () => {
+      it('reads a report by its period, with no ids or internal fields', async () => {
         const response = await server.inject({
           method: 'GET',
           url: inProgress,
@@ -162,7 +194,55 @@ describe('report routes by natural key', () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(JSON.parse(response.payload).id).toBe(seeded.inProgress)
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          year: YEAR,
+          cadence,
+          period: periods.inProgress,
+          submissionNumber: 1,
+          status: REPORT_STATUS.IN_PROGRESS,
+          version: 1
+        })
+        for (const key of NEVER_SERVED) {
+          expect(body).not.toHaveProperty(key)
+        }
+      })
+
+      it('serves a period with no report as a preview', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: submission(reports, periods.created),
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          period: periods.created,
+          submissionNumber: 1,
+          status: 'not_started'
+        })
+        expect(body).not.toHaveProperty('source')
+        expect(body).not.toHaveProperty('version')
+      })
+
+      it('says a stale report is stale, without ids', async () => {
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
+          organisation.id,
+          registration.id,
+          'sl-2',
+          '2026-05-01T00:00:00.000Z'
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: inProgress,
+          ...asOperator()
+        })
+
+        expect(JSON.parse(response.payload).stale).toStrictEqual({
+          summaryLogChanged: { uploadedAt: '2026-05-01T00:00:00.000Z' }
+        })
       })
 
       it('updates a report', async () => {
@@ -176,9 +256,19 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const report = await reportsRepository.findReportById(seeded.inProgress)
         expect(report.supportingInformation).toBe('Updated by number')
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          period: periods.inProgress,
+          status: REPORT_STATUS.IN_PROGRESS,
+          supportingInformation: 'Updated by number',
+          version: 2
+        })
+        for (const key of NEVER_SERVED) {
+          expect(body).not.toHaveProperty(key)
+        }
       })
 
-      it("changes a report's status", async () => {
+      it("changes a report's status and serves the report", async () => {
         const response = await server.inject({
           method: 'POST',
           url: `${inProgress}/status`,
@@ -189,6 +279,80 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const report = await reportsRepository.findReportById(seeded.inProgress)
         expect(report.status.currentStatus).toBe(REPORT_STATUS.READY_TO_SUBMIT)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          version: 2
+        })
+      })
+
+      it('submits a report and says who submitted it', async () => {
+        await reportsRepository.updateReportStatus({
+          reportId: seeded.inProgress,
+          version: 1,
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy: { id: 'user-1', name: 'Alice', position: 'Officer' }
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `${inProgress}/status`,
+          payload: {
+            status: REPORT_STATUS.SUBMITTED,
+            version: 2,
+            submissionDeclaredBy: 'Test User'
+          },
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          status: REPORT_STATUS.SUBMITTED,
+          version: 3,
+          submittedAt: expect.any(String),
+          submittedBy: { position: expect.any(String) }
+        })
+        expect(body.submittedBy).not.toHaveProperty('id')
+      })
+
+      it('refuses to change a stale report, as on /v1', async () => {
+        await reportsRepository.markActiveReportsStaleForSummaryLog(
+          organisation.id,
+          registration.id,
+          'sl-2',
+          '2026-05-01T00:00:00.000Z'
+        )
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: inProgress,
+          payload: { supportingInformation: 'Too late' },
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('refuses to change a submitted report, as on /v1', async () => {
+        const response = await server.inject({
+          method: 'PATCH',
+          url: submitted,
+          payload: { supportingInformation: 'Too late' },
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
+      it('refuses to unsubmit a report that is not submitted, as on /v1', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `${inProgress}/unsubmit`,
+          ...asServiceMaintainerWrite()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
 
       it('deletes a report', async () => {
@@ -214,9 +378,12 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const report = await reportsRepository.findReportById(seeded.submitted)
         expect(report.status.currentStatus).toBe(REPORT_STATUS.READY_TO_SUBMIT)
+        const body = JSON.parse(response.payload)
+        expect(body.status).toBe(REPORT_STATUS.READY_TO_SUBMIT)
+        expect(body).not.toHaveProperty('submittedAt')
       })
 
-      it('requests a resubmission', async () => {
+      it('requests a resubmission and serves the report still submitted', async () => {
         const response = await server.inject({
           method: 'POST',
           url: `${submitted}/request-resubmission`,
@@ -226,9 +393,37 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const report = await reportsRepository.findReportById(seeded.submitted)
         expect(report.resubmissionRequired).toBeDefined()
+        const body = JSON.parse(response.payload)
+        expect(body).toMatchObject({
+          status: REPORT_STATUS.SUBMITTED,
+          resubmissionRequired: {
+            operatorRequested: {
+              requestedAt: expect.any(String),
+              requestedBy: { position: expect.any(String) }
+            }
+          }
+        })
+        expect(
+          body.resubmissionRequired.operatorRequested.requestedBy
+        ).not.toHaveProperty('id')
       })
     }
   )
+
+  it('serves a registered-only report without prn', async () => {
+    const [registeredOnly] = streams
+
+    const response = await server.inject({
+      method: 'GET',
+      url: submission(
+        registeredOnly.reports,
+        registeredOnly.periods.inProgress
+      ),
+      ...asOperator()
+    })
+
+    expect(JSON.parse(response.payload)).not.toHaveProperty('prn')
+  })
 
   it("serves a registration's reporting calendar", async () => {
     const response = await server.inject({
