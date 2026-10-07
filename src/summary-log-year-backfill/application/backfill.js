@@ -1,4 +1,5 @@
 import { startOfDay } from '#common/helpers/date-formatter.js'
+import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { auditSummaryLogYearBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -19,8 +20,23 @@ import { auditSummaryLogYearBackfill } from './audit.js'
 const hasYear = ({ year }) => year !== undefined && year !== null
 
 /**
+ * The earliest approval in a registration's status history, as a year.
+ *
+ * @param {{ status: string, updatedAt: Date | string }[] | undefined} statusHistory
+ * @returns {number | undefined}
+ */
+const firstApprovalYear = (statusHistory = []) => {
+  const approvals = statusHistory
+    .filter(({ status }) => status === REGISTRATION_STATUS.APPROVED)
+    .map(({ updatedAt }) => new Date(updatedAt))
+    .sort((a, b) => a.getTime() - b.getTime())
+  return approvals[0]?.getUTCFullYear()
+}
+
+/**
  * The registration's start year, matching the year the year-scoped routes
- * are called with.
+ * are called with. A cancelled registration can have lost its `validFrom`, so
+ * its first approval in the status history stands in for it.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {{ organisationId?: string, registrationId?: string }} summaryLog
@@ -33,14 +49,21 @@ const registrationStartYear = async (
   if (!organisationId || !registrationId) {
     throw new Error('Summary log has no organisation or registration')
   }
-  const { validFrom } = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
-  if (!validFrom) {
-    throw new Error(`Registration ${registrationId} has no validFrom`)
+  const { validFrom, statusHistory } =
+    await organisationsRepository.findRegistrationById(
+      organisationId,
+      registrationId
+    )
+  if (validFrom) {
+    return startOfDay(validFrom).getUTCFullYear()
   }
-  return startOfDay(validFrom).getUTCFullYear()
+  const approvalYear = firstApprovalYear(statusHistory)
+  if (approvalYear === undefined) {
+    throw new Error(
+      `Registration ${registrationId} has no validFrom or approval in its status history`
+    )
+  }
+  return approvalYear
 }
 
 /**

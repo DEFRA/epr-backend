@@ -155,20 +155,51 @@ describe('backfillSummaryLogYear', () => {
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
-  it('fails a summary log whose registration has no validFrom, leaving it unchanged', async () => {
+  it('uses the earliest approval in the status history when the registration has no validFrom', async () => {
     await summaryLogsRepository.insert('sl-1', legacy())
-    organisationsRepository.findRegistrationById.mockResolvedValue({})
+    organisationsRepository.findRegistrationById.mockResolvedValue({
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-11-01' },
+        { status: 'approved', updatedAt: '2026-01-02' },
+        { status: 'approved', updatedAt: '2025-02-10' },
+        { status: 'cancelled', updatedAt: '2026-03-05' }
+      ]
+    })
 
     expect(await run(false)).toEqual({
       legacy: 1,
-      updated: 0,
-      failed: 1,
+      updated: 1,
+      failed: 0,
       auditFailed: 0,
-      years: {}
+      years: { 2025: 1 }
     })
-    expect((await summaryLogsRepository.findById('sl-1')).version).toBe(1)
-    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['no status history', {}],
+    [
+      'no approval in its status history',
+      { statusHistory: [{ status: 'created', updatedAt: '2025-01-01' }] }
+    ]
+  ])(
+    'fails a summary log whose registration has no validFrom and %s, leaving it unchanged',
+    async (_name, registration) => {
+      await summaryLogsRepository.insert('sl-1', legacy())
+      organisationsRepository.findRegistrationById.mockResolvedValue(
+        registration
+      )
+
+      expect(await run(false)).toEqual({
+        legacy: 1,
+        updated: 0,
+        failed: 1,
+        auditFailed: 0,
+        years: {}
+      })
+      expect((await summaryLogsRepository.findById('sl-1')).version).toBe(1)
+      expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+    }
+  )
 
   it('fails a summary log with no registration reference', async () => {
     await summaryLogsRepository.insert(
