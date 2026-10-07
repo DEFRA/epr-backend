@@ -15,7 +15,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { summaryLogsUploadCompletedYearPath } from './post.js'
+import { summaryLogsUploadCompletedYearPath } from './year-post.js'
 
 const mockRecordStatusTransition = vi.fn()
 

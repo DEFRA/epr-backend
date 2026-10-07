@@ -8,7 +8,7 @@ import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import {
   summaryLogsYearCreateParamsSchema,
   summaryLogsYearCreatePayloadSchema
-} from './post.schema.js'
+} from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */

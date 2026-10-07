@@ -19,7 +19,7 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SummaryLogUpload } from './post.schema.js' */
+/** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 export const buildFileData = (upload, existingFile) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
