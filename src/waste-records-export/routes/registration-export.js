@@ -11,6 +11,7 @@ import { buildDownloadDisposition } from '#repositories/summary-logs/download-di
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { ResolvedRecords } from '#routes/organisations/by-natural-key.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
@@ -44,7 +45,8 @@ export const registrationWasteRecordsExport = {
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   app: ResolvedRecords
    * }} request
    * @param {HapiResponseToolkit} h
    */
@@ -53,7 +55,7 @@ export const registrationWasteRecordsExport = {
 
     // Names the download only, so a failed lookup costs the name, not the file.
     const registrationNumber =
-      request.params.registrationNumber ??
+      request.app.registration?.registrationNumber ??
       (await request.organisationsRepository
         .findRegistrationById(organisationId, registrationId)
         .then((registration) => registration.registrationNumber)
@@ -67,6 +69,7 @@ export const registrationWasteRecordsExport = {
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,
           overseasSitesRepository: request.overseasSitesRepository,
+          organisation: request.app.organisation,
           organisationId,
           registrationId
         })

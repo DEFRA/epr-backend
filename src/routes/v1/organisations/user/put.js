@@ -15,7 +15,10 @@ import { StatusCodes } from 'http-status-codes'
 export const putOrganisationUser =
   (statusCode) =>
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & { params: { organisationId: string } }} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   params: { organisationId: string },
+   *   app: import('#routes/organisations/by-natural-key.js').ResolvedRecords
+   * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */
   async (request, h) => {
@@ -27,7 +30,9 @@ export const putOrganisationUser =
       request.auth.artifacts
     )
 
-    const organisation = await organisationsRepository.findById(organisationId)
+    const organisation =
+      request.app.organisation ??
+      (await organisationsRepository.findById(organisationId))
     const result = await addOrUpdateOrganisationUser(
       request,
       tokenPayload,

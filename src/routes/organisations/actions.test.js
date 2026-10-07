@@ -37,7 +37,18 @@ describe('organisation actions by organisation number', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        // The organisation the number resolved to is the one acted on, so
+        // only a read of the write's own result reaches findById.
+        organisationsRepository: () => {
+          const repository = organisationsRepositoryFactory()
+          return {
+            ...repository,
+            findById: (id, minimumVersion) =>
+              minimumVersion === undefined
+                ? Promise.reject(new Error('read again'))
+                : repository.findById(id, minimumVersion)
+          }
+        },
         systemLogsRepository: createSystemLogsRepository()
       }
     })

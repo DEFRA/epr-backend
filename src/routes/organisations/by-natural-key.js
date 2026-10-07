@@ -9,6 +9,8 @@ import {
 /**
  * @import { ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
  * @import {
  *   AccreditationParams,
  *   OrganisationParams,
@@ -24,6 +26,8 @@ import {
  * @typedef {{ organisationId: string }} OrganisationIds
  * @typedef {OrganisationIds & { registrationId: string }} RegistrationIds
  * @typedef {RegistrationIds & { accreditationId: string }} AccreditationIds
+ *
+ * @typedef {{ organisation?: Organisation, registration?: Registration }} ResolvedRecords
  */
 
 /**
@@ -33,7 +37,9 @@ import {
 
 /**
  * Serves an existing route at a natural-key path. The keys resolve to the
- * stored ids the existing handler reads, so both paths behave the same.
+ * stored ids the existing handler reads, so both paths behave the same. The
+ * records the keys resolved to are on `request.app`, as `ResolvedRecords`, so
+ * a handler need not read them again.
  *
  * @template {OrganisationParams} P
  * @param {Route} route
@@ -62,11 +68,16 @@ export const atNaturalKeys = (route, path, params, resolveIds) => ({
  * @param {HapiRequest & { params: OrganisationParams }} request
  * @returns {Promise<OrganisationIds>}
  */
-export const organisationIds = async ({ organisationsRepository, params }) => {
+export const organisationIds = async ({
+  app,
+  organisationsRepository,
+  params
+}) => {
   const organisation = await findOrganisationByNumber(
     organisationsRepository,
     params.organisationNumber
   )
+  Object.assign(app, { organisation })
   return { organisationId: organisation.id }
 }
 
@@ -74,12 +85,17 @@ export const organisationIds = async ({ organisationsRepository, params }) => {
  * @param {HapiRequest & { params: RegistrationParams }} request
  * @returns {Promise<RegistrationIds>}
  */
-export const registrationIds = async ({ organisationsRepository, params }) => {
+export const registrationIds = async ({
+  app,
+  organisationsRepository,
+  params
+}) => {
   const { organisation, registration } = await findRegistrationByNumber(
     organisationsRepository,
     params.organisationNumber,
     params.registrationNumber
   )
+  Object.assign(app, { organisation, registration })
   return { organisationId: organisation.id, registrationId: registration.id }
 }
 
@@ -87,12 +103,17 @@ export const registrationIds = async ({ organisationsRepository, params }) => {
  * @param {HapiRequest & { params: AccreditationParams }} request
  * @returns {Promise<AccreditationIds>}
  */
-export const accreditationIds = async ({ organisationsRepository, params }) => {
+export const accreditationIds = async ({
+  app,
+  organisationsRepository,
+  params
+}) => {
   const { organisation, registration } = await findRegistrationByNumber(
     organisationsRepository,
     params.organisationNumber,
     params.registrationNumber
   )
+  Object.assign(app, { organisation, registration })
   const accreditation = findAccreditationForYear(
     organisation,
     registration,

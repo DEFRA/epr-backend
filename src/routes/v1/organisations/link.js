@@ -43,7 +43,8 @@ export const linkOrganisation =
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    params: { organisationId: string }
+   *    params: { organisationId: string },
+   *    app: import('#routes/organisations/by-natural-key.js').ResolvedRecords
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
@@ -64,7 +65,9 @@ export const linkOrganisation =
     }
 
     // throws Boom.notFound if organisation does not exist
-    const organisation = await organisationsRepository.findById(organisationId)
+    const organisation =
+      request.app.organisation ??
+      (await organisationsRepository.findById(organisationId))
 
     const { email, id: credentialId } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (

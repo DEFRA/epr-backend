@@ -73,7 +73,8 @@ const submittedLog = (fileId, submittedAt) => ({
  *   rows?: any[],
  *   registration?: any,
  *   ledgerEvents?: LedgerEvent[],
- *   findRegistrationById?: () => Promise<any>
+ *   findRegistrationById?: () => Promise<any>,
+ *   findById?: () => Promise<any>
  * }} [options]
  */
 const createServer = async ({
@@ -87,7 +88,8 @@ const createServer = async ({
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
     })
   ]),
-  findRegistrationById = () => Promise.resolve(registration)
+  findRegistrationById = () => Promise.resolve(registration),
+  findById
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
@@ -113,7 +115,7 @@ const createServer = async ({
     repositories: {
       organisationsRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
-        findById: vi.fn().mockResolvedValue(organisation),
+        findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
         findByOrgId: vi.fn((orgId) =>
           Promise.resolve(orgId === organisation.orgId ? organisation : null)
         ),
@@ -295,10 +297,11 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     )
   })
 
-  it('names the download by the registration number it was asked for', async () => {
+  it('serves the records it resolved without reading them again', async () => {
     const server = await createServer({
       registration: approved,
-      findRegistrationById: () => Promise.reject(new Error('no registration'))
+      findById: () => Promise.reject(new Error('read again')),
+      findRegistrationById: () => Promise.reject(new Error('read again'))
     })
 
     const response = await server.inject({
@@ -307,6 +310,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       ...asServiceMaintainer()
     })
 
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.payload).toContain('Acme Ltd')
     expect(response.headers['content-disposition']).toMatch(
       new RegExp(`^attachment; filename="${approved.registrationNumber}-`)
     )
