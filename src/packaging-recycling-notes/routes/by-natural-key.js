@@ -16,10 +16,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import {
-  accreditationIds,
-  atNaturalKeys
-} from '#routes/organisations/by-natural-key.js'
+import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationParams,
   accreditationPath
@@ -48,7 +45,7 @@ import { createStatusesValidator } from './validation.js'
  * } from '#domain/organisations/model.js'
  * @import { AccreditationSnapshot, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { ResolveIds, Route } from '#routes/organisations/by-natural-key.js'
+ * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { AccreditationParams, RegistrationParams } from '#routes/organisations/view-route.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
@@ -357,15 +354,18 @@ const prnGet = {
   }
 }
 
+const accredited = { accredited: true }
+
 /**
  * The existing PRN commands name the PRN `id`.
  *
- * @type {ResolveIds<PrnParams>}
+ * @param {ResolvedRequest & { params: { prnId: string, id?: string } }} request
  */
-const prnIds = async (request) => ({
-  ...(await accreditationIds(request)),
-  id: request.params.prnId
-})
+const namingPrnId = (request) => {
+  request.params.id = request.params.prnId
+}
+
+const namedPrn = { ...accredited, before: namingPrnId }
 
 /**
  * @param {{ params: RegistrationParams }} request
@@ -391,9 +391,9 @@ const updateStatusServingPrn = (request, h) =>
   updatePrnStatusHandler(servingPrnFor(request))(request, h)
 
 /**
- * @param {Route} route
+ * @param {NaturalKeyRoute} route
  * @param {Joi.Schema} schema
- * @param {Route['handler']} [handler]
+ * @param {NaturalKeyRoute['handler']} [handler]
  */
 const declaringResponse = (route, schema, handler = route.handler) => ({
   ...route,
@@ -427,7 +427,7 @@ const decemberEligibilitySchema = Joi.object({
 })
 
 export const prnRoutesByNaturalKey = [
-  atNaturalKeys(prnsList, prnsPath, accreditationParams, accreditationIds),
+  atNaturalKeys(prnsList, prnsPath, accreditationParams, accredited),
   atNaturalKeys(
     declaringResponse(
       packagingRecyclingNotesCreate,
@@ -436,7 +436,7 @@ export const prnRoutesByNaturalKey = [
     ),
     prnsPath,
     accreditationParams,
-    accreditationIds
+    accredited
   ),
   atNaturalKeys(
     declaringResponse(
@@ -445,9 +445,9 @@ export const prnRoutesByNaturalKey = [
     ),
     `${prnsPath}/december-prn-eligibility`,
     accreditationParams,
-    accreditationIds
+    accredited
   ),
-  atNaturalKeys(prnGet, prnPath, prnParams, accreditationIds),
+  atNaturalKeys(prnGet, prnPath, prnParams, accredited),
   atNaturalKeys(
     declaringResponse(
       packagingRecyclingNotesUpdateStatus,
@@ -456,7 +456,7 @@ export const prnRoutesByNaturalKey = [
     ),
     `${prnPath}/status`,
     prnParams,
-    prnIds
+    namedPrn
   )
 ]
 
@@ -468,5 +468,5 @@ export const prnCancelByNaturalKey = atNaturalKeys(
   ),
   `${prnPath}/cancel`,
   prnParams,
-  prnIds
+  namedPrn
 )

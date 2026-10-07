@@ -29,6 +29,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
  */
 
 /**
@@ -267,6 +268,7 @@ export const createPrn =
   (respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
+   *   app: Partial<ResolvedRecords>,
    *   organisationsRepository: OrganisationsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
@@ -275,6 +277,7 @@ export const createPrn =
    */
   async (request, h) => {
     const {
+      app,
       packagingRecyclingNotesRepository,
       organisationsRepository,
       ledgerRepository,
@@ -296,7 +299,7 @@ export const createPrn =
           organisationId,
           accreditationId
         ),
-        organisationsRepository.findById(organisationId)
+        app.organisation ?? organisationsRepository.findById(organisationId)
       ])
 
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {

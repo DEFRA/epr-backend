@@ -48,6 +48,9 @@ vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 const accredited = accreditation()
 const registration = reprocessor({ accreditationId: accredited.id })
 const organisation = buildOrganisation({
+  statusHistory: [
+    { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+  ],
   registrations: [registration],
   accreditations: [accredited]
 })
