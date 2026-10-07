@@ -26,6 +26,7 @@ import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/route
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
+import { reportRoutesByNaturalKey } from '#reports/routes/by-natural-key.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
 import {
@@ -85,6 +86,7 @@ const router = {
         ...Object.values(marketInsightsRoutes),
         ...Object.values(coreReportsRoutes),
         reportsUnsubmit,
+        ...reportRoutesByNaturalKey,
         adminMeGet,
         accreditationWasteBalanceLedgerGet,
         registrationsList,
