@@ -278,4 +278,75 @@ describe('MongoDB organisations repository', () => {
       expect(result.registrations[0]).not.toHaveProperty('validTo')
     })
   })
+
+  describe('accreditation number storage', () => {
+    it('stores no number field for an unnumbered accreditation', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+      const inserted = await repository.findById(organisation.id)
+      await repository.replace(
+        organisation.id,
+        1,
+        prepareOrgUpdate(inserted, { wasteProcessingTypes: ['reprocessor'] })
+      )
+
+      const rawDoc = /** @type {Record<string, any>} */ (
+        await mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+          .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+      )
+
+      expect(rawDoc.version).toBe(2)
+      for (const accreditation of rawDoc.accreditations) {
+        expect(accreditation).not.toHaveProperty('accreditationNumber')
+      }
+    })
+
+    it('removes stored null numbers so the unique index can be built', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(COLLECTION_NAME)
+      // Start from a collection written before the index existed
+      await collection.drop()
+      await collection.insertMany([
+        {
+          orgId: 1,
+          accreditations: [
+            { id: 'a1', accreditationNumber: null },
+            { id: 'a2', accreditationNumber: 'ACC200001' }
+          ]
+        },
+        { orgId: 2, accreditations: [{ id: 'b1', accreditationNumber: null }] }
+      ])
+
+      await createOrganisationsRepository(database)
+
+      const rawDocs = await collection
+        .find({}, { projection: { _id: 0 } })
+        .sort({ orgId: 1 })
+        .toArray()
+      expect(rawDocs).toStrictEqual([
+        {
+          orgId: 1,
+          accreditations: [
+            { id: 'a1' },
+            { id: 'a2', accreditationNumber: 'ACC200001' }
+          ]
+        },
+        { orgId: 2, accreditations: [{ id: 'b1' }] }
+      ])
+      await expect(
+        collection.insertOne({
+          orgId: 3,
+          accreditations: [{ id: 'c1', accreditationNumber: 'ACC200001' }]
+        })
+      ).rejects.toMatchObject({ code: 11000 })
+    })
+  })
 })

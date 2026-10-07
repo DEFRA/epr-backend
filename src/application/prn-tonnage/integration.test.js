@@ -309,7 +309,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     await db.collection(ORGANISATIONS_COLLECTION).insertMany([
       organisation(secondOrganisationId, orgId + 1, 'Zenith Recycling', [
-        ['acc-z', 'ACC-1']
+        ['acc-z', 'ACC-0']
       ]),
       organisation(organisationId, orgId, 'Acme Reprocessing', [
         ['acc-b', 'ACC-2'],
@@ -335,7 +335,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ).toStrictEqual([
       ['Acme Reprocessing', 'ACC-1'],
       ['Acme Reprocessing', 'ACC-2'],
-      ['Zenith Recycling', 'ACC-1']
+      ['Zenith Recycling', 'ACC-0']
     ])
   })
 

@@ -47,7 +47,6 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
-import { runDuplicateNumberDiagnostic } from '#duplicate-number-diagnostic/run.js'
 import { runFutureStatusDateDiagnostic } from '#future-status-date-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -225,7 +224,6 @@ async function createServer(options = {}) {
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
-    void runDuplicateNumberDiagnostic(startedServer)
     void runFutureStatusDateDiagnostic(startedServer)
   })
 
