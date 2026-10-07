@@ -13,6 +13,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   buildAccreditation,
   buildAwaitingAcceptancePrn,
@@ -264,7 +265,7 @@ describe('PRN routes by natural key', () => {
       })
     })
 
-    it("serves an exporter's PRN with its trading name and glass process", async () => {
+    it("serves an exporter's PRN with its trading name and resolved material", async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[2]).toMatchObject({
@@ -275,13 +276,12 @@ describe('PRN routes by natural key', () => {
         },
         accreditation: {
           wasteProcessingType: 'exporter',
-          material: 'glass',
-          glassRecyclingProcess: 'glass_re_melt'
+          material: 'glass_re_melt'
         }
       })
-      expect(body(response).items[2].accreditation).not.toHaveProperty(
-        'siteAddress'
-      )
+      const { accreditation: served } = body(response).items[2]
+      expect(served).not.toHaveProperty('glassRecyclingProcess')
+      expect(served).not.toHaveProperty('siteAddress')
     })
 
     describe('when the ledger is ahead of a stored PRN', () => {
@@ -465,7 +465,7 @@ describe('PRN routes by natural key', () => {
         accreditation: expect.objectContaining({
           accreditationNumber: accredited.accreditationNumber,
           wasteProcessingType: 'reprocessor',
-          material: accredited.material
+          material: resolveMaterial(accredited)
         }),
         tonnage: 10,
         processToBeUsed: expect.any(String),

@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { appliedForMaterialSchema } from '#common/validation/material-schema.js'
+import { materialSchema } from '#common/validation/material-schema.js'
 import {
   catchUpPrnProjection,
   getProjectedPrnById
@@ -12,10 +12,10 @@ import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancel
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
-  GLASS_RECYCLING_PROCESS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   accreditationIds,
   atNaturalKeys
@@ -42,8 +42,7 @@ import { createStatusesValidator } from './validation.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import {
- *   AppliedForMaterial,
- *   GlassRecyclingProcess,
+ *   Material,
  *   RegulatorValue,
  *   WasteProcessingTypeValue
  * } from '#domain/organisations/model.js'
@@ -81,8 +80,7 @@ import { createStatusesValidator } from './validation.js'
  *     accreditationNumber: string,
  *     accreditationYear: number,
  *     wasteProcessingType: WasteProcessingTypeValue,
- *     material: AppliedForMaterial,
- *     glassRecyclingProcess?: GlassRecyclingProcess,
+ *     material: Material,
  *     submittedToRegulator: { code: RegulatorValue },
  *     siteAddress?: AccreditationSnapshot['siteAddress']
  *   },
@@ -146,10 +144,7 @@ const prnSchema = Joi.object({
     wasteProcessingType: Joi.string()
       .valid(...Object.values(WASTE_PROCESSING_TYPE))
       .required(),
-    material: appliedForMaterialSchema.required(),
-    glassRecyclingProcess: Joi.string().valid(
-      ...Object.values(GLASS_RECYCLING_PROCESS)
-    ),
+    material: materialSchema.required(),
     submittedToRegulator: Joi.object({
       code: Joi.string()
         .valid(...Object.values(REGULATOR))
@@ -192,8 +187,11 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
     wasteProcessingType: isExport
       ? WASTE_PROCESSING_TYPE.EXPORTER
       : WASTE_PROCESSING_TYPE.REPROCESSOR,
-    material: accreditation.material,
-    ...(glassRecyclingProcess && { glassRecyclingProcess }),
+    material: resolveMaterial({
+      id: accreditation.id,
+      material: accreditation.material,
+      glassRecyclingProcess: glassRecyclingProcess && [glassRecyclingProcess]
+    }),
     submittedToRegulator: { code: accreditation.submittedToRegulator },
     ...(siteAddress && {
       siteAddress: {
