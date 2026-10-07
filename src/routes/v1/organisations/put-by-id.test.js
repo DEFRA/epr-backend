@@ -1504,6 +1504,35 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
       )
     })
 
+    it('returns 422 when a corrected date is in the future', async () => {
+      const { server, org } = await seed({
+        accreditationHistory: SUSPENSION_HISTORY
+      })
+      const accreditation = org.accreditations[0]
+
+      const response = await putOrganisation(
+        server,
+        org,
+        prepareOrgUpdate(org, {
+          accreditations: [
+            withHistory(
+              accreditation,
+              redated(
+                accreditation.statusHistory,
+                'suspended',
+                '2999-01-01T00:00:00.000Z'
+              )
+            )
+          ]
+        })
+      )
+
+      expectClause(
+        response,
+        `Accreditation ${accreditation.id} status history dates cannot be in the future`
+      )
+    })
+
     it('returns 422 when a statusHistory is supplied for a new item', async () => {
       const { server, org } = await seed()
       const newRegistration = buildRegistration({

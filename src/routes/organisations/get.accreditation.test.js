@@ -2,12 +2,12 @@ import { StatusCodes } from 'http-status-codes'
 
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   body,
   buildAccreditedOrganisation,
+  exporterAccreditationResponse,
+  reprocessorResponse,
   useViewServer
 } from './organisation-view-test-helpers.js'
 
@@ -29,26 +29,28 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const response = await get(`${reprocessorPath}/accreditations`)
 
     expect(body(response)).toEqual({
-      accreditations: {
-        2026: {
-          accreditationNumber: ACCREDITATION_NUMBER,
-          status: 'approved'
-        }
-      }
+      accreditations: reprocessorResponse.accreditations
+    })
+  })
+
+  it("returns an exporter's accreditations with their overseas sites", async () => {
+    const response = await get(`${exporterPath}/accreditations`)
+
+    expect(body(response)).toEqual({
+      accreditations: { 2026: exporterAccreditationResponse }
     })
   })
 
   it('returns one accreditation by its year, with its overseas sites embedded', async () => {
     const response = await get(`${exporterPath}/accreditations/2026`)
 
-    expect(body(response)).toEqual({
-      accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-      status: 'approved',
-      overseasSites: {
-        '001': { status: 'approved', approvedOn: '2026-01-01' },
-        '002': { status: 'pending' }
-      }
-    })
+    expect(body(response)).toEqual(exporterAccreditationResponse)
+  })
+
+  it('returns one reprocessor accreditation by its year', async () => {
+    const response = await get(`${reprocessorPath}/accreditations/2026`)
+
+    expect(body(response)).toEqual(reprocessorResponse.accreditations[2026])
   })
 
   it.each([

@@ -6,7 +6,7 @@ import {
   accreditation,
   granted,
   reprocessor
-} from './organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   findAccreditationForYear,
   findRegistrationByNumber

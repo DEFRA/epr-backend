@@ -33,6 +33,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
@@ -47,7 +48,6 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runSummaryLogYearBackfill } from '#summary-log-year-backfill/run.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
-import { runApplicationContactDiagnostic } from '#application-contact-diagnostic/run.js'
 import { runDuplicateNumberDiagnostic } from '#duplicate-number-diagnostic/run.js'
 import { runFutureStatusDateDiagnostic } from '#future-status-date-diagnostic/run.js'
 
@@ -137,6 +137,7 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
+    organisationReadRepositoryPlugin,
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
@@ -226,7 +227,6 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runSummaryLogYearBackfill(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
-    void runApplicationContactDiagnostic(startedServer)
     void runDuplicateNumberDiagnostic(startedServer)
     void runFutureStatusDateDiagnostic(startedServer)
   })

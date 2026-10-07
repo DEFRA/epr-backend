@@ -9,5 +9,5 @@ export const organisationViewGet = viewRoute(
   organisationPath,
   organisationParams,
   organisationViewSchema,
-  (view) => view
+  (organisation) => organisation
 )

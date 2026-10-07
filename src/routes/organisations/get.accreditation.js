@@ -12,23 +12,27 @@ import {
   viewRoute
 } from './view-route.js'
 
-/** @import { OrganisationView } from './organisation-view.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationParams, RegistrationParams } from './view-route.js' */
 
 /**
- * @param {OrganisationView} view
+ * @param {Organisation} organisation
  * @param {RegistrationParams} params
  */
-const accreditations = (view, params) => ({
-  accreditations: registration(view, params).accreditations
+const accreditations = (organisation, params) => ({
+  accreditations: registration(organisation, params).accreditations
 })
 
 /**
- * @param {OrganisationView} view
+ * @param {Organisation} organisation
  * @param {AccreditationParams} params
  */
-const accreditation = (view, params) =>
-  found(registration(view, params).accreditations, params.year, 'Accreditation')
+const accreditation = (organisation, params) =>
+  found(
+    registration(organisation, params).accreditations,
+    params.year,
+    'Accreditation'
+  )
 
 export const accreditationsViewGet = viewRoute(
   accreditationsPath,

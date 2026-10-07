@@ -1,94 +1,27 @@
-import { ObjectId } from 'mongodb'
-
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
-  buildAccreditation,
-  buildOrganisation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
+  accreditation,
+  approvedOverseasSite,
+  exporter,
+  exporterAccreditation,
+  overseasSites,
+  pendingOverseasSite,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 
-export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
-export const EXPORTER_NUMBER = 'R26EX5001180042PL'
-export const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
-export const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
+export {
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-export const APPROVED_SITE_ID = new ObjectId().toString()
-export const PENDING_SITE_ID = new ObjectId().toString()
-export const MISSING_SITE_ID = new ObjectId().toString()
-
-const approvedSite = {
-  id: APPROVED_SITE_ID,
-  name: 'Beta Reprocessor',
-  country: 'Germany',
-  address: { line1: '2 Teststrasse', townOrCity: 'Berlin', postcode: '10115' },
-  coordinates: '52.5200,13.4050',
-  validFrom: new Date('2026-01-01T00:00:00.000Z'),
-  createdAt: new Date(),
-  updatedAt: new Date()
-}
-
-const pendingSite = {
-  id: PENDING_SITE_ID,
-  name: 'Alpha Reprocessor',
-  country: 'France',
-  address: { line1: '1 Rue de Test', townOrCity: 'Paris', line2: null },
-  createdAt: new Date(),
-  updatedAt: new Date()
-}
-
-export const granted = (status) => [
-  { status: 'created', updatedAt: '2026-01-01' },
-  { status, updatedAt: '2026-02-01' }
-]
-
-export const accreditation = (overrides = {}) =>
-  buildAccreditation({
-    accreditationNumber: ACCREDITATION_NUMBER,
-    validFrom: '2026-07-01',
-    validTo: '2026-12-31',
-    statusHistory: granted('approved'),
-    ...overrides
-  })
-
-export const exporterAccreditation = (overrides = {}) =>
-  accreditation({
-    wasteProcessingType: 'exporter',
-    accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-    ...overrides
-  })
-
-export const reprocessor = (overrides = {}) =>
-  buildRegistration({
-    registrationNumber: REPROCESSOR_NUMBER,
-    reprocessingType: 'input',
-    validFrom: '2026-02-01',
-    statusHistory: granted('approved'),
-    ...overrides
-  })
-
-export const exporter = (overrides = {}) =>
-  buildRegistration({
-    wasteProcessingType: 'exporter',
-    registrationNumber: EXPORTER_NUMBER,
-    validFrom: '2026-02-01',
-    statusHistory: granted('approved'),
-    overseasSites: {
-      '001': { overseasSiteId: APPROVED_SITE_ID },
-      '002': { overseasSiteId: PENDING_SITE_ID }
-    },
-    ...overrides
-  })
-
-export const reprocessorAt = (address) => {
-  const registration = reprocessor()
-  return { ...registration, site: { ...registration.site, address } }
-}
-
-export const buildAccreditedOrganisation = () => {
+export const buildAccreditedOrganisation = (overrides = {}) => {
   const reprocessorAccreditation = accreditation()
   const exportAccreditation = exporterAccreditation()
   return buildOrganisation({
@@ -96,24 +29,50 @@ export const buildAccreditedOrganisation = () => {
       reprocessor({ accreditationId: reprocessorAccreditation.id }),
       exporter({ accreditationId: exportAccreditation.id })
     ],
-    accreditations: [reprocessorAccreditation, exportAccreditation]
+    accreditations: [reprocessorAccreditation, exportAccreditation],
+    ...overrides
   })
 }
 
-export const approvedSiteView = {
-  name: 'Beta Reprocessor',
-  address: {
-    line1: '2 Teststrasse',
-    townOrCity: 'Berlin',
-    postcode: '10115',
-    country: 'Germany'
+/** What `buildAccreditedOrganisation` serves for its reprocessor. */
+export const reprocessorResponse = {
+  status: 'approved',
+  validFrom: '2026-02-01',
+  material: 'glass_re_melt',
+  submittedToRegulator: { code: 'ea' },
+  wasteProcessingType: 'reprocessor',
+  reprocessingType: 'input',
+  site: {
+    address: {
+      line1: '7 Glass processing site',
+      town: 'London',
+      postcode: 'SW2A 0AA'
+    }
   },
-  coordinates: '52.5200,13.4050'
+  accreditations: {
+    2026: { accreditationNumber: ACCREDITATION_NUMBER, status: 'approved' }
+  }
 }
 
-export const pendingSiteView = {
-  name: 'Alpha Reprocessor',
-  address: { line1: '1 Rue de Test', townOrCity: 'Paris', country: 'France' }
+/** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
+export const exporterAccreditationResponse = {
+  accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+  status: 'approved',
+  overseasSites: {
+    '001': { status: 'approved', approvedOn: '2026-01-01' },
+    '002': { status: 'pending' }
+  }
+}
+
+/** What `buildAccreditedOrganisation` serves for its exporter. */
+export const exporterResponse = {
+  status: 'approved',
+  validFrom: '2026-02-01',
+  material: 'plastic',
+  submittedToRegulator: { code: 'ea' },
+  wasteProcessingType: 'exporter',
+  overseasSites: { '001': approvedOverseasSite, '002': pendingOverseasSite },
+  accreditations: { 2026: exporterAccreditationResponse }
 }
 
 export const body = (response) => JSON.parse(response.payload)
@@ -133,10 +92,8 @@ export const useViewServer = () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository,
-        overseasSitesRepository: createInMemoryOverseasSitesRepository([
-          approvedSite,
-          pendingSite
-        ])
+        overseasSitesRepository:
+          createInMemoryOverseasSitesRepository(overseasSites)
       }
     })
   }
@@ -165,13 +122,5 @@ export const useViewServer = () => {
   const get = (url, auth = asServiceMaintainer()) =>
     server.inject({ method: 'GET', url, ...auth })
 
-  /**
-   * @param {{ orgId: number }} organisation
-   */
-  const registrationsOf = async (organisation) => {
-    await serve(organisation)
-    return body(await get(`/organisations/${organisation.orgId}`)).registrations
-  }
-
-  return { server: () => server, serve, serveStored, get, registrationsOf }
+  return { server: () => server, serve, serveStored, get }
 }

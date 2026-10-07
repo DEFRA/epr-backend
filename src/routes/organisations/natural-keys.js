@@ -4,7 +4,7 @@ import { accreditationsForRegistration } from '#domain/organisations/registratio
 import {
   toAccreditationEntry,
   toRegistrationEntry
-} from './organisation-view.js'
+} from '#organisation-read-model/repository/adapter.js'
 
 /**
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
@@ -17,8 +17,11 @@ import {
  * Finding a record needs only its key. Overseas sites and the reasons a record
  * is not served matter to the view alone.
  */
-const NO_SITES = new Map()
-const ignoreDrop = () => {}
+const lookupContext = () => ({
+  onDrop: () => {},
+  overseasSitesById: new Map(),
+  today: new Date().toISOString().slice(0, 10)
+})
 
 /**
  * Finds the stored registration a route names by its natural keys. Only a
@@ -45,8 +48,7 @@ export async function findRegistrationByNumber(
     organisation.registrations.filter(
       (candidate) =>
         candidate.registrationNumber === registrationNumber &&
-        toRegistrationEntry(candidate, organisation, NO_SITES, ignoreDrop) !==
-          null
+        toRegistrationEntry(candidate, organisation, lookupContext()) !== null
     ),
     'Registration'
   )
@@ -67,7 +69,7 @@ export function findAccreditationForYear(organisation, registration, year) {
   return onlyOne(
     accreditationsForRegistration(registration, organisation).filter(
       (candidate) =>
-        toAccreditationEntry(candidate, ignoreDrop)?.[0] === String(year)
+        toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
     ),
     'Accreditation'
   )

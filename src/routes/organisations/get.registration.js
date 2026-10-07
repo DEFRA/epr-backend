@@ -15,7 +15,7 @@ export const registrationsViewGet = viewRoute(
   registrationsPath,
   organisationParams,
   registrationsViewResponseSchema,
-  (view) => ({ registrations: view.registrations })
+  (organisation) => ({ registrations: organisation.registrations })
 )
 
 export const registrationViewGet = viewRoute(
