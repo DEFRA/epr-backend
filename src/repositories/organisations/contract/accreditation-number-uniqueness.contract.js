@@ -40,6 +40,18 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       expect(result.accreditations[0].accreditationNumber).toBeNull()
     })
 
+    it('accepts organisations that each hold numbered and unnumbered accreditations', async () => {
+      const first = organisationWithNumbers('ACC100006', null)
+      const second = organisationWithNumbers('ACC100007', null)
+
+      await repository.insert(first)
+      await repository.insert(second)
+
+      const result = await repository.findById(second.id)
+      expect(result.accreditations[0].accreditationNumber).toBe('ACC100007')
+      expect(result.accreditations[1].accreditationNumber).toBeNull()
+    })
+
     it('refuses to insert an organisation whose accreditation number another organisation holds', async () => {
       await repository.insert(organisationWithNumbers('ACC100001'))
 
