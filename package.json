@@ -18,6 +18,7 @@
     "#duplicate-number-diagnostic/*": "./src/duplicate-number-diagnostic/*",
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
+    "#future-status-date-diagnostic/*": "./src/future-status-date-diagnostic/*",
     "#glass-migration/*": "./src/glass-migration/*",
     "#market-insights/*": "./src/market-insights/*",
     "#non-prod-data-reset/*": "./src/non-prod-data-reset/*",
