@@ -45,7 +45,17 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
 
       await expect(
         repository.insert(organisationWithNumbers('ACC100001'))
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining(
+              'accreditations.accreditationNumber'
+            )
+          }
+        }
+      })
     })
 
     it('refuses to give an accreditation a number another organisation holds', async () => {

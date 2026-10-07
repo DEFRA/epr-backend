@@ -73,6 +73,32 @@ describe('MongoDB organisations repository', () => {
       )
     })
 
+    it('converts E11000 from insert on a key other than the id to a curated Boom.conflict', async () => {
+      const dbMock = createMockDb({
+        createIndex: async () => {},
+        insertOne: async () => {
+          throw createMongoError('E11000 duplicate key error', { code: 11000 })
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.insert(buildOrganisation())
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: { message: expect.stringContaining('unknown') }
+        },
+        event: {
+          action: 'insert_organisation',
+          reason: 'fields=unknown type=Error code=11000'
+        }
+      })
+    })
+
     it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
       const existingOrg = buildOrganisation()
       const existingDoc = {
