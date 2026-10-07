@@ -6,19 +6,19 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
 
-export const organisationsUserPut = {
-  method: 'PUT',
-  path: '/v1/organisations/{organisationId}/user',
-  options: {
-    auth: { scope: [SCOPES.organisationWrite] },
-    tags: ['api']
-  },
-
+/**
+ * Adds the user in the token to the organisation, or updates their details,
+ * and responds with an empty body and `statusCode`.
+ *
+ * @param {number} statusCode
+ */
+export const putOrganisationUser =
+  (statusCode) =>
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & { params: { organisationId: string } }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const { organisationId } = request.params
     const { organisationsRepository } = request
     const {
@@ -41,6 +41,15 @@ export const organisationsUserPut = {
       await auditOrganisationUserAdded(request, organisationId, result)
     }
 
-    return h.response().code(StatusCodes.OK)
+    return h.response().code(statusCode)
   }
+
+export const organisationsUserPut = {
+  method: 'PUT',
+  path: '/v1/organisations/{organisationId}/user',
+  options: {
+    auth: { scope: [SCOPES.organisationWrite] },
+    tags: ['api']
+  },
+  handler: putOrganisationUser(StatusCodes.OK)
 }

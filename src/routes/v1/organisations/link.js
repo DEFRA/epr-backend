@@ -25,16 +25,25 @@ import { getDefraTokenSummary } from '#auth/roles/helpers.js'
  * @property {LinkedDefraOrganisationResponse} linked
  */
 
-export const organisationsLink = {
-  method: 'POST',
-  path: '/v1/organisations/{organisationId}/link',
-  options: {
-    auth: {
-      scope: [SCOPES.organisationLinkedWrite]
-    },
-    tags: ['api', 'admin']
-  },
+/**
+ * @typedef {{
+ *   orgId: string,
+ *   orgName: string,
+ *   linkedAt: string,
+ *   linkedBy: { email: string, id: string }
+ * }} LinkedDefraOrganisation
+ *
+ * @typedef {(status: string, linked: LinkedDefraOrganisation) => object} RespondToLink
+ */
 
+/**
+ * Links the Defra ID organisation in the user's token to the organisation, and
+ * responds with the body that `respond` builds.
+ *
+ * @param {RespondToLink} respond
+ */
+export const linkOrganisation =
+  (respond) =>
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
@@ -44,7 +53,7 @@ export const organisationsLink = {
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const { organisationId } = request.params
     const { organisationsRepository } = request
     const {
@@ -115,17 +124,34 @@ export const organisationsLink = {
       currentVersion + 1
     )
 
-    /** @type {LinkedOrganisationResponse} */
-    const payload = {
-      status: updatedOrganisation.status,
-      linked: {
-        id: linkedDefraOrg.orgId,
-        name: linkedDefraOrg.orgName,
-        linkedAt: linkedDefraOrg.linkedAt,
-        linkedBy: linkedDefraOrg.linkedBy
-      }
-    }
-
-    return h.response(payload).code(StatusCodes.OK)
+    return h
+      .response(respond(updatedOrganisation.status, linkedDefraOrg))
+      .code(StatusCodes.OK)
   }
+
+/** @type {RespondToLink} */
+const toLinkedOrganisationResponse = (status, linked) => {
+  /** @type {LinkedOrganisationResponse} */
+  const payload = {
+    status,
+    linked: {
+      id: linked.orgId,
+      name: linked.orgName,
+      linkedAt: linked.linkedAt,
+      linkedBy: linked.linkedBy
+    }
+  }
+  return payload
+}
+
+export const organisationsLink = {
+  method: 'POST',
+  path: '/v1/organisations/{organisationId}/link',
+  options: {
+    auth: {
+      scope: [SCOPES.organisationLinkedWrite]
+    },
+    tags: ['api', 'admin']
+  },
+  handler: linkOrganisation(toLinkedOrganisationResponse)
 }

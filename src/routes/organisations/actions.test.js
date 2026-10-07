@@ -72,6 +72,14 @@ describe('organisation actions by organisation number', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({
+        status: ORGANISATION_STATUS.ACTIVE,
+        linkedDefraOrganisation: {
+          defraOrganisation: { id: DEFRA_ID_ORG_ID, name: 'Defra ID Org Ltd' },
+          linkedAt: expect.any(String),
+          linkedBy: { email }
+        }
+      })
       const linked = await organisationsRepository.findById(
         organisation.id,
         organisation.version + 1
@@ -108,7 +116,8 @@ describe('organisation actions by organisation number', () => {
         headers: { Authorization: `Bearer ${generateValidTokenWith(newUser)}` }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+      expect(response.payload).toBe('')
       const updated = await organisationsRepository.findById(
         organisation.id,
         organisation.version + 1
