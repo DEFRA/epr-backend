@@ -47,6 +47,18 @@ async function ensureCollection(db) {
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
 
+  // An unnumbered accreditation once stored an explicit null, which a sparse
+  // index still indexes, so every null would collide with every other
+  await collection.updateMany(
+    { 'accreditations.accreditationNumber': { $type: 'null' } },
+    { $unset: { 'accreditations.$[unnumbered].accreditationNumber': '' } },
+    { arrayFilters: [{ 'unnumbered.accreditationNumber': { $type: 'null' } }] }
+  )
+  await collection.createIndex(
+    { 'accreditations.accreditationNumber': 1 },
+    { unique: true, sparse: true }
+  )
+
   return collection
 }
 // Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)

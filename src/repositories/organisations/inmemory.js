@@ -2,6 +2,7 @@
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 
 import Boom from '@hapi/boom'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
@@ -17,6 +18,7 @@ import {
   prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import { errorCodes } from './enums/error-codes.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -43,6 +45,35 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
   })
 }
 
+/**
+ * Stands in for the unique index the MongoDB adapter holds on the
+ * accreditation number, which spans organisations.
+ */
+const assertAccreditationNumbersUnheld = (storage, id, accreditations) => {
+  const heldElsewhere = new Set(
+    storage
+      .filter((org) => org._id !== id)
+      .flatMap((org) => org.accreditations)
+      .map((acc) => acc.accreditationNumber)
+      .filter((number) => typeof number === 'string')
+  )
+
+  if (
+    accreditations.some((acc) => heldElsewhere.has(acc.accreditationNumber))
+  ) {
+    throw conflict(
+      `Duplicate key conflict updating organisation ${id} (accreditations.accreditationNumber)`,
+      errorCodes.organisationDuplicateKey,
+      {
+        event: {
+          action: 'update_organisation',
+          reason: 'fields=accreditations.accreditationNumber'
+        }
+      }
+    )
+  }
+}
+
 const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
@@ -54,6 +85,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
 
   const registrations = initializeItems(orgFields.registrations)
   const accreditations = initializeItems(orgFields.accreditations)
+  assertAccreditationNumbersUnheld(storage, id, accreditations)
 
   const newOrg = structuredClone({
     _id: id,
@@ -93,6 +125,11 @@ const performReplace =
       updates
     )
 
+    assertAccreditationNumbersUnheld(
+      storage,
+      existing._id,
+      replaced.accreditations
+    )
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update

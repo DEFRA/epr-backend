@@ -30,7 +30,10 @@ export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
 
 export const organisationInsertSchema = Joi.object({
-  accreditations: Joi.array().items(accreditationSchema).optional(),
+  accreditations: Joi.array()
+    .items(accreditationSchema)
+    .unique('accreditationNumber', { ignoreUndefined: true })
+    .optional(),
   businessType: Joi.string()
     .valid(
       BUSINESS_TYPE.INDIVIDUAL,
@@ -93,6 +96,7 @@ export const organisationReplaceSchema = organisationInsertSchema
       .custom(validateImmutableFields(['id'])),
     accreditations: Joi.array()
       .items(accreditationUpdateSchema)
+      .unique('accreditationNumber', { ignoreUndefined: true })
       .default([])
       .custom(validateImmutableFields(['id']))
   })
