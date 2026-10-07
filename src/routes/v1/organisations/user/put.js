@@ -17,7 +17,7 @@ export const putOrganisationUser =
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   params: { organisationId: string },
-   *   app: import('#routes/organisations/by-natural-key.js').ResolvedRecords
+   *   app: Partial<import('#routes/organisations/at-natural-keys.js').ResolvedRecords>
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    */

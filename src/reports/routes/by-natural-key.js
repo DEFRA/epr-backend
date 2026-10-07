@@ -3,11 +3,7 @@ import Joi from 'joi'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodSchema } from '#reports/repository/schema.js'
-import {
-  accreditationIds,
-  atNaturalKeys,
-  registrationIds
-} from '#routes/organisations/by-natural-key.js'
+import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams,
@@ -25,8 +21,7 @@ import { submissionNumberSchema } from './shared.js'
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { ResolveIds, Route } from '#routes/organisations/by-natural-key.js'
- * @import { RegistrationParams } from '#routes/organisations/view-route.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  */
 
 /**
@@ -40,7 +35,20 @@ const submissionParams = (cadence) => ({
   submissionNumber: submissionNumberSchema
 })
 
-/** @type {[Route, string][]} */
+const streams = [
+  {
+    path: `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
+    params: submissionParams(CADENCE.quarterly),
+    accredited: false
+  },
+  {
+    path: `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
+    params: submissionParams(CADENCE.monthly),
+    accredited: true
+  }
+]
+
+/** @type {[NaturalKeyRoute, string][]} */
 const submissionRoutes = [
   [reportsGetDetail, ''],
   [reportsPost, ''],
@@ -51,32 +59,15 @@ const submissionRoutes = [
   [reportsRequestResubmission, '/request-resubmission']
 ]
 
-/**
- * @template {RegistrationParams} P
- * @param {string} path
- * @param {Joi.PartialSchemaMap} params
- * @param {ResolveIds<P>} resolveIds
- */
-const submissionRoutesAt = (path, params, resolveIds) =>
-  submissionRoutes.map(([route, action]) =>
-    atNaturalKeys(route, `${path}${action}`, params, resolveIds)
-  )
-
 export const reportRoutesByNaturalKey = [
-  ...submissionRoutesAt(
-    `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
-    submissionParams(CADENCE.quarterly),
-    registrationIds
-  ),
-  ...submissionRoutesAt(
-    `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
-    submissionParams(CADENCE.monthly),
-    accreditationIds
+  ...streams.flatMap(({ path, params, accredited }) =>
+    submissionRoutes.map(([route, action]) =>
+      atNaturalKeys(route, `${path}${action}`, params, { accredited })
+    )
   ),
   atNaturalKeys(
     reportsGet,
     `${registrationPath}/reports/calendar`,
-    registrationParams,
-    registrationIds
+    registrationParams
   )
 ]

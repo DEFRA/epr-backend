@@ -44,7 +44,7 @@ export const linkOrganisation =
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
    *    params: { organisationId: string },
-   *    app: import('#routes/organisations/by-natural-key.js').ResolvedRecords
+   *    app: Partial<import('#routes/organisations/at-natural-keys.js').ResolvedRecords>
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}

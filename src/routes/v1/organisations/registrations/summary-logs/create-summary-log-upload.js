@@ -58,7 +58,8 @@ const buildCallbackUrl = ({
  *   registrationId: string,
  *   year?: number,
  *   redirectUrl: string,
- *   routePath: string
+ *   routePath: string,
+ *   callbackUrlFor?: (summaryLogId: string) => string
  * }} args
  * @returns {Promise<{ summaryLogId: string, uploadId: string, uploadUrl: string, statusUrl: string }>}
  */
@@ -69,21 +70,23 @@ export async function createSummaryLogUpload({
   registrationId,
   year,
   redirectUrl,
-  routePath
+  routePath,
+  callbackUrlFor
 }) {
   const summaryLogId = randomUUID()
   const resolvedRedirectUrl = redirectUrl.replace(
     '{summaryLogId}',
     summaryLogId
   )
-  const appBaseUrl = config.get('appBaseUrl')
-  const callbackUrl = buildCallbackUrl({
-    appBaseUrl,
-    organisationId,
-    registrationId,
-    summaryLogId,
-    year
-  })
+  const callbackUrl =
+    callbackUrlFor?.(summaryLogId) ??
+    buildCallbackUrl({
+      appBaseUrl: config.get('appBaseUrl'),
+      organisationId,
+      registrationId,
+      summaryLogId,
+      year
+    })
 
   try {
     const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({

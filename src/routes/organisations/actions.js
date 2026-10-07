@@ -11,7 +11,7 @@ import {
   organisationsUserPut,
   putOrganisationUser
 } from '#routes/v1/organisations/user/put.js'
-import { atNaturalKeys, organisationIds } from './by-natural-key.js'
+import { atNaturalKeys } from './at-natural-keys.js'
 import { linkedDefraOrganisationViewSchema } from './response.schema.js'
 import { organisationParams, organisationPath } from './view-route.js'
 
@@ -40,8 +40,7 @@ export const organisationLink = atNaturalKeys(
     }))
   },
   `${organisationPath}/link`,
-  organisationParams,
-  organisationIds
+  organisationParams
 )
 
 export const organisationUserPut = atNaturalKeys(
@@ -51,6 +50,5 @@ export const organisationUserPut = atNaturalKeys(
     handler: putOrganisationUser(StatusCodes.NO_CONTENT)
   },
   `${organisationPath}/user`,
-  organisationParams,
-  organisationIds
+  organisationParams
 )

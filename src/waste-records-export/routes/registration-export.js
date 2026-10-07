@@ -1,8 +1,5 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import {
-  atNaturalKeys,
-  registrationIds
-} from '#routes/organisations/by-natural-key.js'
+import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   registrationParams,
   registrationPath
@@ -11,7 +8,7 @@ import { buildDownloadDisposition } from '#repositories/summary-logs/download-di
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { ResolvedRecords } from '#routes/organisations/by-natural-key.js' */
+/** @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
@@ -46,7 +43,7 @@ export const registrationWasteRecordsExport = {
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
-   *   app: ResolvedRecords
+   *   app: Partial<ResolvedRecords>
    * }} request
    * @param {HapiResponseToolkit} h
    */
@@ -94,6 +91,5 @@ export const registrationWasteRecordsExport = {
 export const registrationWasteRecordsExportByNumber = atNaturalKeys(
   registrationWasteRecordsExport,
   `${registrationPath}/waste-records/export.csv`,
-  registrationParams,
-  registrationIds
+  registrationParams
 )
