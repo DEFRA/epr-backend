@@ -132,7 +132,7 @@ function toOrganisation(stored, context) {
  * @param {Context} context
  * @returns {[string, Registration] | null}
  */
-function toRegistrationEntry(registration, organisation, context) {
+export function toRegistrationEntry(registration, organisation, context) {
   const { onDrop, today } = context
   const { registrationNumber, validFrom, applicationContactDetails } =
     registration
@@ -256,7 +256,7 @@ function withAccreditedSites(accreditations, overseasSites) {
  * @param {Context} context
  * @returns {[string, AccreditationCommon] | null}
  */
-function toAccreditationEntry(accreditation, { onDrop, today }) {
+export function toAccreditationEntry(accreditation, { onDrop, today }) {
   const { accreditationNumber, prnIssuance } = accreditation
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)

@@ -29,7 +29,6 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
-    "#stream-transition-diagnostic/*": "./src/stream-transition-diagnostic/*",
     "#summary-log-year-backfill/*": "./src/summary-log-year-backfill/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
