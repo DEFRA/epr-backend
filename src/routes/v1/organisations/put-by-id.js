@@ -300,16 +300,6 @@ const collectStatusHistoryErrors = (
 }
 
 /**
- * A registration or accreditation status history may have its entry statuses
- * and updatedAt dates corrected through this endpoint (PAE-1809). Entries
- * cannot be added, removed or reattributed, the history must still start at
- * created, corrected dates must stay strictly ascending and not in the future,
- * and the resulting sequence must be a walk of the domain transition table.
- * Correcting the last entry changes the item's derived status directly —
- * deliberately, per the ticket — without the dedicated transition endpoints'
- * side effects (no cascade cancel, no grant fields, no approval-uniqueness
- * check).
- *
  * @param {Organisation} initial - the stored organisation (findById throws 404 when the id is unknown)
  * @param {OrganisationReplacement} updates
  * @throws {Boom.Boom} 422 with one clause per offending item, joined by '; '
