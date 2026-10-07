@@ -8,7 +8,7 @@ import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
-} from './organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { registrationParams } from './view-route.js'
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'

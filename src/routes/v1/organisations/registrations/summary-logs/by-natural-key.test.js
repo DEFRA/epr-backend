@@ -18,7 +18,7 @@ import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
-} from '#routes/organisations/organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -46,21 +46,18 @@ const organisation = buildOrganisation({
 })
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
-const registeredOnly = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`
-const accreditedSummaryLog = `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`
+const summaryLogs = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 
-const kinds = [
+const uploadAddresses = [
   {
     kind: 'registered-only',
-    summaryLogs: registeredOnly,
-    registration: registeredOnlyRegistration,
-    accreditationId: null
+    uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
+    registration: registeredOnlyRegistration
   },
   {
     kind: 'accredited',
-    summaryLogs: accreditedSummaryLog,
-    registration: accreditedRegistration,
-    accreditationId: accredited.id
+    uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
+    registration: accreditedRegistration
   }
 ]
 
@@ -152,21 +149,13 @@ describe('summary-log routes by natural key', () => {
     return summaryLogId
   }
 
-  describe.each(kinds)(
-    'a $kind summary log',
-    ({ summaryLogs, registration, accreditationId }) => {
-      /** @param {object} [overrides] */
-      const seedOwn = (overrides = {}) =>
-        seedValidated({
-          registrationId: registration.id,
-          accreditationId,
-          ...overrides
-        })
-
-      it('is created with its upload-completed callback under the same address', async () => {
+  describe.each(uploadAddresses)(
+    'uploading a $kind summary log',
+    ({ uploads, registration }) => {
+      it('starts the upload with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: summaryLogs,
+          url: uploads,
           payload: redirect,
           ...asOperator()
         })
@@ -176,16 +165,16 @@ describe('summary-log routes by natural key', () => {
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          callbackUrl: `${config.get('appBaseUrl')}${summaryLogs}/${summaryLogId}/upload-completed`
+          callbackUrl: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`
         })
       })
 
-      it('is stored for the registration and year when its upload completes', async () => {
+      it('stores the summary log for the registration and year when the upload completes', async () => {
         const summaryLogId = randomUUID()
 
         const response = await server.inject({
           method: 'POST',
-          url: `${summaryLogs}/${summaryLogId}/upload-completed`,
+          url: `${uploads}/${summaryLogId}/upload-completed`,
           payload: uploadCompleted
         })
 
@@ -201,105 +190,117 @@ describe('summary-log routes by natural key', () => {
           year: YEAR
         })
       })
-
-      it('is read back from its address', async () => {
-        const summaryLogId = await seedOwn()
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${summaryLogs}/${summaryLogId}`,
-          ...asOperator()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const body = JSON.parse(response.payload)
-        expect(body.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-        expect(body).not.toHaveProperty('accreditationId')
-      })
-
-      it('reads as the default status while its upload is in progress', async () => {
-        const response = await server.inject({
-          method: 'GET',
-          url: `${summaryLogs}/${randomUUID()}`,
-          ...asOperator()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(JSON.parse(response.payload).status).toBe(
-          SUMMARY_LOG_STATUS.PREPROCESSING
-        )
-      })
-
-      it('is submitted, answering with its own address', async () => {
-        const summaryLogId = await seedOwn()
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `${summaryLogs}/${summaryLogId}/submit`,
-          ...asOperator()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(response.headers.location).toBe(`${summaryLogs}/${summaryLogId}`)
-      })
-
-      it('has its file downloaded', async () => {
-        const summaryLogId = await seedOwn()
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${summaryLogs}/${summaryLogId}/file`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
-      })
-
-      it('has its document read', async () => {
-        const summaryLogId = await seedOwn()
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${summaryLogs}/${summaryLogId}/document`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const body = JSON.parse(response.payload)
-        expect(body).toMatchObject({ year: YEAR, status: 'validated' })
-        expect(body).not.toHaveProperty('organisationId')
-        expect(body).not.toHaveProperty('registrationId')
-        expect(body).not.toHaveProperty('accreditationId')
-      })
-
-      it.each([
-        ['another organisation', { organisationId: 'another-organisation' }],
-        ['another registration', { registrationId: 'another-registration' }],
-        ['another year', { year: YEAR - 1 }]
-      ])('is not found when it belongs to %s', async (_, overrides) => {
-        const summaryLogId = await seedOwn(overrides)
-
-        const responses = await Promise.all(
-          [
-            { method: 'GET', suffix: '', auth: asOperator() },
-            { method: 'POST', suffix: '/submit', auth: asOperator() },
-            { method: 'GET', suffix: '/file', auth: asServiceMaintainer() },
-            { method: 'GET', suffix: '/document', auth: asServiceMaintainer() }
-          ].map(({ method, suffix, auth }) =>
-            server.inject({
-              method,
-              url: `${summaryLogs}/${summaryLogId}${suffix}`,
-              ...auth
-            })
-          )
-        )
-
-        expect(responses.map(({ statusCode }) => statusCode)).toEqual(
-          Array(4).fill(StatusCodes.NOT_FOUND)
-        )
-      })
     }
   )
+
+  describe('a summary log', () => {
+    /** @param {object} [overrides] */
+    const seedOwn = (overrides = {}) =>
+      seedValidated({
+        registrationId: accreditedRegistration.id,
+        accreditationId: accredited.id,
+        ...overrides
+      })
+
+    it('is read under its registration, whatever its year', async () => {
+      const summaryLogId = await seedOwn({ year: YEAR - 1 })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(body).not.toHaveProperty('accreditationId')
+    })
+
+    it('reads as the default status while its upload is in progress', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${randomUUID()}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).status).toBe(
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+    })
+
+    it('is submitted, answering with its own address', async () => {
+      const summaryLogId = await seedOwn()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `${summaryLogs}/${summaryLogId}/submit`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(response.headers.location).toBe(`${summaryLogs}/${summaryLogId}`)
+    })
+
+    it('has its file downloaded', async () => {
+      const summaryLogId = await seedOwn()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}/file`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+    })
+
+    it('has its document read', async () => {
+      const summaryLogId = await seedOwn()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}/document`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body).toMatchObject({ year: YEAR, status: 'validated' })
+      expect(body).not.toHaveProperty('organisationId')
+      expect(body).not.toHaveProperty('registrationId')
+      expect(body).not.toHaveProperty('accreditationId')
+    })
+
+    it.each([
+      ['another organisation', { organisationId: 'another-organisation' }],
+      [
+        'another registration',
+        { registrationId: registeredOnlyRegistration.id }
+      ]
+    ])('is not found when it belongs to %s', async (_, overrides) => {
+      const summaryLogId = await seedOwn(overrides)
+
+      const responses = await Promise.all(
+        [
+          { method: 'GET', suffix: '', auth: asOperator() },
+          { method: 'POST', suffix: '/submit', auth: asOperator() },
+          { method: 'GET', suffix: '/file', auth: asServiceMaintainer() },
+          { method: 'GET', suffix: '/document', auth: asServiceMaintainer() }
+        ].map(({ method, suffix, auth }) =>
+          server.inject({
+            method,
+            url: `${summaryLogs}/${summaryLogId}${suffix}`,
+            ...auth
+          })
+        )
+      )
+
+      expect(responses.map(({ statusCode }) => statusCode)).toEqual(
+        Array(4).fill(StatusCodes.NOT_FOUND)
+      )
+    })
+  })
 
   it.each([
     [
@@ -327,9 +328,9 @@ describe('summary-log routes by natural key', () => {
       uploadCompleted
     ],
     [
-      'reading under a registration with no accreditation',
+      'reading under an unknown registration',
       'GET',
-      `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}`,
+      `${registrations}/R26XX0000000000PL/summary-logs/${randomUUID()}`,
       undefined
     ]
   ])('returns 404 for %s', async (_, method, url, payload) => {

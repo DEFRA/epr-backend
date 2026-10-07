@@ -6,8 +6,8 @@ import Boom from '@hapi/boom'
  */
 
 /**
- * A summary log is read back only from the address it was posted to. One not
- * stored yet passes: its upload is still in progress.
+ * A summary log is read only under the organisation and registration it
+ * belongs to. One not stored yet passes: its upload is still in progress.
  *
  * @param {ResolvedRequest & {
  *   params: { summaryLogId: string },
@@ -15,7 +15,7 @@ import Boom from '@hapi/boom'
  * }} request
  */
 export const assertSummaryLogMatchesPath = async (request) => {
-  const { organisationId, registrationId, year, summaryLogId } = request.params
+  const { organisationId, registrationId, summaryLogId } = request.params
   const stored = await request.summaryLogsRepository.findById(summaryLogId)
   if (!stored) {
     return
@@ -24,8 +24,7 @@ export const assertSummaryLogMatchesPath = async (request) => {
   const { summaryLog } = stored
   if (
     summaryLog.organisationId !== organisationId ||
-    summaryLog.registrationId !== registrationId ||
-    summaryLog.year !== year
+    summaryLog.registrationId !== registrationId
   ) {
     throw Boom.notFound('Summary log not found')
   }

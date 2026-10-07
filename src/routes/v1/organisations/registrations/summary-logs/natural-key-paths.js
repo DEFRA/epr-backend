@@ -4,29 +4,28 @@
  *   registrationNumber: string,
  *   year: number,
  *   accredited: boolean,
- *   summaryLogId: string,
- *   suffix?: string
- * }} SummaryLogPathArgs
+ *   summaryLogId: string
+ * }} UploadCompletedPathArgs
  */
 
 /**
- * The natural-key path of one summary log, under the address of the kind it
- * was posted to.
+ * The natural-key path CDP Uploader calls back on, under the address the
+ * upload was started at, so the callback knows its year and whether it is
+ * accredited.
  *
- * @param {SummaryLogPathArgs} args
+ * @param {UploadCompletedPathArgs} args
  * @returns {string}
  */
-export const summaryLogPath = ({
+export const uploadCompletedPath = ({
   organisationNumber,
   registrationNumber,
   year,
   accredited,
-  summaryLogId,
-  suffix = ''
+  summaryLogId
 }) => {
   const registration = `/organisations/${organisationNumber}/registrations/${registrationNumber}`
-  const summaryLogs = accredited
+  const uploads = accredited
     ? `${registration}/accreditations/${year}/summary-log`
     : `${registration}/summary-logs/${year}`
-  return `${summaryLogs}/${summaryLogId}${suffix}`
+  return `${uploads}/${summaryLogId}/upload-completed`
 }
