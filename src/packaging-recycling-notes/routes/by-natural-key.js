@@ -3,8 +3,11 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { MATERIAL } from '#domain/organisations/model.js'
-import { getProjectedPrnById } from '#packaging-recycling-notes/application/get-projected-prn.js'
+import { appliedForMaterialSchema } from '#common/validation/material-schema.js'
+import {
+  catchUpPrnProjection,
+  getProjectedPrnById
+} from '#packaging-recycling-notes/application/get-projected-prn.js'
 import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancellation.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -21,10 +24,12 @@ import { packagingRecyclingNotesDecemberEligibility } from './december-eligibili
 import { isServedUnder } from './get-by-id.js'
 import { packagingRecyclingNotesCreate } from './post.js'
 import { packagingRecyclingNotesUpdateStatus } from './status.js'
+import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createStatusesValidator } from './validation.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { AppliedForMaterial } from '#domain/organisations/model.js'
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { ResolveIds } from '#routes/organisations/by-natural-key.js'
@@ -38,6 +43,27 @@ import { createStatusesValidator } from './validation.js'
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
+ *
+ * @typedef {{
+ *   id: string,
+ *   prnNumber?: string,
+ *   status: PrnStatus,
+ *   issuedToOrganisation: {
+ *     id: string,
+ *     name: string,
+ *     tradingName?: string,
+ *     registrationType?: string
+ *   },
+ *   tonnage: number,
+ *   material: AppliedForMaterial,
+ *   processToBeUsed: string | null,
+ *   isDecemberWaste: boolean,
+ *   obligationYear: number,
+ *   notes?: string,
+ *   createdAt: string,
+ *   issued?: { at: string, by: { name?: string, position?: string } },
+ *   regulatorCancellable: boolean
+ * }} PrnResource
  */
 
 const prnsPath = `${accreditationPath}/packaging-recycling-notes`
@@ -61,9 +87,7 @@ const prnSchema = Joi.object({
     registrationType: Joi.string()
   }).required(),
   tonnage: Joi.number().required(),
-  material: Joi.string()
-    .valid(...Object.values(MATERIAL))
-    .required(),
+  material: appliedForMaterialSchema.required(),
   processToBeUsed: Joi.string().required(),
   isDecemberWaste: Joi.boolean().required(),
   obligationYear: Joi.number().integer().required(),
@@ -82,6 +106,7 @@ const prnSchema = Joi.object({
  *
  * @param {PackagingRecyclingNote} prn
  * @param {Date} now
+ * @returns {PrnResource}
  */
 const toPrnResource = (prn, now) => {
   const { id, name, tradingName, registrationType } = prn.issuedToOrganisation
@@ -143,8 +168,8 @@ const prnsList = {
     }
   },
   /**
-   * The PRNs of one accreditation are few, so the whole set is read and the
-   * filters applied in memory.
+   * The PRNs of one accreditation are few, so the whole set is read, each is
+   * caught up to the ledger, and the filters are applied in memory.
    *
    * @param {PrnRequest & {
    *   params: AccreditationIds,
@@ -155,17 +180,22 @@ const prnsList = {
   handler: async (request, h) => {
     const { organisationId, registrationId, accreditationId } = request.params
     const { statuses, prnNumber } = request.query
-    const prns =
+    const stored =
       await request.packagingRecyclingNotesRepository.findByAccreditation({
         organisationId,
         registrationId,
         accreditationId
       })
+    const service = createWasteBalanceService(request.ledgerRepository)
+    const prns = await Promise.all(
+      stored.map((prn) => catchUpPrnProjection(prn, service))
+    )
 
     const now = new Date()
     const items = prns
       .filter(
         (prn) =>
+          prn.status.currentStatus !== PRN_STATUS.DELETED &&
           (!statuses || statuses.includes(prn.status.currentStatus)) &&
           (!prnNumber || prn.prnNumber === prnNumber)
       )

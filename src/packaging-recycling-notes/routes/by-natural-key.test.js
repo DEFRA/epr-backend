@@ -22,7 +22,12 @@ import {
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildPrnCreatedEvent,
+  buildPrnCreationCancelledEvent,
+  buildPrnIssuedEvent
+} from '#waste-balances/repository/ledger-test-data.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
@@ -30,7 +35,10 @@ import {
   reprocessor
 } from '#routes/organisations/organisation-view-test-helpers.js'
 
-/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
+/**
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ */
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -94,6 +102,8 @@ describe('PRN routes by natural key', () => {
   let server
   /** @type {PackagingRecyclingNotesRepository} */
   let packagingRecyclingNotesRepository
+  /** @type {WasteBalanceLedgerRepository} */
+  let ledgerRepository
 
   /** @param {{ cancellationEnabled?: boolean }} [options] */
   const startServer = async ({ cancellationEnabled = true } = {}) => {
@@ -105,7 +115,7 @@ describe('PRN routes by natural key', () => {
         elsewhere
       ])
     packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
-    const ledgerRepository = createInMemoryLedgerRepository([
+    ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
           ...ownIds,
@@ -190,6 +200,64 @@ describe('PRN routes by natural key', () => {
         notes: 'For the spring run',
         createdAt: '2026-03-01T10:00:00.000Z',
         regulatorCancellable: false
+      })
+    })
+
+    describe('when the ledger is ahead of a stored PRN', () => {
+      const AFTER_CREATION = { amount: 500, availableAmount: 400 }
+
+      /** @param {object} overrides */
+      const draftEvent = (overrides) => ({
+        ...ownIds,
+        payload: { prnId: draft.id, amount: 100 },
+        ...overrides
+      })
+
+      beforeEach(async () => {
+        await ledgerRepository.appendEvents([
+          buildPrnCreatedEvent(
+            draftEvent({
+              number: 2,
+              openingBalance: { amount: 500, availableAmount: 500 },
+              closingBalance: AFTER_CREATION
+            })
+          )
+        ])
+      })
+
+      it('serves the PRN as the ledger has it', async () => {
+        await ledgerRepository.appendEvents([
+          buildPrnIssuedEvent(
+            draftEvent({
+              number: 3,
+              openingBalance: AFTER_CREATION,
+              closingBalance: { amount: 400, availableAmount: 400 }
+            })
+          )
+        ])
+
+        const response = await server.inject({
+          url: `${prns}?statuses=awaiting_acceptance`,
+          ...asOperator()
+        })
+
+        expect(idsOf(response)).toStrictEqual([issued.id, draft.id])
+      })
+
+      it('leaves out a PRN the ledger has deleted', async () => {
+        await ledgerRepository.appendEvents([
+          buildPrnCreationCancelledEvent(
+            draftEvent({
+              number: 3,
+              openingBalance: AFTER_CREATION,
+              closingBalance: { amount: 500, availableAmount: 500 }
+            })
+          )
+        ])
+
+        const response = await server.inject({ url: prns, ...asOperator() })
+
+        expect(idsOf(response)).toStrictEqual([issued.id])
       })
     })
 
