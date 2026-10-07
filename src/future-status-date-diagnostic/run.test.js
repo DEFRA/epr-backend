@@ -1,5 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
+  buildAccreditation,
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
@@ -96,8 +97,36 @@ describe('runFutureStatusDateDiagnostic', () => {
           message:
             'Future status date diagnostic: scannedOrganisations=1 scannedEntries=3 futureDatedEntries=1'
         }
+      ],
+      [
+        {
+          message:
+            'Approved accreditation year diagnostic: year=2026 scannedApproved=0 outsideYear=0'
+        }
       ]
     ])
+  })
+
+  it('logs each approved accreditation valid from another year', async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: 'ACC12345',
+      validFrom: '2025-01-01',
+      statusHistory: [
+        { status: 'created', updatedAt: new Date('2025-01-01T00:00:00Z') },
+        { status: 'approved', updatedAt: new Date('2025-02-01T00:00:00Z') }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+    storeOrganisations([partialMock(organisation)])
+
+    await runFutureStatusDateDiagnostic(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: `Approved accreditation outside year: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=ACC12345 validFrom=2025-01-01`
+    })
   })
 
   it('releases the lock and logs an error when reading the organisations fails', async () => {

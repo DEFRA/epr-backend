@@ -1,11 +1,14 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { diagnoseFutureStatusDates } from '#future-status-date-diagnostic/application/diagnose-future-status-dates.js'
+import { diagnoseApprovedAccreditationYears } from '#future-status-date-diagnostic/application/diagnose-approved-accreditation-years.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { FutureStatusDateRow } from '#future-status-date-diagnostic/application/diagnose-future-status-dates.js' */
+/** @import { AccreditationOutsideYearRow } from '#future-status-date-diagnostic/application/diagnose-approved-accreditation-years.js' */
 
 const LOCK_NAME = 'future-status-date-diagnostic'
+const ACCREDITATION_YEAR = 2026
 
 /** @param {FutureStatusDateRow} row */
 const formatEntryLine = (row) =>
@@ -20,16 +23,26 @@ const formatEntryLine = (row) =>
     `updatedAt=${row.updatedAt}`
   ].join(' ')
 
+/** @param {AccreditationOutsideYearRow} row */
+const formatAccreditationLine = (row) =>
+  [
+    'Approved accreditation outside year:',
+    `organisationId=${row.organisationId}`,
+    `orgId=${row.orgId}`,
+    `testOrganisation=${row.testOrganisation}`,
+    `accreditationId=${row.accreditationId}`,
+    `accreditationNumber=${row.accreditationNumber}`,
+    `validFrom=${row.validFrom}`
+  ].join(' ')
+
 /** @param {StartedServer} server */
 const runDiagnostic = async (server) => {
   const organisationsRepository = (
     await createOrganisationsRepository(server.db)
   )()
 
-  const { rows, summary } = diagnoseFutureStatusDates(
-    await organisationsRepository.findAll(),
-    new Date()
-  )
+  const organisations = await organisationsRepository.findAll()
+  const { rows, summary } = diagnoseFutureStatusDates(organisations, new Date())
 
   for (const row of rows) {
     logger.info({ message: formatEntryLine(row) })
@@ -38,11 +51,25 @@ const runDiagnostic = async (server) => {
   logger.info({
     message: `Future status date diagnostic: scannedOrganisations=${summary.scannedOrganisations} scannedEntries=${summary.scannedEntries} futureDatedEntries=${summary.futureDatedEntries}`
   })
+
+  const years = diagnoseApprovedAccreditationYears(
+    organisations,
+    ACCREDITATION_YEAR
+  )
+
+  for (const row of years.rows) {
+    logger.info({ message: formatAccreditationLine(row) })
+  }
+
+  logger.info({
+    message: `Approved accreditation year diagnostic: year=${ACCREDITATION_YEAR} scannedApproved=${years.summary.scannedApproved} outsideYear=${years.summary.outsideYear}`
+  })
 }
 
 /**
  * Read-only startup diagnostic: counts status history entries dated in the
- * future. Removed once the counts are known.
+ * future, and approved accreditations not valid from 2026. Removed once the
+ * counts are known.
  *
  * @param {StartedServer} server
  */
