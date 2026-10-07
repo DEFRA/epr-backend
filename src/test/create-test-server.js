@@ -26,6 +26,7 @@ import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/up
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
@@ -157,6 +158,10 @@ const repositoryConfigs = [
   {
     name: 'orsImportsRepository',
     createDefault: createInMemoryOrsImportsRepositoryPlugin
+  },
+  {
+    name: 'organisationReadRepository',
+    createDefault: () => organisationReadRepositoryPlugin
   }
 ]
 

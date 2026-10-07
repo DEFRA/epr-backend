@@ -1,6 +1,5 @@
 import Joi from 'joi'
 import {
-  ORGANISATION_STATUS,
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
@@ -8,9 +7,16 @@ import {
 import { materialSchema } from '#common/validation/material-schema.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
-  SERVED_ACCREDITATION_STATUSES,
-  SERVED_REGISTRATION_STATUSES
-} from './organisation-view.js'
+  ACCREDITATION_STATUSES,
+  ORGANISATION_STATUSES,
+  REGISTRATION_STATUSES
+} from '#organisation-read-model/domain/model.js'
+
+/*
+ * Routes validate responses with `stripUnknown`, so these schemas also decide
+ * what is served. The first alternative that matches wins, so where one shape
+ * extends another the larger comes first.
+ */
 
 const regulatorSchema = Joi.object({
   code: Joi.string()
@@ -59,7 +65,7 @@ const accreditedOverseasSitesViewSchema = Joi.object()
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
   status: Joi.string()
-    .valid(...SERVED_ACCREDITATION_STATUSES)
+    .valid(...ACCREDITATION_STATUSES)
     .required()
 }
 
@@ -76,8 +82,8 @@ const exporterAccreditationSchema = Joi.object({
 const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
 
 export const accreditationViewSchema = Joi.alternatives().try(
-  reprocessorAccreditationSchema,
-  exporterAccreditationSchema
+  exporterAccreditationSchema,
+  reprocessorAccreditationSchema
 )
 
 const ukAddressSchema = Joi.alternatives().try(
@@ -94,7 +100,7 @@ const ukAddressSchema = Joi.alternatives().try(
 const registrationCommon = {
   material: materialSchema.required(),
   status: Joi.string()
-    .valid(...SERVED_REGISTRATION_STATUSES)
+    .valid(...REGISTRATION_STATUSES)
     .required(),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
@@ -141,7 +147,7 @@ export const organisationViewSchema = Joi.object({
   organisationNumber: Joi.number().integer().required(),
   registrations: registrationsViewSchema,
   status: Joi.string()
-    .valid(...Object.values(ORGANISATION_STATUS))
+    .valid(...ORGANISATION_STATUSES)
     .required(),
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
@@ -152,6 +158,6 @@ export const registrationsViewResponseSchema = Joi.object({
 })
 
 export const accreditationsViewResponseSchema = Joi.alternatives().try(
-  Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) }),
-  Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) })
+  Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) }),
+  Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) })
 )

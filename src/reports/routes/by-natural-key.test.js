@@ -20,7 +20,7 @@ import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
-} from '#routes/organisations/organisation-view-test-helpers.js'
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 

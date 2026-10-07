@@ -4,9 +4,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
-  approvedSiteView,
   body,
   buildAccreditedOrganisation,
+  exporterResponse,
+  reprocessorResponse,
   useViewServer
 } from './organisation-view-test-helpers.js'
 
@@ -25,20 +26,19 @@ describe('GET /organisations/{organisationNumber}/registrations', () => {
   it('lists the granted registrations keyed by number', async () => {
     const response = await get(registrations)
 
-    expect(Object.keys(body(response).registrations)).toEqual([
-      REPROCESSOR_NUMBER,
-      EXPORTER_NUMBER
-    ])
+    expect(body(response)).toEqual({
+      registrations: {
+        [REPROCESSOR_NUMBER]: reprocessorResponse,
+        [EXPORTER_NUMBER]: exporterResponse
+      }
+    })
   })
 
   it('returns one registration by its number', async () => {
     const response = await get(`${registrations}/${EXPORTER_NUMBER}`)
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(body(response)).toMatchObject({
-      wasteProcessingType: 'exporter',
-      overseasSites: { '001': approvedSiteView }
-    })
+    expect(body(response)).toEqual(exporterResponse)
   })
 
   it('returns 404 for an unknown registration', async () => {
