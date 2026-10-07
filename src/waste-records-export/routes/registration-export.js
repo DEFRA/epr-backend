@@ -1,4 +1,12 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  atNaturalKeys,
+  registrationIds
+} from '#routes/organisations/by-natural-key.js'
+import {
+  registrationParams,
+  registrationPath
+} from '#routes/organisations/view-route.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
@@ -77,3 +85,10 @@ export const registrationWasteRecordsExport = {
       : response
   }
 }
+
+export const registrationWasteRecordsExportByNumber = atNaturalKeys(
+  registrationWasteRecordsExport,
+  `${registrationPath}/waste-records/export.csv`,
+  registrationParams,
+  registrationIds
+)

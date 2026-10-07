@@ -12,6 +12,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { granted } from '#routes/organisations/organisation-view-test-helpers.js'
 
 import {
   registrationWasteRecordsExport,
@@ -21,6 +22,7 @@ import {
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const ORGANISATION_ID = 'org-1'
+const ORGANISATION_NUMBER = 500123
 const REGISTRATION_ID = 'reg-1'
 const FILE_ID = 'file-1'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
@@ -89,6 +91,7 @@ const createServer = async ({
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
+    orgId: ORGANISATION_NUMBER,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
     registrations: [registration]
@@ -111,6 +114,7 @@ const createServer = async ({
       organisationsRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
         findById: vi.fn().mockResolvedValue(organisation),
+        findByOrgId: vi.fn().mockResolvedValue(organisation),
         findRegistrationById: vi.fn(findRegistrationById)
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
@@ -255,5 +259,49 @@ describe(`GET ${registrationWasteRecordsExportPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
+  })
+})
+
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/waste-records/export.csv', () => {
+  setupAuthContext()
+
+  const approved = buildRegistration({
+    status: REGISTRATION_STATUS.APPROVED,
+    statusHistory: granted('approved'),
+    validFrom: '2026-02-01'
+  })
+  const registrations = `/organisations/${ORGANISATION_NUMBER}/registrations`
+
+  it('serves the export the route by database id serves', async () => {
+    const server = await createServer({ registration: approved })
+
+    const byId = await server.inject({
+      method: 'GET',
+      url,
+      ...asServiceMaintainer()
+    })
+    const byNumber = await server.inject({
+      method: 'GET',
+      url: `${registrations}/${approved.registrationNumber}/waste-records/export.csv`,
+      ...asServiceMaintainer()
+    })
+
+    expect(byNumber.statusCode).toBe(StatusCodes.OK)
+    expect(byNumber.payload).toBe(byId.payload)
+    expect(byNumber.headers['content-disposition']).toMatch(
+      /^attachment; filename="R26ER5000000002PA-/
+    )
+  })
+
+  it('returns 404 for a registration number the organisation does not serve', async () => {
+    const server = await createServer({ registration: approved })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${registrations}/R26XX0000000000PL/waste-records/export.csv`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 })

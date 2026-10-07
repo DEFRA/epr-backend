@@ -24,6 +24,23 @@ const lookupContext = () => ({
 })
 
 /**
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {number} organisationNumber
+ * @returns {Promise<Organisation>}
+ */
+export async function findOrganisationByNumber(
+  organisationsRepository,
+  organisationNumber
+) {
+  const organisation =
+    await organisationsRepository.findByOrgId(organisationNumber)
+  if (!organisation) {
+    throw Boom.notFound('Organisation not found')
+  }
+  return organisation
+}
+
+/**
  * Finds the stored registration a route names by its natural keys. Only a
  * registration the organisation read model serves can be found, so a link
  * built from the read model resolves and nothing else does.
@@ -38,11 +55,10 @@ export async function findRegistrationByNumber(
   organisationNumber,
   registrationNumber
 ) {
-  const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
-  if (!organisation) {
-    throw Boom.notFound('Organisation not found')
-  }
+  const organisation = await findOrganisationByNumber(
+    organisationsRepository,
+    organisationNumber
+  )
 
   const registration = onlyOne(
     organisation.registrations.filter(
