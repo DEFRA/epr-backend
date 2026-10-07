@@ -1,6 +1,8 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
 import {
   linkOrganisation,
   organisationsLink
@@ -10,55 +12,32 @@ import {
   putOrganisationUser
 } from '#routes/v1/organisations/user/put.js'
 import { atNaturalKeys, organisationIds } from './by-natural-key.js'
+import { linkedDefraOrganisationViewSchema } from './response.schema.js'
 import { organisationParams, organisationPath } from './view-route.js'
 
-/**
- * @import { RespondToLink } from '#routes/v1/organisations/link.js'
- *
- * @typedef {{
- *   status: string,
- *   linkedDefraOrganisation: {
- *     defraOrganisation: { id: string, name: string },
- *     linkedAt: string,
- *     linkedBy: { email: string }
- *   }
- * }} LinkedOrganisation
- */
-
 const linkedOrganisationSchema = Joi.object({
-  status: Joi.string().required(),
-  linkedDefraOrganisation: Joi.object({
-    defraOrganisation: Joi.object({
-      id: Joi.string().required(),
-      name: Joi.string().required()
-    }).required(),
-    linkedAt: Joi.string().isoDate().required(),
-    linkedBy: Joi.object({ email: Joi.string().required() }).required()
-  }).required()
+  status: Joi.string()
+    .valid(...ORGANISATION_STATUSES)
+    .required(),
+  linkedDefraOrganisation: linkedDefraOrganisationViewSchema.required()
 })
-
-/** @type {RespondToLink} */
-const toLinkedOrganisation = (status, linked) => {
-  /** @type {LinkedOrganisation} */
-  const body = {
-    status,
-    linkedDefraOrganisation: {
-      defraOrganisation: { id: linked.orgId, name: linked.orgName },
-      linkedAt: linked.linkedAt,
-      linkedBy: { email: linked.linkedBy.email }
-    }
-  }
-  return body
-}
 
 export const organisationLink = atNaturalKeys(
   {
     ...organisationsLink,
     options: {
       ...organisationsLink.options,
-      response: { schema: linkedOrganisationSchema }
+      tags: ['api'],
+      response: {
+        schema: linkedOrganisationSchema,
+        modify: true,
+        options: { stripUnknown: true }
+      }
     },
-    handler: linkOrganisation(toLinkedOrganisation)
+    handler: linkOrganisation((status, linked) => ({
+      status,
+      linkedDefraOrganisation: toLinkedDefraOrganisation(linked)
+    }))
   },
   `${organisationPath}/link`,
   organisationParams,

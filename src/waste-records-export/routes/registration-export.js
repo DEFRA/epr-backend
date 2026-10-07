@@ -52,10 +52,12 @@ export const registrationWasteRecordsExport = {
     const { organisationId, registrationId } = request.params
 
     // Names the download only, so a failed lookup costs the name, not the file.
-    const registrationNumber = await request.organisationsRepository
-      .findRegistrationById(organisationId, registrationId)
-      .then((registration) => registration.registrationNumber)
-      .catch(() => undefined)
+    const registrationNumber =
+      request.params.registrationNumber ??
+      (await request.organisationsRepository
+        .findRegistrationById(organisationId, registrationId)
+        .then((registration) => registration.registrationNumber)
+        .catch(() => undefined))
 
     const response = h
       .response(

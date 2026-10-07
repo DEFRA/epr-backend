@@ -295,6 +295,23 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     )
   })
 
+  it('names the download by the registration number it was asked for', async () => {
+    const server = await createServer({
+      registration: approved,
+      findRegistrationById: () => Promise.reject(new Error('no registration'))
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${registrations}/${approved.registrationNumber}/waste-records/export.csv`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.headers['content-disposition']).toMatch(
+      new RegExp(`^attachment; filename="${approved.registrationNumber}-`)
+    )
+  })
+
   it.each([
     [
       'an unknown organisation number',

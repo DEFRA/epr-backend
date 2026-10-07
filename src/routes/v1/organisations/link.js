@@ -26,12 +26,7 @@ import { getDefraTokenSummary } from '#auth/roles/helpers.js'
  */
 
 /**
- * @typedef {{
- *   orgId: string,
- *   orgName: string,
- *   linkedAt: string,
- *   linkedBy: { email: string, id: string }
- * }} LinkedDefraOrganisation
+ * @import { LinkedDefraOrganisation } from '#domain/organisations/model.js'
  *
  * @typedef {(status: string, linked: LinkedDefraOrganisation) => object} RespondToLink
  */
@@ -129,20 +124,20 @@ export const linkOrganisation =
       .code(StatusCodes.OK)
   }
 
-/** @type {RespondToLink} */
-const toLinkedOrganisationResponse = (status, linked) => {
-  /** @type {LinkedOrganisationResponse} */
-  const payload = {
-    status,
-    linked: {
-      id: linked.orgId,
-      name: linked.orgName,
-      linkedAt: linked.linkedAt,
-      linkedBy: linked.linkedBy
-    }
+/**
+ * @param {string} status
+ * @param {LinkedDefraOrganisation} linked
+ * @returns {LinkedOrganisationResponse}
+ */
+const toLinkedOrganisationResponse = (status, linked) => ({
+  status,
+  linked: {
+    id: linked.orgId,
+    name: linked.orgName,
+    linkedAt: linked.linkedAt,
+    linkedBy: linked.linkedBy
   }
-  return payload
-}
+})
 
 export const organisationsLink = {
   method: 'POST',

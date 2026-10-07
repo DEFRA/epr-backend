@@ -13,7 +13,7 @@ import {
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Address, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Address, LinkedDefraOrganisation as StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -67,6 +67,18 @@ export const createOrganisationReadRepository = ({
 })
 
 /**
+ * @param {StoredOrganisation} stored
+ * @param {string} today
+ * @returns {boolean}
+ */
+export function servesOrganisation(stored, today) {
+  return isOneOf(
+    ORGANISATION_STATUSES,
+    statusOn(toStatusTimeline(stored.statusHistory), today)
+  )
+}
+
+/**
  * Serves only registrations and accreditations granted a number. A record the
  * model cannot represent is dropped and reported through `onDrop`.
  *
@@ -105,17 +117,9 @@ function toOrganisation(stored, context) {
     })),
     version: stored.version,
     ...(linkedDefraOrganisation && {
-      linkedDefraOrganisation: {
-        defraOrganisation: {
-          id: linkedDefraOrganisation.orgId,
-          name: linkedDefraOrganisation.orgName
-        },
-        linkedAt: new Date(linkedDefraOrganisation.linkedAt).toISOString(),
-        linkedBy: {
-          email: linkedDefraOrganisation.linkedBy.email,
-          id: linkedDefraOrganisation.linkedBy.id
-        }
-      }
+      linkedDefraOrganisation: toLinkedDefraOrganisation(
+        linkedDefraOrganisation
+      )
     }),
     registrations: keyedRecords(
       stored.registrations,
@@ -123,6 +127,18 @@ function toOrganisation(stored, context) {
       'Registration number',
       context.onDrop
     )
+  }
+}
+
+/**
+ * @param {StoredLinkedDefraOrganisation} linked
+ * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
+ */
+export function toLinkedDefraOrganisation(linked) {
+  return {
+    defraOrganisation: { id: linked.orgId, name: linked.orgName },
+    linkedAt: new Date(linked.linkedAt).toISOString(),
+    linkedBy: { email: linked.linkedBy.email, id: linked.linkedBy.id }
   }
 }
 

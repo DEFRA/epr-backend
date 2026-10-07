@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
+  servesOrganisation,
   toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/adapter.js'
@@ -24,6 +25,9 @@ const lookupContext = () => ({
 })
 
 /**
+ * Finds the stored organisation a route names by its number. Only an
+ * organisation the organisation read model serves can be found.
+ *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {number} organisationNumber
  * @returns {Promise<Organisation>}
@@ -34,7 +38,10 @@ export async function findOrganisationByNumber(
 ) {
   const organisation =
     await organisationsRepository.findByOrgId(organisationNumber)
-  if (!organisation) {
+  if (
+    !organisation ||
+    !servesOrganisation(organisation, lookupContext().today)
+  ) {
     throw Boom.notFound('Organisation not found')
   }
   return organisation
