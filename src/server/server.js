@@ -45,7 +45,6 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
-import { runStreamTransitionDiagnostic } from '#stream-transition-diagnostic/run.js'
 import { runSummaryLogYearBackfill } from '#summary-log-year-backfill/run.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runApplicationContactDiagnostic } from '#application-contact-diagnostic/run.js'
@@ -225,7 +224,6 @@ async function createServer(options = {}) {
     void runFormsDataMigration(startedServer)
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
-    void runStreamTransitionDiagnostic(startedServer)
     void runSummaryLogYearBackfill(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runApplicationContactDiagnostic(startedServer)
