@@ -11,6 +11,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * @property {string} accreditationId
  * @property {string | null} accreditationNumber
  * @property {string | undefined} validFrom
+ * @property {string | undefined} validTo
  */
 
 /**
@@ -20,13 +21,17 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  */
 
 /**
- * Lists every approved accreditation whose `validFrom` is not in `year`.
+ * Lists every approved accreditation whose `validFrom` or `validTo` is not in
+ * `year`.
  *
  * @param {Organisation[]} organisations
  * @param {number} year
  * @returns {AccreditationYearsReport}
  */
 export const diagnoseApprovedAccreditationYears = (organisations, year) => {
+  /** @param {string | undefined} date */
+  const isInYear = (date) => date?.startsWith(`${year}-`)
+
   const approved = organisations.flatMap((organisation) =>
     organisation.accreditations
       .filter(({ status }) => status === ACCREDITATION_STATUS.APPROVED)
@@ -34,7 +39,8 @@ export const diagnoseApprovedAccreditationYears = (organisations, year) => {
   )
   const rows = approved
     .filter(
-      ({ accreditation }) => !accreditation.validFrom?.startsWith(`${year}-`)
+      ({ accreditation: { validFrom, validTo } }) =>
+        !isInYear(validFrom) || !isInYear(validTo)
     )
     .map(({ organisation, accreditation }) => ({
       organisationId: organisation.id,
@@ -42,7 +48,8 @@ export const diagnoseApprovedAccreditationYears = (organisations, year) => {
       testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
       accreditationId: accreditation.id,
       accreditationNumber: accreditation.accreditationNumber,
-      validFrom: accreditation.validFrom
+      validFrom: accreditation.validFrom,
+      validTo: accreditation.validTo
     }))
 
   return {

@@ -111,6 +111,7 @@ describe('runFutureStatusDateDiagnostic', () => {
     const accreditation = buildAccreditation({
       accreditationNumber: 'ACC12345',
       validFrom: '2025-01-01',
+      validTo: '2025-12-31',
       statusHistory: [
         { status: 'created', updatedAt: new Date('2025-01-01T00:00:00Z') },
         { status: 'approved', updatedAt: new Date('2025-02-01T00:00:00Z') }
@@ -125,7 +126,7 @@ describe('runFutureStatusDateDiagnostic', () => {
     await runFutureStatusDateDiagnostic(server)
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Approved accreditation outside year: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=ACC12345 validFrom=2025-01-01`
+      message: `Approved accreditation outside year: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=ACC12345 validFrom=2025-01-01 validTo=2025-12-31`
     })
   })
 

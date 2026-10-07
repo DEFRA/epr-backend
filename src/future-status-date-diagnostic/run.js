@@ -32,7 +32,8 @@ const formatAccreditationLine = (row) =>
     `testOrganisation=${row.testOrganisation}`,
     `accreditationId=${row.accreditationId}`,
     `accreditationNumber=${row.accreditationNumber}`,
-    `validFrom=${row.validFrom}`
+    `validFrom=${row.validFrom}`,
+    `validTo=${row.validTo}`
   ].join(' ')
 
 /** @param {StartedServer} server */
@@ -68,8 +69,8 @@ const runDiagnostic = async (server) => {
 
 /**
  * Read-only startup diagnostic: counts status history entries dated in the
- * future, and approved accreditations not valid from 2026. Removed once the
- * counts are known.
+ * future, and approved accreditations not valid from and to 2026. Removed once
+ * the counts are known.
  *
  * @param {StartedServer} server
  */

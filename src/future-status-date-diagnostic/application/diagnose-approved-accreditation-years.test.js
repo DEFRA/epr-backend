@@ -11,6 +11,7 @@ const accreditation = (overrides) =>
   buildAccreditation({
     status: 'approved',
     validFrom: '2026-01-01',
+    validTo: '2026-12-31',
     ...overrides
   })
 
@@ -41,8 +42,17 @@ describe('diagnoseApprovedAccreditationYears', () => {
         testOrganisation: false,
         accreditationId: outside.id,
         accreditationNumber: 'ACC12345',
-        validFrom: '2027-01-01'
+        validFrom: '2027-01-01',
+        validTo: '2026-12-31'
       }
+    ])
+  })
+
+  it('flags an approved accreditation valid to another year', () => {
+    const { rows } = diagnose([accreditation({ validTo: '2027-12-31' })])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({ validTo: '2027-12-31' })
     ])
   })
 
@@ -54,8 +64,8 @@ describe('diagnoseApprovedAccreditationYears', () => {
     ])
   })
 
-  it('leaves out approved accreditations valid from the year', () => {
-    const { rows } = diagnose([accreditation({ validFrom: '2026-12-31' })])
+  it('leaves out approved accreditations valid within the year', () => {
+    const { rows } = diagnose([accreditation({})])
 
     expect(rows).toStrictEqual([])
   })
