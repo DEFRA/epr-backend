@@ -17,10 +17,15 @@ import {
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
+  EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
+  exporter,
+  exporterAccreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
@@ -39,9 +44,15 @@ const registeredOnlyRegistration = reprocessor({
   registrationNumber: REGISTERED_ONLY_NUMBER
 })
 const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
+const accreditedExport = exporterAccreditation()
+const accreditedExporter = exporter({ accreditationId: accreditedExport.id })
 const organisation = buildOrganisation({
-  registrations: [registeredOnlyRegistration, accreditedRegistration],
-  accreditations: [accredited]
+  registrations: [
+    registeredOnlyRegistration,
+    accreditedRegistration,
+    accreditedExporter
+  ],
+  accreditations: [accredited, accreditedExport]
 })
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
@@ -229,6 +240,101 @@ describe('report routes by natural key', () => {
       })
     }
   )
+
+  describe('for an operator accredited in July', () => {
+    const registeredOnlyReports = `${registrations}/${REPROCESSOR_NUMBER}/reports/${YEAR}/quarterly`
+    const accreditedReports = `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/monthly`
+
+    /**
+     * @param {Record<string, any>} registration
+     * @param {object} [overrides]
+     */
+    const seedQ1 = (registration, overrides = {}) =>
+      reportsRepository.createReport(
+        buildCreateReportParams({
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          year: YEAR,
+          cadence: 'quarterly',
+          period: 1,
+          ...overrides
+        })
+      )
+
+    it('creates a registered-only report for January to March, with no PRN figures', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: submission(registeredOnlyReports, 1),
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      const report = await reportsRepository.findReportById(
+        JSON.parse(response.payload).id
+      )
+      expect(report).toMatchObject({ cadence: 'quarterly', prn: null })
+    })
+
+    it('previews a registered-only report as registered-only', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: submission(registeredOnlyReports, 2),
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toMatchObject({
+        operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
+        prn: null
+      })
+    })
+
+    it('readies a registered-only report without PRN figures', async () => {
+      await seedQ1(accreditedRegistration, {
+        recyclingActivity: COMPLETE_REPORT.recyclingActivity
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `${submission(registeredOnlyReports, 1)}/status`,
+        payload: { status: REPORT_STATUS.READY_TO_SUBMIT, version: 1 },
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('takes the tonnage not exported on a registered-only exporter report', async () => {
+      await seedQ1(accreditedExporter, {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+      })
+
+      const response = await server.inject({
+        method: 'PATCH',
+        url: submission(
+          `${registrations}/${EXPORTER_NUMBER}/reports/${YEAR}/quarterly`,
+          1
+        ),
+        payload: { tonnageNotExported: 5 },
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it.each(['GET', 'POST'])(
+      'does not find an accredited report for June (%s)',
+      async (method) => {
+        const response = await server.inject({
+          method,
+          url: submission(accreditedReports, 6),
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+  })
 
   it("serves a registration's reporting calendar", async () => {
     const response = await server.inject({
