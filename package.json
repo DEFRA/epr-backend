@@ -20,6 +20,7 @@
     "#future-status-date-diagnostic/*": "./src/future-status-date-diagnostic/*",
     "#glass-migration/*": "./src/glass-migration/*",
     "#market-insights/*": "./src/market-insights/*",
+    "#natural-key-format-diagnostic/*": "./src/natural-key-format-diagnostic/*",
     "#non-prod-data-reset/*": "./src/non-prod-data-reset/*",
     "#organisation-read-model/*": "./src/organisation-read-model/*",
     "#overseas-sites/*": "./src/overseas-sites/*",
