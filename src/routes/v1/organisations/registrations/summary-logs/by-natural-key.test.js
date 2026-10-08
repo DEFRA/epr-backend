@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
+  NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
@@ -52,12 +53,14 @@ const uploadAddresses = [
   {
     kind: 'registered-only',
     uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
-    registration: registeredOnlyRegistration
+    registration: registeredOnlyRegistration,
+    accreditationId: null
   },
   {
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
-    registration: accreditedRegistration
+    registration: accreditedRegistration,
+    accreditationId: accredited.id
   }
 ]
 
@@ -151,7 +154,7 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
-    ({ uploads, registration }) => {
+    ({ uploads, registration, accreditationId }) => {
       it('starts the upload with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
@@ -169,7 +172,7 @@ describe('summary-log routes by natural key', () => {
         })
       })
 
-      it('stores the summary log for the registration and year when the upload completes', async () => {
+      it('stores the summary log for the registration, year and accreditation when the upload completes', async () => {
         const summaryLogId = randomUUID()
 
         const response = await server.inject({
@@ -187,11 +190,51 @@ describe('summary-log routes by natural key', () => {
         expect(stored.summaryLog).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          year: YEAR
+          year: YEAR,
+          accreditationId
         })
       })
     }
   )
+
+  it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
+    const summaryLogId = randomUUID()
+
+    const response = await server.inject({
+      method: 'POST',
+      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      payload: uploadCompleted
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    expect(stored.summaryLog).toMatchObject({
+      registrationId: accreditedRegistration.id,
+      accreditationId: null
+    })
+  })
+
+  it('validates a registered-only upload against the prior registered-only submission, not the accredited one', async () => {
+    await seed(
+      {
+        registrationId: accreditedRegistration.id,
+        accreditationId: accredited.id
+      },
+      summaryLogFactory.submitted
+    )
+    const summaryLogId = randomUUID()
+
+    await server.inject({
+      method: 'POST',
+      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      payload: uploadCompleted
+    })
+
+    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    expect(stored.summaryLog.validatedAgainstSummaryLogId).toBe(
+      NO_PRIOR_SUBMISSION
+    )
+  })
 
   describe('a summary log', () => {
     /** @param {object} [overrides] */
