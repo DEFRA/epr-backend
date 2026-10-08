@@ -8,7 +8,11 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildReadOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -447,8 +451,10 @@ export const createUploadPayload = (
 export const buildGetUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
 
+const UPLOAD_YEAR = 2025
+
 export const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${UPLOAD_YEAR}/${summaryLogId}/upload-completed`
 
 export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
@@ -600,6 +606,7 @@ export const createTestInfrastructure = async (
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
+      organisationsRepository: () => organisationsRepository,
       uploadsRepository
     },
     workers: {
@@ -831,7 +838,13 @@ const buildComplexTestOrg = ({
   accredited = true,
   accreditationValidFrom = VALID_FROM
 }) => {
+  // Built on the full fixtures so the read model serves them, letting the
+  // natural-key routes find them. The fixture's own accreditation link is
+  // dropped: `accredited` decides it.
+  const { accreditationId: _fixtureLink, ...servableRegistration } =
+    buildRegistration({ wasteProcessingType: processingType })
   const registration = {
+    ...servableRegistration,
     id: registrationId,
     registrationNumber: 'REG-123',
     status: /** @type {'approved'} */ ('approved'),
@@ -862,6 +875,7 @@ const buildComplexTestOrg = ({
     accreditations: accredited
       ? [
           partialMock({
+            ...buildAccreditation({ wasteProcessingType: processingType }),
             id: accreditationId,
             accreditationNumber: 'ACC-123',
             validFrom: accreditationValidFrom,

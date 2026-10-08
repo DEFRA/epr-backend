@@ -7,7 +7,6 @@ import { testTransitionToSubmittingExclusive } from './contract/transition-to-su
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
 import { testFindAllByOrgReg } from './contract/find-all-by-org-reg.contract.js'
-import { testAssignYear } from './contract/assign-year.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
@@ -22,6 +21,5 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
     testFindAllByOrgReg(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
-    testAssignYear(repositoryFactory)
   })
 }

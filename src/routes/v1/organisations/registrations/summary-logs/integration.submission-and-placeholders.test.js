@@ -765,7 +765,11 @@ describe('Submission and placeholder tests', () => {
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            statusHistory: [
+              { status: 'created', updatedAt: '2024-01-01' },
+              { status: 'approved', updatedAt: '2024-02-01' }
+            ]
           })
         ]
       })
@@ -813,7 +817,8 @@ describe('Submission and placeholder tests', () => {
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
+          uploadsRepository,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

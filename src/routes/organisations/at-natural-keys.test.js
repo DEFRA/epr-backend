@@ -10,7 +10,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { registrationParams } from './view-route.js'
+import { organisationParams, registrationParams } from './view-route.js'
 
 /**
  * @import { ServerRoute } from '@hapi/hapi'
@@ -43,6 +43,7 @@ const route = {
  */
 const requestFor = (params) =>
   partialMock({
+    app: {},
     params,
     organisationsRepository: createInMemoryOrganisationsRepository([
       partialMock(organisation)
@@ -113,6 +114,37 @@ describe('atNaturalKeys', () => {
     expect(params).toMatchObject({
       registrationId: accreditedRegistration.id,
       accreditationId: accredited.id
+    })
+  })
+
+  it('passes the organisation alone to an organisation route', async () => {
+    const served = atNaturalKeys(route, '/served', organisationParams)
+
+    const params = await served.handler(
+      requestFor({ organisationNumber: organisation.orgId }),
+      h
+    )
+
+    expect(params).toEqual({
+      organisationNumber: organisation.orgId,
+      organisationId: organisation.id
+    })
+  })
+
+  it('puts the records it resolved on the request', async () => {
+    const served = atNaturalKeys(route, '/served', registrationParams)
+    const request = requestFor({
+      organisationNumber: organisation.orgId,
+      registrationNumber: REGISTERED_ONLY_NUMBER
+    })
+
+    await served.handler(request, h)
+
+    expect(request.app).toEqual({
+      organisation: expect.objectContaining({ id: organisation.id }),
+      registration: expect.objectContaining({
+        id: registeredOnlyRegistration.id
+      })
     })
   })
 
@@ -326,5 +358,13 @@ describe('atNaturalKeys', () => {
       expect(response.statusCode).toBe(409)
       expect(map).not.toHaveBeenCalled()
     })
+  })
+
+  it('rejects an unknown organisation on an organisation route', async () => {
+    const served = atNaturalKeys(route, '/served', organisationParams)
+
+    await expect(
+      served.handler(requestFor({ organisationNumber: 999999 }), h)
+    ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 })

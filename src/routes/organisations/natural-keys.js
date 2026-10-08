@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
+  servesOrganisation,
   toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/adapter.js'
@@ -24,6 +25,29 @@ const lookupContext = () => ({
 })
 
 /**
+ * Finds the stored organisation a route names by its number. Only an
+ * organisation the organisation read model serves can be found.
+ *
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {number} organisationNumber
+ * @returns {Promise<Organisation>}
+ */
+export async function findOrganisationByNumber(
+  organisationsRepository,
+  organisationNumber
+) {
+  const organisation =
+    await organisationsRepository.findByOrgId(organisationNumber)
+  if (
+    !organisation ||
+    !servesOrganisation(organisation, lookupContext().today)
+  ) {
+    throw Boom.notFound('Organisation not found')
+  }
+  return organisation
+}
+
+/**
  * Finds the stored registration a route names by its natural keys. Only a
  * registration the organisation read model serves can be found, so a link
  * built from the read model resolves and nothing else does.
@@ -38,11 +62,10 @@ export async function findRegistrationByNumber(
   organisationNumber,
   registrationNumber
 ) {
-  const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
-  if (!organisation) {
-    throw Boom.notFound('Organisation not found')
-  }
+  const organisation = await findOrganisationByNumber(
+    organisationsRepository,
+    organisationNumber
+  )
 
   const registration = onlyOne(
     organisation.registrations.filter(
