@@ -1,7 +1,10 @@
+import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { periodBounds } from '#reports/domain/reporting-period.js'
 import { periodSchema } from '#reports/repository/schema.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
@@ -130,6 +133,34 @@ const mapCommand = async (request, h) =>
     )
   )
 
+/**
+ * An accredited report covers only periods from the accreditation's start: a
+ * period ending before it is not found.
+ *
+ * @param {ResolvedRequest & { params: { cadence: Cadence, period: number } }} request
+ */
+const assertPeriodWithinAccreditation = async (request) => {
+  const { organisationId, accreditationId, year, cadence, period } =
+    request.params
+  const { validFrom } =
+    await request.organisationsRepository.findAccreditationById(
+      organisationId,
+      /** @type {string} */ (accreditationId)
+    )
+  const { endDate } = periodBounds(
+    cadence,
+    /** @type {number} */ (year),
+    period
+  )
+
+  // The read model only serves an accreditation with a validFrom.
+  if (
+    endDate.localeCompare(toCalendarDate(/** @type {string} */ (validFrom))) < 0
+  ) {
+    throw Boom.notFound('Report period is before the accreditation started')
+  }
+}
+
 /** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
 const submissionRoutes = [
   [reportsGetDetail, '', respondWithReport(mapDetail)],
@@ -148,7 +179,11 @@ const submissionRoutes = [
 export const reportRoutesByNaturalKey = [
   ...streams.flatMap(({ path, params, accredited }) =>
     submissionRoutes.map(([route, action, respond]) =>
-      atNaturalKeys(route, `${path}${action}`, params, { accredited, respond })
+      atNaturalKeys(route, `${path}${action}`, params, {
+        accredited,
+        respond,
+        ...(accredited && { before: assertPeriodWithinAccreditation })
+      })
     )
   ),
   atNaturalKeys(
