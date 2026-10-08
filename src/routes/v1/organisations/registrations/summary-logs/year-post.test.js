@@ -1,5 +1,6 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeAll, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -52,6 +53,7 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
   }
 
   afterEach(async () => {
+    vi.restoreAllMocks()
     await server?.stop()
   })
 
@@ -94,6 +96,36 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
       expect(uploadsRepository.initiateCalls.at(-1).callbackUrl).toContain(
         `/summary-logs/2025/${body.summaryLogId}/upload-completed`
       )
+    })
+
+    it('re-throws Boom errors from the uploads repository', async () => {
+      vi.spyOn(uploadsRepository, 'initiateSummaryLogUpload').mockRejectedValue(
+        Boom.badGateway('CDP Uploader is down')
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: buildUrl(organisationId, registrationId, 2025),
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_GATEWAY)
+    })
+
+    it('wraps non-Boom errors from the uploads repository in a 500', async () => {
+      vi.spyOn(uploadsRepository, 'initiateSummaryLogUpload').mockRejectedValue(
+        new Error('Network failure')
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: buildUrl(organisationId, registrationId, 2025),
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
 
     it('returns 422 for a future year', async () => {

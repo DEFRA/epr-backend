@@ -23,8 +23,8 @@ export const summaryLogsYearCreatePath =
 
 /**
  * Which accreditation the upload belongs to isn't asked for here: it is
- * stamped at upload-completed from the registration's current accreditation
- * link.
+ * stamped at upload-completed, from the natural-key path or else the
+ * registration's current accreditation link.
  */
 export const summaryLogsYearCreate = {
   method: 'POST',

@@ -1,8 +1,14 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
+import {
+  registrationParams,
+  registrationPath
+} from '#routes/organisations/view-route.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
@@ -36,7 +42,8 @@ export const registrationWasteRecordsExport = {
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   app: Partial<ResolvedRecords>
    * }} request
    * @param {HapiResponseToolkit} h
    */
@@ -44,10 +51,12 @@ export const registrationWasteRecordsExport = {
     const { organisationId, registrationId } = request.params
 
     // Names the download only, so a failed lookup costs the name, not the file.
-    const registrationNumber = await request.organisationsRepository
-      .findRegistrationById(organisationId, registrationId)
-      .then((registration) => registration.registrationNumber)
-      .catch(() => undefined)
+    const registrationNumber =
+      request.app.registration?.registrationNumber ??
+      (await request.organisationsRepository
+        .findRegistrationById(organisationId, registrationId)
+        .then((registration) => registration.registrationNumber)
+        .catch(() => undefined))
 
     const response = h
       .response(
@@ -57,6 +66,7 @@ export const registrationWasteRecordsExport = {
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,
           overseasSitesRepository: request.overseasSitesRepository,
+          organisation: request.app.organisation,
           organisationId,
           registrationId
         })
@@ -77,3 +87,9 @@ export const registrationWasteRecordsExport = {
       : response
   }
 }
+
+export const registrationWasteRecordsExportByNumber = atNaturalKeys(
+  registrationWasteRecordsExport,
+  `${registrationPath}/waste-records/export.csv`,
+  registrationParams
+)
