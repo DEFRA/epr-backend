@@ -40,8 +40,7 @@ const buildCallbackUrl = ({
  * The year-scoped create route has already validated eligibility for `year`,
  * so it is passed through to mint the year-scoped callback, letting the
  * eventual insert know which year it belongs to. The accreditation is
- * stamped at upload-completed from the registration's current accreditation
- * link.
+ * stamped at upload-completed.
  *
  * @param {{
  *   uploadsRepository: UploadsRepository,
