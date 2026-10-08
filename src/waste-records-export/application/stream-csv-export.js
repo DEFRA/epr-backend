@@ -35,6 +35,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
+ * @property {Organisation} [organisation] - The organisation `organisationId` names, when the caller has already read it.
  * @property {string} [organisationId] - When set, export only this organisation.
  * @property {string} [registrationId] - When set (with organisationId), export only this registration.
  */
@@ -278,6 +279,7 @@ export async function* streamCsvExport(deps) {
     ledgerRepository,
     summaryLogsRepository,
     overseasSitesRepository,
+    organisation,
     organisationId,
     registrationId
   } = deps
@@ -294,7 +296,9 @@ export async function* streamCsvExport(deps) {
 
   const entriesByRegistration = groupByRegistration(latestSubmittedEntries)
 
-  const orgsSorted = await resolveOrgs(organisationsRepository, organisationId)
+  const orgsSorted = organisation
+    ? [organisation]
+    : await resolveOrgs(organisationsRepository, organisationId)
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])]
       .filter((reg) => !registrationId || reg.id === registrationId)

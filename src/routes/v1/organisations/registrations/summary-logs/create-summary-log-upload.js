@@ -12,17 +12,15 @@ import { config } from '#root/config.js'
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 
 /**
- * The callback URL CDP Uploader calls once the file lands: the year-scoped
- * path when `year` is given, matching the year-scoped `upload-completed`
- * route; otherwise the legacy org/registration-scoped path, matching the
- * deprecated `upload-completed` route the legacy create route still uses.
+ * The year-scoped callback URL CDP Uploader calls once the file lands,
+ * matching the year-scoped `upload-completed` route.
  *
  * @param {{
  *   appBaseUrl: string,
  *   organisationId: string,
  *   registrationId: string,
  *   summaryLogId: string,
- *   year?: number
+ *   year: number
  * }} args
  * @returns {string}
  */
@@ -33,30 +31,23 @@ const buildCallbackUrl = ({
   summaryLogId,
   year
 }) =>
-  year === undefined
-    ? `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
-    : `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${year}/${summaryLogId}/upload-completed`
+  `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${year}/${summaryLogId}/upload-completed`
 
 /**
  * Initiates a summary log upload: mints an id, builds the upload-completed
  * callback, and asks the uploads repository for a CDP upload session.
  *
- * Shared by both the year-scoped create route and the legacy
- * org/registration-scoped one. The scoped route has already validated
- * eligibility for a specific `year`, so it passes it through here to mint the
- * year-scoped callback, letting the eventual insert know which year it
- * belongs to — the accreditation is stamped at upload-completed. The legacy
- * route never asked for a specific year, so it
- * omits it — the summary log is then stored unscoped, and `validate.js`
- * resolves the registration's live accreditation itself, fresh, when
- * validation runs.
+ * The year-scoped create route has already validated eligibility for `year`,
+ * so it is passed through to mint the year-scoped callback, letting the
+ * eventual insert know which year it belongs to. The accreditation is
+ * stamped at upload-completed.
  *
  * @param {{
  *   uploadsRepository: UploadsRepository,
  *   logger: TypedLogger,
  *   organisationId: string,
  *   registrationId: string,
- *   year?: number,
+ *   year: number,
  *   redirectUrl: string,
  *   routePath: string,
  *   callbackUrlFor?: (summaryLogId: string) => string

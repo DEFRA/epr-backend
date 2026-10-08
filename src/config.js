@@ -372,12 +372,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
-    summaryLogYearBackfill: {
-      doc: 'Feature Flag: Let the startup backfill write each registration start year onto summary logs created before year-scoped routes, rather than only counting them (PAE-2027)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_YEAR_BACKFILL'
-    },
     resubmissionFigureGate: {
       doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',
       format: Boolean,

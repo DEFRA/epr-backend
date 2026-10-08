@@ -451,8 +451,10 @@ export const createUploadPayload = (
 export const buildGetUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
 
+const UPLOAD_YEAR = 2025
+
 export const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${UPLOAD_YEAR}/${summaryLogId}/upload-completed`
 
 export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
@@ -604,6 +606,7 @@ export const createTestInfrastructure = async (
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
+      organisationsRepository: () => organisationsRepository,
       uploadsRepository
     },
     workers: {

@@ -7,3 +7,4 @@ export {
   accreditationsViewGet,
   accreditationViewGet
 } from './get.accreditation.js'
+export { organisationLink, organisationUserPut } from './actions.js'

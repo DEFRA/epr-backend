@@ -38,8 +38,6 @@ describe('mock-repositories', () => {
         'insert',
         'update',
         'findById',
-        'findIdsWithoutYear',
-        'assignYear',
         'findLatestSubmittedForOrgReg',
         'findAllByOrgReg',
         'findAllSummaryLogStatsByRegistrationId',

@@ -9,7 +9,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { registrationParams } from './view-route.js'
+import { organisationParams, registrationParams } from './view-route.js'
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
@@ -37,6 +37,7 @@ const route = {
  */
 const requestFor = (params) =>
   partialMock({
+    app: {},
     params,
     organisationsRepository: createInMemoryOrganisationsRepository([
       partialMock(organisation)
@@ -110,6 +111,37 @@ describe('atNaturalKeys', () => {
     })
   })
 
+  it('passes the organisation alone to an organisation route', async () => {
+    const served = atNaturalKeys(route, '/served', organisationParams)
+
+    const params = await served.handler(
+      requestFor({ organisationNumber: organisation.orgId }),
+      h
+    )
+
+    expect(params).toEqual({
+      organisationNumber: organisation.orgId,
+      organisationId: organisation.id
+    })
+  })
+
+  it('puts the records it resolved on the request', async () => {
+    const served = atNaturalKeys(route, '/served', registrationParams)
+    const request = requestFor({
+      organisationNumber: organisation.orgId,
+      registrationNumber: REGISTERED_ONLY_NUMBER
+    })
+
+    await served.handler(request, h)
+
+    expect(request.app).toEqual({
+      organisation: expect.objectContaining({ id: organisation.id }),
+      registration: expect.objectContaining({
+        id: registeredOnlyRegistration.id
+      })
+    })
+  })
+
   it('runs the before step with the stored ids, before the handler', async () => {
     const calls = []
     const before = vi.fn((request) => {
@@ -177,5 +209,13 @@ describe('atNaturalKeys', () => {
     await expect(served.handler(requestFor(params), h)).rejects.toMatchObject({
       output: { statusCode: 404 }
     })
+  })
+
+  it('rejects an unknown organisation on an organisation route', async () => {
+    const served = atNaturalKeys(route, '/served', organisationParams)
+
+    await expect(
+      served.handler(requestFor({ organisationNumber: 999999 }), h)
+    ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 })
