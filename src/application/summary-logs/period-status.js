@@ -3,6 +3,7 @@ import { getTargetAmount } from '#waste-balances/application/target-amount.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { reportingDateFieldsFor } from '#reports/domain/aggregation/fields-by-operator-category.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
 import {
@@ -26,6 +27,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
+/** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {RecordChange} from './record-change.js' */
 
 /** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
@@ -145,7 +147,7 @@ const closedPeriodRefsFor = (
  *
  * @param {ValidatedWasteRecord['record']} record
  * @param {RecordChange} status
- * @param {TableSchema} schema
+ * @param {string[]} reportingDateFields
  * @param {Map<string, WasteRecordState>} submittedRowStatesByKey
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
@@ -154,7 +156,7 @@ const closedPeriodRefsFor = (
 const closedPeriodRefsForRecord = (
   record,
   status,
-  schema,
+  reportingDateFields,
   submittedRowStatesByKey,
   submittedPeriods,
   cadence
@@ -170,12 +172,7 @@ const closedPeriodRefsForRecord = (
   return changedData
     .filter(Boolean)
     .flatMap((data) =>
-      closedPeriodRefsFor(
-        data,
-        schema.reportingDateFields,
-        submittedPeriods,
-        cadence
-      )
+      closedPeriodRefsFor(data, reportingDateFields, submittedPeriods, cadence)
     )
 }
 
@@ -347,6 +344,7 @@ const reduceEntries = (entries) => {
  * @param {ValidatedWasteRecord} params.wasteRecord
  * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
  * @param {TableSchema} params.schema
+ * @param {string[]} params.reportingDateFields
  * @param {Set<string>} params.submittedPeriods
  * @param {Cadence} params.cadence
  * @param {ClassificationContext} params.context
@@ -356,12 +354,12 @@ const classifyAdjustedWasteRecord = ({
   wasteRecord,
   submittedRowStatesByKey,
   schema,
+  reportingDateFields,
   submittedPeriods,
   cadence,
   context
 }) => {
   const { record, outcome } = wasteRecord
-  const { reportingDateFields } = schema
 
   const newSidePeriod = classifyPeriodStatus(
     record.data,
@@ -421,6 +419,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {Set<string>} params.submittedPeriods
  * @param {Cadence} params.cadence
  * @param {ProcessingTypeSchemas} params.tableSchemas
+ * @param {string[]} params.reportingDateFields
  * @returns {PeriodRef[]}
  */
 const closedPeriodsTouched = ({
@@ -429,7 +428,8 @@ const closedPeriodsTouched = ({
   recordChanges,
   submittedPeriods,
   cadence,
-  tableSchemas
+  tableSchemas,
+  reportingDateFields
 }) => {
   /** @type {Map<string, PeriodRef>} */
   const closedPeriodsByKey = new Map()
@@ -445,7 +445,7 @@ const closedPeriodsTouched = ({
     closedPeriodRefsForRecord(
       record,
       status,
-      schema,
+      reportingDateFields,
       submittedRowStatesByKey,
       submittedPeriods,
       cadence
@@ -459,14 +459,14 @@ const closedPeriodsTouched = ({
  * @param {ValidatedWasteRecord} wasteRecord
  * @param {RecordChange} status
  * @param {TableSchema | undefined} schema
- * @param {{ submittedRowStatesByKey: Map<string, WasteRecordState>, submittedPeriods: Set<string>, cadence: Cadence }} periodContext
+ * @param {{ submittedRowStatesByKey: Map<string, WasteRecordState>, submittedPeriods: Set<string>, cadence: Cadence, reportingDateFields: string[] }} periodContext
  * @returns {schema is TableSchema}
  */
 const contributesLoadLegs = (
   { record, outcome },
   status,
   schema,
-  { submittedRowStatesByKey, submittedPeriods, cadence }
+  { submittedRowStatesByKey, submittedPeriods, cadence, reportingDateFields }
 ) => {
   if (status === RECORD_CHANGE.UNCHANGED || !schema) {
     return false
@@ -482,7 +482,7 @@ const contributesLoadLegs = (
     closedPeriodRefsForRecord(
       record,
       status,
-      schema,
+      reportingDateFields,
       submittedRowStatesByKey,
       submittedPeriods,
       cadence
@@ -503,6 +503,7 @@ const contributesLoadLegs = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {Cadence} params.cadence
  * @param {ProcessingTypeSchemas} params.tableSchemas
+ * @param {OperatorCategory} params.operatorCategory
  * @param {ClassificationContext} params.classificationContext
  * @returns {LoadsByReportingPeriod}
  */
@@ -513,10 +514,17 @@ export const classifyByPeriodStatus = ({
   periodicReports,
   cadence,
   tableSchemas,
+  operatorCategory,
   classificationContext
 }) => {
   const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
-  const periodContext = { submittedRowStatesByKey, submittedPeriods, cadence }
+  const reportingDateFields = reportingDateFieldsFor(operatorCategory)
+  const periodContext = {
+    submittedRowStatesByKey,
+    submittedPeriods,
+    cadence,
+    reportingDateFields
+  }
 
   /** @type {PeriodStatusEntry[]} */
   const entries = []
@@ -533,7 +541,7 @@ export const classifyByPeriodStatus = ({
     if (status === RECORD_CHANGE.ADDED) {
       const period = classifyPeriodStatus(
         record.data,
-        schema.reportingDateFields,
+        reportingDateFields,
         submittedPeriods,
         cadence
       )
@@ -558,6 +566,7 @@ export const classifyByPeriodStatus = ({
           wasteRecord,
           submittedRowStatesByKey,
           schema,
+          reportingDateFields,
           submittedPeriods,
           cadence,
           context: classificationContext
@@ -569,11 +578,9 @@ export const classifyByPeriodStatus = ({
   return {
     ...reduceEntries(entries),
     closedPeriods: closedPeriodsTouched({
+      ...periodContext,
       wasteRecords,
-      submittedRowStatesByKey,
       recordChanges,
-      submittedPeriods,
-      cadence,
       tableSchemas
     })
   }
