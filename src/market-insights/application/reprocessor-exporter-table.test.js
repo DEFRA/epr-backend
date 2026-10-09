@@ -586,7 +586,7 @@ describe('buildReprocessorExporterTable', () => {
     expect(reported(table)).toEqual([])
   })
 
-  it('leaves out the months of an accreditation since cancelled, as the regulator does', async () => {
+  it('keeps the months an accreditation since cancelled filed while it was accredited', async () => {
     const operator = makeOperator({
       orgId: 1,
       accreditationStatusHistory: [
@@ -599,7 +599,9 @@ describe('buildReprocessorExporterTable', () => {
       reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
     })
 
-    expect(reported(table)).toEqual([])
+    expect(reported(table)).toEqual([
+      expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
+    ])
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
@@ -681,11 +683,13 @@ describe('buildReprocessorExporterTable', () => {
       })
 
       expect(reported(table).map(({ material }) => material)).toEqual([
-        MATERIAL.PLASTIC
+        MATERIAL.PLASTIC,
+        MATERIAL.WOOD
       ])
-      expect(coverage(table).byMonth['2026-01']).toEqual({
-        expected: 1,
-        submitted: 1
+      expect(coverage(table).byMonth).toEqual({
+        '2026-01': { expected: 2, submitted: 2 },
+        '2026-02': { expected: 2, submitted: 0 },
+        '2026-03': { expected: 1, submitted: 0 }
       })
     })
   })
@@ -1012,7 +1016,7 @@ describe('buildReprocessorExporterTable', () => {
       })
     })
 
-    it('leaves out an operator whose accreditation the figures leave out', async () => {
+    it('counts an operator in the months before its accreditation was cancelled, and never one whose accreditation was refused', async () => {
       const cancelled = makeOperator({
         orgId: 1,
         accreditationStatusHistory: [
@@ -1036,8 +1040,13 @@ describe('buildReprocessorExporterTable', () => {
         ]
       })
 
-      expect(reported(table)).toEqual([])
-      expect(operatorCounts(table)).toEqual({})
+      expect(reported(table)).toEqual([
+        expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
+      ])
+      expect(operatorCounts(table)).toEqual({
+        '2026-01 plastic reprocessor': 1,
+        '2026-02 plastic reprocessor': 1
+      })
     })
 
     it('counts an operator with sites in two nations once in each nation and once in the UK', async () => {
