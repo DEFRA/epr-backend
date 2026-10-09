@@ -14,7 +14,6 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 const ALL_FIELDS = Object.values(FIELDS)
 
@@ -47,10 +46,6 @@ const transformWithMonthSlice = (rowData, rowIndex) => {
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateFields: Object.values(
-    REPORTING_DATE_FIELDS.REPROCESSOR_REGISTERED_ONLY
-      .RECEIVED_LOADS_FOR_REPROCESSING
-  ),
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   sheetName: 'Received',
   rowTransformer: transformWithMonthSlice,

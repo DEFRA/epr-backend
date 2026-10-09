@@ -580,6 +580,50 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ])
   })
 
+  it('flags the closed period a refused load is repatriated in, not the month it was exported', async () => {
+    const env = await setupGateEnvironment({
+      processingType: 'exporter',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    const refusedJanuaryExport = {
+      rowId: 1001,
+      osrId: 100,
+      exportTonnage: 8,
+      exportDate: '2025-01-26T00:00:00.000Z',
+      wasteRefused: 'Yes'
+    }
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createExporterUploadData([refusedJanuaryExport]),
+      exporterMeta
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+    await generateAndSubmitReport(env, FEBRUARY_2025)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-repatriated',
+      'file-repatriated',
+      createExporterUploadData([
+        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+      ]),
+      exporterMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      JANUARY_2025,
+      FEBRUARY_2025
+    ])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      FEBRUARY_2025
+    ])
+  })
+
   it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',

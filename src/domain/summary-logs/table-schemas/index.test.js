@@ -7,6 +7,10 @@ import {
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { reportingDateFieldsFor } from '#reports/domain/aggregation/fields-by-operator-category.js'
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
+
+/** @import { OperatorCategory } from '#reports/domain/operator-category.js' */
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -270,27 +274,42 @@ describe('table-schemas', () => {
     })
   })
 
-  describe('reportingDateFields', () => {
+  describe('reporting date fields', () => {
+    const PROCESSING_TYPES_BY_OPERATOR_CATEGORY = {
+      [OPERATOR_CATEGORY.EXPORTER]: [PROCESSING_TYPES.EXPORTER],
+      [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
+        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
+      ],
+      [OPERATOR_CATEGORY.REPROCESSOR]: [
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      ],
+      [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ]
+    }
+
     it.each(
-      Object.entries(PROCESSING_TYPE_TABLES).flatMap(
-        ([processingType, tables]) =>
-          Object.entries(tables).map(([tableName, schema]) => ({
-            processingType,
-            tableName,
-            schema
-          }))
+      Object.entries(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flatMap(
+        ([operatorCategory, processingTypes]) =>
+          reportingDateFieldsFor(
+            /** @type {OperatorCategory} */ (operatorCategory)
+          ).flatMap((field) =>
+            processingTypes.map((processingType) => ({
+              operatorCategory,
+              processingType,
+              field
+            }))
+          )
       )
     )(
-      '$processingType/$tableName has reportingDateFields in requiredHeaders',
-      ({ schema }) => {
-        expect(schema.reportingDateFields).toBeDefined()
-        expect(Array.isArray(schema.reportingDateFields)).toBe(true)
-        expect(schema.reportingDateFields.length).toBeGreaterThan(0)
+      '$operatorCategory: $field is a required header on a $processingType table',
+      ({ processingType, field }) => {
+        const requiredHeaders = Object.values(
+          PROCESSING_TYPE_TABLES[processingType]
+        ).flatMap((schema) => schema.requiredHeaders)
 
-        for (const field of schema.reportingDateFields) {
-          expect(typeof field).toBe('string')
-          expect(schema.requiredHeaders).toContain(field)
-        }
+        expect(requiredHeaders).toContain(field)
       }
     )
   })
