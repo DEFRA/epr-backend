@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY,
-  reportingDateFieldsForWorksheet
+  reportingDateFieldsFor
 } from './aggregation/fields-by-operator-category.js'
 import { OPERATOR_CATEGORY, isExporterCategory } from './operator-category.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -72,44 +72,6 @@ describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
   )
 })
 
-describe('reportingDateFieldsForWorksheet', () => {
-  it('returns every reporting date the worksheet carries', () => {
-    expect(
-      reportingDateFieldsForWorksheet({
-        requiredHeaders: [
-          'ROW_ID',
-          'DATE_RECEIVED_FOR_EXPORT',
-          'TONNAGE_RECEIVED_FOR_EXPORT',
-          'DATE_OF_EXPORT',
-          'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
-        ]
-      })
-    ).toStrictEqual([
-      'DATE_RECEIVED_FOR_EXPORT',
-      'DATE_OF_EXPORT',
-      'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
-    ])
-  })
-
-  it('returns only the reporting dates of a worksheet sharing a name with a richer one', () => {
-    expect(
-      reportingDateFieldsForWorksheet({
-        requiredHeaders: [
-          'ROW_ID',
-          'MONTH_RECEIVED_FOR_EXPORT',
-          'TONNAGE_RECEIVED_FOR_EXPORT'
-        ]
-      })
-    ).toStrictEqual(['MONTH_RECEIVED_FOR_EXPORT'])
-  })
-
-  it('returns nothing for a worksheet without a reporting date', () => {
-    expect(
-      reportingDateFieldsForWorksheet({ requiredHeaders: ['ROW_ID'] })
-    ).toStrictEqual([])
-  })
-})
-
 describe('reporting date fields against the summary log templates', () => {
   const PROCESSING_TYPES_BY_OPERATOR_CATEGORY = {
     [OPERATOR_CATEGORY.EXPORTER]: [PROCESSING_TYPES.EXPORTER],
@@ -130,11 +92,7 @@ describe('reporting date fields against the summary log templates', () => {
    * @returns {string[]}
    */
   const categoryDateFields = (operatorCategory) =>
-    Object.values(
-      SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[
-        /** @type {OperatorCategory} */ (operatorCategory)
-      ]
-    )
+    reportingDateFieldsFor(/** @type {OperatorCategory} */ (operatorCategory))
 
   const worksheets = Object.entries(
     PROCESSING_TYPES_BY_OPERATOR_CATEGORY
@@ -180,18 +138,15 @@ describe('reporting date fields against the summary log templates', () => {
   )
 
   it.each(worksheets)(
-    '$processingType/$tableName carries a reporting date field',
-    ({ schema }) => {
-      expect(reportingDateFieldsForWorksheet(schema)).not.toHaveLength(0)
-    }
-  )
-
-  it.each(worksheets)(
-    '$processingType/$tableName carries only $operatorCategory reporting date fields',
+    '$processingType/$tableName carries a $operatorCategory reporting date field',
     ({ operatorCategory, schema }) => {
-      expect(categoryDateFields(operatorCategory)).toEqual(
-        expect.arrayContaining(reportingDateFieldsForWorksheet(schema))
-      )
+      const reportingDateFields = categoryDateFields(operatorCategory)
+
+      expect(
+        schema.requiredHeaders.some((/** @type {string} */ header) =>
+          reportingDateFields.includes(header)
+        )
+      ).toBe(true)
     }
   )
 })
