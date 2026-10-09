@@ -77,7 +77,10 @@ export const findSchemaForProcessingType = (
   processingType,
   wasteRecordType
 ) => {
-  const tables = PROCESSING_TYPE_TABLES[processingType]
+  const tables =
+    PROCESSING_TYPE_TABLES[
+      /** @type {keyof typeof PROCESSING_TYPE_TABLES} */ (processingType)
+    ]
   if (!tables) {
     return null
   }
@@ -106,7 +109,7 @@ export const createTableSchemaGetter = (processingType, registry) => {
  *
  * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
  * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
- * @returns {{ tableName: string, schema: Object } | null} The table name and schema, or null if not found
+ * @returns {{ tableName: string, schema: TableSchema } | null} The table name and schema, or null if not found
  */
 export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
   for (const tables of Object.values(registry)) {
