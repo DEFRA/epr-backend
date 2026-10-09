@@ -278,4 +278,33 @@ describe('MongoDB organisations repository', () => {
       expect(result.registrations[0]).not.toHaveProperty('validTo')
     })
   })
+
+  describe('accreditation number storage', () => {
+    it('stores no number field for an unnumbered accreditation', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+      const inserted = await repository.findById(organisation.id)
+      await repository.replace(
+        organisation.id,
+        1,
+        prepareOrgUpdate(inserted, { wasteProcessingTypes: ['reprocessor'] })
+      )
+
+      const rawDoc = /** @type {Record<string, any>} */ (
+        await mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+          .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+      )
+
+      expect(rawDoc.version).toBe(2)
+      for (const accreditation of rawDoc.accreditations) {
+        expect(accreditation).not.toHaveProperty('accreditationNumber')
+      }
+    })
+  })
 })

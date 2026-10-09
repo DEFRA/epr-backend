@@ -141,6 +141,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
 
   for (const item of rest.accreditations) {
     item.status = getCurrentStatus(item)
+    item.accreditationNumber = item.accreditationNumber ?? null
   }
 
   return { id: _id.toString(), ...rest }
