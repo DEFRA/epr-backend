@@ -913,7 +913,7 @@ describe('buildReprocessorExporterTable', () => {
       })
     })
 
-    it('counts an operator in a month its accreditation was cancelled in and reinstated after, though that month owes no report', async () => {
+    it('expects a report for a month its accreditation was cancelled in and reinstated before the report fell due', async () => {
       const reinstated = makeOperator({
         orgId: 1,
         accreditationStatusHistory: [
@@ -929,12 +929,11 @@ describe('buildReprocessorExporterTable', () => {
       const { table } = await run({ organisations: [reinstated] })
 
       expect(table.data.months['2026-02'].reports).toEqual({
-        expected: 0,
+        expected: 1,
         submitted: 0
       })
       expect(operatorCounts(table)).toEqual(everyMonth(1))
     })
-
     it('counts an operator in the month its accreditation was cancelled partway through', async () => {
       const reinstated = makeOperator({
         orgId: 1,
