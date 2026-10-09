@@ -9,7 +9,6 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { classifyByPeriodStatus } from './period-status.js'
 import { classifyRecordChanges } from './classify-record-changes.js'
 import {
@@ -106,7 +105,6 @@ export const classifyLoads = ({
             ? CADENCE.monthly
             : CADENCE.quarterly,
           tableSchemas,
-          operatorCategory: getOperatorCategory(registration),
           classificationContext: {
             accreditation: registration.accreditation ?? null,
             overseasSites
