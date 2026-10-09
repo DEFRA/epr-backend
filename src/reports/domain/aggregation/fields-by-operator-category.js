@@ -91,19 +91,18 @@ export const SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
   }
 })
 
-const ALL_REPORTING_DATE_FIELDS = new Set(
-  Object.values(SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY).flatMap(Object.values)
-)
-
 /**
- * Every date field that places a row of this worksheet in a reporting period:
+ * Every date field that places a row in a reporting period for the category:
  * a row belongs to each period any of these dates falls in.
  *
- * @param {{ requiredHeaders: string[] }} worksheet
+ * @param {OperatorCategory} operatorCategory
  * @returns {string[]}
  */
-export const reportingDateFieldsForWorksheet = ({ requiredHeaders }) =>
-  requiredHeaders.filter((header) => ALL_REPORTING_DATE_FIELDS.has(header))
+export const reportingDateFieldsFor = (operatorCategory) => [
+  ...new Set(
+    Object.values(SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory])
+  )
+]
 
 /**
  * Maps operatorCategory to the tonnage field name used in received records.
