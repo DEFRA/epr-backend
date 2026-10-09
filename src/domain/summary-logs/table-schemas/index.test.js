@@ -312,6 +312,35 @@ describe('table-schemas', () => {
         expect(requiredHeaders).toContain(field)
       }
     )
+
+    it.each(
+      Object.entries(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flatMap(
+        ([operatorCategory, processingTypes]) =>
+          processingTypes.flatMap((processingType) =>
+            Object.entries(PROCESSING_TYPE_TABLES[processingType]).map(
+              ([tableName, schema]) => ({
+                operatorCategory,
+                processingType,
+                tableName,
+                schema
+              })
+            )
+          )
+      )
+    )(
+      '$processingType/$tableName carries a $operatorCategory reporting date field',
+      ({ operatorCategory, schema }) => {
+        const reportingDateFields = reportingDateFieldsFor(
+          /** @type {OperatorCategory} */ (operatorCategory)
+        )
+
+        expect(
+          schema.requiredHeaders.some((header) =>
+            reportingDateFields.includes(header)
+          )
+        ).toBe(true)
+      }
+    )
   })
 
   describe('aggregateUnfilledValues', () => {
