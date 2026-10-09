@@ -7,13 +7,6 @@ import {
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import {
-  SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
-  reportingDateFieldsForWorksheet
-} from '#reports/domain/aggregation/fields-by-operator-category.js'
-import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
-
-/** @import { OperatorCategory } from '#reports/domain/operator-category.js' */
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -275,86 +268,6 @@ describe('table-schemas', () => {
 
       expect(schema).toBeNull()
     })
-  })
-
-  describe('reporting date fields', () => {
-    const PROCESSING_TYPES_BY_OPERATOR_CATEGORY = {
-      [OPERATOR_CATEGORY.EXPORTER]: [PROCESSING_TYPES.EXPORTER],
-      [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
-        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
-      ],
-      [OPERATOR_CATEGORY.REPROCESSOR]: [
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT
-      ],
-      [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ]
-    }
-
-    /**
-     * @param {string} operatorCategory
-     * @returns {string[]}
-     */
-    const categoryDateFields = (operatorCategory) =>
-      Object.values(
-        SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[
-          /** @type {OperatorCategory} */ (operatorCategory)
-        ]
-      )
-
-    const worksheets = Object.entries(
-      PROCESSING_TYPES_BY_OPERATOR_CATEGORY
-    ).flatMap(([operatorCategory, processingTypes]) =>
-      processingTypes.flatMap((processingType) =>
-        Object.entries(PROCESSING_TYPE_TABLES[processingType]).map(
-          ([tableName, schema]) => ({
-            operatorCategory,
-            processingType,
-            tableName,
-            schema
-          })
-        )
-      )
-    )
-
-    it.each(
-      Object.entries(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flatMap(
-        ([operatorCategory, processingTypes]) =>
-          categoryDateFields(operatorCategory).flatMap((field) =>
-            processingTypes.map((processingType) => ({
-              operatorCategory,
-              processingType,
-              field
-            }))
-          )
-      )
-    )(
-      '$operatorCategory: $field is a required header on a $processingType table',
-      ({ processingType, field }) => {
-        const requiredHeaders = Object.values(
-          PROCESSING_TYPE_TABLES[processingType]
-        ).flatMap((schema) => schema.requiredHeaders)
-
-        expect(requiredHeaders).toContain(field)
-      }
-    )
-
-    it.each(worksheets)(
-      '$processingType/$tableName carries a reporting date field',
-      ({ schema }) => {
-        expect(reportingDateFieldsForWorksheet(schema)).not.toHaveLength(0)
-      }
-    )
-
-    it.each(worksheets)(
-      '$processingType/$tableName carries only $operatorCategory reporting date fields',
-      ({ operatorCategory, schema }) => {
-        expect(categoryDateFields(operatorCategory)).toEqual(
-          expect.arrayContaining(reportingDateFieldsForWorksheet(schema))
-        )
-      }
-    )
   })
 
   describe('aggregateUnfilledValues', () => {
