@@ -40,11 +40,11 @@ import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-field
  * Maps (operatorCategory, reportSection) to the single date field used
  * for filtering records into that section during aggregation.
  *
- * This map decides which date places a row in a reporting period, for both
- * report aggregation and summary-log period status. The distinction between
- * operator category and processing type matters for accredited reprocessors:
- * the input/output distinction is lost at the waste record level, but both
- * variants use identical date fields so a single REPROCESSOR mapping suffices.
+ * This map decides which date places a row in a reporting period. The
+ * distinction between operator category and processing type matters for
+ * accredited reprocessors: the input/output distinction is lost at the waste
+ * record level, but both variants use identical date fields so a single
+ * REPROCESSOR mapping suffices.
  *
  * For accredited exporters, their received-loads table carries the received,
  * exported and repatriated dates, so a single record can appear in up to
