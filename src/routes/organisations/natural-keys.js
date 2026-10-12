@@ -71,12 +71,40 @@ export async function findRegistrationByNumber(
     organisation.registrations.filter(
       (candidate) =>
         candidate.registrationNumber === registrationNumber &&
-        toRegistrationEntry(candidate, organisation, lookupContext()) !== null
+        isServedRegistration(organisation, candidate)
     ),
     'Registration'
   )
 
   return { organisation, registration }
+}
+
+/**
+ * Whether the organisation read model serves the registration.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @returns {boolean}
+ */
+export function isServedRegistration(organisation, registration) {
+  return (
+    toRegistrationEntry(registration, organisation, lookupContext()) !== null
+  )
+}
+
+/**
+ * A registration's accreditations for a year, by the read model's rules.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @param {number} year
+ * @returns {Accreditation[]}
+ */
+export function accreditationsForYear(organisation, registration, year) {
+  return accreditationsForRegistration(registration, organisation).filter(
+    (candidate) =>
+      toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
+  )
 }
 
 /**
@@ -90,10 +118,7 @@ export async function findRegistrationByNumber(
  */
 export function findAccreditationForYear(organisation, registration, year) {
   return onlyOne(
-    accreditationsForRegistration(registration, organisation).filter(
-      (candidate) =>
-        toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
-    ),
+    accreditationsForYear(organisation, registration, year),
     'Accreditation'
   )
 }
