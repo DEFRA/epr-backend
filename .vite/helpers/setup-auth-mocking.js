@@ -9,7 +9,7 @@ export function setupAuthContext() {
   // Set up in beforeAll so it's available for createServer calls in beforeAll hooks
   beforeAll(() => {
     mockOidcServer = createMockOidcServers()
-    mockOidcServer.listen({ onUnhandledRequest: 'error' })
+    mockOidcServer.listen({ onUnhandledFrame: 'error' })
   })
 
   afterEach(() => {
