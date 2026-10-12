@@ -161,6 +161,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
       dueDate: calendarDate('2025-02-20')
     })
 
+  const closeFebruary2025 = (env) =>
+    createAndSubmitReport(env.reportsRepository, {
+      organisationId: env.organisationId,
+      registrationId: env.registrationId,
+      year: 2025,
+      cadence: 'monthly',
+      period: MONTHLY_PERIODS.February,
+      startDate: calendarDate('2025-02-01'),
+      endDate: calendarDate('2025-02-28'),
+      dueDate: calendarDate('2025-03-20')
+    })
+
   const emptyChange = () => ({
     balanceAffecting: { count: 0, tonnageDelta: 0, rows: [] },
     nonBalanceAffecting: { count: 0, rows: [] }
@@ -603,6 +615,77 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
+  })
+
+  const refusedJanuaryExport = {
+    rowId: 1001,
+    osrId: 100,
+    exportTonnage: 8,
+    dateReceived: '2025-01-15T00:00:00.000Z',
+    dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+    exportDate: '2025-01-26T00:00:00.000Z',
+    wasteRefused: 'Yes'
+  }
+
+  it('lists the closed period a refused load is repatriated in', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    await closeJanuary2025(env)
+    await closeFebruary2025(env)
+
+    await upload(
+      env,
+      'sl-repatriation-original',
+      'file-repatriation-original',
+      createUploadData([refusedJanuaryExport])
+    )
+    await submitAndPoll(env, 'sl-repatriation-original')
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-repatriation-reupload',
+      'file-repatriation-reupload',
+      createUploadData([
+        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+      ])
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January },
+      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.February }
+    ])
+  })
+
+  it('classifies a load as closed when only its repatriation date is in a closed period', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    await closeFebruary2025(env)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-repatriation-closed-wins',
+      'file-repatriation-closed-wins',
+      createUploadData([
+        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+      ])
+    )
+
+    expect(
+      loadsByReportingPeriod.closedPeriodLoads.added.nonBalanceAffecting
+    ).toEqual({
+      count: 1,
+      rows: [
+        {
+          rowId: '1001',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [CLASSIFICATION_REASON.WASTE_REFUSED],
+          tonnageDelta: 0
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
   })
 
   it('aggregates count and tonnageDelta across multiple loads in the same period', async () => {
