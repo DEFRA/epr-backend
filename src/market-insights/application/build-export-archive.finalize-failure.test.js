@@ -12,7 +12,7 @@ const finalize = vi.fn()
 // one: a genuine archive cannot be made to fail while compressing when
 // everything appended to it is a string.
 vi.mock('archiver', () => ({
-  default: () => {
+  ZipArchive: function () {
     // Produces nothing on its own, so the only way the stream ends is the
     // teardown under test.
     const archive = new Readable({ read() {} })
