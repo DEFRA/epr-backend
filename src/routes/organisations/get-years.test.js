@@ -55,6 +55,14 @@ describe('organisationYearsResponseSchema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('rejects a repeated year', () => {
+    const { error } = organisationYearsResponseSchema.validate({
+      years: [2027, 2026, 2026]
+    })
+
+    expect(error).toBeDefined()
+  })
+
   it('rejects a year that has not started', () => {
     const { error } = organisationYearsResponseSchema.validate({
       years: [2028]

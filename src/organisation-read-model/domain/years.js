@@ -1,3 +1,4 @@
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { approvedYears } from './status-timeline.js'
 
 /** @import { Organisation } from './model.js' */
@@ -11,7 +12,7 @@ import { approvedYears } from './status-timeline.js'
  * @returns {number[]}
  */
 export const organisationYears = (organisation, now = new Date()) => {
-  const today = now.toISOString().slice(0, 10)
+  const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
     ({ statusTimeline }) => approvedYears(statusTimeline, today)
   )

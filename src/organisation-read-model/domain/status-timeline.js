@@ -1,25 +1,31 @@
+import {
+  calendarDate,
+  utcCalendarDate
+} from '#common/helpers/date-formatter.js'
+
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { StatusTimeline } from './model.js' */
 
-/** @typedef {{ from: string, to: string }} DateRange */
+/** @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange */
 
 /**
- * @param {string} date - ISO 8601 date
- * @returns {string}
+ * @param {CalendarDate} date
+ * @returns {CalendarDate}
  */
 const dayBefore = (date) => {
   const day = new Date(date)
   day.setUTCDate(day.getUTCDate() - 1)
-  return day.toISOString().slice(0, 10)
+  return utcCalendarDate(day)
 }
 
 /**
- * @param {string} date - ISO 8601 date
+ * @param {CalendarDate} date
  * @returns {number}
  */
 const yearOf = (date) => new Date(date).getUTCFullYear()
 
 /**
- * @param {DateRange} range
+ * @param {CalendarDateRange} range
  * @returns {number[]}
  */
 const yearsIn = ({ from, to }) => {
@@ -32,13 +38,13 @@ const yearsIn = ({ from, to }) => {
 
 /**
  * @param {StatusTimeline} timeline
- * @param {string} today - ISO 8601 date
- * @returns {string[]}
+ * @param {CalendarDate} today
+ * @returns {CalendarDate[]}
  */
 const datesUpTo = (timeline, today) => {
-  const dates = Object.keys(timeline).filter(
-    (date) => date.localeCompare(today) <= 0
-  )
+  const dates = Object.keys(timeline)
+    .map(calendarDate)
+    .filter((date) => date.localeCompare(today) <= 0)
   return dates.sort((a, b) => a.localeCompare(b))
 }
 
@@ -46,9 +52,9 @@ const datesUpTo = (timeline, today) => {
  * A status holds until the day before the next one starts; the latest status
  * holds until today.
  *
- * @param {string | undefined} nextDate - ISO 8601 date
- * @param {string} today - ISO 8601 date
- * @returns {string}
+ * @param {CalendarDate | undefined} nextDate
+ * @param {CalendarDate} today
+ * @returns {CalendarDate}
  */
 const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
 
@@ -56,13 +62,13 @@ const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
  * The date ranges each status was held, keyed by status.
  *
  * @param {StatusTimeline} timeline
- * @param {string} today - ISO 8601 date
- * @returns {Partial<Record<string, DateRange[]>>}
+ * @param {CalendarDate} today
+ * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
 export const statusRanges = (timeline, today) => {
   const dates = datesUpTo(timeline, today)
 
-  /** @type {Partial<Record<string, DateRange[]>>} */
+  /** @type {Partial<Record<string, CalendarDateRange[]>>} */
   const ranges = {}
 
   for (let i = 0; i < dates.length; i++) {
@@ -82,7 +88,7 @@ export const statusRanges = (timeline, today) => {
  * spent wholly cancelled are left out.
  *
  * @param {StatusTimeline} timeline
- * @param {string} today - ISO 8601 date
+ * @param {CalendarDate} today
  * @returns {number[]}
  */
 export const approvedYears = (timeline, today) => {

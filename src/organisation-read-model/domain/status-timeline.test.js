@@ -1,6 +1,7 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { approvedYears, statusRanges } from './status-timeline.js'
 
-const TODAY = '2028-03-15'
+const TODAY = calendarDate('2028-03-15')
 
 describe('statusRanges', () => {
   it('groups ranges by status, each ending the day before the next entry', () => {

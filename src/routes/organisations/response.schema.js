@@ -171,5 +171,5 @@ const servedYear = yearSchema().custom((year, helpers) =>
 )
 
 export const organisationYearsResponseSchema = Joi.object({
-  years: Joi.array().items(servedYear).required()
+  years: Joi.array().items(servedYear).unique().required()
 })

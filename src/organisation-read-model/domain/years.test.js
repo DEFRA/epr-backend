@@ -70,11 +70,13 @@ describe('organisationYears', () => {
       { '2026-02-01': { status: 'approved' } },
       {
         '2025-02-01': { status: 'approved' },
-        '2025-12-01': { status: 'cancelled' }
+        '2026-12-01': { status: 'cancelled' }
       }
     )
 
-    expect(organisationYears(organisation, NOW)).toEqual([2027, 2026, 2025])
+    expect(organisationYears(organisation, NOW)).toStrictEqual([
+      2027, 2026, 2025
+    ])
   })
 
   it('lists nothing when there are no registrations', () => {
