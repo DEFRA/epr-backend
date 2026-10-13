@@ -65,6 +65,18 @@ const CBDU_ORG_ID_DIGITS = 4
 const SUFFIX_LENGTH = 3
 
 /**
+ * A number in the production format: a letter, the two-digit year, then
+ * digits (PAE-2041).
+ * @param {'R' | 'A'} prefix
+ * @param {string} validFrom
+ * @param {number} orgId
+ * @param {number} sequenceNumber
+ * @returns {string}
+ */
+const seededNumber = (prefix, validFrom, orgId, sequenceNumber) =>
+  `${prefix}${validFrom.slice(2, 4)}${orgId}${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`
+
+/**
  * Creates approved registrations with unique numbers for all items
  *
  * @param {Omit<Organisation, 'status'>} org - Organisation data
@@ -96,7 +108,12 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
       ...reg,
       ...(accreditationId && { accreditationId }),
       status: REGISTRATION_STATUS.APPROVED,
-      registrationNumber: `REG-${org.orgId}-${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`,
+      registrationNumber: seededNumber(
+        'R',
+        VALID_FROM,
+        org.orgId,
+        sequenceNumber
+      ),
       cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
       ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: VALID_FROM,
@@ -138,7 +155,7 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
       status: isLinked
         ? ACCREDITATION_STATUS.APPROVED
         : ACCREDITATION_STATUS.CREATED,
-      accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(SUFFIX_LENGTH, '0')}`,
+      accreditationNumber: seededNumber('A', VALID_FROM, org.orgId, index + 1),
       ...(isReprocessor &&
         isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: isLinked ? VALID_FROM : null,
