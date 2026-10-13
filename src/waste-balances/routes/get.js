@@ -1,33 +1,11 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
-import { availableForPool } from '#waste-balances/domain/pool-balances.js'
-import { POOL } from '#waste-balances/repository/ledger-schema.js'
+import { toBalanceBody } from './balance-body.js'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { LedgerBalanceSnapshot } from '#waste-balances/repository/ledger-schema.js' */
-
-/**
- * The separate December portion of a balance, plus the derived non-December
- * remainder of `availableAmount`, surfaced only when the accreditation holds
- * a December portion. A drained in-window pool still reports `0`s; an
- * accreditation with no December portion omits all three fields entirely -
- * its whole `availableAmount` already IS the only balance, so there is no
- * meaningful non-December split to report.
- *
- * @param {LedgerBalanceSnapshot | null} [balance]
- * @returns {{ decemberAmount?: number, decemberAvailableAmount?: number, nonDecemberAvailableAmount?: number }}
- */
-const decemberFields = (balance) => ({
-  ...(balance?.decemberAmount !== undefined && {
-    decemberAmount: balance.decemberAmount
-  }),
-  ...(balance?.decemberAvailableAmount !== undefined && {
-    decemberAvailableAmount: balance.decemberAvailableAmount,
-    nonDecemberAvailableAmount: availableForPool(balance, POOL.GENERAL)
-  })
-})
+/** @import { WasteBalanceBody } from './balance-body.js' */
 
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
@@ -104,34 +82,16 @@ export const wasteBalanceGet = {
           accreditationId
         })
 
-        return {
+        return /** @type {[string, WasteBalanceBody]} */ ([
           accreditationId,
-          amount: balance?.amount ?? 0,
-          availableAmount: balance?.availableAmount ?? 0,
-          ...decemberFields(balance)
-        }
+          toBalanceBody(balance)
+        ])
       })
     )
 
-    /**
-     * @type {Record<string, {
-     *   amount: number,
-     *   availableAmount: number,
-     *   decemberAmount?: number,
-     *   decemberAvailableAmount?: number,
-     *   nonDecemberAvailableAmount?: number
-     * }>}
-     */
-    const balanceMap = {}
-    for (const balance of balances) {
-      if (balance) {
-        balanceMap[balance.accreditationId] = {
-          amount: balance.amount,
-          availableAmount: balance.availableAmount,
-          ...decemberFields(balance)
-        }
-      }
-    }
+    const balanceMap = Object.fromEntries(
+      balances.filter((balance) => balance !== null)
+    )
 
     return h.response(balanceMap).code(StatusCodes.OK)
   }

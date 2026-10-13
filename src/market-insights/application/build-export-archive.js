@@ -1,4 +1,4 @@
-import archiver from 'archiver'
+import { ZipArchive } from 'archiver'
 import { Readable } from 'node:stream'
 import { writeToString } from '@fast-csv/format'
 
@@ -49,7 +49,7 @@ const csvFile = async (name, columns, rows) => ({
  * @returns {Readable}
  */
 const zip = (files) => {
-  const archive = archiver('zip', { zlib: { level: 9 } })
+  const archive = new ZipArchive({ zlib: { level: 9 } })
 
   for (const { name, contents } of files) {
     archive.append(contents, { name })

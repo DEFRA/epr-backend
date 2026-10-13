@@ -57,7 +57,6 @@ export const MIN_TEMPLATE_VERSIONS = {
 /**
  * @typedef {Object} TableSchema
  * @property {string} rowIdField - Field name containing the row identifier
- * @property {string[]} reportingDateFields - Field names containing dates used for reporting period classification
  * @property {string} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
  * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * @property {(rowData: Record<string, any>, rowIndex: number) => {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
@@ -78,7 +77,10 @@ export const findSchemaForProcessingType = (
   processingType,
   wasteRecordType
 ) => {
-  const tables = PROCESSING_TYPE_TABLES[processingType]
+  const tables =
+    PROCESSING_TYPE_TABLES[
+      /** @type {keyof typeof PROCESSING_TYPE_TABLES} */ (processingType)
+    ]
   if (!tables) {
     return null
   }
@@ -107,7 +109,7 @@ export const createTableSchemaGetter = (processingType, registry) => {
  *
  * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
  * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
- * @returns {{ tableName: string, schema: Object } | null} The table name and schema, or null if not found
+ * @returns {{ tableName: string, schema: TableSchema } | null} The table name and schema, or null if not found
  */
 export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
   for (const tables of Object.values(registry)) {

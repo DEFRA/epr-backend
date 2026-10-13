@@ -47,7 +47,7 @@ export const it =
         // eslint-disable-next-line no-empty-pattern
         async ({}, use) => {
           const mockOidcServer = createMockOidcServers()
-          mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+          mockOidcServer.listen({ onUnhandledFrame: 'warn' })
 
           await use(mockOidcServer)
 
