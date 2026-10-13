@@ -9,14 +9,11 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 
 export const organisationPath = '/organisations/{organisationNumber}'
 export const yearsPath = `${organisationPath}/years`
-export const registrationsPath = `${organisationPath}/registrations`
-export const registrationPath = `${registrationsPath}/{registrationNumber}`
-export const accreditationsPath = `${registrationPath}/accreditations`
-export const accreditationPath = `${accreditationsPath}/{year}`
+export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
+export const accreditationPath = `${registrationPath}/accreditations/{year}`
 
 /** @typedef {{ organisationNumber: number }} OrganisationParams */
 /** @typedef {OrganisationParams & { registrationNumber: string }} RegistrationParams */
-/** @typedef {RegistrationParams & { year: string }} AccreditationParams */
 
 export const organisationParams = {
   organisationNumber: Joi.number().integer().positive().required()
@@ -24,12 +21,6 @@ export const organisationParams = {
 export const registrationParams = {
   ...organisationParams,
   registrationNumber: Joi.string().required()
-}
-export const accreditationParams = {
-  ...registrationParams,
-  year: Joi.string()
-    .pattern(/^\d{4}$/)
-    .required()
 }
 
 /**
@@ -68,28 +59,6 @@ export const viewRoute = (path, params, schema, select) => ({
     return h.response(select(organisation, request.params)).code(StatusCodes.OK)
   }
 })
-
-/**
- * @param {Organisation} organisation
- * @param {RegistrationParams} params
- */
-export const registration = (organisation, { registrationNumber }) =>
-  found(organisation.registrations, registrationNumber, 'Registration')
-
-/**
- * @template T
- * @param {Record<string, T>} record
- * @param {string} key
- * @param {string} what
- * @returns {T}
- */
-export function found(record, key, what) {
-  const value = Object.hasOwn(record, key) ? record[key] : undefined
-  if (value === undefined) {
-    throw Boom.notFound(`${what} not found`)
-  }
-  return value
-}
 
 /**
  * @param {ViewRequest<OrganisationParams>} request
