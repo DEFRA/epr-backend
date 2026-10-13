@@ -10,6 +10,7 @@ import {
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { S3Client } from '@aws-sdk/client-s3'
+import { onUnhandledFrame } from '#vite/setup-msw.js'
 import { createPublicRegisterRepository } from './public-register.js'
 
 const mockStorage = new Map()
@@ -22,7 +23,7 @@ const server = setupServer(
   })
 )
 
-beforeAll(() => server.listen())
+beforeAll(() => server.listen({ onUnhandledFrame }))
 afterAll(() => server.close())
 
 beforeEach(() => {

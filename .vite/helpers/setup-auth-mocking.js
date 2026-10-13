@@ -1,4 +1,5 @@
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
+import { onUnhandledFrame } from '#vite/setup-msw.js'
 import { cognitoJwksUrl } from './mock-cognito-jwks.js'
 
 export { cognitoJwksUrl }
@@ -9,7 +10,7 @@ export function setupAuthContext() {
   // Set up in beforeAll so it's available for createServer calls in beforeAll hooks
   beforeAll(() => {
     mockOidcServer = createMockOidcServers()
-    mockOidcServer.listen({ onUnhandledFrame: 'error' })
+    mockOidcServer.listen({ onUnhandledFrame })
   })
 
   afterEach(() => {
