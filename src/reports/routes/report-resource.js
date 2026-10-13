@@ -42,6 +42,8 @@ import {
  *   endDate: string,
  *   dueDate?: string,
  *   status: StoredStatus | typeof PREVIEW_STATUS,
+ *   createdAt?: string,
+ *   createdBy?: Person,
  *   submittedAt?: string,
  *   submittedBy?: Person,
  *   version?: number,
@@ -131,6 +133,8 @@ const toStoredResource = (report) => ({
   endDate: report.endDate,
   dueDate: report.dueDate,
   status: report.status.currentStatus,
+  createdAt: report.status.created.at,
+  createdBy: toPerson(report.status.created.by),
   ...submission(report.status),
   version: report.version,
   canRequestResubmission: report.canRequestResubmission,
@@ -245,6 +249,8 @@ const storedReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
+  createdAt: Joi.string().isoDate().required(),
+  createdBy: personSchema.required(),
   submittedAt: Joi.string().isoDate(),
   submittedBy: personSchema,
   version: Joi.number().integer().min(1).required(),
