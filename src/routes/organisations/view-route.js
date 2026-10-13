@@ -8,6 +8,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 export const organisationPath = '/organisations/{organisationNumber}'
+export const yearsPath = `${organisationPath}/years`
 export const registrationsPath = `${organisationPath}/registrations`
 export const registrationPath = `${registrationsPath}/{registrationNumber}`
 export const accreditationsPath = `${registrationPath}/accreditations`

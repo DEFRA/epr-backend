@@ -3,6 +3,7 @@ import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { RECORD_CHANGE } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
@@ -60,35 +61,19 @@ const submittedState = ({ rowId = '10001', type = 'received', data }) => [
   })
 ]
 
-/** @type {ProcessingTypeSchemas} Single-date-field table schemas (most tables). */
-const SINGLE_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
-  /** @type {unknown} */ ({
-    RECEIVED_LOADS_FOR_REPROCESSING: {
-      reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
-      wasteRecordType: 'received',
-      sheetName: 'Received',
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: Number(data.GROSS_WEIGHT) || 0
-      })
-    }
+const STUB_RECEIVED_SCHEMA = {
+  wasteRecordType: 'received',
+  sheetName: 'Received',
+  classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+    outcome: ROW_OUTCOME.INCLUDED,
+    reasons: [],
+    transactionAmount: Number(data.GROSS_WEIGHT) || 0
   })
-)
+}
 
-/** @type {ProcessingTypeSchemas} Registered-only table schemas (monthly dates as YYYY-MM). */
-const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
+const STUB_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   /** @type {unknown} */ ({
-    RECEIVED_LOADS_FOR_REPROCESSING: {
-      reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
-      wasteRecordType: 'received',
-      sheetName: 'Received',
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: Number(data.GROSS_WEIGHT) || 0
-      })
-    }
+    RECEIVED_LOADS_FOR_REPROCESSING: STUB_RECEIVED_SCHEMA
   })
 )
 
@@ -151,7 +136,8 @@ const classificationContext = /** @type {ClassificationContext} */ (
 
 const baseParams = {
   cadence: /** @type {'monthly' | 'quarterly'} */ ('monthly'),
-  tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+  tableSchemas: STUB_TABLE_SCHEMAS,
+  operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
   classificationContext,
   submittedRowStatesByKey: /** @type {Map<string, WasteRecordState>} */ (
     new Map()
@@ -393,7 +379,7 @@ describe('classifyByPeriodStatus', () => {
     it('handles month-only dates correctly', () => {
       const result = run({
         cadence: 'quarterly',
-        tableSchemas: REGISTERED_ONLY_TABLE_SCHEMAS,
+        operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
         periodicReports: [
           buildSubmittedReport({ cadence: 'quarterly', period: 1 })
         ],
@@ -489,7 +475,7 @@ describe('classifyByPeriodStatus', () => {
       const schemasWithExcluded = /** @type {ProcessingTypeSchemas} */ (
         /** @type {unknown} */ ({
           RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...SINGLE_DATE_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_REPROCESSING,
+            ...STUB_RECEIVED_SCHEMA,
             classifyForWasteBalance: () => ({
               outcome: ROW_OUTCOME.EXCLUDED,
               reasons: []
