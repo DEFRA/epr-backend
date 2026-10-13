@@ -24,7 +24,8 @@ import {
   validateMarkSubmittedReportsRequiringResubmission,
   validateMarkSubmittedReportRequiringResubmissionByOperator,
   validateUpdateReport,
-  validateUpdateReportStatus
+  validateUpdateReportStatus,
+  validateClearClosedPeriodRestated
 } from './validation.js'
 
 /**
@@ -605,6 +606,50 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
 }
 
 /**
+ * Mirrors mongodb-flagging.js's conditional write, returning `null` when
+ * nothing matched.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').ClearClosedPeriodRestatedParams} params
+ * @returns {Promise<import('./port.js').ClearClosedPeriodRestatedResult | null>}
+ */
+const clearClosedPeriodRestated = async (reports, params) => {
+  const { reportId, summaryLogId } = validateClearClosedPeriodRestated(params)
+
+  const report = reports.get(reportId)
+  const closedPeriodRestated =
+    report?.resubmissionRequired?.closedPeriodRestated
+
+  if (
+    report?.status.currentStatus !== REPORT_STATUS.SUBMITTED ||
+    closedPeriodRestated?.summaryLogId !== summaryLogId
+  ) {
+    return null
+  }
+
+  const { closedPeriodRestated: _cleared, ...remaining } =
+    report.resubmissionRequired
+  const { resubmissionRequired: _previous, ...rest } = report
+
+  reports.set(reportId, {
+    ...rest,
+    ...(Object.keys(remaining).length > 0 && {
+      resubmissionRequired: remaining
+    }),
+    version: report.version + 1
+  })
+
+  return structuredClone({
+    reportId: report.id,
+    year: report.year,
+    cadence: report.cadence,
+    period: report.period,
+    submissionNumber: report.submissionNumber,
+    closedPeriodRestated
+  })
+}
+
+/**
  * Returns true when any report for the org/reg was submitted strictly after
  * `since`. SUBMITTED is terminal and each submission is a distinct document, so
  * the denormalised `status.submitted` slot is the single submission instant.
@@ -671,6 +716,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
       markSubmittedReportsRequiringResubmission(reports, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
+    clearClosedPeriodRestated: (params) =>
+      clearClosedPeriodRestated(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })

@@ -372,6 +372,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
+    clearUnwarrantedResubmissionFlags: {
+      doc: 'Feature Flag: Let the startup sweep clear closed-period resubmission flags whose reported figures are unchanged, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_CLEAR_UNWARRANTED_RESUBMISSION_FLAGS'
+    },
     resubmissionFigureGate: {
       doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',
       format: Boolean,

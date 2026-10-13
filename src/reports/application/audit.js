@@ -10,6 +10,7 @@ import {
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
+ *   ClearClosedPeriodRestatedResult,
  *   MarkReportStaleResult,
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   Report
@@ -275,6 +276,46 @@ export async function auditMarkReportsRequiringResubmission({
     field: 'resubmissionRequired',
     results: reportsRequiringResubmission
   })
+}
+
+/**
+ * Audits the removal of a closed-period resubmission flag whose restated
+ * figures turned out unchanged.
+ * @param {{
+ *   systemLogsRepository: SystemLogsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   cleared: ClearClosedPeriodRestatedResult
+ * }} params
+ */
+export async function auditClearReportRequiringResubmission({
+  systemLogsRepository,
+  organisationId,
+  registrationId,
+  cleared
+}) {
+  const payload = {
+    user: SYSTEM_ACTOR,
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: 'clear-requiring-resubmission'
+    },
+    context: {
+      organisationId,
+      registrationId,
+      year: cleared.year,
+      cadence: cleared.cadence,
+      period: cleared.period,
+      submissionNumber: cleared.submissionNumber,
+      reportId: cleared.reportId,
+      previous: { closedPeriodRestated: cleared.closedPeriodRestated },
+      next: { closedPeriodRestated: null }
+    }
+  }
+
+  safeAudit(payload)
+  await recordSystemLogs(systemLogsRepository, [payload])
 }
 
 /**

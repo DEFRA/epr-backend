@@ -2,7 +2,8 @@ import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
-  validateMarkSubmittedReportRequiringResubmissionByOperator
+  validateMarkSubmittedReportRequiringResubmissionByOperator,
+  validateClearClosedPeriodRestated
 } from './validation.js'
 import { latestSubmissionPerPeriod } from '#root/reports/repository/helpers.js'
 import {
@@ -332,5 +333,70 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
       ...doc.resubmissionRequired,
       operatorRequested
     }
+  }
+}
+
+/**
+ * Removes the `closedPeriodRestated` flag set by `summaryLogId`, or the whole
+ * `resubmissionRequired` when that was its only reason. The version guard makes
+ * a concurrent re-flag win: the write then matches nothing and returns `null`.
+ *
+ * @param {Db} db
+ * @param {import('./port.js').ClearClosedPeriodRestatedParams} params
+ * @returns {Promise<import('./port.js').ClearClosedPeriodRestatedResult | null>}
+ */
+export const performClearClosedPeriodRestated = async (db, params) => {
+  const { reportId, summaryLogId } = validateClearClosedPeriodRestated(params)
+
+  const doc = await reportsCollection(db).findOne(
+    {
+      id: reportId,
+      'status.currentStatus': REPORT_STATUS.SUBMITTED,
+      'resubmissionRequired.closedPeriodRestated.summaryLogId': summaryLogId
+    },
+    {
+      projection: {
+        _id: 0,
+        id: 1,
+        version: 1,
+        year: 1,
+        cadence: 1,
+        period: 1,
+        submissionNumber: 1,
+        resubmissionRequired: 1
+      }
+    }
+  )
+
+  if (!doc) {
+    return null
+  }
+
+  // The filter matched on the flag, so it is present.
+  const { closedPeriodRestated, ...remaining } =
+    /** @type {{ closedPeriodRestated: import('./port.js').ResubmissionClosedPeriodRestated }} */ (
+      doc.resubmissionRequired
+    )
+  const field =
+    Object.keys(remaining).length > 0
+      ? 'resubmissionRequired.closedPeriodRestated'
+      : 'resubmissionRequired'
+
+  const { modifiedCount } = await reportsCollection(db).updateOne(
+    { id: reportId, version: doc.version },
+    { $unset: { [field]: '' }, $inc: { version: 1 } }
+  )
+
+  if (modifiedCount === 0) {
+    return null
+  }
+
+  return {
+    reportId: doc.id,
+    year: doc.year,
+    cadence: doc.cadence,
+    period: doc.period,
+    submissionNumber: doc.submissionNumber,
+    closedPeriodRestated
   }
 }

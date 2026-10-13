@@ -201,6 +201,25 @@
  */
 
 /**
+ * Parameters for {@link ReportsRepository.clearClosedPeriodRestated}.
+ * @typedef {Object} ClearClosedPeriodRestatedParams
+ * @property {string} reportId
+ * @property {string} summaryLogId - the summary log the flag must still name
+ */
+
+/**
+ * Result of {@link ReportsRepository.clearClosedPeriodRestated}, carrying the
+ * cleared flag for auditing.
+ * @typedef {Object} ClearClosedPeriodRestatedResult
+ * @property {string} reportId
+ * @property {number} year
+ * @property {string} cadence
+ * @property {number} period
+ * @property {number} submissionNumber
+ * @property {ResubmissionClosedPeriodRestated} closedPeriodRestated
+ */
+
+/**
  * @typedef {Object} Report
  * @property {string} id
  * @property {number} version
@@ -411,6 +430,11 @@
  *   resubmission at the operator's own request, conditional on it still
  *   being `submitted` and not already flagged this way. Returns `null` when
  *   the write matched nothing.
+ * @property {(params: ClearClosedPeriodRestatedParams) => Promise<ClearClosedPeriodRestatedResult | null>} clearClosedPeriodRestated
+ *   Removes a submitted report's `resubmissionRequired.closedPeriodRestated`,
+ *   conditional on it still naming `summaryLogId`, leaving `operatorRequested`
+ *   untouched. Removes `resubmissionRequired` altogether when no reason remains.
+ *   Returns `null` when the write matched nothing.
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
  *   Returns true when any report for the org/reg was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),

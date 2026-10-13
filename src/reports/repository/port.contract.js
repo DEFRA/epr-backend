@@ -10,6 +10,7 @@ import { testMarkActiveReportsStaleForSummaryLogBehaviour } from './contract/mar
 import { testMarkActiveReportsStaleForPrnCancellationBehaviour } from './contract/markActiveReportsStaleForPrnCancellation.contract.js'
 import { testMarkSubmittedReportsRequiringResubmissionBehaviour } from './contract/markSubmittedReportsRequiringResubmission.contract.js'
 import { testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour } from './contract/markSubmittedReportRequiringResubmissionByOperator.contract.js'
+import { testClearClosedPeriodRestatedBehaviour } from './contract/clearClosedPeriodRestated.contract.js'
 import { testHasReportSubmittedSinceBehaviour } from './contract/hasReportSubmittedSince.contract.js'
 
 export const testReportsRepositoryContract = (it) => {
@@ -25,5 +26,6 @@ export const testReportsRepositoryContract = (it) => {
   testMarkActiveReportsStaleForPrnCancellationBehaviour(it)
   testMarkSubmittedReportsRequiringResubmissionBehaviour(it)
   testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour(it)
+  testClearClosedPeriodRestatedBehaviour(it)
   testHasReportSubmittedSinceBehaviour(it)
 }

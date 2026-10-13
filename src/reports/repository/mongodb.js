@@ -23,7 +23,8 @@ import {
   performMarkActiveReportsStaleForSummaryLog,
   performMarkActiveReportsStaleForPrnCancellation,
   performMarkSubmittedReportsRequiringResubmission,
-  performMarkSubmittedReportRequiringResubmissionByOperator
+  performMarkSubmittedReportRequiringResubmissionByOperator,
+  performClearClosedPeriodRestated
 } from './mongodb-flagging.js'
 
 /**
@@ -463,6 +464,8 @@ export const createReportsRepository = async (db) => {
       performMarkSubmittedReportsRequiringResubmission(db, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
+    clearClosedPeriodRestated: (params) =>
+      performClearClosedPeriodRestated(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
