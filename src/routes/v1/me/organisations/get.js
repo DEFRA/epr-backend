@@ -21,7 +21,7 @@ import { StatusCodes } from 'http-status-codes'
  *   id: string
  *   name: string
  *   orgId: number
- *   refId: string
+ *   referenceNumber: string
  * }} EprOrganisationSummary
  */
 
@@ -151,7 +151,7 @@ export const organisationsLinkedGetAll = {
           id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,
           orgId: linkedOrg.orgId,
-          refId: linkedOrg.id,
+          referenceNumber: linkedOrg.id,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
           linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
         }
@@ -161,7 +161,7 @@ export const organisationsLinkedGetAll = {
       id: unlinkedOrg.id,
       name: unlinkedOrg.companyDetails.name,
       orgId: unlinkedOrg.orgId,
-      refId: unlinkedOrg.id
+      referenceNumber: unlinkedOrg.id
     }))
 
     try {
