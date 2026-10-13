@@ -29,6 +29,17 @@ export function yearBounds(year) {
 }
 
 /**
+ * The last day of `year`, or `today` while the year is still running.
+ * @param {number} year
+ * @param {CalendarDate} today
+ * @returns {CalendarDate}
+ */
+export function yearEndOrToday(year, today) {
+  const { end } = yearBounds(year)
+  return end.localeCompare(today) < 0 ? end : today
+}
+
+/**
  * Whether `year` is later than the current calendar year — a year that
  * hasn't started yet, so nothing can be valid for it.
  * @param {number} year

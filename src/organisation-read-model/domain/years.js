@@ -1,9 +1,8 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
+import { yearEndOrToday } from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
 import { approvedYears } from './status-timeline.js'
 
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Organisation, Registration } from './model.js' */
 
 /**
@@ -20,18 +19,6 @@ export const organisationYears = (organisation, now = new Date()) => {
     ({ statusTimeline }) => approvedYears(statusTimeline, today)
   )
   return [...new Set(years)].sort((a, b) => b - a)
-}
-
-/**
- * The year's last day, or today while the year is still running.
- *
- * @param {number} year
- * @param {CalendarDate} today
- * @returns {CalendarDate}
- */
-const yearEndOrToday = (year, today) => {
-  const { end } = yearBounds(year)
-  return end.localeCompare(today) < 0 ? end : today
 }
 
 /**

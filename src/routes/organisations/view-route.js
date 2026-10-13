@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { yearSchema } from '#common/validation/year-schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
@@ -23,10 +22,6 @@ export const registrationParams = {
   ...organisationParams,
   registrationNumber: Joi.string().required()
 }
-
-/** @typedef {{ year?: number }} OrganisationQuery */
-
-export const organisationQuery = { year: yearSchema() }
 
 /**
  * @template [Q=object]

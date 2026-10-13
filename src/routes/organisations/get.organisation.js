@@ -1,9 +1,12 @@
+import { yearSchema } from '#common/validation/year-schema.js'
 import { organisationInYear } from '#organisation-read-model/domain/years.js'
 import { organisationViewSchema } from './response.schema.js'
-import { organisationPath, organisationQuery, viewRoute } from './view-route.js'
+import { organisationPath, viewRoute } from './view-route.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationQuery } from './view-route.js' */
+/** @typedef {{ year?: number }} OrganisationQuery */
+
+const organisationQuery = { year: yearSchema() }
 
 /**
  * @param {Organisation} organisation
