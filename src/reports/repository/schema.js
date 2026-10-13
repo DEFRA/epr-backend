@@ -121,7 +121,7 @@ const finalDestinationSchema = Joi.object({
   tonnageSentOn: tonnage().required()
 })
 
-const wasteSentSchema = Joi.object({
+export const wasteSentSchema = Joi.object({
   tonnageSentToReprocessor: tonnage().required(),
   tonnageSentToExporter: tonnage().required(),
   tonnageSentToAnotherSite: tonnage().required(),
