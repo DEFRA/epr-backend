@@ -97,30 +97,6 @@ const accreditedLedgerGet = {
     h.response({ events: await readLedgerEvents(request) }).code(StatusCodes.OK)
 }
 
-const balanceReadScope = [SCOPES.organisationRead, SCOPES.adminRead]
-
-const accreditedWasteBalanceGet = {
-  method: 'GET',
-  options: {
-    auth: { scope: balanceReadScope },
-    tags: ['api'],
-    response: { schema: wasteBalanceSchema }
-  },
-  /**
-   * @param {ResolvedRequest} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { organisationId, registrationId, accreditationId } = request.params
-    const balance = await request.wasteBalanceService.currentBalance({
-      organisationId,
-      registrationId,
-      accreditationId: /** @type {string} */ (accreditationId)
-    })
-    return h.response(toBalanceBody(balance)).code(StatusCodes.OK)
-  }
-}
-
 /**
  * The balance of each registration's accreditation for the year. A
  * registration with none for the year, or that the read model does not serve,
@@ -129,7 +105,7 @@ const accreditedWasteBalanceGet = {
 const organisationWasteBalancesGet = {
   method: 'GET',
   options: {
-    auth: { scope: balanceReadScope },
+    auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
     validate: { query: Joi.object({ year: yearSchema().required() }) },
     response: {
@@ -198,12 +174,6 @@ export const wasteBalanceRoutesByNaturalKey = [
     {
       accredited: true
     }
-  ),
-  atNaturalKeys(
-    accreditedWasteBalanceGet,
-    `${accreditationPath}/waste-balance`,
-    yearParams,
-    { accredited: true }
   ),
   atNaturalKeys(
     organisationWasteBalancesGet,

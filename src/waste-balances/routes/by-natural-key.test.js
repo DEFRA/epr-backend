@@ -250,62 +250,6 @@ describe('ledger and waste balance routes by natural key', () => {
     })
   })
 
-  describe('GET R/accreditations/{year}/waste-balance', () => {
-    it('serves the balance with its December portion', async () => {
-      await server.app.ledgerRepository.appendEvents([
-        buildLedgerEvent({
-          ...accreditedLedgerId,
-          closingBalance: {
-            amount: 120,
-            availableAmount: 100,
-            decemberAmount: 10,
-            decemberAvailableAmount: 10
-          }
-        })
-      ])
-
-      const response = await get(`${accreditationPath(2026)}/waste-balance`)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toEqual({
-        amount: 120,
-        availableAmount: 100,
-        decemberAmount: 10,
-        decemberAvailableAmount: 10,
-        nonDecemberAvailableAmount: 90
-      })
-    })
-
-    it('serves no December fields for a balance without that portion', async () => {
-      await server.app.ledgerRepository.appendEvents([
-        buildLedgerEvent(accreditedLedgerId)
-      ])
-
-      const response = await get(`${accreditationPath(2026)}/waste-balance`)
-
-      expect(body(response)).toEqual({ amount: 100, availableAmount: 100 })
-    })
-
-    it('serves zeros for an accreditation with no ledger', async () => {
-      const response = await get(`${accreditationPath(2026)}/waste-balance`)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toEqual({ amount: 0, availableAmount: 0 })
-    })
-
-    it('returns 404 for a year the registration holds no accreditation', async () => {
-      const response = await get(`${accreditationPath(2027)}/waste-balance`)
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-
-    it('returns 422 for a year out of range', async () => {
-      const response = await get(`${accreditationPath(2023)}/waste-balance`)
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-  })
-
   describe('GET /organisations/{organisationNumber}/waste-balances?year=', () => {
     const wasteBalances = (query) =>
       `/organisations/${organisation.orgId}/waste-balances${query}`
@@ -346,6 +290,25 @@ describe('ledger and waste balance routes by natural key', () => {
           decemberAmount: 10,
           decemberAvailableAmount: 10,
           nonDecemberAvailableAmount: 90
+        }
+      ])
+    })
+
+    it('serves zeros for an accreditation with no ledger', async () => {
+      const response = await get(wasteBalances('?year=2026'))
+
+      expect(body(response)).toEqual([
+        {
+          registrationNumber: REPROCESSOR_NUMBER,
+          year: 2026,
+          amount: 0,
+          availableAmount: 0
+        },
+        {
+          registrationNumber: EXPORTER_NUMBER,
+          year: 2026,
+          amount: 0,
+          availableAmount: 0
         }
       ])
     })
