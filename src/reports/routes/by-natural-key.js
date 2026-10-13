@@ -20,11 +20,19 @@ import { reportsPost } from './post.js'
 import { reportsRequestResubmission } from './request-resubmission.js'
 import { reportsStatus } from './status.js'
 import { reportsUnsubmit } from './unsubmit.js'
+import { reportResourceSchema, toReportResource } from './report-resource.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 import { submissionNumberSchema } from './shared.js'
 
 /**
+ * @import { ResponseObject } from '@hapi/hapi'
+ * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NaturalKeyResponse, NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { PreviewBody, StoredReportBody } from './report-resource.js'
+ *
+ * @typedef {ResolvedRequest & { params: { submissionNumber: number } }} SubmissionRequest
+ * @typedef {StoredReportBody | PreviewBody} ReportDetailBody
  */
 
 /**
@@ -50,6 +58,80 @@ const streams = [
     accredited: true
   }
 ]
+
+/**
+ * @param {NaturalKeyResponse['map']} map
+ * @returns {NaturalKeyResponse}
+ */
+const respondWithReport = (map) => ({
+  schema: reportResourceSchema,
+  failAction: reportResponseFailAction,
+  map
+})
+
+/**
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ * @param {ReportDetailBody} body
+ * @param {number} statusCode
+ */
+const serveReport = (request, h, body, statusCode) =>
+  h
+    .response(
+      toReportResource(body, {
+        submissionNumber: request.params.submissionNumber
+      })
+    )
+    .code(statusCode)
+
+/**
+ * Serves the report detail handler's body as the report resource.
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ * @param {ResponseObject} response
+ */
+const mapDetail = (request, h, response) =>
+  serveReport(
+    request,
+    h,
+    /** @type {ReportDetailBody} */ (response.source),
+    response.statusCode
+  )
+
+/**
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ * @param {ResponseObject} response
+ */
+const mapCreated = (request, h, response) =>
+  serveReport(
+    request,
+    h,
+    /** @type {StoredReportBody} */ ({
+      .../** @type {object} */ (response.source),
+      canRequestResubmission: false
+    }),
+    response.statusCode
+  )
+
+/**
+ * Serves the report as it stands after a command, read the way GET reads it.
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ */
+const mapCommand = async (request, h) =>
+  mapDetail(
+    request,
+    h,
+    /** @type {ResponseObject} */ (
+      await reportsGetDetail.handler(
+        /** @type {Parameters<typeof reportsGetDetail.handler>[0]} */ (
+          /** @type {unknown} */ (request)
+        ),
+        h
+      )
+    )
+  )
 
 /**
  * An accredited report covers only periods from the accreditation's start: a
@@ -79,22 +161,27 @@ const assertPeriodWithinAccreditation = async (request) => {
   }
 }
 
-/** @type {[NaturalKeyRoute, string][]} */
+/** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
 const submissionRoutes = [
-  [reportsGetDetail, ''],
-  [reportsPost, ''],
-  [reportsPatch, ''],
+  [reportsGetDetail, '', respondWithReport(mapDetail)],
+  [reportsPost, '', respondWithReport(mapCreated)],
+  [reportsPatch, '', respondWithReport(mapCommand)],
   [reportsDelete, ''],
-  [reportsStatus, '/status'],
-  [reportsUnsubmit, '/unsubmit'],
-  [reportsRequestResubmission, '/request-resubmission']
+  [reportsStatus, '/status', respondWithReport(mapCommand)],
+  [reportsUnsubmit, '/unsubmit', respondWithReport(mapCommand)],
+  [
+    reportsRequestResubmission,
+    '/request-resubmission',
+    respondWithReport(mapCommand)
+  ]
 ]
 
 export const reportRoutesByNaturalKey = [
   ...streams.flatMap(({ path, params, accredited }) =>
-    submissionRoutes.map(([route, action]) =>
+    submissionRoutes.map(([route, action, respond]) =>
       atNaturalKeys(route, `${path}${action}`, params, {
         accredited,
+        respond,
         ...(accredited && { before: assertPeriodWithinAccreditation })
       })
     )
