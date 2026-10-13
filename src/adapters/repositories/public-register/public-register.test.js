@@ -1,30 +1,18 @@
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  beforeAll,
-  afterAll
-} from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
 import { S3Client } from '@aws-sdk/client-s3'
-import { onUnhandledFrame } from '#vite/setup-msw.js'
+import { setupMsw } from '#vite/setup-msw.js'
 import { createPublicRegisterRepository } from './public-register.js'
 
 const mockStorage = new Map()
 
-const server = setupServer(
+setupMsw(
   http.get('https://test-bucket.s3.amazonaws.com/:fileName', ({ params }) => {
     const { fileName } = params
     const data = mockStorage.get(fileName)
     return HttpResponse.text(data || '')
   })
 )
-
-beforeAll(() => server.listen({ onUnhandledFrame }))
-afterAll(() => server.close())
 
 beforeEach(() => {
   mockStorage.clear()

@@ -11,15 +11,15 @@ const awsImdsHandlers = [
   })
 ]
 
+export const mockOidcHandlers = [
+  ...entraIdOidcHandlers,
+  ...defraIdOidcHandlers,
+  ...cognitoJwksHandlers,
+  ...awsImdsHandlers
+]
+
 /**
  * Create and configure MSW server for OIDC tests
  * @returns {import('msw/node').SetupServer}
  */
-export const createMockOidcServers = () => {
-  return setupServer(
-    ...entraIdOidcHandlers,
-    ...defraIdOidcHandlers,
-    ...cognitoJwksHandlers,
-    ...awsImdsHandlers
-  )
-}
+export const createMockOidcServers = () => setupServer(...mockOidcHandlers)
