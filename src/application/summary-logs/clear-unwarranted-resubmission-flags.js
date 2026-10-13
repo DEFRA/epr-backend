@@ -132,7 +132,6 @@ const clearFlag = async (deps, { report, flaggedBy, isDryRun }) => {
     reportId: report.id,
     summaryLogId: flaggedBy
   })
-  // Re-flagged or resubmitted since it was read: the newer state stands.
   if (!cleared) {
     return 'skipped'
   }

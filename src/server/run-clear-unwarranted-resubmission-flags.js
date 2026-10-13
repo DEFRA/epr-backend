@@ -69,7 +69,6 @@ const buildDependencies = async (server) => ({
 
 /** @param {StartedServer} server */
 const runSweep = async (server) => {
-  // Flag off (the default) only reports; on lets it clear.
   const isDryRun = !config.get('featureFlags.clearUnwarrantedResubmissionFlags')
 
   const { outcomes, failures } = await clearUnwarrantedResubmissionFlags(
