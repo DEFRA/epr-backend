@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-const wasteBalanceSchema = Joi.object({
+export const wasteBalanceSchema = Joi.object({
   amount: Joi.number().required(),
   availableAmount: Joi.number().required(),
   // Present only when the accreditation holds a separate December portion.
