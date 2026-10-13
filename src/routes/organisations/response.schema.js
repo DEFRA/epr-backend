@@ -83,11 +83,6 @@ const exporterAccreditationSchema = Joi.object({
  */
 const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
 
-export const accreditationViewSchema = Joi.alternatives().try(
-  exporterAccreditationSchema,
-  reprocessorAccreditationSchema
-)
-
 const ukAddressSchema = Joi.alternatives().try(
   Joi.object({
     county: Joi.string(),
@@ -108,7 +103,7 @@ const registrationCommon = {
   validFrom: isoDate.required()
 }
 
-export const registrationViewSchema = Joi.alternatives().try(
+const registrationViewSchema = Joi.alternatives().try(
   Joi.object({
     accreditations: keyedByYear(reprocessorAccreditationSchema),
     ...registrationCommon,
@@ -156,15 +151,6 @@ export const organisationViewSchema = Joi.object({
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
 })
-
-export const registrationsViewResponseSchema = Joi.object({
-  registrations: registrationsViewSchema
-})
-
-export const accreditationsViewResponseSchema = Joi.alternatives().try(
-  Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) }),
-  Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) })
-)
 
 const servedYear = yearSchema().custom((year, helpers) =>
   isFutureYear(year) ? helpers.error('any.invalid') : year
