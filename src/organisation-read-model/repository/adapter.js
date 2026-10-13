@@ -313,7 +313,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
  * @returns {StatusTimeline}
  */
-function toStatusTimeline(statusHistory) {
+export function toStatusTimeline(statusHistory) {
   return Object.fromEntries(
     statusHistory.map(({ status, updatedAt }) => [
       new Date(updatedAt).toISOString().slice(0, 10),

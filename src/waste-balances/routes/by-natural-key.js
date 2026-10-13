@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
@@ -6,7 +7,8 @@ import { yearSchema } from '#common/validation/year-schema.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationsForYear,
-  isServedRegistration
+  registrationYears,
+  servedRegistrations
 } from '#routes/organisations/natural-keys.js'
 import {
   accreditationPath,
@@ -64,21 +66,26 @@ const readLedgerEvents = async (request) => {
 
 /**
  * The registered-only ledger spans a registration's years, so a year narrows
- * it to the events submitted in that year (UTC).
+ * it to the events submitted in that year (UTC). A year the registration was
+ * not approved in is not found.
  */
 const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest} request
+   * @param {LedgerRequest & { app: Required<ResolvedRecords> }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
+    const year = /** @type {number} */ (request.params.year)
+    if (!registrationYears(request.app.registration).includes(year)) {
+      throw Boom.notFound('Year not found')
+    }
     const events = await readLedgerEvents(request)
     return h
       .response({
         events: events.filter(
-          (event) => event.createdAt.getUTCFullYear() === request.params.year
+          (event) => event.createdAt.getUTCFullYear() === year
         )
       })
       .code(StatusCodes.OK)
@@ -99,8 +106,8 @@ const accreditedLedgerGet = {
 
 /**
  * The balance of each registration's accreditation for the year. A
- * registration with none for the year, or that the read model does not serve,
- * is left out.
+ * registration the read model does not serve, or without exactly one
+ * accreditation for the year, is left out, as the read model leaves it out.
  */
 const organisationWasteBalancesGet = {
   method: 'GET',
@@ -125,19 +132,18 @@ const organisationWasteBalancesGet = {
     const { organisation } = request.app
     const { year } = request.query
 
-    const accredited = organisation.registrations.flatMap((registration) => {
-      if (!isServedRegistration(organisation, registration)) {
-        return []
+    const accredited = servedRegistrations(organisation).flatMap(
+      (registration) => {
+        const accreditations = accreditationsForYear(
+          organisation,
+          registration,
+          year
+        )
+        return accreditations.length === 1
+          ? [{ registration, accreditation: accreditations[0] }]
+          : []
       }
-      const accreditations = accreditationsForYear(
-        organisation,
-        registration,
-        year
-      )
-      return accreditations.length === 1
-        ? [{ registration, accreditation: accreditations[0] }]
-        : []
-    })
+    )
 
     const balances = await Promise.all(
       accredited.map(async ({ registration, accreditation }) => ({

@@ -24,7 +24,11 @@ import {
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
 const registeredOnly = reprocessor({
-  registrationNumber: REGISTERED_ONLY_NUMBER
+  registrationNumber: REGISTERED_ONLY_NUMBER,
+  statusHistory: [
+    { status: 'created', updatedAt: '2024-01-01T09:00:00.000Z' },
+    { status: 'approved', updatedAt: '2024-02-01T09:00:00.000Z' }
+  ]
 })
 const accredited = accreditation()
 const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
@@ -45,6 +49,21 @@ const organisation = buildOrganisation({
     unnumbered
   ],
   accreditations: [accredited, accreditedExport, unnumberedAccreditation]
+})
+
+const sharedNumberAccreditations = [accreditation(), accreditation()]
+const sharedNumberExportAccreditation = exporterAccreditation()
+const sharedNumberOrganisation = buildOrganisation({
+  registrations: [
+    ...sharedNumberAccreditations.map(({ id }) =>
+      reprocessor({ accreditationId: id })
+    ),
+    exporter({ accreditationId: sharedNumberExportAccreditation.id })
+  ],
+  accreditations: [
+    ...sharedNumberAccreditations,
+    sharedNumberExportAccreditation
+  ]
 })
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
@@ -89,7 +108,8 @@ describe('ledger and waste balance routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
+          partialMock(organisation),
+          partialMock(sharedNumberOrganisation)
         ]),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([issuedNote], [])
@@ -106,20 +126,20 @@ describe('ledger and waste balance routes by natural key', () => {
       await server.app.ledgerRepository.appendEvents([
         registeredOnlyEvent({
           number: 1,
-          createdAt: new Date('2026-12-31T23:59:59.999Z')
+          createdAt: new Date('2025-12-31T23:59:59.999Z')
         })
       ])
       await server.app.ledgerRepository.appendEvents([
         registeredOnlyEvent({
           number: 2,
-          createdAt: new Date('2027-01-01T00:00:00.000Z'),
-          payload: { summaryLogId: 'file-2027', creditTotal: 5 }
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          payload: { summaryLogId: 'file-2026', creditTotal: 5 }
         })
       ])
     })
 
     it('serves the registered-only events submitted in the year, and no ids', async () => {
-      const response = await get(registeredOnlyLedger(2026))
+      const response = await get(registeredOnlyLedger(2025))
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toEqual({
@@ -127,7 +147,7 @@ describe('ledger and waste balance routes by natural key', () => {
           {
             number: 1,
             kind: 'summary-log-submitted',
-            createdAt: '2026-12-31T23:59:59.999Z',
+            createdAt: '2025-12-31T23:59:59.999Z',
             createdBy: { id: 'user-1', name: 'Test User' },
             balance: {
               opening: { total: 0, available: 0 },
@@ -140,16 +160,22 @@ describe('ledger and waste balance routes by natural key', () => {
     })
 
     it('serves the next year its own events', async () => {
-      const response = await get(registeredOnlyLedger(2027))
+      const response = await get(registeredOnlyLedger(2026))
 
       expect(body(response).events.map((event) => event.number)).toEqual([2])
     })
 
-    it('serves no events for a year with none', async () => {
-      const response = await get(registeredOnlyLedger(2025))
+    it('serves no events for an approved year with none', async () => {
+      const response = await get(registeredOnlyLedger(2024))
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toEqual({ events: [] })
+    })
+
+    it('returns 404 for a year the registration was not approved in', async () => {
+      const response = await get(registeredOnlyLedger(2099))
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
     it('returns 404 for an unknown registration number', async () => {
@@ -304,6 +330,21 @@ describe('ledger and waste balance routes by natural key', () => {
           amount: 0,
           availableAmount: 0
         },
+        {
+          registrationNumber: EXPORTER_NUMBER,
+          year: 2026,
+          amount: 0,
+          availableAmount: 0
+        }
+      ])
+    })
+
+    it('leaves out registrations that share a number', async () => {
+      const response = await get(
+        `/organisations/${sharedNumberOrganisation.orgId}/waste-balances?year=2026`
+      )
+
+      expect(body(response)).toEqual([
         {
           registrationNumber: EXPORTER_NUMBER,
           year: 2026,
