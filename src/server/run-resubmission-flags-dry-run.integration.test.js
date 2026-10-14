@@ -9,6 +9,8 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 import { runResubmissionFlagsDryRun } from './run-resubmission-flags-dry-run.js'
 
@@ -35,32 +37,41 @@ const it = mongoIt.extend({
 })
 
 /**
- * A submitted report flagged by a summary log whose ledger holds no
- * submission, so there is no current data to compare against.
+ * A report submitted before any summary log, flagged by a later submission
+ * with no rows: both sides rebuild to the same empty figures.
  */
-const seedFlagWithoutCurrentData = async (/** @type {*} */ database) => {
+const seedUnwarrantedFlag = async (/** @type {*} */ database) => {
   const organisation = buildOrganisation()
   const [registration] = organisation.registrations
   await (await createOrganisationsRepository(database))().insert(organisation)
 
+  const summaryLog = summaryLogFactory.submitted({
+    organisationId: organisation.id,
+    registrationId: registration.id
+  })
   await (
     await createSummaryLogsRepository(database, {
       s3Client: /** @type {*} */ ({}),
       preSignedUrlExpiry: 60
     })
-  )(logger).insert(
-    'sl-restated',
-    summaryLogFactory.submitted({
+  )(logger).insert('sl-restated', summaryLog)
+  await (
+    await createMongoLedgerRepository(database)
+  )().appendEvents([
+    buildLedgerEvent({
       organisationId: organisation.id,
-      registrationId: registration.id
+      registrationId: registration.id,
+      accreditationId: summaryLog.accreditationId,
+      payload: { summaryLogId: summaryLog.file.id, creditTotal: 0 }
     })
-  )
+  ])
 
   const reportsRepository = (await createReportsRepository(database))()
   await createAndSubmitReport(reportsRepository, {
     organisationId: organisation.id,
     registrationId: registration.id,
-    ...JANUARY_2024
+    ...JANUARY_2024,
+    source: { summaryLogId: null, lastUploadedAt: null }
   })
   await reportsRepository.markSubmittedReportsRequiringResubmission({
     organisationId: organisation.id,
@@ -75,7 +86,7 @@ describe('runResubmissionFlagsDryRun (integration)', () => {
   it('evaluates flags through the real repositories', async (/** @type {*} */ {
     database
   }) => {
-    await seedFlagWithoutCurrentData(database)
+    await seedUnwarrantedFlag(database)
     const server = /** @type {*} */ ({
       db: database,
       locker: grantingLocker()
@@ -86,7 +97,7 @@ describe('runResubmissionFlagsDryRun (integration)', () => {
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission flags dry run: flagged=1 wouldClear=0 keptOperatorRequested=0 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=1 failed=0'
+        'Resubmission flags dry run: flagged=1 wouldClear=1 keptOperatorRequested=0 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=0 failed=0'
     })
   })
 })

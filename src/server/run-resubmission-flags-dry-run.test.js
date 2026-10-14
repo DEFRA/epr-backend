@@ -146,7 +146,7 @@ describe('runResubmissionFlagsDryRun', () => {
         outcome({
           verdict: 'kept',
           reason: 'cannot-compare',
-          detail: 'the registration has no submitted summary log'
+          detail: 'the summary log that set the flag no longer exists'
         })
       ],
       failures: [{ reportId: 'report-4', error: 'connection reset' }]

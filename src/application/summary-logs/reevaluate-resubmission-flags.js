@@ -97,10 +97,12 @@ const compareWithCurrent = async (deps, { report, period, flaggedBy }) => {
     /** @type {SubmittedSummaryLog} */ (flaggingLog.summaryLog),
     registration
   )
-  // An empty after-side would read as every field changed.
+  // Submit appends to this ledger before it sets the flag.
   const head = await latestSubmittedSummaryLog(deps.ledgerRepository, ledgerId)
   if (!head) {
-    return { cannotCompare: 'the registration has no submitted summary log' }
+    throw new Error(
+      `No submission on the ledger of summary log ${flaggedBy}, which set the flag`
+    )
   }
 
   const context = await buildFiguresContext({

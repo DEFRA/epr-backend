@@ -400,6 +400,32 @@ describe('reevaluateResubmissionFlags', () => {
     expect(failures).toEqual([])
   })
 
+  it('records a failure when the ledger of the summary log that set the flag holds no submission', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-nonfigure',
+      'file-nonfigure',
+      AMENDED_REFERENCE
+    )
+    vi.spyOn(
+      env.ledgerRepository,
+      'findLatestInLedgerByKind'
+    ).mockResolvedValue(null)
+
+    const { outcomes, failures } = await reevaluate(env)
+
+    expect(outcomes).toEqual([])
+    expect(failures).toEqual([
+      {
+        reportId,
+        error:
+          'No submission on the ledger of summary log sl-nonfigure, which set the flag'
+      }
+    ])
+  })
+
   it('records a report it fails to evaluate and carries on with the rest', async () => {
     const env = await setupEnvironment()
     await upload(
@@ -663,26 +689,6 @@ describe('reevaluateResubmissionFlags', () => {
             verdict: 'kept',
             reason: 'cannot-compare',
             detail: 'its source submission has no row states'
-          })
-        ])
-      })
-
-      it('when the registration has no submitted summary log', async () => {
-        const env = await setupEnvironment()
-        const reportId = await flagWithoutFigureChange(env)
-        vi.spyOn(
-          env.ledgerRepository,
-          'findLatestInLedgerByKind'
-        ).mockResolvedValue(null)
-
-        const { outcomes } = await reevaluate(env)
-
-        expect(outcomes).toEqual([
-          expect.objectContaining({
-            reportId,
-            verdict: 'kept',
-            reason: 'cannot-compare',
-            detail: 'the registration has no submitted summary log'
           })
         ])
       })
