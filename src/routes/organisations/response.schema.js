@@ -64,11 +64,19 @@ const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
+const statusTimelineSchema = Joi.object()
+  .pattern(
+    Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/),
+    Joi.object({ status: Joi.string().required() })
+  )
+  .required()
+
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
   status: Joi.string()
     .valid(...ACCREDITATION_STATUSES)
-    .required()
+    .required(),
+  statusTimeline: statusTimelineSchema
 }
 
 const reprocessorAccreditationSchema = Joi.object(accreditationCommon)

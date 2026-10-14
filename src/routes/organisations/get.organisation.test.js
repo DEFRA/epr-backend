@@ -54,6 +54,31 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
   })
 
+  it('serves an accreditation’s whole status timeline but no registration timeline', async () => {
+    const suspended = accreditation({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-05-01T09:00:00.000Z' }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: suspended.id })],
+      accreditations: [suspended]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2026].statusTimeline).toEqual({
+      '2026-01-01': { status: 'created' },
+      '2026-02-01': { status: 'approved' },
+      '2026-05-01': { status: 'suspended' }
+    })
+    expect(registration).not.toHaveProperty('statusTimeline')
+  })
+
   it('serves an organisation as the repository stores it', async () => {
     const linked = buildLinkedDefraOrg(crypto.randomUUID(), 'Defra Org')
     const organisation = buildOrganisation({
