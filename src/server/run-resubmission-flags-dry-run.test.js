@@ -215,7 +215,7 @@ describe('runResubmissionFlagsDryRun', () => {
     )
   })
 
-  it('clears flags, and logs a repair summary counting cleared and skipped, while the clearing flag is on', async () => {
+  it('passes clearFlags through and logs a repair summary counting cleared and skipped while the clearing flag is on', async () => {
     withClearingFlag(true)
     vi.mocked(reevaluateResubmissionFlags).mockResolvedValue({
       outcomes: [
@@ -273,5 +273,29 @@ describe('runResubmissionFlagsDryRun', () => {
       message: 'Failed to run resubmission flags dry run'
     })
     expect(mockLock.free).toHaveBeenCalled()
+  })
+
+  it('names the repair when skipping for the lock while the clearing flag is on', async () => {
+    withClearingFlag(true)
+    mockServer.locker.lock.mockResolvedValue(null)
+
+    await runResubmissionFlagsDryRun(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Unable to obtain lock, skipping resubmission flags repair'
+    })
+  })
+
+  it('names the repair when the run fails while the clearing flag is on', async () => {
+    withClearingFlag(true)
+    const error = new Error('mongo unavailable')
+    vi.mocked(reevaluateResubmissionFlags).mockRejectedValue(error)
+
+    await runResubmissionFlagsDryRun(mockServer)
+
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message: 'Failed to run resubmission flags repair'
+    })
   })
 })

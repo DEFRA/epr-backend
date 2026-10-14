@@ -58,13 +58,16 @@ const keptFor = (outcomes, reason) =>
 const countOf = (outcomes, verdict) =>
   outcomes.filter((outcome) => outcome.verdict === verdict).length
 
+/** @param {boolean} clearFlags */
+const modeOf = (clearFlags) => (clearFlags ? 'repair' : 'dry run')
+
 /**
  * @param {{ outcomes: FlagOutcome[], failures: unknown[] }} result
  * @param {boolean} clearFlags
  */
 const formatSummary = ({ outcomes, failures }, clearFlags) =>
   [
-    `Resubmission flags ${clearFlags ? 'repair' : 'dry run'}:`,
+    `Resubmission flags ${modeOf(clearFlags)}:`,
     `flagged=${outcomes.length + failures.length}`,
     `wouldClear=${countOf(outcomes, 'would-clear')}`,
     `cleared=${countOf(outcomes, 'cleared')}`,
@@ -98,11 +101,11 @@ const buildDependencies = async (server) => ({
   systemLogsRepository: (await createSystemLogsRepository(server.db))(logger)
 })
 
-/** @param {StartedServer} server */
-const runSweep = async (server) => {
-  const clearFlags = config.get(
-    'featureFlags.clearUnwarrantedResubmissionFlags'
-  )
+/**
+ * @param {StartedServer} server
+ * @param {boolean} clearFlags
+ */
+const runSweep = async (server, clearFlags) => {
   const result = await reevaluateResubmissionFlags(
     await buildDependencies(server),
     { clearFlags }
@@ -127,23 +130,26 @@ const runSweep = async (server) => {
  * @param {StartedServer} server
  */
 export const runResubmissionFlagsDryRun = async (server) => {
+  const clearFlags = config.get(
+    'featureFlags.clearUnwarrantedResubmissionFlags'
+  )
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
       logger.info({
-        message: 'Unable to obtain lock, skipping resubmission flags dry run'
+        message: `Unable to obtain lock, skipping resubmission flags ${modeOf(clearFlags)}`
       })
       return
     }
     try {
-      await runSweep(server)
+      await runSweep(server, clearFlags)
     } finally {
       await lock.free()
     }
   } catch (error) {
     logger.error({
       err: error,
-      message: 'Failed to run resubmission flags dry run'
+      message: `Failed to run resubmission flags ${modeOf(clearFlags)}`
     })
   }
 }
