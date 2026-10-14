@@ -554,7 +554,7 @@ describe('reevaluateResubmissionFlags', () => {
       ])
     })
 
-    it('compares against current data, not the upload that last set the flag', async () => {
+    it('keeps a flag whose figures changed in an earlier upload than the one that last set it', async () => {
       const env = await setupEnvironment()
       const reportId = await submitAndCloseJanuary(env)
       await uploadAndSubmitFlaggingEveryClosedPeriod(
@@ -578,6 +578,34 @@ describe('reevaluateResubmissionFlags', () => {
           flaggedBy: 'sl-nonfigure',
           verdict: 'kept',
           reason: 'figures-changed'
+        })
+      ])
+    })
+
+    it('compares against the latest submission, not the upload that set the flag', async () => {
+      const env = await setupEnvironment()
+      const reportId = await submitAndCloseJanuary(env)
+      await uploadAndSubmitFlaggingEveryClosedPeriod(
+        env,
+        'sl-figure',
+        'file-figure',
+        CHANGED_TONNAGE
+      )
+      await upload(
+        env,
+        'sl-reverted',
+        'file-reverted',
+        reprocessorFile(FIRST_UPLOAD)
+      )
+      await submit(env, 'sl-reverted')
+
+      const { outcomes } = await reevaluate(env)
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          flaggedBy: 'sl-figure',
+          verdict: 'would-clear'
         })
       ])
     })

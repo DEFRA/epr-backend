@@ -37,7 +37,7 @@ const formatOutcome = (outcome) => {
     `flaggedBy=${outcome.flaggedBy}`,
     `reason=${'reason' in outcome ? outcome.reason : 'none'}`,
     `changedFields=${'changedFields' in outcome ? outcome.changedFields.join(',') : 'none'}`,
-    `detail=${'detail' in outcome ? outcome.detail : 'none'}`
+    `detail=${'detail' in outcome ? JSON.stringify(outcome.detail) : 'none'}`
   ].join(' ')
 }
 

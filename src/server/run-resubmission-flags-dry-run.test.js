@@ -74,14 +74,17 @@ describe('runResubmissionFlagsDryRun', () => {
   describe('one line per flagged report', () => {
     it.each([
       {
+        name: 'would-clear',
         verdict: { verdict: 'would-clear' },
         line: `Resubmission flag would-clear: ${IDENTITY} reason=none changedFields=none detail=none`
       },
       {
+        name: 'kept, operator-requested',
         verdict: { verdict: 'kept', reason: 'operator-requested' },
         line: `Resubmission flag kept: ${IDENTITY} reason=operator-requested changedFields=none detail=none`
       },
       {
+        name: 'kept, figures-changed, with the field paths',
         verdict: {
           verdict: 'kept',
           reason: 'figures-changed',
@@ -93,14 +96,15 @@ describe('runResubmissionFlagsDryRun', () => {
         line: `Resubmission flag kept: ${IDENTITY} reason=figures-changed changedFields=recyclingActivity.totalTonnageReceived,recyclingActivity.suppliers detail=none`
       },
       {
+        name: 'kept, cannot-compare, with the detail quoted',
         verdict: {
           verdict: 'kept',
           reason: 'cannot-compare',
           detail: 'its report records no source'
         },
-        line: `Resubmission flag kept: ${IDENTITY} reason=cannot-compare changedFields=none detail=its report records no source`
+        line: `Resubmission flag kept: ${IDENTITY} reason=cannot-compare changedFields=none detail="its report records no source"`
       }
-    ])('logs $verdict.verdict $verdict.reason', async ({ verdict, line }) => {
+    ])('logs $name', async ({ verdict, line }) => {
       vi.mocked(reevaluateResubmissionFlags).mockResolvedValue({
         outcomes: [outcome(verdict)],
         failures: []
