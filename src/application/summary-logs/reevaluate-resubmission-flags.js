@@ -247,9 +247,6 @@ const reevaluate = async (
 }
 
 /**
- * Produces the review list of closed-period flags, and with `clearFlags`
- * clears the ones whose figures are unchanged.
- *
  * @param {ReevaluateResubmissionFlagsDependencies} deps
  * @param {{ clearFlags?: boolean }} [options]
  * @returns {Promise<{ outcomes: FlagOutcome[], failures: FlagFailure[] }>}

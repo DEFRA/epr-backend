@@ -100,7 +100,6 @@ const buildDependencies = async (server) => ({
 
 /** @param {StartedServer} server */
 const runSweep = async (server) => {
-  // Flag off (the default) only reports; on lets it clear.
   const clearFlags = config.get(
     'featureFlags.clearUnwarrantedResubmissionFlags'
   )
