@@ -32,6 +32,7 @@ const formatOutcome = (outcome) =>
     `period=${outcome.period.period}`,
     `flaggedAt=${outcome.closedPeriodRestated.uploadedAt}`,
     `flaggedBy=${outcome.closedPeriodRestated.summaryLogId}`,
+    `operatorRequested=${outcome.operatorRequested}`,
     `source=${outcome.comparison.baseline.sourceSummaryLogId ?? 'none'}`,
     `head=${outcome.headSummaryLogId ?? 'none'}`,
     `verdict=${describeChange(outcome.comparison)}`

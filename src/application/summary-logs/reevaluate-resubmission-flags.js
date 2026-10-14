@@ -41,6 +41,7 @@ import {
  * @property {string | null} headSummaryLogId - the file the figures were rebuilt from
  * @property {Comparison} comparison
  * @property {FlagVerdict} verdict
+ * @property {boolean} operatorRequested - still requires resubmission once this flag clears
  *
  * @typedef {{ reportId: string, error: string }} FlagFailure
  */
@@ -140,7 +141,7 @@ const decide = (comparison, resubmissionInProgress) => {
   if (requiresResubmission(comparison)) {
     return 'kept'
   }
-  // The flag is what permitted the draft, so clearing it would strand it.
+  // The flag may be the only reason permitting the draft, so clearing it could strand it.
   if (resubmissionInProgress) {
     return 'resubmission-in-progress'
   }
@@ -179,7 +180,8 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     closedPeriodRestated,
     headSummaryLogId,
     comparison,
-    verdict: decide(comparison, resubmissionInProgress)
+    verdict: decide(comparison, resubmissionInProgress),
+    operatorRequested: Boolean(report.resubmissionRequired?.operatorRequested)
   }
 }
 

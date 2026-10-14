@@ -57,6 +57,7 @@ const outcome = (overrides) => ({
     changedFields: []
   },
   verdict: 'would-clear',
+  operatorRequested: false,
   ...overrides
 })
 
@@ -93,7 +94,11 @@ describe('runResubmissionFlagsDryRun', () => {
           },
           verdict: 'kept'
         }),
-        outcome({ reportId: 'report-5', verdict: 'resubmission-in-progress' })
+        outcome({
+          reportId: 'report-5',
+          verdict: 'resubmission-in-progress',
+          operatorRequested: true
+        })
       ],
       failures: []
     })
@@ -106,11 +111,16 @@ describe('runResubmissionFlagsDryRun', () => {
     expect(mockLock.free).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission flag would-clear: organisationId=org-1 registrationId=reg-1 reportId=report-1 submissionNumber=1 year=2025 cadence=monthly period=1 flaggedAt=2026-05-01T00:00:00.000Z flaggedBy=sl-2 source=file-1 head=file-3 verdict=does not require resubmission: reported data unchanged'
+        'Resubmission flag would-clear: organisationId=org-1 registrationId=reg-1 reportId=report-1 submissionNumber=1 year=2025 cadence=monthly period=1 flaggedAt=2026-05-01T00:00:00.000Z flaggedBy=sl-2 operatorRequested=false source=file-1 head=file-3 verdict=does not require resubmission: reported data unchanged'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringMatching(
         /^Resubmission flag kept: .*reportId=report-2 .*source=none head=file-3 verdict=requires resubmission: reported data changed in recyclingActivity\.totalTonnageReceived$/
+      )
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /^Resubmission flag resubmission-in-progress: .*reportId=report-5 .*operatorRequested=true /
       )
     })
     expect(logger.info).toHaveBeenCalledWith({

@@ -356,7 +356,8 @@ describe('reevaluateResubmissionFlags', () => {
         period: JANUARY_2025,
         headSummaryLogId: 'file-nonfigure',
         comparison: expect.objectContaining({ changedFields: [] }),
-        verdict: 'would-clear'
+        verdict: 'would-clear',
+        operatorRequested: false
       })
     ])
     expect(failures).toEqual([])
@@ -537,6 +538,35 @@ describe('reevaluateResubmissionFlags', () => {
     expect(await env.reportsRepository.findReportById(reportId)).toEqual(
       flagged
     )
+  })
+
+  it('reports when the operator has also asked to resubmit the report it would clear', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await requestOperatorResubmission({
+      reportsRepository: env.reportsRepository,
+      organisationId: env.organisationId,
+      registrationId: env.registrationId,
+      ...JANUARY_2025,
+      submissionNumber: 1,
+      requestedBy: CHANGED_BY
+    })
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-nonfigure',
+      'file-nonfigure',
+      AMENDED_REFERENCE
+    )
+
+    const { outcomes } = await reevaluate(env)
+
+    expect(outcomes).toEqual([
+      expect.objectContaining({
+        reportId,
+        verdict: 'would-clear',
+        operatorRequested: true
+      })
+    ])
   })
 
   it('keeps the flag when a figure changed, even with a resubmission in progress', async () => {
