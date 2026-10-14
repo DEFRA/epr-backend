@@ -13,7 +13,8 @@ import {
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 import {
-  EXPORTER_NUMBER,
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   exporter,
@@ -276,11 +277,11 @@ describe('ledger and waste balance routes by natural key', () => {
     })
   })
 
-  describe('GET /organisations/{organisationNumber}/waste-balances?year=', () => {
-    const wasteBalances = (query) =>
-      `/organisations/${organisation.orgId}/waste-balances${query}`
+  describe('GET /organisations/{organisationNumber}/waste-balances/{year}', () => {
+    const wasteBalances = (year) =>
+      `/organisations/${organisation.orgId}/waste-balances/${year}`
 
-    it('serves a balance for each accreditation in the year, named by registration number, leaving out a registration with no number', async () => {
+    it('serves a balance for each accreditation in the year, keyed by accreditation number, leaving out a registration with no number', async () => {
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent(accreditedLedgerId)
       ])
@@ -298,82 +299,55 @@ describe('ledger and waste balance routes by natural key', () => {
         })
       ])
 
-      const response = await get(wasteBalances('?year=2026'))
+      const response = await get(wasteBalances(2026))
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toEqual([
-        {
-          registrationNumber: REPROCESSOR_NUMBER,
-          year: 2026,
-          amount: 100,
-          availableAmount: 100
-        },
-        {
-          registrationNumber: EXPORTER_NUMBER,
-          year: 2026,
+      expect(body(response)).toEqual({
+        [ACCREDITATION_NUMBER]: { amount: 100, availableAmount: 100 },
+        [EXPORTER_ACCREDITATION_NUMBER]: {
           amount: 120,
           availableAmount: 100,
           decemberAmount: 10,
           decemberAvailableAmount: 10,
           nonDecemberAvailableAmount: 90
         }
-      ])
+      })
     })
 
     it('serves zeros for an accreditation with no ledger', async () => {
-      const response = await get(wasteBalances('?year=2026'))
+      const response = await get(wasteBalances(2026))
 
-      expect(body(response)).toEqual([
-        {
-          registrationNumber: REPROCESSOR_NUMBER,
-          year: 2026,
-          amount: 0,
-          availableAmount: 0
-        },
-        {
-          registrationNumber: EXPORTER_NUMBER,
-          year: 2026,
-          amount: 0,
-          availableAmount: 0
-        }
-      ])
+      expect(body(response)).toEqual({
+        [ACCREDITATION_NUMBER]: { amount: 0, availableAmount: 0 },
+        [EXPORTER_ACCREDITATION_NUMBER]: { amount: 0, availableAmount: 0 }
+      })
     })
 
     it('leaves out registrations that share a number', async () => {
       const response = await get(
-        `/organisations/${sharedNumberOrganisation.orgId}/waste-balances?year=2026`
+        `/organisations/${sharedNumberOrganisation.orgId}/waste-balances/2026`
       )
 
-      expect(body(response)).toEqual([
-        {
-          registrationNumber: EXPORTER_NUMBER,
-          year: 2026,
-          amount: 0,
-          availableAmount: 0
-        }
-      ])
+      expect(body(response)).toEqual({
+        [EXPORTER_ACCREDITATION_NUMBER]: { amount: 0, availableAmount: 0 }
+      })
     })
 
     it('serves none for a year with no accreditations', async () => {
-      const response = await get(wasteBalances('?year=2027'))
+      const response = await get(wasteBalances(2027))
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(body(response)).toEqual([])
+      expect(body(response)).toEqual({})
     })
 
-    it.each(['', '?year=abc', '?year=2101'])(
-      'returns 422 for the query "%s"',
-      async (query) => {
-        const response = await get(wasteBalances(query))
+    it.each(['abc', '2101'])('returns 422 for the year "%s"', async (year) => {
+      const response = await get(wasteBalances(year))
 
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      }
-    )
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
 
     it('returns 404 for an unknown organisation number', async () => {
-      const response = await get(
-        '/organisations/999999/waste-balances?year=2026'
-      )
+      const response = await get('/organisations/999999/waste-balances/2026')
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
