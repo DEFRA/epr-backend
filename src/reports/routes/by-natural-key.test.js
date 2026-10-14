@@ -93,6 +93,11 @@ const COMPLETE_REPORT = {
   }
 }
 
+const SEEDED_CREATION = {
+  createdAt: expect.any(String),
+  createdBy: { name: 'Test User', position: 'Officer' }
+}
+
 const NEVER_SERVED = [
   'id',
   'organisationId',
@@ -179,7 +184,9 @@ describe('report routes by natural key', () => {
           period: periods.created,
           submissionNumber: 1,
           status: REPORT_STATUS.IN_PROGRESS,
-          canRequestResubmission: false
+          canRequestResubmission: false,
+          createdAt: expect.any(String),
+          createdBy: { position: expect.any(String) }
         })
         for (const key of NEVER_SERVED) {
           expect(body).not.toHaveProperty(key)
@@ -211,7 +218,8 @@ describe('report routes by natural key', () => {
           period: periods.inProgress,
           submissionNumber: 1,
           status: REPORT_STATUS.IN_PROGRESS,
-          version: 1
+          version: 1,
+          ...SEEDED_CREATION
         })
         for (const key of NEVER_SERVED) {
           expect(body).not.toHaveProperty(key)
@@ -234,6 +242,8 @@ describe('report routes by natural key', () => {
         })
         expect(body).not.toHaveProperty('source')
         expect(body).not.toHaveProperty('version')
+        expect(body).not.toHaveProperty('createdAt')
+        expect(body).not.toHaveProperty('createdBy')
       })
 
       it('says a stale report is stale, without ids', async () => {
@@ -271,7 +281,8 @@ describe('report routes by natural key', () => {
           period: periods.inProgress,
           status: REPORT_STATUS.IN_PROGRESS,
           supportingInformation: 'Updated by number',
-          version: 2
+          version: 2,
+          ...SEEDED_CREATION
         })
         for (const key of NEVER_SERVED) {
           expect(body).not.toHaveProperty(key)
@@ -291,7 +302,8 @@ describe('report routes by natural key', () => {
         expect(report.status.currentStatus).toBe(REPORT_STATUS.READY_TO_SUBMIT)
         expect(JSON.parse(response.payload)).toMatchObject({
           status: REPORT_STATUS.READY_TO_SUBMIT,
-          version: 2
+          version: 2,
+          ...SEEDED_CREATION
         })
       })
 
@@ -321,7 +333,8 @@ describe('report routes by natural key', () => {
           status: REPORT_STATUS.SUBMITTED,
           version: 3,
           submittedAt: expect.any(String),
-          submittedBy: { position: expect.any(String) }
+          submittedBy: { position: expect.any(String) },
+          ...SEEDED_CREATION
         })
         expect(body.submittedBy).not.toHaveProperty('id')
       })
@@ -389,7 +402,10 @@ describe('report routes by natural key', () => {
         const report = await reportsRepository.findReportById(seeded.submitted)
         expect(report.status.currentStatus).toBe(REPORT_STATUS.READY_TO_SUBMIT)
         const body = JSON.parse(response.payload)
-        expect(body.status).toBe(REPORT_STATUS.READY_TO_SUBMIT)
+        expect(body).toMatchObject({
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          ...SEEDED_CREATION
+        })
         expect(body).not.toHaveProperty('submittedAt')
       })
 
@@ -406,6 +422,7 @@ describe('report routes by natural key', () => {
         const body = JSON.parse(response.payload)
         expect(body).toMatchObject({
           status: REPORT_STATUS.SUBMITTED,
+          ...SEEDED_CREATION,
           resubmissionRequired: {
             operatorRequested: {
               requestedAt: expect.any(String),

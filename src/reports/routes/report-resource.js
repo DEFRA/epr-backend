@@ -40,22 +40,33 @@ import {
  *   submissionNumber: number,
  *   startDate: string,
  *   endDate: string,
- *   dueDate?: string,
- *   status: StoredStatus | typeof PREVIEW_STATUS,
- *   submittedAt?: string,
- *   submittedBy?: Person,
- *   version?: number,
  *   canRequestResubmission: boolean,
  *   recyclingActivity?: ServedRecyclingActivity,
  *   exportActivity?: ExportActivity,
  *   wasteSent?: WasteSent,
  *   prn?: PrnData,
+ *   source?: { summaryLogId: string, lastUploadedAt: string | null }
+ * }} ReportResourceBase
+ *
+ * @typedef {ReportResourceBase & {
+ *   dueDate?: string,
+ *   status: StoredStatus,
+ *   createdAt: string,
+ *   createdBy: Person,
+ *   submittedAt?: string,
+ *   submittedBy?: Person,
+ *   version: number,
  *   supportingInformation?: string,
- *   source?: { summaryLogId: string, lastUploadedAt: string | null },
  *   stale?: { summaryLogChanged?: { uploadedAt: string }, prnCancelled?: { occurredAt: string } },
- *   resubmissionRequired?: { closedPeriodRestated?: { uploadedAt: string }, operatorRequested?: { requestedAt: string, requestedBy: Person } },
+ *   resubmissionRequired?: { closedPeriodRestated?: { uploadedAt: string }, operatorRequested?: { requestedAt: string, requestedBy: Person } }
+ * }} StoredReportResource
+ *
+ * @typedef {ReportResourceBase & {
+ *   status: typeof PREVIEW_STATUS,
  *   incompleteSummaryLogRows?: IncompleteSummaryLogRows
- * }} ReportResource
+ * }} PreviewReportResource
+ *
+ * @typedef {StoredReportResource | PreviewReportResource} ReportResource
  */
 
 /** Status of a report that has not been created yet. Never stored. */
@@ -121,6 +132,7 @@ const toResubmissionRequired = ({
 
 /**
  * @param {StoredReportBody} report
+ * @returns {StoredReportResource}
  */
 const toStoredResource = (report) => ({
   year: report.year,
@@ -131,6 +143,8 @@ const toStoredResource = (report) => ({
   endDate: report.endDate,
   dueDate: report.dueDate,
   status: report.status.currentStatus,
+  createdAt: report.status.created.at,
+  createdBy: toPerson(report.status.created.by),
   ...submission(report.status),
   version: report.version,
   canRequestResubmission: report.canRequestResubmission,
@@ -151,6 +165,7 @@ const toStoredResource = (report) => ({
 /**
  * @param {PreviewBody} preview
  * @param {number} submissionNumber
+ * @returns {PreviewReportResource}
  */
 const toPreviewResource = (preview, submissionNumber) => ({
   year: preview.year,
@@ -175,16 +190,35 @@ const toPreviewResource = (preview, submissionNumber) => ({
 })
 
 /**
+ * @overload
+ * @param {StoredReportBody} body
+ * @param {{ submissionNumber: number }} options
+ * @returns {StoredReportResource}
+ */
+/**
+ * @overload
+ * @param {PreviewBody} body
+ * @param {{ submissionNumber: number }} options
+ * @returns {PreviewReportResource}
+ */
+/**
+ * @overload
+ * @param {StoredReportBody | PreviewBody} body
+ * @param {{ submissionNumber: number }} options
+ * @returns {ReportResource}
+ */
+/**
  * Maps the report detail body (stored report or generated preview) to the
  * body the natural-key report routes serve.
  * @param {StoredReportBody | PreviewBody} body
  * @param {{ submissionNumber: number }} options
  * @returns {ReportResource}
  */
-export const toReportResource = (body, { submissionNumber }) =>
-  'diagnostics' in body
+export function toReportResource(body, { submissionNumber }) {
+  return 'diagnostics' in body
     ? toPreviewResource(body, submissionNumber)
     : toStoredResource(body)
+}
 
 const personSchema = Joi.object({
   name: Joi.string(),
@@ -245,6 +279,8 @@ const storedReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
+  createdAt: Joi.string().isoDate().required(),
+  createdBy: personSchema.required(),
   submittedAt: Joi.string().isoDate(),
   submittedBy: personSchema,
   version: Joi.number().integer().min(1).required(),
