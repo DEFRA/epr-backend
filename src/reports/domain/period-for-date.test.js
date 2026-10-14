@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isDateInRange } from './aggregation/filter-records-by-date.js'
 import { CADENCE, MONTHS_PER_PERIOD } from './cadence.js'
-import { periodForDate } from './period-for-date.js'
+import { periodForDate, reportedPeriodForDate } from './period-for-date.js'
 import { periodBounds } from './reporting-period.js'
 
 describe('periodForDate', () => {
@@ -81,5 +81,28 @@ describe('periodForDate', () => {
         ).toBe(false)
       }
     )
+  })
+})
+
+describe('reportedPeriodForDate', () => {
+  it('gives the period the report counts a date in', () => {
+    expect(reportedPeriodForDate('2025-02-10', CADENCE.monthly)).toEqual({
+      year: 2025,
+      period: 2
+    })
+  })
+
+  it.each([
+    null,
+    46063,
+    true,
+    new Date('2025-02-10T00:00:00Z'),
+    '10/02/2025',
+    '2025-xx-10',
+    '2025/02/10',
+    '2025-02-30',
+    '2025-02-99'
+  ])('gives no period for %j, which the report counts nowhere', (value) => {
+    expect(reportedPeriodForDate(value, CADENCE.monthly)).toBeNull()
   })
 })
