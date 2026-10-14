@@ -73,17 +73,31 @@ const emptyResult = () => ({
   closedPeriods: []
 })
 
+const ISO_DATE_PREFIX = /^\d{4}-\d{2}/
+
+// Some date columns are unvalidated, so a stored cell can hold any value. Only
+// an ISO-shaped date is one the report can place in a period.
+/**
+ * @param {unknown} date
+ * @returns {date is string | Date}
+ */
+const isPlaceableDate = (date) =>
+  date instanceof Date ||
+  (typeof date === 'string' && ISO_DATE_PREFIX.test(date))
+
 /**
  * Whether a reporting date falls in a submitted (closed) period. A missing
  * date is never in a closed period.
  *
- * @param {string | Date | null | undefined} date
+ * @param {unknown} date
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
  * @returns {date is string | Date}
  */
 const isSubmittedDate = (date, submittedPeriods, cadence) =>
-  date ? isDateInSubmittedPeriod(submittedPeriods, date, cadence) : false
+  isPlaceableDate(date)
+    ? isDateInSubmittedPeriod(submittedPeriods, date, cadence)
+    : false
 
 /**
  * Applies the closed-wins rule: if ANY date field falls in a submitted

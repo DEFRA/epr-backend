@@ -624,6 +624,81 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ])
   })
 
+  describe('a repatriation cell that is not an ISO date', () => {
+    const refusedJanuaryExport = {
+      rowId: 1001,
+      osrId: 100,
+      exportTonnage: 8,
+      exportDate: '2025-01-26T00:00:00.000Z',
+      wasteRefused: 'Yes'
+    }
+
+    const setupWithJanuaryAndFebruarySubmitted = async (dateRepatriated) => {
+      const env = await setupGateEnvironment({
+        processingType: 'exporter',
+        organisationId: new ObjectId().toString(),
+        registrationId: new ObjectId().toString()
+      })
+
+      await upload(
+        env,
+        'sl-first',
+        'file-first',
+        createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated }
+        ]),
+        exporterMeta
+      )
+      await submitAndPoll(env, 'sl-first')
+      await generateAndSubmitReport(env, JANUARY_2025)
+      await generateAndSubmitReport(env, FEBRUARY_2025)
+
+      return env
+    }
+
+    it.each([46063, true, '2025/02/10'])(
+      'places the load by its other dates when the cell holds %j',
+      async (dateRepatriated) => {
+        const env = await setupWithJanuaryAndFebruarySubmitted(null)
+
+        const loadsByReportingPeriod = await uploadAndValidate(
+          env,
+          'sl-bad-date',
+          'file-bad-date',
+          createExporterUploadData([
+            { ...refusedJanuaryExport, dateRepatriated }
+          ]),
+          exporterMeta
+        )
+
+        expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+        expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+      }
+    )
+
+    it('flags the repatriation month once a stored non-date is corrected', async () => {
+      const env = await setupWithJanuaryAndFebruarySubmitted(46063)
+
+      const loadsByReportingPeriod = await uploadAndValidate(
+        env,
+        'sl-corrected',
+        'file-corrected',
+        createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+        ]),
+        exporterMeta
+      )
+
+      expect(loadsByReportingPeriod.closedPeriods).toEqual([
+        JANUARY_2025,
+        FEBRUARY_2025
+      ])
+      expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+        FEBRUARY_2025
+      ])
+    })
+  })
+
   it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {
     const env = await setupGateEnvironment({
       processingType: 'reprocessor',
