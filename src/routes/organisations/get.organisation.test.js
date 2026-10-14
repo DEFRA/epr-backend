@@ -79,6 +79,55 @@ describe('GET /organisations/{organisationNumber}', () => {
     expect(registration).not.toHaveProperty('statusTimeline')
   })
 
+  it('serves the last of several status changes on one day as that day’s status', async () => {
+    const reinstated = accreditation({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-03-01T09:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2026-03-01T12:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-03-01T15:00:00.000Z' }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: reinstated.id })],
+      accreditations: [reinstated]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2026].statusTimeline).toEqual({
+      '2026-01-01': { status: 'created' },
+      '2026-02-01': { status: 'approved' },
+      '2026-03-01': { status: 'approved' }
+    })
+  })
+
+  it('serves the latest status on a day even when the history is stored out of order', async () => {
+    const reinstated = accreditation({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-03-01T15:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2026-03-01T12:00:00.000Z' }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: reinstated.id })],
+      accreditations: [reinstated]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2026].statusTimeline).toEqual({
+      '2026-01-01': { status: 'created' },
+      '2026-03-01': { status: 'approved' }
+    })
+  })
+
   it('serves an organisation as the repository stores it', async () => {
     const linked = buildLinkedDefraOrg(crypto.randomUUID(), 'Defra Org')
     const organisation = buildOrganisation({

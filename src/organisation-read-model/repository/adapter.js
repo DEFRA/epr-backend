@@ -315,10 +315,10 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
  */
 export function toStatusTimeline(statusHistory) {
   return Object.fromEntries(
-    statusHistory.map(({ status, updatedAt }) => [
-      new Date(updatedAt).toISOString().slice(0, 10),
-      { status }
-    ])
+    statusHistory
+      .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+      .sort((one, other) => one.at.getTime() - other.at.getTime())
+      .map(({ status, at }) => [at.toISOString().slice(0, 10), { status }])
   )
 }
 
