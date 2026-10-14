@@ -117,6 +117,30 @@ describe('atNaturalKeys', () => {
     })
   })
 
+  it.each([
+    ['monthly', accredited.id],
+    ['quarterly', null]
+  ])(
+    'decides from the params whether a %s request is accredited',
+    async (cadence, accreditationId) => {
+      const served = atNaturalKeys(route, '/served', registrationParams, {
+        accredited: (params) => params.cadence === 'monthly'
+      })
+
+      const params = await served.handler(
+        requestFor({
+          organisationNumber: organisation.orgId,
+          registrationNumber: REPROCESSOR_NUMBER,
+          year: 2026,
+          cadence
+        }),
+        h
+      )
+
+      expect(params).toMatchObject({ accreditationId })
+    }
+  )
+
   it('passes the organisation alone to an organisation route', async () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
 

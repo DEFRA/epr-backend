@@ -8,7 +8,6 @@ import { periodBounds } from '#reports/domain/reporting-period.js'
 import { periodSchema } from '#reports/repository/schema.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
-  accreditationPath,
   registrationParams,
   registrationPath
 } from '#routes/organisations/view-route.js'
@@ -28,36 +27,30 @@ import { submissionNumberSchema } from './shared.js'
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { NaturalKeyResponse, NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { KeyParams, NaturalKeyResponse, NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { PreviewBody, StoredReportBody } from './report-resource.js'
  *
  * @typedef {ResolvedRequest & { params: { submissionNumber: number } }} SubmissionRequest
  * @typedef {StoredReportBody | PreviewBody} ReportDetailBody
  */
 
-/**
- * @param {Cadence} cadence
- */
-const submissionParams = (cadence) => ({
+const submissionPath = `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`
+
+const submissionParams = {
   ...registrationParams,
   year: yearSchema().required(),
-  cadence: Joi.string().valid(cadence).required(),
+  cadence: Joi.string()
+    .valid(...Object.values(CADENCE))
+    .required(),
   period: periodSchema,
   submissionNumber: submissionNumberSchema
-})
+}
 
-const streams = [
-  {
-    path: `${registrationPath}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}`,
-    params: submissionParams(CADENCE.quarterly),
-    accredited: false
-  },
-  {
-    path: `${accreditationPath}/reports/{cadence}/{period}/submissions/{submissionNumber}`,
-    params: submissionParams(CADENCE.monthly),
-    accredited: true
-  }
-]
+/**
+ * Monthly reports are accredited; quarterly are registered-only.
+ * @param {KeyParams} params
+ */
+const isMonthly = ({ cadence }) => cadence === CADENCE.monthly
 
 /**
  * @param {NaturalKeyResponse['map']} map
@@ -135,13 +128,16 @@ const mapCommand = async (request, h) =>
 
 /**
  * An accredited report covers only periods from the accreditation's start: a
- * period ending before it is not found.
+ * period ending before it is not found. A registered-only report has no limit.
  *
  * @param {ResolvedRequest & { params: { cadence: Cadence, period: number } }} request
  */
 const assertPeriodWithinAccreditation = async (request) => {
   const { organisationId, accreditationId, year, cadence, period } =
     request.params
+  if (!accreditationId) {
+    return
+  }
   const { validFrom } =
     await request.organisationsRepository.findAccreditationById(
       organisationId,
@@ -177,14 +173,12 @@ const submissionRoutes = [
 ]
 
 export const reportRoutesByNaturalKey = [
-  ...streams.flatMap(({ path, params, accredited }) =>
-    submissionRoutes.map(([route, action, respond]) =>
-      atNaturalKeys(route, `${path}${action}`, params, {
-        accredited,
-        respond,
-        ...(accredited && { before: assertPeriodWithinAccreditation })
-      })
-    )
+  ...submissionRoutes.map(([route, action, respond]) =>
+    atNaturalKeys(route, `${submissionPath}${action}`, submissionParams, {
+      accredited: isMonthly,
+      respond,
+      before: assertPeriodWithinAccreditation
+    })
   ),
   atNaturalKeys(
     reportsGet,

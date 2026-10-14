@@ -37,8 +37,10 @@ import {
  *   map(request: ResolvedRequest, h: HapiResponseToolkit, response: ResponseObject): unknown
  * }} NaturalKeyResponse
  *
+ * @typedef {RegistrationParams & { year?: number, [param: string]: unknown }} KeyParams
+ *
  * @typedef {{
- *   accredited?: boolean,
+ *   accredited?: boolean | ((params: KeyParams) => boolean),
  *   before?(request: ResolvedRequest): void | Promise<void>,
  *   respond?: NaturalKeyResponse
  * }} NaturalKeyOptions
@@ -71,7 +73,8 @@ const resolveRegistration = (organisationsRepository, params) =>
 /**
  * Serves an existing route at a natural-key path. The keys resolve to the
  * stored ids the existing handler reads, so both paths behave the same. A
- * path with no registration number resolves the organisation alone. The
+ * path with no registration number resolves the organisation alone. A route
+ * is accredited outright, or by its params, such as a report's cadence. The
  * records the keys resolved to are on `request.app`, as `ResolvedRecords`, so
  * a handler need not read them again.
  *
@@ -86,6 +89,9 @@ export const atNaturalKeys = (
   params,
   { accredited = false, before, respond } = {}
 ) => {
+  /** @param {KeyParams} params */
+  const isAccredited = (params) =>
+    typeof accredited === 'function' ? accredited(params) : accredited
   const resolveRecords =
     'registrationNumber' in params ? resolveRegistration : resolveOrganisation
 
@@ -100,7 +106,7 @@ export const atNaturalKeys = (
       })
     },
     /**
-     * @param {HapiRequest & { params: RegistrationParams & { year?: number } }} request
+     * @param {HapiRequest & { params: KeyParams }} request
      * @param {HapiResponseToolkit} h
      */
     handler: async (request, h) => {
@@ -115,7 +121,7 @@ export const atNaturalKeys = (
         ? {
             organisationId: organisation.id,
             registrationId: registration.id,
-            accreditationId: accredited
+            accreditationId: isAccredited(request.params)
               ? findAccreditationForYear(
                   organisation,
                   registration,

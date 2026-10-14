@@ -80,7 +80,7 @@ const streams = [
     periods: { inProgress: 7, submitted: 8, created: 9 },
     seeded: { inProgress: '', submitted: '' },
     prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 },
-    reports: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/monthly`
+    reports: `${registrations}/${REPROCESSOR_NUMBER}/reports/${YEAR}/monthly`
   }
 ]
 
@@ -454,7 +454,7 @@ describe('report routes by natural key', () => {
 
   describe('for an operator accredited in July', () => {
     const registeredOnlyReports = `${registrations}/${REPROCESSOR_NUMBER}/reports/${YEAR}/quarterly`
-    const accreditedReports = `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/monthly`
+    const accreditedReports = `${registrations}/${REPROCESSOR_NUMBER}/reports/${YEAR}/monthly`
 
     /**
      * @param {Record<string, any>} registration
@@ -584,11 +584,11 @@ describe('report routes by natural key', () => {
     ],
     [
       'a year the registration has no accreditation for',
-      `${registrations}/${REPROCESSOR_NUMBER}/accreditations/2027/reports/monthly/1/submissions/1`
+      `${registrations}/${REPROCESSOR_NUMBER}/reports/2027/monthly/1/submissions/1`
     ],
     [
       'a registration with no accreditation',
-      `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/reports/monthly/1/submissions/1`
+      `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/${YEAR}/monthly/1/submissions/1`
     ],
     [
       'the calendar of an unknown registration',
@@ -604,19 +604,10 @@ describe('report routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it.each([
-    [
-      'a monthly report in the registered-only stream',
-      `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/${YEAR}/monthly/1/submissions/1`
-    ],
-    [
-      'a quarterly report in the accredited stream',
-      `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/reports/quarterly/1/submissions/1`
-    ]
-  ])('rejects %s', async (_, url) => {
+  it('rejects an unknown cadence', async () => {
     const response = await server.inject({
       method: 'GET',
-      url,
+      url: `${registrations}/${REPROCESSOR_NUMBER}/reports/${YEAR}/annual/1/submissions/1`,
       ...asServiceMaintainer()
     })
 
