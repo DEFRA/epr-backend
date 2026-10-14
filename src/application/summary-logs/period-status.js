@@ -4,8 +4,10 @@ import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { reportingDateFieldsFor } from '#reports/domain/aggregation/fields-by-operator-category.js'
+import { isDateInRange } from '#reports/domain/aggregation/filter-records-by-date.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { periodBounds } from '#reports/domain/reporting-period.js'
 import {
   buildSubmittedPeriods,
   isDateInSubmittedPeriod
@@ -75,27 +77,32 @@ const emptyResult = () => ({
 
 const ISO_DATE_PREFIX = /^\d{4}-\d{2}/
 
-// Some date columns are unvalidated, so a stored cell can hold any value. Only
-// an ISO-shaped date is one the report can place in a period.
+// Some date columns are unvalidated, so a stored cell can hold any value. Asking
+// the report keeps period detection from placing a date the report never counts.
 /**
  * @param {unknown} date
- * @returns {date is string | Date}
+ * @param {Cadence} cadence
+ * @returns {date is string}
  */
-const isPlaceableDate = (date) =>
-  date instanceof Date ||
-  (typeof date === 'string' && ISO_DATE_PREFIX.test(date))
+const isPlaceableDate = (date, cadence) => {
+  if (typeof date !== 'string' || !ISO_DATE_PREFIX.test(date)) {
+    return false
+  }
+  const { year, period } = periodForDate(date, cadence)
+  return isDateInRange(date, periodBounds(cadence, year, period))
+}
 
 /**
- * Whether a reporting date falls in a submitted (closed) period. A missing
- * date is never in a closed period.
+ * Whether a reporting date falls in a submitted (closed) period. A missing or
+ * unplaceable date is never in a closed period.
  *
  * @param {unknown} date
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
- * @returns {date is string | Date}
+ * @returns {date is string}
  */
 const isSubmittedDate = (date, submittedPeriods, cadence) =>
-  isPlaceableDate(date)
+  isPlaceableDate(date, cadence)
     ? isDateInSubmittedPeriod(submittedPeriods, date, cadence)
     : false
 

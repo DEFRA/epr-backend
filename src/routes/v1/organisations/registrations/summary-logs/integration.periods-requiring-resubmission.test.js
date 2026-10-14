@@ -16,6 +16,7 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -665,7 +666,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       return env
     }
 
-    it.each([46063, true, '2025/02/10'])(
+    it.each([46063, true, '2025/02/10', '2025-02-99', '2025-02-30'])(
       'places the load by its other dates when the cell holds %j',
       async (dateRepatriated) => {
         const env = await setupWithJanuaryAndFebruarySubmitted()
@@ -687,6 +688,16 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     it('flags the repatriation month once a stored non-date is corrected', async () => {
       const env = await setupWithJanuaryAndFebruarySubmitted(46063)
+      const [storedRow] =
+        await env.summaryLogRowStatesRepository.findRowHistory(
+          env.organisationId,
+          env.registrationId,
+          '1001',
+          WASTE_RECORD_TYPE.EXPORTED
+        )
+      expect(storedRow.data.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED).toBe(
+        46063
+      )
 
       const loadsByReportingPeriod = await uploadAndValidate(
         env,
