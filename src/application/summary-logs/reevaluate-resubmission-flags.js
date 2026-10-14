@@ -8,6 +8,7 @@ import {
 } from './periods-requiring-resubmission.js'
 
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {Comparison} from './periods-requiring-resubmission.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
@@ -35,7 +36,8 @@ import {
  *
  * @typedef {{
  *   organisationId: string,
- *   registrationId: string,
+ *   registrationNumber: string | null,
+ *   accreditationNumber: string | null,
  *   reportId: string,
  *   submissionNumber: number,
  *   period: PeriodRef,
@@ -76,20 +78,19 @@ const findFlaggedReports = (periodicReports) =>
 
 /**
  * @param {ReevaluateResubmissionFlagsDependencies} deps
- * @param {{ report: Report, period: PeriodRef, flaggedBy: string }} params
+ * @param {{ report: Report, registration: Registration, period: PeriodRef, flaggedBy: string }} params
  * @returns {Promise<Comparison | { cannotCompare: string }>}
  */
-const compareWithCurrent = async (deps, { report, period, flaggedBy }) => {
+const compareWithCurrent = async (
+  deps,
+  { report, registration, period, flaggedBy }
+) => {
   const flaggingLog = await deps.summaryLogsRepository.findById(flaggedBy)
   if (!flaggingLog) {
     return {
       cannotCompare: 'the summary log that set the flag no longer exists'
     }
   }
-  const registration = await deps.organisationsRepository.findRegistrationById(
-    report.organisationId,
-    report.registrationId
-  )
   const ledgerId = ledgerIdFor(
     /** @type {SubmittedSummaryLog} */ (flaggingLog.summaryLog),
     registration
@@ -119,7 +120,7 @@ const compareWithCurrent = async (deps, { report, period, flaggedBy }) => {
 
 /**
  * @param {ReevaluateResubmissionFlagsDependencies} deps
- * @param {{ report: Report, period: PeriodRef, flaggedBy: string, resubmissionInProgress: boolean }} params
+ * @param {{ report: Report, registration: Registration, period: PeriodRef, flaggedBy: string, resubmissionInProgress: boolean }} params
  * @returns {Promise<Verdict>}
  */
 const verdictFor = async (deps, { resubmissionInProgress, ...params }) => {
@@ -167,10 +168,16 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     cadence: report.cadence,
     period: report.period
   }
+  const registration = await deps.organisationsRepository.findRegistrationById(
+    report.organisationId,
+    report.registrationId
+  )
 
   return {
     organisationId: report.organisationId,
-    registrationId: report.registrationId,
+    registrationNumber: registration.registrationNumber ?? null,
+    accreditationNumber:
+      registration.accreditation?.accreditationNumber ?? null,
     reportId: report.id,
     submissionNumber: report.submissionNumber,
     period,
@@ -178,6 +185,7 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     flaggedBy: summaryLogId,
     ...(await verdictFor(deps, {
       report,
+      registration,
       period,
       flaggedBy: summaryLogId,
       resubmissionInProgress

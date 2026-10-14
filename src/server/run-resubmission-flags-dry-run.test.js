@@ -35,13 +35,15 @@ vi.mock('#common/helpers/s3/s3-client.js', () => ({
   createS3Client: vi.fn()
 }))
 
-const IDENTITY =
-  'organisationId=org-1 registrationId=reg-1 reportId=report-1 submissionNumber=1 year=2025 cadence=monthly period=1 flaggedAt=2026-05-01T00:00:00.000Z flaggedBy=sl-2'
+const REPORT =
+  'reportId=report-1 submissionNumber=1 year=2025 cadence=monthly period=1 flaggedAt=2026-05-01T00:00:00.000Z flaggedBy=sl-2'
+const IDENTITY = `organisationId=org-1 registrationNumber=R25SR500030912PA accreditationNumber=A26RE000001PA ${REPORT}`
 
 /** @returns {*} */
 const outcome = (verdict) => ({
   organisationId: 'org-1',
-  registrationId: 'reg-1',
+  registrationNumber: 'R25SR500030912PA',
+  accreditationNumber: 'A26RE000001PA',
   reportId: 'report-1',
   submissionNumber: 1,
   period: { year: 2025, cadence: 'monthly', period: 1 },
@@ -113,6 +115,21 @@ describe('runResubmissionFlagsDryRun', () => {
       await runResubmissionFlagsDryRun(mockServer)
 
       expect(logger.info).toHaveBeenCalledWith({ message: line })
+    })
+  })
+
+  it('logs a registration with no accreditation as none', async () => {
+    vi.mocked(reevaluateResubmissionFlags).mockResolvedValue({
+      outcomes: [
+        outcome({ verdict: 'would-clear', accreditationNumber: null })
+      ],
+      failures: []
+    })
+
+    await runResubmissionFlagsDryRun(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: `Resubmission flag would-clear: organisationId=org-1 registrationNumber=R25SR500030912PA accreditationNumber=none ${REPORT} reason=none changedFields=none detail=none`
     })
   })
 

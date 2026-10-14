@@ -347,7 +347,8 @@ describe('reevaluateResubmissionFlags', () => {
     expect(outcomes).toEqual([
       {
         organisationId: env.organisationId,
-        registrationId: env.registrationId,
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-123',
         reportId,
         submissionNumber: 1,
         period: JANUARY_2025,
@@ -642,6 +643,8 @@ describe('reevaluateResubmissionFlags', () => {
         expect.objectContaining({
           reportId,
           period: Q1_2025,
+          registrationNumber: 'REG-123',
+          accreditationNumber: null,
           verdict: 'would-clear'
         })
       ])

@@ -27,7 +27,8 @@ const formatOutcome = (outcome) => {
   return [
     `Resubmission flag ${outcome.verdict}:`,
     `organisationId=${outcome.organisationId}`,
-    `registrationId=${outcome.registrationId}`,
+    `registrationNumber=${outcome.registrationNumber ?? 'none'}`,
+    `accreditationNumber=${outcome.accreditationNumber ?? 'none'}`,
     `reportId=${outcome.reportId}`,
     `submissionNumber=${outcome.submissionNumber}`,
     `year=${year}`,
