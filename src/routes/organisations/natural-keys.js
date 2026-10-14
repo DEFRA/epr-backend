@@ -104,7 +104,7 @@ export function servedRegistrations(organisation) {
  * cannot show elsewhere in the organisation does not stop the lookup.
  *
  * @param {Organisation} organisation
- * @param {string | undefined} registrationNumber
+ * @param {string | null | undefined} registrationNumber
  * @returns {Registration | null}
  */
 function servedRegistrationByNumber(organisation, registrationNumber) {

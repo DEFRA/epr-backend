@@ -92,7 +92,7 @@ const mapMappingToRow = (
  * @property {number} [orgId]
  * @property {Array<{
  *   material?: string,
- *   registrationNumber?: string,
+ *   registrationNumber?: string | null,
  *   accreditationId?: string,
  *   accreditationNumber?: string,
  *   accreditation?: { accreditationNumber?: string | null } | null,

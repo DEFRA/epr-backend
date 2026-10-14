@@ -39,7 +39,7 @@ const serveFile = (sign, idOf) => async (request, h) => {
   // Names the download only, so a failed lookup costs the name, not the file.
   const registrationNumber = await organisationsRepository
     .findRegistrationById(organisationId, registrationId)
-    .then((registration) => registration.registrationNumber)
+    .then((registration) => registration.registrationNumber ?? undefined)
     .catch(() => undefined)
 
   const { url } = await sign(summaryLogsRepository, id, registrationNumber)
