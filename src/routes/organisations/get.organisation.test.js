@@ -255,6 +255,36 @@ describe('GET /organisations/{organisationNumber}', () => {
       ])
     })
 
+    it('serves a registration recorded after its validFrom as approved in that year', async () => {
+      const recordedLate = [
+        { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
+        { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
+      ]
+      const accredited = accreditation({
+        validFrom: '2026-01-01',
+        statusHistory: recordedLate
+      })
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            accreditationId: accredited.id,
+            validFrom: '2026-01-01',
+            statusHistory: recordedLate
+          })
+        ],
+        accreditations: [accredited]
+      })
+      await serve(organisation)
+
+      const response = await get(urlFor(organisation, 2026))
+
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      expect(registration.status).toBe('approved')
+      expect(registration.accreditations[2026].statusTimeline).toEqual({
+        '2026-01-01': { status: 'approved' }
+      })
+    })
+
     it('rejects a year outside the supported range', async () => {
       const organisation = buildAccreditedOrganisation()
       await serve(organisation)

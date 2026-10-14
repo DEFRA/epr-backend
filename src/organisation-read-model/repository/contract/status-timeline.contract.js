@@ -118,6 +118,28 @@ export const testStatusTimelineBehaviour = (it) => {
       })
     })
 
+    it('dates a change recorded before the first approval no later than validFrom', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = organisationAccredited({
+        validFrom: '2026-01-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
+          { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(repository, stored.orgId)
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
+          .statusTimeline
+      ).toEqual({ '2026-01-01': { status: 'approved' } })
+    })
+
     it('dates a reinstatement on the day it was recorded, not at validFrom', async ({
       organisationReadRepositoryWith
     }) => {
