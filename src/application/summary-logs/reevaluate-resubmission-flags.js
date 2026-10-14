@@ -39,7 +39,7 @@ import {
  * @property {PeriodRef} period
  * @property {ResubmissionClosedPeriodRestated} closedPeriodRestated
  * @property {string | null} headSummaryLogId - the file the figures were rebuilt from
- * @property {Comparison} comparison
+ * @property {Comparison | null} comparison - null when a resubmission is in progress
  * @property {FlagVerdict} verdict
  * @property {boolean} operatorRequested - still requires resubmission once this flag clears
  *
@@ -133,22 +133,6 @@ const compareWithHead = async (deps, { report, period, flaggedBy }) => {
 }
 
 /**
- * @param {Comparison} comparison
- * @param {boolean} resubmissionInProgress
- * @returns {FlagVerdict}
- */
-const decide = (comparison, resubmissionInProgress) => {
-  if (requiresResubmission(comparison)) {
-    return 'kept'
-  }
-  // The flag may be the only reason permitting the draft, so clearing it could strand it.
-  if (resubmissionInProgress) {
-    return 'resubmission-in-progress'
-  }
-  return 'would-clear'
-}
-
-/**
  * @param {ReevaluateResubmissionFlagsDependencies} deps
  * @param {FlaggedReport} flagged
  * @returns {Promise<FlagOutcome | null>} null when the flag has gone since the scan
@@ -165,23 +149,36 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     cadence: report.cadence,
     period: report.period
   }
-  const { headSummaryLogId, comparison } = await compareWithHead(deps, {
-    report,
-    period,
-    flaggedBy: closedPeriodRestated.summaryLogId
-  })
-
-  return {
+  const outcome = {
     organisationId: report.organisationId,
     registrationId: report.registrationId,
     reportId: report.id,
     submissionNumber: report.submissionNumber,
     period,
     closedPeriodRestated,
+    operatorRequested: Boolean(report.resubmissionRequired?.operatorRequested)
+  }
+
+  // The flag may be the only reason permitting the draft, so it stays whatever the figures say.
+  if (resubmissionInProgress) {
+    return {
+      ...outcome,
+      headSummaryLogId: null,
+      comparison: null,
+      verdict: 'resubmission-in-progress'
+    }
+  }
+
+  const { headSummaryLogId, comparison } = await compareWithHead(deps, {
+    report,
+    period,
+    flaggedBy: closedPeriodRestated.summaryLogId
+  })
+  return {
+    ...outcome,
     headSummaryLogId,
     comparison,
-    verdict: decide(comparison, resubmissionInProgress),
-    operatorRequested: Boolean(report.resubmissionRequired?.operatorRequested)
+    verdict: requiresResubmission(comparison) ? 'kept' : 'would-clear'
   }
 }
 

@@ -490,7 +490,7 @@ describe('reevaluateResubmissionFlags', () => {
     )
   })
 
-  it('keeps the flag when the operator has already started the resubmission', async () => {
+  it('keeps the flag without comparing figures when the operator has already started the resubmission', async () => {
     const env = await setupEnvironment()
     const reportId = await submitAndCloseJanuary(env)
     await uploadAndSubmitFlaggingEveryClosedPeriod(
@@ -499,19 +499,21 @@ describe('reevaluateResubmissionFlags', () => {
       'file-nonfigure',
       AMENDED_REFERENCE
     )
-    // The flag is what allowed the draft, so clearing it would strand the draft.
     await generateReport(env, JANUARY_2025, 2)
     const flagged = await env.reportsRepository.findReportById(reportId)
+    const findSummaryLog = vi.spyOn(env.summaryLogsRepository, 'findById')
 
     const { outcomes } = await reevaluate(env)
 
     expect(await env.reportsRepository.findReportById(reportId)).toEqual(
       flagged
     )
+    expect(findSummaryLog).not.toHaveBeenCalled()
     expect(outcomes).toEqual([
       expect.objectContaining({
         reportId,
-        comparison: expect.objectContaining({ changedFields: [] }),
+        headSummaryLogId: null,
+        comparison: null,
         verdict: 'resubmission-in-progress'
       })
     ])
@@ -569,7 +571,7 @@ describe('reevaluateResubmissionFlags', () => {
     ])
   })
 
-  it('keeps the flag when a figure changed, even with a resubmission in progress', async () => {
+  it('reports a resubmission in progress even when a figure changed', async () => {
     const env = await setupEnvironment()
     const reportId = await submitAndCloseJanuary(env)
     await uploadAndSubmitFlaggingEveryClosedPeriod(
@@ -583,7 +585,7 @@ describe('reevaluateResubmissionFlags', () => {
     const { outcomes } = await reevaluate(env)
 
     expect(outcomes).toEqual([
-      expect.objectContaining({ reportId, verdict: 'kept' })
+      expect.objectContaining({ reportId, verdict: 'resubmission-in-progress' })
     ])
   })
 

@@ -33,9 +33,9 @@ const formatOutcome = (outcome) =>
     `flaggedAt=${outcome.closedPeriodRestated.uploadedAt}`,
     `flaggedBy=${outcome.closedPeriodRestated.summaryLogId}`,
     `operatorRequested=${outcome.operatorRequested}`,
-    `source=${outcome.comparison.baseline.sourceSummaryLogId ?? 'none'}`,
+    `source=${outcome.comparison?.baseline.sourceSummaryLogId ?? 'none'}`,
     `head=${outcome.headSummaryLogId ?? 'none'}`,
-    `verdict=${describeChange(outcome.comparison)}`
+    `verdict=${outcome.comparison ? describeChange(outcome.comparison) : 'not compared'}`
   ].join(' ')
 
 /**

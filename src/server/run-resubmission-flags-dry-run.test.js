@@ -96,6 +96,8 @@ describe('runResubmissionFlagsDryRun', () => {
         }),
         outcome({
           reportId: 'report-5',
+          headSummaryLogId: null,
+          comparison: null,
           verdict: 'resubmission-in-progress',
           operatorRequested: true
         })
@@ -120,7 +122,7 @@ describe('runResubmissionFlagsDryRun', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringMatching(
-        /^Resubmission flag resubmission-in-progress: .*reportId=report-5 .*operatorRequested=true /
+        /^Resubmission flag resubmission-in-progress: .*reportId=report-5 .*operatorRequested=true source=none head=none verdict=not compared$/
       )
     })
     expect(logger.info).toHaveBeenCalledWith({
