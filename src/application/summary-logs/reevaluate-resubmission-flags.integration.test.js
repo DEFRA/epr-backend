@@ -8,8 +8,12 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
-import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import {
+  MONTHLY_PERIODS,
+  QUARTERLY_PERIODS
+} from '#reports/domain/period-labels.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -46,6 +50,12 @@ const FEBRUARY_2025 = {
 }
 const FEBRUARY_DATE = '2025-02-15T00:00:00.000Z'
 
+const Q1_2025 = {
+  year: 2025,
+  cadence: /** @type {const} */ ('quarterly'),
+  period: QUARTERLY_PERIODS.Q1
+}
+
 const CHANGED_BY = { id: 'u1', name: 'Test User', position: 'Officer' }
 
 const FIRST_UPLOAD = [
@@ -65,11 +75,81 @@ const createUploadData = (rows) => ({
   }
 })
 
+const reprocessorFile = (rows) => ({ meta, data: createUploadData(rows) })
+
+const registeredOnlyExporterMeta = {
+  REGISTRATION_NUMBER: {
+    value: 'REG-123',
+    location: { sheet: 'Cover', row: 1, column: 'B' }
+  },
+  PROCESSING_TYPE: {
+    value: 'EXPORTER_REGISTERED_ONLY',
+    location: { sheet: 'Cover', row: 2, column: 'B' }
+  },
+  MATERIAL: {
+    value: 'Paper_and_board',
+    location: { sheet: 'Cover', row: 3, column: 'B' }
+  },
+  TEMPLATE_VERSION: {
+    value: 2.1,
+    location: { sheet: 'Cover', row: 4, column: 'B' }
+  }
+}
+
+const LOADS_EXPORTED_HEADERS = [
+  'ROW_ID',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'DATE_OF_EXPORT',
+  'OSR_ID',
+  'BASEL_EXPORT_CODE',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED',
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'OSR_NAME',
+  'OSR_COUNTRY',
+  'CUSTOMS_CODES',
+  'CONTAINER_NUMBER'
+]
+
+// OSR_ID 100 resolves to a registered overseas site, so the report takes the
+// site's name and country from the ORS registry, not from these cells.
+const registeredOnlyExporterFile = ({ osrName, osrCountry }) => ({
+  meta: registeredOnlyExporterMeta,
+  data: {
+    LOADS_EXPORTED: {
+      location: { sheet: 'Exported', row: TABLE_HEADER_ROW, column: 'A' },
+      headers: LOADS_EXPORTED_HEADERS,
+      rows: [
+        {
+          rowNumber: FIRST_DATA_ROW,
+          values: [
+            2001,
+            100,
+            '2025-01-20T00:00:00.000Z',
+            100,
+            'B3020',
+            'No',
+            'No',
+            null,
+            osrName,
+            osrCountry,
+            '123456',
+            'CONT123456'
+          ]
+        }
+      ]
+    }
+  }
+})
+
 const setupEnvironment = async ({
-  resubmissionFigureGateEnabled = false
+  resubmissionFigureGateEnabled = false,
+  processingType = 'reprocessor',
+  accredited = true
 } = {}) => {
   const env = await setupWasteBalanceIntegrationEnvironment({
-    processingType: 'reprocessor',
+    processingType,
+    accredited,
     organisationId: new ObjectId().toString(),
     registrationId: new ObjectId().toString(),
     resubmissionFigureGateEnabled
@@ -78,10 +158,10 @@ const setupEnvironment = async ({
   return { ...env, systemLogsRepository }
 }
 
-const upload = async (env, summaryLogId, fileId, rows) => {
+const upload = async (env, summaryLogId, fileId, file) => {
   const { server, fileDataMap, organisationId, registrationId } = env
 
-  fileDataMap[fileId] = { meta, data: createUploadData(rows) }
+  fileDataMap[fileId] = file
 
   await server.inject({
     method: 'POST',
@@ -184,19 +264,19 @@ const generateAndSubmitReport = async (env, period, submissionNumber = 1) => {
 }
 
 const submitAndCloseJanuary = async (env) => {
-  await upload(env, 'sl-first', 'file-first', FIRST_UPLOAD)
+  await upload(env, 'sl-first', 'file-first', reprocessorFile(FIRST_UPLOAD))
   await submit(env, 'sl-first')
   return generateAndSubmitReport(env, JANUARY_2025)
 }
 
 // Flags as submit did before the figure gate: every restated closed period.
-const uploadAndSubmitFlaggingEveryClosedPeriod = async (
+const uploadFileAndSubmitFlaggingEveryClosedPeriod = async (
   env,
   summaryLogId,
   fileId,
-  rows
+  file
 ) => {
-  await upload(env, summaryLogId, fileId, rows)
+  await upload(env, summaryLogId, fileId, file)
   const loadsByReportingPeriod = await loadsByReportingPeriodOf(
     env,
     summaryLogId
@@ -210,6 +290,19 @@ const uploadAndSubmitFlaggingEveryClosedPeriod = async (
   })
   return loadsByReportingPeriod
 }
+
+const uploadAndSubmitFlaggingEveryClosedPeriod = (
+  env,
+  summaryLogId,
+  fileId,
+  rows
+) =>
+  uploadFileAndSubmitFlaggingEveryClosedPeriod(
+    env,
+    summaryLogId,
+    fileId,
+    reprocessorFile(rows)
+  )
 
 const AMENDED_REFERENCE = [
   { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
@@ -423,6 +516,83 @@ describe('reevaluateResubmissionFlags', () => {
     ])
   })
 
+  it('ignores a report flagged only by the operator', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await requestOperatorResubmission({
+      reportsRepository: env.reportsRepository,
+      organisationId: env.organisationId,
+      registrationId: env.registrationId,
+      ...JANUARY_2025,
+      submissionNumber: 1,
+      requestedBy: CHANGED_BY
+    })
+    const flagged = await env.reportsRepository.findReportById(reportId)
+    expect(flagged.resubmissionRequired?.operatorRequested).toBeDefined()
+
+    const { outcomes, failures } = await reevaluate(env)
+
+    expect(outcomes).toEqual([])
+    expect(failures).toEqual([])
+    expect(await env.reportsRepository.findReportById(reportId)).toEqual(
+      flagged
+    )
+  })
+
+  it('keeps the flag when a figure changed, even with a resubmission in progress', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-figure',
+      'file-figure',
+      CHANGED_TONNAGE
+    )
+    await generateReport(env, JANUARY_2025, 2)
+
+    const { outcomes } = await reevaluate(env)
+
+    expect(outcomes).toEqual([
+      expect.objectContaining({ reportId, verdict: 'kept' })
+    ])
+  })
+
+  it('would clear the flag on a registered-only quarterly report when no reported figure changed', async () => {
+    const env = await setupEnvironment({
+      processingType: 'exporter',
+      accredited: false
+    })
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      registeredOnlyExporterFile({
+        osrName: 'Site A',
+        osrCountry: 'Vietnam-VN'
+      })
+    )
+    await submit(env, 'sl-first')
+    const reportId = await generateAndSubmitReport(env, Q1_2025)
+    await uploadFileAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-osr',
+      'file-osr',
+      registeredOnlyExporterFile({ osrName: 'Site B', osrCountry: 'France-FR' })
+    )
+
+    const { outcomes, failures } = await reevaluate(env)
+
+    expect(outcomes).toEqual([
+      expect.objectContaining({
+        reportId,
+        period: Q1_2025,
+        headSummaryLogId: 'file-osr',
+        verdict: 'would-clear'
+      })
+    ])
+    expect(failures).toEqual([])
+  })
+
   it('leaves out a report whose flag went between the scan and the read', async () => {
     const env = await setupEnvironment()
     await submitAndCloseJanuary(env)
@@ -468,15 +638,20 @@ describe('reevaluateResubmissionFlags', () => {
 
   it('would clear exactly the restated periods the validation-time gate would not have flagged', async () => {
     const env = await setupEnvironment({ resubmissionFigureGateEnabled: true })
-    await upload(env, 'sl-first', 'file-first', [
-      { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
-      {
-        rowId: 1002,
-        tonnageReceived: 200,
-        dateReceived: FEBRUARY_DATE,
-        yourReference: 'REF-FEB'
-      }
-    ])
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      reprocessorFile([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB'
+        }
+      ])
+    )
     await submit(env, 'sl-first')
     await generateAndSubmitReport(env, JANUARY_2025)
     await generateAndSubmitReport(env, FEBRUARY_2025)
