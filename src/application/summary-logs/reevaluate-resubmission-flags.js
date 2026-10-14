@@ -1,3 +1,5 @@
+import { auditClearReportRequiringResubmission } from '#reports/application/audit.js'
+import { isLatestSubmissionOf } from '#reports/application/resubmission-service.js'
 import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { latestSubmittedSummaryLogRowStates } from '#waste-records/application/read-summary-log-row-states.js'
 import { ledgerIdFor } from './ledger-id.js'
@@ -15,6 +17,8 @@ import {
 /** @import {PeriodicReport, PeriodicReportSlots, Report, ReportResubmissionRequired, ReportSummary, ReportsRepository, ResubmissionClosedPeriodRestated} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
+/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+/** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 
 /**
@@ -25,10 +29,12 @@ import {
  * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @property {OverseasSitesRepository} overseasSitesRepository
+ * @property {SystemLogsRepository} systemLogsRepository
  */
 
 /**
- * @typedef {{ verdict: 'would-clear' }
+ * @typedef {{ verdict: 'would-clear' | 'cleared' }
+ *   | { verdict: 'skipped', reason: 'changed-since-compared' | 'resubmission-started' }
  *   | { verdict: 'kept', reason: 'operator-requested' | 'resubmission-in-progress' }
  *   | { verdict: 'kept', reason: 'figures-changed', changedFields: string[] }
  *   | { verdict: 'kept', reason: 'cannot-compare', detail: string }} Verdict
@@ -152,10 +158,53 @@ const verdictFor = async (deps, { resubmissionInProgress, ...params }) => {
 
 /**
  * @param {ReevaluateResubmissionFlagsDependencies} deps
+ * @param {Report} report
+ * @returns {Promise<Verdict>}
+ */
+const clearFlag = async (deps, report) => {
+  // Starting a draft never writes to this report, so its version can't catch one.
+  const periodicReports = await deps.reportsRepository.findPeriodicReports({
+    organisationId: report.organisationId,
+    registrationId: report.registrationId
+  })
+  if (
+    !isLatestSubmissionOf(
+      periodicReports,
+      report.year,
+      /** @type {Cadence} */ (report.cadence),
+      report.period,
+      report.submissionNumber
+    )
+  ) {
+    return { verdict: 'skipped', reason: 'resubmission-started' }
+  }
+
+  const cleared = await deps.reportsRepository.clearResubmissionRequired({
+    reportId: report.id,
+    version: report.version
+  })
+  if (!cleared) {
+    return { verdict: 'skipped', reason: 'changed-since-compared' }
+  }
+
+  await auditClearReportRequiringResubmission({
+    systemLogsRepository: deps.systemLogsRepository,
+    report
+  })
+  return { verdict: 'cleared' }
+}
+
+/**
+ * @param {ReevaluateResubmissionFlagsDependencies} deps
  * @param {FlaggedReport} flagged
+ * @param {boolean} clearFlags
  * @returns {Promise<FlagOutcome>}
  */
-const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
+const reevaluate = async (
+  deps,
+  { reportId, resubmissionInProgress },
+  clearFlags
+) => {
   const report = await deps.reportsRepository.findReportById(reportId)
   // Selected for carrying this flag.
   const { closedPeriodRestated } = /** @type {ReportResubmissionRequired} */ (
@@ -173,6 +222,14 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     report.registrationId
   )
 
+  const verdict = await verdictFor(deps, {
+    report,
+    registration,
+    period,
+    flaggedBy: summaryLogId,
+    resubmissionInProgress
+  })
+
   return {
     organisationId: report.organisationId,
     registrationNumber: registration.registrationNumber ?? null,
@@ -183,23 +240,24 @@ const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
     period,
     flaggedAt: uploadedAt,
     flaggedBy: summaryLogId,
-    ...(await verdictFor(deps, {
-      report,
-      registration,
-      period,
-      flaggedBy: summaryLogId,
-      resubmissionInProgress
-    }))
+    ...(clearFlags && verdict.verdict === 'would-clear'
+      ? await clearFlag(deps, report)
+      : verdict)
   }
 }
 
 /**
- * Read-only: produces the review list of closed-period flags, writes nothing.
+ * Produces the review list of closed-period flags, and with `clearFlags`
+ * clears the ones whose figures are unchanged.
  *
  * @param {ReevaluateResubmissionFlagsDependencies} deps
+ * @param {{ clearFlags?: boolean }} [options]
  * @returns {Promise<{ outcomes: FlagOutcome[], failures: FlagFailure[] }>}
  */
-export const reevaluateResubmissionFlags = async (deps) => {
+export const reevaluateResubmissionFlags = async (
+  deps,
+  { clearFlags = false } = {}
+) => {
   const flaggedReports = findFlaggedReports(
     await deps.reportsRepository.findAllPeriodicReports()
   )
@@ -210,7 +268,7 @@ export const reevaluateResubmissionFlags = async (deps) => {
   const failures = []
   for (const flagged of flaggedReports) {
     try {
-      outcomes.push(await reevaluate(deps, flagged)) // NOSONAR: javascript:S9382 - sequential so the sweep never fans out reads across every flagged report
+      outcomes.push(await reevaluate(deps, flagged, clearFlags)) // NOSONAR: javascript:S9382 - sequential so the sweep never fans out reads across every flagged report
     } catch (error) {
       failures.push({
         reportId: flagged.reportId,

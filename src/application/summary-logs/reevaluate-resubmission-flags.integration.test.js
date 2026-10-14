@@ -308,15 +308,41 @@ const uploadAndSubmitFlaggingEveryClosedPeriod = (
     reprocessorFile(rows)
   )
 
-const reevaluate = (env) =>
-  reevaluateResubmissionFlags({
-    reportsRepository: env.reportsRepository,
-    organisationsRepository: env.organisationsRepository,
-    summaryLogsRepository: env.summaryLogsRepository,
-    ledgerRepository: env.ledgerRepository,
-    summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
-    overseasSitesRepository: env.overseasSitesRepository
+const reevaluate = (env, { clearFlags = false } = {}) =>
+  reevaluateResubmissionFlags(
+    {
+      reportsRepository: env.reportsRepository,
+      organisationsRepository: env.organisationsRepository,
+      summaryLogsRepository: env.summaryLogsRepository,
+      ledgerRepository: env.ledgerRepository,
+      summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
+      overseasSitesRepository: env.overseasSitesRepository,
+      systemLogsRepository: env.systemLogsRepository
+    },
+    { clearFlags }
+  )
+
+const clearAuditsOf = async (env) => {
+  const { systemLogs } = await env.systemLogsRepository.find({
+    organisationId: env.organisationId,
+    subCategory: 'reports',
+    limit: 100
   })
+  return systemLogs.filter(
+    ({ event }) => event.action === 'clear-requiring-resubmission'
+  )
+}
+
+const flagWithoutFigureChange = async (env) => {
+  const reportId = await submitAndCloseJanuary(env)
+  await uploadAndSubmitFlaggingEveryClosedPeriod(
+    env,
+    'sl-nonfigure',
+    'file-nonfigure',
+    AMENDED_REFERENCE
+  )
+  return reportId
+}
 
 describe('reevaluateResubmissionFlags', () => {
   const { getServer } = setupAuthContext()
@@ -652,17 +678,6 @@ describe('reevaluateResubmissionFlags', () => {
     })
 
     describe('keeps a flag it cannot compare', () => {
-      const flagWithoutFigureChange = async (env) => {
-        const reportId = await submitAndCloseJanuary(env)
-        await uploadAndSubmitFlaggingEveryClosedPeriod(
-          env,
-          'sl-nonfigure',
-          'file-nonfigure',
-          AMENDED_REFERENCE
-        )
-        return reportId
-      }
-
       const withStoredReport = (env, change) => {
         const findReportById = env.reportsRepository.findReportById
         vi.spyOn(env.reportsRepository, 'findReportById').mockImplementation(
@@ -723,6 +738,139 @@ describe('reevaluateResubmissionFlags', () => {
           })
         ])
       })
+    })
+  })
+
+  describe('clearing flags', () => {
+    it('writes nothing while clearing is off', async () => {
+      const env = await setupEnvironment()
+      const reportId = await flagWithoutFigureChange(env)
+      const before = await env.reportsRepository.findReportById(reportId)
+
+      const { outcomes } = await reevaluate(env)
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({ reportId, verdict: 'would-clear' })
+      ])
+      expect(await env.reportsRepository.findReportById(reportId)).toEqual(
+        before
+      )
+      expect(await clearAuditsOf(env)).toEqual([])
+    })
+
+    it('clears a flag whose figures are unchanged and audits it', async () => {
+      const env = await setupEnvironment()
+      const reportId = await flagWithoutFigureChange(env)
+      const before = await env.reportsRepository.findReportById(reportId)
+
+      const { outcomes, failures } = await reevaluate(env, { clearFlags: true })
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({ reportId, verdict: 'cleared' })
+      ])
+      expect(failures).toEqual([])
+      const after = await env.reportsRepository.findReportById(reportId)
+      expect(after.resubmissionRequired).toBeUndefined()
+      expect(after.version).toBe(before.version + 1)
+      expect(await clearAuditsOf(env)).toEqual([
+        expect.objectContaining({
+          createdBy: expect.objectContaining({ id: 'system' }),
+          context: {
+            organisationId: env.organisationId,
+            registrationId: env.registrationId,
+            ...JANUARY_2025,
+            submissionNumber: 1,
+            reportId,
+            previous: { resubmissionRequired: before.resubmissionRequired },
+            next: { resubmissionRequired: null }
+          }
+        })
+      ])
+    })
+
+    it('leaves a kept flag alone', async () => {
+      const env = await setupEnvironment()
+      const reportId = await submitAndCloseJanuary(env)
+      await uploadAndSubmitFlaggingEveryClosedPeriod(
+        env,
+        'sl-figure',
+        'file-figure',
+        CHANGED_TONNAGE
+      )
+      const before = await env.reportsRepository.findReportById(reportId)
+
+      const { outcomes } = await reevaluate(env, { clearFlags: true })
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          verdict: 'kept',
+          reason: 'figures-changed'
+        })
+      ])
+      expect(await env.reportsRepository.findReportById(reportId)).toEqual(
+        before
+      )
+      expect(await clearAuditsOf(env)).toEqual([])
+    })
+
+    it('skips a report re-flagged after it was compared', async () => {
+      const env = await setupEnvironment()
+      const reportId = await flagWithoutFigureChange(env)
+      const clear = env.reportsRepository.clearResubmissionRequired
+      vi.spyOn(
+        env.reportsRepository,
+        'clearResubmissionRequired'
+      ).mockImplementation(async (params) => {
+        await env.reportsRepository.markSubmittedReportsRequiringResubmission({
+          organisationId: env.organisationId,
+          registrationId: env.registrationId,
+          summaryLogId: 'sl-concurrent',
+          uploadedAt: new Date().toISOString(),
+          periods: [JANUARY_2025]
+        })
+        return clear(params)
+      })
+
+      const { outcomes } = await reevaluate(env, { clearFlags: true })
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          verdict: 'skipped',
+          reason: 'changed-since-compared'
+        })
+      ])
+      const after = await env.reportsRepository.findReportById(reportId)
+      expect(after.resubmissionRequired?.closedPeriodRestated).toEqual(
+        expect.objectContaining({ summaryLogId: 'sl-concurrent' })
+      )
+      expect(await clearAuditsOf(env)).toEqual([])
+    })
+
+    it('skips a report whose resubmission was started after the sweep read it', async () => {
+      const env = await setupEnvironment()
+      const reportId = await flagWithoutFigureChange(env)
+      const findReportById = env.reportsRepository.findReportById
+      vi.spyOn(env.reportsRepository, 'findReportById').mockImplementationOnce(
+        async (id) => {
+          await generateReport(env, JANUARY_2025, 2)
+          return findReportById(id)
+        }
+      )
+
+      const { outcomes } = await reevaluate(env, { clearFlags: true })
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          verdict: 'skipped',
+          reason: 'resubmission-started'
+        })
+      ])
+      const after = await env.reportsRepository.findReportById(reportId)
+      expect(after.resubmissionRequired?.closedPeriodRestated).toBeDefined()
+      expect(await clearAuditsOf(env)).toEqual([])
     })
   })
 })

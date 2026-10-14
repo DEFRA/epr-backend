@@ -5,6 +5,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { config } from '#root/config.js'
@@ -51,13 +52,23 @@ const keptFor = (outcomes, reason) =>
     .length
 
 /**
- * @param {{ outcomes: FlagOutcome[], failures: unknown[] }} result
+ * @param {FlagOutcome[]} outcomes
+ * @param {FlagOutcome['verdict']} verdict
  */
-const formatSummary = ({ outcomes, failures }) =>
+const countOf = (outcomes, verdict) =>
+  outcomes.filter((outcome) => outcome.verdict === verdict).length
+
+/**
+ * @param {{ outcomes: FlagOutcome[], failures: unknown[] }} result
+ * @param {boolean} clearFlags
+ */
+const formatSummary = ({ outcomes, failures }, clearFlags) =>
   [
-    'Resubmission flags dry run:',
+    `Resubmission flags ${clearFlags ? 'repair' : 'dry run'}:`,
     `flagged=${outcomes.length + failures.length}`,
-    `wouldClear=${outcomes.filter(({ verdict }) => verdict === 'would-clear').length}`,
+    `wouldClear=${countOf(outcomes, 'would-clear')}`,
+    `cleared=${countOf(outcomes, 'cleared')}`,
+    `skipped=${countOf(outcomes, 'skipped')}`,
     `keptOperatorRequested=${keptFor(outcomes, 'operator-requested')}`,
     `keptResubmissionInProgress=${keptFor(outcomes, 'resubmission-in-progress')}`,
     `keptFiguresChanged=${keptFor(outcomes, 'figures-changed')}`,
@@ -83,13 +94,19 @@ const buildDependencies = async (server) => ({
   summaryLogRowStatesRepository: (
     await createMongoSummaryLogRowStatesRepository(server.db)
   )(),
-  overseasSitesRepository: (await createOverseasSitesRepository(server.db))()
+  overseasSitesRepository: (await createOverseasSitesRepository(server.db))(),
+  systemLogsRepository: (await createSystemLogsRepository(server.db))(logger)
 })
 
 /** @param {StartedServer} server */
 const runSweep = async (server) => {
+  // Flag off (the default) only reports; on lets it clear.
+  const clearFlags = config.get(
+    'featureFlags.clearUnwarrantedResubmissionFlags'
+  )
   const result = await reevaluateResubmissionFlags(
-    await buildDependencies(server)
+    await buildDependencies(server),
+    { clearFlags }
   )
 
   for (const outcome of result.outcomes) {
@@ -100,12 +117,13 @@ const runSweep = async (server) => {
       message: `Failed to re-evaluate resubmission flag on report ${failure.reportId}: ${failure.error}`
     })
   }
-  logger.info({ message: formatSummary(result) })
+  logger.info({ message: formatSummary(result, clearFlags) })
 }
 
 /**
- * Read-only startup sweep producing the review list of closed-period
- * resubmission flags. Findings log at info to stay off the OpenSearch alerts.
+ * Startup sweep producing the review list of closed-period resubmission flags,
+ * clearing unwarranted ones behind `clearUnwarrantedResubmissionFlags`.
+ * Findings log at info to stay off the OpenSearch alerts.
  *
  * @param {StartedServer} server
  */

@@ -1,4 +1,5 @@
 import {
+  validateClearResubmissionRequired,
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
@@ -333,4 +334,20 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
       operatorRequested
     }
   }
+}
+
+/**
+ * @param {Db} db
+ * @param {import('./port.js').ClearResubmissionRequiredParams} params
+ * @returns {Promise<boolean>}
+ */
+export const performClearResubmissionRequired = async (db, params) => {
+  const { reportId, version } = validateClearResubmissionRequired(params)
+
+  const { modifiedCount } = await reportsCollection(db).updateOne(
+    { id: reportId, version },
+    { $unset: { resubmissionRequired: '' }, $inc: { version: 1 } }
+  )
+
+  return modifiedCount === 1
 }
