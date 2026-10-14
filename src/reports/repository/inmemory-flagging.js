@@ -1,4 +1,3 @@
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { validateClearClosedPeriodRestated } from './validation.js'
 
 /**
@@ -15,7 +14,6 @@ export const clearClosedPeriodRestated = async (reports, params) => {
 
   if (
     report?.version !== version ||
-    report.status.currentStatus !== REPORT_STATUS.SUBMITTED ||
     !report.resubmissionRequired?.closedPeriodRestated
   ) {
     return false

@@ -352,7 +352,6 @@ export const performClearClosedPeriodRestated = async (db, params) => {
   const asRead = {
     id: reportId,
     version,
-    'status.currentStatus': REPORT_STATUS.SUBMITTED,
     'resubmissionRequired.closedPeriodRestated': { $exists: true }
   }
 

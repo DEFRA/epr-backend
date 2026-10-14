@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
   DEFAULT_ORG_ID,
@@ -113,19 +112,6 @@ export const testClearClosedPeriodRestatedBehaviour = (it) => {
       const cleared = await repository.clearClosedPeriodRestated({
         reportId,
         version: report.version
-      })
-
-      expect(cleared).toBe(false)
-    })
-
-    it('returns false when the report is no longer submitted', async () => {
-      const { id: reportId, version } = await repository.createReport(
-        buildCreateReportParams()
-      )
-
-      const cleared = await repository.clearClosedPeriodRestated({
-        reportId,
-        version
       })
 
       expect(cleared).toBe(false)

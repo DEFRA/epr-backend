@@ -419,7 +419,7 @@
  *   being `submitted` and not already flagged this way. Returns `null` when
  *   the write matched nothing.
  * @property {(params: ClearClosedPeriodRestatedParams) => Promise<boolean>} clearClosedPeriodRestated
- *   Removes a submitted report's `resubmissionRequired.closedPeriodRestated`,
+ *   Removes a report's `resubmissionRequired.closedPeriodRestated`,
  *   conditional on the report still being at `version`, leaving
  *   `operatorRequested` untouched. Removes `resubmissionRequired` altogether
  *   when no reason remains. Returns whether it cleared anything.
