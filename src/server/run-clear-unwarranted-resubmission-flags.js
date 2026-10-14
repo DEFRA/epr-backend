@@ -88,7 +88,7 @@ const runSweep = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'repair'
   logger.info({
-    message: `Clear unwarranted resubmission flags (${mode}): flagged=${outcomes.length + failures.length} cleared=${countOf(outcomes, 'cleared')} wouldClear=${countOf(outcomes, 'would-clear')} kept=${countOf(outcomes, 'kept')} skipped=${countOf(outcomes, 'skipped')} failed=${failures.length}`
+    message: `Clear unwarranted resubmission flags (${mode}): flagged=${outcomes.length + failures.length} cleared=${countOf(outcomes, 'cleared')} wouldClear=${countOf(outcomes, 'would-clear')} kept=${countOf(outcomes, 'kept')} resubmissionInProgress=${countOf(outcomes, 'resubmission-in-progress')} skipped=${countOf(outcomes, 'skipped')} failed=${failures.length}`
   })
 }
 

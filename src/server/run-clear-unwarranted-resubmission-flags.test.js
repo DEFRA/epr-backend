@@ -141,7 +141,7 @@ describe('runClearUnwarrantedResubmissionFlags', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Clear unwarranted resubmission flags (dry-run): flagged=2 cleared=0 wouldClear=1 kept=1 skipped=0 failed=0'
+        'Clear unwarranted resubmission flags (dry-run): flagged=2 cleared=0 wouldClear=1 kept=1 resubmissionInProgress=0 skipped=0 failed=0'
     })
   })
 
@@ -150,7 +150,8 @@ describe('runClearUnwarrantedResubmissionFlags', () => {
     vi.mocked(clearUnwarrantedResubmissionFlags).mockResolvedValue({
       outcomes: [
         outcome({ action: 'cleared' }),
-        outcome({ reportId: 'report-3', action: 'skipped' })
+        outcome({ reportId: 'report-3', action: 'skipped' }),
+        outcome({ reportId: 'report-5', action: 'resubmission-in-progress' })
       ],
       failures: [{ reportId: 'report-4', error: 'connection reset' }]
     })
@@ -167,7 +168,7 @@ describe('runClearUnwarrantedResubmissionFlags', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Clear unwarranted resubmission flags (repair): flagged=3 cleared=1 wouldClear=0 kept=0 skipped=1 failed=1'
+        'Clear unwarranted resubmission flags (repair): flagged=4 cleared=1 wouldClear=0 kept=0 resubmissionInProgress=1 skipped=1 failed=1'
     })
   })
 

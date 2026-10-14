@@ -278,7 +278,7 @@ export const markSubmittedReportRequiringResubmissionByOperatorSchema =
 
 export const clearClosedPeriodRestatedSchema = Joi.object({
   reportId: findReportByIdSchema,
-  summaryLogId: Joi.string().required()
+  version: Joi.number().integer().min(1).required()
 })
 
 /**

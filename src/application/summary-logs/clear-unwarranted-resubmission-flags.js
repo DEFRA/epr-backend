@@ -13,7 +13,7 @@ import {
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {PeriodicReport, PeriodicReportSlots, Report, ReportsRepository, ResubmissionClosedPeriodRestated} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, PeriodicReportSlots, Report, ReportResubmissionRequired, ReportSummary, ReportsRepository, ResubmissionClosedPeriodRestated} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
@@ -32,7 +32,7 @@ import {
  */
 
 /**
- * @typedef {'cleared' | 'would-clear' | 'kept' | 'skipped'} FlagAction
+ * @typedef {'cleared' | 'would-clear' | 'kept' | 'resubmission-in-progress' | 'skipped'} FlagAction
  *
  * @typedef {Object} FlagOutcome
  * @property {string} organisationId
@@ -49,22 +49,38 @@ import {
  */
 
 /**
+ * @typedef {{ reportId: string, resubmissionInProgress: boolean }} FlaggedReport
+ */
+
+/**
  * The latest submission of every period carrying a closed-period flag.
  * Superseded submissions are skipped: a later submission answers them.
  *
  * @param {PeriodicReport[]} periodicReports
- * @returns {string[]} report ids
+ * @returns {FlaggedReport[]}
  */
-const findFlaggedReportIds = (periodicReports) =>
+const findFlaggedReports = (periodicReports) =>
   periodicReports
     .flatMap(({ reports }) => Object.values(reports))
     // A cadence key exists only for cadences that hold reports.
     .flatMap((slots) =>
       Object.values(/** @type {PeriodicReportSlots} */ (slots))
     )
-    .map((slot) => latestSubmitted(slot.current, slot.previousSubmissions))
-    .filter((report) => report?.resubmissionRequired?.closedPeriodRestated)
-    .map((report) => /** @type {NonNullable<typeof report>} */ (report).id)
+    .flatMap((slot) => {
+      const flagged = latestSubmitted(slot.current, slot.previousSubmissions)
+      if (!flagged?.resubmissionRequired?.closedPeriodRestated) {
+        return []
+      }
+      // current is the period's highest submission, so never null here.
+      const current = /** @type {ReportSummary} */ (slot.current)
+      return [
+        {
+          reportId: flagged.id,
+          resubmissionInProgress:
+            current.submissionNumber > flagged.submissionNumber
+        }
+      ]
+    })
 
 /**
  * Rebuilds the period's figures from the registration's current head, on the
@@ -120,45 +136,70 @@ const compareWithHead = async (deps, { report, period, flaggedBy }) => {
 
 /**
  * @param {ClearUnwarrantedResubmissionFlagsDependencies} deps
- * @param {{ report: Report, flaggedBy: string, isDryRun: boolean }} params
+ * @param {{ report: Report, isDryRun: boolean }} params
  * @returns {Promise<FlagAction>}
  */
-const clearFlag = async (deps, { report, flaggedBy, isDryRun }) => {
+const clearFlag = async (deps, { report, isDryRun }) => {
   if (isDryRun) {
     return 'would-clear'
   }
 
   const cleared = await deps.reportsRepository.clearClosedPeriodRestated({
     reportId: report.id,
-    summaryLogId: flaggedBy
+    version: report.version
   })
   if (!cleared) {
     return 'skipped'
   }
 
+  const { closedPeriodRestated: _cleared, ...remaining } =
+    /** @type {ReportResubmissionRequired} */ (report.resubmissionRequired)
   await auditClearReportRequiringResubmission({
     systemLogsRepository: deps.systemLogsRepository,
-    organisationId: report.organisationId,
-    registrationId: report.registrationId,
-    cleared
+    report,
+    remaining: Object.keys(remaining).length > 0 ? remaining : null
   })
   return 'cleared'
 }
 
 /**
  * @param {ClearUnwarrantedResubmissionFlagsDependencies} deps
- * @param {string} reportId
+ * @param {Report} report
+ * @param {{ comparison: Comparison, resubmissionInProgress: boolean, isDryRun: boolean }} params
+ * @returns {Promise<FlagAction>}
+ */
+const decide = async (
+  deps,
+  report,
+  { comparison, resubmissionInProgress, isDryRun }
+) => {
+  if (requiresResubmission(comparison)) {
+    return 'kept'
+  }
+  // The flag is what permitted the draft, so clearing it would strand it.
+  if (resubmissionInProgress) {
+    return 'resubmission-in-progress'
+  }
+  return clearFlag(deps, { report, isDryRun })
+}
+
+/**
+ * @param {ClearUnwarrantedResubmissionFlagsDependencies} deps
+ * @param {FlaggedReport} flagged
  * @param {boolean} isDryRun
  * @returns {Promise<FlagOutcome | null>} null when the flag has gone since the scan
  */
-const reevaluate = async (deps, reportId, isDryRun) => {
+const reevaluate = async (
+  deps,
+  { reportId, resubmissionInProgress },
+  isDryRun
+) => {
   const report = await deps.reportsRepository.findReportById(reportId)
   const closedPeriodRestated = report.resubmissionRequired?.closedPeriodRestated
   if (!closedPeriodRestated) {
     return null
   }
 
-  const flaggedBy = closedPeriodRestated.summaryLogId
   const period = {
     year: report.year,
     cadence: report.cadence,
@@ -167,11 +208,13 @@ const reevaluate = async (deps, reportId, isDryRun) => {
   const { headSummaryLogId, comparison } = await compareWithHead(deps, {
     report,
     period,
-    flaggedBy
+    flaggedBy: closedPeriodRestated.summaryLogId
   })
-  const action = requiresResubmission(comparison)
-    ? 'kept'
-    : await clearFlag(deps, { report, flaggedBy, isDryRun })
+  const action = await decide(deps, report, {
+    comparison,
+    resubmissionInProgress,
+    isDryRun
+  })
 
   return {
     organisationId: report.organisationId,
@@ -196,7 +239,7 @@ const reevaluate = async (deps, reportId, isDryRun) => {
  * @returns {Promise<{ outcomes: FlagOutcome[], failures: FlagFailure[] }>}
  */
 export const clearUnwarrantedResubmissionFlags = async (deps, { isDryRun }) => {
-  const reportIds = findFlaggedReportIds(
+  const flaggedReports = findFlaggedReports(
     await deps.reportsRepository.findAllPeriodicReports()
   )
 
@@ -206,14 +249,17 @@ export const clearUnwarrantedResubmissionFlags = async (deps, { isDryRun }) => {
   const failures = []
 
   // Sequential, so the sweep never fans out reads across every flagged report.
-  for (const reportId of reportIds) {
+  for (const flagged of flaggedReports) {
     try {
-      const outcome = await reevaluate(deps, reportId, isDryRun)
+      const outcome = await reevaluate(deps, flagged, isDryRun)
       if (outcome) {
         outcomes.push(outcome)
       }
     } catch (error) {
-      failures.push({ reportId, error: /** @type {Error} */ (error).message })
+      failures.push({
+        reportId: flagged.reportId,
+        error: /** @type {Error} */ (error).message
+      })
     }
   }
 

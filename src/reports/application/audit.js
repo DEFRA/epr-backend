@@ -10,10 +10,10 @@ import {
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
- *   ClearClosedPeriodRestatedResult,
  *   MarkReportStaleResult,
  *   MarkSubmittedReportRequiringResubmissionResult,
- *   Report
+ *   Report,
+ *   ReportResubmissionRequired
  * } from '#reports/repository/port.js'
  */
 
@@ -280,19 +280,18 @@ export async function auditMarkReportsRequiringResubmission({
 
 /**
  * Audits the removal of a closed-period resubmission flag whose restated
- * figures turned out unchanged.
+ * figures turned out unchanged, as the reverse of
+ * {@link auditMarkReportsRequiringResubmission}.
  * @param {{
  *   systemLogsRepository: SystemLogsRepository,
- *   organisationId: string,
- *   registrationId: string,
- *   cleared: ClearClosedPeriodRestatedResult
+ *   report: Report,
+ *   remaining: ReportResubmissionRequired | null
  * }} params
  */
 export async function auditClearReportRequiringResubmission({
   systemLogsRepository,
-  organisationId,
-  registrationId,
-  cleared
+  report,
+  remaining
 }) {
   const payload = {
     user: SYSTEM_ACTOR,
@@ -302,15 +301,15 @@ export async function auditClearReportRequiringResubmission({
       action: 'clear-requiring-resubmission'
     },
     context: {
-      organisationId,
-      registrationId,
-      year: cleared.year,
-      cadence: cleared.cadence,
-      period: cleared.period,
-      submissionNumber: cleared.submissionNumber,
-      reportId: cleared.reportId,
-      previous: { closedPeriodRestated: cleared.closedPeriodRestated },
-      next: { closedPeriodRestated: null }
+      organisationId: report.organisationId,
+      registrationId: report.registrationId,
+      year: report.year,
+      cadence: report.cadence,
+      period: report.period,
+      submissionNumber: report.submissionNumber,
+      reportId: report.id,
+      previous: { resubmissionRequired: report.resubmissionRequired },
+      next: { resubmissionRequired: remaining }
     }
   }
 

@@ -30,6 +30,7 @@ const {
   auditReportDelete,
   auditMarkReportsStale,
   auditMarkReportsRequiringResubmission,
+  auditClearReportRequiringResubmission,
   auditReportRequestResubmission,
   MARK_STALE_ACTION
 } = await import('./audit.js')
@@ -400,6 +401,81 @@ describe.each([
         context
       }
     ])
+  })
+})
+
+describe('auditClearReportRequiringResubmission', () => {
+  const mockInsertMany = vi.fn()
+
+  const event = {
+    category: 'waste-reporting',
+    subCategory: 'reports',
+    action: 'clear-requiring-resubmission'
+  }
+
+  const operatorRequested = {
+    requestedAt: '2025-05-01T12:00:00.000Z',
+    requestedBy: { id: 'user-1', name: 'Alice', position: 'Officer' }
+  }
+
+  const run = (/** @type {object} */ remaining) =>
+    auditClearReportRequiringResubmission({
+      systemLogsRepository: buildSystemLogsRepository(mockInsertMany),
+      report: asReport({
+        id: flaggedReport.reportId,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: flaggedReport.year,
+        cadence: flaggedReport.cadence,
+        period: flaggedReport.period,
+        submissionNumber: flaggedReport.submissionNumber,
+        resubmissionRequired: { ...resubmissionRequired, ...remaining }
+      }),
+      remaining: Object.keys(remaining).length > 0 ? remaining : null
+    })
+
+  const contextWith = (previous, next) => ({
+    ...flaggedReport,
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    previous: { resubmissionRequired: previous },
+    next: { resubmissionRequired: next }
+  })
+
+  beforeEach(() => {
+    mockInsertMany.mockResolvedValue(undefined)
+  })
+
+  it('records the flag going, as the reverse of marking it', async () => {
+    await run({})
+
+    const context = contextWith(resubmissionRequired, null)
+    expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
+      user: systemActor,
+      event,
+      context
+    })
+    expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
+      {
+        createdAt: new Date('2025-06-01T12:00:00.000Z'),
+        createdBy: systemActor,
+        event,
+        context
+      }
+    ])
+  })
+
+  it("records the operator's own request as still standing", async () => {
+    await run({ operatorRequested })
+
+    expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
+      user: systemActor,
+      event,
+      context: contextWith(
+        { ...resubmissionRequired, operatorRequested },
+        { operatorRequested }
+      )
+    })
   })
 })
 

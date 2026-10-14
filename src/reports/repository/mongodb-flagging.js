@@ -337,66 +337,38 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
 }
 
 /**
- * Removes the `closedPeriodRestated` flag set by `summaryLogId`, or the whole
- * `resubmissionRequired` when that was its only reason. The version guard makes
- * a concurrent re-flag win: the write then matches nothing and returns `null`.
+ * Removes the `closedPeriodRestated` flag, or the whole `resubmissionRequired`
+ * when the operator has not also asked to resubmit. The version guard means
+ * a report changed since the caller read it is left alone, and at most one of
+ * the two writes can match.
  *
  * @param {Db} db
  * @param {import('./port.js').ClearClosedPeriodRestatedParams} params
- * @returns {Promise<import('./port.js').ClearClosedPeriodRestatedResult | null>}
+ * @returns {Promise<boolean>}
  */
 export const performClearClosedPeriodRestated = async (db, params) => {
-  const { reportId, summaryLogId } = validateClearClosedPeriodRestated(params)
+  const { reportId, version } = validateClearClosedPeriodRestated(params)
 
-  const doc = await reportsCollection(db).findOne(
-    {
-      id: reportId,
-      'status.currentStatus': REPORT_STATUS.SUBMITTED,
-      'resubmissionRequired.closedPeriodRestated.summaryLogId': summaryLogId
-    },
-    {
-      projection: {
-        _id: 0,
-        id: 1,
-        version: 1,
-        year: 1,
-        cadence: 1,
-        period: 1,
-        submissionNumber: 1,
-        resubmissionRequired: 1
-      }
-    }
-  )
-
-  if (!doc) {
-    return null
+  const asRead = {
+    id: reportId,
+    version,
+    'status.currentStatus': REPORT_STATUS.SUBMITTED,
+    'resubmissionRequired.closedPeriodRestated': { $exists: true }
   }
 
-  // The filter matched on the flag, so it is present.
-  const { closedPeriodRestated, ...remaining } =
-    /** @type {{ closedPeriodRestated: import('./port.js').ResubmissionClosedPeriodRestated }} */ (
-      doc.resubmissionRequired
+  const unset = async (operatorRequested, field) => {
+    const { modifiedCount } = await reportsCollection(db).updateOne(
+      {
+        ...asRead,
+        'resubmissionRequired.operatorRequested': { $exists: operatorRequested }
+      },
+      { $unset: { [field]: '' }, $inc: { version: 1 } }
     )
-  const field =
-    Object.keys(remaining).length > 0
-      ? 'resubmissionRequired.closedPeriodRestated'
-      : 'resubmissionRequired'
+    return modifiedCount > 0
+  }
 
-  const { modifiedCount } = await reportsCollection(db).updateOne(
-    { id: reportId, version: doc.version },
-    { $unset: { [field]: '' }, $inc: { version: 1 } }
+  return (
+    (await unset(true, 'resubmissionRequired.closedPeriodRestated')) ||
+    unset(false, 'resubmissionRequired')
   )
-
-  if (modifiedCount === 0) {
-    return null
-  }
-
-  return {
-    reportId: doc.id,
-    year: doc.year,
-    cadence: doc.cadence,
-    period: doc.period,
-    submissionNumber: doc.submissionNumber,
-    closedPeriodRestated
-  }
 }

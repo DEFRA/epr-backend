@@ -155,30 +155,5 @@ describe('MongoDB reports repository', () => {
         'Database connection lost'
       )
     })
-
-    it('clears nothing when the report changes between reading its flag and the write', async () => {
-      const mockDb = createMockDb({
-        findOne: async () => ({
-          id: LEGACY_REPORT_ID,
-          version: 3,
-          resubmissionRequired: {
-            closedPeriodRestated: {
-              uploadedAt: '2026-05-01T00:00:00.000Z',
-              summaryLogId: 'sl-restated'
-            }
-          }
-        }),
-        updateOne: async () => ({ matchedCount: 0, modifiedCount: 0 })
-      })
-
-      const repository = (await createReportsRepository(mockDb))()
-
-      await expect(
-        repository.clearClosedPeriodRestated({
-          reportId: LEGACY_REPORT_ID,
-          summaryLogId: 'sl-restated'
-        })
-      ).resolves.toBeNull()
-    })
   })
 })

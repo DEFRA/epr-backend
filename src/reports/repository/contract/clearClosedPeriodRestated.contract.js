@@ -13,7 +13,6 @@ import {
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
-const SL_ID = 'sl-restated'
 const UPLOADED_AT = '2026-05-01T00:00:00.000Z'
 const REQUESTED_AT = '2026-06-01T12:00:00.000Z'
 
@@ -46,30 +45,28 @@ export const testClearClosedPeriodRestatedBehaviour = (it) => {
         periods: [PERIOD]
       })
 
-    it('removes the flag and returns what it cleared', async () => {
+    const flaggedReport = async () => {
       const reportId = await createAndSubmitReport(repository)
-      await flagFrom(SL_ID)
-      const flagged = await repository.findReportById(reportId)
+      await flagFrom('sl-restated')
+      return repository.findReportById(reportId)
+    }
 
-      const result = await repository.clearClosedPeriodRestated({
-        reportId,
-        summaryLogId: SL_ID
+    it('removes the flag from the report as it was read', async () => {
+      const flagged = await flaggedReport()
+
+      const cleared = await repository.clearClosedPeriodRestated({
+        reportId: flagged.id,
+        version: flagged.version
       })
 
-      expect(result).toEqual({
-        reportId,
-        ...PERIOD,
-        submissionNumber: 1,
-        closedPeriodRestated: { uploadedAt: UPLOADED_AT, summaryLogId: SL_ID }
-      })
-      const report = await repository.findReportById(reportId)
+      expect(cleared).toBe(true)
+      const report = await repository.findReportById(flagged.id)
       expect(report.resubmissionRequired).toBeUndefined()
       expect(report.version).toBe(flagged.version + 1)
     })
 
     it("keeps the operator's own resubmission request", async () => {
       const reportId = await createAndSubmitReport(repository)
-      await flagFrom(SL_ID)
       await repository.markSubmittedReportRequiringResubmissionByOperator({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
@@ -78,10 +75,12 @@ export const testClearClosedPeriodRestatedBehaviour = (it) => {
         requestedBy: DEFAULT_CHANGED_BY,
         requestedAt: REQUESTED_AT
       })
+      await flagFrom('sl-restated')
+      const flagged = await repository.findReportById(reportId)
 
       await repository.clearClosedPeriodRestated({
         reportId,
-        summaryLogId: SL_ID
+        version: flagged.version
       })
 
       const report = await repository.findReportById(reportId)
@@ -93,47 +92,48 @@ export const testClearClosedPeriodRestatedBehaviour = (it) => {
       })
     })
 
-    it('leaves a flag a later summary log set', async () => {
-      const reportId = await createAndSubmitReport(repository)
+    it('leaves a report that changed since it was read', async () => {
+      const flagged = await flaggedReport()
       await flagFrom('sl-later')
-      const flagged = await repository.findReportById(reportId)
+      const reflagged = await repository.findReportById(flagged.id)
 
-      const result = await repository.clearClosedPeriodRestated({
-        reportId,
-        summaryLogId: SL_ID
+      const cleared = await repository.clearClosedPeriodRestated({
+        reportId: flagged.id,
+        version: flagged.version
       })
 
-      expect(result).toBeNull()
-      expect(await repository.findReportById(reportId)).toEqual(flagged)
+      expect(cleared).toBe(false)
+      expect(await repository.findReportById(flagged.id)).toEqual(reflagged)
     })
 
-    it('returns null when the report is not flagged', async () => {
+    it('returns false when the report is not flagged', async () => {
       const reportId = await createAndSubmitReport(repository)
+      const report = await repository.findReportById(reportId)
 
-      const result = await repository.clearClosedPeriodRestated({
+      const cleared = await repository.clearClosedPeriodRestated({
         reportId,
-        summaryLogId: SL_ID
+        version: report.version
       })
 
-      expect(result).toBeNull()
+      expect(cleared).toBe(false)
     })
 
-    it('returns null when the report is no longer submitted', async () => {
-      const { id: reportId } = await repository.createReport(
+    it('returns false when the report is no longer submitted', async () => {
+      const { id: reportId, version } = await repository.createReport(
         buildCreateReportParams()
       )
 
-      const result = await repository.clearClosedPeriodRestated({
+      const cleared = await repository.clearClosedPeriodRestated({
         reportId,
-        summaryLogId: SL_ID
+        version
       })
 
-      expect(result).toBeNull()
+      expect(cleared).toBe(false)
     })
 
     it('throws validation error for invalid input', async () => {
       await expect(
-        repository.clearClosedPeriodRestated({ reportId: '', summaryLogId: '' })
+        repository.clearClosedPeriodRestated({ reportId: '', version: 0 })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
   })

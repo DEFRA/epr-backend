@@ -136,7 +136,7 @@ const submit = async (env, summaryLogId) => {
   })
 }
 
-const generateAndSubmitReport = async (
+const generateReport = async (
   env,
   { year, cadence, period },
   submissionNumber = 1
@@ -145,7 +145,7 @@ const generateAndSubmitReport = async (
     env.organisationId,
     env.registrationId
   )
-  const report = await createReportForPeriod({
+  return createReportForPeriod({
     reportsRepository: env.reportsRepository,
     ledgerRepository: env.ledgerRepository,
     summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
@@ -160,6 +160,10 @@ const generateAndSubmitReport = async (
     submissionNumber,
     changedBy: CHANGED_BY
   })
+}
+
+const generateAndSubmitReport = async (env, period, submissionNumber = 1) => {
+  const report = await generateReport(env, period, submissionNumber)
 
   await env.reportsRepository.updateReportStatus({
     reportId: report.id,
@@ -461,6 +465,61 @@ describe('clearUnwarrantedResubmissionFlags', () => {
     )
   })
 
+  it('keeps the flag when the operator has already started the resubmission', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-nonfigure',
+      'file-nonfigure',
+      AMENDED_REFERENCE
+    )
+    // The flag is what allowed the draft, so clearing it would strand the draft.
+    await generateReport(env, JANUARY_2025, 2)
+    const flagged = await env.reportsRepository.findReportById(reportId)
+
+    const { outcomes } = await runBackfill(env, { isDryRun: false })
+
+    expect(await env.reportsRepository.findReportById(reportId)).toEqual(
+      flagged
+    )
+    expect(outcomes).toEqual([
+      expect.objectContaining({
+        reportId,
+        comparison: expect.objectContaining({ changedFields: [] }),
+        action: 'resubmission-in-progress'
+      })
+    ])
+  })
+
+  it('records what the flag was and what remains when it clears it', async () => {
+    const env = await setupEnvironment()
+    const reportId = await submitAndCloseJanuary(env)
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-nonfigure',
+      'file-nonfigure',
+      AMENDED_REFERENCE
+    )
+    const flagged = await env.reportsRepository.findReportById(reportId)
+
+    await runBackfill(env, { isDryRun: false })
+
+    const { systemLogs } = await env.systemLogsRepository.find({
+      organisationId: env.organisationId,
+      limit: 100
+    })
+    expect(
+      systemLogs.find(
+        (log) => log.event.action === 'clear-requiring-resubmission'
+      )?.context
+    ).toMatchObject({
+      reportId,
+      previous: { resubmissionRequired: flagged.resubmissionRequired },
+      next: { resubmissionRequired: null }
+    })
+  })
+
   it('skips a report re-flagged between the comparison and the write', async () => {
     const env = await setupEnvironment()
     const reportId = await submitAndCloseJanuary(env)
@@ -473,7 +532,7 @@ describe('clearUnwarrantedResubmissionFlags', () => {
     vi.spyOn(
       env.reportsRepository,
       'clearClosedPeriodRestated'
-    ).mockResolvedValue(null)
+    ).mockResolvedValue(false)
 
     const { outcomes } = await runBackfill(env, { isDryRun: false })
 

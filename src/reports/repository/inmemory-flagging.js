@@ -2,25 +2,23 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { validateClearClosedPeriodRestated } from './validation.js'
 
 /**
- * Mirrors mongodb-flagging.js's conditional write, returning `null` when
- * nothing matched.
+ * Mirrors mongodb-flagging.js's version-guarded write.
  *
  * @param {Map<string, Object>} reports
  * @param {import('./port.js').ClearClosedPeriodRestatedParams} params
- * @returns {Promise<import('./port.js').ClearClosedPeriodRestatedResult | null>}
+ * @returns {Promise<boolean>}
  */
 export const clearClosedPeriodRestated = async (reports, params) => {
-  const { reportId, summaryLogId } = validateClearClosedPeriodRestated(params)
+  const { reportId, version } = validateClearClosedPeriodRestated(params)
 
   const report = reports.get(reportId)
-  const closedPeriodRestated =
-    report?.resubmissionRequired?.closedPeriodRestated
 
   if (
-    report?.status.currentStatus !== REPORT_STATUS.SUBMITTED ||
-    closedPeriodRestated?.summaryLogId !== summaryLogId
+    report?.version !== version ||
+    report.status.currentStatus !== REPORT_STATUS.SUBMITTED ||
+    !report.resubmissionRequired?.closedPeriodRestated
   ) {
-    return null
+    return false
   }
 
   const { closedPeriodRestated: _cleared, ...remaining } =
@@ -35,12 +33,5 @@ export const clearClosedPeriodRestated = async (reports, params) => {
     version: report.version + 1
   })
 
-  return structuredClone({
-    reportId: report.id,
-    year: report.year,
-    cadence: report.cadence,
-    period: report.period,
-    submissionNumber: report.submissionNumber,
-    closedPeriodRestated
-  })
+  return true
 }
