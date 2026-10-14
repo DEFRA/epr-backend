@@ -75,9 +75,6 @@ const findFlaggedReports = (periodicReports) =>
     })
 
 /**
- * The registration's current figures, on the ledger the gate read for the
- * upload that set the flag, against the report's own source submission.
- *
  * @param {ReevaluateResubmissionFlagsDependencies} deps
  * @param {{ report: Report, period: PeriodRef, flaggedBy: string }} params
  * @returns {Promise<Comparison | { cannotCompare: string }>}
