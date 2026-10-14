@@ -13,7 +13,7 @@ import {
 /** @import {Comparison} from './periods-requiring-resubmission.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {PeriodicReport, PeriodicReportSlots, Report, ReportSummary, ReportsRepository, ResubmissionClosedPeriodRestated} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, PeriodicReportSlots, Report, ReportResubmissionRequired, ReportSummary, ReportsRepository, ResubmissionClosedPeriodRestated} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
@@ -159,10 +159,11 @@ const verdictFor = async (deps, { resubmissionInProgress, ...params }) => {
 const reevaluate = async (deps, { reportId, resubmissionInProgress }) => {
   const report = await deps.reportsRepository.findReportById(reportId)
   // Selected for carrying this flag.
+  const { closedPeriodRestated } = /** @type {ReportResubmissionRequired} */ (
+    report.resubmissionRequired
+  )
   const { uploadedAt, summaryLogId } =
-    /** @type {ResubmissionClosedPeriodRestated} */ (
-      report.resubmissionRequired?.closedPeriodRestated
-    )
+    /** @type {ResubmissionClosedPeriodRestated} */ (closedPeriodRestated)
   const period = {
     year: report.year,
     cadence: report.cadence,
