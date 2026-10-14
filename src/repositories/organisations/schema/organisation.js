@@ -29,18 +29,6 @@ import {
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
 
-/**
- * Two registrations clash only when both hold the same number. An unnumbered
- * registration holds none, whether it is stored as null or without the field.
- *
- * @param {{ registrationNumber?: string | null }} first
- * @param {{ registrationNumber?: string | null }} second
- * @returns {boolean}
- */
-const shareRegistrationNumber = (first, second) =>
-  Boolean(first.registrationNumber) &&
-  first.registrationNumber === second.registrationNumber
-
 export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array()
     .items(accreditationSchema)
@@ -62,7 +50,7 @@ export const organisationInsertSchema = Joi.object({
   partnership: partnershipSchema.optional(),
   registrations: Joi.array()
     .items(registrationSchema)
-    .unique(shareRegistrationNumber)
+    .unique('registrationNumber', { ignoreUndefined: true })
     .optional(),
   reprocessingNations: Joi.array()
     .items(
@@ -107,7 +95,7 @@ export const organisationReplaceSchema = organisationInsertSchema
       .valid(PREVIOUS_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION),
     registrations: Joi.array()
       .items(registrationUpdateSchema)
-      .unique(shareRegistrationNumber)
+      .unique('registrationNumber', { ignoreUndefined: true })
       .default([])
       .custom(validateImmutableFields(['id'])),
     accreditations: Joi.array()
