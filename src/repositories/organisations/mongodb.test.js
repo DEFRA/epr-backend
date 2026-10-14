@@ -279,32 +279,27 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
-  describe('registration number storage', () => {
-    it('stores no number field for an unnumbered registration', async ({
+  describe('registration number reads', () => {
+    it('reads a stored registration without the field as it reads one holding null', async ({
       organisationsRepository,
       mongoClient
     }) => {
       const repository = organisationsRepository()
       const organisation = buildOrganisation()
       await repository.insert(organisation)
-      const inserted = await repository.findById(organisation.id)
-      await repository.replace(
-        organisation.id,
-        1,
-        prepareOrgUpdate(inserted, { wasteProcessingTypes: ['reprocessor'] })
-      )
+      const withNull = await repository.findById(organisation.id)
 
-      const rawDoc = /** @type {Record<string, any>} */ (
-        await mongoClient
-          .db(DATABASE_NAME)
-          .collection(COLLECTION_NAME)
-          .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
-      )
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .updateOne(
+          { _id: ObjectId.createFromHexString(organisation.id) },
+          { $unset: { 'registrations.$[].registrationNumber': '' } }
+        )
+      const withoutField = await repository.findById(organisation.id)
 
-      expect(rawDoc.version).toBe(2)
-      for (const registration of rawDoc.registrations) {
-        expect(registration).not.toHaveProperty('registrationNumber')
-      }
+      expect(withNull.registrations[0].registrationNumber).toBeNull()
+      expect(withoutField).toEqual(withNull)
     })
   })
 

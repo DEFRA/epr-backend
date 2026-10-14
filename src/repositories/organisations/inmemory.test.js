@@ -278,6 +278,7 @@ describe('In-memory organisations repository', () => {
     it('leaves storage untouched when a replace is rejected', async () => {
       const organisation = buildOrganisation()
       await repository.insert(organisation)
+      const storedBefore = structuredClone(repository._getStorageForTesting())
 
       const duplicated = organisation.registrations.map((registration) => ({
         ...registration,
@@ -292,13 +293,7 @@ describe('In-memory organisations repository', () => {
         )
       ).rejects.toThrow(/duplicate value/)
 
-      const storage = repository._getStorageForTesting()
-      const storedOrg = storage.find((o) => o._id === organisation.id)
-
-      expect(storedOrg.registrations[0]).not.toHaveProperty(
-        'registrationNumber'
-      )
-      expect(storedOrg.registrations[0]).not.toHaveProperty('status')
+      expect(repository._getStorageForTesting()).toEqual(storedBefore)
     })
   })
 })
