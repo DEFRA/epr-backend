@@ -43,6 +43,7 @@ const SUBMITTED_SOURCE = {
   summaryLogId: 'sl-1',
   lastUploadedAt: '2026-04-01T21:22:28.351Z'
 }
+const CREATOR = { name: 'Test User', position: 'Officer' }
 
 const storedPeriod = {
   year: DEFAULT_REPORT_YEAR,
@@ -128,13 +129,15 @@ describe('toReportResource', () => {
         supportingInformation: 'Notes'
       })
 
-      const resource = toReportResource(await bodyOf(repository, id), {
-        submissionNumber: 1
-      })
+      const body = await bodyOf(repository, id)
+
+      const resource = toReportResource(body, { submissionNumber: 1 })
 
       expect(resource).toStrictEqual({
         ...storedPeriod,
         status: 'in_progress',
+        createdAt: body.status.created.at,
+        createdBy: CREATOR,
         version: 1,
         canRequestResubmission: false,
         recyclingActivity: NO_ROWS_RECEIVED,
@@ -250,6 +253,8 @@ describe('toReportResource', () => {
         ...storedPeriod,
         status: 'submitted',
         submittedAt: stored.status.submitted?.at,
+        createdAt: stored.status.created.at,
+        createdBy: CREATOR,
         submittedBy: { name: 'Alice', position: 'Officer' },
         version: 3,
         canRequestResubmission: true,
@@ -283,6 +288,58 @@ describe('toReportResource', () => {
       })
 
       expect(resource.submittedBy).toStrictEqual({ position: 'User' })
+    })
+
+    it.each([
+      [REPORT_STATUS.IN_PROGRESS, 0],
+      [REPORT_STATUS.READY_TO_SUBMIT, 1],
+      [REPORT_STATUS.SUBMITTED, 2]
+    ])(
+      'says who created the report and when, without their id, while %s',
+      async (status, transitions) => {
+        const { repository, id } = await createInProgress()
+        if (transitions > 0) {
+          await repository.updateReportStatus({
+            reportId: id,
+            version: 1,
+            status: REPORT_STATUS.READY_TO_SUBMIT,
+            slot: REPORT_STATUS_SLOT.READY,
+            changedBy: CHANGED_BY
+          })
+        }
+        if (transitions > 1) {
+          await repository.updateReportStatus({
+            reportId: id,
+            version: 2,
+            status: REPORT_STATUS.SUBMITTED,
+            slot: REPORT_STATUS_SLOT.SUBMITTED,
+            changedBy: CHANGED_BY,
+            submissionDeclaredBy: 'Bob'
+          })
+        }
+        const body = await bodyOf(repository, id)
+
+        const resource = toReportResource(body, { submissionNumber: 1 })
+
+        expect(resource).toMatchObject({
+          status,
+          createdAt: body.status.created.at,
+          createdBy: CREATOR
+        })
+        expect(reportResourceSchema.validate(resource).error).toBeUndefined()
+      }
+    )
+
+    it('leaves out the name of a creator who has none', async () => {
+      const { repository, id } = await createInProgress({
+        changedBy: { id: 'user-3', position: 'User' }
+      })
+
+      const resource = toReportResource(await bodyOf(repository, id), {
+        submissionNumber: 1
+      })
+
+      expect(resource.createdBy).toStrictEqual({ position: 'User' })
     })
 
     it.each([
@@ -458,6 +515,13 @@ describe('toReportResource', () => {
       expect(resource).toStrictEqual(servedPreview)
     })
 
+    it('says nothing of a creator', () => {
+      const resource = toReportResource(preview(), { submissionNumber: 1 })
+
+      expect(resource).not.toHaveProperty('createdAt')
+      expect(resource).not.toHaveProperty('createdBy')
+    })
+
     it('serves only the issued tonnage of an accredited preview', () => {
       const resource = toReportResource(preview({ prn: ACCREDITED_PRN }), {
         submissionNumber: 2
@@ -593,6 +657,26 @@ describe('reportResourceSchema', () => {
       reportResourceSchema.validate({
         ...servedPreview,
         source: { ...SUBMITTED_SOURCE, internal: true }
+      }).error
+    ).toBeDefined()
+  })
+
+  it('rejects a stored report without its creation time', async () => {
+    const { repository, id } = await createInProgress()
+    const { createdAt: _, ...withoutCreatedAt } = toReportResource(
+      await bodyOf(repository, id),
+      { submissionNumber: 1 }
+    )
+
+    expect(reportResourceSchema.validate(withoutCreatedAt).error).toBeDefined()
+  })
+
+  it('rejects a preview with a creator', () => {
+    expect(
+      reportResourceSchema.validate({
+        ...servedPreview,
+        createdAt: '2026-04-01T00:00:00.000Z',
+        createdBy: CREATOR
       }).error
     ).toBeDefined()
   })
