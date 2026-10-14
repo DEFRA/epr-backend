@@ -61,8 +61,8 @@ export const accreditationSchema = Joi.object({
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
   accreditationNumber: Joi.string()
-    .when('status', requiredWhenApprovedOrSuspended)
-    .default(null),
+    .empty(null)
+    .when('status', requiredWhenApprovedOrSuspended),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApprovedOrSuspended),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
