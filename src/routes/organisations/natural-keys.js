@@ -124,7 +124,7 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
  */
 export function registrationYears(registration) {
   return approvedYears(
-    toStatusTimeline(registration.statusHistory),
+    toStatusTimeline(registration.statusHistory, registration.validFrom),
     utcCalendarDate(new Date())
   )
 }

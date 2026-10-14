@@ -73,8 +73,8 @@ describe('GET /organisations/{organisationNumber}', () => {
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].statusTimeline).toEqual({
       '2026-01-01': { status: 'created' },
-      '2026-02-01': { status: 'approved' },
-      '2026-05-01': { status: 'suspended' }
+      '2026-05-01': { status: 'suspended' },
+      '2026-07-01': { status: 'approved' }
     })
     expect(registration).not.toHaveProperty('statusTimeline')
   })
@@ -100,8 +100,8 @@ describe('GET /organisations/{organisationNumber}', () => {
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].statusTimeline).toEqual({
       '2026-01-01': { status: 'created' },
-      '2026-02-01': { status: 'approved' },
-      '2026-03-01': { status: 'approved' }
+      '2026-03-01': { status: 'approved' },
+      '2026-07-01': { status: 'approved' }
     })
   })
 
@@ -109,8 +109,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     const reinstated = accreditation({
       statusHistory: [
         { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', updatedAt: '2026-03-01T15:00:00.000Z' },
-        { status: 'cancelled', updatedAt: '2026-03-01T12:00:00.000Z' }
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2026-03-01T15:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-03-01T12:00:00.000Z' }
       ]
     })
     const organisation = buildOrganisation({
@@ -124,7 +125,8 @@ describe('GET /organisations/{organisationNumber}', () => {
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].statusTimeline).toEqual({
       '2026-01-01': { status: 'created' },
-      '2026-03-01': { status: 'approved' }
+      '2026-03-01': { status: 'cancelled' },
+      '2026-07-01': { status: 'approved' }
     })
   })
 

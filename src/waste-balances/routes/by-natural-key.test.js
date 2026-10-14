@@ -26,6 +26,7 @@ const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
 const registeredOnly = reprocessor({
   registrationNumber: REGISTERED_ONLY_NUMBER,
+  validFrom: '2024-02-01',
   statusHistory: [
     { status: 'created', updatedAt: '2024-01-01T09:00:00.000Z' },
     { status: 'approved', updatedAt: '2024-02-01T09:00:00.000Z' }

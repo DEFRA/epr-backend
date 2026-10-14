@@ -156,8 +156,8 @@ export function toRegistrationEntry(registration, organisation, context) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(registration.statusHistory)
-  const status = statusOn(statusTimeline, today)
+  const statusTimeline = toStatusTimeline(registration.statusHistory, validFrom)
+  const { status } = registration
   if (!isOneOf(REGISTRATION_STATUSES, status)) {
     onDrop(
       `Registration ${registrationNumber} has status ${status} on ${today}`
@@ -278,8 +278,11 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(accreditation.statusHistory)
-  const status = statusOn(statusTimeline, today)
+  const statusTimeline = toStatusTimeline(
+    accreditation.statusHistory,
+    accreditation.validFrom
+  )
+  const { status } = accreditation
   if (!isOneOf(ACCREDITATION_STATUSES, status)) {
     onDrop(
       `Accreditation ${accreditationNumber} has status ${status} on ${today}`
@@ -307,16 +310,25 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
 }
 
 /**
- * Until ADR-0051's events exist, each change takes effect on the day it was
- * recorded, and the last recorded on a day wins.
+ * Until ADR-0051's events exist, the first approval takes effect from the
+ * record's validFrom and every other change on the day it was recorded; the
+ * last recorded on a day wins.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
+ * @param {string} [validFrom]
  * @returns {StatusTimeline}
  */
-export function toStatusTimeline(statusHistory) {
+export function toStatusTimeline(statusHistory, validFrom) {
+  const recorded = statusHistory
+    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .sort((one, other) => one.at.getTime() - other.at.getTime())
+  const firstApproval = recorded.find(({ status }) => status === 'approved')
+  if (firstApproval && validFrom) {
+    firstApproval.at = new Date(validFrom)
+  }
   return Object.fromEntries(
-    statusHistory
-      .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    // A stable sort keeps recorded order within a day
+    recorded
       .sort((one, other) => one.at.getTime() - other.at.getTime())
       .map(({ status, at }) => [at.toISOString().slice(0, 10), { status }])
   )

@@ -10,10 +10,10 @@ import {
   accreditation,
   anakin,
   approvedOverseasSite,
+  approvedTimeline,
   exporter,
   exporterAccreditation,
   findOrganisation,
-  grantedTimeline,
   luke,
   overseasSites,
   pendingOverseasSite,
@@ -76,7 +76,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             applicationContactDetails: luke,
             approvedPersons: [luke],
             status: 'approved',
-            statusTimeline: grantedTimeline('approved'),
+            statusTimeline: approvedTimeline('2026-02-01'),
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
@@ -95,7 +95,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
                 accreditationNumber: ACCREDITATION_NUMBER,
                 prnIssuance: { signatories: [yoda], tonnageBand: 'over_10000' },
                 status: 'approved',
-                statusTimeline: grantedTimeline('approved'),
+                statusTimeline: approvedTimeline('2026-07-01'),
                 submitterContactDetails: yoda
               }
             }
@@ -119,7 +119,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         applicationContactDetails: anakin,
         approvedPersons: [anakin],
         status: 'approved',
-        statusTimeline: grantedTimeline('approved'),
+        statusTimeline: approvedTimeline('2026-02-01'),
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',

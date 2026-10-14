@@ -62,9 +62,14 @@ export const granted = (status) => [
   { status, updatedAt: '2026-02-01T09:00:00.000Z' }
 ]
 
-export const grantedTimeline = (status) => ({
+/**
+ * The timeline of a record built with `granted('approved')`.
+ *
+ * @param {string} validFrom
+ */
+export const approvedTimeline = (validFrom) => ({
   '2026-01-01': { status: 'created' },
-  '2026-02-01': { status }
+  [validFrom]: { status: 'approved' }
 })
 
 export const accreditation = (overrides = {}) =>

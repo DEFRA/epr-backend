@@ -3,9 +3,9 @@ import {
   EXPORTER_ACCREDITATION_NUMBER,
   accreditation,
   approvedOverseasSite,
+  approvedTimeline,
   exporter,
   exporterAccreditation,
-  grantedTimeline,
   overseasSites,
   pendingOverseasSite,
   reprocessor
@@ -54,7 +54,7 @@ export const reprocessorResponse = {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
       status: 'approved',
-      statusTimeline: grantedTimeline('approved')
+      statusTimeline: approvedTimeline('2026-07-01')
     }
   }
 }
@@ -63,7 +63,7 @@ export const reprocessorResponse = {
 const exporterAccreditationResponse = {
   accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
   status: 'approved',
-  statusTimeline: grantedTimeline('approved'),
+  statusTimeline: approvedTimeline('2026-07-01'),
   overseasSites: {
     '001': { status: 'approved', approvedOn: '2026-01-01' },
     '002': { status: 'pending' }
