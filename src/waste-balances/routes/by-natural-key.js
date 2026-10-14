@@ -105,8 +105,8 @@ const accreditedLedgerGet = {
 }
 
 /**
- * The balance of each registration's accreditation for the year. A
- * registration the read model does not serve, or without exactly one
+ * The balance of each accreditation for the year, keyed by accreditation
+ * number. A registration the read model does not serve, or without exactly one
  * accreditation for the year, is left out, as the read model leaves it out.
  */
 const organisationWasteBalancesGet = {
@@ -114,23 +114,17 @@ const organisationWasteBalancesGet = {
   options: {
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
-    validate: { query: Joi.object({ year: yearSchema().required() }) },
     response: {
-      schema: Joi.array().items(
-        wasteBalanceSchema.keys({
-          registrationNumber: Joi.string().required(),
-          year: Joi.number().integer().required()
-        })
-      )
+      schema: Joi.object().pattern(Joi.string(), wasteBalanceSchema)
     }
   },
   /**
-   * @param {ResolvedRequest & { query: { year: number }, app: ResolvedRecords }} request
+   * @param {ResolvedRequest & { params: { year: number }, app: ResolvedRecords }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { organisation } = request.app
-    const { year } = request.query
+    const { year } = request.params
 
     const accredited = servedRegistrations(organisation).flatMap(
       (registration) => {
@@ -146,20 +140,19 @@ const organisationWasteBalancesGet = {
     )
 
     const balances = await Promise.all(
-      accredited.map(async ({ registration, accreditation }) => ({
-        registrationNumber: registration.registrationNumber,
-        year,
-        ...toBalanceBody(
+      accredited.map(async ({ registration, accreditation }) => [
+        accreditation.accreditationNumber,
+        toBalanceBody(
           await request.wasteBalanceService.currentBalance({
             organisationId: organisation.id,
             registrationId: registration.id,
             accreditationId: accreditation.id
           })
         )
-      }))
+      ])
     )
 
-    return h.response(balances).code(StatusCodes.OK)
+    return h.response(Object.fromEntries(balances)).code(StatusCodes.OK)
   }
 }
 
@@ -183,7 +176,7 @@ export const wasteBalanceRoutesByNaturalKey = [
   ),
   atNaturalKeys(
     organisationWasteBalancesGet,
-    `${organisationPath}/waste-balances`,
-    organisationParams
+    `${organisationPath}/waste-balances/{year}`,
+    { ...organisationParams, year: yearSchema().required() }
   )
 ]
