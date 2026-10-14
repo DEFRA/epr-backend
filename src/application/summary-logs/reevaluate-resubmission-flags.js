@@ -201,10 +201,9 @@ export const reevaluateResubmissionFlags = async (deps) => {
   /** @type {FlagFailure[]} */
   const failures = []
 
-  // Sequential, so the sweep never fans out reads across every flagged report.
   for (const flagged of flaggedReports) {
     try {
-      const outcome = await reevaluate(deps, flagged)
+      const outcome = await reevaluate(deps, flagged) // NOSONAR: javascript:S9382 - sequential so the sweep never fans out reads across every flagged report
       if (outcome) {
         outcomes.push(outcome)
       }
