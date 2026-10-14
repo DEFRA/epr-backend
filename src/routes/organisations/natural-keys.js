@@ -89,8 +89,8 @@ export async function findRegistrationByNumber(
  */
 export function servedRegistrations(organisation) {
   const numbers = new Set(
-    organisation.registrations.map(
-      ({ registrationNumber }) => registrationNumber
+    organisation.registrations.flatMap(
+      ({ registrationNumber }) => registrationNumber ?? []
     )
   )
   return [...numbers].flatMap(
@@ -104,7 +104,7 @@ export function servedRegistrations(organisation) {
  * cannot show elsewhere in the organisation does not stop the lookup.
  *
  * @param {Organisation} organisation
- * @param {string | null | undefined} registrationNumber
+ * @param {string} registrationNumber
  * @returns {Registration | null}
  */
 function servedRegistrationByNumber(organisation, registrationNumber) {

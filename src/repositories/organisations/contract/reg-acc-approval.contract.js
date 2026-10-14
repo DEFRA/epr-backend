@@ -846,7 +846,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.registrationNumber:.*contains an invalid value/
+            /Invalid organisation data: registrations\.0\.registrationNumber: "registrations\[0\]\.registrationNumber" is required/
           )
         })
 
