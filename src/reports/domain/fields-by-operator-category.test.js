@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
-  TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
+  TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY,
+  reportingDateFieldsFor
 } from './aggregation/fields-by-operator-category.js'
 import { OPERATOR_CATEGORY, isExporterCategory } from './operator-category.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+
+/** @import { OperatorCategory } from './operator-category.js' */
 
 describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
@@ -63,6 +68,85 @@ describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
       expect(
         'wasteExported' in SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[category]
       ).toBe(isExporterCategory(category))
+    }
+  )
+})
+
+describe('reporting date fields against the summary log templates', () => {
+  const PROCESSING_TYPES_BY_OPERATOR_CATEGORY = {
+    [OPERATOR_CATEGORY.EXPORTER]: [PROCESSING_TYPES.EXPORTER],
+    [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
+      PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
+    ],
+    [OPERATOR_CATEGORY.REPROCESSOR]: [
+      PROCESSING_TYPES.REPROCESSOR_INPUT,
+      PROCESSING_TYPES.REPROCESSOR_OUTPUT
+    ],
+    [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
+      PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+    ]
+  }
+
+  /**
+   * @param {string} operatorCategory
+   * @returns {string[]}
+   */
+  const categoryDateFields = (operatorCategory) =>
+    reportingDateFieldsFor(/** @type {OperatorCategory} */ (operatorCategory))
+
+  const worksheets = Object.entries(
+    PROCESSING_TYPES_BY_OPERATOR_CATEGORY
+  ).flatMap(([operatorCategory, processingTypes]) =>
+    processingTypes.flatMap((processingType) =>
+      Object.entries(PROCESSING_TYPE_TABLES[processingType]).map(
+        ([tableName, schema]) => ({
+          operatorCategory,
+          processingType,
+          tableName,
+          schema
+        })
+      )
+    )
+  )
+
+  it('covers every processing type with a template', () => {
+    expect(
+      Object.values(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flat().sort()
+    ).toStrictEqual(Object.keys(PROCESSING_TYPE_TABLES).sort())
+  })
+
+  it.each(
+    Object.entries(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flatMap(
+      ([operatorCategory, processingTypes]) =>
+        categoryDateFields(operatorCategory).flatMap((field) =>
+          processingTypes.map((processingType) => ({
+            operatorCategory,
+            processingType,
+            field
+          }))
+        )
+    )
+  )(
+    '$operatorCategory: $field is a required header on a $processingType table',
+    ({ processingType, field }) => {
+      const requiredHeaders = Object.values(
+        PROCESSING_TYPE_TABLES[processingType]
+      ).flatMap((schema) => schema.requiredHeaders)
+
+      expect(requiredHeaders).toContain(field)
+    }
+  )
+
+  it.each(worksheets)(
+    '$processingType/$tableName carries a $operatorCategory reporting date field',
+    ({ operatorCategory, schema }) => {
+      const reportingDateFields = categoryDateFields(operatorCategory)
+
+      expect(
+        schema.requiredHeaders.some((/** @type {string} */ header) =>
+          reportingDateFields.includes(header)
+        )
+      ).toBe(true)
     }
   )
 })

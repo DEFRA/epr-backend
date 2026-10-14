@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { currentUtcYear, isFutureYear, yearBounds } from './year.js'
+import {
+  currentUtcYear,
+  isFutureYear,
+  yearBounds,
+  yearEndOrToday
+} from './year.js'
 
 describe('currentUtcYear', () => {
   it('reads the year in UTC', () => {
@@ -17,6 +22,21 @@ describe('yearBounds', () => {
       start: '2026-01-01',
       end: '2026-12-31'
     })
+  })
+})
+
+describe('yearEndOrToday', () => {
+  const today =
+    /** @type {import('#common/helpers/date-formatter.js').CalendarDate} */ (
+      '2026-06-15'
+    )
+
+  it('is the last day of a year that has finished', () => {
+    expect(yearEndOrToday(2025, today)).toBe('2025-12-31')
+  })
+
+  it('is today while the year is running', () => {
+    expect(yearEndOrToday(2026, today)).toBe('2026-06-15')
   })
 })
 

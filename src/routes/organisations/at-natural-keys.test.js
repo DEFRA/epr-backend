@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
@@ -10,6 +11,11 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { organisationParams, registrationParams } from './view-route.js'
+
+/**
+ * @import { ServerRoute } from '@hapi/hapi'
+ * @import { NaturalKeyResponse } from './at-natural-keys.js'
+ */
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
@@ -208,6 +214,149 @@ describe('atNaturalKeys', () => {
 
     await expect(served.handler(requestFor(params), h)).rejects.toMatchObject({
       output: { statusCode: 404 }
+    })
+  })
+
+  describe('with a respond option', () => {
+    const servedPath =
+      '/organisations/{organisationNumber}/registrations/{registrationNumber}'
+    const url = `/organisations/${organisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}`
+    const mappedSchema = Joi.object({
+      mapped: Joi.string().required(),
+      registrationId: Joi.string().required()
+    })
+    const failAction = () => {
+      throw Boom.teapot()
+    }
+
+    const unmappedRoute = {
+      method: 'GET',
+      options: { response: { schema: Joi.object({ raw: Joi.string() }) } },
+      handler: vi.fn(async (_request, h) =>
+        h.response({ raw: 'body' }).code(200)
+      )
+    }
+
+    /**
+     * @param {ReturnType<typeof atNaturalKeys>} served
+     */
+    const serve = async (served) => {
+      const { default: Hapi } = await import('@hapi/hapi')
+      const server = Hapi.server()
+      server.validator(Joi)
+      server.decorate(
+        'request',
+        'organisationsRepository',
+        createInMemoryOrganisationsRepository([partialMock(organisation)])()
+      )
+      server.route(/** @type {ServerRoute} */ (served))
+      return server.inject({ method: 'GET', url })
+    }
+
+    /**
+     * @param {NaturalKeyResponse['map']} map
+     * @returns {NaturalKeyResponse}
+     */
+    const respondWith = (map) => ({ schema: mappedSchema, failAction, map })
+
+    it('serves what map returns, with its status code', async () => {
+      const served = atNaturalKeys(
+        unmappedRoute,
+        servedPath,
+        registrationParams,
+        {
+          respond: respondWith((request, h, response) =>
+            h
+              .response({
+                mapped: /** @type {{ raw: string }} */ (response.source).raw,
+                registrationId: request.params.registrationId
+              })
+              .code(201)
+          )
+        }
+      )
+
+      const response = await serve(served)
+
+      expect(response.statusCode).toBe(201)
+      expect(JSON.parse(response.payload)).toEqual({
+        mapped: 'body',
+        registrationId: registeredOnlyRegistration.id
+      })
+    })
+
+    it('waits for an async map', async () => {
+      const served = atNaturalKeys(
+        unmappedRoute,
+        servedPath,
+        registrationParams,
+        {
+          respond: respondWith(async (request, h) =>
+            h.response({
+              mapped: 'later',
+              registrationId: request.params.registrationId
+            })
+          )
+        }
+      )
+
+      const response = await serve(served)
+
+      expect(JSON.parse(response.payload)).toMatchObject({ mapped: 'later' })
+    })
+
+    it('checks the mapped body against its own schema and fail action', async () => {
+      const served = atNaturalKeys(
+        unmappedRoute,
+        servedPath,
+        registrationParams,
+        {
+          respond: respondWith((_request, h) => h.response({ raw: 'body' }))
+        }
+      )
+
+      const response = await serve(served)
+
+      expect(response.statusCode).toBe(418)
+    })
+
+    it('leaves the wrapped route its own response options', () => {
+      const ownResponse = unmappedRoute.options.response
+
+      const served = atNaturalKeys(
+        unmappedRoute,
+        servedPath,
+        registrationParams,
+        {
+          respond: respondWith((_request, h) => h.response({}))
+        }
+      )
+
+      expect(unmappedRoute.options.response).toBe(ownResponse)
+      expect(served.options.response).toEqual({
+        schema: mappedSchema,
+        failAction
+      })
+    })
+
+    it('passes a handler error through without mapping', async () => {
+      const map = vi.fn()
+      const served = atNaturalKeys(
+        {
+          ...unmappedRoute,
+          handler: vi.fn(async () => {
+            throw Boom.conflict()
+          })
+        },
+        servedPath,
+        registrationParams,
+        { respond: respondWith(map) }
+      )
+
+      const response = await serve(served)
+
+      expect(response.statusCode).toBe(409)
+      expect(map).not.toHaveBeenCalled()
     })
   })
 

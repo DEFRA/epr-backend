@@ -55,7 +55,7 @@ export const reprocessorResponse = {
 }
 
 /** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
-export const exporterAccreditationResponse = {
+const exporterAccreditationResponse = {
   accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
   status: 'approved',
   overseasSites: {

@@ -1367,27 +1367,30 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
   })
 
-  testInvalidTokenScenarios({
-    server: () => server,
-    makeRequest: async () => {
-      const ctx = await seedOrg('approved')
-      return {
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: suspendPayload
-      }
-    }
-  })
+  describe('authentication and authorisation', () => {
+    let ctx
 
-  testOnlyServiceMaintainerCanAccess({
-    server: () => server,
-    makeRequest: async () => {
-      const ctx = await seedOrg('approved')
-      return {
-        method: 'POST',
-        url: statusHistoryUrl(ctx),
-        payload: suspendPayload
-      }
-    }
+    // One server per group; only the first role case reaches the handler
+    const makeRequest = async () => ({
+      method: 'POST',
+      url: statusHistoryUrl(ctx),
+      payload: suspendPayload
+    })
+
+    describe('invalid tokens', () => {
+      beforeAll(async () => {
+        ctx = await seedOrg('approved')
+      })
+
+      testInvalidTokenScenarios({ server: () => server, makeRequest })
+    })
+
+    describe('roles', () => {
+      beforeAll(async () => {
+        ctx = await seedOrg('approved')
+      })
+
+      testOnlyServiceMaintainerCanAccess({ server: () => server, makeRequest })
+    })
   })
 })

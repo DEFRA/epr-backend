@@ -97,6 +97,12 @@ const prnEventSchema = Joi.object({
   prn: prnSchema.required()
 }).label('PrnLedgerEvent')
 
+/** An event is one of two whole shapes, and `kind` decides which. */
+export const ledgerEventSchema = Joi.alternatives().try(
+  summaryLogEventSchema,
+  prnEventSchema
+)
+
 /**
  * The width of a waste balance ledger read, enforced at the wire.
  *
@@ -104,15 +110,16 @@ const prnEventSchema = Joi.object({
  * `src/waste-balances/application/read-ledger.js` — keep the two in sync; this
  * schema is the runtime gate, those typedefs are the check-time gate.
  *
- * An event is one of two whole shapes, and `kind` decides which.
- *
  * Swagger 2.0 has no union, so `/swagger` describes an event as the first
  * shape and carries the second under the `x-alternatives` extension, which a
  * standard reader ignores. The generated document understates the contract.
  */
 export const wasteBalanceLedgerResponseSchema = Joi.object({
   ledger: ledgerSchema.required(),
-  events: Joi.array()
-    .items(Joi.alternatives().try(summaryLogEventSchema, prnEventSchema))
-    .required()
+  events: Joi.array().items(ledgerEventSchema).required()
+})
+
+/** A ledger addressed by natural key: the path names it, so no `ledger`. */
+export const naturalKeyLedgerResponseSchema = Joi.object({
+  events: Joi.array().items(ledgerEventSchema).required()
 })
