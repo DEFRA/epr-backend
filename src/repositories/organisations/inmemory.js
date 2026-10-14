@@ -89,7 +89,7 @@ const performReplace =
     }
 
     const replaced = prepareForReplace(
-      mapDocumentWithCurrentStatuses(existing),
+      mapDocumentWithCurrentStatuses(structuredClone(existing)),
       updates
     )
 
