@@ -10,7 +10,7 @@ import { ledgerIdFor } from './ledger-id.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {PeriodicReport, ReportPerPeriod} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, Report, ReportPerPeriod} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
@@ -106,25 +106,42 @@ const aggregatePeriodFigures = (
  */
 
 /**
+ * @param {object} params
+ * @param {Registration} params.registration
+ * @param {ReportableWasteRecordState[]} params.newHeadRowStates
+ * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId
+ * @returns {Promise<FiguresContext>}
+ */
+export const buildFiguresContext = async ({
+  registration,
+  newHeadRowStates,
+  overseasSitesRepository,
+  summaryLogRowStatesRepository,
+  ledgerId
+}) => ({
+  newHeadRowStates,
+  operatorCategory: getOperatorCategory(registration),
+  orsDetailsMap: await getOrsDetailsMap(
+    overseasSitesRepository,
+    registration.overseasSites
+  ),
+  ledgerId,
+  summaryLogRowStatesRepository
+})
+
+/**
  * The before-state is rebuilt from the report's source submission, not read
  * from the stored report, so drift since submission affects both sides alike.
  *
  * @param {object} params
  * @param {PeriodRef} params.period
- * @param {PeriodicReport[]} params.periodicReports
- * @param {ReportsService} params.reportsService
+ * @param {Pick<Report, 'id' | 'submissionNumber' | 'source'>} params.report
  * @param {FiguresContext} params.context
  * @returns {Promise<Comparison>}
  */
-const compareWithLatestSubmittedReport = async ({
-  period,
-  periodicReports,
-  reportsService,
-  context
-}) => {
-  const report = await reportsService.findReportById(
-    latestSubmittedReportIdForPeriod(periodicReports, period)
-  )
+export const compareSubmittedReport = async ({ period, report, context }) => {
   const baseline = {
     reportId: report.id,
     submissionNumber: report.submissionNumber
@@ -165,13 +182,13 @@ const compareWithLatestSubmittedReport = async ({
  */
 
 // A period that cannot be compared is flagged: no retry would change that.
-const requiresResubmission = (/** @type {PeriodOutcome} */ outcome) =>
+export const requiresResubmission = (/** @type {Comparison} */ outcome) =>
   'cannotCompare' in outcome || outcome.changedFields.length > 0
 
 /**
  * @param {Comparison} comparison
  */
-const describeChange = (comparison) => {
+export const describeChange = (comparison) => {
   if ('cannotCompare' in comparison) {
     return `requires resubmission: cannot compare, ${comparison.cannotCompare}`
   }
@@ -255,32 +272,26 @@ const computePeriodsRequiringResubmission = async ({
     throw new Error('Closed periods without a registration')
   }
 
-  const operatorCategory = getOperatorCategory(registration)
-  const orsDetailsMap = await getOrsDetailsMap(
+  const context = await buildFiguresContext({
+    registration,
+    newHeadRowStates: toNewHeadRowStates(
+      wasteRecords,
+      registration.accreditation ?? null,
+      overseasSites
+    ),
     overseasSitesRepository,
-    registration.overseasSites
-  )
-  const newHeadRowStates = toNewHeadRowStates(
-    wasteRecords,
-    registration.accreditation ?? null,
-    overseasSites
-  )
-
-  const context = {
-    newHeadRowStates,
-    operatorCategory,
-    orsDetailsMap,
-    ledgerId,
-    summaryLogRowStatesRepository
-  }
+    summaryLogRowStatesRepository,
+    ledgerId
+  })
 
   const outcomes = await Promise.all(
     closedPeriods.map(async (period) => ({
       period,
-      ...(await compareWithLatestSubmittedReport({
+      ...(await compareSubmittedReport({
         period,
-        periodicReports,
-        reportsService,
+        report: await reportsService.findReportById(
+          latestSubmittedReportIdForPeriod(periodicReports, period)
+        ),
         context
       }))
     }))
