@@ -633,7 +633,10 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       wasteRefused: 'Yes'
     }
 
-    const setupWithJanuaryAndFebruarySubmitted = async (dateRepatriated) => {
+    /** @param {unknown} [storedDateRepatriated] */
+    const setupWithJanuaryAndFebruarySubmitted = async (
+      storedDateRepatriated = null
+    ) => {
       const env = await setupGateEnvironment({
         processingType: 'exporter',
         organisationId: new ObjectId().toString(),
@@ -644,11 +647,17 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         env,
         'sl-first',
         'file-first',
-        createExporterUploadData([
-          { ...refusedJanuaryExport, dateRepatriated }
-        ]),
+        createExporterUploadData([refusedJanuaryExport]),
         exporterMeta
       )
+      // Submit stores rows without reading their dates, so swapping the file
+      // here stores the value as an upload from before dates were read would.
+      env.fileDataMap['file-first'] = {
+        meta: exporterMeta,
+        data: createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
+        ])
+      }
       await submitAndPoll(env, 'sl-first')
       await generateAndSubmitReport(env, JANUARY_2025)
       await generateAndSubmitReport(env, FEBRUARY_2025)
@@ -659,7 +668,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     it.each([46063, true, '2025/02/10'])(
       'places the load by its other dates when the cell holds %j',
       async (dateRepatriated) => {
-        const env = await setupWithJanuaryAndFebruarySubmitted(null)
+        const env = await setupWithJanuaryAndFebruarySubmitted()
 
         const loadsByReportingPeriod = await uploadAndValidate(
           env,
