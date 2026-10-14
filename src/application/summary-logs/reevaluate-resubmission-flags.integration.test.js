@@ -10,7 +10,10 @@ import {
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
-import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import {
+  MONTHLY_PERIODS,
+  QUARTERLY_PERIODS
+} from '#reports/domain/period-labels.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -38,6 +41,19 @@ const JANUARY_2025 = {
   year: 2025,
   cadence: /** @type {const} */ ('monthly'),
   period: MONTHLY_PERIODS.January
+}
+
+const FEBRUARY_2025 = {
+  year: 2025,
+  cadence: /** @type {const} */ ('monthly'),
+  period: MONTHLY_PERIODS.February
+}
+const FEBRUARY_DATE = '2025-02-15T00:00:00.000Z'
+
+const Q1_2025 = {
+  year: 2025,
+  cadence: /** @type {const} */ ('quarterly'),
+  period: QUARTERLY_PERIODS.Q1
 }
 
 const CHANGED_BY = { id: 'u1', name: 'Test User', position: 'Officer' }
@@ -68,10 +84,78 @@ const reprocessorFile = (rows) => ({
   }
 })
 
-const setupEnvironment = async () => {
+const registeredOnlyExporterMeta = {
+  REGISTRATION_NUMBER: {
+    value: 'REG-123',
+    location: { sheet: 'Cover', row: 1, column: 'B' }
+  },
+  PROCESSING_TYPE: {
+    value: 'EXPORTER_REGISTERED_ONLY',
+    location: { sheet: 'Cover', row: 2, column: 'B' }
+  },
+  MATERIAL: {
+    value: 'Paper_and_board',
+    location: { sheet: 'Cover', row: 3, column: 'B' }
+  },
+  TEMPLATE_VERSION: {
+    value: 2.1,
+    location: { sheet: 'Cover', row: 4, column: 'B' }
+  }
+}
+
+const LOADS_EXPORTED_HEADERS = [
+  'ROW_ID',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'DATE_OF_EXPORT',
+  'OSR_ID',
+  'BASEL_EXPORT_CODE',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED',
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'OSR_NAME',
+  'OSR_COUNTRY',
+  'CUSTOMS_CODES',
+  'CONTAINER_NUMBER'
+]
+
+// OSR_ID 100 resolves to a registered overseas site, so the report takes the
+// site's name and country from the registry, not from these cells.
+const registeredOnlyExporterFile = ({ osrName, osrCountry }) => ({
+  meta: registeredOnlyExporterMeta,
+  data: {
+    LOADS_EXPORTED: {
+      location: { sheet: 'Exported', row: TABLE_HEADER_ROW, column: 'A' },
+      headers: LOADS_EXPORTED_HEADERS,
+      rows: [
+        {
+          rowNumber: FIRST_DATA_ROW,
+          values: [
+            2001,
+            100,
+            '2025-01-20T00:00:00.000Z',
+            100,
+            'B3020',
+            'No',
+            'No',
+            null,
+            osrName,
+            osrCountry,
+            '123456',
+            'CONT123456'
+          ]
+        }
+      ]
+    }
+  }
+})
+
+const setupEnvironment = async ({
+  processingType = 'reprocessor',
+  accredited = true
+} = {}) => {
   const env = await setupWasteBalanceIntegrationEnvironment({
-    processingType: 'reprocessor',
-    accredited: true,
+    processingType,
+    accredited,
     organisationId: new ObjectId().toString(),
     registrationId: new ObjectId().toString()
   })
@@ -191,13 +275,13 @@ const submitAndCloseJanuary = async (env) => {
 }
 
 // Flags as submit did before the figure gate: every restated closed period.
-const uploadAndSubmitFlaggingEveryClosedPeriod = async (
+const uploadFileAndSubmitFlaggingEveryClosedPeriod = async (
   env,
   summaryLogId,
   fileId,
-  rows
+  file
 ) => {
-  await upload(env, summaryLogId, fileId, reprocessorFile(rows))
+  await upload(env, summaryLogId, fileId, file)
   const loadsByReportingPeriod = await loadsByReportingPeriodOf(
     env,
     summaryLogId
@@ -210,6 +294,19 @@ const uploadAndSubmitFlaggingEveryClosedPeriod = async (
     periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
   })
 }
+
+const uploadAndSubmitFlaggingEveryClosedPeriod = (
+  env,
+  summaryLogId,
+  fileId,
+  rows
+) =>
+  uploadFileAndSubmitFlaggingEveryClosedPeriod(
+    env,
+    summaryLogId,
+    fileId,
+    reprocessorFile(rows)
+  )
 
 const reevaluate = (env) =>
   reevaluateResubmissionFlags({
@@ -303,6 +400,56 @@ describe('reevaluateResubmissionFlags', () => {
     expect(failures).toEqual([])
   })
 
+  it('records a report it fails to evaluate and carries on with the rest', async () => {
+    const env = await setupEnvironment()
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      reprocessorFile([
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB'
+        }
+      ])
+    )
+    await submit(env, 'sl-first')
+    const januaryId = await generateAndSubmitReport(env, JANUARY_2025)
+    const februaryId = await generateAndSubmitReport(env, FEBRUARY_2025)
+    await uploadAndSubmitFlaggingEveryClosedPeriod(
+      env,
+      'sl-nonfigure',
+      'file-nonfigure',
+      [
+        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-JAN-2' },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          dateReceived: FEBRUARY_DATE,
+          yourReference: 'REF-FEB-2'
+        }
+      ]
+    )
+    vi.spyOn(env.reportsRepository, 'findReportById').mockRejectedValueOnce(
+      new Error('reports store unavailable')
+    )
+
+    const { outcomes, failures } = await reevaluate(env)
+
+    expect(failures).toEqual([
+      { reportId: expect.any(String), error: 'reports store unavailable' }
+    ])
+    expect(outcomes).toEqual([
+      expect.objectContaining({ verdict: 'would-clear' })
+    ])
+    expect([failures[0].reportId, outcomes[0].reportId].sort()).toEqual(
+      [januaryId, februaryId].sort()
+    )
+  })
+
   describe('verdict', () => {
     it('keeps a flag the operator has also asked to resubmit, without comparing figures', async () => {
       const env = await setupEnvironment()
@@ -379,6 +526,72 @@ describe('reevaluateResubmissionFlags', () => {
           ])
         })
       ])
+    })
+
+    it('compares against current data, not the upload that last set the flag', async () => {
+      const env = await setupEnvironment()
+      const reportId = await submitAndCloseJanuary(env)
+      await uploadAndSubmitFlaggingEveryClosedPeriod(
+        env,
+        'sl-figure',
+        'file-figure',
+        CHANGED_TONNAGE
+      )
+      await uploadAndSubmitFlaggingEveryClosedPeriod(
+        env,
+        'sl-nonfigure',
+        'file-nonfigure',
+        [{ ...CHANGED_TONNAGE[0], yourReference: 'REF-AMENDED' }]
+      )
+
+      const { outcomes } = await reevaluate(env)
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          flaggedBy: 'sl-nonfigure',
+          verdict: 'kept',
+          reason: 'figures-changed'
+        })
+      ])
+    })
+
+    it('evaluates a registered-only registration on its own ledger', async () => {
+      const env = await setupEnvironment({
+        processingType: 'exporter',
+        accredited: false
+      })
+      await upload(
+        env,
+        'sl-first',
+        'file-first',
+        registeredOnlyExporterFile({
+          osrName: 'Site A',
+          osrCountry: 'Vietnam-VN'
+        })
+      )
+      await submit(env, 'sl-first')
+      const reportId = await generateAndSubmitReport(env, Q1_2025)
+      await uploadFileAndSubmitFlaggingEveryClosedPeriod(
+        env,
+        'sl-osr',
+        'file-osr',
+        registeredOnlyExporterFile({
+          osrName: 'Site B',
+          osrCountry: 'France-FR'
+        })
+      )
+
+      const { outcomes, failures } = await reevaluate(env)
+
+      expect(outcomes).toEqual([
+        expect.objectContaining({
+          reportId,
+          period: Q1_2025,
+          verdict: 'would-clear'
+        })
+      ])
+      expect(failures).toEqual([])
     })
 
     describe('keeps a flag it cannot compare', () => {

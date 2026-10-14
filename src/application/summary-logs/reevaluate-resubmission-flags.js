@@ -199,9 +199,18 @@ export const reevaluateResubmissionFlags = async (deps) => {
 
   /** @type {FlagOutcome[]} */
   const outcomes = []
+  /** @type {FlagFailure[]} */
+  const failures = []
   for (const flagged of flaggedReports) {
-    outcomes.push(await reevaluate(deps, flagged)) // NOSONAR: javascript:S9382 - sequential so the sweep never fans out reads across every flagged report
+    try {
+      outcomes.push(await reevaluate(deps, flagged)) // NOSONAR: javascript:S9382 - sequential so the sweep never fans out reads across every flagged report
+    } catch (error) {
+      failures.push({
+        reportId: flagged.reportId,
+        error: /** @type {Error} */ (error).message
+      })
+    }
   }
 
-  return { outcomes, failures: [] }
+  return { outcomes, failures }
 }
