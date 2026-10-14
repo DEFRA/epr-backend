@@ -74,16 +74,16 @@ const emptyResult = () => ({
 })
 
 /**
- * Whether a reporting date falls in a submitted (closed) period. A missing or
- * unplaceable date is never in a closed period.
+ * Whether a reporting date falls in a submitted (closed) period. A missing
+ * date is never in a closed period.
  *
- * @param {unknown} date
+ * @param {string | Date | null | undefined} date
  * @param {Set<string>} submittedPeriods
  * @param {Cadence} cadence
- * @returns {date is string}
+ * @returns {date is string | Date}
  */
 const isSubmittedDate = (date, submittedPeriods, cadence) =>
-  isDateInSubmittedPeriod(submittedPeriods, date, cadence)
+  date ? isDateInSubmittedPeriod(submittedPeriods, date, cadence) : false
 
 /**
  * Applies the closed-wins rule: if ANY date field falls in a submitted
