@@ -224,6 +224,23 @@ describe('organisationInYear', () => {
     expect(status).toBe('active')
   })
 
+  it('serves the last status on a year’s final day when it changed several times that day', () => {
+    const organisation = organisationWith(
+      { R1: approvedFrom('2025-02-01') },
+      {
+        statusTimeline: {
+          '2025-01-01T09:00:00.000Z': { status: 'approved' },
+          '2025-12-31T09:00:00.000Z': { status: 'rejected' },
+          '2025-12-31T15:00:00.000Z': { status: 'active' }
+        }
+      }
+    )
+
+    const { status } = organisationInYear(organisation, 2025, NOW)
+
+    expect(status).toBe('active')
+  })
+
   it('keeps the current organisation status when its timeline starts later', () => {
     const organisation = organisationWith(
       { R1: approvedFrom('2025-02-01') },

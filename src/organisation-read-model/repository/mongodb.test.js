@@ -109,8 +109,8 @@ describe('organisation read repository over MongoDB repositories', () => {
     expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
       'statusTimeline',
       {
-        '2026-01-01': { status: 'created' },
-        '2026-02-01': { status: 'approved' }
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-02-01T00:00:00.000Z': { status: 'approved' }
       }
     )
   })

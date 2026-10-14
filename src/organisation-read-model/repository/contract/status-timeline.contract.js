@@ -29,7 +29,7 @@ export const testStatusTimelineBehaviour = (it) => {
       })
     }
 
-    it('keeps the last status recorded on a day', async ({
+    it('keeps every status recorded on a day, each at its time', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -48,16 +48,17 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(repository, stored.orgId)
 
-      expect(organisation.registrations[REPROCESSOR_NUMBER]).toMatchObject({
-        statusTimeline: {
-          '2026-01-01': { status: 'created' },
-          '2026-02-01': { status: 'approved' },
-          '2026-03-01': { status: 'cancelled' }
-        }
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].statusTimeline
+      ).toEqual({
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-02-01T00:00:00.000Z': { status: 'approved' },
+        '2026-03-01T09:00:00.000Z': { status: 'suspended' },
+        '2026-03-01T15:00:00.000Z': { status: 'cancelled' }
       })
     })
 
-    it('dates a registration’s approval at its validFrom and its other changes on the day they were recorded', async ({
+    it('dates a registration’s approval at its validFrom and its other changes when they were recorded', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -82,14 +83,14 @@ export const testStatusTimelineBehaviour = (it) => {
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].statusTimeline
       ).toEqual({
-        '2026-01-01': { status: 'created' },
-        '2026-02-01': { status: 'approved' },
-        '2026-03-01': { status: 'suspended' },
-        '2026-04-01': { status: 'cancelled' }
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-02-01T00:00:00.000Z': { status: 'approved' },
+        '2026-03-01T09:00:00.000Z': { status: 'suspended' },
+        '2026-04-01T09:00:00.000Z': { status: 'cancelled' }
       })
     })
 
-    it('dates an accreditation’s approval at its validFrom and its other changes on the day they were recorded', async ({
+    it('dates an accreditation’s approval at its validFrom and its other changes when they were recorded', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -111,14 +112,43 @@ export const testStatusTimelineBehaviour = (it) => {
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .statusTimeline
       ).toEqual({
-        '2026-01-01': { status: 'created' },
-        '2026-07-01': { status: 'approved' },
-        '2026-08-01': { status: 'suspended' },
-        '2026-09-01': { status: 'cancelled' }
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-07-01T00:00:00.000Z': { status: 'approved' },
+        '2026-08-01T09:00:00.000Z': { status: 'suspended' },
+        '2026-09-01T09:00:00.000Z': { status: 'cancelled' }
       })
     })
 
-    it('dates a change recorded before the first approval no later than validFrom', async ({
+    it('dates the approval after the last re-creation at validFrom, and the earlier approval when it was recorded', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = organisationAccredited({
+        validFrom: '2026-07-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+          { status: 'created', updatedAt: '2026-03-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-04-01T09:00:00.000Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(repository, stored.orgId)
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
+          .statusTimeline
+      ).toEqual({
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-02-01T09:00:00.000Z': { status: 'approved' },
+        '2026-03-01T09:00:00.000Z': { status: 'created' },
+        '2026-07-01T00:00:00.000Z': { status: 'approved' }
+      })
+    })
+
+    it('dates a change recorded before the approval that starts the accreditation no later than validFrom, and the approval just after it', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -137,10 +167,13 @@ export const testStatusTimelineBehaviour = (it) => {
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .statusTimeline
-      ).toEqual({ '2026-01-01': { status: 'approved' } })
+      ).toEqual({
+        '2026-01-01T00:00:00.000Z': { status: 'created' },
+        '2026-01-01T00:00:00.001Z': { status: 'approved' }
+      })
     })
 
-    it('dates a reinstatement on the day it was recorded, not at validFrom', async ({
+    it('dates a reinstatement when it was recorded, not at validFrom', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -161,9 +194,9 @@ export const testStatusTimelineBehaviour = (it) => {
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .statusTimeline
       ).toEqual({
-        '2026-01-01': { status: 'approved' },
-        '2026-03-10': { status: 'cancelled' },
-        '2026-03-30': { status: 'approved' }
+        '2026-01-01T00:00:00.000Z': { status: 'approved' },
+        '2026-03-10T09:00:00.000Z': { status: 'cancelled' },
+        '2026-03-30T09:00:00.000Z': { status: 'approved' }
       })
     })
 
@@ -191,8 +224,8 @@ export const testStatusTimelineBehaviour = (it) => {
       ).toMatchObject({
         status: 'approved',
         statusTimeline: {
-          [now.toISOString().slice(0, 10)]: { status: 'created' },
-          [`${nextYear}-01-01`]: { status: 'approved' }
+          [now.toISOString()]: { status: 'created' },
+          [`${nextYear}-01-01T00:00:00.000Z`]: { status: 'approved' }
         }
       })
     })
@@ -217,11 +250,11 @@ export const testStatusTimelineBehaviour = (it) => {
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
       ).toMatchObject({
         status: 'suspended',
-        statusTimeline: { '2999-01-01': { status: 'suspended' } }
+        statusTimeline: { '2999-01-01T09:00:00.000Z': { status: 'suspended' } }
       })
     })
 
-    it('dates an organisation’s approval on the day it was recorded', async ({
+    it('dates an organisation’s approval when it was recorded', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -239,9 +272,34 @@ export const testStatusTimelineBehaviour = (it) => {
       expect(organisation).toMatchObject({
         status: 'approved',
         statusTimeline: {
-          '2026-01-01': { status: 'created' },
-          '2026-02-01': { status: 'approved' }
+          '2026-01-01T09:00:00.000Z': { status: 'created' },
+          '2026-02-01T09:00:00.000Z': { status: 'approved' }
         }
+      })
+    })
+
+    it('keeps every change recorded at the same instant, each later-recorded one a millisecond after the one before', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const instant = new Date('2026-01-01T09:00:00Z')
+      const stored = buildOrganisation({
+        statusHistory: [
+          { status: 'created', updatedAt: instant },
+          { status: 'approved', updatedAt: instant },
+          { status: 'active', updatedAt: instant }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(repository, stored.orgId)
+
+      expect(organisation.status).toBe('active')
+      expect(organisation.statusTimeline).toEqual({
+        '2026-01-01T09:00:00.000Z': { status: 'created' },
+        '2026-01-01T09:00:00.001Z': { status: 'approved' },
+        '2026-01-01T09:00:00.002Z': { status: 'active' }
       })
     })
 

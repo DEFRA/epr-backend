@@ -29,8 +29,6 @@ import {
  */
 export const testFindByOrganisationNumberBehaviour = (it) => {
   describe('findByOrganisationNumber', () => {
-    const today = () => new Date().toISOString().slice(0, 10)
-
     it('returns null for an unknown organisation number', async ({
       organisationReadRepositoryWith
     }) => {
@@ -66,7 +64,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           postcode: 'SW1A 0AA'
         },
         status: 'created',
-        statusTimeline: { [today()]: { status: 'created' } },
+        statusTimeline: {
+          [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
+            status: 'created'
+          }
+        },
         submittedToRegulator: { code: 'ea' },
         submitterContactDetails: anakin,
         users: [],

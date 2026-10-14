@@ -310,9 +310,9 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
 }
 
 /**
- * Until ADR-0051's events exist, the first approval takes effect from the
- * record's validFrom, anything recorded before it no later than that, and every
- * other change on the day it was recorded; the last recorded on a day wins.
+ * Until ADR-0051's events exist, the approval after the last `created` takes
+ * effect from the record's validFrom, anything recorded before it no later than
+ * that, and every other change when it was recorded.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
  * @param {string} [validFrom]
@@ -322,21 +322,29 @@ export function toStatusTimeline(statusHistory, validFrom) {
   const recorded = statusHistory
     .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
     .toSorted(byDate)
-  const firstApproval = recorded.findIndex(
-    ({ status }) => status === 'approved'
+  const lastCreated = recorded.findLastIndex(
+    ({ status }) => status === 'created'
   )
-  if (firstApproval >= 0 && validFrom) {
+  const approvalAfterLastCreated = recorded.findIndex(
+    ({ status }, index) => index > lastCreated && status === 'approved'
+  )
+  if (approvalAfterLastCreated >= 0 && validFrom) {
     const approvedFrom = new Date(validFrom)
-    for (const entry of recorded.slice(0, firstApproval)) {
+    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
       entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
     }
-    recorded[firstApproval].at = approvedFrom
+    recorded[approvalAfterLastCreated].at = approvedFrom
+  }
+  // A stable sort keeps recorded order among equal times
+  const timed = recorded.toSorted(byDate)
+  for (let i = 1; i < timed.length; i++) {
+    // On a tie the earlier-recorded entry keeps the time; the later moves 1ms on
+    if (timed[i].at <= timed[i - 1].at) {
+      timed[i].at = new Date(timed[i - 1].at.getTime() + 1)
+    }
   }
   return Object.fromEntries(
-    // A stable sort keeps recorded order within a day
-    recorded
-      .toSorted(byDate)
-      .map(({ status, at }) => [at.toISOString().slice(0, 10), { status }])
+    timed.map(({ status, at }) => [at.toISOString(), { status }])
   )
 }
 
