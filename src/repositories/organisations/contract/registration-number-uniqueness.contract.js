@@ -98,5 +98,75 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
       expect(result.registrations[0].registrationNumber).toBe('REG100005')
       expect(result.registrations[1].registrationNumber).toBeNull()
     })
+
+    it('accepts several unnumbered registrations in one organisation', async () => {
+      const organisation = organisationWithNumbers()
+      await repository.insert(organisation)
+
+      const result = await repository.findById(organisation.id)
+      expect(
+        result.registrations.map(({ registrationNumber }) => registrationNumber)
+      ).toEqual(result.registrations.map(() => null))
+    })
+
+    describe('canonical form', () => {
+      it('stores an inserted number trimmed and upper-case', async () => {
+        const organisation = organisationWithNumbers(' reg100020 ', null)
+        await repository.insert(organisation)
+
+        const result = await repository.findById(organisation.id)
+        expect(result.registrations[0].registrationNumber).toBe('REG100020')
+      })
+
+      it('stores a replaced number trimmed and upper-case', async () => {
+        const organisation = organisationWithNumbers('REG100021', null)
+        await repository.insert(organisation)
+        const inserted = await repository.findById(organisation.id)
+
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(inserted, {
+            registrations: [
+              { ...inserted.registrations[0], registrationNumber: ' reg100022' }
+            ]
+          })
+        )
+
+        const result = await repository.findById(organisation.id, 2)
+        expect(result.registrations[0].registrationNumber).toBe('REG100022')
+      })
+
+      it('refuses an insert whose numbers differ only in case or spacing', async () => {
+        await expect(
+          repository.insert(organisationWithNumbers('REG100023', ' reg100023'))
+        ).rejects.toThrow(
+          /Invalid organisation data: registrations\.1: .*duplicate value/
+        )
+      })
+
+      it('refuses a replace whose numbers differ only in case or spacing', async () => {
+        const organisation = organisationWithNumbers('REG100024', null)
+        await repository.insert(organisation)
+        const inserted = await repository.findById(organisation.id)
+
+        await expect(
+          repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [
+                {
+                  ...inserted.registrations[1],
+                  registrationNumber: 'reg100024 '
+                }
+              ]
+            })
+          )
+        ).rejects.toThrow(
+          /Invalid organisation data: registrations\.1: .*duplicate value/
+        )
+      })
+    })
   })
 }

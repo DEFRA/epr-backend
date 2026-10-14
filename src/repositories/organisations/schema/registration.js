@@ -75,6 +75,8 @@ export const registrationSchema = Joi.object({
     .valid(...Object.values(REGISTRATION_STATUS))
     .forbidden(),
   registrationNumber: Joi.string()
+    .trim()
+    .uppercase()
     .empty(null)
     .when('status', requiredWhenApproved),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApproved),
