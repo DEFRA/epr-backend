@@ -38,6 +38,7 @@ export const buildAccreditedOrganisation = (overrides = {}) => {
 /** What `buildAccreditedOrganisation` serves for its reprocessor. */
 export const reprocessorResponse = {
   status: 'approved',
+  statusTimeline: approvedTimeline('2026-02-01'),
   validFrom: '2026-02-01',
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
@@ -73,6 +74,7 @@ const exporterAccreditationResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
   status: 'approved',
+  statusTimeline: approvedTimeline('2026-02-01'),
   validFrom: '2026-02-01',
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
