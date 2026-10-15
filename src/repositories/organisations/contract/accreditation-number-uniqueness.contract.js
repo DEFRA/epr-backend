@@ -98,5 +98,80 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       expect(result.accreditations[0].accreditationNumber).toBe('ACC100005')
       expect(result.accreditations[1].accreditationNumber).toBeNull()
     })
+
+    it('accepts several unnumbered accreditations in one organisation', async () => {
+      const organisation = organisationWithNumbers()
+      await repository.insert(organisation)
+
+      const result = await repository.findById(organisation.id)
+      expect(
+        result.accreditations.map(
+          ({ accreditationNumber }) => accreditationNumber
+        )
+      ).toEqual(result.accreditations.map(() => null))
+    })
+
+    describe('canonical form', () => {
+      it('stores an inserted number trimmed and upper-case', async () => {
+        const organisation = organisationWithNumbers(' acc100020 ', null)
+        await repository.insert(organisation)
+
+        const result = await repository.findById(organisation.id)
+        expect(result.accreditations[0].accreditationNumber).toBe('ACC100020')
+      })
+
+      it('stores a replaced number trimmed and upper-case', async () => {
+        const organisation = organisationWithNumbers('ACC100021', null)
+        await repository.insert(organisation)
+        const inserted = await repository.findById(organisation.id)
+
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(inserted, {
+            accreditations: [
+              {
+                ...inserted.accreditations[0],
+                accreditationNumber: ' acc100022'
+              }
+            ]
+          })
+        )
+
+        const result = await repository.findById(organisation.id, 2)
+        expect(result.accreditations[0].accreditationNumber).toBe('ACC100022')
+      })
+
+      it('refuses an insert whose numbers differ only in case or spacing', async () => {
+        await expect(
+          repository.insert(organisationWithNumbers('ACC100023', ' acc100023'))
+        ).rejects.toThrow(
+          /Invalid organisation data: accreditations\.1: .*duplicate value/
+        )
+      })
+
+      it('refuses a replace whose numbers differ only in case or spacing', async () => {
+        const organisation = organisationWithNumbers('ACC100024', null)
+        await repository.insert(organisation)
+        const inserted = await repository.findById(organisation.id)
+
+        await expect(
+          repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [
+                {
+                  ...inserted.accreditations[1],
+                  accreditationNumber: 'acc100024 '
+                }
+              ]
+            })
+          )
+        ).rejects.toThrow(
+          /Invalid organisation data: accreditations\.1: .*duplicate value/
+        )
+      })
+    })
   })
 }
