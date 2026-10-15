@@ -1,28 +1,28 @@
-import { createTestServer } from '#test/create-test-server.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { vi } from 'vitest'
+
+import { it } from '#vite/fixtures/server.js'
 
 describe('DELETE /v1/dev/organisations/{id}', () => {
-  setupAuthContext()
+  const deleteOrg = (server, id) =>
+    server.inject({
+      method: 'DELETE',
+      url: `/v1/dev/organisations/${id}`
+    })
 
   describe('feature flag disabled', () => {
-    it('returns 404 when devEndpoints feature flag is disabled', async () => {
-      const server = await createTestServer({
-        config: { featureFlags: { devEndpoints: false } }
-      })
+    it.override({ config: { featureFlags: { devEndpoints: false } } })
 
-      const response = await server.inject({
-        method: 'DELETE',
-        url: '/v1/dev/organisations/506544'
-      })
+    it('returns 404 when devEndpoints feature flag is disabled', async ({
+      server
+    }) => {
+      const response = await deleteOrg(server, 506544)
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 
   describe('feature flag enabled', () => {
-    let server
     const stubCounts = {
       'packaging-recycling-notes': 3,
       reports: 4,
@@ -30,74 +30,56 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       'overseas-sites': 0,
       'epr-organisations': 1
     }
+    const nonProdDataReset = {
+      deleteByOrgId: vi.fn(async () => stubCounts)
+    }
 
-    beforeEach(async () => {
-      const nonProdDataReset = {
-        deleteByOrgId: async () => stubCounts
-      }
-      server = await createTestServer({
-        config: { featureFlags: { devEndpoints: true } },
-        repositories: { nonProdDataReset }
-      })
+    it.override({
+      config: { featureFlags: { devEndpoints: true } },
+      repositories: { nonProdDataReset }
     })
 
-    it.each([
-      ['non-numeric', 'not-a-number'],
-      ['a Mongo ObjectId hex string', '507f1f77bcf86cd799439011'],
-      ['zero or negative', '0']
-    ])('returns 422 when id is %s', async (_description, id) => {
-      const response = await server.inject({
-        method: 'DELETE',
-        url: `/v1/dev/organisations/${id}`
-      })
+    it.for([
+      { description: 'non-numeric', id: 'not-a-number' },
+      {
+        description: 'a Mongo ObjectId hex string',
+        id: '507f1f77bcf86cd799439011'
+      },
+      { description: 'zero or negative', id: '0' }
+    ])('returns 422 when id is $description', async ({ id }, { server }) => {
+      const response = await deleteOrg(server, id)
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('does not require authentication', async () => {
-      const response = await server.inject({
-        method: 'DELETE',
-        url: '/v1/dev/organisations/506544'
-      })
+    it('does not require authentication', async ({ server }) => {
+      const response = await deleteOrg(server, 506544)
 
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    it('returns 200 with the counts surfaced by the reset module', async () => {
+    it('returns 200 with the counts surfaced by the reset module', async ({
+      server
+    }) => {
       const orgId = 506544
 
-      const response = await server.inject({
-        method: 'DELETE',
-        url: `/v1/dev/organisations/${orgId}`
-      })
+      const response = await deleteOrg(server, orgId)
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload)).toEqual({
+      expect(JSON.parse(response.payload)).toStrictEqual({
         orgId,
         deletedCounts: stubCounts
       })
     })
 
-    it('passes the numeric path id through to the reset module', async () => {
+    it('passes the numeric path id through to the reset module', async ({
+      server
+    }) => {
       const orgId = 506544
-      const received = []
-      const nonProdDataReset = {
-        deleteByOrgId: async (id) => {
-          received.push(id)
-          return {}
-        }
-      }
-      const testServer = await createTestServer({
-        config: { featureFlags: { devEndpoints: true } },
-        repositories: { nonProdDataReset }
-      })
 
-      await testServer.inject({
-        method: 'DELETE',
-        url: `/v1/dev/organisations/${orgId}`
-      })
+      await deleteOrg(server, orgId)
 
-      expect(received).toEqual([orgId])
+      expect(nonProdDataReset.deleteByOrgId).toHaveBeenCalledWith(orgId)
     })
   })
 })
