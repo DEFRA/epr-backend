@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 import {
   asOperator,
@@ -63,10 +63,8 @@ const singleRowTable = (tableName, sheet, headers, values) => ({
 })
 
 describe('by-design non-waste-balance sections carry an explicit exclusion reason', () => {
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
-    getServer().use(
+  it.beforeEach(({ msw }) => {
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
