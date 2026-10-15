@@ -39,7 +39,8 @@ export async function buildApprovedOrg(
     {
       ...org.accreditations[0],
       status: ACCREDITATION_STATUS.APPROVED,
-      accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
+      accreditationNumber:
+        org.accreditations[0].accreditationNumber || `ACC${org.orgId}`,
       validFrom: VALID_FROM,
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validTo: VALID_TO
@@ -52,7 +53,7 @@ export async function buildApprovedOrg(
       cbduNumber:
         /** @type {RegistrationOther} */ (org.registrations[0]).cbduNumber ||
         'CBDU123456',
-      registrationNumber: 'REG1',
+      registrationNumber: `REG${org.orgId}`,
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: VALID_FROM,
       validTo: VALID_TO

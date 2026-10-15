@@ -219,7 +219,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                     /** @type {import('#domain/organisations/registration.js').RegistrationOther} */ (
                       org.registrations[0]
                     ).cbduNumber || 'CBDU123456',
-                  registrationNumber: 'REG1',
+                  registrationNumber: `REG${org.orgId}`,
                   validFrom: VALID_FROM,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }

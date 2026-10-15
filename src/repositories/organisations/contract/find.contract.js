@@ -279,7 +279,7 @@ export const testFindBehaviour = (it) => {
             {
               ...inserted.registrations[0],
               status: REGISTRATION_STATUS.APPROVED,
-              registrationNumber: 'REG12345',
+              registrationNumber: `REG${org.orgId}`,
               validFrom: VALID_FROM,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }

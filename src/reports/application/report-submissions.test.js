@@ -54,7 +54,7 @@ describe('generateReportSubmissions (integration)', () => {
     })
 
     // Org 2: approved registration with no report submissions
-    await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
@@ -66,10 +66,14 @@ describe('generateReportSubmissions (integration)', () => {
       submitterEmail: 'luke.skywalker@starwars.com',
       approvedPersonsEmail: 'luke.skywalker@starwars.com',
       material: 'Glass-remelt',
-      registrationNumber: 'REG1',
-      accreditationNumber: 'ACC1',
       reportType: 'Monthly'
     }
+    /** @param {import('#domain/organisations/model.js').Organisation} org */
+    const rowFor = (org) => ({
+      ...baseRow,
+      registrationNumber: org.registrations[0].registrationNumber,
+      accreditationNumber: org.accreditations[0].accreditationNumber
+    })
 
     const emptyTonnage = {
       tonnageReceivedForRecycling: '',
@@ -117,7 +121,7 @@ describe('generateReportSubmissions (integration)', () => {
       generatedAt: FIXED_DATE.toISOString(),
       reportSubmissions: [
         {
-          ...baseRow,
+          ...rowFor(org1),
           ...submittedTonnage,
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
@@ -126,7 +130,7 @@ describe('generateReportSubmissions (integration)', () => {
           submissionNumber: 1
         },
         {
-          ...baseRow,
+          ...rowFor(org1),
           ...emptyTonnage,
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
@@ -135,7 +139,7 @@ describe('generateReportSubmissions (integration)', () => {
           submissionNumber: ''
         },
         {
-          ...baseRow,
+          ...rowFor(org1),
           ...emptyTonnage,
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
@@ -144,7 +148,7 @@ describe('generateReportSubmissions (integration)', () => {
           submissionNumber: ''
         },
         {
-          ...baseRow,
+          ...rowFor(org2),
           ...emptyTonnage,
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
@@ -153,7 +157,7 @@ describe('generateReportSubmissions (integration)', () => {
           submissionNumber: ''
         },
         {
-          ...baseRow,
+          ...rowFor(org2),
           ...emptyTonnage,
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
@@ -162,7 +166,7 @@ describe('generateReportSubmissions (integration)', () => {
           submissionNumber: ''
         },
         {
-          ...baseRow,
+          ...rowFor(org2),
           ...emptyTonnage,
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
