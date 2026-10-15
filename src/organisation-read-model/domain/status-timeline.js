@@ -59,6 +59,19 @@ const datesUpTo = (timeline, today) => {
 const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
 
 /**
+ * The status at the end of each UTC day with a change, keyed by ISO 8601 date.
+ *
+ * @param {StatusTimeline} timeline
+ * @returns {StatusTimeline}
+ */
+export const dailyTimeline = (timeline) =>
+  Object.fromEntries(
+    Object.keys(timeline)
+      .sort((a, b) => a.localeCompare(b))
+      .map((key) => [calendarDate(key), timeline[key]])
+  )
+
+/**
  * The date ranges each status was held, keyed by status.
  *
  * @param {StatusTimeline} timeline
@@ -66,7 +79,8 @@ const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
  * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
 export const statusRanges = (timeline, today) => {
-  const dates = datesUpTo(timeline, today)
+  const daily = dailyTimeline(timeline)
+  const dates = datesUpTo(daily, today)
 
   /** @type {Partial<Record<string, CalendarDateRange[]>>} */
   const ranges = {}
@@ -74,7 +88,7 @@ export const statusRanges = (timeline, today) => {
   for (let i = 0; i < dates.length; i++) {
     const from = dates[i]
     const to = rangeEnd(dates[i + 1], today)
-    const { status } = timeline[from]
+    const { status } = daily[from]
 
     ranges[status] ??= []
     ranges[status].push({ from, to })

@@ -1,3 +1,5 @@
+import { dailyTimeline } from './status-timeline.js'
+
 /**
  * The organisation read model (ADR-0052).
  *
@@ -107,7 +109,7 @@
  */
 
 /**
- * One status per day, keyed by ISO 8601 date (ADR-0051).
+ * Every status change, keyed by ISO 8601 datetime (ADR-0051).
  *
  * @typedef {Record<string, { status: string }>} StatusTimeline
  */
@@ -131,16 +133,17 @@ export const ACCREDITATION_STATUSES = Object.freeze([
 ])
 
 /**
- * The status at the latest date on or before `date`.
+ * The status at the end of the latest day on or before `date`.
  *
  * @param {StatusTimeline} timeline
  * @param {string} date - ISO 8601 date
  * @returns {string | undefined}
  */
 export const statusOn = (timeline, date) => {
-  const day = Object.keys(timeline)
+  const daily = dailyTimeline(timeline)
+  const day = Object.keys(daily)
     .filter((key) => key.localeCompare(date) <= 0)
     .sort((a, b) => a.localeCompare(b))
     .at(-1)
-  return day === undefined ? undefined : timeline[day].status
+  return day === undefined ? undefined : daily[day].status
 }
