@@ -135,6 +135,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)
     item.accreditation = item.accreditation ?? null
+    item.registrationNumber = item.registrationNumber ?? null
     // Registrations don't expire (PAE-1904); strip any validTo left on older documents.
     delete (/** @type {Record<string, unknown>} */ (item).validTo)
   }

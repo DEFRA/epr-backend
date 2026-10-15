@@ -279,6 +279,35 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
+  describe('registration number storage', () => {
+    it('stores no number field for an unnumbered registration', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+      const inserted = await repository.findById(organisation.id)
+      await repository.replace(
+        organisation.id,
+        1,
+        prepareOrgUpdate(inserted, { wasteProcessingTypes: ['reprocessor'] })
+      )
+
+      const rawDoc = /** @type {Record<string, any>} */ (
+        await mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+          .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+      )
+
+      expect(rawDoc.version).toBe(2)
+      for (const registration of rawDoc.registrations) {
+        expect(registration).not.toHaveProperty('registrationNumber')
+      }
+    })
+  })
+
   describe('accreditation number storage', () => {
     it('stores no number field for an unnumbered accreditation', async ({
       organisationsRepository,

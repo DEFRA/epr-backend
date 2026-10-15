@@ -827,7 +827,7 @@ export const testReplaceBehaviour = (it) => {
           const registration = {
             ...organisation.registrations[1],
             status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'REG12345',
+            registrationNumber: 'REG12346',
             validFrom: VALID_FROM,
             submitterContactDetails: {
               fullName: 'Different Submitter Name',

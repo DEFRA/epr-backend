@@ -274,5 +274,31 @@ describe('In-memory organisations repository', () => {
       expect(storedOrg.registrations[0].status).toBeUndefined()
       expect(storedOrg.accreditations[0].status).toBeUndefined()
     })
+
+    it('leaves storage untouched when a replace is rejected', async () => {
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+
+      const duplicated = organisation.registrations.map((registration) => ({
+        ...registration,
+        registrationNumber: 'REG12345'
+      }))
+
+      await expect(
+        repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, { registrations: duplicated })
+        )
+      ).rejects.toThrow(/duplicate value/)
+
+      const storage = repository._getStorageForTesting()
+      const storedOrg = storage.find((o) => o._id === organisation.id)
+
+      expect(storedOrg.registrations[0]).not.toHaveProperty(
+        'registrationNumber'
+      )
+      expect(storedOrg.registrations[0]).not.toHaveProperty('status')
+    })
   })
 })

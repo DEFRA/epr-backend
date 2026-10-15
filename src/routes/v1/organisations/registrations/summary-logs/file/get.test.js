@@ -152,7 +152,10 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   })
 
   describe('naming the download', () => {
-    const withRegistration = async () => {
+    /** @param {string | null} [registrationNumber] */
+    const withRegistration = async (
+      registrationNumber = 'R26ER5000000002PA'
+    ) => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository =
         summaryLogsRepositoryFactory(createMockLogger())
@@ -168,7 +171,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
                 registrations: [
                   buildRegistration({
                     id: registrationId,
-                    registrationNumber: 'R26ER5000000002PA'
+                    registrationNumber
                   })
                 ]
               })
@@ -198,6 +201,14 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         summaryLogId,
         'R26ER5000000002PA'
       )
+    })
+
+    it('names nothing when the registration has no number', async () => {
+      const { server, getDownloadUrl } = await withRegistration(null)
+
+      await makeRequest(server)
+
+      expect(getDownloadUrl).toHaveBeenCalledWith(summaryLogId, undefined)
     })
   })
 
