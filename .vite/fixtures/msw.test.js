@@ -21,6 +21,22 @@ describe('msw fixture', () => {
     expect(response.status).toBe(204)
   })
 
+  it('should let a test override a default handler', async ({ msw }) => {
+    msw.use(
+      http.get(cognitoJwksUrl, () => new HttpResponse(null, { status: 503 }))
+    )
+
+    const response = await fetch(cognitoJwksUrl)
+
+    expect(response.status).toBe(503)
+  })
+
+  it('should drop handlers added in a previous test', async () => {
+    const response = await fetch(cognitoJwksUrl)
+
+    expect(response.status).toBe(200)
+  })
+
   it.fails(
     'should fail a test whose request has no msw handler, even when the rejection is handled',
     async () => {
