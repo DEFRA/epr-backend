@@ -8,9 +8,8 @@ export function createInMemorySystemLogsRepositoryPlugin() {
   return {
     name: 'systemLogsRepository',
     register: (server) => {
-      registerDependency(server, 'systemLogsRepository', (request) =>
-        factory(request.logger)
-      )
+      const repository = factory(server.logger)
+      registerDependency(server, 'systemLogsRepository', () => repository)
     }
   }
 }
