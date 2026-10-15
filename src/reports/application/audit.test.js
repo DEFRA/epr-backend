@@ -31,6 +31,7 @@ const {
   auditMarkReportsStale,
   auditMarkReportsRequiringResubmission,
   auditReportRequestResubmission,
+  auditClearReportRequiringResubmission,
   MARK_STALE_ACTION
 } = await import('./audit.js')
 
@@ -490,6 +491,40 @@ describe('auditReportRequestResubmission', () => {
         action: 'request-resubmission'
       },
       context: params
+    })
+  })
+})
+
+describe('auditClearReportRequiringResubmission', () => {
+  it('sends a CDP audit event recording the whole requirement before and after', async () => {
+    await auditClearReportRequiringResubmission({
+      systemLogsRepository,
+      report: asReport({
+        id: 'rep-1',
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        cadence: CADENCE.quarterly,
+        period: 1,
+        submissionNumber: 1,
+        resubmissionRequired
+      })
+    })
+
+    expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
+      user: systemActor,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'clear-requiring-resubmission'
+      },
+      context: {
+        ...flaggedReport,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        previous: { resubmissionRequired },
+        next: { resubmissionRequired: null }
+      }
     })
   })
 })

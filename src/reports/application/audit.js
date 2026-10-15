@@ -278,6 +278,40 @@ export async function auditMarkReportsRequiringResubmission({
 }
 
 /**
+ * @param {{
+ *   systemLogsRepository: SystemLogsRepository,
+ *   report: Report
+ * }} params
+ */
+export async function auditClearReportRequiringResubmission({
+  systemLogsRepository,
+  report
+}) {
+  const payload = {
+    user: SYSTEM_ACTOR,
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: 'clear-requiring-resubmission'
+    },
+    context: {
+      organisationId: report.organisationId,
+      registrationId: report.registrationId,
+      year: report.year,
+      cadence: report.cadence,
+      period: report.period,
+      submissionNumber: report.submissionNumber,
+      reportId: report.id,
+      previous: { resubmissionRequired: report.resubmissionRequired },
+      next: { resubmissionRequired: null }
+    }
+  }
+
+  safeAudit(payload)
+  await recordSystemLogs(systemLogsRepository, [payload])
+}
+
+/**
  * Audits a report creation via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params

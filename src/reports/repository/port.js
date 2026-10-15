@@ -201,6 +201,11 @@
  */
 
 /**
+ * Parameters for {@link ReportsRepository.clearResubmissionRequired}.
+ * @typedef {{ reportId: string, version: number }} ClearResubmissionRequiredParams
+ */
+
+/**
  * @typedef {Object} Report
  * @property {string} id
  * @property {number} version
@@ -411,6 +416,9 @@
  *   resubmission at the operator's own request, conditional on it still
  *   being `submitted` and not already flagged this way. Returns `null` when
  *   the write matched nothing.
+ * @property {(params: ClearResubmissionRequiredParams) => Promise<boolean>} clearResubmissionRequired
+ *   Removes the report's whole `resubmissionRequired`, only while it is still at
+ *   `version`. Returns false when the version has moved on.
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
  *   Returns true when any report for the org/reg was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),

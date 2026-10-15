@@ -1,8 +1,10 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { randomUUID } from 'node:crypto'
 import { MongoClient } from 'mongodb'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, onTestFinished, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { config } from '#root/config.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -12,7 +14,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
-import { runResubmissionFlagsDryRun } from './run-resubmission-flags-dry-run.js'
+import { runReevaluateResubmissionFlags } from './run-reevaluate-resubmission-flags.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -32,7 +34,8 @@ const it = mongoIt.extend({
     await client.close()
   },
   database: async (/** @type {*} */ { mongoClient }, use) => {
-    await use(mongoClient.db(DATABASE_NAME))
+    // The sweep reads every report, so each test needs a database of its own.
+    await use(mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`))
   }
 })
 
@@ -67,7 +70,7 @@ const seedUnwarrantedFlag = async (/** @type {*} */ database) => {
   ])
 
   const reportsRepository = (await createReportsRepository(database))()
-  await createAndSubmitReport(reportsRepository, {
+  const reportId = await createAndSubmitReport(reportsRepository, {
     organisationId: organisation.id,
     registrationId: registration.id,
     ...JANUARY_2024,
@@ -80,9 +83,10 @@ const seedUnwarrantedFlag = async (/** @type {*} */ database) => {
     uploadedAt: '2026-05-01T00:00:00.000Z',
     periods: [JANUARY_2024]
   })
+  return { reportsRepository, reportId }
 }
 
-describe('runResubmissionFlagsDryRun (integration)', () => {
+describe('runReevaluateResubmissionFlags (integration)', () => {
   it('evaluates flags through the real repositories', async (/** @type {*} */ {
     database
   }) => {
@@ -92,12 +96,40 @@ describe('runResubmissionFlagsDryRun (integration)', () => {
       locker: grantingLocker()
     })
 
-    await runResubmissionFlagsDryRun(server)
+    await runReevaluateResubmissionFlags(server)
 
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission flags dry run: flagged=1 wouldClear=1 keptOperatorRequested=0 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=0 failed=0'
+        'Resubmission flags dry run: flagged=1 wouldClear=1 cleared=0 skipped=0 keptOperatorRequested=0 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=0 failed=0'
     })
+  })
+
+  it('clears the flag through the real repositories while the clearing flag is on', async (/** @type {*} */ {
+    database
+  }) => {
+    const { reportsRepository, reportId } = await seedUnwarrantedFlag(database)
+    const get = config.get.bind(config)
+    vi.spyOn(config, 'get').mockImplementation(
+      (/** @type {*} */ key) =>
+        key === 'featureFlags.clearUnwarrantedResubmissionFlags' || get(key)
+    )
+    onTestFinished(() => {
+      vi.restoreAllMocks()
+    })
+    const server = /** @type {*} */ ({
+      db: database,
+      locker: grantingLocker()
+    })
+
+    await runReevaluateResubmissionFlags(server)
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Resubmission flags repair: flagged=1 wouldClear=0 cleared=1 skipped=0 keptOperatorRequested=0 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=0 failed=0'
+    })
+    const report = await reportsRepository.findReportById(reportId)
+    expect(report.resubmissionRequired).toBeUndefined()
   })
 })
