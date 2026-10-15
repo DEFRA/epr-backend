@@ -107,6 +107,7 @@ const registrationCommon = {
   status: Joi.string()
     .valid(...REGISTRATION_STATUSES)
     .required(),
+  statusTimeline: statusTimelineSchema,
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
 }
