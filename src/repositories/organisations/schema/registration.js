@@ -16,6 +16,7 @@ import {
   registrationStatusHistoryItemSchema,
   userSchema
 } from './base.js'
+import { normalisedRegistrationNumberSchema } from './numbers.js'
 import { wasteManagementPermitSchema } from './waste-permits.js'
 import { yearlyMetricsSchema } from './metrics.js'
 import {
@@ -74,11 +75,10 @@ export const registrationSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REGISTRATION_STATUS))
     .forbidden(),
-  registrationNumber: Joi.string()
-    .trim()
-    .uppercase()
-    .empty(null)
-    .when('status', requiredWhenApproved),
+  registrationNumber: normalisedRegistrationNumberSchema.when(
+    'status',
+    requiredWhenApproved
+  ),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApproved),
   validFrom: dateRequiredWhenApproved(),
   submittedToRegulator: Joi.string()

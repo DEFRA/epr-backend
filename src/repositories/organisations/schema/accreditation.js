@@ -22,6 +22,7 @@ import {
   whenMaterial,
   whenReprocessor
 } from './helpers.js'
+import { normalisedAccreditationNumberSchema } from './numbers.js'
 
 export const accreditationSiteSchema = Joi.object({
   address: Joi.object({
@@ -60,11 +61,10 @@ export const accreditationSchema = Joi.object({
     .forbidden(),
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
-  accreditationNumber: Joi.string()
-    .trim()
-    .uppercase()
-    .empty(null)
-    .when('status', requiredWhenApprovedOrSuspended),
+  accreditationNumber: normalisedAccreditationNumberSchema.when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApprovedOrSuspended),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
