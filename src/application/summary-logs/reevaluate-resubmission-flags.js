@@ -1,6 +1,5 @@
 import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
-import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
-import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
+import { latestSubmittedSummaryLogRowStates } from '#waste-records/application/read-summary-log-row-states.js'
 import { ledgerIdFor } from './ledger-id.js'
 import {
   buildFiguresContext,
@@ -96,8 +95,12 @@ const compareWithCurrent = async (
     registration
   )
   // Submit appends to this ledger before it sets the flag.
-  const head = await latestSubmittedSummaryLog(deps.ledgerRepository, ledgerId)
-  if (!head) {
+  const latest = await latestSubmittedSummaryLogRowStates({
+    ledgerRepository: deps.ledgerRepository,
+    summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository,
+    ...ledgerId
+  })
+  if (!latest) {
     throw new Error(
       `No submission on the ledger of summary log ${flaggedBy}, which set the flag`
     )
@@ -105,11 +108,7 @@ const compareWithCurrent = async (
 
   const context = await buildFiguresContext({
     registration,
-    newHeadRowStates: await wasteRecordStatesForHead(
-      deps.summaryLogRowStatesRepository,
-      ledgerId,
-      head.summaryLogId
-    ),
+    newHeadRowStates: latest.wasteRecordStates,
     overseasSitesRepository: deps.overseasSitesRepository,
     summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository,
     ledgerId
