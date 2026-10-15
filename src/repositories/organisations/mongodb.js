@@ -1,19 +1,21 @@
-import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
+import { classifierTail } from '#common/helpers/logging/cdp-boom.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { errorCodes } from './enums/error-codes.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
+  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
@@ -24,6 +26,84 @@ import { getCurrentStatus } from './status.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+const NO_NUMBER = { $in: [null, /^\s*$/] }
+const NON_CANONICAL_NUMBER = /^\s|\s$|[a-z]/
+
+/**
+ * A sparse unique index still indexes a stored null or blank, so those are
+ * removed first. The rest are stored as the schema writes them now, so two
+ * spellings of one number collide.
+ *
+ * @param {Collection} collection
+ * @param {(typeof UNIQUE_NUMBER_FIELDS)[number]} numberField
+ */
+const cleanNumbersForUniqueIndex = async (collection, { items, field }) => {
+  const removed = await collection.updateMany(
+    { [items]: { $elemMatch: { [field]: NO_NUMBER } } },
+    { $unset: { [`${items}.$[unnumbered].${field}`]: '' } },
+    { arrayFilters: [{ [`unnumbered.${field}`]: NO_NUMBER }] }
+  )
+  const rewritten = await collection.updateMany(
+    { [`${items}.${field}`]: NON_CANONICAL_NUMBER },
+    [
+      {
+        $set: {
+          [items]: {
+            $map: {
+              input: `$${items}`,
+              as: 'item',
+              in: {
+                $cond: [
+                  { $eq: [{ $type: `$$item.${field}` }, 'string'] },
+                  {
+                    $mergeObjects: [
+                      '$$item',
+                      {
+                        [field]: {
+                          $toUpper: { $trim: { input: `$$item.${field}` } }
+                        }
+                      }
+                    ]
+                  },
+                  '$$item'
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  )
+  await collection.createIndex(
+    { [`${items}.${field}`]: 1 },
+    { unique: true, sparse: true }
+  )
+
+  return { removed: removed.modifiedCount, rewritten: rewritten.modifiedCount }
+}
+
+/** @param {Collection} collection */
+const ensureUniqueNumbers = async (collection) => {
+  const [registrationFields, accreditationFields] = UNIQUE_NUMBER_FIELDS
+  const registrations = await cleanNumbersForUniqueIndex(
+    collection,
+    registrationFields
+  )
+  const accreditations = await cleanNumbersForUniqueIndex(
+    collection,
+    accreditationFields
+  )
+
+  if (
+    [registrations, accreditations].some(
+      ({ removed, rewritten }) => removed + rewritten > 0
+    )
+  ) {
+    logger.info({
+      message: `Cleaned numbers before building their unique indexes: organisationsWithRegistrationNumbersRemoved=${registrations.removed} organisationsWithRegistrationNumbersRewritten=${registrations.rewritten} organisationsWithAccreditationNumbersRemoved=${accreditations.removed} organisationsWithAccreditationNumbersRewritten=${accreditations.rewritten}`
+    })
+  }
+}
 
 /**
  * Ensures the collection exists with required indexes.
@@ -46,6 +126,7 @@ async function ensureCollection(db) {
     { unique: true, sparse: true }
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
+  await ensureUniqueNumbers(collection)
 
   return collection
 }
@@ -82,7 +163,10 @@ const performInsert = (db) => async (organisation) => {
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throw Boom.conflict(`Organisation with ${id} already exists`)
+      if (error.keyPattern?._id) {
+        throw Boom.conflict(`Organisation with ${id} already exists`)
+      }
+      throwCuratedDuplicateKeyBoom(error, id, 'inserting')
     }
     throw error
   }
@@ -91,23 +175,20 @@ const performInsert = (db) => async (organisation) => {
 /**
  * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
  * @param {string} id
+ * @param {'inserting' | 'updating'} operation
  * @returns {never}
  */
-const throwCuratedDuplicateKeyBoom = (error, id) => {
+const throwCuratedDuplicateKeyBoom = (error, id, operation) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
 
-  throw conflict(
-    `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
-    errorCodes.organisationDuplicateKey,
-    {
-      event: {
-        action: 'update_organisation',
-        reason: `fields=${conflictFields} ${classifierTail(error)}`
-      }
-    }
-  )
+  throw duplicateKeyConflict({
+    operation,
+    id,
+    conflictFields,
+    reason: `fields=${conflictFields} ${classifierTail(error)}`
+  })
 }
 
 const performReplace = (db) => async (id, version, updates) => {
@@ -130,7 +211,7 @@ const performReplace = (db) => async (id, version, updates) => {
       )
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throwCuratedDuplicateKeyBoom(error, validatedId)
+      throwCuratedDuplicateKeyBoom(error, validatedId, 'updating')
     }
     throw error
   }

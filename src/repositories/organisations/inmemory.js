@@ -10,11 +10,13 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
+  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
@@ -43,6 +45,38 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
   })
 }
 
+/**
+ * Stands in for the unique indexes the MongoDB adapter holds on each number,
+ * which span organisations.
+ *
+ * @param {Array<Record<string, any>>} storage
+ * @param {string} id - the organisation being written
+ * @param {Record<string, any>} organisation - as it will be stored
+ * @param {'inserting' | 'updating'} operation
+ */
+const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
+  const others = storage.filter((org) => org._id !== id)
+
+  for (const { items, field } of UNIQUE_NUMBER_FIELDS) {
+    const heldElsewhere = new Set(
+      others.flatMap((org) => org[items]).map((item) => item[field])
+    )
+    const repeated = organisation[items].some(
+      (item) =>
+        typeof item[field] === 'string' && heldElsewhere.has(item[field])
+    )
+
+    if (repeated) {
+      throw duplicateKeyConflict({
+        operation,
+        id,
+        conflictFields: `${items}.${field}`,
+        reason: `fields=${items}.${field}`
+      })
+    }
+  }
+}
+
 const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
@@ -54,6 +88,12 @@ const performInsert = (storage, staleCache) => async (organisation) => {
 
   const registrations = initializeItems(orgFields.registrations)
   const accreditations = initializeItems(orgFields.accreditations)
+  assertNumbersUnheldElsewhere(
+    storage,
+    id,
+    { registrations, accreditations },
+    'inserting'
+  )
 
   const newOrg = structuredClone({
     _id: id,
@@ -93,6 +133,7 @@ const performReplace =
       updates
     )
 
+    assertNumbersUnheldElsewhere(storage, existing._id, replaced, 'updating')
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update

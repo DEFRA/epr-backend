@@ -6,7 +6,7 @@ import {
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import crypto from 'node:crypto'
-import { beforeEach, describe, expect } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   buildLinkedDefraOrg,
   buildOrganisation,
@@ -16,6 +16,7 @@ import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 /**
  * @import { OrganisationsRepositoryFactory } from './port.js'
@@ -71,6 +72,59 @@ describe('MongoDB organisations repository', () => {
       await expect(repository.insert(orgData)).rejects.toThrow(
         'Unexpected database error'
       )
+    })
+
+    it('converts E11000 from insert on a key other than the id to a curated Boom.conflict', async () => {
+      const dbMock = createMockDb({
+        insertOne: async () => {
+          throw createMongoError('E11000 duplicate key error', {
+            code: 11000,
+            keyPattern: { 'accreditations.accreditationNumber': 1 }
+          })
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.insert(buildOrganisation())
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining(
+              'accreditations.accreditationNumber'
+            )
+          }
+        },
+        event: { action: 'insert_organisation' }
+      })
+    })
+
+    it('falls back to "unknown" in the dup-key message from insert when keyPattern is absent', async () => {
+      const dbMock = createMockDb({
+        insertOne: async () => {
+          throw createMongoError('E11000 duplicate key error', { code: 11000 })
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.insert(buildOrganisation())
+      ).rejects.toMatchObject({
+        output: {
+          statusCode: 409,
+          payload: { message: expect.stringContaining('(unknown)') }
+        },
+        event: {
+          action: 'insert_organisation',
+          reason: 'fields=unknown type=Error code=11000'
+        }
+      })
     })
 
     it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
@@ -335,5 +389,125 @@ describe('MongoDB organisations repository', () => {
         expect(accreditation).not.toHaveProperty('accreditationNumber')
       }
     })
+  })
+
+  describe('number clean-up before the unique indexes build', () => {
+    it('removes null and blank numbers and stores the rest trimmed and upper-case', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(COLLECTION_NAME)
+      // Start from a collection written before the indexes existed
+      await collection.drop()
+      await collection.insertMany([
+        {
+          orgId: 1,
+          registrations: [
+            { id: 'r1', registrationNumber: null },
+            { id: 'r2', registrationNumber: ' reg200001 ' }
+          ],
+          accreditations: [
+            { id: 'a1', accreditationNumber: null },
+            { id: 'a2', accreditationNumber: 'acc200001' }
+          ]
+        },
+        {
+          orgId: 2,
+          registrations: [
+            { id: 'r3', registrationNumber: '' },
+            { id: 'r4', registrationNumber: 'REG200002' }
+          ],
+          accreditations: [
+            { id: 'a3', accreditationNumber: '  ' },
+            { id: 'a4', accreditationNumber: 'ACC200002' }
+          ]
+        },
+        { orgId: 3 }
+      ])
+      const info = vi.spyOn(logger, 'info')
+
+      await createOrganisationsRepository(database)
+
+      const rawDocs = await collection
+        .find({}, { projection: { _id: 0 } })
+        .sort({ orgId: 1 })
+        .toArray()
+      expect(rawDocs).toStrictEqual([
+        {
+          orgId: 1,
+          registrations: [
+            { id: 'r1' },
+            { id: 'r2', registrationNumber: 'REG200001' }
+          ],
+          accreditations: [
+            { id: 'a1' },
+            { id: 'a2', accreditationNumber: 'ACC200001' }
+          ]
+        },
+        {
+          orgId: 2,
+          registrations: [
+            { id: 'r3' },
+            { id: 'r4', registrationNumber: 'REG200002' }
+          ],
+          accreditations: [
+            { id: 'a3' },
+            { id: 'a4', accreditationNumber: 'ACC200002' }
+          ]
+        },
+        { orgId: 3 }
+      ])
+      expect(info).toHaveBeenCalledWith({
+        message:
+          'Cleaned numbers before building their unique indexes: organisationsWithRegistrationNumbersRemoved=2 organisationsWithRegistrationNumbersRewritten=1 organisationsWithAccreditationNumbersRemoved=2 organisationsWithAccreditationNumbersRewritten=1'
+      })
+    })
+
+    it('logs nothing when every stored number is already clean', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection(COLLECTION_NAME).insertOne({
+        orgId: 1,
+        registrations: [{ id: 'r1' }, { id: 'r2', registrationNumber: 'REG1' }],
+        accreditations: [
+          { id: 'a1' },
+          { id: 'a2', accreditationNumber: 'ACC1' }
+        ]
+      })
+      const info = vi.spyOn(logger, 'info')
+
+      await createOrganisationsRepository(database)
+
+      expect(info).not.toHaveBeenCalled()
+    })
+
+    it.for([
+      ['registrations', 'registrationNumber'],
+      ['accreditations', 'accreditationNumber']
+    ])(
+      'refuses a number in %s that another organisation holds, at the database',
+      async ([items, field], { organisationsRepository, mongoClient }) => {
+        organisationsRepository()
+        const collection = mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+        await collection.insertOne({
+          orgId: 1,
+          [items]: [{ id: 'x1' }, { id: 'x2', [field]: 'NUMBER1' }]
+        })
+        await collection.insertOne({
+          orgId: 2,
+          [items]: [{ id: 'y1' }, { id: 'y2', [field]: 'NUMBER2' }]
+        })
+
+        await expect(
+          collection.insertOne({
+            orgId: 3,
+            [items]: [{ id: 'z1', [field]: 'NUMBER1' }]
+          })
+        ).rejects.toMatchObject({ code: 11000 })
+      }
+    )
   })
 })
