@@ -104,8 +104,7 @@ const cleanNumbersForUniqueIndex = async (collection, numberField) => {
 
 /**
  * A repeat across organisations fails the build. The service starts without
- * the index rather than not at all, and the duplicate-number diagnostic lists
- * every repeat.
+ * the index rather than not at all.
  *
  * @param {Collection} collection
  * @param {UniqueNumberField} numberField

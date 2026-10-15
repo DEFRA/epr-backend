@@ -48,7 +48,6 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { runReevaluateResubmissionFlags } from '#server/run-reevaluate-resubmission-flags.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
-import { runDuplicateNumberDiagnostic } from '#duplicate-number-diagnostic/run.js'
 import { runFutureStatusDateDiagnostic } from '#future-status-date-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
 
@@ -228,7 +227,6 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runReevaluateResubmissionFlags(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
-    void runDuplicateNumberDiagnostic(startedServer)
     void runFutureStatusDateDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
   })
