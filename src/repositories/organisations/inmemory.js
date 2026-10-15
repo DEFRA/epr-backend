@@ -1,6 +1,6 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
-/** @import { NumberHolder } from './helpers.js' */
+/** @import { NumberHolder, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -53,7 +53,7 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
  * @param {Array<NumberHolder & { _id: string }>} storage
  * @param {string} id - the organisation being written
  * @param {NumberHolder} organisation - as it will be stored
- * @param {'inserting' | 'updating'} operation
+ * @param {WriteOperation} operation
  */
 const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
   const others = storage.filter((org) => org._id !== id)

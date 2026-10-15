@@ -23,7 +23,7 @@ import { getCurrentStatus } from './status.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
-/** @import { UniqueNumberField } from './helpers.js' */
+/** @import { UniqueNumberField, WriteOperation } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -176,7 +176,7 @@ const performInsert = (db) => async (organisation) => {
 /**
  * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
  * @param {string} id
- * @param {'inserting' | 'updating'} operation
+ * @param {WriteOperation} operation
  * @returns {never}
  */
 const throwCuratedDuplicateKeyBoom = (error, id, operation) => {

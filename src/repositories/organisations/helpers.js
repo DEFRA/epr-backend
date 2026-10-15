@@ -157,9 +157,11 @@ export const UNIQUE_NUMBER_FIELDS = [
   }
 ]
 
+/** @typedef {'inserting' | 'updating'} WriteOperation */
+
 /**
  * @param {{
- *   operation: 'inserting' | 'updating',
+ *   operation: WriteOperation,
  *   id: string,
  *   conflictFields: string,
  *   reason: string
