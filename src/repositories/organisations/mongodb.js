@@ -23,6 +23,7 @@ import { getCurrentStatus } from './status.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { UniqueNumberField } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -35,7 +36,7 @@ const NON_CANONICAL_NUMBER = /^\s|\s$|[a-z]/
  * spellings of one number collide.
  *
  * @param {Collection} collection
- * @param {(typeof UNIQUE_NUMBER_FIELDS)[number]} numberField
+ * @param {UniqueNumberField} numberField
  */
 const cleanNumbersForUniqueIndex = async (collection, { items, field }) => {
   const removed = await collection.updateMany(

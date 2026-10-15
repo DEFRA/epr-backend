@@ -1,5 +1,6 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { NumberHolder } from './helpers.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -49,21 +50,18 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
  * Stands in for the unique indexes the MongoDB adapter holds on each number,
  * which span organisations.
  *
- * @param {Array<Record<string, any>>} storage
+ * @param {Array<NumberHolder & { _id: string }>} storage
  * @param {string} id - the organisation being written
- * @param {Record<string, any>} organisation - as it will be stored
+ * @param {NumberHolder} organisation - as it will be stored
  * @param {'inserting' | 'updating'} operation
  */
 const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
   const others = storage.filter((org) => org._id !== id)
 
-  for (const { items, field } of UNIQUE_NUMBER_FIELDS) {
-    const heldElsewhere = new Set(
-      others.flatMap((org) => org[items]).map((item) => item[field])
-    )
-    const repeated = organisation[items].some(
-      (item) =>
-        typeof item[field] === 'string' && heldElsewhere.has(item[field])
+  for (const { items, field, numbersOf } of UNIQUE_NUMBER_FIELDS) {
+    const heldElsewhere = new Set(others.flatMap(numbersOf))
+    const repeated = numbersOf(organisation).some(
+      (number) => typeof number === 'string' && heldElsewhere.has(number)
     )
 
     if (repeated) {

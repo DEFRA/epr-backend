@@ -126,14 +126,36 @@ export const updateStatusHistoryForItems = (
   })
 }
 
+/** @typedef {Pick<Organisation, 'registrations' | 'accreditations'>} NumberHolder */
+
+/**
+ * @typedef {{
+ *   items: 'registrations' | 'accreditations',
+ *   field: 'registrationNumber' | 'accreditationNumber',
+ *   numbersOf: (organisation: NumberHolder) => Array<string | null | undefined>
+ * }} UniqueNumberField
+ */
+
 /**
  * Numbers that no two items share across all organisations. The MongoDB
  * adapter holds a sparse unique index on each.
+ *
+ * @type {UniqueNumberField[]}
  */
-export const UNIQUE_NUMBER_FIELDS = /** @type {const} */ ([
-  { items: 'registrations', field: 'registrationNumber' },
-  { items: 'accreditations', field: 'accreditationNumber' }
-])
+export const UNIQUE_NUMBER_FIELDS = [
+  {
+    items: 'registrations',
+    field: 'registrationNumber',
+    numbersOf: ({ registrations }) =>
+      registrations.map(({ registrationNumber }) => registrationNumber)
+  },
+  {
+    items: 'accreditations',
+    field: 'accreditationNumber',
+    numbersOf: ({ accreditations }) =>
+      accreditations.map(({ accreditationNumber }) => accreditationNumber)
+  }
+]
 
 /**
  * @param {{
