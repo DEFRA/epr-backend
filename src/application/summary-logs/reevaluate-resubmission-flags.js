@@ -33,11 +33,13 @@ import {
  */
 
 /**
- * @typedef {{ verdict: 'would-clear' | 'cleared' }
- *   | { verdict: 'skipped', reason: 'changed-since-compared' | 'resubmission-started' }
+ * @typedef {{ verdict: 'would-clear' }
  *   | { verdict: 'kept', reason: 'operator-requested' | 'resubmission-in-progress' }
  *   | { verdict: 'kept', reason: 'figures-changed', changedFields: string[] }
  *   | { verdict: 'kept', reason: 'cannot-compare', detail: string }} Verdict
+ *
+ * @typedef {{ verdict: 'cleared' }
+ *   | { verdict: 'skipped', reason: 'changed-since-compared' | 'resubmission-started' }} ClearOutcome
  *
  * @typedef {{
  *   organisationId: string,
@@ -48,7 +50,7 @@ import {
  *   period: PeriodRef,
  *   flaggedAt: string,
  *   flaggedBy: string
- * } & Verdict} FlagOutcome
+ * } & (Verdict | ClearOutcome)} FlagOutcome
  *
  * @typedef {{ reportId: string, error: string }} FlagFailure
  *
@@ -159,7 +161,7 @@ const verdictFor = async (deps, { resubmissionInProgress, ...params }) => {
 /**
  * @param {ReevaluateResubmissionFlagsDependencies} deps
  * @param {Report} report
- * @returns {Promise<Verdict>}
+ * @returns {Promise<ClearOutcome>}
  */
 const clearFlag = async (deps, report) => {
   // Starting a draft never writes to this report, so its version can't catch one.
