@@ -4,7 +4,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 import {
   asOperator,
@@ -21,10 +21,8 @@ import {
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
-    getServer().use(
+  it.beforeEach(({ msw }) => {
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
