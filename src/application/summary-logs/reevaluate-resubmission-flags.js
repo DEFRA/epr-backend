@@ -1,5 +1,5 @@
 import { auditClearReportRequiringResubmission } from '#reports/application/audit.js'
-import { isLatestSubmissionOf } from '#reports/application/resubmission-service.js'
+import { isLatestSubmission } from '#reports/application/resubmission-service.js'
 import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { latestSubmittedSummaryLogRowStates } from '#waste-records/application/read-summary-log-row-states.js'
 import { ledgerIdFor } from './ledger-id.js'
@@ -163,19 +163,16 @@ const verdictFor = async (deps, { resubmissionInProgress, ...params }) => {
  */
 const clearFlag = async (deps, report) => {
   // Starting a draft never writes to this report, so its version can't catch one.
-  const periodicReports = await deps.reportsRepository.findPeriodicReports({
-    organisationId: report.organisationId,
-    registrationId: report.registrationId
-  })
-  if (
-    !isLatestSubmissionOf(
-      periodicReports,
-      report.year,
-      /** @type {Cadence} */ (report.cadence),
-      report.period,
-      report.submissionNumber
-    )
-  ) {
+  const isLatest = await isLatestSubmission(
+    deps.reportsRepository,
+    report.organisationId,
+    report.registrationId,
+    report.year,
+    /** @type {Cadence} */ (report.cadence),
+    report.period,
+    report.submissionNumber
+  )
+  if (!isLatest) {
     return { verdict: 'skipped', reason: 'resubmission-started' }
   }
 
