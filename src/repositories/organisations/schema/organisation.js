@@ -48,7 +48,10 @@ export const organisationInsertSchema = Joi.object({
   managementContactDetails: userSchema.optional(),
   orgId: Joi.number().required(),
   partnership: partnershipSchema.optional(),
-  registrations: Joi.array().items(registrationSchema).optional(),
+  registrations: Joi.array()
+    .items(registrationSchema)
+    .unique('registrationNumber', { ignoreUndefined: true })
+    .optional(),
   reprocessingNations: Joi.array()
     .items(
       Joi.string().valid(
@@ -92,6 +95,7 @@ export const organisationReplaceSchema = organisationInsertSchema
       .valid(PREVIOUS_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION),
     registrations: Joi.array()
       .items(registrationUpdateSchema)
+      .unique('registrationNumber', { ignoreUndefined: true })
       .default([])
       .custom(validateImmutableFields(['id'])),
     accreditations: Joi.array()

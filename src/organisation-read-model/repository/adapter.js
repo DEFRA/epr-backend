@@ -156,8 +156,8 @@ export function toRegistrationEntry(registration, organisation, context) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(registration.statusHistory)
-  const status = statusOn(statusTimeline, today)
+  const statusTimeline = toStatusTimeline(registration.statusHistory, validFrom)
+  const { status } = registration
   if (!isOneOf(REGISTRATION_STATUSES, status)) {
     onDrop(
       `Registration ${registrationNumber} has status ${status} on ${today}`
@@ -278,8 +278,11 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(accreditation.statusHistory)
-  const status = statusOn(statusTimeline, today)
+  const statusTimeline = toStatusTimeline(
+    accreditation.statusHistory,
+    accreditation.validFrom
+  )
+  const { status } = accreditation
   if (!isOneOf(ACCREDITATION_STATUSES, status)) {
     onDrop(
       `Accreditation ${accreditationNumber} has status ${status} on ${today}`
@@ -307,20 +310,50 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
 }
 
 /**
- * Until ADR-0051's events exist, each change takes effect on the day it was
- * recorded, and the last recorded on a day wins.
+ * Until ADR-0051's events exist, the approval after the last `created` takes
+ * effect from the record's validFrom, anything recorded before it no later than
+ * that, and every other change when it was recorded.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
+ * @param {string} [validFrom]
  * @returns {StatusTimeline}
  */
-export function toStatusTimeline(statusHistory) {
+export function toStatusTimeline(statusHistory, validFrom) {
+  const recorded = statusHistory
+    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .toSorted(byDate)
+  const lastCreated = recorded.findLastIndex(
+    ({ status }) => status === 'created'
+  )
+  const approvalAfterLastCreated = recorded.findIndex(
+    ({ status }, index) => index > lastCreated && status === 'approved'
+  )
+  if (approvalAfterLastCreated >= 0 && validFrom) {
+    const approvedFrom = new Date(validFrom)
+    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
+      entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
+    }
+    recorded[approvalAfterLastCreated].at = approvedFrom
+  }
+  // A stable sort keeps recorded order among equal times
+  const timed = recorded.toSorted(byDate)
+  for (let i = 1; i < timed.length; i++) {
+    // On a tie the earlier-recorded entry keeps the time; the later moves 1ms on
+    if (timed[i].at <= timed[i - 1].at) {
+      timed[i].at = new Date(timed[i - 1].at.getTime() + 1)
+    }
+  }
   return Object.fromEntries(
-    statusHistory.map(({ status, updatedAt }) => [
-      new Date(updatedAt).toISOString().slice(0, 10),
-      { status }
-    ])
+    timed.map(({ status, at }) => [at.toISOString(), { status }])
   )
 }
+
+/**
+ * @param {{ at: Date }} one
+ * @param {{ at: Date }} other
+ * @returns {number}
+ */
+const byDate = (one, other) => one.at.getTime() - other.at.getTime()
 
 /**
  * @param {StoredRegistration} registration

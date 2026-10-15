@@ -21,6 +21,51 @@ import {
   useViewServer
 } from './organisation-view-test-helpers.js'
 
+const reinstatedThenCancelledOnNewYearsDay = () => {
+  const statusHistory = [
+    { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
+    { status: 'approved', updatedAt: '2025-02-01T09:00:00.000Z' },
+    { status: 'cancelled', updatedAt: '2026-01-01T09:00:00.000Z' },
+    { status: 'approved', updatedAt: '2026-01-01T12:00:00.000Z' },
+    { status: 'cancelled', updatedAt: '2026-01-01T15:00:00.000Z' }
+  ]
+  const accredited = accreditation({
+    validFrom: '2025-07-01',
+    validTo: '2025-12-31',
+    statusHistory
+  })
+  return buildOrganisation({
+    registrations: [
+      reprocessor({
+        accreditationId: accredited.id,
+        validFrom: '2025-02-01',
+        statusHistory
+      })
+    ],
+    accreditations: [accredited]
+  })
+}
+
+const approvedThenCancelled = () =>
+  buildOrganisation({
+    registrations: [
+      reprocessor({
+        validFrom: '2025-03-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-04-01T09:00:00.000Z' },
+          { status: 'cancelled', updatedAt: '2026-03-01T09:00:00.000Z' }
+        ]
+      })
+    ]
+  })
+
+const approvedThenCancelledTimeline = {
+  '2025-01-01T09:00:00.000Z': { status: 'created' },
+  '2025-03-01T00:00:00.000Z': { status: 'approved' },
+  '2026-03-01T09:00:00.000Z': { status: 'cancelled' }
+}
+
 describe('GET /organisations/{organisationNumber}', () => {
   setupAuthContext()
 
@@ -51,6 +96,86 @@ describe('GET /organisations/{organisationNumber}', () => {
         [REPROCESSOR_NUMBER]: reprocessorResponse,
         [EXPORTER_NUMBER]: exporterResponse
       }
+    })
+  })
+
+  it('serves the whole status timelines of an accreditation and its registration', async () => {
+    const suspended = accreditation({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-05-01T09:00:00.000Z' }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: suspended.id })],
+      accreditations: [suspended]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2026].statusTimeline).toEqual({
+      '2026-01-01T09:00:00.000Z': { status: 'created' },
+      '2026-05-01T09:00:00.000Z': { status: 'suspended' },
+      '2026-07-01T00:00:00.000Z': { status: 'approved' }
+    })
+    expect(registration.statusTimeline).toEqual({
+      '2026-01-01T09:00:00.000Z': { status: 'created' },
+      '2026-02-01T00:00:00.000Z': { status: 'approved' }
+    })
+  })
+
+  it('serves a registration approved and later cancelled with its whole status timeline', async () => {
+    const organisation = approvedThenCancelled()
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.statusTimeline).toEqual(approvedThenCancelledTimeline)
+  })
+
+  it('serves every one of several status changes on one day with its time', async () => {
+    const organisation = reinstatedThenCancelledOnNewYearsDay()
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2025].statusTimeline).toEqual({
+      '2025-01-01T09:00:00.000Z': { status: 'created' },
+      '2025-07-01T00:00:00.000Z': { status: 'approved' },
+      '2026-01-01T09:00:00.000Z': { status: 'cancelled' },
+      '2026-01-01T12:00:00.000Z': { status: 'approved' },
+      '2026-01-01T15:00:00.000Z': { status: 'cancelled' }
+    })
+  })
+
+  it('serves each status change at its own time even when the history is stored out of order', async () => {
+    const reinstated = accreditation({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2026-03-01T15:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-03-01T12:00:00.000Z' }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: reinstated.id })],
+      accreditations: [reinstated]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const registration = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(registration.accreditations[2026].statusTimeline).toEqual({
+      '2026-01-01T09:00:00.000Z': { status: 'created' },
+      '2026-03-01T12:00:00.000Z': { status: 'suspended' },
+      '2026-03-01T15:00:00.000Z': { status: 'cancelled' },
+      '2026-07-01T00:00:00.000Z': { status: 'approved' }
     })
   })
 
@@ -177,6 +302,59 @@ describe('GET /organisations/{organisationNumber}', () => {
         ['cancelled', []],
         undefined
       ])
+    })
+
+    it('serves a registration recorded after its validFrom as approved in that year', async () => {
+      const recordedLate = [
+        { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
+        { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
+      ]
+      const accredited = accreditation({
+        validFrom: '2026-01-01',
+        statusHistory: recordedLate
+      })
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            accreditationId: accredited.id,
+            validFrom: '2026-01-01',
+            statusHistory: recordedLate
+          })
+        ],
+        accreditations: [accredited]
+      })
+      await serve(organisation)
+
+      const response = await get(urlFor(organisation, 2026))
+
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      expect(registration.status).toBe('approved')
+      expect(registration.accreditations[2026].statusTimeline).toEqual({
+        '2026-01-01T00:00:00.000Z': { status: 'created' },
+        '2026-01-01T00:00:00.001Z': { status: 'approved' }
+      })
+    })
+
+    it('serves a registration’s whole status timeline in a year it was cancelled', async () => {
+      const organisation = approvedThenCancelled()
+      await serve(organisation)
+
+      const response = await get(urlFor(organisation, 2026))
+
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      expect(registration.status).toBe('cancelled')
+      expect(registration.statusTimeline).toEqual(approvedThenCancelledTimeline)
+    })
+
+    it('classifies a year by the last of several status changes on one day', async () => {
+      const organisation = reinstatedThenCancelledOnNewYearsDay()
+      await serve(organisation)
+
+      const in2025 = body(await get(urlFor(organisation, 2025)))
+      const in2026 = body(await get(urlFor(organisation, 2026)))
+
+      expect(in2025.registrations[REPROCESSOR_NUMBER].status).toBe('approved')
+      expect(in2026.registrations).toEqual({})
     })
 
     it('rejects a year outside the supported range', async () => {

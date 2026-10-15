@@ -10,10 +10,10 @@ import {
   accreditation,
   anakin,
   approvedOverseasSite,
+  approvedTimeline,
   exporter,
   exporterAccreditation,
   findOrganisation,
-  grantedTimeline,
   luke,
   overseasSites,
   pendingOverseasSite,
@@ -29,8 +29,6 @@ import {
  */
 export const testFindByOrganisationNumberBehaviour = (it) => {
   describe('findByOrganisationNumber', () => {
-    const today = () => new Date().toISOString().slice(0, 10)
-
     it('returns null for an unknown organisation number', async ({
       organisationReadRepositoryWith
     }) => {
@@ -66,7 +64,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           postcode: 'SW1A 0AA'
         },
         status: 'created',
-        statusTimeline: { [today()]: { status: 'created' } },
+        statusTimeline: {
+          [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
+            status: 'created'
+          }
+        },
         submittedToRegulator: { code: 'ea' },
         submitterContactDetails: anakin,
         users: [],
@@ -76,7 +78,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             applicationContactDetails: luke,
             approvedPersons: [luke],
             status: 'approved',
-            statusTimeline: grantedTimeline('approved'),
+            statusTimeline: approvedTimeline('2026-02-01'),
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
@@ -95,7 +97,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
                 accreditationNumber: ACCREDITATION_NUMBER,
                 prnIssuance: { signatories: [yoda], tonnageBand: 'over_10000' },
                 status: 'approved',
-                statusTimeline: grantedTimeline('approved'),
+                statusTimeline: approvedTimeline('2026-07-01'),
                 submitterContactDetails: yoda
               }
             }
@@ -119,7 +121,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         applicationContactDetails: anakin,
         approvedPersons: [anakin],
         status: 'approved',
-        statusTimeline: grantedTimeline('approved'),
+        statusTimeline: approvedTimeline('2026-02-01'),
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',
