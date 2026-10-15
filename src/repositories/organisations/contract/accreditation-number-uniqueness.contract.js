@@ -92,7 +92,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
             accreditations: [
               {
                 ...inserted.accreditations[0],
-                accreditationNumber: 'ACC100002'
+                accreditationNumber: ' acc100002 '
               }
             ]
           })

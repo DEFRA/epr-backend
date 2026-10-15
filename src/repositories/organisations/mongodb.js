@@ -21,14 +21,57 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
 
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 /** @import { UniqueNumberField, WriteOperation } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-const NO_NUMBER = { $in: [null, /^\s*$/] }
+const BLANK_NUMBER = /^\s*$/
+const NO_NUMBER = { $in: [null, BLANK_NUMBER] }
 const NON_CANONICAL_NUMBER = /^\s|\s$|[a-z]/
+
+/**
+ * @param {unknown} number - as stored, absent when the item has none
+ * @returns {'removed' | 'rewritten' | null}
+ */
+const cleanUpOf = (number) => {
+  if (
+    number === null ||
+    (typeof number === 'string' && BLANK_NUMBER.test(number))
+  ) {
+    return 'removed'
+  }
+  if (typeof number === 'string' && NON_CANONICAL_NUMBER.test(number)) {
+    return 'rewritten'
+  }
+  return null
+}
+
+/**
+ * @param {Collection} collection
+ * @param {UniqueNumberField} numberField
+ * @param {{ removal: Filter<Document>, rewrite: Filter<Document> }} filters
+ */
+const logNumbersToClean = async (collection, { items, field }, filters) => {
+  const organisations = await collection
+    .find(
+      { $or: [filters.removal, filters.rewrite] },
+      { projection: { [`${items}.id`]: 1, [`${items}.${field}`]: 1 } }
+    )
+    .toArray()
+
+  for (const organisation of organisations) {
+    for (const item of organisation[items]) {
+      const change = cleanUpOf(item[field])
+      if (change) {
+        logger.info({
+          message: `Cleaning ${items}.${field} before building its unique index: organisationId=${organisation._id} itemId=${item.id} change=${change} numberBefore=${JSON.stringify(item[field])}`
+        })
+      }
+    }
+  }
+}
 
 /**
  * A sparse unique index still indexes a stored null or blank, so those are
@@ -38,71 +81,79 @@ const NON_CANONICAL_NUMBER = /^\s|\s$|[a-z]/
  * @param {Collection} collection
  * @param {UniqueNumberField} numberField
  */
-const cleanNumbersForUniqueIndex = async (collection, { items, field }) => {
-  const removed = await collection.updateMany(
-    { [items]: { $elemMatch: { [field]: NO_NUMBER } } },
+const cleanNumbersForUniqueIndex = async (collection, numberField) => {
+  const { items, field } = numberField
+  const filters = {
+    removal: { [items]: { $elemMatch: { [field]: NO_NUMBER } } },
+    rewrite: { [`${items}.${field}`]: NON_CANONICAL_NUMBER }
+  }
+  await logNumbersToClean(collection, numberField, filters)
+
+  await collection.updateMany(
+    filters.removal,
     { $unset: { [`${items}.$[unnumbered].${field}`]: '' } },
     { arrayFilters: [{ [`unnumbered.${field}`]: NO_NUMBER }] }
   )
-  const rewritten = await collection.updateMany(
-    { [`${items}.${field}`]: NON_CANONICAL_NUMBER },
-    [
-      {
-        $set: {
-          [items]: {
-            $map: {
-              input: `$${items}`,
-              as: 'item',
-              in: {
-                $cond: [
-                  { $eq: [{ $type: `$$item.${field}` }, 'string'] },
-                  {
-                    $mergeObjects: [
-                      '$$item',
-                      {
-                        [field]: {
-                          $toUpper: { $trim: { input: `$$item.${field}` } }
-                        }
+  await collection.updateMany(filters.rewrite, [
+    {
+      $set: {
+        [items]: {
+          $map: {
+            input: `$${items}`,
+            as: 'item',
+            in: {
+              $cond: [
+                { $eq: [{ $type: `$$item.${field}` }, 'string'] },
+                {
+                  $mergeObjects: [
+                    '$$item',
+                    {
+                      [field]: {
+                        $toUpper: { $trim: { input: `$$item.${field}` } }
                       }
-                    ]
-                  },
-                  '$$item'
-                ]
-              }
+                    }
+                  ]
+                },
+                '$$item'
+              ]
             }
           }
         }
       }
-    ]
-  )
-  await collection.createIndex(
-    { [`${items}.${field}`]: 1 },
-    { unique: true, sparse: true }
-  )
+    }
+  ])
+}
 
-  return { removed: removed.modifiedCount, rewritten: rewritten.modifiedCount }
+/**
+ * A repeat across organisations fails the build. The service starts without
+ * the index rather than not at all, and the duplicate-number diagnostic lists
+ * every repeat.
+ *
+ * @param {Collection} collection
+ * @param {UniqueNumberField} numberField
+ */
+const buildUniqueNumberIndex = async (collection, { items, field }) => {
+  try {
+    await collection.createIndex(
+      { [`${items}.${field}`]: 1 },
+      { unique: true, sparse: true }
+    )
+  } catch (error) {
+    if (error.code !== MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throw error
+    }
+    logger.error({
+      err: error,
+      message: `Starting without the unique index on ${items}.${field}, because more than one organisation holds ${JSON.stringify(error.keyValue)}`
+    })
+  }
 }
 
 /** @param {Collection} collection */
 const ensureUniqueNumbers = async (collection) => {
-  const [registrationFields, accreditationFields] = UNIQUE_NUMBER_FIELDS
-  const registrations = await cleanNumbersForUniqueIndex(
-    collection,
-    registrationFields
-  )
-  const accreditations = await cleanNumbersForUniqueIndex(
-    collection,
-    accreditationFields
-  )
-
-  if (
-    [registrations, accreditations].some(
-      ({ removed, rewritten }) => removed + rewritten > 0
-    )
-  ) {
-    logger.info({
-      message: `Cleaned numbers before building their unique indexes: organisationsWithRegistrationNumbersRemoved=${registrations.removed} organisationsWithRegistrationNumbersRewritten=${registrations.rewritten} organisationsWithAccreditationNumbersRemoved=${accreditations.removed} organisationsWithAccreditationNumbersRewritten=${accreditations.rewritten}`
-    })
+  for (const numberField of UNIQUE_NUMBER_FIELDS) {
+    await cleanNumbersForUniqueIndex(collection, numberField)
+    await buildUniqueNumberIndex(collection, numberField)
   }
 }
 

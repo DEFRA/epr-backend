@@ -90,7 +90,10 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
           1,
           prepareOrgUpdate(inserted, {
             registrations: [
-              { ...inserted.registrations[0], registrationNumber: 'REG100002' }
+              {
+                ...inserted.registrations[0],
+                registrationNumber: ' reg100002 '
+              }
             ]
           })
         )
