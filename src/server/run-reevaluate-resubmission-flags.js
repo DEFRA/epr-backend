@@ -13,7 +13,7 @@ import { config } from '#root/config.js'
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { FlagOutcome } from '#application/summary-logs/reevaluate-resubmission-flags.js' */
 
-const LOCK_NAME = 'resubmission-flags-dry-run'
+const LOCK_NAME = 'reevaluate-resubmission-flags'
 
 // The sweep never signs a download, but the repository is built with a client.
 const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
@@ -129,7 +129,7 @@ const runSweep = async (server, clearFlags) => {
  *
  * @param {StartedServer} server
  */
-export const runResubmissionFlagsDryRun = async (server) => {
+export const runReevaluateResubmissionFlags = async (server) => {
   const clearFlags = config.get(
     'featureFlags.clearUnwarrantedResubmissionFlags'
   )

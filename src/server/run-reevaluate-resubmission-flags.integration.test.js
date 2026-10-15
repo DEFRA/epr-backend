@@ -14,7 +14,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
-import { runResubmissionFlagsDryRun } from './run-resubmission-flags-dry-run.js'
+import { runReevaluateResubmissionFlags } from './run-reevaluate-resubmission-flags.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -86,7 +86,7 @@ const seedUnwarrantedFlag = async (/** @type {*} */ database) => {
   return { reportsRepository, reportId }
 }
 
-describe('runResubmissionFlagsDryRun (integration)', () => {
+describe('runReevaluateResubmissionFlags (integration)', () => {
   it('evaluates flags through the real repositories', async (/** @type {*} */ {
     database
   }) => {
@@ -96,7 +96,7 @@ describe('runResubmissionFlagsDryRun (integration)', () => {
       locker: grantingLocker()
     })
 
-    await runResubmissionFlagsDryRun(server)
+    await runReevaluateResubmissionFlags(server)
 
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
@@ -122,7 +122,7 @@ describe('runResubmissionFlagsDryRun (integration)', () => {
       locker: grantingLocker()
     })
 
-    await runResubmissionFlagsDryRun(server)
+    await runReevaluateResubmissionFlags(server)
 
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
