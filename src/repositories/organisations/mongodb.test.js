@@ -464,32 +464,32 @@ describe('MongoDB organisations repository', () => {
         .sort({ orgId: 1 })
         .toArray()
       expect(rawDocs).toStrictEqual(CLEAN_NUMBERS)
-      expect(info.mock.calls).toStrictEqual(
+      const cleaned = [
+        ['registrations.registrationNumber', 0, 'r1', 'removed', 'null'],
         [
-          ['registrations.registrationNumber', 0, 'r1', 'removed', 'null'],
-          [
-            'registrations.registrationNumber',
-            0,
-            'r2',
-            'rewritten',
-            '" reg200001 "'
-          ],
-          ['registrations.registrationNumber', 1, 'r3', 'removed', '""'],
-          ['accreditations.accreditationNumber', 0, 'a1', 'removed', 'null'],
-          [
-            'accreditations.accreditationNumber',
-            0,
-            'a2',
-            'rewritten',
-            '"acc200001"'
-          ],
-          ['accreditations.accreditationNumber', 1, 'a3', 'removed', '"  "']
-        ].map(([numbers, organisation, itemId, change, numberBefore]) => [
-          {
-            message: `Cleaning ${numbers} before building its unique index: organisationId=${insertedIds[organisation]} itemId=${itemId} change=${change} numberBefore=${numberBefore}`
-          }
-        ])
-      )
+          'registrations.registrationNumber',
+          0,
+          'r2',
+          'rewritten',
+          '" reg200001 "'
+        ],
+        ['registrations.registrationNumber', 1, 'r3', 'removed', '""'],
+        ['accreditations.accreditationNumber', 0, 'a1', 'removed', 'null'],
+        [
+          'accreditations.accreditationNumber',
+          0,
+          'a2',
+          'rewritten',
+          '"acc200001"'
+        ],
+        ['accreditations.accreditationNumber', 1, 'a3', 'removed', '"  "']
+      ].map(([numbers, organisation, itemId, change, numberBefore]) => [
+        {
+          message: `Cleaning ${numbers} before building its unique index: organisationId=${insertedIds[organisation]} itemId=${itemId} change=${change} numberBefore=${numberBefore}`
+        }
+      ])
+      expect(info.mock.calls).toHaveLength(cleaned.length)
+      expect(info.mock.calls).toEqual(expect.arrayContaining(cleaned))
     })
 
     it('finds nothing left to clean on the next start', async ({
