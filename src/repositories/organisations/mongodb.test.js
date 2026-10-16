@@ -391,7 +391,7 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('unique number indexes', () => {
-    it('leaves stored numbers as they are when it starts', async ({
+    it('starts without rewriting numbers stored before the indexes', async ({
       mongoClient
     }) => {
       const database = mongoClient.db(DATABASE_NAME)
@@ -428,9 +428,12 @@ describe('MongoDB organisations repository', () => {
         { orgId: 2, registrations: [{ id: 'r2', registrationNumber: 'REG1' }] }
       ])
 
-      await expect(createOrganisationsRepository(database)).rejects.toThrow(
-        expect.objectContaining({ code: 11000 })
-      )
+      await expect(
+        createOrganisationsRepository(database)
+      ).rejects.toMatchObject({
+        code: 11000,
+        keyPattern: { 'registrations.registrationNumber': 1 }
+      })
     })
 
     it.for([

@@ -13,7 +13,8 @@ import {
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
@@ -46,14 +47,12 @@ async function ensureCollection(db) {
     { unique: true, sparse: true }
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
-  await collection.createIndex(
-    { 'registrations.registrationNumber': 1 },
-    { unique: true, sparse: true }
-  )
-  await collection.createIndex(
-    { 'accreditations.accreditationNumber': 1 },
-    { unique: true, sparse: true }
-  )
+  for (const { items, field } of UNIQUE_NUMBER_FIELDS) {
+    await collection.createIndex(
+      { [`${items}.${field}`]: 1 },
+      { unique: true, sparse: true }
+    )
+  }
 
   return collection
 }
