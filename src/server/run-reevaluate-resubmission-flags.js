@@ -80,26 +80,35 @@ const formatSummary = ({ outcomes, failures }, clearFlags) =>
   ].join(' ')
 
 /** @param {StartedServer} server */
-const buildDependencies = async (server) => ({
-  reportsRepository: (await createReportsRepository(server.db))(),
-  organisationsRepository: (await createOrganisationsRepository(server.db))(),
-  summaryLogsRepository: (
-    await createSummaryLogsRepository(server.db, {
-      s3Client: createS3Client({
-        region: config.get('awsRegion'),
-        endpoint: config.get('s3Endpoint'),
-        forcePathStyle: config.get('isDevelopment')
-      }),
-      preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
-    })
-  )(logger),
-  ledgerRepository: (await createMongoLedgerRepository(server.db))(),
-  summaryLogRowStatesRepository: (
-    await createMongoSummaryLogRowStatesRepository(server.db)
-  )(),
-  overseasSitesRepository: (await createOverseasSitesRepository(server.db))(),
-  systemLogsRepository: (await createSystemLogsRepository(server.db))(logger)
-})
+const buildDependencies = async (server) => {
+  const organisationsRepository = (
+    await createOrganisationsRepository(server.db)
+  )()
+  return {
+    reportsRepository: (await createReportsRepository(server.db))(),
+    organisationsRepository,
+    summaryLogsRepository: (
+      await createSummaryLogsRepository(
+        server.db,
+        {
+          s3Client: createS3Client({
+            region: config.get('awsRegion'),
+            endpoint: config.get('s3Endpoint'),
+            forcePathStyle: config.get('isDevelopment')
+          }),
+          preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
+        },
+        organisationsRepository
+      )
+    )(logger),
+    ledgerRepository: (await createMongoLedgerRepository(server.db))(),
+    summaryLogRowStatesRepository: (
+      await createMongoSummaryLogRowStatesRepository(server.db)
+    )(),
+    overseasSitesRepository: (await createOverseasSitesRepository(server.db))(),
+    systemLogsRepository: (await createSystemLogsRepository(server.db))(logger)
+  }
+}
 
 /**
  * @param {StartedServer} server

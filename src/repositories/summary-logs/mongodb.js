@@ -13,6 +13,7 @@ import Boom from '@hapi/boom'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
+import { resolveSummaryLogKey } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -192,42 +193,44 @@ const yearFilter = ({ year, accreditationId }) =>
         ]
       }
 
+const latestSubmitted = async (db, filter) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne(
+      { ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED },
+      { sort: { submittedAt: -1 } }
+    )
+
+  if (!doc) {
+    return null
+  }
+
+  const { _id, version, ...summaryLog } = doc
+  return {
+    id: _id,
+    version,
+    summaryLog: normaliseStoredSummaryLog(summaryLog)
+  }
+}
+
 const findLatestSubmittedForOrgReg =
   (db) =>
   /** @param {import('./port.js').SummaryLogScope} scope */
-  async ({ organisationId, registrationId, year, accreditationId }) => {
-    /** @type {any} */
-    const filter = {
+  async ({ organisationId, registrationId, year, accreditationId }) =>
+    latestSubmitted(db, {
       organisationId,
       registrationId,
-      status: SUMMARY_LOG_STATUS.SUBMITTED,
       ...yearFilter({ year, accreditationId })
-    }
+    })
 
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne(filter, { sort: { submittedAt: -1 } })
-
-    if (!doc) {
-      return null
-    }
-
-    const { _id, version, ...summaryLog } = doc
-    return {
-      id: _id,
-      version,
-      summaryLog: normaliseStoredSummaryLog(summaryLog)
-    }
-  }
-
-const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
+/** Submitted and failed summary logs, newest upload first. */
+const uploads = async (db, filter) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .aggregate([
       {
         $match: {
-          organisationId,
-          registrationId,
+          ...filter,
           status: {
             $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
           }
@@ -251,6 +254,53 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
     }
   })
 }
+
+const findAllByOrgReg = (db) => async (organisationId, registrationId) =>
+  uploads(db, { organisationId, registrationId })
+
+/**
+ * A summary log stored before its accreditation was recorded has no
+ * `accreditationId`, and matches every accreditation, as in `yearFilter`.
+ *
+ * @param {import('./natural-keys.js').StoredSummaryLogKey} storedKey
+ * @returns {any}
+ */
+const storedKeyFilter = ({
+  organisationId,
+  registrationId,
+  accreditationId
+}) =>
+  accreditationId === undefined
+    ? { organisationId, registrationId }
+    : {
+        organisationId,
+        registrationId,
+        $or: [{ accreditationId }, { accreditationId: { $exists: false } }]
+      }
+
+const findLatestSubmitted =
+  (db, organisationsRepository) =>
+  /** @param {import('./port.js').SummaryLogKey} key */
+  async (key) => {
+    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
+    if (!resolved) {
+      return null
+    }
+    const found = await latestSubmitted(db, storedKeyFilter(resolved.storedKey))
+    return found && resolved.toKeyed(found)
+  }
+
+const findAll =
+  (db, organisationsRepository) =>
+  /** @param {import('./port.js').SummaryLogKey} key */
+  async (key) => {
+    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
+    if (!resolved) {
+      return []
+    }
+    const found = await uploads(db, storedKeyFilter(resolved.storedKey))
+    return found.map(resolved.toKeyed)
+  }
 
 const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
   const docs = await db
@@ -438,9 +488,15 @@ const getDownloadUrlByFileId =
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {SummaryLogsS3Config} s3Config - S3 configuration for download URLs
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ *   - Resolves natural keys to the ids summary logs are stored under
  * @returns {Promise<import('./port.js').SummaryLogsRepositoryFactory>}
  */
-export const createSummaryLogsRepository = async (db, s3Config) => {
+export const createSummaryLogsRepository = async (
+  db,
+  s3Config,
+  organisationsRepository
+) => {
   await ensureCollection(db)
 
   return (logger) => ({
@@ -449,6 +505,8 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     findById: findById(db),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     findAllByOrgReg: findAllByOrgReg(db),
+    findLatestSubmitted: findLatestSubmitted(db, organisationsRepository),
+    findAll: findAll(db, organisationsRepository),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),
