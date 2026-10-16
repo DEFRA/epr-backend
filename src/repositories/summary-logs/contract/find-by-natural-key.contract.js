@@ -234,6 +234,19 @@ export const testFindByNaturalKey = (it) => {
         expect(result?.id).toBe(unscopedId)
         expect(result?.summaryLog).not.toHaveProperty('accreditationNumber')
       })
+
+      it('counts a summary log stored before accreditations were recorded as registered-only', async () => {
+        const unscopedId = await insert(
+          withoutYear(summaryLogFactory.submitted())
+        )
+
+        const result = await repo.findLatestSubmitted({
+          ...stored.key,
+          accreditationNumber: null
+        })
+
+        expect(result?.id).toBe(unscopedId)
+      })
     })
 
     describe('findAll', () => {
@@ -298,6 +311,19 @@ export const testFindByNaturalKey = (it) => {
         })
 
         expect(result.map(({ id }) => id)).toEqual([currentId])
+      })
+
+      it('counts a summary log stored before accreditations were recorded towards every accreditation', async () => {
+        const unscopedId = await insert(
+          withoutYear(summaryLogFactory.submitted())
+        )
+
+        const result = await repo.findAll({
+          ...stored.key,
+          accreditationNumber: stored.current.accreditationNumber
+        })
+
+        expect(result.map(({ id }) => id)).toEqual([unscopedId])
       })
     })
   })

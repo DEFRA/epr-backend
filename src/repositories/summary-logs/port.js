@@ -82,7 +82,7 @@
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
- * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted
+ * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted in any year
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
