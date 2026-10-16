@@ -47,12 +47,10 @@ const yearsIn = ({ from, to }) => {
  * @param {CalendarDate} today
  * @returns {CalendarDate[]}
  */
-const datesUpTo = (daily, today) => {
-  const dates = Object.keys(daily)
+const datesUpTo = (daily, today) =>
+  Object.keys(daily)
     .map(calendarDate)
     .filter((date) => date.localeCompare(today) <= 0)
-  return dates.sort((a, b) => a.localeCompare(b))
-}
 
 /**
  * A status holds until the day before the next one starts; the latest status
