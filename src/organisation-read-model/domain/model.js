@@ -1,4 +1,4 @@
-import { dailyTimeline } from './status-timeline.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * The organisation read model (ADR-0052).
@@ -106,9 +106,11 @@ import { dailyTimeline } from './status-timeline.js'
  */
 
 /**
- * Every status change, keyed by ISO 8601 datetime (ADR-0051).
+ * Every status change, oldest first, each at its ISO 8601 datetime. Nothing
+ * requires two changes to happen at different times, so changes that share a
+ * time keep the order they were recorded in.
  *
- * @typedef {Record<string, { status: string }>} StatusTimeline
+ * @typedef {{ status: string, at: string }[]} StatusTimeline
  */
 
 /**
@@ -143,11 +145,6 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  * @param {string} date - ISO 8601 date
  * @returns {string | undefined}
  */
-export const statusOn = (timeline, date) => {
-  const daily = dailyTimeline(timeline)
-  const day = Object.keys(daily)
-    .filter((key) => key.localeCompare(date) <= 0)
-    .sort((a, b) => a.localeCompare(b))
-    .at(-1)
-  return day === undefined ? undefined : daily[day].status
-}
+export const statusOn = (timeline, date) =>
+  timeline.findLast(({ at }) => calendarDate(at).localeCompare(date) <= 0)
+    ?.status

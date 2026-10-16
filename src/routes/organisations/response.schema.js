@@ -64,10 +64,15 @@ const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
-const statusTimelineSchema = Joi.object()
-  .pattern(
-    Joi.string().pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
-    Joi.object({ status: Joi.string().required() })
+const statusTimelineSchema = Joi.array()
+  .items(
+    Joi.object({
+      at: isoDateTime.required(),
+      status: Joi.string().required()
+    })
+  )
+  .description(
+    'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
   )
   .required()
 
@@ -159,11 +164,7 @@ export const organisationViewSchema = Joi.object({
   name: Joi.string().required(),
   organisationNumber: Joi.number().integer().required(),
   registrations: registrationsViewSchema,
-  status: Joi.object({
-    current: Joi.string()
-      .valid(...ORGANISATION_STATUSES)
-      .required()
-  }).required(),
+  status: statusSchema(ORGANISATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
 })
