@@ -37,8 +37,7 @@ export const buildAccreditedOrganisation = (overrides = {}) => {
 
 /** What `buildAccreditedOrganisation` serves for its reprocessor. */
 export const reprocessorResponse = {
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-02-01'),
+  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
   validFrom: '2026-02-01',
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
@@ -54,8 +53,7 @@ export const reprocessorResponse = {
   accreditations: {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
-      status: 'approved',
-      statusTimeline: approvedTimeline('2026-07-01')
+      status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
     }
   }
 }
@@ -63,8 +61,7 @@ export const reprocessorResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
 const exporterAccreditationResponse = {
   accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-07-01'),
+  status: { current: 'approved', timeline: approvedTimeline('2026-07-01') },
   overseasSites: {
     '001': { status: 'approved', approvedOn: '2026-01-01' },
     '002': { status: 'pending' }
@@ -73,8 +70,7 @@ const exporterAccreditationResponse = {
 
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-02-01'),
+  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
   validFrom: '2026-02-01',
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },

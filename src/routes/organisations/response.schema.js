@@ -71,12 +71,20 @@ const statusTimelineSchema = Joi.object()
   )
   .required()
 
+/**
+ * @param {readonly string[]} statuses
+ */
+const statusSchema = (statuses) =>
+  Joi.object({
+    current: Joi.string()
+      .valid(...statuses)
+      .required(),
+    timeline: statusTimelineSchema
+  }).required()
+
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
-  status: Joi.string()
-    .valid(...ACCREDITATION_STATUSES)
-    .required(),
-  statusTimeline: statusTimelineSchema
+  status: statusSchema(ACCREDITATION_STATUSES)
 }
 
 const reprocessorAccreditationSchema = Joi.object(accreditationCommon)
@@ -104,10 +112,7 @@ const ukAddressSchema = Joi.alternatives().try(
 
 const registrationCommon = {
   material: materialSchema.required(),
-  status: Joi.string()
-    .valid(...REGISTRATION_STATUSES)
-    .required(),
-  statusTimeline: statusTimelineSchema,
+  status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
 }
@@ -154,9 +159,11 @@ export const organisationViewSchema = Joi.object({
   name: Joi.string().required(),
   organisationNumber: Joi.number().integer().required(),
   registrations: registrationsViewSchema,
-  status: Joi.string()
-    .valid(...ORGANISATION_STATUSES)
-    .required(),
+  status: Joi.object({
+    current: Joi.string()
+      .valid(...ORGANISATION_STATUSES)
+      .required()
+  }).required(),
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
 })
