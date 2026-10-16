@@ -5,7 +5,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 import {
   asOperator,
@@ -34,10 +34,8 @@ const DEC = '2025-12-15T00:00:00.000Z'
 const JAN = '2025-01-16T00:00:00.000Z'
 
 describe('December waste balance accrual', () => {
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
-    getServer().use(
+  it.beforeEach(({ msw }) => {
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })

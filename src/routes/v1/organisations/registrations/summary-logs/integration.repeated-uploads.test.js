@@ -20,7 +20,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 import {
   asOperator,
@@ -38,13 +38,11 @@ describe('Repeated uploads of identical data', () => {
   const VALID_FROM = '2025-01-01'
   const VALID_TO = '2025-12-31'
 
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
+  it.beforeEach(({ msw }) => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    getServer().use(
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:year/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })

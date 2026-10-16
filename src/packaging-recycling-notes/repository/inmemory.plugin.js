@@ -431,10 +431,11 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   return {
     name: 'packagingRecyclingNotesRepository',
     register: (server) => {
+      const repository = factory(server.logger)
       registerDependency(
         server,
         'packagingRecyclingNotesRepository',
-        (request) => factory(request.logger)
+        () => repository
       )
     }
   }

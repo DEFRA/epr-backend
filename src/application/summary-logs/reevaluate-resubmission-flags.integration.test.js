@@ -31,7 +31,7 @@ import {
   REPROCESSOR_RECEIVED_HEADERS,
   setupWasteBalanceIntegrationEnvironment
 } from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 const TABLE_HEADER_ROW = 7
 const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
@@ -345,10 +345,8 @@ const flagWithoutFigureChange = async (env) => {
 }
 
 describe('reevaluateResubmissionFlags', () => {
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
-    getServer().use(
+  it.beforeEach(({ msw }) => {
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })

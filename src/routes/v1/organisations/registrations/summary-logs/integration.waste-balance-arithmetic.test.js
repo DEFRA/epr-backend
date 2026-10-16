@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   createPrn as decideCreatePrn,
@@ -39,10 +39,8 @@ import {
  * Per PAE-1003: available balance = total credits - PRN deductions
  */
 describe('Waste balance arithmetic integration tests', () => {
-  const { getServer } = setupAuthContext()
-
-  beforeEach(() => {
-    getServer().use(
+  it.beforeEach(({ msw }) => {
+    msw.use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
