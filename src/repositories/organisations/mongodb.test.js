@@ -6,7 +6,7 @@ import {
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import crypto from 'node:crypto'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
   buildOrganisation,
@@ -16,7 +16,6 @@ import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
-import { logger } from '#common/helpers/logging/logger.js'
 
 /**
  * @import { OrganisationsRepositoryFactory } from './port.js'
@@ -391,198 +390,50 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
-  describe('number clean-up before the unique indexes build', () => {
-    /** @param {import('mongodb').Collection} collection */
-    const storeNumbersWrittenBeforeTheIndexes = async (collection) => {
-      await collection.drop()
-      const { insertedIds } = await collection.insertMany([
-        {
-          orgId: 1,
-          registrations: [
-            { id: 'r1', registrationNumber: null },
-            { id: 'r2', registrationNumber: ' reg200001 ' }
-          ],
-          accreditations: [
-            { id: 'a1', accreditationNumber: null },
-            { id: 'a2', accreditationNumber: 'acc200001' }
-          ]
-        },
-        {
-          orgId: 2,
-          registrations: [
-            { id: 'r3', registrationNumber: '' },
-            { id: 'r4', registrationNumber: 'REG200002' }
-          ],
-          accreditations: [
-            { id: 'a3', accreditationNumber: '  ' },
-            { id: 'a4', accreditationNumber: 'ACC200002' }
-          ]
-        },
-        { orgId: 3 }
-      ])
-      return insertedIds
-    }
-
-    const CLEAN_NUMBERS = [
-      {
+  describe('unique number indexes', () => {
+    it('starts without rewriting numbers stored before the indexes', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(COLLECTION_NAME)
+      const stored = {
         orgId: 1,
         registrations: [
           { id: 'r1' },
-          { id: 'r2', registrationNumber: 'REG200001' }
+          { id: 'r2', registrationNumber: ' reg200001 ' }
         ],
         accreditations: [
           { id: 'a1' },
-          { id: 'a2', accreditationNumber: 'ACC200001' }
+          { id: 'a2', accreditationNumber: 'acc200001' }
         ]
-      },
-      {
-        orgId: 2,
-        registrations: [
-          { id: 'r3' },
-          { id: 'r4', registrationNumber: 'REG200002' }
-        ],
-        accreditations: [
-          { id: 'a3' },
-          { id: 'a4', accreditationNumber: 'ACC200002' }
-        ]
-      },
-      { orgId: 3 }
-    ]
-
-    it('removes null and blank numbers and stores the rest trimmed and upper-case', async ({
-      mongoClient
-    }) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      const collection = database.collection(COLLECTION_NAME)
-      const insertedIds = await storeNumbersWrittenBeforeTheIndexes(collection)
-      const info = vi.spyOn(logger, 'info')
+      }
+      await collection.insertOne({ ...stored })
 
       await createOrganisationsRepository(database)
 
-      const rawDocs = await collection
-        .find({}, { projection: { _id: 0 } })
-        .sort({ orgId: 1 })
-        .toArray()
-      expect(rawDocs).toStrictEqual(CLEAN_NUMBERS)
-      const cleaned = [
-        ['registrations.registrationNumber', 0, 'r1', 'removed', 'null'],
-        [
-          'registrations.registrationNumber',
-          0,
-          'r2',
-          'rewritten',
-          '" reg200001 "'
-        ],
-        ['registrations.registrationNumber', 1, 'r3', 'removed', '""'],
-        ['accreditations.accreditationNumber', 0, 'a1', 'removed', 'null'],
-        [
-          'accreditations.accreditationNumber',
-          0,
-          'a2',
-          'rewritten',
-          '"acc200001"'
-        ],
-        ['accreditations.accreditationNumber', 1, 'a3', 'removed', '"  "']
-      ].map(([numbers, organisation, itemId, change, numberBefore]) => [
-        {
-          message: `Cleaning ${numbers} before building its unique index: organisationId=${insertedIds[organisation]} itemId=${itemId} change=${change} numberBefore=${numberBefore}`
-        }
-      ])
-      expect(info.mock.calls).toHaveLength(cleaned.length)
-      expect(info.mock.calls).toEqual(expect.arrayContaining(cleaned))
+      const rawDoc = await collection.findOne(
+        { orgId: 1 },
+        { projection: { _id: 0 } }
+      )
+      expect(rawDoc).toStrictEqual(stored)
     })
 
-    it('finds nothing left to clean on the next start', async ({
-      mongoClient
-    }) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      const collection = database.collection(COLLECTION_NAME)
-      await storeNumbersWrittenBeforeTheIndexes(collection)
-      const info = vi.spyOn(logger, 'info')
-      await createOrganisationsRepository(database)
-      info.mockClear()
-
-      await createOrganisationsRepository(database)
-
-      const rawDocs = await collection
-        .find({}, { projection: { _id: 0 } })
-        .sort({ orgId: 1 })
-        .toArray()
-      expect(rawDocs).toStrictEqual(CLEAN_NUMBERS)
-      expect(info).not.toHaveBeenCalled()
-    })
-
-    it('starts without an index when two organisations hold one number', async ({
+    it('fails to start when two organisations hold one number', async ({
       mongoClient
     }) => {
       const database = mongoClient.db('organisations-holding-a-repeat')
       await database.dropDatabase()
-      const collection = database.collection(COLLECTION_NAME)
-      await collection.insertMany([
-        {
-          orgId: 1,
-          registrations: [{ id: 'r1', registrationNumber: 'REG1' }],
-          accreditations: [{ id: 'a1', accreditationNumber: 'ACC1' }]
-        },
-        {
-          orgId: 2,
-          registrations: [{ id: 'r2', registrationNumber: 'REG1' }],
-          accreditations: [{ id: 'a2', accreditationNumber: 'acc1' }]
-        }
+      await database.collection(COLLECTION_NAME).insertMany([
+        { orgId: 1, registrations: [{ id: 'r1', registrationNumber: 'REG1' }] },
+        { orgId: 2, registrations: [{ id: 'r2', registrationNumber: 'REG1' }] }
       ])
-      const error = vi.spyOn(logger, 'error')
 
-      await createOrganisationsRepository(database)
-
-      expect(error).toHaveBeenCalledWith({
-        err: expect.objectContaining({ code: 11000 }),
-        message:
-          'Starting without the unique index on registrations.registrationNumber, because more than one organisation holds {"registrations.registrationNumber":"REG1"}'
+      await expect(
+        createOrganisationsRepository(database)
+      ).rejects.toMatchObject({
+        code: 11000,
+        keyPattern: { 'registrations.registrationNumber': 1 }
       })
-      expect(error).toHaveBeenCalledWith({
-        err: expect.objectContaining({ code: 11000 }),
-        message:
-          'Starting without the unique index on accreditations.accreditationNumber, because more than one organisation holds {"accreditations.accreditationNumber":"ACC1"}'
-      })
-      const indexedFields = (await collection.indexes()).map(({ key }) =>
-        Object.keys(key).join()
-      )
-      expect(indexedFields).not.toContain('registrations.registrationNumber')
-      expect(indexedFields).not.toContain('accreditations.accreditationNumber')
-    })
-
-    it('fails to start when an index build fails for any other reason', async ({
-      mongoClient
-    }) => {
-      const database = mongoClient.db('organisations-with-a-clashing-index')
-      await database.dropDatabase()
-      await database
-        .collection(COLLECTION_NAME)
-        .createIndex(
-          { 'registrations.registrationNumber': 1 },
-          { name: 'registrations.registrationNumber_1' }
-        )
-
-      await expect(createOrganisationsRepository(database)).rejects.toThrow()
-    })
-
-    it('logs nothing when every stored number is already clean', async ({
-      mongoClient
-    }) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      await database.collection(COLLECTION_NAME).insertOne({
-        orgId: 1,
-        registrations: [{ id: 'r1' }, { id: 'r2', registrationNumber: 'REG1' }],
-        accreditations: [
-          { id: 'a1' },
-          { id: 'a2', accreditationNumber: 'ACC1' }
-        ]
-      })
-      const info = vi.spyOn(logger, 'info')
-
-      await createOrganisationsRepository(database)
-
-      expect(info).not.toHaveBeenCalled()
     })
 
     it.for([

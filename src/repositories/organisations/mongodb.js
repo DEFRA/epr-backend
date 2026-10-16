@@ -13,9 +13,9 @@ import {
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
-import { ensureUniqueNumbers } from './mongodb.unique-numbers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
@@ -47,7 +47,14 @@ async function ensureCollection(db) {
     { unique: true, sparse: true }
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
-  await ensureUniqueNumbers(collection)
+  await Promise.all(
+    UNIQUE_NUMBER_FIELDS.map(({ items, field }) =>
+      collection.createIndex(
+        { [`${items}.${field}`]: 1 },
+        { unique: true, sparse: true }
+      )
+    )
+  )
 
   return collection
 }
