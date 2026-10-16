@@ -16,6 +16,7 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { DECEMBER_WASTE_NOT_DECLARABLE_CODE } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import { ISSUANCE_WINDOW_CLOSED_CODE } from '#packaging-recycling-notes/domain/issuance-window.js'
 import {
   MATERIAL,
   WASTE_PROCESSING_TYPE,
@@ -125,6 +126,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     beforeEach(() => {
+      // The fixtures are 2026-year accreditations: from 1 Feb 2027 the real
+      // clock falls outside their reg 92(1)(c) issuance window and creation
+      // would be refused, so every test runs on a pinned in-window clock.
+      vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
       ledgerRepository = seedStream()
     })
 
@@ -744,6 +749,61 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: { ...validPayload, tonnage: 200 }
         })
         expect(second.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+    })
+
+    describe('issuance window (reg 92(1)(c))', () => {
+      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('returns 409 and creates no draft after 31 January of the year following the accreditation year', async () => {
+        vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          ISSUANCE_WINDOW_CLOSED_CODE
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('refuses a December declaration after the window with the same closed-window code', async () => {
+        vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: { ...validPayload, isDecemberWaste: true }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe(
+          ISSUANCE_WINDOW_CLOSED_CODE
+        )
+        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+      })
+
+      it('creates the draft at the last instant of 31 January', async () => {
+        vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          ...asOperator(),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
       })
     })
 

@@ -15,6 +15,7 @@ import {
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import { assertIssuanceWindowOpen } from '#packaging-recycling-notes/domain/issuance-window.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -305,6 +306,8 @@ export const packagingRecyclingNotesCreate = {
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      assertIssuanceWindowOpen({ accreditation, now })
 
       assertDecemberWasteDeclarable({
         accreditation,
