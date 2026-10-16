@@ -495,7 +495,8 @@ describe('Advanced validation scenarios', () => {
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
+          uploadsRepository,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -678,7 +679,8 @@ describe('Advanced validation scenarios', () => {
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
+          uploadsRepository,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

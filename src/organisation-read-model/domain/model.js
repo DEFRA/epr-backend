@@ -1,3 +1,5 @@
+import { dailyTimeline } from './status-timeline.js'
+
 /**
  * The organisation read model (ADR-0052).
  *
@@ -15,8 +17,7 @@
  *   organisationNumber: number
  *   registeredAddress?: UkAddress
  *   registrations: Record<string, Registration>
- *   status: 'created' | 'approved' | 'active' | 'rejected'
- *   statusTimeline: StatusTimeline
+ *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   tradingName?: string
@@ -33,8 +34,7 @@
  *   approvedPersons: Contact[]
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
- *   status: 'approved' | 'cancelled'
- *   statusTimeline: StatusTimeline
+ *   status: Status<'approved' | 'cancelled'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   validFrom: string
@@ -67,8 +67,7 @@
  * @typedef {{
  *   accreditationNumber: string
  *   prnIssuance: { signatories: Contact[], tonnageBand: string }
- *   status: 'approved' | 'suspended' | 'cancelled'
- *   statusTimeline: StatusTimeline
+ *   status: Status<'approved' | 'suspended' | 'cancelled'>
  *   submitterContactDetails: Contact
  * }} AccreditationCommon
  *
@@ -107,12 +106,19 @@
  */
 
 /**
- * One status per day, keyed by ISO 8601 date (ADR-0051).
+ * Every status change, keyed by ISO 8601 datetime (ADR-0051).
  *
  * @typedef {Record<string, { status: string }>} StatusTimeline
  */
 
-/** @type {readonly Organisation['status'][]} */
+/**
+ * The status today, and the timeline it is read from.
+ *
+ * @template {string} S
+ * @typedef {{ current: S, timeline: StatusTimeline }} Status
+ */
+
+/** @type {readonly Organisation['status']['current'][]} */
 export const ORGANISATION_STATUSES = Object.freeze([
   'created',
   'approved',
@@ -120,10 +126,10 @@ export const ORGANISATION_STATUSES = Object.freeze([
   'rejected'
 ])
 
-/** @type {readonly Registration['status'][]} */
+/** @type {readonly Registration['status']['current'][]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
 
-/** @type {readonly AccreditationCommon['status'][]} */
+/** @type {readonly AccreditationCommon['status']['current'][]} */
 export const ACCREDITATION_STATUSES = Object.freeze([
   'approved',
   'suspended',
@@ -131,16 +137,17 @@ export const ACCREDITATION_STATUSES = Object.freeze([
 ])
 
 /**
- * The status at the latest date on or before `date`.
+ * The status at the end of the latest day on or before `date`.
  *
  * @param {StatusTimeline} timeline
  * @param {string} date - ISO 8601 date
  * @returns {string | undefined}
  */
 export const statusOn = (timeline, date) => {
-  const day = Object.keys(timeline)
+  const daily = dailyTimeline(timeline)
+  const day = Object.keys(daily)
     .filter((key) => key.localeCompare(date) <= 0)
     .sort((a, b) => a.localeCompare(b))
     .at(-1)
-  return day === undefined ? undefined : timeline[day].status
+  return day === undefined ? undefined : daily[day].status
 }

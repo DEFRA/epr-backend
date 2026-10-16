@@ -1,13 +1,22 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-const organisationId = 'org-123'
+const organisation = buildOrganisation({
+  registrations: [buildRegistration({ id: 'reg-456' })]
+})
+const organisationId = organisation.id
 
 const buildPostUrl = (orgId, registrationId, summaryLogId) =>
-  `/v1/organisations/${orgId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+  `/v1/organisations/${orgId}/registrations/${registrationId}/summary-logs/2025/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly
@@ -18,7 +27,10 @@ describe('POST upload-completed validation', () => {
   beforeAll(async () => {
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: createInMemorySummaryLogsRepository()
+        summaryLogsRepository: createInMemorySummaryLogsRepository(),
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ])
       }
     })
   })

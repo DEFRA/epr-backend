@@ -50,8 +50,6 @@
  * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
- * @property {() => Promise<string[]>} findIdsWithoutYear - ids of summary logs created before year-scoping (PAE-2027 backfill only)
- * @property {(id: string, version: number, year: number) => Promise<void>} assignYear - sets `year` once on a legacy summary log (PAE-2027 backfill only)
  * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId

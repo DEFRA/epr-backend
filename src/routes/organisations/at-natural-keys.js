@@ -7,7 +7,7 @@ import {
 } from './natural-keys.js'
 
 /**
- * @import { ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
+ * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -32,8 +32,15 @@ import {
  * @typedef {{ organisation: Organisation, registration?: Registration }} ResolvedRecords
  *
  * @typedef {{
+ *   schema: Joi.Schema,
+ *   failAction(request: HapiRequest, h: HapiResponseToolkit, err: Error): unknown,
+ *   map(request: ResolvedRequest, h: HapiResponseToolkit, response: ResponseObject): unknown
+ * }} NaturalKeyResponse
+ *
+ * @typedef {{
  *   accredited?: boolean,
- *   before?(request: ResolvedRequest): void | Promise<void>
+ *   before?(request: ResolvedRequest): void | Promise<void>,
+ *   respond?: NaturalKeyResponse
  * }} NaturalKeyOptions
  */
 
@@ -77,7 +84,7 @@ export const atNaturalKeys = (
   route,
   path,
   params,
-  { accredited = false, before } = {}
+  { accredited = false, before, respond } = {}
 ) => {
   const resolveRecords =
     'registrationNumber' in params ? resolveRegistration : resolveOrganisation
@@ -87,7 +94,10 @@ export const atNaturalKeys = (
     path,
     options: {
       ...route.options,
-      validate: { ...route.options.validate, params: Joi.object(params) }
+      validate: { ...route.options.validate, params: Joi.object(params) },
+      ...(respond && {
+        response: { schema: respond.schema, failAction: respond.failAction }
+      })
     },
     /**
      * @param {HapiRequest & { params: RegistrationParams & { year?: number } }} request
@@ -122,7 +132,10 @@ export const atNaturalKeys = (
         ...ids
       })
       await before?.(resolved)
-      return route.handler(resolved, h)
+      const response = await route.handler(resolved, h)
+      return respond
+        ? respond.map(resolved, h, /** @type {ResponseObject} */ (response))
+        : response
     }
   }
 }

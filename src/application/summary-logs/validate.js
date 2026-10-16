@@ -87,10 +87,36 @@ const extractSummaryLog = async ({
 }
 
 /**
+ * The accreditation a summary log is validated against: the one it stored
+ * (`null` = registered-only), or the registration's current one for a legacy
+ * summary log that stored none.
+ *
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {SubmittedSummaryLog} summaryLog
+ * @param {Registration} registration
+ * @returns {Promise<Registration['accreditation']>}
+ */
+const accreditationFor = async (
+  organisationsRepository,
+  { organisationId, accreditationId },
+  registration
+) => {
+  if (accreditationId === undefined) {
+    return registration.accreditation
+  }
+
+  return accreditationId === null
+    ? null
+    : organisationsRepository.findAccreditationById(
+        organisationId,
+        accreditationId
+      )
+}
+
+/**
  * @param {{
  *   organisationsRepository: OrganisationsRepository,
- *   organisationId: string,
- *   registrationId: string,
+ *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger
  * }} params
@@ -98,15 +124,23 @@ const extractSummaryLog = async ({
  */
 const fetchRegistration = async ({
   organisationsRepository,
-  organisationId,
-  registrationId,
+  summaryLog,
   loggingContext,
   logger
 }) => {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
+  const currentRegistration =
+    await organisationsRepository.findRegistrationById(
+      summaryLog.organisationId,
+      summaryLog.registrationId
+    )
+  const registration = {
+    ...currentRegistration,
+    accreditation: await accreditationFor(
+      organisationsRepository,
+      summaryLog,
+      currentRegistration
+    )
+  }
 
   logger.info({
     message: `Fetched registration: ${loggingContext}`,
@@ -275,8 +309,7 @@ const performValidationChecks = async ({
 
     registration = await fetchRegistration({
       organisationsRepository,
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
+      summaryLog,
       loggingContext,
       logger
     })

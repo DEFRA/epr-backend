@@ -5,6 +5,8 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
+import { yearSchema } from '#common/validation/year-schema.js'
+import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
   ACCREDITATION_STATUSES,
@@ -62,11 +64,27 @@ const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
+const statusTimelineSchema = Joi.object()
+  .pattern(
+    Joi.string().pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
+    Joi.object({ status: Joi.string().required() })
+  )
+  .required()
+
+/**
+ * @param {readonly string[]} statuses
+ */
+const statusSchema = (statuses) =>
+  Joi.object({
+    current: Joi.string()
+      .valid(...statuses)
+      .required(),
+    timeline: statusTimelineSchema
+  }).required()
+
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
-  status: Joi.string()
-    .valid(...ACCREDITATION_STATUSES)
-    .required()
+  status: statusSchema(ACCREDITATION_STATUSES)
 }
 
 const reprocessorAccreditationSchema = Joi.object(accreditationCommon)
@@ -81,11 +99,6 @@ const exporterAccreditationSchema = Joi.object({
  */
 const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
 
-export const accreditationViewSchema = Joi.alternatives().try(
-  exporterAccreditationSchema,
-  reprocessorAccreditationSchema
-)
-
 const ukAddressSchema = Joi.alternatives().try(
   Joi.object({
     county: Joi.string(),
@@ -99,14 +112,12 @@ const ukAddressSchema = Joi.alternatives().try(
 
 const registrationCommon = {
   material: materialSchema.required(),
-  status: Joi.string()
-    .valid(...REGISTRATION_STATUSES)
-    .required(),
+  status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
 }
 
-export const registrationViewSchema = Joi.alternatives().try(
+const registrationViewSchema = Joi.alternatives().try(
   Joi.object({
     accreditations: keyedByYear(reprocessorAccreditationSchema),
     ...registrationCommon,
@@ -148,18 +159,19 @@ export const organisationViewSchema = Joi.object({
   name: Joi.string().required(),
   organisationNumber: Joi.number().integer().required(),
   registrations: registrationsViewSchema,
-  status: Joi.string()
-    .valid(...ORGANISATION_STATUSES)
-    .required(),
+  status: Joi.object({
+    current: Joi.string()
+      .valid(...ORGANISATION_STATUSES)
+      .required()
+  }).required(),
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
 })
 
-export const registrationsViewResponseSchema = Joi.object({
-  registrations: registrationsViewSchema
-})
-
-export const accreditationsViewResponseSchema = Joi.alternatives().try(
-  Joi.object({ accreditations: keyedByYear(exporterAccreditationSchema) }),
-  Joi.object({ accreditations: keyedByYear(reprocessorAccreditationSchema) })
+const servedYear = yearSchema().custom((year, helpers) =>
+  isFutureYear(year) ? helpers.error('any.invalid') : year
 )
+
+export const organisationYearsResponseSchema = Joi.object({
+  years: Joi.array().items(servedYear).unique().required()
+})

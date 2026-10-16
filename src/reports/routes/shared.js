@@ -16,6 +16,7 @@ export const periodParamsSchema = Joi.object({
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  *
  * @typedef {{
@@ -23,11 +24,37 @@ export const periodParamsSchema = Joi.object({
  *   registrationId: string,
  *   year: number,
  *   cadence: Cadence,
- *   period: number
+ *   period: number,
+ *   accreditationId?: string | null
  * }} PeriodPathParams
  *
  * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
  */
+
+/**
+ * The registration a report is for. A registered-only natural-key route
+ * (`accreditationId: null`) reports without an accreditation, whatever the
+ * registration's current one.
+ *
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {{ organisationId: string, registrationId: string, accreditationId?: string | null }} params
+ * @returns {Promise<Registration>}
+ */
+export async function findRegistrationForReport(
+  organisationsRepository,
+  { organisationId, registrationId, accreditationId }
+) {
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
+  if (accreditationId !== null) {
+    return registration
+  }
+
+  const { accreditationId: _current, ...registeredOnly } = registration
+  return { ...registeredOnly, accreditation: null }
+}
 
 /**
  * Wraps a report (stored or computed) with registration details.

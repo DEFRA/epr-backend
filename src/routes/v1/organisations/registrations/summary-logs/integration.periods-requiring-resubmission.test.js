@@ -16,6 +16,7 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -578,6 +579,144 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       FEBRUARY_2025
     ])
+  })
+
+  it('flags the closed period a refused load is repatriated in, not the month it was exported', async () => {
+    const env = await setupGateEnvironment({
+      processingType: 'exporter',
+      organisationId: new ObjectId().toString(),
+      registrationId: new ObjectId().toString()
+    })
+    const refusedJanuaryExport = {
+      rowId: 1001,
+      osrId: 100,
+      exportTonnage: 8,
+      exportDate: '2025-01-26T00:00:00.000Z',
+      wasteRefused: 'Yes'
+    }
+
+    await upload(
+      env,
+      'sl-first',
+      'file-first',
+      createExporterUploadData([refusedJanuaryExport]),
+      exporterMeta
+    )
+    await submitAndPoll(env, 'sl-first')
+    await generateAndSubmitReport(env, JANUARY_2025)
+    await generateAndSubmitReport(env, FEBRUARY_2025)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-repatriated',
+      'file-repatriated',
+      createExporterUploadData([
+        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+      ]),
+      exporterMeta
+    )
+
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([
+      JANUARY_2025,
+      FEBRUARY_2025
+    ])
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+      FEBRUARY_2025
+    ])
+  })
+
+  describe('a repatriation cell that is not an ISO date', () => {
+    const refusedJanuaryExport = {
+      rowId: 1001,
+      osrId: 100,
+      exportTonnage: 8,
+      exportDate: '2025-01-26T00:00:00.000Z',
+      wasteRefused: 'Yes'
+    }
+
+    /** @param {unknown} [storedDateRepatriated] */
+    const setupWithJanuaryAndFebruarySubmitted = async (
+      storedDateRepatriated = null
+    ) => {
+      const env = await setupGateEnvironment({
+        processingType: 'exporter',
+        organisationId: new ObjectId().toString(),
+        registrationId: new ObjectId().toString()
+      })
+
+      await upload(
+        env,
+        'sl-first',
+        'file-first',
+        createExporterUploadData([refusedJanuaryExport]),
+        exporterMeta
+      )
+      // Submit stores rows without reading their dates, so swapping the file
+      // here stores the value as an upload from before dates were read would.
+      env.fileDataMap['file-first'] = {
+        meta: exporterMeta,
+        data: createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
+        ])
+      }
+      await submitAndPoll(env, 'sl-first')
+      await generateAndSubmitReport(env, JANUARY_2025)
+      await generateAndSubmitReport(env, FEBRUARY_2025)
+
+      return env
+    }
+
+    it.each([46063, true, '2025/02/10', '2025-02-99', '2025-02-30'])(
+      'places the load by its other dates when the cell holds %j',
+      async (dateRepatriated) => {
+        const env = await setupWithJanuaryAndFebruarySubmitted()
+
+        const loadsByReportingPeriod = await uploadAndValidate(
+          env,
+          'sl-bad-date',
+          'file-bad-date',
+          createExporterUploadData([
+            { ...refusedJanuaryExport, dateRepatriated }
+          ]),
+          exporterMeta
+        )
+
+        expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
+        expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+      }
+    )
+
+    it('flags the repatriation month once a stored non-date is corrected', async () => {
+      const env = await setupWithJanuaryAndFebruarySubmitted(46063)
+      const [storedRow] =
+        await env.summaryLogRowStatesRepository.findRowHistory(
+          env.organisationId,
+          env.registrationId,
+          '1001',
+          WASTE_RECORD_TYPE.EXPORTED
+        )
+      expect(storedRow.data.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED).toBe(
+        46063
+      )
+
+      const loadsByReportingPeriod = await uploadAndValidate(
+        env,
+        'sl-corrected',
+        'file-corrected',
+        createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+        ]),
+        exporterMeta
+      )
+
+      expect(loadsByReportingPeriod.closedPeriods).toEqual([
+        JANUARY_2025,
+        FEBRUARY_2025
+      ])
+      expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
+        FEBRUARY_2025
+      ])
+    })
   })
 
   it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {

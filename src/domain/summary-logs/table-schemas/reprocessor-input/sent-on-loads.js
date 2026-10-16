@@ -10,7 +10,6 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
@@ -25,9 +24,6 @@ const WASTE_BALANCE_CONTENT_FIELDS = [
  * Tracks waste sent on to other facilities.
  */
 export const SENT_ON_LOADS = {
-  reportingDateFields: Object.values(
-    REPORTING_DATE_FIELDS.REPROCESSOR_INPUT.SENT_ON_LOADS
-  ),
   ...createSentOnLoadsSchema(
     ROW_ID_MINIMUMS.SENT_ON_LOADS,
     createRowTransformer({

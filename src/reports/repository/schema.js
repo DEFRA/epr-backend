@@ -121,7 +121,7 @@ const finalDestinationSchema = Joi.object({
   tonnageSentOn: tonnage().required()
 })
 
-const wasteSentSchema = Joi.object({
+export const wasteSentSchema = Joi.object({
   tonnageSentToReprocessor: tonnage().required(),
   tonnageSentToExporter: tonnage().required(),
   tonnageSentToAnotherSite: tonnage().required(),
@@ -275,6 +275,11 @@ export const markSubmittedReportRequiringResubmissionByOperatorSchema =
     requestedBy: userSummarySchema,
     requestedAt: Joi.string().isoDate().required()
   })
+
+export const clearResubmissionRequiredSchema = Joi.object({
+  reportId: Joi.string().required(),
+  version: Joi.number().integer().min(1).required()
+})
 
 /**
  * Shape of a report's `resubmissionRequired` field, mirroring `staleSchema`.

@@ -19,6 +19,8 @@ import {
   assertAccreditationStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
@@ -124,6 +126,67 @@ export const updateStatusHistoryForItems = (
   })
 }
 
+/** @typedef {Pick<Organisation, 'registrations' | 'accreditations'>} NumberHolder */
+
+/**
+ * @typedef {{
+ *   items: 'registrations' | 'accreditations',
+ *   field: 'registrationNumber' | 'accreditationNumber',
+ *   numbersOf: (organisation: NumberHolder) => Array<string | null | undefined>
+ * }} UniqueNumberField
+ */
+
+/**
+ * Numbers that no two items share across all organisations. The MongoDB
+ * adapter holds a sparse unique index on each.
+ *
+ * @type {UniqueNumberField[]}
+ */
+export const UNIQUE_NUMBER_FIELDS = [
+  {
+    items: 'registrations',
+    field: 'registrationNumber',
+    numbersOf: ({ registrations }) =>
+      registrations.map(({ registrationNumber }) => registrationNumber)
+  },
+  {
+    items: 'accreditations',
+    field: 'accreditationNumber',
+    numbersOf: ({ accreditations }) =>
+      accreditations.map(({ accreditationNumber }) => accreditationNumber)
+  }
+]
+
+/** @typedef {'inserting' | 'updating'} WriteOperation */
+
+/**
+ * @param {{
+ *   operation: WriteOperation,
+ *   id: string,
+ *   conflictFields: string,
+ *   reason: string
+ * }} params
+ */
+export const duplicateKeyConflict = ({
+  operation,
+  id,
+  conflictFields,
+  reason
+}) =>
+  conflict(
+    `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
+    errorCodes.organisationDuplicateKey,
+    {
+      event: {
+        action:
+          operation === 'inserting'
+            ? 'insert_organisation'
+            : 'update_organisation',
+        reason
+      }
+    }
+  )
+
 export const mapDocumentWithCurrentStatuses = (org) => {
   const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
     normaliseOrganisationFromDb(org)
@@ -135,12 +198,14 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)
     item.accreditation = item.accreditation ?? null
+    item.registrationNumber = item.registrationNumber ?? null
     // Registrations don't expire (PAE-1904); strip any validTo left on older documents.
     delete (/** @type {Record<string, unknown>} */ (item).validTo)
   }
 
   for (const item of rest.accreditations) {
     item.status = getCurrentStatus(item)
+    item.accreditationNumber = item.accreditationNumber ?? null
   }
 
   return { id: _id.toString(), ...rest }

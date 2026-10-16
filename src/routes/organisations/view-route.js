@@ -8,14 +8,12 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 export const organisationPath = '/organisations/{organisationNumber}'
-export const registrationsPath = `${organisationPath}/registrations`
-export const registrationPath = `${registrationsPath}/{registrationNumber}`
-export const accreditationsPath = `${registrationPath}/accreditations`
-export const accreditationPath = `${accreditationsPath}/{year}`
+export const yearsPath = `${organisationPath}/years`
+export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
+export const accreditationPath = `${registrationPath}/accreditations/{year}`
 
 /** @typedef {{ organisationNumber: number }} OrganisationParams */
 /** @typedef {OrganisationParams & { registrationNumber: string }} RegistrationParams */
-/** @typedef {RegistrationParams & { year: string }} AccreditationParams */
 
 export const organisationParams = {
   organisationNumber: Joi.number().integer().positive().required()
@@ -24,74 +22,50 @@ export const registrationParams = {
   ...organisationParams,
   registrationNumber: Joi.string().required()
 }
-export const accreditationParams = {
-  ...registrationParams,
-  year: Joi.string()
-    .pattern(/^\d{4}$/)
-    .required()
-}
 
 /**
- * @template {OrganisationParams} P
+ * @template [Q=object]
  * @typedef {HapiRequest & {
  *   organisationReadRepository: OrganisationReadRepository,
- *   params: P
+ *   params: OrganisationParams,
+ *   query: Q
  * }} ViewRequest
  */
 
 /**
  * The response schemas strip the fields that are not served.
  *
- * @template {OrganisationParams} P
  * @template R
+ * @template [Q=object]
  * @param {string} path
- * @param {Joi.StrictSchemaMap<P>} params
  * @param {Joi.Schema} schema
- * @param {(organisation: Organisation, params: P) => R} select
+ * @param {(organisation: Organisation, query: Q) => R} select
+ * @param {Joi.StrictSchemaMap<Q>} [query]
  */
-export const viewRoute = (path, params, schema, select) => ({
+export const viewRoute = (path, schema, select, query = undefined) => ({
   method: 'GET',
   path,
   options: {
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
-    validate: { params: Joi.object(params) },
+    validate: {
+      params: Joi.object(organisationParams),
+      ...(query && { query: Joi.object(query) })
+    },
     response: { schema, modify: true, options: { stripUnknown: true } }
   },
   /**
-   * @param {ViewRequest<P>} request
+   * @param {ViewRequest<Q>} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const organisation = await findOrganisation(request)
-    return h.response(select(organisation, request.params)).code(StatusCodes.OK)
+    return h.response(select(organisation, request.query)).code(StatusCodes.OK)
   }
 })
 
 /**
- * @param {Organisation} organisation
- * @param {RegistrationParams} params
- */
-export const registration = (organisation, { registrationNumber }) =>
-  found(organisation.registrations, registrationNumber, 'Registration')
-
-/**
- * @template T
- * @param {Record<string, T>} record
- * @param {string} key
- * @param {string} what
- * @returns {T}
- */
-export function found(record, key, what) {
-  const value = Object.hasOwn(record, key) ? record[key] : undefined
-  if (value === undefined) {
-    throw Boom.notFound(`${what} not found`)
-  }
-  return value
-}
-
-/**
- * @param {ViewRequest<OrganisationParams>} request
+ * @param {ViewRequest} request
  * @returns {Promise<Organisation>}
  */
 async function findOrganisation(request) {

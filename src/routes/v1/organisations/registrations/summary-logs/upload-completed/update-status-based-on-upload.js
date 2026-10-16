@@ -19,7 +19,16 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SummaryLogUpload } from './post.schema.js' */
+/** @import { SummaryLogUpload } from './year-post.schema.js' */
+
+/**
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   year: number,
+ *   accreditationId?: string | null
+ * }} UploadLocation
+ */
 
 export const buildFileData = (upload, existingFile) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
@@ -65,13 +74,12 @@ const buildSummaryLogData = (
 }
 
 /**
- * A year-scoped upload's accreditation is the registration's currently
- * approved (or suspended) accreditation — not asked for on the upload itself,
+ * A year-scoped upload whose path names no accreditation takes the
+ * registration's currently approved (or suspended) one — not asked for on the upload itself,
  * since a summary log's template must already match it or meta-business
  * validation rejects the file. A cancelled or rejected accreditation still
  * linked to the registration doesn't count: the upload is treated as
- * registered-only. A legacy (unscoped) upload resolves the same way it always
- * has, once `validate.js` runs.
+ * registered-only.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} organisationId
@@ -103,7 +111,7 @@ const resolveAccreditationId = async (
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {string} newStatus
- * @param {{ organisationId: string, registrationId: string, year: number | undefined, accreditationId: string | null | undefined }} scope
+ * @param {{ organisationId: string, registrationId: string, year: number, accreditationId: string | null | undefined }} scope
  * @returns {Promise<string | undefined>}
  */
 const validatedAgainstSummaryLogIdFor = async (
@@ -126,7 +134,7 @@ const validatedAgainstSummaryLogIdFor = async (
  * @param {string} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {string} newStatus
- * @param {{ organisationId: string, registrationId: string, year: number | undefined }} location
+ * @param {UploadLocation} location
  */
 const insertNewSummaryLog = async (
   summaryLogsRepository,
@@ -134,11 +142,11 @@ const insertNewSummaryLog = async (
   summaryLogId,
   upload,
   newStatus,
-  { organisationId, registrationId, year }
+  { organisationId, registrationId, year, accreditationId: pathAccreditationId }
 ) => {
   const accreditationId =
-    year === undefined
-      ? undefined
+    pathAccreditationId !== undefined
+      ? pathAccreditationId
       : await resolveAccreditationId(
           organisationsRepository,
           organisationId,
@@ -172,7 +180,7 @@ const insertNewSummaryLog = async (
  * @param {string} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
- * @param {{ organisationId: string, registrationId: string, year: number | undefined }} location
+ * @param {UploadLocation} location
  * @returns {Promise<string>} The new status
  */
 export const updateStatusBasedOnUpload = async (

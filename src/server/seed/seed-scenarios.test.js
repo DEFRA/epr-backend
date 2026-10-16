@@ -121,6 +121,24 @@ describe('seed-scenarios', () => {
       ).toBe(true)
     })
 
+    it('numbers registrations and accreditations in the production format', async () => {
+      await createEprOrganisationScenarios(mockDb, repository)
+      await waitForCacheSync()
+
+      const orgs = await repository.findAll()
+      const approvedOrg = orgs.find(
+        (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
+      )
+      assertPresent(approvedOrg)
+
+      for (const { registrationNumber } of approvedOrg.registrations) {
+        expect(registrationNumber).toMatch(/^R\d{2}[A-Z0-9]+$/)
+      }
+      for (const { accreditationNumber } of approvedOrg.accreditations) {
+        expect(accreditationNumber).toMatch(/^A\d{2}[A-Z0-9]+$/)
+      }
+    })
+
     it('creates an active organisation with approved registration and accreditation', async () => {
       await createEprOrganisationScenarios(mockDb, repository)
       await waitForCacheSync()

@@ -366,17 +366,17 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
     },
+    clearUnwarrantedResubmissionFlags: {
+      doc: 'Feature Flag: Let the startup sweep clear closed-period resubmission flags whose reported figures are unchanged, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_CLEAR_UNWARRANTED_RESUBMISSION_FLAGS'
+    },
     reconcileStalePrnProjections: {
       doc: 'Feature Flag: Let the startup sweep repair PRN projections whose status lags their ledger, rather than only reporting them (PAE-1908)',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
-    },
-    summaryLogYearBackfill: {
-      doc: 'Feature Flag: Let the startup backfill write each registration start year onto summary logs created before year-scoped routes, rather than only counting them (PAE-2027)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOG_YEAR_BACKFILL'
     },
     resubmissionFigureGate: {
       doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',

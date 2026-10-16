@@ -160,7 +160,7 @@
 
 /**
  * @typedef {RegistrationBase & {
- *  registrationNumber?: string;
+ *  registrationNumber: string | null;
  *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  * }} RegistrationOther

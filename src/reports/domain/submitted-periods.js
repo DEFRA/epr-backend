@@ -1,7 +1,8 @@
-import { periodForDate } from './period-for-date.js'
+import { reportedPeriodForDate } from './period-for-date.js'
 import { REPORT_STATUS } from './report-status.js'
 
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
+/** @import {Cadence} from './cadence.js' */
 
 /**
  * @param {number} year
@@ -45,8 +46,8 @@ export const buildSubmittedPeriods = (periodicReports, cadence) => {
  * Tests whether a date falls in one of the submitted periods.
  *
  * @param {Set<string>} submittedPeriods - result of {@link buildSubmittedPeriods}
- * @param {string | Date} dateValue
- * @param {string} cadence - 'monthly' or 'quarterly'
+ * @param {unknown} dateValue
+ * @param {Cadence} cadence
  * @returns {boolean}
  */
 export const isDateInSubmittedPeriod = (
@@ -54,6 +55,9 @@ export const isDateInSubmittedPeriod = (
   dateValue,
   cadence
 ) => {
-  const { year, period } = periodForDate(dateValue, cadence)
-  return submittedPeriods.has(periodKey(year, period))
+  const reported = reportedPeriodForDate(dateValue, cadence)
+  return (
+    reported !== null &&
+    submittedPeriods.has(periodKey(reported.year, reported.period))
+  )
 }

@@ -46,7 +46,7 @@ describe('Repeated uploads of identical data', () => {
 
     getServer().use(
       http.post(
-        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:year/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )

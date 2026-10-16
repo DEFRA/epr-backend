@@ -846,7 +846,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            /Invalid organisation data: registrations\.0\.registrationNumber:.*contains an invalid value/
+            /Invalid organisation data: registrations\.0\.registrationNumber: "registrations\[0\]\.registrationNumber" is required/
           )
         })
 
@@ -937,7 +937,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            /Invalid organisation data: accreditations\.0\.accreditationNumber:.*contains an invalid value/
+            /Invalid organisation data: accreditations\.0\.accreditationNumber: "accreditations\[0\]\.accreditationNumber" is required/
           )
         })
 
@@ -1007,7 +1007,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            /Invalid organisation data: accreditations\.0\.accreditationNumber:.*contains an invalid value/
+            /Invalid organisation data: accreditations\.0\.accreditationNumber: "accreditations\[0\]\.accreditationNumber" is required/
           )
         })
 

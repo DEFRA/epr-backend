@@ -10,11 +10,12 @@ import {
   markActiveReportsStaleSchema,
   markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema,
-  markSubmittedReportRequiringResubmissionByOperatorSchema
+  markSubmittedReportRequiringResubmissionByOperatorSchema,
+  clearResubmissionRequiredSchema
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams } from './port.js'
+ * @import { ClearResubmissionRequiredParams, MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams } from './port.js'
  */
 
 /**
@@ -189,6 +190,22 @@ export const validateMarkSubmittedReportRequiringResubmissionByOperator = (
     markSubmittedReportRequiringResubmissionByOperatorSchema.validate(params, {
       abortEarly: false
     })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {ClearResubmissionRequiredParams} params
+ * @returns {ClearResubmissionRequiredParams}
+ */
+export const validateClearResubmissionRequired = (params) => {
+  const { error, value } = clearResubmissionRequiredSchema.validate(params, {
+    abortEarly: false
+  })
 
   if (error) {
     throw Boom.badRequest(error.message)

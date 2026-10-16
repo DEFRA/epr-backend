@@ -1,13 +1,13 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
-  buildAccreditation,
-  buildOrganisation
+  buildOrganisation,
+  buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { partialMock } from '#test/type-helpers.js'
 
-import { runDuplicateNumberDiagnostic } from './run.js'
+import { runNaturalKeyFormatDiagnostic } from './run.js'
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -20,7 +20,7 @@ vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
 }))
 
-describe('runDuplicateNumberDiagnostic', () => {
+describe('runNaturalKeyFormatDiagnostic', () => {
   /** @type {StartedServer} */
   let server
   /** @type {Lock} */
@@ -45,10 +45,10 @@ describe('runDuplicateNumberDiagnostic', () => {
   })
 
   it('acquires a lock scoped to the diagnostic and releases it afterwards', async () => {
-    await runDuplicateNumberDiagnostic(server)
+    await runNaturalKeyFormatDiagnostic(server)
 
     expect(server.locker.lock).toHaveBeenCalledWith(
-      'duplicate-number-diagnostic'
+      'natural-key-format-diagnostic'
     )
     expect(lock.free).toHaveBeenCalled()
   })
@@ -56,42 +56,42 @@ describe('runDuplicateNumberDiagnostic', () => {
   it('skips the run when the lock is held by another instance', async () => {
     vi.mocked(server.locker.lock).mockResolvedValue(null)
 
-    await runDuplicateNumberDiagnostic(server)
+    await runNaturalKeyFormatDiagnostic(server)
 
     expect(createOrganisationsRepository).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Unable to obtain lock, skipping duplicate number diagnostic'
+      message:
+        'Unable to obtain lock, skipping page URL number format diagnostic'
     })
   })
 
-  it('logs each duplicated number with every record holding it, then the summary', async () => {
-    const first = buildOrganisation({
-      accreditations: [buildAccreditation({ accreditationNumber: 'ACC-1' })],
-      registrations: []
+  it('logs each number in another format, then the summary', async () => {
+    const organisation = buildOrganisation({
+      accreditations: [],
+      registrations: [
+        buildRegistration({
+          registrationNumber: 'EPR/AB1234CD/R1',
+          statusHistory: [
+            { status: 'created', updatedAt: '2026-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2026-01-02T00:00:00.000Z' }
+          ]
+        })
+      ]
     })
-    const second = buildOrganisation({
-      accreditations: [buildAccreditation({ accreditationNumber: 'ACC-1' })],
-      registrations: []
-    })
-    storeOrganisations([partialMock(first), partialMock(second)])
+    storeOrganisations([partialMock(organisation)])
 
-    await runDuplicateNumberDiagnostic(server)
-
-    const holder = (
-      /** @type {ReturnType<typeof buildOrganisation>} */ organisation
-    ) =>
-      `[number="ACC-1" organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordId=${organisation.accreditations[0].id} status=created]`
+    await runNaturalKeyFormatDiagnostic(server)
 
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `Duplicate accreditation number: number="ACC-1" holders=2 organisationCount=2 ${holder(first)} ${holder(second)}`
+          message: `Page URL number format mismatch: recordType=registration number="EPR/AB1234CD/R1" breaksUrlSegment=true organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordId=${organisation.registrations[0].id} status=approved`
         }
       ],
       [
         {
           message:
-            'Duplicate number diagnostic: scannedOrganisations=2 numberedAccreditations=2 numberedRegistrations=0 duplicateAccreditationNumbers=1 duplicateRegistrationNumbers=0'
+            'Page URL number format diagnostic: scannedOrganisations=1 checkedRegistrations=1 checkedAccreditations=0 mismatchedRegistrationNumbers=1 mismatchedAccreditationNumbers=0'
         }
       ]
     ])
@@ -101,11 +101,11 @@ describe('runDuplicateNumberDiagnostic', () => {
     const error = new Error('mongo unavailable')
     vi.mocked(createOrganisationsRepository).mockRejectedValue(error)
 
-    await runDuplicateNumberDiagnostic(server)
+    await runNaturalKeyFormatDiagnostic(server)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
-      message: 'Failed to run duplicate number diagnostic'
+      message: 'Failed to run page URL number format diagnostic'
     })
     expect(lock.free).toHaveBeenCalled()
   })
@@ -114,11 +114,11 @@ describe('runDuplicateNumberDiagnostic', () => {
     const error = new Error('locker unavailable')
     vi.mocked(server.locker.lock).mockRejectedValue(error)
 
-    await runDuplicateNumberDiagnostic(server)
+    await runNaturalKeyFormatDiagnostic(server)
 
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
-      message: 'Failed to run duplicate number diagnostic'
+      message: 'Failed to run page URL number format diagnostic'
     })
   })
 })

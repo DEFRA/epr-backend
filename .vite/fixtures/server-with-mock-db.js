@@ -1,5 +1,6 @@
 import { test, vi } from 'vitest'
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
+import { onUnhandledFrame } from '#vite/setup-msw.js'
 
 /**
  * @import { TestAPI, Mock } from 'vitest'
@@ -47,7 +48,7 @@ export const it =
         // eslint-disable-next-line no-empty-pattern
         async ({}, use) => {
           const mockOidcServer = createMockOidcServers()
-          mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+          mockOidcServer.listen({ onUnhandledFrame })
 
           await use(mockOidcServer)
 

@@ -13,7 +13,6 @@ import Boom from '@hapi/boom'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
-import { yearSchema } from '#common/validation/year-schema.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -139,54 +138,6 @@ const update = (db, logger) => async (id, version, updates) => {
 
     const conflictError = new Error(
       `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-    )
-    logger.error({
-      err: conflictError,
-      message: `Version conflict detected for summary log ${validatedId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.DB,
-        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-        reference: validatedId
-      }
-    })
-    throw Boom.conflict(conflictError.message)
-  }
-}
-
-const WITHOUT_YEAR = { $or: [{ year: { $exists: false } }, { year: null }] }
-
-const findIdsWithoutYear = (db) => async () => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find(WITHOUT_YEAR, { projection: { _id: 1 } })
-    .toArray()
-  return docs.map((doc) => doc._id)
-}
-
-const assignYear = (db, logger) => async (id, version, year) => {
-  const validatedId = validateId(id)
-  const { error, value: validatedYear } = yearSchema().required().validate(year)
-  if (error) {
-    throw Boom.badData(error.message)
-  }
-
-  /** @type {any} */
-  const filter = { _id: validatedId, version, ...WITHOUT_YEAR }
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .updateOne(filter, { $set: { year: validatedYear }, $inc: { version: 1 } })
-
-  if (result.matchedCount === 0) {
-    /** @type {any} */
-    const findFilter = { _id: validatedId }
-    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
-
-    if (!existing) {
-      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-    }
-
-    const conflictError = new Error(
-      `Version conflict: attempted to assign year with version ${version} but current version is ${existing.version}, year is ${existing.year ?? 'unset'}`
     )
     logger.error({
       err: conflictError,
@@ -496,8 +447,6 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
-    findIdsWithoutYear: findIdsWithoutYear(db),
-    assignYear: assignYear(db, logger),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     findAllByOrgReg: findAllByOrgReg(db),
     findAllSummaryLogStatsByRegistrationId:

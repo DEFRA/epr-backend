@@ -1,10 +1,13 @@
 import Boom from '@hapi/boom'
 
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
+import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import {
   servesOrganisation,
   toAccreditationEntry,
-  toRegistrationEntry
+  toRegistrationEntry,
+  toStatusTimeline
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
@@ -67,16 +70,78 @@ export async function findRegistrationByNumber(
     organisationNumber
   )
 
-  const registration = onlyOne(
-    organisation.registrations.filter(
-      (candidate) =>
-        candidate.registrationNumber === registrationNumber &&
-        toRegistrationEntry(candidate, organisation, lookupContext()) !== null
-    ),
-    'Registration'
+  const registration = servedRegistrationByNumber(
+    organisation,
+    registrationNumber
   )
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
 
   return { organisation, registration }
+}
+
+/**
+ * The registrations the organisation read model serves.
+ *
+ * @param {Organisation} organisation
+ * @returns {Registration[]}
+ */
+export function servedRegistrations(organisation) {
+  const numbers = new Set(
+    organisation.registrations.flatMap(
+      ({ registrationNumber }) => registrationNumber ?? []
+    )
+  )
+  return [...numbers].flatMap(
+    (number) => servedRegistrationByNumber(organisation, number) ?? []
+  )
+}
+
+/**
+ * A number shared by more than one served registration names none of them.
+ * Only registrations with the number are read, so a record the read model
+ * cannot show elsewhere in the organisation does not stop the lookup.
+ *
+ * @param {Organisation} organisation
+ * @param {string} registrationNumber
+ * @returns {Registration | null}
+ */
+function servedRegistrationByNumber(organisation, registrationNumber) {
+  const served = organisation.registrations.filter(
+    (candidate) =>
+      candidate.registrationNumber === registrationNumber &&
+      toRegistrationEntry(candidate, organisation, lookupContext()) !== null
+  )
+  return served.length === 1 ? served[0] : null
+}
+
+/**
+ * The years the registration was approved in, up to this year.
+ *
+ * @param {Registration} registration
+ * @returns {number[]}
+ */
+export function registrationYears(registration) {
+  return approvedYears(
+    toStatusTimeline(registration.statusHistory, registration.validFrom),
+    utcCalendarDate(new Date())
+  )
+}
+
+/**
+ * A registration's accreditations for a year, by the read model's rules.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @param {number} year
+ * @returns {Accreditation[]}
+ */
+export function accreditationsForYear(organisation, registration, year) {
+  return accreditationsForRegistration(registration, organisation).filter(
+    (candidate) =>
+      toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
+  )
 }
 
 /**
@@ -90,10 +155,7 @@ export async function findRegistrationByNumber(
  */
 export function findAccreditationForYear(organisation, registration, year) {
   return onlyOne(
-    accreditationsForRegistration(registration, organisation).filter(
-      (candidate) =>
-        toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
-    ),
+    accreditationsForYear(organisation, registration, year),
     'Accreditation'
   )
 }

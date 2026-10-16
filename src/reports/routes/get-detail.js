@@ -1,7 +1,11 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import { periodParamsSchema, withRegistrationDetails } from './shared.js'
+import {
+  findRegistrationForReport,
+  periodParamsSchema,
+  withRegistrationDetails
+} from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -99,9 +103,9 @@ export const reportsGetDetail = {
       submissionNumber
     } = params
 
-    const registration = await organisationsRepository.findRegistrationById(
-      organisationId,
-      registrationId
+    const registration = await findRegistrationForReport(
+      organisationsRepository,
+      params
     )
 
     const report = await fetchOrGenerateReportForPeriod({

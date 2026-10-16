@@ -19,7 +19,7 @@ import {
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SummaryLogUpload } from './post.schema.js' */
+/** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
@@ -31,9 +31,9 @@ export const summaryLogsUploadCompletedYearPath =
 /**
  * The callback for an upload that started via the year-scoped create route.
  * `year` is carried on the path rather than a query string, since every
- * upload reaching this route already knows it at create time. Which
- * accreditation the upload belongs to isn't carried either — it's the
- * registration's current live link, fetched here.
+ * upload reaching this route already knows it at create time. On the
+ * natural-key routes the path names the accreditation (`null` for
+ * registered-only); otherwise it's the registration's current live link.
  */
 export const summaryLogsUploadCompletedYear = {
   method: 'POST',
@@ -47,7 +47,7 @@ export const summaryLogsUploadCompletedYear = {
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string, accreditationId?: string | null },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
@@ -64,7 +64,13 @@ export const summaryLogsUploadCompletedYear = {
       logger
     } = request
 
-    const { summaryLogId, organisationId, registrationId, year } = params
+    const {
+      summaryLogId,
+      organisationId,
+      registrationId,
+      year,
+      accreditationId
+    } = params
     const { summaryLogUpload } = payload.form
 
     try {
@@ -74,7 +80,7 @@ export const summaryLogsUploadCompletedYear = {
         summaryLogId,
         summaryLogUpload,
         logger,
-        { organisationId, registrationId, year }
+        { organisationId, registrationId, year, accreditationId }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

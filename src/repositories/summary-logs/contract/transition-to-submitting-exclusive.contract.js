@@ -247,6 +247,25 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result2.success).toBe(false)
     })
 
+    it('blocks a second submission for legacy logs without a year', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const logId1 = `summary-${randomUUID()}`
+      const logId2 = `summary-${randomUUID()}`
+      const legacy = () => ({
+        ...summaryLogFactory.validated({ organisationId, registrationId }),
+        year: undefined
+      })
+
+      await repository.insert(logId1, legacy())
+      await repository.insert(logId2, legacy())
+
+      const result1 = await repository.transitionToSubmittingExclusive(logId1)
+      const result2 = await repository.transitionToSubmittingExclusive(logId2)
+
+      expect(result1.success).toBe(true)
+      expect(result2.success).toBe(false)
+    })
+
     it('increments version on successful transition', async () => {
       const { organisationId, registrationId } = generateOrgReg()
       const logId = `summary-${randomUUID()}`

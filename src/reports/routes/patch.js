@@ -12,7 +12,11 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { periodParamsSchema, extractChangedBy } from './shared.js'
+import {
+  extractChangedBy,
+  findRegistrationForReport,
+  periodParamsSchema
+} from './shared.js'
 
 export const reportsPatchPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
@@ -164,10 +168,7 @@ export const reportsPatch = {
     const submissionNumber = Number(params.submissionNumber)
 
     const [registration, report] = await Promise.all([
-      organisationsRepository.findRegistrationById(
-        organisationId,
-        registrationId
-      ),
+      findRegistrationForReport(organisationsRepository, params),
       fetchReportBySubmissionNumber(
         reportsRepository,
         organisationId,

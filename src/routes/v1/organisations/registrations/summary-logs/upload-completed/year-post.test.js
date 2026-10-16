@@ -239,6 +239,40 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
   })
 
+  it('updates a preprocessing summary log in place when its upload completes', async () => {
+    const summaryLogId = randomUUID()
+
+    await server.inject({
+      method: 'POST',
+      url: uploadCompletedUrl(2026, summaryLogId),
+      payload: {
+        uploadStatus: 'ready',
+        metadata: { organisationId, registrationId },
+        form: {
+          summaryLogUpload: createFileDetails({
+            fileId: 'file-pending-then-complete',
+            fileStatus: 'pending',
+            s3Bucket: undefined,
+            s3Key: undefined
+          })
+        },
+        numberOfRejectedFiles: 0
+      }
+    })
+    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedUrl(2026, summaryLogId),
+      payload: createCompletePayload('file-pending-then-complete')
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+    const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
+    expect(updated.summaryLog.year).toBe(2026)
+  })
+
   it('returns 422 for an invalid year', async () => {
     const response = await server.inject({
       method: 'POST',
@@ -249,7 +283,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('rejects a callback arriving after the log has moved on from validating, sharing the state machine with the legacy callback', async () => {
+  it('rejects a callback arriving after the log has moved on from validating', async () => {
     const summaryLogId = randomUUID()
 
     await server.inject({

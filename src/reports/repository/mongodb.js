@@ -20,6 +20,7 @@ import {
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
 import { reportsCollection } from './mongodb-collection.js'
 import {
+  performClearResubmissionRequired,
   performMarkActiveReportsStaleForSummaryLog,
   performMarkActiveReportsStaleForPrnCancellation,
   performMarkSubmittedReportsRequiringResubmission,
@@ -463,6 +464,8 @@ export const createReportsRepository = async (db) => {
       performMarkSubmittedReportsRequiringResubmission(db, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
+    clearResubmissionRequired: (params) =>
+      performClearResubmissionRequired(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       performHasReportSubmittedSince(db, organisationId, registrationId, since)
   })
