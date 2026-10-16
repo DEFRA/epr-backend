@@ -193,13 +193,33 @@ const yearFilter = ({ year, accreditationId }) =>
         ]
       }
 
+/**
+ * @import { Collection, Db, Filter } from 'mongodb'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { StoredSummaryLogKey } from './natural-keys.js'
+ * @import { SummaryLogKey, SummaryLogWithId } from './port.js'
+ *
+ * @typedef {SummaryLog & { _id: string, version: number }} SummaryLogDocument
+ */
+
+/**
+ * @param {Db} db
+ * @returns {Collection<SummaryLogDocument>}
+ */
+const summaryLogs = (db) =>
+  /** @type {Collection<SummaryLogDocument>} */ (db.collection(COLLECTION_NAME))
+
+/**
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogWithId | null>}
+ */
 const latestSubmitted = async (db, filter) => {
-  const doc = await db
-    .collection(COLLECTION_NAME)
-    .findOne(
-      { ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED },
-      { sort: { submittedAt: -1 } }
-    )
+  const doc = await summaryLogs(db).findOne(
+    { ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED },
+    { sort: { submittedAt: -1 } }
+  )
 
   if (!doc) {
     return null
@@ -223,10 +243,15 @@ const findLatestSubmittedForOrgReg =
       ...yearFilter({ year, accreditationId })
     })
 
-/** Submitted and failed summary logs, newest upload first. */
+/**
+ * Submitted and failed summary logs, newest upload first.
+ *
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogWithId[]>}
+ */
 const uploads = async (db, filter) => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
+  const docs = await summaryLogs(db)
     .aggregate([
       {
         $match: {
@@ -245,7 +270,9 @@ const uploads = async (db, filter) => {
     ])
     .toArray()
 
-  return docs.map((doc) => {
+  return /** @type {(SummaryLogDocument & { _uploadedAt: string })[]} */ (
+    docs
+  ).map((doc) => {
     const { _id, version, _uploadedAt: _u, ...summaryLog } = doc
     return {
       id: _id,
@@ -262,8 +289,8 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) =>
  * A summary log stored before its accreditation was recorded has no
  * `accreditationId`, and matches every accreditation, as in `yearFilter`.
  *
- * @param {import('./natural-keys.js').StoredSummaryLogKey} storedKey
- * @returns {any}
+ * @param {StoredSummaryLogKey} storedKey
+ * @returns {Filter<SummaryLogDocument>}
  */
 const storedKeyFilter = ({
   organisationId,
@@ -278,9 +305,13 @@ const storedKeyFilter = ({
         $or: [{ accreditationId }, { accreditationId: { $exists: false } }]
       }
 
+/**
+ * @param {Db} db
+ * @param {OrganisationsRepository} organisationsRepository
+ */
 const findLatestSubmitted =
   (db, organisationsRepository) =>
-  /** @param {import('./port.js').SummaryLogKey} key */
+  /** @param {SummaryLogKey} key */
   async (key) => {
     const resolved = await resolveSummaryLogKey(organisationsRepository, key)
     if (!resolved) {
@@ -290,9 +321,13 @@ const findLatestSubmitted =
     return found && resolved.toKeyed(found)
   }
 
+/**
+ * @param {Db} db
+ * @param {OrganisationsRepository} organisationsRepository
+ */
 const findAll =
   (db, organisationsRepository) =>
-  /** @param {import('./port.js').SummaryLogKey} key */
+  /** @param {SummaryLogKey} key */
   async (key) => {
     const resolved = await resolveSummaryLogKey(organisationsRepository, key)
     if (!resolved) {

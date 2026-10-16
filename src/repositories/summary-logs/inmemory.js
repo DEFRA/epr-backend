@@ -120,17 +120,28 @@ const matchesYear = (summaryLog, { year, accreditationId }) => {
 }
 
 /**
- * @param {Map<string, any>} staleCache
- * @param {(summaryLog: import('#domain/summary-logs/model.js').SummaryLog) => boolean} matches
- * @returns {import('./port.js').SummaryLogWithId | null}
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { StoredSummaryLogKey } from './natural-keys.js'
+ * @import { SummaryLogKey, SummaryLogVersion, SummaryLogWithId } from './port.js'
+ *
+ * @typedef {Map<string, SummaryLogVersion>} SummaryLogStore
+ * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
+ */
+
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {SummaryLogMatch} matches
+ * @returns {SummaryLogWithId | null}
  */
 const latestSubmitted = (staleCache, matches) => {
-  /** @type {{ id: string, doc: any, submittedAt: string } | null} */
+  /** @type {{ id: string, doc: SummaryLogVersion, submittedAt: string } | null} */
   let latest = null
 
   for (const [id, doc] of staleCache) {
     if (doc.summaryLog.status === 'submitted' && matches(doc.summaryLog)) {
-      const { submittedAt } = doc.summaryLog
+      const submittedAt = /** @type {string} */ (doc.summaryLog.submittedAt)
 
       // Return the most recently submitted summary log
       if (latest === null || submittedAt > latest.submittedAt) {
@@ -162,6 +173,7 @@ const findLatestSubmittedForOrgReg =
         matchesYear(summaryLog, { year, accreditationId })
     )
 
+/** @type {Set<SummaryLogStatus>} */
 const TERMINAL_STATUS = new Set([
   SUMMARY_LOG_STATUS.SUBMITTED,
   ...SUMMARY_LOG_FAILURE_STATUS
@@ -170,9 +182,9 @@ const TERMINAL_STATUS = new Set([
 /**
  * Submitted and failed summary logs, newest upload first.
  *
- * @param {Map<string, any>} staleCache
- * @param {(summaryLog: import('#domain/summary-logs/model.js').SummaryLog) => boolean} matches
- * @returns {import('./port.js').SummaryLogWithId[]}
+ * @param {SummaryLogStore} staleCache
+ * @param {SummaryLogMatch} matches
+ * @returns {SummaryLogWithId[]}
  */
 const uploads = (staleCache, matches) => {
   const found = []
@@ -207,8 +219,8 @@ const findAllByOrgReg =
  * A summary log stored before its accreditation was recorded has no
  * `accreditationId`, and matches every accreditation, as in `matchesYear`.
  *
- * @param {import('./natural-keys.js').StoredSummaryLogKey} storedKey
- * @returns {(summaryLog: import('#domain/summary-logs/model.js').SummaryLog) => boolean}
+ * @param {StoredSummaryLogKey} storedKey
+ * @returns {SummaryLogMatch}
  */
 const matchesStoredKey =
   ({ organisationId, registrationId, accreditationId }) =>
@@ -219,9 +231,13 @@ const matchesStoredKey =
       summaryLog.accreditationId === undefined ||
       summaryLog.accreditationId === accreditationId)
 
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {OrganisationsRepository} organisationsRepository
+ */
 const findLatestSubmitted =
   (staleCache, organisationsRepository) =>
-  /** @param {import('./port.js').SummaryLogKey} key */
+  /** @param {SummaryLogKey} key */
   async (key) => {
     const resolved = await resolveSummaryLogKey(organisationsRepository, key)
     if (!resolved) {
@@ -234,9 +250,13 @@ const findLatestSubmitted =
     return found && resolved.toKeyed(found)
   }
 
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {OrganisationsRepository} organisationsRepository
+ */
 const findAll =
   (staleCache, organisationsRepository) =>
-  /** @param {import('./port.js').SummaryLogKey} key */
+  /** @param {SummaryLogKey} key */
   async (key) => {
     const resolved = await resolveSummaryLogKey(organisationsRepository, key)
     if (!resolved) {
@@ -396,7 +416,7 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [organisationsRepository]
+ * @param {OrganisationsRepository} [organisationsRepository]
  *   - Resolves natural keys to the ids summary logs are stored under
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */

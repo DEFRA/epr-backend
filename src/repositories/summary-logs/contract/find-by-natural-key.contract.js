@@ -10,8 +10,15 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogFactory, withoutYear } from './test-data.js'
 
 /**
+ * @import { TestAPI } from 'vitest'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { SummaryLogsRepository } from '../port.js'
+ * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
+ *
+ * @typedef {{
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   organisationsRepository: OrganisationsRepository
+ * }} NaturalKeyFixtures
  */
 
 /** @param {string} prefix */
@@ -57,10 +64,11 @@ const storeRegistration = async (organisationsRepository) => {
 
 const STORED_IDS = ['organisationId', 'registrationId', 'accreditationId']
 
-/** @param {{ summaryLog: object } | null} found */
+/** @param {KeyedSummaryLogWithId | null} found */
 const storedIdsIn = (found) =>
   STORED_IDS.filter((key) => found && key in found.summaryLog)
 
+/** @param {TestAPI<NaturalKeyFixtures>} it */
 export const testFindByNaturalKey = (it) => {
   describe('finding by natural key', () => {
     /** @type {SummaryLogsRepository} */
@@ -70,7 +78,7 @@ export const testFindByNaturalKey = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ summaryLogsRepository: SummaryLogsRepository, organisationsRepository: OrganisationsRepository }} */ {
+        /** @type {NaturalKeyFixtures} */ {
           summaryLogsRepository,
           organisationsRepository
         }
@@ -80,6 +88,7 @@ export const testFindByNaturalKey = (it) => {
       }
     )
 
+    /** @param {Omit<SummaryLog, 'organisationId' | 'registrationId'>} summaryLog */
     const insert = async (summaryLog) => {
       const id = new ObjectId().toString()
       await repo.insert(id, { ...stored.ids, ...summaryLog })
