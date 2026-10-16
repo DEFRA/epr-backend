@@ -60,11 +60,11 @@ const approvedThenCancelled = () =>
     ]
   })
 
-const approvedThenCancelledTimeline = {
-  '2025-01-01T09:00:00.000Z': { status: 'created' },
-  '2025-03-01T00:00:00.000Z': { status: 'approved' },
-  '2026-03-01T09:00:00.000Z': { status: 'cancelled' }
-}
+const approvedThenCancelledTimeline = [
+  { status: 'created', at: '2025-01-01T09:00:00.000Z' },
+  { status: 'approved', at: '2025-03-01T00:00:00.000Z' },
+  { status: 'cancelled', at: '2026-03-01T09:00:00.000Z' }
+]
 
 describe('GET /organisations/{organisationNumber}', () => {
   setupAuthContext()
@@ -85,7 +85,15 @@ describe('GET /organisations/{organisationNumber}', () => {
       organisationNumber: organisation.orgId,
       name: 'ACME ltd',
       tradingName: 'ACME ltd',
-      status: { current: 'created' },
+      status: {
+        current: 'created',
+        timeline: [
+          {
+            status: 'created',
+            at: new Date(organisation.statusHistory[0].updatedAt).toISOString()
+          }
+        ]
+      },
       submittedToRegulator: { code: 'ea' },
       linkedDefraOrganisation: {
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
@@ -96,6 +104,29 @@ describe('GET /organisations/{organisationNumber}', () => {
         [REPROCESSOR_NUMBER]: reprocessorResponse,
         [EXPORTER_NUMBER]: exporterResponse
       }
+    })
+  })
+
+  it('serves the organisation’s status changes at one instant in the order they were recorded', async () => {
+    const instant = new Date('2026-01-01T09:00:00Z')
+    const organisation = buildOrganisation({
+      statusHistory: [
+        { status: 'created', updatedAt: instant },
+        { status: 'approved', updatedAt: instant },
+        { status: 'active', updatedAt: instant }
+      ]
+    })
+    await serve(organisation)
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    expect(body(response).status).toEqual({
+      current: 'active',
+      timeline: [
+        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', at: '2026-01-01T09:00:00.000Z' },
+        { status: 'active', at: '2026-01-01T09:00:00.000Z' }
+      ]
     })
   })
 
@@ -116,15 +147,15 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].status.timeline).toEqual({
-      '2026-01-01T09:00:00.000Z': { status: 'created' },
-      '2026-05-01T09:00:00.000Z': { status: 'suspended' },
-      '2026-07-01T00:00:00.000Z': { status: 'approved' }
-    })
-    expect(registration.status.timeline).toEqual({
-      '2026-01-01T09:00:00.000Z': { status: 'created' },
-      '2026-02-01T00:00:00.000Z': { status: 'approved' }
-    })
+    expect(registration.accreditations[2026].status.timeline).toEqual([
+      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+      { status: 'suspended', at: '2026-05-01T09:00:00.000Z' },
+      { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
+    ])
+    expect(registration.status.timeline).toEqual([
+      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+      { status: 'approved', at: '2026-02-01T00:00:00.000Z' }
+    ])
   })
 
   it('serves a registration approved and later cancelled with its whole status timeline', async () => {
@@ -144,13 +175,13 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2025].status.timeline).toEqual({
-      '2025-01-01T09:00:00.000Z': { status: 'created' },
-      '2025-07-01T00:00:00.000Z': { status: 'approved' },
-      '2026-01-01T09:00:00.000Z': { status: 'cancelled' },
-      '2026-01-01T12:00:00.000Z': { status: 'approved' },
-      '2026-01-01T15:00:00.000Z': { status: 'cancelled' }
-    })
+    expect(registration.accreditations[2025].status.timeline).toEqual([
+      { status: 'created', at: '2025-01-01T09:00:00.000Z' },
+      { status: 'approved', at: '2025-07-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2026-01-01T09:00:00.000Z' },
+      { status: 'approved', at: '2026-01-01T12:00:00.000Z' },
+      { status: 'cancelled', at: '2026-01-01T15:00:00.000Z' }
+    ])
   })
 
   it('serves each status change at its own time even when the history is stored out of order', async () => {
@@ -171,12 +202,12 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].status.timeline).toEqual({
-      '2026-01-01T09:00:00.000Z': { status: 'created' },
-      '2026-03-01T12:00:00.000Z': { status: 'suspended' },
-      '2026-03-01T15:00:00.000Z': { status: 'cancelled' },
-      '2026-07-01T00:00:00.000Z': { status: 'approved' }
-    })
+    expect(registration.accreditations[2026].status.timeline).toEqual([
+      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+      { status: 'suspended', at: '2026-03-01T12:00:00.000Z' },
+      { status: 'cancelled', at: '2026-03-01T15:00:00.000Z' },
+      { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
+    ])
   })
 
   it('serves an organisation as the repository stores it', async () => {
@@ -329,10 +360,10 @@ describe('GET /organisations/{organisationNumber}', () => {
 
       const registration = body(response).registrations[REPROCESSOR_NUMBER]
       expect(registration.status.current).toBe('approved')
-      expect(registration.accreditations[2026].status.timeline).toEqual({
-        '2026-01-01T00:00:00.000Z': { status: 'created' },
-        '2026-01-01T00:00:00.001Z': { status: 'approved' }
-      })
+      expect(registration.accreditations[2026].status.timeline).toEqual([
+        { status: 'created', at: '2026-01-01T00:00:00.000Z' },
+        { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+      ])
     })
 
     it('serves a registration’s whole status timeline in a year it was cancelled', async () => {

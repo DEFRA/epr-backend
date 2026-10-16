@@ -67,10 +67,10 @@ export const granted = (status) => [
  *
  * @param {string} validFrom
  */
-export const approvedTimeline = (validFrom) => ({
-  '2026-01-01T09:00:00.000Z': { status: 'created' },
-  [new Date(validFrom).toISOString()]: { status: 'approved' }
-})
+export const approvedTimeline = (validFrom) => [
+  { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+  { status: 'approved', at: new Date(validFrom).toISOString() }
+]
 
 export const accreditation = (overrides = {}) =>
   buildAccreditation({

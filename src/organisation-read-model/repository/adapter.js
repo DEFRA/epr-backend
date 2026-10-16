@@ -333,16 +333,9 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  const timed = recorded.toSorted(byDate)
-  for (let i = 1; i < timed.length; i++) {
-    // On a tie the earlier-recorded entry keeps the time; the later moves 1ms on
-    if (timed[i].at <= timed[i - 1].at) {
-      timed[i].at = new Date(timed[i - 1].at.getTime() + 1)
-    }
-  }
-  return Object.fromEntries(
-    timed.map(({ status, at }) => [at.toISOString(), { status }])
-  )
+  return recorded
+    .toSorted(byDate)
+    .map(({ status, at }) => ({ status, at: at.toISOString() }))
 }
 
 /**

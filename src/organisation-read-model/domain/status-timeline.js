@@ -9,6 +9,12 @@ import {
 /** @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange */
 
 /**
+ * One status per day, keyed by ISO 8601 date (ADR-0051).
+ *
+ * @typedef {Record<CalendarDate, { status: string }>} DailyTimeline
+ */
+
+/**
  * @param {CalendarDate} date
  * @returns {CalendarDate}
  */
@@ -37,12 +43,12 @@ const yearsIn = ({ from, to }) => {
 }
 
 /**
- * @param {StatusTimeline} timeline
+ * @param {DailyTimeline} daily
  * @param {CalendarDate} today
  * @returns {CalendarDate[]}
  */
-const datesUpTo = (timeline, today) => {
-  const dates = Object.keys(timeline)
+const datesUpTo = (daily, today) => {
+  const dates = Object.keys(daily)
     .map(calendarDate)
     .filter((date) => date.localeCompare(today) <= 0)
   return dates.sort((a, b) => a.localeCompare(b))
@@ -59,16 +65,14 @@ const datesUpTo = (timeline, today) => {
 const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
 
 /**
- * The status at the end of each UTC day with a change, keyed by ISO 8601 date.
+ * The status at the end of each UTC day with a change.
  *
  * @param {StatusTimeline} timeline
- * @returns {StatusTimeline}
+ * @returns {DailyTimeline}
  */
 export const dailyTimeline = (timeline) =>
   Object.fromEntries(
-    Object.keys(timeline)
-      .sort((a, b) => a.localeCompare(b))
-      .map((key) => [calendarDate(key), timeline[key]])
+    timeline.map(({ status, at }) => [calendarDate(at), { status }])
   )
 
 /**
