@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { reevaluateResubmissionFlags } from '#application/summary-logs/reevaluate-resubmission-flags.js'
+import { config } from '#root/config.js'
 
-import { runResubmissionFlagsDryRun } from './run-resubmission-flags-dry-run.js'
+import { runReevaluateResubmissionFlags } from './run-reevaluate-resubmission-flags.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -31,9 +32,22 @@ vi.mock('#waste-records/repository/mongodb.js', () => ({
 vi.mock('#overseas-sites/repository/mongodb.js', () => ({
   createOverseasSitesRepository: vi.fn().mockResolvedValue(() => ({}))
 }))
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn().mockResolvedValue(() => ({}))
+}))
 vi.mock('#common/helpers/s3/s3-client.js', () => ({
   createS3Client: vi.fn()
 }))
+vi.mock('#root/config.js', () => ({ config: { get: vi.fn() } }))
+
+/** @param {boolean} enabled */
+const withClearingFlag = (enabled) =>
+  vi
+    .mocked(config.get)
+    .mockImplementation(
+      (/** @type {string} */ key) =>
+        key === 'featureFlags.clearUnwarrantedResubmissionFlags' && enabled
+    )
 
 const REPORT =
   'reportId=report-1 submissionNumber=1 year=2025 cadence=monthly period=1 flaggedAt=2026-05-01T00:00:00.000Z flaggedBy=sl-2'
@@ -52,7 +66,7 @@ const outcome = (verdict) => ({
   ...verdict
 })
 
-describe('runResubmissionFlagsDryRun', () => {
+describe('runReevaluateResubmissionFlags', () => {
   /** @type {*} */
   let mockServer
   /** @type {*} */
@@ -71,6 +85,7 @@ describe('runResubmissionFlagsDryRun', () => {
       outcomes: [],
       failures: []
     })
+    withClearingFlag(false)
   })
 
   describe('one line per flagged report', () => {
@@ -105,6 +120,16 @@ describe('runResubmissionFlagsDryRun', () => {
           detail: 'its report records no source'
         },
         line: `Resubmission flag kept: ${IDENTITY} reason=cannot-compare changedFields=none detail="its report records no source"`
+      },
+      {
+        name: 'cleared',
+        verdict: { verdict: 'cleared' },
+        line: `Resubmission flag cleared: ${IDENTITY} reason=none changedFields=none detail=none`
+      },
+      {
+        name: 'skipped, with the reason',
+        verdict: { verdict: 'skipped', reason: 'resubmission-started' },
+        line: `Resubmission flag skipped: ${IDENTITY} reason=resubmission-started changedFields=none detail=none`
       }
     ])('logs $name', async ({ verdict, line }) => {
       vi.mocked(reevaluateResubmissionFlags).mockResolvedValue({
@@ -112,7 +137,7 @@ describe('runResubmissionFlagsDryRun', () => {
         failures: []
       })
 
-      await runResubmissionFlagsDryRun(mockServer)
+      await runReevaluateResubmissionFlags(mockServer)
 
       expect(logger.info).toHaveBeenCalledWith({ message: line })
     })
@@ -126,7 +151,7 @@ describe('runResubmissionFlagsDryRun', () => {
       failures: []
     })
 
-    await runResubmissionFlagsDryRun(mockServer)
+    await runReevaluateResubmissionFlags(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message: `Resubmission flag would-clear: organisationId=org-1 registrationNumber=R25SR500030912PA accreditationNumber=none ${REPORT} reason=none changedFields=none detail=none`
@@ -139,7 +164,7 @@ describe('runResubmissionFlagsDryRun', () => {
       failures: [{ reportId: 'report-4', error: 'connection reset' }]
     })
 
-    await runResubmissionFlagsDryRun(mockServer)
+    await runReevaluateResubmissionFlags(mockServer)
 
     expect(logger.error).toHaveBeenCalledWith({
       message:
@@ -173,19 +198,52 @@ describe('runResubmissionFlagsDryRun', () => {
       failures: [{ reportId: 'report-4', error: 'connection reset' }]
     })
 
-    await runResubmissionFlagsDryRun(mockServer)
+    await runReevaluateResubmissionFlags(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Resubmission flags dry run: flagged=8 wouldClear=2 keptOperatorRequested=1 keptResubmissionInProgress=1 keptFiguresChanged=1 keptCannotCompare=2 failed=1'
+        'Resubmission flags dry run: flagged=8 wouldClear=2 cleared=0 skipped=0 keptOperatorRequested=1 keptResubmissionInProgress=1 keptFiguresChanged=1 keptCannotCompare=2 failed=1'
+    })
+  })
+
+  it('runs as a dry run while the clearing flag is off', async () => {
+    await runReevaluateResubmissionFlags(mockServer)
+
+    expect(reevaluateResubmissionFlags).toHaveBeenCalledWith(
+      expect.anything(),
+      { clearFlags: false }
+    )
+  })
+
+  it('passes clearFlags through and logs a repair summary counting cleared and skipped while the clearing flag is on', async () => {
+    withClearingFlag(true)
+    vi.mocked(reevaluateResubmissionFlags).mockResolvedValue({
+      outcomes: [
+        outcome({ verdict: 'cleared' }),
+        outcome({ verdict: 'cleared' }),
+        outcome({ verdict: 'skipped', reason: 'changed-since-compared' }),
+        outcome({ verdict: 'kept', reason: 'operator-requested' })
+      ],
+      failures: []
+    })
+
+    await runReevaluateResubmissionFlags(mockServer)
+
+    expect(reevaluateResubmissionFlags).toHaveBeenCalledWith(
+      expect.anything(),
+      { clearFlags: true }
+    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Resubmission flags repair: flagged=4 wouldClear=0 cleared=2 skipped=1 keptOperatorRequested=1 keptResubmissionInProgress=0 keptFiguresChanged=0 keptCannotCompare=0 failed=0'
     })
   })
 
   it('runs under the lock and frees it', async () => {
-    await runResubmissionFlagsDryRun(mockServer)
+    await runReevaluateResubmissionFlags(mockServer)
 
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
-      'resubmission-flags-dry-run'
+      'reevaluate-resubmission-flags'
     )
     expect(reevaluateResubmissionFlags).toHaveBeenCalled()
     expect(mockLock.free).toHaveBeenCalled()
@@ -194,7 +252,7 @@ describe('runResubmissionFlagsDryRun', () => {
   it('skips the run when the lock is held by another instance', async () => {
     mockServer.locker.lock.mockResolvedValue(null)
 
-    await runResubmissionFlagsDryRun(mockServer)
+    await runReevaluateResubmissionFlags(mockServer)
 
     expect(reevaluateResubmissionFlags).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
@@ -206,7 +264,7 @@ describe('runResubmissionFlagsDryRun', () => {
     const error = new Error('mongo unavailable')
     vi.mocked(reevaluateResubmissionFlags).mockRejectedValue(error)
 
-    await expect(runResubmissionFlagsDryRun(mockServer)).resolves.toBe(
+    await expect(runReevaluateResubmissionFlags(mockServer)).resolves.toBe(
       undefined
     )
 
@@ -215,5 +273,29 @@ describe('runResubmissionFlagsDryRun', () => {
       message: 'Failed to run resubmission flags dry run'
     })
     expect(mockLock.free).toHaveBeenCalled()
+  })
+
+  it('names the repair when skipping for the lock while the clearing flag is on', async () => {
+    withClearingFlag(true)
+    mockServer.locker.lock.mockResolvedValue(null)
+
+    await runReevaluateResubmissionFlags(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Unable to obtain lock, skipping resubmission flags repair'
+    })
+  })
+
+  it('names the repair when the run fails while the clearing flag is on', async () => {
+    withClearingFlag(true)
+    const error = new Error('mongo unavailable')
+    vi.mocked(reevaluateResubmissionFlags).mockRejectedValue(error)
+
+    await runReevaluateResubmissionFlags(mockServer)
+
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message: 'Failed to run resubmission flags repair'
+    })
   })
 })
