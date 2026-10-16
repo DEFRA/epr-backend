@@ -63,10 +63,12 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           town: 'London',
           postcode: 'SW1A 0AA'
         },
-        status: 'created',
-        statusTimeline: {
-          [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
-            status: 'created'
+        status: {
+          current: 'created',
+          timeline: {
+            [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
+              status: 'created'
+            }
           }
         },
         submittedToRegulator: { code: 'ea' },
@@ -77,8 +79,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           [REPROCESSOR_NUMBER]: {
             applicationContactDetails: luke,
             approvedPersons: [luke],
-            status: 'approved',
-            statusTimeline: approvedTimeline('2026-02-01'),
+            status: {
+              current: 'approved',
+              timeline: approvedTimeline('2026-02-01')
+            },
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
@@ -96,8 +100,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
               2026: {
                 accreditationNumber: ACCREDITATION_NUMBER,
                 prnIssuance: { signatories: [yoda], tonnageBand: 'over_10000' },
-                status: 'approved',
-                statusTimeline: approvedTimeline('2026-07-01'),
+                status: {
+                  current: 'approved',
+                  timeline: approvedTimeline('2026-07-01')
+                },
                 submitterContactDetails: yoda
               }
             }
@@ -120,8 +126,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
         applicationContactDetails: anakin,
         approvedPersons: [anakin],
-        status: 'approved',
-        statusTimeline: approvedTimeline('2026-02-01'),
+        status: {
+          current: 'approved',
+          timeline: approvedTimeline('2026-02-01')
+        },
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',

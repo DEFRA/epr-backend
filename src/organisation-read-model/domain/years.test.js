@@ -1,7 +1,7 @@
 import { partialMock } from '#test/type-helpers.js'
 import { organisationInYear, organisationYears } from './years.js'
 
-const registration = (statusTimeline) => partialMock({ statusTimeline })
+const registration = (timeline) => partialMock({ status: { timeline } })
 
 const organisationOf = (...timelines) =>
   partialMock({
@@ -95,15 +95,19 @@ describe('organisationInYear', () => {
   const organisationWith = (registrations, overrides = {}) =>
     partialMock({
       name: 'ACME ltd',
-      status: 'active',
-      statusTimeline: { '2024-01-01': { status: 'active' } },
+      status: {
+        current: 'active',
+        timeline: { '2024-01-01': { status: 'active' } }
+      },
       ...overrides,
       registrations
     })
 
   const approvedFrom = (date, accreditations = {}) => ({
-    status: 'approved',
-    statusTimeline: { [date]: { status: 'approved' } },
+    status: {
+      current: 'approved',
+      timeline: { [date]: { status: 'approved' } }
+    },
     accreditations
   })
 
@@ -135,10 +139,12 @@ describe('organisationInYear', () => {
   it('drops a registration cancelled before the year starts', () => {
     const organisation = organisationWith({
       R1: {
-        status: 'cancelled',
-        statusTimeline: {
-          '2024-02-01': { status: 'approved' },
-          '2025-06-01': { status: 'cancelled' }
+        status: {
+          current: 'cancelled',
+          timeline: {
+            '2024-02-01': { status: 'approved' },
+            '2025-06-01': { status: 'cancelled' }
+          }
         },
         accreditations: {}
       }
@@ -162,10 +168,12 @@ describe('organisationInYear', () => {
   it('serves a registration cancelled part-way through the year as cancelled', () => {
     const organisation = organisationWith({
       R1: {
-        status: 'cancelled',
-        statusTimeline: {
-          '2025-02-01': { status: 'approved' },
-          '2026-03-01': { status: 'cancelled' }
+        status: {
+          current: 'cancelled',
+          timeline: {
+            '2025-02-01': { status: 'approved' },
+            '2026-03-01': { status: 'cancelled' }
+          }
         },
         accreditations: {}
       }
@@ -173,83 +181,97 @@ describe('organisationInYear', () => {
 
     const { registrations } = organisationInYear(organisation, 2026, NOW)
 
-    expect(registrations.R1.status).toBe('cancelled')
+    expect(registrations.R1.status.current).toBe('cancelled')
   })
 
   it('serves a past year’s statuses as they stood on 31 December', () => {
     const organisation = organisationWith(
       {
         R1: {
-          status: 'cancelled',
-          statusTimeline: {
-            '2025-02-01': { status: 'approved' },
-            '2026-03-01': { status: 'cancelled' }
+          status: {
+            current: 'cancelled',
+            timeline: {
+              '2025-02-01': { status: 'approved' },
+              '2026-03-01': { status: 'cancelled' }
+            }
           },
           accreditations: {}
         }
       },
       {
-        status: 'approved',
-        statusTimeline: {
-          '2024-01-01': { status: 'created' },
-          '2025-01-01': { status: 'approved' },
-          '2026-06-01': { status: 'active' }
+        status: {
+          current: 'approved',
+          timeline: {
+            '2024-01-01': { status: 'created' },
+            '2025-01-01': { status: 'approved' },
+            '2026-06-01': { status: 'active' }
+          }
         }
       }
     )
 
     const result = organisationInYear(organisation, 2025, NOW)
 
-    expect([result.status, result.registrations.R1.status]).toStrictEqual([
-      'approved',
-      'approved'
-    ])
+    expect([
+      result.status.current,
+      result.registrations.R1.status.current
+    ]).toStrictEqual(['approved', 'approved'])
   })
 
   it('serves the current year’s statuses as they stand today', () => {
     const organisation = organisationWith(
       { R1: approvedFrom('2025-02-01') },
       {
-        status: 'approved',
-        statusTimeline: {
-          '2025-01-01': { status: 'approved' },
-          '2027-01-01': { status: 'active' },
-          '2027-12-01': { status: 'rejected' }
+        status: {
+          current: 'approved',
+          timeline: {
+            '2025-01-01': { status: 'approved' },
+            '2027-01-01': { status: 'active' },
+            '2027-12-01': { status: 'rejected' }
+          }
         }
       }
     )
 
     const { status } = organisationInYear(organisation, 2027, NOW)
 
-    expect(status).toBe('active')
+    expect(status.current).toBe('active')
   })
 
   it('serves the last status on a year’s final day when it changed several times that day', () => {
     const organisation = organisationWith(
       { R1: approvedFrom('2025-02-01') },
       {
-        statusTimeline: {
-          '2025-01-01T09:00:00.000Z': { status: 'approved' },
-          '2025-12-31T09:00:00.000Z': { status: 'rejected' },
-          '2025-12-31T15:00:00.000Z': { status: 'active' }
+        status: {
+          current: 'active',
+          timeline: {
+            '2025-01-01T09:00:00.000Z': { status: 'approved' },
+            '2025-12-31T09:00:00.000Z': { status: 'rejected' },
+            '2025-12-31T15:00:00.000Z': { status: 'active' }
+          }
         }
       }
     )
 
     const { status } = organisationInYear(organisation, 2025, NOW)
 
-    expect(status).toBe('active')
+    expect(status.current).toBe('active')
   })
 
   it('keeps the current organisation status when its timeline starts later', () => {
     const organisation = organisationWith(
       { R1: approvedFrom('2025-02-01') },
-      { statusTimeline: { '2026-06-01': { status: 'active' } } }
+      {
+        status: {
+          current: 'active',
+          timeline: { '2026-06-01': { status: 'active' } }
+        }
+      }
     )
 
     const { status } = organisationInYear(organisation, 2025, NOW)
 
-    expect(status).toBe('active')
+    expect(status.current).toBe('active')
   })
 
   it('serves no registrations for a year that has not started', () => {

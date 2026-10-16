@@ -85,7 +85,7 @@ describe('GET /organisations/{organisationNumber}', () => {
       organisationNumber: organisation.orgId,
       name: 'ACME ltd',
       tradingName: 'ACME ltd',
-      status: 'created',
+      status: { current: 'created' },
       submittedToRegulator: { code: 'ea' },
       linkedDefraOrganisation: {
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
@@ -116,12 +116,12 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].statusTimeline).toEqual({
+    expect(registration.accreditations[2026].status.timeline).toEqual({
       '2026-01-01T09:00:00.000Z': { status: 'created' },
       '2026-05-01T09:00:00.000Z': { status: 'suspended' },
       '2026-07-01T00:00:00.000Z': { status: 'approved' }
     })
-    expect(registration.statusTimeline).toEqual({
+    expect(registration.status.timeline).toEqual({
       '2026-01-01T09:00:00.000Z': { status: 'created' },
       '2026-02-01T00:00:00.000Z': { status: 'approved' }
     })
@@ -134,7 +134,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.statusTimeline).toEqual(approvedThenCancelledTimeline)
+    expect(registration.status.timeline).toEqual(approvedThenCancelledTimeline)
   })
 
   it('serves every one of several status changes on one day with its time', async () => {
@@ -144,7 +144,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2025].statusTimeline).toEqual({
+    expect(registration.accreditations[2025].status.timeline).toEqual({
       '2025-01-01T09:00:00.000Z': { status: 'created' },
       '2025-07-01T00:00:00.000Z': { status: 'approved' },
       '2026-01-01T09:00:00.000Z': { status: 'cancelled' },
@@ -171,7 +171,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     const response = await get(`/organisations/${organisation.orgId}`)
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].statusTimeline).toEqual({
+    expect(registration.accreditations[2026].status.timeline).toEqual({
       '2026-01-01T09:00:00.000Z': { status: 'created' },
       '2026-03-01T12:00:00.000Z': { status: 'suspended' },
       '2026-03-01T15:00:00.000Z': { status: 'cancelled' },
@@ -291,7 +291,7 @@ describe('GET /organisations/{organisationNumber}', () => {
         const registration = body(response).registrations[REPROCESSOR_NUMBER]
         summaries.push(
           registration && [
-            registration.status,
+            registration.status.current,
             Object.keys(registration.accreditations)
           ]
         )
@@ -328,8 +328,8 @@ describe('GET /organisations/{organisationNumber}', () => {
       const response = await get(urlFor(organisation, 2026))
 
       const registration = body(response).registrations[REPROCESSOR_NUMBER]
-      expect(registration.status).toBe('approved')
-      expect(registration.accreditations[2026].statusTimeline).toEqual({
+      expect(registration.status.current).toBe('approved')
+      expect(registration.accreditations[2026].status.timeline).toEqual({
         '2026-01-01T00:00:00.000Z': { status: 'created' },
         '2026-01-01T00:00:00.001Z': { status: 'approved' }
       })
@@ -342,8 +342,10 @@ describe('GET /organisations/{organisationNumber}', () => {
       const response = await get(urlFor(organisation, 2026))
 
       const registration = body(response).registrations[REPROCESSOR_NUMBER]
-      expect(registration.status).toBe('cancelled')
-      expect(registration.statusTimeline).toEqual(approvedThenCancelledTimeline)
+      expect(registration.status.current).toBe('cancelled')
+      expect(registration.status.timeline).toEqual(
+        approvedThenCancelledTimeline
+      )
     })
 
     it('classifies a year by the last of several status changes on one day', async () => {
@@ -353,7 +355,9 @@ describe('GET /organisations/{organisationNumber}', () => {
       const in2025 = body(await get(urlFor(organisation, 2025)))
       const in2026 = body(await get(urlFor(organisation, 2026)))
 
-      expect(in2025.registrations[REPROCESSOR_NUMBER].status).toBe('approved')
+      expect(in2025.registrations[REPROCESSOR_NUMBER].status.current).toBe(
+        'approved'
+      )
       expect(in2026.registrations).toEqual({})
     })
 

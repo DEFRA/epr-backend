@@ -16,7 +16,7 @@ import { approvedYears } from './status-timeline.js'
 export const organisationYears = (organisation, now = new Date()) => {
   const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
-    ({ statusTimeline }) => approvedYears(statusTimeline, today)
+    ({ status }) => approvedYears(status.timeline, today)
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
@@ -43,23 +43,30 @@ export const organisationInYear = (organisation, year, now = new Date()) => {
   const today = utcCalendarDate(now)
   const day = yearEndOrToday(year, today)
   const registrations = Object.entries(organisation.registrations)
-    .filter(([, { statusTimeline }]) =>
-      approvedYears(statusTimeline, today).includes(year)
+    .filter(([, { status }]) =>
+      approvedYears(status.timeline, today).includes(year)
     )
     .map(([number, registration]) => [
       number,
       {
         ...registration,
-        status: statusOn(registration.statusTimeline, day),
+        status: {
+          ...registration.status,
+          current: statusOn(registration.status.timeline, day)
+        },
         accreditations: accreditationIn(registration.accreditations, year)
       }
     ])
 
   return {
     ...organisation,
-    status: /** @type {Organisation['status']} */ (
-      statusOn(organisation.statusTimeline, day) ?? organisation.status
-    ),
+    status: {
+      ...organisation.status,
+      current: /** @type {Organisation['status']['current']} */ (
+        statusOn(organisation.status.timeline, day) ??
+          organisation.status.current
+      )
+    },
     registrations: Object.fromEntries(registrations)
   }
 }

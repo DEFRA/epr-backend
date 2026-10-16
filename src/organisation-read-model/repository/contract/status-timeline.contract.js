@@ -49,7 +49,7 @@ export const testStatusTimelineBehaviour = (it) => {
       const organisation = await findOrganisation(repository, stored.orgId)
 
       expect(
-        organisation.registrations[REPROCESSOR_NUMBER].statusTimeline
+        organisation.registrations[REPROCESSOR_NUMBER].status.timeline
       ).toEqual({
         '2026-01-01T09:00:00.000Z': { status: 'created' },
         '2026-02-01T00:00:00.000Z': { status: 'approved' },
@@ -81,7 +81,7 @@ export const testStatusTimelineBehaviour = (it) => {
       const organisation = await findOrganisation(repository, stored.orgId)
 
       expect(
-        organisation.registrations[REPROCESSOR_NUMBER].statusTimeline
+        organisation.registrations[REPROCESSOR_NUMBER].status.timeline
       ).toEqual({
         '2026-01-01T09:00:00.000Z': { status: 'created' },
         '2026-02-01T00:00:00.000Z': { status: 'approved' },
@@ -110,7 +110,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
-          .statusTimeline
+          .status.timeline
       ).toEqual({
         '2026-01-01T09:00:00.000Z': { status: 'created' },
         '2026-07-01T00:00:00.000Z': { status: 'approved' },
@@ -139,7 +139,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
-          .statusTimeline
+          .status.timeline
       ).toEqual({
         '2026-01-01T09:00:00.000Z': { status: 'created' },
         '2026-02-01T09:00:00.000Z': { status: 'approved' },
@@ -166,7 +166,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
-          .statusTimeline
+          .status.timeline
       ).toEqual({
         '2026-01-01T00:00:00.000Z': { status: 'created' },
         '2026-01-01T00:00:00.001Z': { status: 'approved' }
@@ -192,7 +192,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
-          .statusTimeline
+          .status.timeline
       ).toEqual({
         '2026-01-01T00:00:00.000Z': { status: 'approved' },
         '2026-03-10T09:00:00.000Z': { status: 'cancelled' },
@@ -222,10 +222,12 @@ export const testStatusTimelineBehaviour = (it) => {
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[nextYear]
       ).toMatchObject({
-        status: 'approved',
-        statusTimeline: {
-          [now.toISOString()]: { status: 'created' },
-          [`${nextYear}-01-01T00:00:00.000Z`]: { status: 'approved' }
+        status: {
+          current: 'approved',
+          timeline: {
+            [now.toISOString()]: { status: 'created' },
+            [`${nextYear}-01-01T00:00:00.000Z`]: { status: 'approved' }
+          }
         }
       })
     })
@@ -249,8 +251,10 @@ export const testStatusTimelineBehaviour = (it) => {
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
       ).toMatchObject({
-        status: 'suspended',
-        statusTimeline: { '2999-01-01T09:00:00.000Z': { status: 'suspended' } }
+        status: {
+          current: 'suspended',
+          timeline: { '2999-01-01T09:00:00.000Z': { status: 'suspended' } }
+        }
       })
     })
 
@@ -270,10 +274,12 @@ export const testStatusTimelineBehaviour = (it) => {
       const organisation = await findOrganisation(repository, stored.orgId)
 
       expect(organisation).toMatchObject({
-        status: 'approved',
-        statusTimeline: {
-          '2026-01-01T09:00:00.000Z': { status: 'created' },
-          '2026-02-01T09:00:00.000Z': { status: 'approved' }
+        status: {
+          current: 'approved',
+          timeline: {
+            '2026-01-01T09:00:00.000Z': { status: 'created' },
+            '2026-02-01T09:00:00.000Z': { status: 'approved' }
+          }
         }
       })
     })
@@ -295,8 +301,8 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(repository, stored.orgId)
 
-      expect(organisation.status).toBe('active')
-      expect(organisation.statusTimeline).toEqual({
+      expect(organisation.status.current).toBe('active')
+      expect(organisation.status.timeline).toEqual({
         '2026-01-01T09:00:00.000Z': { status: 'created' },
         '2026-01-01T09:00:00.001Z': { status: 'approved' },
         '2026-01-01T09:00:00.002Z': { status: 'active' }

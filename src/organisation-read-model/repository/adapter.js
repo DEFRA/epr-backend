@@ -87,8 +87,8 @@ export function servesOrganisation(stored, today) {
  * @returns {Organisation | null}
  */
 function toOrganisation(stored, context) {
-  const statusTimeline = toStatusTimeline(stored.statusHistory)
-  const status = statusOn(statusTimeline, context.today)
+  const timeline = toStatusTimeline(stored.statusHistory)
+  const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
       `Organisation ${stored.orgId} has status ${status} on ${context.today}`
@@ -106,8 +106,7 @@ function toOrganisation(stored, context) {
       registeredAddress: toUkAddress(companyDetails.registeredAddress),
       tradingName: companyDetails.tradingName
     }),
-    status,
-    statusTimeline,
+    status: { current: status, timeline },
     submittedToRegulator: { code: stored.submittedToRegulator },
     submitterContactDetails: toContact(stored.submitterContactDetails),
     users: stored.users.map(({ contactId, email, roles }) => ({
@@ -156,7 +155,7 @@ export function toRegistrationEntry(registration, organisation, context) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(registration.statusHistory, validFrom)
+  const timeline = toStatusTimeline(registration.statusHistory, validFrom)
   const { status } = registration
   if (!isOneOf(REGISTRATION_STATUSES, status)) {
     onDrop(
@@ -180,8 +179,7 @@ export function toRegistrationEntry(registration, organisation, context) {
     applicationContactDetails: toContact(applicationContactDetails),
     approvedPersons: registration.approvedPersons.map(toContact),
     material: resolveMaterial(registration),
-    status,
-    statusTimeline,
+    status: { current: status, timeline },
     submittedToRegulator: { code: registration.submittedToRegulator },
     submitterContactDetails: toContact(registration.submitterContactDetails),
     validFrom
@@ -278,7 +276,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(
+  const timeline = toStatusTimeline(
     accreditation.statusHistory,
     accreditation.validFrom
   )
@@ -302,8 +300,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
         signatories: prnIssuance.signatories.map(toContact),
         tonnageBand: prnIssuance.tonnageBand
       },
-      status,
-      statusTimeline,
+      status: { current: status, timeline },
       submitterContactDetails: toContact(accreditation.submitterContactDetails)
     }
   ]
