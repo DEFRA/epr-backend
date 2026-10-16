@@ -18,9 +18,10 @@ import {
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
-  accreditationParams,
-  accreditationPath
+  accreditationPath,
+  registrationParams
 } from '#routes/organisations/view-route.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 import {
   adminPackagingRecyclingNotesCancel,
@@ -46,9 +47,10 @@ import { createStatusesValidator } from './validation.js'
  * @import { AccreditationSnapshot, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { AccreditationParams, RegistrationParams } from '#routes/organisations/view-route.js'
+ * @import { RegistrationParams } from '#routes/organisations/view-route.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
+ * @typedef {RegistrationParams & { year: number }} AccreditationParams
  * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
  * @typedef {AccreditationParams & { prnId: string }} PrnParams
  *
@@ -95,6 +97,10 @@ import { createStatusesValidator } from './validation.js'
 const prnsPath = `${accreditationPath}/packaging-recycling-notes`
 const prnPath = `${prnsPath}/{prnId}`
 
+const accreditationParams = {
+  ...registrationParams,
+  year: yearSchema().required()
+}
 const prnIdSchema = Joi.string().hex().length(24).required()
 const prnParams = { ...accreditationParams, prnId: prnIdSchema }
 
