@@ -51,16 +51,18 @@ export const resolveSummaryLogKey = async (
     organisationId: organisation.id,
     registrationId: registration.id
   }
-  if (accreditationNumber === null) {
-    storedKey.accreditationId = null
-  } else if (accreditationNumber !== undefined) {
-    const accreditation = organisation.accreditations.find(
-      (candidate) => candidate.accreditationNumber === accreditationNumber
-    )
-    if (!accreditation) {
-      return null
+  if (accreditationNumber !== undefined) {
+    if (accreditationNumber === null) {
+      storedKey.accreditationId = null
+    } else {
+      const accreditation = organisation.accreditations.find(
+        (candidate) => candidate.accreditationNumber === accreditationNumber
+      )
+      if (!accreditation) {
+        return null
+      }
+      storedKey.accreditationId = accreditation.id
     }
-    storedKey.accreditationId = accreditation.id
   }
 
   return {

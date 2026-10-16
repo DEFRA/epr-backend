@@ -144,7 +144,10 @@ const latestSubmitted = (staleCache, matches) => {
       const submittedAt = /** @type {string} */ (doc.summaryLog.submittedAt)
 
       // Return the most recently submitted summary log
-      if (latest === null || submittedAt > latest.submittedAt) {
+      if (
+        latest === null ||
+        submittedAt.localeCompare(latest.submittedAt) > 0
+      ) {
         latest = { id, doc, submittedAt }
       }
     }
