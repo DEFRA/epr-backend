@@ -15,6 +15,8 @@ import {
   AccreditationStatusError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { RelevantYearWindowExpiredError } from '#packaging-recycling-notes/domain/relevant-year.js'
+import { issuanceWindowClosedError } from '#packaging-recycling-notes/domain/issuance-window.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
@@ -86,9 +88,10 @@ const buildUser = (auth) => {
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
  * @param {string} path
+ * @param {string} accreditationId
  * @param {TypedLogger} logger
  */
-const mapUpdateStatusError = (error, path, logger) => {
+const mapUpdateStatusError = (error, path, accreditationId, logger) => {
   const conflict = writeConflictRefusal(error)
   if (conflict) {
     return conflict
@@ -96,6 +99,13 @@ const mapUpdateStatusError = (error, path, logger) => {
 
   if (error instanceof AccreditationStatusError) {
     return Boom.forbidden(error.message)
+  }
+
+  // Only the issuance-window rule raises this class on this route: the
+  // cancellation deadline shares the error but its transitions are closed to
+  // this route's actors, so the operator-facing issuance copy is always right.
+  if (error instanceof RelevantYearWindowExpiredError) {
+    return issuanceWindowClosedError(accreditationId)
   }
 
   if (
@@ -204,6 +214,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       throw mapUpdateStatusError(
         error,
         packagingRecyclingNotesUpdateStatusPath,
+        accreditationId,
         logger
       )
     }

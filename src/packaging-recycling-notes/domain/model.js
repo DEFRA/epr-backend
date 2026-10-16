@@ -135,7 +135,7 @@ export class AccreditationStatusError extends Error {
  * @param {{ status: AccreditationStatus } | null | undefined} accreditation
  * @returns {AccreditationStatusError | undefined}
  */
-export function issuanceRefusal(newStatus, accreditation) {
+export function accreditationStatusRefusal(newStatus, accreditation) {
   if (newStatus !== PRN_STATUS.AWAITING_ACCEPTANCE) {
     return undefined
   }
