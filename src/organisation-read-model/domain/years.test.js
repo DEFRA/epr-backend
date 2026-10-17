@@ -14,64 +14,64 @@ const NOW = new Date('2027-03-15T10:00:00.000Z')
 
 describe('organisationYears', () => {
   it('lists the current year for a registration approved this year', () => {
-    const organisation = organisationOf({
-      '2027-01-10': { status: 'approved' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2027-01-10T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([2027])
   })
 
   it('lists every year from approval to now while it stays approved', () => {
-    const organisation = organisationOf({
-      '2025-02-01': { status: 'approved' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2025-02-01T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([2027, 2026, 2025])
   })
 
   it('stops at the year of cancellation', () => {
-    const organisation = organisationOf({
-      '2025-02-01': { status: 'approved' },
-      '2026-03-01': { status: 'cancelled' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([2026, 2025])
   })
 
   it('does not list the year when cancelled on the first of January', () => {
-    const organisation = organisationOf({
-      '2025-02-01': { status: 'approved' },
-      '2026-01-01': { status: 'cancelled' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2026-01-01T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([2025])
   })
 
   it('skips the years between a cancellation and a reinstatement', () => {
-    const organisation = organisationOf({
-      '2024-02-01': { status: 'approved' },
-      '2024-06-01': { status: 'cancelled' },
-      '2026-09-01': { status: 'approved' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2024-02-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2024-06-01T00:00:00.000Z' },
+      { status: 'approved', at: '2026-09-01T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([2027, 2026, 2024])
   })
 
   it('does not list a year the approval has not reached', () => {
-    const organisation = organisationOf({
-      '2028-01-01': { status: 'approved' }
-    })
+    const organisation = organisationOf([
+      { status: 'approved', at: '2028-01-01T00:00:00.000Z' }
+    ])
 
     expect(organisationYears(organisation, NOW)).toEqual([])
   })
 
   it('merges registrations without duplicates, newest first', () => {
     const organisation = organisationOf(
-      { '2026-02-01': { status: 'approved' } },
-      {
-        '2025-02-01': { status: 'approved' },
-        '2026-12-01': { status: 'cancelled' }
-      }
+      [{ status: 'approved', at: '2026-02-01T00:00:00.000Z' }],
+      [
+        { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+        { status: 'cancelled', at: '2026-12-01T00:00:00.000Z' }
+      ]
     )
 
     expect(organisationYears(organisation, NOW)).toStrictEqual([
@@ -97,7 +97,7 @@ describe('organisationInYear', () => {
       name: 'ACME ltd',
       status: {
         current: 'active',
-        timeline: { '2024-01-01': { status: 'active' } }
+        timeline: [{ status: 'active', at: '2024-01-01T00:00:00.000Z' }]
       },
       ...overrides,
       registrations
@@ -106,7 +106,7 @@ describe('organisationInYear', () => {
   const approvedFrom = (date, accreditations = {}) => ({
     status: {
       current: 'approved',
-      timeline: { [date]: { status: 'approved' } }
+      timeline: [{ status: 'approved', at: date }]
     },
     accreditations
   })
@@ -141,10 +141,10 @@ describe('organisationInYear', () => {
       R1: {
         status: {
           current: 'cancelled',
-          timeline: {
-            '2024-02-01': { status: 'approved' },
-            '2025-06-01': { status: 'cancelled' }
-          }
+          timeline: [
+            { status: 'approved', at: '2024-02-01T00:00:00.000Z' },
+            { status: 'cancelled', at: '2025-06-01T00:00:00.000Z' }
+          ]
         },
         accreditations: {}
       }
@@ -170,10 +170,10 @@ describe('organisationInYear', () => {
       R1: {
         status: {
           current: 'cancelled',
-          timeline: {
-            '2025-02-01': { status: 'approved' },
-            '2026-03-01': { status: 'cancelled' }
-          }
+          timeline: [
+            { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+            { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
+          ]
         },
         accreditations: {}
       }
@@ -190,10 +190,10 @@ describe('organisationInYear', () => {
         R1: {
           status: {
             current: 'cancelled',
-            timeline: {
-              '2025-02-01': { status: 'approved' },
-              '2026-03-01': { status: 'cancelled' }
-            }
+            timeline: [
+              { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+              { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
+            ]
           },
           accreditations: {}
         }
@@ -201,11 +201,11 @@ describe('organisationInYear', () => {
       {
         status: {
           current: 'approved',
-          timeline: {
-            '2024-01-01': { status: 'created' },
-            '2025-01-01': { status: 'approved' },
-            '2026-06-01': { status: 'active' }
-          }
+          timeline: [
+            { status: 'created', at: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', at: '2025-01-01T00:00:00.000Z' },
+            { status: 'active', at: '2026-06-01T00:00:00.000Z' }
+          ]
         }
       }
     )
@@ -224,11 +224,11 @@ describe('organisationInYear', () => {
       {
         status: {
           current: 'approved',
-          timeline: {
-            '2025-01-01': { status: 'approved' },
-            '2027-01-01': { status: 'active' },
-            '2027-12-01': { status: 'rejected' }
-          }
+          timeline: [
+            { status: 'approved', at: '2025-01-01T00:00:00.000Z' },
+            { status: 'active', at: '2027-01-01T00:00:00.000Z' },
+            { status: 'rejected', at: '2027-12-01T00:00:00.000Z' }
+          ]
         }
       }
     )
@@ -244,11 +244,11 @@ describe('organisationInYear', () => {
       {
         status: {
           current: 'active',
-          timeline: {
-            '2025-01-01T09:00:00.000Z': { status: 'approved' },
-            '2025-12-31T09:00:00.000Z': { status: 'rejected' },
-            '2025-12-31T15:00:00.000Z': { status: 'active' }
-          }
+          timeline: [
+            { status: 'approved', at: '2025-01-01T09:00:00.000Z' },
+            { status: 'rejected', at: '2025-12-31T09:00:00.000Z' },
+            { status: 'active', at: '2025-12-31T15:00:00.000Z' }
+          ]
         }
       }
     )
@@ -264,7 +264,7 @@ describe('organisationInYear', () => {
       {
         status: {
           current: 'active',
-          timeline: { '2026-06-01': { status: 'active' } }
+          timeline: [{ status: 'active', at: '2026-06-01T00:00:00.000Z' }]
         }
       }
     )

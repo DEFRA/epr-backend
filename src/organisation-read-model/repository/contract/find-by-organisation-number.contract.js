@@ -65,11 +65,12 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         },
         status: {
           current: 'created',
-          timeline: {
-            [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
-              status: 'created'
+          timeline: [
+            {
+              status: 'created',
+              at: new Date(stored.statusHistory[0].updatedAt).toISOString()
             }
-          }
+          ]
         },
         submittedToRegulator: { code: 'ea' },
         submitterContactDetails: anakin,
