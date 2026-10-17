@@ -98,6 +98,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
 
     repositories: async ({ database }, use) => {
       const organisationsFactory = await createOrganisationsRepository(database)
+      const organisations = organisationsFactory()
       const prnsFactory = await createPackagingRecyclingNotesRepository(
         database,
         []
@@ -106,7 +107,8 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       const summaryLogsFactory = await createSummaryLogsRepository(
         database,
         // @ts-expect-error -- partial S3 config sufficient for test
-        mockS3Config
+        mockS3Config,
+        organisations
       )
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
@@ -114,7 +116,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         await createMongoSummaryLogRowStatesRepository(database)
 
       await use({
-        organisations: organisationsFactory(),
+        organisations,
         prns: prnsFactory(mockLogger),
         reports: reportsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),

@@ -7,7 +7,9 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { parseSummaryLogUri } from './parse-uri.js'
+import { resolveSummaryLogKey } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -117,68 +119,155 @@ const matchesYear = (summaryLog, { year, accreditationId }) => {
   )
 }
 
-const findLatestSubmittedForOrgReg =
-  (staleCache) =>
-  /** @param {import('./port.js').SummaryLogScope} scope */
-  async ({ organisationId, registrationId, year, accreditationId }) => {
-    /** @type {{ id: string, doc: any, submittedAt: string } | null} */
-    let latest = null
+/**
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { StoredSummaryLogKey } from './natural-keys.js'
+ * @import { SummaryLogKey, SummaryLogVersion, SummaryLogWithId } from './port.js'
+ *
+ * @typedef {Map<string, SummaryLogVersion>} SummaryLogStore
+ * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
+ */
 
-    for (const [id, doc] of staleCache) {
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {SummaryLogMatch} matches
+ * @returns {SummaryLogWithId | null}
+ */
+const latestSubmitted = (staleCache, matches) => {
+  /** @type {{ id: string, doc: SummaryLogVersion, submittedAt: string } | null} */
+  let latest = null
+
+  for (const [id, doc] of staleCache) {
+    if (doc.summaryLog.status === 'submitted' && matches(doc.summaryLog)) {
+      const submittedAt = /** @type {string} */ (doc.summaryLog.submittedAt)
+
+      // Return the most recently submitted summary log
       if (
-        doc.summaryLog.organisationId === organisationId &&
-        doc.summaryLog.registrationId === registrationId &&
-        doc.summaryLog.status === 'submitted' &&
-        matchesYear(doc.summaryLog, { year, accreditationId })
+        latest === null ||
+        submittedAt.localeCompare(latest.submittedAt) > 0
       ) {
-        const { submittedAt } = doc.summaryLog
-
-        // Return the most recently submitted summary log
-        if (latest === null || submittedAt > latest.submittedAt) {
-          latest = { id, doc, submittedAt }
-        }
+        latest = { id, doc, submittedAt }
       }
-    }
-
-    if (!latest) {
-      return null
-    }
-
-    return {
-      id: latest.id,
-      version: latest.doc.version,
-      summaryLog: structuredClone(latest.doc.summaryLog)
     }
   }
 
+  if (!latest) {
+    return null
+  }
+
+  return {
+    id: latest.id,
+    version: latest.doc.version,
+    summaryLog: structuredClone(latest.doc.summaryLog)
+  }
+}
+
+const findLatestSubmittedForOrgReg =
+  (staleCache) =>
+  /** @param {import('./port.js').SummaryLogScope} scope */
+  async ({ organisationId, registrationId, year, accreditationId }) =>
+    latestSubmitted(
+      staleCache,
+      (summaryLog) =>
+        summaryLog.organisationId === organisationId &&
+        summaryLog.registrationId === registrationId &&
+        matchesYear(summaryLog, { year, accreditationId })
+    )
+
+/** @type {Set<SummaryLogStatus>} */
 const TERMINAL_STATUS = new Set([
   SUMMARY_LOG_STATUS.SUBMITTED,
   ...SUMMARY_LOG_FAILURE_STATUS
 ])
 
-const findAllByOrgReg =
-  (staleCache) => async (organisationId, registrationId) => {
-    const matches = []
+/**
+ * Submitted and failed summary logs, newest upload first.
+ *
+ * @param {SummaryLogStore} staleCache
+ * @param {SummaryLogMatch} matches
+ * @returns {SummaryLogWithId[]}
+ */
+const uploads = (staleCache, matches) => {
+  const found = []
 
-    for (const [id, doc] of staleCache) {
-      const { summaryLog } = doc
-      if (
-        summaryLog.organisationId === organisationId &&
-        summaryLog.registrationId === registrationId &&
-        TERMINAL_STATUS.has(summaryLog.status)
-      ) {
-        matches.push({
-          id,
-          version: doc.version,
-          summaryLog: structuredClone(summaryLog),
-          _uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt
-        })
-      }
+  for (const [id, doc] of staleCache) {
+    const { summaryLog } = doc
+    if (TERMINAL_STATUS.has(summaryLog.status) && matches(summaryLog)) {
+      found.push({
+        id,
+        version: doc.version,
+        summaryLog: structuredClone(summaryLog),
+        _uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt
+      })
     }
+  }
 
-    matches.sort((a, b) => b._uploadedAt.localeCompare(a._uploadedAt))
+  found.sort((a, b) => b._uploadedAt.localeCompare(a._uploadedAt))
 
-    return matches.map(({ _uploadedAt: _u, ...rest }) => rest)
+  return found.map(({ _uploadedAt: _u, ...rest }) => rest)
+}
+
+const findAllByOrgReg =
+  (staleCache) => async (organisationId, registrationId) =>
+    uploads(
+      staleCache,
+      (summaryLog) =>
+        summaryLog.organisationId === organisationId &&
+        summaryLog.registrationId === registrationId
+    )
+
+/**
+ * A summary log stored before its accreditation was recorded has no
+ * `accreditationId`, and matches every accreditation, as in `matchesYear`.
+ *
+ * @param {StoredSummaryLogKey} storedKey
+ * @returns {SummaryLogMatch}
+ */
+const matchesStoredKey =
+  ({ organisationId, registrationId, accreditationId }) =>
+  (summaryLog) =>
+    summaryLog.organisationId === organisationId &&
+    summaryLog.registrationId === registrationId &&
+    (accreditationId === undefined ||
+      summaryLog.accreditationId === undefined ||
+      summaryLog.accreditationId === accreditationId)
+
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {OrganisationsRepository} organisationsRepository
+ */
+const findLatestSubmitted =
+  (staleCache, organisationsRepository) =>
+  /** @param {SummaryLogKey} key */
+  async (key) => {
+    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
+    if (!resolved) {
+      return null
+    }
+    const found = latestSubmitted(
+      staleCache,
+      matchesStoredKey(resolved.storedKey)
+    )
+    return found && resolved.toKeyed(found)
+  }
+
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {OrganisationsRepository} organisationsRepository
+ */
+const findAll =
+  (staleCache, organisationsRepository) =>
+  /** @param {SummaryLogKey} key */
+  async (key) => {
+    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
+    if (!resolved) {
+      return []
+    }
+    return uploads(staleCache, matchesStoredKey(resolved.storedKey)).map(
+      resolved.toKeyed
+    )
   }
 
 const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
@@ -330,9 +419,13 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
+ * @param {OrganisationsRepository} [organisationsRepository]
+ *   - Resolves natural keys to the ids summary logs are stored under
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createInMemorySummaryLogsRepository = () => {
+export const createInMemorySummaryLogsRepository = (
+  organisationsRepository = createInMemoryOrganisationsRepository()()
+) => {
   const storage = new Map()
   const staleCache = new Map()
 
@@ -342,6 +435,11 @@ export const createInMemorySummaryLogsRepository = () => {
     findById: findById(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     findAllByOrgReg: findAllByOrgReg(staleCache),
+    findLatestSubmitted: findLatestSubmitted(
+      staleCache,
+      organisationsRepository
+    ),
+    findAll: findAll(staleCache, organisationsRepository),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(

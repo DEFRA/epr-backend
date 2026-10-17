@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -12,8 +13,9 @@ import { partialMock } from '#test/type-helpers.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
+ * @typedef {{ mongoClient: MongoClient, organisationsRepository: OrganisationsRepository, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -32,6 +34,9 @@ const mockS3Config = {
   preSignedUrlExpiry: SIXTY_SECONDS
 }
 
+/** @type {OrganisationsRepository} */
+const noOrganisations = partialMock({})
+
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
@@ -40,9 +45,22 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
       await client.close()
     },
 
-    summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
+    organisationsRepository: async ({ mongoClient }, use) => {
       const database = mongoClient.db(DATABASE_NAME)
-      const factory = await createSummaryLogsRepository(database, mockS3Config)
+      const factory = await createOrganisationsRepository(database)
+      await use(factory())
+    },
+
+    summaryLogsRepositoryFactory: async (
+      { mongoClient, organisationsRepository },
+      use
+    ) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createSummaryLogsRepository(
+        database,
+        mockS3Config,
+        organisationsRepository
+      )
       await use(factory)
     },
 
@@ -151,7 +169,7 @@ describe('MongoDB summary logs repository', () => {
         }
       })
 
-      await createSummaryLogsRepository(mockDb, mockS3Config)
+      await createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
 
       expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
         'drop:organisationId_1_registrationId_1'
@@ -181,7 +199,7 @@ describe('MongoDB summary logs repository', () => {
         })
 
         await expect(
-          createSummaryLogsRepository(mockDb, mockS3Config)
+          createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
         ).resolves.toBeDefined()
       }
     )
@@ -194,7 +212,7 @@ describe('MongoDB summary logs repository', () => {
       })
 
       await expect(
-        createSummaryLogsRepository(mockDb, mockS3Config)
+        createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
       ).rejects.toThrow('Connection timeout')
     })
   })
@@ -211,7 +229,8 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config
+        mockS3Config,
+        noOrganisations
       )
       const repository = repositoryFactory(createMockLogger())
 
@@ -241,7 +260,8 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config
+        mockS3Config,
+        noOrganisations
       )
       const repository = repositoryFactory(createMockLogger())
 
@@ -262,7 +282,8 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config
+        mockS3Config,
+        noOrganisations
       )
       const repository = repositoryFactory(createMockLogger())
 

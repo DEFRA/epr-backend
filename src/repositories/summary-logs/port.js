@@ -40,6 +40,36 @@
  */
 
 /**
+ * Names a registration's summary logs by the numbers the domain issues, in
+ * place of their database ids.
+ *
+ * @typedef {Object} SummaryLogKey
+ * @property {number} organisationNumber
+ * @property {string} registrationNumber
+ * @property {string|null} [accreditationNumber] - `null` for registered-only;
+ *   absent matches every accreditation
+ */
+
+/**
+ * A summary log named by its organisation, registration and accreditation
+ * numbers in place of their database ids. The accreditation number is absent
+ * when the summary log was stored before its accreditation was recorded.
+ *
+ * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
+ *   organisationNumber: number,
+ *   registrationNumber: string,
+ *   accreditationNumber?: string | null
+ * }} KeyedSummaryLog
+ */
+
+/**
+ * @typedef {Object} KeyedSummaryLogWithId
+ * @property {string} id
+ * @property {number} version
+ * @property {KeyedSummaryLog} summaryLog
+ */
+
+/**
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
@@ -52,6 +82,8 @@
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
+ * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted in any year
+ * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: string, registrationNumber?: string) => Promise<DownloadUrlResult>} getDownloadUrl

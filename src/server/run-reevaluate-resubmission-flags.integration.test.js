@@ -46,17 +46,24 @@ const it = mongoIt.extend({
 const seedUnwarrantedFlag = async (/** @type {*} */ database) => {
   const organisation = buildOrganisation()
   const [registration] = organisation.registrations
-  await (await createOrganisationsRepository(database))().insert(organisation)
+  const organisationsRepository = (
+    await createOrganisationsRepository(database)
+  )()
+  await organisationsRepository.insert(organisation)
 
   const summaryLog = summaryLogFactory.submitted({
     organisationId: organisation.id,
     registrationId: registration.id
   })
   await (
-    await createSummaryLogsRepository(database, {
-      s3Client: /** @type {*} */ ({}),
-      preSignedUrlExpiry: 60
-    })
+    await createSummaryLogsRepository(
+      database,
+      {
+        s3Client: /** @type {*} */ ({}),
+        preSignedUrlExpiry: 60
+      },
+      organisationsRepository
+    )
   )(logger).insert('sl-restated', summaryLog)
   await (
     await createMongoLedgerRepository(database)
