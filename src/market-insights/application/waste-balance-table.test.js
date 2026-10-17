@@ -644,7 +644,7 @@ describe('buildWasteBalanceTable', () => {
       const operator = makeOperator({ orgId: 500027 })
 
       const { table } = await run({
-        organisations: [cancelledOn(operator.organisation, '2026-03-20')],
+        organisations: [cancelledOn(operator.organisation, '2026-03-25')],
         submissions: [],
         reports: [monthlyReport(operator, 1), monthlyReport(operator, 4)]
       })
@@ -654,7 +654,34 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects nothing of the months between a cancellation and a reinstatement', async () => {
+    it('expects nothing of the month before a cancellation that came before its report fell due', async () => {
+      const operator = makeOperator({ orgId: 500051 })
+
+      const { table } = await run({
+        organisations: [cancelledOn(operator.organisation, '2026-03-04')],
+        submissions: []
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
+      )
+    })
+
+    it('still counts a report filed before a cancellation that came before it fell due', async () => {
+      const operator = makeOperator({ orgId: 500052 })
+
+      const { table } = await run({
+        organisations: [cancelledOn(operator.organisation, '2026-03-04')],
+        submissions: [],
+        reports: [monthlyReport(operator, 2)]
+      })
+
+      expect(monthlyReports(table)).toEqual(
+        perMonth([1, 1, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0])
+      )
+    })
+
+    it('expects nothing of the months whose reports fell due between a cancellation and a reinstatement', async () => {
       const operator = makeOperator({ orgId: 500031 })
 
       const { table } = await run({
@@ -668,7 +695,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([0, 0, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -689,7 +716,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 0, 0, 1, 1, 0], [0, 0, 0, 0, 0, 0])
+        perMonth([0, 0, 1, 1, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
