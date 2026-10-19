@@ -155,6 +155,7 @@ export const linkedDefraOrganisationViewSchema = Joi.object({
 })
 
 export const organisationViewSchema = Joi.object({
+  displayName: Joi.string().required(),
   linkedDefraOrganisation: linkedDefraOrganisationViewSchema,
   name: Joi.string().required(),
   organisationNumber: Joi.number().integer().required(),
@@ -164,8 +165,7 @@ export const organisationViewSchema = Joi.object({
       .valid(...ORGANISATION_STATUSES)
       .required()
   }).required(),
-  submittedToRegulator: regulatorSchema,
-  tradingName: Joi.string()
+  submittedToRegulator: regulatorSchema
 })
 
 const servedYear = yearSchema().custom((year, helpers) =>
