@@ -37,7 +37,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": "^24.21.0"
+    "node": "^24.22.0"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -67,11 +67,11 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1147.0",
-    "@aws-sdk/client-sqs": "3.1147.0",
-    "@aws-sdk/credential-providers": "3.1147.0",
-    "@aws-sdk/lib-storage": "3.1147.0",
-    "@aws-sdk/s3-request-presigner": "3.1147.0",
+    "@aws-sdk/client-s3": "3.1149.0",
+    "@aws-sdk/client-sqs": "3.1149.0",
+    "@aws-sdk/credential-providers": "3.1149.0",
+    "@aws-sdk/lib-storage": "3.1149.0",
+    "@aws-sdk/s3-request-presigner": "3.1149.0",
     "@defra/cdp-auditing": "0.6.2",
     "@defra/hapi-secure-context": "0.4.1",
     "@defra/hapi-tracing": "1.30.1",
@@ -126,14 +126,14 @@
     "eslint-plugin-import-x": "4.17.1",
     "eslint-plugin-n": "18.4.1",
     "husky": "9.1.7",
-    "knip": "6.40.0",
+    "knip": "6.41.0",
     "lint-staged": "17.6.0",
-    "msw": "3.0.2",
-    "neostandard": "0.13.0",
+    "msw": "3.0.3",
+    "neostandard": "0.14.0",
     "nodemon": "3.1.14",
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "testcontainers": "12.2.0",
-    "tinybench": "6.2.1",
+    "tinybench": "6.2.2",
     "typescript": "7.0.2",
     "vitest": "5.0.3",
     "vitest-mongodb": "1.0.3"

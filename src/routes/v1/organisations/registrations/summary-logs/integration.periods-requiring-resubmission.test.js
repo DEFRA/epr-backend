@@ -71,13 +71,6 @@ const Q1_2025 = {
 
 const CHANGED_BY = { id: 'u1', name: 'Test User', position: 'Officer' }
 
-/** @param {import('./integration-test-helpers.js').WasteBalanceEnvironmentOptions} options */
-const setupGateEnvironment = (options) =>
-  setupWasteBalanceIntegrationEnvironment({
-    resubmissionFigureGateEnabled: true,
-    ...options
-  })
-
 describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   const { getServer } = setupAuthContext()
 
@@ -370,7 +363,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   ]
 
   it('does not flag a closed period when only a non-figure field changed, and still shows the adjustment', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -397,35 +390,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     ).toBe(1)
   })
 
-  it('flags every closed period without comparing when the gate is off', async () => {
-    const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'reprocessor',
-      organisationId: new ObjectId().toString(),
-      registrationId: new ObjectId().toString()
-    })
-    await submitAndCloseJanuary(env)
-
-    const infoMessages = captureInfoMessages(env)
-    const loadsByReportingPeriod = await uploadAndValidate(
-      env,
-      'sl-gate-off',
-      'file-gate-off',
-      createUploadData([
-        { rowId: 1001, tonnageReceived: 100, yourReference: 'REF-AMENDED' }
-      ])
-    )
-
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2025])
-    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
-      JANUARY_2025
-    ])
-    expect(infoMessages()).not.toContainEqual(
-      expect.stringContaining('Closed period')
-    )
-  })
-
   it('flags a closed period when a reported figure changed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -453,7 +419,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period when a load is re-dated out of it into an open period', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -482,7 +448,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period when a load is re-dated out of it to before the accreditation window', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -508,7 +474,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period when a load dated before the accreditation window is added to it', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       accreditationValidFrom: '2025-01-10',
       organisationId: new ObjectId().toString(),
@@ -536,7 +502,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags only the closed period whose reported figures changed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -582,7 +548,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags the closed period a refused load is repatriated in, not the month it was exported', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -638,7 +604,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     const setupWithJanuaryAndFebruarySubmitted = async (
       storedDateRepatriated = null
     ) => {
-      const env = await setupGateEnvironment({
+      const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         organisationId: new ObjectId().toString(),
         registrationId: new ObjectId().toString()
@@ -720,7 +686,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when a contact detail changed on one of several rows for the same supplier', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -762,7 +728,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   it('does not flag a closed period that holds loads outside the accreditation window when nothing reported changed', async () => {
     // The accreditation opens partway through January, so a load dated before
     // then is outside it, yet still in January and in January's report.
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       accreditationValidFrom: '2025-01-10',
       organisationId: new ObjectId().toString(),
@@ -798,7 +764,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag when identical figures are uploaded with rows reordered', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -833,7 +799,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when only supplier email and phone changed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -862,7 +828,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when a supplier name differs only by casing and whitespace', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -885,7 +851,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period when a final destination name changed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'output',
       organisationId: new ObjectId().toString(),
@@ -921,7 +887,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when only final destination email and phone changed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'output',
       organisationId: new ObjectId().toString(),
@@ -960,7 +926,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when only OSR name and country changed (registered-only exporter)', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
       organisationId: new ObjectId().toString(),
@@ -998,7 +964,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when the registry renames the site (excluded registry fields)', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
       organisationId: new ObjectId().toString(),
@@ -1040,7 +1006,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('does not flag a closed period when the registry stops resolving the site after it closed', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -1075,7 +1041,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('compares against the latest submitted report, not a resubmission draft', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -1132,7 +1098,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period it cannot compare because the source submission has no row states', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -1176,7 +1142,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('flags a closed period it cannot compare because its report records no source', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -1213,7 +1179,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('leaves the upload validating for a retry when a comparison fails, rather than flagging', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
@@ -1255,7 +1221,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   })
 
   it('compares against an empty before-state when the report predates any submission', async () => {
-    const env = await setupGateEnvironment({
+    const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       organisationId: new ObjectId().toString(),
       registrationId: new ObjectId().toString()
