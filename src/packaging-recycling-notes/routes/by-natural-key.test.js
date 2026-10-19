@@ -17,6 +17,7 @@ import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   buildAccreditation,
   buildAwaitingAcceptancePrn,
+  buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
   buildDeletedPrn,
   buildDraftPrn,
@@ -128,8 +129,8 @@ const elsewhere = {
 const idsOf = (response) =>
   body(response).items.map((/** @type {{ id: string }} */ { id }) => id)
 
-const issuedBy = {
-  organisationNumber: organisation.orgId,
+const issuingOrganisation = {
+  organisationNumber: String(organisation.orgId),
   name: 'Test Organisation'
 }
 
@@ -201,28 +202,51 @@ describe('PRN routes by natural key', () => {
       expect(idsOf(response)).toStrictEqual([issued.id, draft.id, exported.id])
     })
 
-    it('serves an issued PRN with its number and issue', async () => {
+    it('serves an issued PRN with its number, its issue and every status change', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[0]).toStrictEqual({
         id: issued.id,
         prnNumber: issued.prnNumber,
-        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        status: {
+          current: PRN_STATUS.AWAITING_ACCEPTANCE,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: issued.status.history[0]?.at.toISOString(),
+              by: { name: 'Creator User' }
+            },
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              at: issued.status.history[1]?.at.toISOString(),
+              by: { name: 'Raiser User' }
+            },
+            {
+              status: PRN_STATUS.AWAITING_ACCEPTANCE,
+              at: issued.status.history[2]?.at.toISOString(),
+              by: { name: 'Issuer User' }
+            }
+          ]
+        },
         issuedToOrganisation: {
           id: 'producer-1',
           name: 'Producer Ltd',
           tradingName: 'Producer',
           registrationType: 'COMPLIANCE_SCHEME'
         },
-        issuedByOrganisation: issuedBy,
-        registration: { registrationNumber: REPROCESSOR_NUMBER },
-        accreditation: {
-          accreditationNumber: issued.accreditation.accreditationNumber,
-          accreditationYear: 2026,
-          wasteProcessingType: 'reprocessor',
-          material: 'plastic',
-          submittedToRegulator: { code: 'ea' },
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+        issuer: {
+          ...issuingOrganisation,
+          registration: {
+            registrationNumber: REPROCESSOR_NUMBER,
+            accreditation: {
+              accreditationNumber: issued.accreditation.accreditationNumber,
+              accreditationYear: 2026,
+              wasteProcessingType: 'reprocessor',
+              material: 'plastic',
+              submittedToRegulator: { code: 'ea' },
+              siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+            }
+          }
         },
         tonnage: issued.tonnage,
         processToBeUsed: 'R3',
@@ -231,32 +255,45 @@ describe('PRN routes by natural key', () => {
         createdAt: '2026-04-01T10:00:00.000Z',
         issued: {
           at: issued.status.issued?.at.toISOString(),
-          by: { name: 'Issuer User', position: 'Manager' }
+          by: { name: 'Issuer User' }
         },
         regulatorCancellable: true
       })
     })
 
-    it('serves a draft PRN with no number and no issue', async () => {
+    it('serves a draft PRN with no number', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[1]).toStrictEqual({
         id: draft.id,
-        status: PRN_STATUS.DRAFT,
+        status: {
+          current: PRN_STATUS.DRAFT,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: draft.status.history[0]?.at.toISOString(),
+              by: { name: 'Creator User' }
+            }
+          ]
+        },
         issuedToOrganisation: {
           id: draft.issuedToOrganisation.id,
           name: draft.issuedToOrganisation.name,
           tradingName: draft.issuedToOrganisation.tradingName
         },
-        issuedByOrganisation: issuedBy,
-        registration: { registrationNumber: REPROCESSOR_NUMBER },
-        accreditation: {
-          accreditationNumber: draft.accreditation.accreditationNumber,
-          accreditationYear: 2026,
-          wasteProcessingType: 'reprocessor',
-          material: 'plastic',
-          submittedToRegulator: { code: 'ea' },
-          siteAddress: fullSiteAddress
+        issuer: {
+          ...issuingOrganisation,
+          registration: {
+            registrationNumber: REPROCESSOR_NUMBER,
+            accreditation: {
+              accreditationNumber: draft.accreditation.accreditationNumber,
+              accreditationYear: 2026,
+              wasteProcessingType: 'reprocessor',
+              material: 'plastic',
+              submittedToRegulator: { code: 'ea' },
+              siteAddress: fullSiteAddress
+            }
+          }
         },
         tonnage: draft.tonnage,
         processToBeUsed: 'R3',
@@ -272,17 +309,20 @@ describe('PRN routes by natural key', () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[2]).toMatchObject({
-        issuedByOrganisation: {
-          organisationNumber: organisation.orgId,
+        issuer: {
+          organisationNumber: String(organisation.orgId),
           name: 'Test Organisation',
-          tradingName: 'Test Trading'
-        },
-        accreditation: {
-          wasteProcessingType: 'exporter',
-          material: 'glass_re_melt'
+          tradingName: 'Test Trading',
+          registration: {
+            accreditation: {
+              wasteProcessingType: 'exporter',
+              material: 'glass_re_melt'
+            }
+          }
         }
       })
-      const { accreditation: served } = body(response).items[2]
+      const { accreditation: served } =
+        body(response).items[2].issuer.registration
       expect(served).not.toHaveProperty('glassRecyclingProcess')
       expect(served).not.toHaveProperty('siteAddress')
     })
@@ -403,8 +443,40 @@ describe('PRN routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: draft.id,
-        status: PRN_STATUS.DRAFT
+        status: { current: PRN_STATUS.DRAFT }
       })
+    })
+
+    it('keeps changes that share a time in the order they were recorded', async () => {
+      const at = new Date('2026-05-01T09:00:00.000Z')
+      const { id } = await packagingRecyclingNotesRepository.create(
+        buildAwaitingAuthorisationPrn({
+          ...underAccreditation(ownIds),
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            currentStatusAt: at,
+            history: [
+              { status: PRN_STATUS.DRAFT, at, by: { id: 'u1', name: 'A' } },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at,
+                by: { id: 'u1', name: 'A' }
+              }
+            ]
+          }
+        })
+      )
+
+      const response = await server.inject({
+        url: `${prns}/${id}`,
+        ...asOperator()
+      })
+
+      expect(
+        body(response).status.timeline.map(
+          (/** @type {{ status: string }} */ { status }) => status
+        )
+      ).toStrictEqual([PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION])
     })
 
     it.each([
@@ -454,21 +526,32 @@ describe('PRN routes by natural key', () => {
           issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
           tonnage: 10
         },
-        ...asOperator()
+        ...asOperator({ name: 'Operator User' })
       })
 
       expect(body(response)).toStrictEqual({
         id: expect.any(String),
-        status: PRN_STATUS.DRAFT,
+        status: {
+          current: PRN_STATUS.DRAFT,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: '2026-06-01T00:00:00.000Z',
+              by: { name: 'Operator User' }
+            }
+          ]
+        },
         issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
-        issuedByOrganisation: expect.objectContaining({
-          organisationNumber: organisation.orgId
-        }),
-        registration: { registrationNumber: REPROCESSOR_NUMBER },
-        accreditation: expect.objectContaining({
-          accreditationNumber: accredited.accreditationNumber,
-          wasteProcessingType: 'reprocessor',
-          material: resolveMaterial(accredited)
+        issuer: expect.objectContaining({
+          organisationNumber: String(organisation.orgId),
+          registration: {
+            registrationNumber: REPROCESSOR_NUMBER,
+            accreditation: expect.objectContaining({
+              accreditationNumber: accredited.accreditationNumber,
+              wasteProcessingType: 'reprocessor',
+              material: resolveMaterial(accredited)
+            })
+          }
         }),
         tonnage: 10,
         processToBeUsed: expect.any(String),
@@ -484,14 +567,19 @@ describe('PRN routes by natural key', () => {
         method: 'POST',
         url: `${prns}/${draft.id}/status`,
         payload: { status: PRN_STATUS.AWAITING_AUTHORISATION },
-        ...asOperator()
+        ...asOperator({ name: 'Operator User' })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: draft.id,
-        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        status: { current: PRN_STATUS.AWAITING_AUTHORISATION },
         notes: 'For the spring run'
+      })
+      expect(body(response).status.timeline.at(-1)).toStrictEqual({
+        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        at: '2026-06-01T00:00:00.000Z',
+        by: { name: 'Operator User' }
       })
       expect(body(response)).not.toHaveProperty('prnNumber')
     })
@@ -528,15 +616,20 @@ describe('PRN routes by natural key', () => {
       const response = await server.inject({
         method: 'POST',
         url: `${prns}/${issued.id}/cancel`,
-        ...asServiceMaintainerWrite()
+        ...asServiceMaintainerWrite({ name: 'Maintainer User' })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: issued.id,
         prnNumber: issued.prnNumber,
-        status: PRN_STATUS.CANCELLED,
+        status: { current: PRN_STATUS.CANCELLED },
         regulatorCancellable: false
+      })
+      expect(body(response).status.timeline.at(-1)).toStrictEqual({
+        status: PRN_STATUS.CANCELLED,
+        at: '2026-06-01T00:00:00.000Z',
+        by: { name: 'Maintainer User' }
       })
     })
 

@@ -44,7 +44,7 @@ import { createStatusesValidator } from './validation.js'
  *   RegulatorValue,
  *   WasteProcessingTypeValue
  * } from '#domain/organisations/model.js'
- * @import { AccreditationSnapshot, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/view-route.js'
@@ -59,29 +59,34 @@ import { createStatusesValidator } from './validation.js'
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
  *
+ * @typedef {{ at: string, by?: { name: string } }} PrnOperation
+ * @typedef {PrnOperation & { status: PrnStatus }} PrnStatusChange
+ *
  * @typedef {{
  *   id: string,
  *   prnNumber?: string,
- *   status: PrnStatus,
+ *   status: { current: PrnStatus, timeline: PrnStatusChange[] },
  *   issuedToOrganisation: {
  *     id: string,
  *     name: string,
  *     tradingName?: string,
  *     registrationType?: string
  *   },
- *   issuedByOrganisation: {
- *     organisationNumber: number,
+ *   issuer: {
+ *     organisationNumber: string,
  *     name: string,
- *     tradingName?: string
- *   },
- *   registration: { registrationNumber: string },
- *   accreditation: {
- *     accreditationNumber: string,
- *     accreditationYear: number,
- *     wasteProcessingType: WasteProcessingTypeValue,
- *     material: Material,
- *     submittedToRegulator: { code: RegulatorValue },
- *     siteAddress?: AccreditationSnapshot['siteAddress']
+ *     tradingName?: string,
+ *     registration: {
+ *       registrationNumber: string,
+ *       accreditation: {
+ *         accreditationNumber: string,
+ *         accreditationYear: number,
+ *         wasteProcessingType: WasteProcessingTypeValue,
+ *         material: Material,
+ *         submittedToRegulator: { code: RegulatorValue },
+ *         siteAddress?: AccreditationSnapshot['siteAddress']
+ *       }
+ *     }
  *   },
  *   tonnage: number,
  *   processToBeUsed: string | null,
@@ -89,7 +94,7 @@ import { createStatusesValidator } from './validation.js'
  *   obligationYear: number,
  *   notes?: string,
  *   createdAt: string,
- *   issued?: { at: string, by: { name?: string, position?: string } },
+ *   issued?: PrnOperation,
  *   regulatorCancellable: boolean
  * }} PrnResource
  */
@@ -118,49 +123,64 @@ const onceIssued = Joi.valid(...issuedStatuses)
 
 const isoDateTime = Joi.string().isoDate().required()
 
+const prnOperationKeys = {
+  at: isoDateTime,
+  by: Joi.object({ name: Joi.string().required() })
+}
+
+const prnStatusSchema = Joi.string()
+  .valid(...Object.values(PRN_STATUS))
+  .required()
+
 const prnSchema = Joi.object({
   id: Joi.string().required(),
-  prnNumber: Joi.string().when('status', {
+  prnNumber: Joi.string().when('status.current', {
     not: onceIssued,
     then: Joi.forbidden()
   }),
-  status: Joi.string()
-    .valid(...Object.values(PRN_STATUS))
-    .required(),
+  status: Joi.object({
+    current: prnStatusSchema,
+    timeline: Joi.array()
+      .items(Joi.object({ status: prnStatusSchema, ...prnOperationKeys }))
+      .description(
+        'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
+      )
+      .required()
+  }).required(),
   issuedToOrganisation: Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required(),
     tradingName: Joi.string(),
     registrationType: Joi.string()
   }).required(),
-  issuedByOrganisation: Joi.object({
-    organisationNumber: Joi.number().integer().required(),
+  issuer: Joi.object({
+    organisationNumber: Joi.string().required(),
     name: Joi.string().required(),
-    tradingName: Joi.string()
-  }).required(),
-  registration: Joi.object({
-    registrationNumber: Joi.string().required()
-  }).required(),
-  accreditation: Joi.object({
-    accreditationNumber: Joi.string().required(),
-    accreditationYear: Joi.number().integer().required(),
-    wasteProcessingType: Joi.string()
-      .valid(...Object.values(WASTE_PROCESSING_TYPE))
-      .required(),
-    material: materialSchema.required(),
-    submittedToRegulator: Joi.object({
-      code: Joi.string()
-        .valid(...Object.values(REGULATOR))
-        .required()
-    }).required(),
-    siteAddress: Joi.object({
-      line1: Joi.string().required(),
-      line2: Joi.string(),
-      town: Joi.string(),
-      county: Joi.string(),
-      postcode: Joi.string().required(),
-      country: Joi.string()
-    })
+    tradingName: Joi.string(),
+    registration: Joi.object({
+      registrationNumber: Joi.string().required(),
+      accreditation: Joi.object({
+        accreditationNumber: Joi.string().required(),
+        accreditationYear: Joi.number().integer().required(),
+        wasteProcessingType: Joi.string()
+          .valid(...Object.values(WASTE_PROCESSING_TYPE))
+          .required(),
+        material: materialSchema.required(),
+        submittedToRegulator: Joi.object({
+          code: Joi.string()
+            .valid(...Object.values(REGULATOR))
+            .required()
+        }).required(),
+        siteAddress: Joi.object({
+          line1: Joi.string().required(),
+          line2: Joi.string(),
+          town: Joi.string(),
+          county: Joi.string(),
+          postcode: Joi.string().required(),
+          country: Joi.string()
+        })
+      }).required()
+    }).required()
   }).required(),
   tonnage: Joi.number().required(),
   processToBeUsed: Joi.string().required(),
@@ -168,10 +188,10 @@ const prnSchema = Joi.object({
   obligationYear: Joi.number().integer().required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
-  issued: Joi.object({
-    at: isoDateTime,
-    by: Joi.object({ name: Joi.string(), position: Joi.string() }).required()
-  }).when('status', { not: onceIssued, then: Joi.forbidden() }),
+  issued: Joi.object(prnOperationKeys).when('status.current', {
+    not: onceIssued,
+    then: Joi.forbidden()
+  }),
   regulatorCancellable: Joi.boolean().required()
 })
 
@@ -180,7 +200,7 @@ const prnSchema = Joi.object({
  * as a certificate does.
  *
  * @param {PackagingRecyclingNote} prn
- * @returns {PrnResource['accreditation']}
+ * @returns {PrnResource['issuer']['registration']['accreditation']}
  */
 const toAccreditationSnapshot = ({ accreditation, isExport }) => {
   const { siteAddress, glassRecyclingProcess } = accreditation
@@ -222,47 +242,55 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
  * @param {Date} now
  * @returns {PrnResource}
  */
+/**
+ * @param {BusinessOperation} operation
+ * @returns {PrnOperation}
+ */
+const toPrnOperation = ({ at, by }) => ({
+  at: new Date(at).toISOString(),
+  ...(by.name && { by: { name: by.name } })
+})
+
 const toPrnResource = (
   prn,
   { organisationNumber, registrationNumber },
   now
 ) => {
   const { id, name, tradingName, registrationType } = prn.issuedToOrganisation
-  const { issued } = prn.status
   return {
     id: prn.id,
     ...(prn.prnNumber && { prnNumber: prn.prnNumber }),
-    status: prn.status.currentStatus,
+    status: {
+      current: prn.status.currentStatus,
+      timeline: prn.status.history.map((change) => ({
+        status: change.status,
+        ...toPrnOperation(change)
+      }))
+    },
     issuedToOrganisation: {
       id,
       name,
       ...(tradingName && { tradingName }),
       ...(registrationType && { registrationType })
     },
-    issuedByOrganisation: {
-      organisationNumber,
+    issuer: {
+      organisationNumber: String(organisationNumber),
       name: prn.organisation.name,
       ...(prn.organisation.tradingName && {
         tradingName: prn.organisation.tradingName
-      })
+      }),
+      registration: {
+        registrationNumber,
+        accreditation: toAccreditationSnapshot(prn)
+      }
     },
-    registration: { registrationNumber },
-    accreditation: toAccreditationSnapshot(prn),
     tonnage: prn.tonnage,
     processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
     obligationYear: prn.obligationYear,
     ...(prn.notes && { notes: prn.notes }),
     createdAt: new Date(prn.createdAt).toISOString(),
-    ...(issued && {
-      issued: {
-        at: new Date(issued.at).toISOString(),
-        by: {
-          ...(issued.by.name && { name: issued.by.name }),
-          ...(issued.by.position && { position: issued.by.position })
-        }
-      }
-    }),
+    ...(prn.status.issued && { issued: toPrnOperation(prn.status.issued) }),
     regulatorCancellable: isRegulatorCancellable(
       prn.status.currentStatus,
       prn.accreditation.accreditationYear,
