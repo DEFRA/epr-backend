@@ -30,8 +30,9 @@ export const resolveSummaryLogKey = async (
   organisationsRepository,
   { organisationNumber, registrationNumber, accreditationNumber }
 ) => {
-  const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
+  const organisation = await organisationsRepository.findByOrgId(
+    Number(organisationNumber)
+  )
   const registration = organisation?.registrations.find(
     (candidate) => candidate.registrationNumber === registrationNumber
   )

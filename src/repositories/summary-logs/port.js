@@ -44,7 +44,7 @@
  * place of their database ids.
  *
  * @typedef {Object} SummaryLogKey
- * @property {number} organisationNumber
+ * @property {string} organisationNumber
  * @property {string} registrationNumber
  * @property {string|null} [accreditationNumber] - `null` for registered-only;
  *   absent matches every accreditation
@@ -56,7 +56,7 @@
  * when the summary log was stored before its accreditation was recorded.
  *
  * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
- *   organisationNumber: number,
+ *   organisationNumber: string,
  *   registrationNumber: string,
  *   accreditationNumber?: string | null
  * }} KeyedSummaryLog

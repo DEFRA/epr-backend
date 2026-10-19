@@ -50,9 +50,10 @@ const storeRegistration = async (organisationsRepository) => {
 
   return {
     key: {
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       registrationNumber: registration.registrationNumber
     },
+    unknownOrganisationNumber: String(organisation.orgId + 1),
     ids: {
       organisationId: organisation.id,
       registrationId: registration.id
@@ -101,7 +102,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findLatestSubmitted({
           ...stored.key,
-          organisationNumber: stored.key.organisationNumber + 1
+          organisationNumber: stored.unknownOrganisationNumber
         })
 
         expect(result).toBeNull()
@@ -255,7 +256,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findAll({
           ...stored.key,
-          organisationNumber: stored.key.organisationNumber + 1
+          organisationNumber: stored.unknownOrganisationNumber
         })
 
         expect(result).toEqual([])
