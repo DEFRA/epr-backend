@@ -164,7 +164,11 @@ export const organisationViewSchema = Joi.object({
   name: Joi.string().required(),
   organisationNumber: Joi.string().required(),
   registrations: registrationsViewSchema,
-  status: statusSchema(ORGANISATION_STATUSES),
+  status: Joi.object({
+    current: Joi.string()
+      .valid(...ORGANISATION_STATUSES)
+      .required()
+  }).required(),
   submittedToRegulator: regulatorSchema,
   tradingName: Joi.string()
 })

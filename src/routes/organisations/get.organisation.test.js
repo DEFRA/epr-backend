@@ -85,15 +85,7 @@ describe('GET /organisations/{organisationNumber}', () => {
       organisationNumber: String(organisation.orgId),
       name: 'ACME ltd',
       tradingName: 'ACME ltd',
-      status: {
-        current: 'created',
-        timeline: [
-          {
-            status: 'created',
-            at: new Date(organisation.statusHistory[0].updatedAt).toISOString()
-          }
-        ]
-      },
+      status: { current: 'created' },
       submittedToRegulator: { code: 'ea' },
       linkedDefraOrganisation: {
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
@@ -104,29 +96,6 @@ describe('GET /organisations/{organisationNumber}', () => {
         [REPROCESSOR_NUMBER]: reprocessorResponse,
         [EXPORTER_NUMBER]: exporterResponse
       }
-    })
-  })
-
-  it('serves the organisation’s status changes at one instant in the order they were recorded', async () => {
-    const instant = new Date('2026-01-01T09:00:00Z')
-    const organisation = buildOrganisation({
-      statusHistory: [
-        { status: 'created', updatedAt: instant },
-        { status: 'approved', updatedAt: instant },
-        { status: 'active', updatedAt: instant }
-      ]
-    })
-    await serve(organisation)
-
-    const response = await get(`/organisations/${organisation.orgId}`)
-
-    expect(body(response).status).toEqual({
-      current: 'active',
-      timeline: [
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'active', at: '2026-01-01T09:00:00.000Z' }
-      ]
     })
   })
 
