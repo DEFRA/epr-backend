@@ -114,7 +114,7 @@ const aggregatePeriodFigures = (
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @returns {Promise<FiguresContext>}
  */
-export const buildFiguresContext = async ({
+const buildFiguresContext = async ({
   registration,
   newHeadRowStates,
   overseasSitesRepository,
@@ -141,7 +141,7 @@ export const buildFiguresContext = async ({
  * @param {FiguresContext} params.context
  * @returns {Promise<Comparison>}
  */
-export const compareSubmittedReport = async ({ period, report, context }) => {
+const compareSubmittedReport = async ({ period, report, context }) => {
   const baseline = {
     reportId: report.id,
     submissionNumber: report.submissionNumber

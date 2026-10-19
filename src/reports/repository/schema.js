@@ -276,11 +276,6 @@ export const markSubmittedReportRequiringResubmissionByOperatorSchema =
     requestedAt: Joi.string().isoDate().required()
   })
 
-export const clearResubmissionRequiredSchema = Joi.object({
-  reportId: Joi.string().required(),
-  version: Joi.number().integer().min(1).required()
-})
-
 /**
  * Shape of a report's `resubmissionRequired` field, mirroring `staleSchema`.
  * A report can require resubmission for either or both reasons at once.
