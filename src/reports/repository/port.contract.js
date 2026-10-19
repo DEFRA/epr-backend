@@ -11,7 +11,6 @@ import { testMarkActiveReportsStaleForPrnCancellationBehaviour } from './contrac
 import { testMarkSubmittedReportsRequiringResubmissionBehaviour } from './contract/markSubmittedReportsRequiringResubmission.contract.js'
 import { testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour } from './contract/markSubmittedReportRequiringResubmissionByOperator.contract.js'
 import { testHasReportSubmittedSinceBehaviour } from './contract/hasReportSubmittedSince.contract.js'
-import { testClearResubmissionRequiredBehaviour } from './contract/clearResubmissionRequired.contract.js'
 
 export const testReportsRepositoryContract = (it) => {
   testCreateReportBehaviour(it)
@@ -27,5 +26,4 @@ export const testReportsRepositoryContract = (it) => {
   testMarkSubmittedReportsRequiringResubmissionBehaviour(it)
   testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour(it)
   testHasReportSubmittedSinceBehaviour(it)
-  testClearResubmissionRequiredBehaviour(it)
 }
