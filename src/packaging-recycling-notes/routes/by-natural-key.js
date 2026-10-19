@@ -72,19 +72,21 @@ import { createStatusesValidator } from './validation.js'
  *     tradingName?: string,
  *     registrationType?: string
  *   },
- *   issuedByOrganisation: {
+ *   issuer: {
  *     organisationNumber: number,
  *     name: string,
- *     tradingName?: string
- *   },
- *   registration: { registrationNumber: string },
- *   accreditation: {
- *     accreditationNumber: string,
- *     accreditationYear: number,
- *     wasteProcessingType: WasteProcessingTypeValue,
- *     material: Material,
- *     submittedToRegulator: { code: RegulatorValue },
- *     siteAddress?: AccreditationSnapshot['siteAddress']
+ *     tradingName?: string,
+ *     registration: {
+ *       registrationNumber: string,
+ *       accreditation: {
+ *         accreditationNumber: string,
+ *         accreditationYear: number,
+ *         wasteProcessingType: WasteProcessingTypeValue,
+ *         material: Material,
+ *         submittedToRegulator: { code: RegulatorValue },
+ *         siteAddress?: AccreditationSnapshot['siteAddress']
+ *       }
+ *     }
  *   },
  *   tonnage: number,
  *   processToBeUsed: string | null,
@@ -151,34 +153,34 @@ const prnSchema = Joi.object({
     tradingName: Joi.string(),
     registrationType: Joi.string()
   }).required(),
-  issuedByOrganisation: Joi.object({
+  issuer: Joi.object({
     organisationNumber: Joi.number().integer().required(),
     name: Joi.string().required(),
-    tradingName: Joi.string()
-  }).required(),
-  registration: Joi.object({
-    registrationNumber: Joi.string().required()
-  }).required(),
-  accreditation: Joi.object({
-    accreditationNumber: Joi.string().required(),
-    accreditationYear: Joi.number().integer().required(),
-    wasteProcessingType: Joi.string()
-      .valid(...Object.values(WASTE_PROCESSING_TYPE))
-      .required(),
-    material: materialSchema.required(),
-    submittedToRegulator: Joi.object({
-      code: Joi.string()
-        .valid(...Object.values(REGULATOR))
-        .required()
-    }).required(),
-    siteAddress: Joi.object({
-      line1: Joi.string().required(),
-      line2: Joi.string(),
-      town: Joi.string(),
-      county: Joi.string(),
-      postcode: Joi.string().required(),
-      country: Joi.string()
-    })
+    tradingName: Joi.string(),
+    registration: Joi.object({
+      registrationNumber: Joi.string().required(),
+      accreditation: Joi.object({
+        accreditationNumber: Joi.string().required(),
+        accreditationYear: Joi.number().integer().required(),
+        wasteProcessingType: Joi.string()
+          .valid(...Object.values(WASTE_PROCESSING_TYPE))
+          .required(),
+        material: materialSchema.required(),
+        submittedToRegulator: Joi.object({
+          code: Joi.string()
+            .valid(...Object.values(REGULATOR))
+            .required()
+        }).required(),
+        siteAddress: Joi.object({
+          line1: Joi.string().required(),
+          line2: Joi.string(),
+          town: Joi.string(),
+          county: Joi.string(),
+          postcode: Joi.string().required(),
+          country: Joi.string()
+        })
+      }).required()
+    }).required()
   }).required(),
   tonnage: Joi.number().required(),
   processToBeUsed: Joi.string().required(),
@@ -198,7 +200,7 @@ const prnSchema = Joi.object({
  * as a certificate does.
  *
  * @param {PackagingRecyclingNote} prn
- * @returns {PrnResource['accreditation']}
+ * @returns {PrnResource['issuer']['registration']['accreditation']}
  */
 const toAccreditationSnapshot = ({ accreditation, isExport }) => {
   const { siteAddress, glassRecyclingProcess } = accreditation
@@ -271,15 +273,17 @@ const toPrnResource = (
       ...(tradingName && { tradingName }),
       ...(registrationType && { registrationType })
     },
-    issuedByOrganisation: {
+    issuer: {
       organisationNumber,
       name: prn.organisation.name,
       ...(prn.organisation.tradingName && {
         tradingName: prn.organisation.tradingName
-      })
+      }),
+      registration: {
+        registrationNumber,
+        accreditation: toAccreditationSnapshot(prn)
+      }
     },
-    registration: { registrationNumber },
-    accreditation: toAccreditationSnapshot(prn),
     tonnage: prn.tonnage,
     processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
