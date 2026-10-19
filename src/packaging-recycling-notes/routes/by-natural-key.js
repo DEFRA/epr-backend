@@ -59,7 +59,7 @@ import { createStatusesValidator } from './validation.js'
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
  *
- * @typedef {{ status: PrnStatus, at: string, by: { name?: string } }} PrnStatusChange
+ * @typedef {{ status: PrnStatus, at: string, by?: { name: string } }} PrnStatusChange
  *
  * @typedef {{
  *   id: string,
@@ -136,7 +136,7 @@ const prnSchema = Joi.object({
         Joi.object({
           status: prnStatusSchema,
           at: isoDateTime,
-          by: Joi.object({ name: Joi.string() }).required()
+          by: Joi.object({ name: Joi.string().required() })
         })
       )
       .description(
@@ -249,7 +249,7 @@ const toPrnResource = (
       timeline: prn.status.history.map(({ status, at, by }) => ({
         status,
         at: new Date(at).toISOString(),
-        by: { ...(by.name && { name: by.name }) }
+        ...(by.name && { by: { name: by.name } })
       }))
     },
     issuedToOrganisation: {

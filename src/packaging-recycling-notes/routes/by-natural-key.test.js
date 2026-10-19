@@ -17,6 +17,7 @@ import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   buildAccreditation,
   buildAwaitingAcceptancePrn,
+  buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
   buildDeletedPrn,
   buildDraftPrn,
@@ -431,6 +432,38 @@ describe('PRN routes by natural key', () => {
       })
     })
 
+    it('keeps changes that share a time in the order they were recorded', async () => {
+      const at = new Date('2026-05-01T09:00:00.000Z')
+      const { id } = await packagingRecyclingNotesRepository.create(
+        buildAwaitingAuthorisationPrn({
+          ...underAccreditation(ownIds),
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            currentStatusAt: at,
+            history: [
+              { status: PRN_STATUS.DRAFT, at, by: { id: 'u1', name: 'A' } },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at,
+                by: { id: 'u1', name: 'A' }
+              }
+            ]
+          }
+        })
+      )
+
+      const response = await server.inject({
+        url: `${prns}/${id}`,
+        ...asOperator()
+      })
+
+      expect(
+        body(response).status.timeline.map(
+          (/** @type {{ status: string }} */ { status }) => status
+        )
+      ).toStrictEqual([PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION])
+    })
+
     it.each([
       ['of another accreditation', elsewhere.id],
       ['that was deleted', deleted.id],
@@ -478,7 +511,7 @@ describe('PRN routes by natural key', () => {
           issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
           tonnage: 10
         },
-        ...asOperator()
+        ...asOperator({ name: 'Operator User' })
       })
 
       expect(body(response)).toStrictEqual({
@@ -489,7 +522,7 @@ describe('PRN routes by natural key', () => {
             {
               status: PRN_STATUS.DRAFT,
               at: '2026-06-01T00:00:00.000Z',
-              by: { name: expect.any(String) }
+              by: { name: 'Operator User' }
             }
           ]
         },
@@ -517,7 +550,7 @@ describe('PRN routes by natural key', () => {
         method: 'POST',
         url: `${prns}/${draft.id}/status`,
         payload: { status: PRN_STATUS.AWAITING_AUTHORISATION },
-        ...asOperator()
+        ...asOperator({ name: 'Operator User' })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -525,6 +558,11 @@ describe('PRN routes by natural key', () => {
         id: draft.id,
         status: { current: PRN_STATUS.AWAITING_AUTHORISATION },
         notes: 'For the spring run'
+      })
+      expect(body(response).status.timeline.at(-1)).toStrictEqual({
+        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        at: '2026-06-01T00:00:00.000Z',
+        by: { name: 'Operator User' }
       })
       expect(body(response)).not.toHaveProperty('prnNumber')
     })
@@ -561,7 +599,7 @@ describe('PRN routes by natural key', () => {
       const response = await server.inject({
         method: 'POST',
         url: `${prns}/${issued.id}/cancel`,
-        ...asServiceMaintainerWrite()
+        ...asServiceMaintainerWrite({ name: 'Maintainer User' })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -570,6 +608,11 @@ describe('PRN routes by natural key', () => {
         prnNumber: issued.prnNumber,
         status: { current: PRN_STATUS.CANCELLED },
         regulatorCancellable: false
+      })
+      expect(body(response).status.timeline.at(-1)).toStrictEqual({
+        status: PRN_STATUS.CANCELLED,
+        at: '2026-06-01T00:00:00.000Z',
+        by: { name: 'Maintainer User' }
       })
     })
 
