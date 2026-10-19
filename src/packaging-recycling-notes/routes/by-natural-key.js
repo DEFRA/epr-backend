@@ -73,7 +73,7 @@ import { createStatusesValidator } from './validation.js'
  *     registrationType?: string
  *   },
  *   issuer: {
- *     organisationNumber: number,
+ *     organisationNumber: string,
  *     name: string,
  *     tradingName?: string,
  *     registration: {
@@ -154,7 +154,7 @@ const prnSchema = Joi.object({
     registrationType: Joi.string()
   }).required(),
   issuer: Joi.object({
-    organisationNumber: Joi.number().integer().required(),
+    organisationNumber: Joi.string().required(),
     name: Joi.string().required(),
     tradingName: Joi.string(),
     registration: Joi.object({
@@ -274,7 +274,7 @@ const toPrnResource = (
       ...(registrationType && { registrationType })
     },
     issuer: {
-      organisationNumber,
+      organisationNumber: String(organisationNumber),
       name: prn.organisation.name,
       ...(prn.organisation.tradingName && {
         tradingName: prn.organisation.tradingName

@@ -130,7 +130,7 @@ const idsOf = (response) =>
   body(response).items.map((/** @type {{ id: string }} */ { id }) => id)
 
 const issuingOrganisation = {
-  organisationNumber: organisation.orgId,
+  organisationNumber: String(organisation.orgId),
   name: 'Test Organisation'
 }
 
@@ -310,7 +310,7 @@ describe('PRN routes by natural key', () => {
 
       expect(body(response).items[2]).toMatchObject({
         issuer: {
-          organisationNumber: organisation.orgId,
+          organisationNumber: String(organisation.orgId),
           name: 'Test Organisation',
           tradingName: 'Test Trading',
           registration: {
@@ -543,7 +543,7 @@ describe('PRN routes by natural key', () => {
         },
         issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
         issuer: expect.objectContaining({
-          organisationNumber: organisation.orgId,
+          organisationNumber: String(organisation.orgId),
           registration: {
             registrationNumber: REPROCESSOR_NUMBER,
             accreditation: expect.objectContaining({
