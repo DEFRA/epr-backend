@@ -202,7 +202,7 @@ describe('PRN routes by natural key', () => {
       expect(idsOf(response)).toStrictEqual([issued.id, draft.id, exported.id])
     })
 
-    it('serves an issued PRN with its number and every status change', async () => {
+    it('serves an issued PRN with its number, its issue and every status change', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[0]).toStrictEqual({
@@ -249,6 +249,10 @@ describe('PRN routes by natural key', () => {
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
         createdAt: '2026-04-01T10:00:00.000Z',
+        issued: {
+          at: issued.status.issued?.at.toISOString(),
+          by: { name: 'Issuer User' }
+        },
         regulatorCancellable: true
       })
     })

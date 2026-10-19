@@ -44,7 +44,7 @@ import { createStatusesValidator } from './validation.js'
  *   RegulatorValue,
  *   WasteProcessingTypeValue
  * } from '#domain/organisations/model.js'
- * @import { AccreditationSnapshot, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/view-route.js'
@@ -59,7 +59,8 @@ import { createStatusesValidator } from './validation.js'
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
  *
- * @typedef {{ status: PrnStatus, at: string, by?: { name: string } }} PrnStatusChange
+ * @typedef {{ at: string, by?: { name: string } }} PrnOperation
+ * @typedef {PrnOperation & { status: PrnStatus }} PrnStatusChange
  *
  * @typedef {{
  *   id: string,
@@ -91,6 +92,7 @@ import { createStatusesValidator } from './validation.js'
  *   obligationYear: number,
  *   notes?: string,
  *   createdAt: string,
+ *   issued?: PrnOperation,
  *   regulatorCancellable: boolean
  * }} PrnResource
  */
@@ -119,6 +121,11 @@ const onceIssued = Joi.valid(...issuedStatuses)
 
 const isoDateTime = Joi.string().isoDate().required()
 
+const prnOperationKeys = {
+  at: isoDateTime,
+  by: Joi.object({ name: Joi.string().required() })
+}
+
 const prnStatusSchema = Joi.string()
   .valid(...Object.values(PRN_STATUS))
   .required()
@@ -132,13 +139,7 @@ const prnSchema = Joi.object({
   status: Joi.object({
     current: prnStatusSchema,
     timeline: Joi.array()
-      .items(
-        Joi.object({
-          status: prnStatusSchema,
-          at: isoDateTime,
-          by: Joi.object({ name: Joi.string().required() })
-        })
-      )
+      .items(Joi.object({ status: prnStatusSchema, ...prnOperationKeys }))
       .description(
         'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
       )
@@ -185,6 +186,10 @@ const prnSchema = Joi.object({
   obligationYear: Joi.number().integer().required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
+  issued: Joi.object(prnOperationKeys).when('status.current', {
+    not: onceIssued,
+    then: Joi.forbidden()
+  }),
   regulatorCancellable: Joi.boolean().required()
 })
 
@@ -235,6 +240,15 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
  * @param {Date} now
  * @returns {PrnResource}
  */
+/**
+ * @param {BusinessOperation} operation
+ * @returns {PrnOperation}
+ */
+const toPrnOperation = ({ at, by }) => ({
+  at: new Date(at).toISOString(),
+  ...(by.name && { by: { name: by.name } })
+})
+
 const toPrnResource = (
   prn,
   { organisationNumber, registrationNumber },
@@ -246,10 +260,9 @@ const toPrnResource = (
     ...(prn.prnNumber && { prnNumber: prn.prnNumber }),
     status: {
       current: prn.status.currentStatus,
-      timeline: prn.status.history.map(({ status, at, by }) => ({
-        status,
-        at: new Date(at).toISOString(),
-        ...(by.name && { by: { name: by.name } })
+      timeline: prn.status.history.map((change) => ({
+        status: change.status,
+        ...toPrnOperation(change)
       }))
     },
     issuedToOrganisation: {
@@ -273,6 +286,7 @@ const toPrnResource = (
     obligationYear: prn.obligationYear,
     ...(prn.notes && { notes: prn.notes }),
     createdAt: new Date(prn.createdAt).toISOString(),
+    ...(prn.status.issued && { issued: toPrnOperation(prn.status.issued) }),
     regulatorCancellable: isRegulatorCancellable(
       prn.status.currentStatus,
       prn.accreditation.accreditationYear,
