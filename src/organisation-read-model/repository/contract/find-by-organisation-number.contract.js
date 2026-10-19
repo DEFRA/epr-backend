@@ -36,7 +36,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [buildOrganisation({ orgId: 500001 })]
       })
 
-      expect(await repository.findByOrganisationNumber(500002)).toBeNull()
+      expect(await repository.findByOrganisationNumber('500002')).toBeNull()
     })
 
     it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({
@@ -51,10 +51,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation).toEqual({
-        organisationNumber: stored.orgId,
+        organisationNumber: String(stored.orgId),
         name: 'ACME ltd',
         tradingName: 'ACME ltd',
         companiesHouseNumber: 'AC012345',
@@ -122,7 +125,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         overseasSites
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
         applicationContactDetails: anakin,
@@ -157,7 +163,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         overseasSites
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         organisation.registrations[EXPORTER_NUMBER].accreditations[2026]
@@ -185,7 +194,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         Object.keys(
@@ -214,7 +226,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
         'site',
@@ -232,7 +247,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toHaveProperty(
         'overseasSites',
@@ -251,7 +269,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation).not.toHaveProperty('tradingName')
       expect(organisation).not.toHaveProperty('companiesHouseNumber')
@@ -281,7 +302,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.users).toEqual([
         {
@@ -305,7 +329,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.linkedDefraOrganisation).toEqual({
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
@@ -329,7 +356,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.linkedDefraOrganisation?.linkedAt).toBe(
         '2026-03-04T05:06:07.000Z'
@@ -349,7 +379,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].applicationContactDetails

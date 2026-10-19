@@ -43,7 +43,7 @@ export const overseasSites = [approvedSite, pendingSite]
 
 /**
  * @param {OrganisationReadRepository} repository
- * @param {number} organisationNumber
+ * @param {string} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export const findOrganisation = async (repository, organisationNumber) => {

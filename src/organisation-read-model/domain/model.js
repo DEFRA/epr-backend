@@ -14,7 +14,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *     }
  *   }
  *   name: string
- *   organisationNumber: number
+ *   organisationNumber: string
  *   registeredAddress?: UkAddress
  *   registrations: Record<string, Registration>
  *   status: Status<'created' | 'approved' | 'active' | 'rejected'>

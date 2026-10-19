@@ -46,7 +46,9 @@ export const createOrganisationReadRepository = ({
   logger
 }) => ({
   findByOrganisationNumber: async (organisationNumber) => {
-    const stored = await organisationsRepository.findByOrgId(organisationNumber)
+    const stored = await organisationsRepository.findByOrgId(
+      Number(organisationNumber)
+    )
     if (!stored) {
       return null
     }
@@ -99,7 +101,7 @@ function toOrganisation(stored, context) {
   const { companyDetails, linkedDefraOrganisation } = stored
 
   return {
-    organisationNumber: stored.orgId,
+    organisationNumber: String(stored.orgId),
     name: companyDetails.name,
     ...omitNullish({
       companiesHouseNumber: companyDetails.companiesHouseNumber,

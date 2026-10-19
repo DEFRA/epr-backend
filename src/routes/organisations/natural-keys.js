@@ -32,15 +32,16 @@ const lookupContext = () => ({
  * organisation the organisation read model serves can be found.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {number} organisationNumber
+ * @param {string} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export async function findOrganisationByNumber(
   organisationsRepository,
   organisationNumber
 ) {
-  const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
+  const organisation = await organisationsRepository.findByOrgId(
+    Number(organisationNumber)
+  )
   if (
     !organisation ||
     !servesOrganisation(organisation, lookupContext().today)
@@ -56,7 +57,7 @@ export async function findOrganisationByNumber(
  * built from the read model resolves and nothing else does.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {number} organisationNumber
+ * @param {string} organisationNumber
  * @param {string} registrationNumber
  * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
  */

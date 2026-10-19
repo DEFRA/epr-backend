@@ -35,7 +35,10 @@ export const testDroppedRecordsBehaviour = (it) => {
         overseasSites,
         logger
       })
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
       return { registrations: organisation.registrations, logger }
     }
 

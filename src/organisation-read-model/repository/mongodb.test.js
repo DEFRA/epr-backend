@@ -104,7 +104,10 @@ describe('organisation read repository over MongoDB repositories', () => {
       organisations: [stored]
     })
 
-    const organisation = await findOrganisation(repository, stored.orgId)
+    const organisation = await findOrganisation(
+      repository,
+      String(stored.orgId)
+    )
 
     expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
       'status.timeline',

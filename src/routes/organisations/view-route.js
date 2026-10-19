@@ -12,11 +12,13 @@ export const yearsPath = `${organisationPath}/years`
 export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
 export const accreditationPath = `${registrationPath}/accreditations/{year}`
 
-/** @typedef {{ organisationNumber: number }} OrganisationParams */
+/** @typedef {{ organisationNumber: string }} OrganisationParams */
 /** @typedef {OrganisationParams & { registrationNumber: string }} RegistrationParams */
 
 export const organisationParams = {
-  organisationNumber: Joi.number().integer().positive().required()
+  organisationNumber: Joi.string()
+    .pattern(/^[1-9]\d*$/)
+    .required()
 }
 export const registrationParams = {
   ...organisationParams,

@@ -82,7 +82,7 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       name: 'ACME ltd',
       tradingName: 'ACME ltd',
       status: {
@@ -237,6 +237,15 @@ describe('GET /organisations/{organisationNumber}', () => {
     await serve(buildOrganisation())
 
     const response = await get('/organisations/not-a-number')
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it('rejects an organisation number with a leading zero', async () => {
+    const organisation = buildOrganisation({ orgId: 500001 })
+    await serve(organisation)
+
+    const response = await get('/organisations/0500001')
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })

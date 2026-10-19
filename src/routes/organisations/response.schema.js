@@ -162,7 +162,7 @@ export const linkedDefraOrganisationViewSchema = Joi.object({
 export const organisationViewSchema = Joi.object({
   linkedDefraOrganisation: linkedDefraOrganisationViewSchema,
   name: Joi.string().required(),
-  organisationNumber: Joi.number().integer().required(),
+  organisationNumber: Joi.string().required(),
   registrations: registrationsViewSchema,
   status: statusSchema(ORGANISATION_STATUSES),
   submittedToRegulator: regulatorSchema,
