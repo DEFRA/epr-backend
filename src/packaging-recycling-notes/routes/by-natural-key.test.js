@@ -201,13 +201,32 @@ describe('PRN routes by natural key', () => {
       expect(idsOf(response)).toStrictEqual([issued.id, draft.id, exported.id])
     })
 
-    it('serves an issued PRN with its number and issue', async () => {
+    it('serves an issued PRN with its number and every status change', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[0]).toStrictEqual({
         id: issued.id,
         prnNumber: issued.prnNumber,
-        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        status: {
+          current: PRN_STATUS.AWAITING_ACCEPTANCE,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: issued.status.history[0]?.at.toISOString(),
+              by: { name: 'Creator User' }
+            },
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              at: issued.status.history[1]?.at.toISOString(),
+              by: { name: 'Raiser User' }
+            },
+            {
+              status: PRN_STATUS.AWAITING_ACCEPTANCE,
+              at: issued.status.history[2]?.at.toISOString(),
+              by: { name: 'Issuer User' }
+            }
+          ]
+        },
         issuedToOrganisation: {
           id: 'producer-1',
           name: 'Producer Ltd',
@@ -229,20 +248,25 @@ describe('PRN routes by natural key', () => {
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
         createdAt: '2026-04-01T10:00:00.000Z',
-        issued: {
-          at: issued.status.issued?.at.toISOString(),
-          by: { name: 'Issuer User', position: 'Manager' }
-        },
         regulatorCancellable: true
       })
     })
 
-    it('serves a draft PRN with no number and no issue', async () => {
+    it('serves a draft PRN with no number', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
 
       expect(body(response).items[1]).toStrictEqual({
         id: draft.id,
-        status: PRN_STATUS.DRAFT,
+        status: {
+          current: PRN_STATUS.DRAFT,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: draft.status.history[0]?.at.toISOString(),
+              by: { name: 'Creator User' }
+            }
+          ]
+        },
         issuedToOrganisation: {
           id: draft.issuedToOrganisation.id,
           name: draft.issuedToOrganisation.name,
@@ -403,7 +427,7 @@ describe('PRN routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: draft.id,
-        status: PRN_STATUS.DRAFT
+        status: { current: PRN_STATUS.DRAFT }
       })
     })
 
@@ -459,7 +483,16 @@ describe('PRN routes by natural key', () => {
 
       expect(body(response)).toStrictEqual({
         id: expect.any(String),
-        status: PRN_STATUS.DRAFT,
+        status: {
+          current: PRN_STATUS.DRAFT,
+          timeline: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: '2026-06-01T00:00:00.000Z',
+              by: { name: expect.any(String) }
+            }
+          ]
+        },
         issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
         issuedByOrganisation: expect.objectContaining({
           organisationNumber: organisation.orgId
@@ -490,7 +523,7 @@ describe('PRN routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(body(response)).toMatchObject({
         id: draft.id,
-        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        status: { current: PRN_STATUS.AWAITING_AUTHORISATION },
         notes: 'For the spring run'
       })
       expect(body(response)).not.toHaveProperty('prnNumber')
@@ -535,7 +568,7 @@ describe('PRN routes by natural key', () => {
       expect(body(response)).toMatchObject({
         id: issued.id,
         prnNumber: issued.prnNumber,
-        status: PRN_STATUS.CANCELLED,
+        status: { current: PRN_STATUS.CANCELLED },
         regulatorCancellable: false
       })
     })

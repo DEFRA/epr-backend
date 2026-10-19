@@ -59,10 +59,12 @@ import { createStatusesValidator } from './validation.js'
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
  *
+ * @typedef {{ status: PrnStatus, at: string, by: { name?: string } }} PrnStatusChange
+ *
  * @typedef {{
  *   id: string,
  *   prnNumber?: string,
- *   status: PrnStatus,
+ *   status: { current: PrnStatus, timeline: PrnStatusChange[] },
  *   issuedToOrganisation: {
  *     id: string,
  *     name: string,
@@ -89,7 +91,6 @@ import { createStatusesValidator } from './validation.js'
  *   obligationYear: number,
  *   notes?: string,
  *   createdAt: string,
- *   issued?: { at: string, by: { name?: string, position?: string } },
  *   regulatorCancellable: boolean
  * }} PrnResource
  */
@@ -118,15 +119,31 @@ const onceIssued = Joi.valid(...issuedStatuses)
 
 const isoDateTime = Joi.string().isoDate().required()
 
+const prnStatusSchema = Joi.string()
+  .valid(...Object.values(PRN_STATUS))
+  .required()
+
 const prnSchema = Joi.object({
   id: Joi.string().required(),
-  prnNumber: Joi.string().when('status', {
+  prnNumber: Joi.string().when('status.current', {
     not: onceIssued,
     then: Joi.forbidden()
   }),
-  status: Joi.string()
-    .valid(...Object.values(PRN_STATUS))
-    .required(),
+  status: Joi.object({
+    current: prnStatusSchema,
+    timeline: Joi.array()
+      .items(
+        Joi.object({
+          status: prnStatusSchema,
+          at: isoDateTime,
+          by: Joi.object({ name: Joi.string() }).required()
+        })
+      )
+      .description(
+        'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
+      )
+      .required()
+  }).required(),
   issuedToOrganisation: Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required(),
@@ -168,10 +185,6 @@ const prnSchema = Joi.object({
   obligationYear: Joi.number().integer().required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
-  issued: Joi.object({
-    at: isoDateTime,
-    by: Joi.object({ name: Joi.string(), position: Joi.string() }).required()
-  }).when('status', { not: onceIssued, then: Joi.forbidden() }),
   regulatorCancellable: Joi.boolean().required()
 })
 
@@ -228,11 +241,17 @@ const toPrnResource = (
   now
 ) => {
   const { id, name, tradingName, registrationType } = prn.issuedToOrganisation
-  const { issued } = prn.status
   return {
     id: prn.id,
     ...(prn.prnNumber && { prnNumber: prn.prnNumber }),
-    status: prn.status.currentStatus,
+    status: {
+      current: prn.status.currentStatus,
+      timeline: prn.status.history.map(({ status, at, by }) => ({
+        status,
+        at: new Date(at).toISOString(),
+        by: { ...(by.name && { name: by.name }) }
+      }))
+    },
     issuedToOrganisation: {
       id,
       name,
@@ -254,15 +273,6 @@ const toPrnResource = (
     obligationYear: prn.obligationYear,
     ...(prn.notes && { notes: prn.notes }),
     createdAt: new Date(prn.createdAt).toISOString(),
-    ...(issued && {
-      issued: {
-        at: new Date(issued.at).toISOString(),
-        by: {
-          ...(issued.by.name && { name: issued.by.name }),
-          ...(issued.by.position && { position: issued.by.position })
-        }
-      }
-    }),
     regulatorCancellable: isRegulatorCancellable(
       prn.status.currentStatus,
       prn.accreditation.accreditationYear,
