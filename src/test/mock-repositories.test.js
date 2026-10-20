@@ -40,6 +40,8 @@ describe('mock-repositories', () => {
         'findById',
         'findLatestSubmittedForOrgReg',
         'findAllByOrgReg',
+        'findLatestSubmitted',
+        'findAll',
         'findAllSummaryLogStatsByRegistrationId',
         'transitionToSubmittingExclusive',
         'getDownloadUrl',

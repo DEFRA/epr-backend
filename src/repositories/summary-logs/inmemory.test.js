@@ -1,15 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it as base } from 'vitest'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures
+ * @property {OrganisationsRepository} organisationsRepository
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
  */
@@ -17,8 +20,14 @@ import { waitForVersion } from './contract/test-helpers.js'
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   base.extend({
     // eslint-disable-next-line no-empty-pattern
-    summaryLogsRepositoryFactory: async ({}, use) => {
-      const factory = createInMemorySummaryLogsRepository()
+    organisationsRepository: async ({}, use) => {
+      await use(createInMemoryOrganisationsRepository()())
+    },
+
+    summaryLogsRepositoryFactory: async ({ organisationsRepository }, use) => {
+      const factory = createInMemorySummaryLogsRepository(
+        organisationsRepository
+      )
       await use(factory)
     },
 
