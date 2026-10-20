@@ -160,7 +160,7 @@ jobs:
           fail-on-severity: moderate
 
   test-journey:
-    name: Run Journey Tests (december-scope=${{ matrix.december-scope }})
+    name: Run Journey Tests (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
@@ -172,8 +172,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - december-scope: exclude
-          - december-scope: only
+          - name: e2e 1/3
+            december-scope: exclude
+            test-suite: e2e
+            shard: 1/3
+            suffix: -e2e-shard1
+          - name: e2e 2/3
+            december-scope: exclude
+            test-suite: e2e
+            shard: 2/3
+            suffix: -e2e-shard2
+          - name: e2e 3/3
+            december-scope: exclude
+            test-suite: e2e
+            shard: 3/3
+            suffix: -e2e-shard3
+          - name: december
+            december-scope: only
+            test-suite: e2e
+            suffix: -december
+          - name: api
+            december-scope: exclude
+            test-suite: api
+            suffix: -api
+          - name: a11y
+            december-scope: exclude
+            test-suite: a11y
+            suffix: -a11y
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -202,9 +227,11 @@ jobs:
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
-          artifact-suffix: -${{ matrix.december-scope }}
+          artifact-suffix: ${{ matrix.suffix }}
           december-scope: ${{ matrix.december-scope }}
           test-scope: all
+          test-suite: ${{ matrix.test-suite }}
+          shard: ${{ matrix.shard }}
 
       - name: Write journey test summary
         if: always()
