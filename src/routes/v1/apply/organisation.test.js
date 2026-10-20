@@ -203,8 +203,11 @@ describe(`${url} route`, { timeout: 10000 }, () => {
   })
 
   it('returns 422 if payload is missing its form pages', async ({ server }) => {
-    const payload = structuredClone(organisationFixture)
-    delete payload.meta.definition.pages
+    const { pages: _, ...definition } = organisationFixture.meta.definition
+    const payload = {
+      ...organisationFixture,
+      meta: { ...organisationFixture.meta, definition }
+    }
 
     const response = await server.inject({ method: 'POST', url, payload })
 
@@ -216,8 +219,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
   it('returns 422 if payload is missing its answer data', async ({
     server
   }) => {
-    const payload = structuredClone(organisationFixture)
-    delete payload.data
+    const { data: _, ...payload } = organisationFixture
 
     const response = await server.inject({ method: 'POST', url, payload })
 
@@ -238,8 +240,8 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       return { insertOne: mockInsertOne }
     })
 
-    const payload = structuredClone(organisationFixture)
-    delete payload.data.main.VcdRNr
+    const { VcdRNr: _, ...main } = organisationFixture.data.main
+    const payload = { ...organisationFixture, data: { main } }
 
     const response = await server.inject({ method: 'POST', url, payload })
 

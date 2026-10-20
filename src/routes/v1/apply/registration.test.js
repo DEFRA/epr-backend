@@ -139,8 +139,11 @@ describe(`${url} route`, { timeout: 10000 }, () => {
   })
 
   it('returns 422 if payload is missing its form pages', async ({ server }) => {
-    const payload = structuredClone(registrationFixture)
-    delete payload.meta.definition.pages
+    const { pages: _, ...definition } = registrationFixture.meta.definition
+    const payload = {
+      ...registrationFixture,
+      meta: { ...registrationFixture.meta, definition }
+    }
 
     const response = await server.inject({ method: 'POST', url, payload })
 
@@ -152,8 +155,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
   it('returns 422 if payload is missing its answer data', async ({
     server
   }) => {
-    const payload = structuredClone(registrationFixture)
-    delete payload.data
+    const { data: _, ...payload } = registrationFixture
 
     const response = await server.inject({ method: 'POST', url, payload })
 

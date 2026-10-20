@@ -51,15 +51,16 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  *
  * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number } | null} [closingBalance]
  */
-const seedStream = (closingBalance = SEED_BALANCE) =>
+const seedStream = (
+  closingBalance = SEED_BALANCE,
+  ids = { organisationId, registrationId, accreditationId }
+) =>
   createInMemoryLedgerRepository(
     closingBalance
       ? [
           partialMock(
             buildLedgerEvent({
-              registrationId,
-              accreditationId,
-              organisationId,
+              ...ids,
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -1000,6 +1001,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
   })
 
   describe('an accreditation approved again after it was cancelled', () => {
+    /** @type {Awaited<ReturnType<typeof createTestServer>>} */
     let server
 
     afterAll(async () => {
@@ -1038,19 +1040,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository(),
           organisationsRepository: createInMemoryOrganisationsRepository([
-            organisation
+            partialMock(organisation)
           ]),
-          ledgerRepository: createInMemoryLedgerRepository([
-            partialMock(
-              buildLedgerEvent({
-                ...ids,
-                number: 1,
-                payload: { summaryLogId: 'log-1', creditTotal: 500 },
-                openingBalance: { amount: 0, availableAmount: 0 },
-                closingBalance: SEED_BALANCE
-              })
-            )
-          ])
+          ledgerRepository: () => seedStream(SEED_BALANCE, ids)
         }
       })
       await server.initialize()

@@ -18,6 +18,8 @@ import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+
 const mockLogger = createMockLogger()
 
 const APPROVED_SINCE_2025 = [
@@ -155,7 +157,9 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
   })
 
   describe('an operator signed in with Defra ID', () => {
+    /** @type {Organisation} */
     let linkedOrganisation
+    /** @type {Organisation} */
     let otherOrganisation
 
     beforeAll(async () => {
@@ -177,6 +181,7 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
       await server.initialize()
     })
 
+    /** @param {Organisation} organisation */
     const uploadTo = (organisation) =>
       server.inject({
         method: 'POST',
