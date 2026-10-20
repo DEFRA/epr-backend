@@ -39,13 +39,17 @@ describe(`${summaryLogsListPath} route`, () => {
   /**
    * The list finds summary logs through the registration they belong to, so
    * each test stores an organisation holding one, with an accreditation.
+   *
+   * @param {string | null} [registrationNumber]
    */
-  const storeRegistration = async () => {
+  const storeRegistration = async (
+    registrationNumber = uniqueNumber('REG')
+  ) => {
     const accreditation = buildAccreditation({
       accreditationNumber: uniqueNumber('ACC')
     })
     const registration = buildRegistration({
-      registrationNumber: uniqueNumber('REG'),
+      registrationNumber,
       accreditationId: accreditation.id
     })
     const organisation = buildOrganisation({
@@ -113,6 +117,24 @@ describe(`${summaryLogsListPath} route`, () => {
         expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
       }
     )
+
+    it('returns 200 with an empty array for a registration with no number, even when it holds logs', async () => {
+      const { organisationId, registrationId } = await storeRegistration(null)
+
+      await summaryLogsRepository.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.invalid({ organisationId, registrationId })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor(organisationId, registrationId),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
+    })
 
     it('returns successful and failed logs for the registration, newest first', async () => {
       const { organisationId, registrationId } = await storeRegistration()
