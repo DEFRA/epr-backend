@@ -9,6 +9,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { partialMock } from '#test/type-helpers.js'
 import { atDatabaseIds } from './at-database-ids.js'
 
+/** @import { DatabaseIdParams } from './at-database-ids.js' */
+
 const registration = buildRegistration({
   registrationNumber: 'R26ER5001180041PL'
 })
@@ -38,6 +40,7 @@ const requestFor = (params) =>
 
 const h = partialMock({})
 
+/** @type {[string, DatabaseIdParams][]} */
 const unknownRegistrations = [
   [
     'an unknown organisation',
