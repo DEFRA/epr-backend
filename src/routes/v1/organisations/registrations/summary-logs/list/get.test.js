@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -5,6 +6,11 @@ import { ObjectId } from 'mongodb'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
@@ -20,15 +26,47 @@ const pathFor = (organisationId, registrationId) =>
     .replace('{organisationId}', organisationId)
     .replace('{registrationId}', registrationId)
 
+/** @param {string} prefix */
+const uniqueNumber = (prefix) =>
+  `${prefix}${randomUUID().slice(0, 8).toUpperCase()}`
+
 describe(`${summaryLogsListPath} route`, () => {
   setupAuthContext()
 
   let server
+  let organisationsRepository
   let summaryLogsRepository
 
+  /**
+   * The list finds summary logs through the registration they belong to, so
+   * each test stores an organisation holding one, with an accreditation.
+   */
+  const storeRegistration = async () => {
+    const accreditation = buildAccreditation({
+      accreditationNumber: uniqueNumber('ACC')
+    })
+    const registration = buildRegistration({
+      registrationNumber: uniqueNumber('REG'),
+      accreditationId: accreditation.id
+    })
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    await organisationsRepository.insert(organisation)
+
+    return {
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      accreditationId: accreditation.id
+    }
+  }
+
   beforeAll(async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository()()
-    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+    organisationsRepository = createInMemoryOrganisationsRepository()()
+    summaryLogsRepository = createInMemorySummaryLogsRepository(
+      organisationsRepository
+    )(logger)
 
     server = await createTestServer({
       repositories: {
@@ -46,8 +84,7 @@ describe(`${summaryLogsListPath} route`, () => {
 
   describe('successful requests', () => {
     it('returns 200 with an empty array when no logs exist for the registration', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
 
       const response = await server.inject({
         method: 'GET',
@@ -59,9 +96,35 @@ describe(`${summaryLogsListPath} route`, () => {
       expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
     })
 
+    it.each([
+      [
+        'organisation',
+        () => new ObjectId().toString(),
+        (ids) => ids.registrationId
+      ],
+      [
+        'registration',
+        (ids) => ids.organisationId,
+        () => new ObjectId().toString()
+      ]
+    ])(
+      'returns 200 with an empty array for an unknown %s',
+      async (_, organisationIdFrom, registrationIdFrom) => {
+        const ids = await storeRegistration()
+
+        const response = await server.inject({
+          method: 'GET',
+          url: pathFor(organisationIdFrom(ids), registrationIdFrom(ids)),
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
+      }
+    )
+
     it('returns successful and failed logs for the registration, newest first', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
 
       const submittedId = new ObjectId().toString()
       const failedId = new ObjectId().toString()
@@ -119,8 +182,8 @@ describe(`${summaryLogsListPath} route`, () => {
     })
 
     it('includes year and accreditationId when present', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId, accreditationId } =
+        await storeRegistration()
       const submittedId = new ObjectId().toString()
 
       await summaryLogsRepository.insert(
@@ -129,7 +192,7 @@ describe(`${summaryLogsListPath} route`, () => {
           organisationId,
           registrationId,
           year: 2026,
-          accreditationId: 'acc-1'
+          accreditationId
         })
       )
 
@@ -142,13 +205,38 @@ describe(`${summaryLogsListPath} route`, () => {
       const payload = JSON.parse(response.payload)
       expect(payload.summaryLogs[0]).toMatchObject({
         year: 2026,
-        accreditationId: 'acc-1'
+        accreditationId
+      })
+    })
+
+    it('includes a null accreditationId for a registered-only log', async () => {
+      const { organisationId, registrationId } = await storeRegistration()
+
+      await summaryLogsRepository.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor(organisationId, registrationId),
+        ...asServiceMaintainer()
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.summaryLogs[0]).toMatchObject({
+        year: 2026,
+        accreditationId: null
       })
     })
 
     it('omits year and accreditationId for a legacy log carrying neither', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
       const submittedId = new ObjectId().toString()
 
       await summaryLogsRepository.insert(
@@ -170,8 +258,7 @@ describe(`${summaryLogsListPath} route`, () => {
     })
 
     it('excludes intermediate statuses from the list', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
 
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
@@ -214,8 +301,7 @@ describe(`${summaryLogsListPath} route`, () => {
     })
 
     it('does not leak logs from other organisations or registrations', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
       const otherOrgId = new ObjectId().toString()
       const otherRegId = new ObjectId().toString()
 
@@ -260,8 +346,7 @@ describe(`${summaryLogsListPath} route`, () => {
     })
 
     it('uses createdAt for uploadedAt when submittedAt is absent (e.g. invalid/validation_failed)', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
+      const { organisationId, registrationId } = await storeRegistration()
 
       const failedId = new ObjectId().toString()
       await summaryLogsRepository.insert(
@@ -288,13 +373,14 @@ describe(`${summaryLogsListPath} route`, () => {
 
   describe('error scenarios', () => {
     it('returns 500 when repository throws', async () => {
+      const { organisationId, registrationId } = await storeRegistration()
       const errorSpy = vi
-        .spyOn(summaryLogsRepository, 'findAllByOrgReg')
+        .spyOn(summaryLogsRepository, 'findAll')
         .mockRejectedValue(new Error('Simulated Database Failure'))
 
       const response = await server.inject({
         method: 'GET',
-        url: pathFor(new ObjectId().toString(), new ObjectId().toString()),
+        url: pathFor(organisationId, registrationId),
         ...asServiceMaintainer()
       })
 

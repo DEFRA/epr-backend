@@ -5,15 +5,33 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { atDatabaseIds } from '#routes/organisations/at-database-ids.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/view-route.js' */
 
 export const summaryLogsListPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
-export const summaryLogsList = {
+/**
+ * @param {Organisation} organisation
+ * @returns {(accreditationNumber: string | null) => string | null | undefined}
+ */
+const accreditationIdIn = (organisation) => {
+  const ids = new Map(
+    organisation.accreditations.map(({ id, accreditationNumber }) => [
+      accreditationNumber,
+      id
+    ])
+  )
+  return (accreditationNumber) =>
+    accreditationNumber && ids.get(accreditationNumber)
+}
+
+const summaryLogsListByNumber = {
   method: 'GET',
   path: summaryLogsListPath,
   options: {
@@ -27,20 +45,22 @@ export const summaryLogsList = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string },
+   *   params: RegistrationParams,
+   *   app: { organisation: Organisation },
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { summaryLogsRepository, params, logger } = request
-    const { organisationId, registrationId } = params
+    const { organisationNumber, registrationNumber } = params
+    const accreditationIdFor = accreditationIdIn(request.app.organisation)
 
     try {
-      const summaryLogs = await summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      )
+      const summaryLogs = await summaryLogsRepository.findAll({
+        organisationNumber: String(organisationNumber),
+        registrationNumber
+      })
 
       const summaryLogList = summaryLogs.map(({ id, summaryLog }) => ({
         summaryLogId: id,
@@ -48,13 +68,13 @@ export const summaryLogsList = {
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
         status: summaryLog.status,
         ...(summaryLog.year !== undefined && { year: summaryLog.year }),
-        ...(summaryLog.accreditationId !== undefined && {
-          accreditationId: summaryLog.accreditationId
+        ...(summaryLog.accreditationNumber !== undefined && {
+          accreditationId: accreditationIdFor(summaryLog.accreditationNumber)
         })
       }))
 
       logger.info({
-        message: `Summary log list retrieved: organisationId=${organisationId}, registrationId=${registrationId}, count=${summaryLogs.length}`,
+        message: `Summary log list retrieved: organisationNumber=${organisationNumber}, registrationNumber=${registrationNumber}, count=${summaryLogs.length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -81,3 +101,7 @@ export const summaryLogsList = {
     }
   }
 }
+
+export const summaryLogsList = atDatabaseIds(summaryLogsListByNumber, {
+  unknown: (_request, h) => h.response({ summaryLogs: [] }).code(StatusCodes.OK)
+})
