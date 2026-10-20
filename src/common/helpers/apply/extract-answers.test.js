@@ -66,6 +66,28 @@ describe('extractAnswers', () => {
   it('should return empty array for undefined payload', () => {
     expect(extractAnswers(invalidArg(undefined))).toEqual([])
   })
+
+  it('should return empty array when the form definition has no pages', () => {
+    expect(
+      extractAnswers(
+        invalidArg({ meta: { definition: {} }, data: { main: { test: 'x' } } })
+      )
+    ).toEqual([])
+  })
+
+  it('should return empty array when the payload has no answer data', () => {
+    expect(
+      extractAnswers(
+        invalidArg({
+          meta: {
+            definition: {
+              pages: [{ components: [{ name: 'test', title: 'Test' }] }]
+            }
+          }
+        })
+      )
+    ).toEqual([])
+  })
 })
 
 describe('extractEmail', () => {

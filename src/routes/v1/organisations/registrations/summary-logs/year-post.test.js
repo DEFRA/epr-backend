@@ -13,7 +13,14 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import {
+  COMPANY_2_ID,
+  defraIdMockAuthTokens
+} from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+/** @import { Organisation } from '#domain/organisations/model.js' */
 
 const mockLogger = createMockLogger()
 
@@ -148,6 +155,70 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('an operator signed in with Defra ID', () => {
+    /** @type {Organisation} */
+    let linkedOrganisation
+    /** @type {Organisation} */
+    let otherOrganisation
+
+    beforeAll(async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const repository = organisationsRepositoryFactory()
+      linkedOrganisation = await buildActiveOrg(repository)
+      otherOrganisation = await buildActiveOrg(repository, {
+        linkedDefraOrganisation: {
+          orgId: COMPANY_2_ID,
+          orgName: 'Company 2 Name',
+          linkedBy: {
+            email: 'someone.else@example.com',
+            id: '550e8400-e29b-41d4-a716-446655440002'
+          },
+          linkedAt: new Date().toISOString()
+        }
+      })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () =>
+            createInMemorySummaryLogsRepository()(mockLogger),
+          organisationsRepository: organisationsRepositoryFactory,
+          uploadsRepository: createInMemoryUploadsRepository()
+        }
+      })
+
+      await server.initialize()
+    })
+
+    /** @param {Organisation} organisation */
+    const uploadTo = (organisation) =>
+      server.inject({
+        method: 'POST',
+        url: buildUrl(
+          organisation.id,
+          organisation.registrations[0].id,
+          new Date().getFullYear()
+        ),
+        headers: {
+          Authorization: `Bearer ${defraIdMockAuthTokens.validToken}`
+        },
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+    it('returns 201 for the organisation the operator is linked to', async () => {
+      const response = await uploadTo(linkedOrganisation)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('returns 403 for an active organisation linked to someone else', async () => {
+      const response = await uploadTo(otherOrganisation)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
     })
   })
 

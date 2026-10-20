@@ -202,6 +202,32 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toEqual(message)
   })
 
+  it('returns 422 if payload is missing its form pages', async ({ server }) => {
+    const { pages: _, ...definition } = organisationFixture.meta.definition
+    const payload = {
+      ...organisationFixture,
+      meta: { ...organisationFixture.meta, definition }
+    }
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract email from answers')
+  })
+
+  it('returns 422 if payload is missing its answer data', async ({
+    server
+  }) => {
+    const { data: _, ...payload } = organisationFixture
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract email from answers')
+  })
+
   it('returns 422 if payload is missing regulatorEmail', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
