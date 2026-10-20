@@ -14,7 +14,6 @@ import {
 } from '#root/reports/repository/helpers.js'
 import Boom from '@hapi/boom'
 import {
-  validateClearResubmissionRequired,
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
@@ -606,24 +605,6 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
 }
 
 /**
- * @param {Map<string, Report>} reports
- * @param {import('./port.js').ClearResubmissionRequiredParams} params
- * @returns {Promise<boolean>}
- */
-const clearResubmissionRequired = async (reports, params) => {
-  const { reportId, version } = validateClearResubmissionRequired(params)
-
-  const report = reports.get(reportId)
-  if (report?.version !== version) {
-    return false
-  }
-
-  const { resubmissionRequired: _cleared, ...rest } = report
-  reports.set(reportId, { ...rest, version: version + 1 })
-  return true
-}
-
-/**
  * Returns true when any report for the org/reg was submitted strictly after
  * `since`. SUBMITTED is terminal and each submission is a distinct document, so
  * the denormalised `status.submitted` slot is the single submission instant.
@@ -690,8 +671,6 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
       markSubmittedReportsRequiringResubmission(reports, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
-    clearResubmissionRequired: (params) =>
-      clearResubmissionRequired(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
       hasReportSubmittedSince(reports, organisationId, registrationId, since)
   })

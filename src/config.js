@@ -366,12 +366,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
     },
-    clearUnwarrantedResubmissionFlags: {
-      doc: 'Feature Flag: Let the startup sweep clear closed-period resubmission flags whose reported figures are unchanged, rather than only reporting them',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_CLEAR_UNWARRANTED_RESUBMISSION_FLAGS'
-    },
     reconcileStalePrnProjections: {
       doc: 'Feature Flag: Let the startup sweep repair PRN projections whose status lags their ledger, rather than only reporting them (PAE-1908)',
       format: Boolean,
