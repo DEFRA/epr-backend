@@ -28,7 +28,7 @@ export async function buildActiveOrg(organisationsRepository, overrides) {
     INITIAL_VERSION,
     prepareOrgUpdate(org, {
       status: ORGANISATION_STATUS.ACTIVE,
-      linkedDefraOrganisation: linkedDefraOrg
+      linkedDefraOrganisation: org.linkedDefraOrganisation ?? linkedDefraOrg
     })
   )
 

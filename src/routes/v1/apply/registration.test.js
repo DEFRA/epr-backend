@@ -138,6 +138,32 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toEqual(message)
   })
 
+  it('returns 422 if payload is missing its form pages', async ({ server }) => {
+    const { pages: _, ...definition } = registrationFixture.meta.definition
+    const payload = {
+      ...registrationFixture,
+      meta: { ...registrationFixture.meta, definition }
+    }
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract orgId from answers')
+  })
+
+  it('returns 422 if payload is missing its answer data', async ({
+    server
+  }) => {
+    const { data: _, ...payload } = registrationFixture
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract orgId from answers')
+  })
+
   it('returns 422 if payload is missing reference number', async ({
     server
   }) => {

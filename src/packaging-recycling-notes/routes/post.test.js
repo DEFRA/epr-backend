@@ -30,6 +30,14 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { packagingRecyclingNotesCreatePath } from './post.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -45,15 +53,16 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  *
  * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number } | null} [closingBalance]
  */
-const seedStream = (closingBalance = SEED_BALANCE) =>
+const seedStream = (
+  closingBalance = SEED_BALANCE,
+  ids = { organisationId, registrationId, accreditationId }
+) =>
   createInMemoryLedgerRepository(
     closingBalance
       ? [
           partialMock(
             buildLedgerEvent({
-              registrationId,
-              accreditationId,
-              organisationId,
+              ...ids,
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -990,6 +999,80 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
+    })
+  })
+
+  describe('an accreditation whose status comes from its status history', () => {
+    /** @type {StatusHistoryEntry[]} */
+    const cancelledHistory = [
+      { status: 'created', updatedAt: new Date('2025-12-01') },
+      { status: 'approved', updatedAt: new Date('2026-01-01') },
+      { status: 'cancelled', updatedAt: new Date('2026-03-01') }
+    ]
+
+    /** @param {StatusHistoryEntry[]} statusHistory */
+    const createPrnOn = async (statusHistory) => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.PLASTIC,
+        reprocessingType: REPROCESSING_TYPE.OUTPUT,
+        accreditationNumber: 'ACC-001',
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
+        statusHistory
+      })
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
+      const organisation = buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+      const ids = {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      }
+
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository(),
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            partialMock(organisation)
+          ]),
+          ledgerRepository: () => seedStream(SEED_BALANCE, ids)
+        }
+      })
+      await server.initialize()
+
+      try {
+        return await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${ids.organisationId}/registrations/${ids.registrationId}/accreditations/${ids.accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
+      } finally {
+        await server.stop()
+      }
+    }
+
+    it('refuses a PRN while the accreditation is cancelled', async () => {
+      const response = await createPrnOn(cancelledHistory)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Cannot create a PRN on a cancelled accreditation'
+      )
+    })
+
+    it('creates a PRN once the accreditation is approved again', async () => {
+      const response = await createPrnOn([
+        ...cancelledHistory,
+        { status: 'approved', updatedAt: new Date('2026-04-01') }
+      ])
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
   })
 })
