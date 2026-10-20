@@ -1,9 +1,6 @@
 import Joi from 'joi'
 
-import {
-  MATERIAL,
-  TONNAGE_MONITORING_MATERIALS
-} from '#domain/organisations/model.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 
 /**
  * What the record is for, once resolved. Glass is the only material that
@@ -13,12 +10,4 @@ import {
  */
 export const materialSchema = Joi.string().valid(
   ...TONNAGE_MONITORING_MATERIALS
-)
-
-/**
- * The material as the applicant declared it on the form, which is one of the
- * seven the form offers and so includes plain `glass`.
- */
-export const appliedForMaterialSchema = Joi.string().valid(
-  ...Object.values(MATERIAL)
 )

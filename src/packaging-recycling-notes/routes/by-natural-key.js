@@ -28,7 +28,6 @@ import {
   cancelPrnHandler
 } from './admin-cancel.js'
 import { packagingRecyclingNotesDecemberEligibility } from './december-eligibility.js'
-import { isServedUnder } from './get-by-id.js'
 import { createPrn, packagingRecyclingNotesCreate } from './post.js'
 import {
   packagingRecyclingNotesUpdateStatus,
@@ -112,6 +111,20 @@ const prnParams = { ...accreditationParams, prnId: prnIdSchema }
 const servedStatuses = Object.values(PRN_STATUS).filter(
   (status) => status !== PRN_STATUS.DELETED
 )
+
+/**
+ * Whether a PRN is one the accreditation serves. A deleted PRN is served by
+ * no one.
+ *
+ * @param {PackagingRecyclingNote | null} prn
+ * @param {AccreditationIds} ids
+ * @returns {prn is PackagingRecyclingNote}
+ */
+const isServedUnder = (prn, { organisationId, accreditationId }) =>
+  prn !== null &&
+  prn.organisation.id === organisationId &&
+  prn.accreditation.id === accreditationId &&
+  prn.status.currentStatus !== PRN_STATUS.DELETED
 
 const issuedStatuses = [
   PRN_STATUS.AWAITING_ACCEPTANCE,

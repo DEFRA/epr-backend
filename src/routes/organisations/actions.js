@@ -1,5 +1,4 @@
 import Joi from 'joi'
-import { StatusCodes } from 'http-status-codes'
 
 import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
@@ -7,10 +6,7 @@ import {
   linkOrganisation,
   organisationsLink
 } from '#routes/v1/organisations/link.js'
-import {
-  organisationsUserPut,
-  putOrganisationUser
-} from '#routes/v1/organisations/user/put.js'
+import { organisationsUserPut } from '#routes/v1/organisations/user/put.js'
 import { atNaturalKeys } from './at-natural-keys.js'
 import { linkedDefraOrganisationViewSchema } from './response.schema.js'
 import { organisationParams, organisationPath } from './view-route.js'
@@ -44,11 +40,7 @@ export const organisationLink = atNaturalKeys(
 )
 
 export const organisationUserPut = atNaturalKeys(
-  {
-    ...organisationsUserPut,
-    options: { ...organisationsUserPut.options, response: { schema: false } },
-    handler: putOrganisationUser(StatusCodes.NO_CONTENT)
-  },
+  organisationsUserPut,
   `${organisationPath}/user`,
   organisationParams
 )

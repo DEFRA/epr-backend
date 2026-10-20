@@ -1,6 +1,6 @@
 /**
  * @typedef {{
- *   organisationNumber: number,
+ *   organisationNumber: string,
  *   registrationNumber: string,
  *   year: number,
  *   accredited: boolean,
