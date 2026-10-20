@@ -66,16 +66,20 @@ const it =
           const client = await MongoClient.connect(db)
           try {
             const mongoDb = client.db(DATABASE_NAME)
+            const organisationsRepository = (
+              await createOrganisationsRepository(mongoDb)
+            )()
             const repositories = {
               ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
-              organisationsRepository: (
-                await createOrganisationsRepository(mongoDb)
-              )(),
+              organisationsRepository,
               overseasSitesRepository: (
                 await createOverseasSitesRepository(mongoDb)
               )(),
               summaryLogRowStatesRepository: (
-                await createMongoSummaryLogRowStatesRepository(mongoDb)
+                await createMongoSummaryLogRowStatesRepository(
+                  mongoDb,
+                  organisationsRepository
+                )
               )(),
               reportsRepository: (await createReportsRepository(mongoDb))()
             }

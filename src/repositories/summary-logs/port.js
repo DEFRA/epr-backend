@@ -40,14 +40,7 @@
  */
 
 /**
- * Names a registration's summary logs by the numbers the domain issues, in
- * place of their database ids.
- *
- * @typedef {Object} SummaryLogKey
- * @property {string} organisationNumber
- * @property {string} registrationNumber
- * @property {string|null} [accreditationNumber] - `null` for registered-only;
- *   absent matches every accreditation
+ * @typedef {import('#repositories/organisations/natural-keys.js').NaturalKey} SummaryLogKey
  */
 
 /**

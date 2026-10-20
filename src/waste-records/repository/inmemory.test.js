@@ -1,13 +1,23 @@
 import { describe, it as base, expect } from 'vitest'
 
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from './inmemory.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
 import { DEFAULT_LEDGER_ID } from './test-data.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  summaryLogRowStatesRepository: async ({}, use) => {
-    await use(createInMemorySummaryLogRowStatesRepository())
+  organisationsRepository: async ({}, use) => {
+    await use(createInMemoryOrganisationsRepository()())
+  },
+
+  summaryLogRowStatesRepository: async (
+    /** @type {*} */ { organisationsRepository },
+    use
+  ) => {
+    await use(
+      createInMemorySummaryLogRowStatesRepository([], organisationsRepository)
+    )
   }
 })
 

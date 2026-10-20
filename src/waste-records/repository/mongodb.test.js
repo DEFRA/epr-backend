@@ -9,6 +9,8 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import {
   createMongoSummaryLogRowStatesRepository,
@@ -19,6 +21,9 @@ import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
 import { buildSummaryLogRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
+
+/** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+const noOrganisations = partialMock({})
 
 const it = mongoIt.extend({
   mongoClient: async (/** @type {*} */ { db }, use) => {
@@ -43,15 +48,23 @@ const it = mongoIt.extend({
     await use(database.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME))
   },
 
+  organisationsRepository: async (/** @type {*} */ { mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    await use((await createOrganisationsRepository(database))())
+  },
+
   summaryLogRowStatesRepository: async (
-    /** @type {*} */ { mongoClient },
+    /** @type {*} */ { mongoClient, organisationsRepository },
     use
   ) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database
       .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .deleteMany({})
-    const factory = await createMongoSummaryLogRowStatesRepository(database)
+    const factory = await createMongoSummaryLogRowStatesRepository(
+      database,
+      organisationsRepository
+    )
     await use(factory)
   }
 })
@@ -123,7 +136,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
     const repository = (
-      await createMongoSummaryLogRowStatesRepository(database)
+      await createMongoSummaryLogRowStatesRepository(database, noOrganisations)
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
@@ -212,7 +225,8 @@ describe('summary-log row states repository - mongodb implementation', () => {
       const stubDb = { collection: () => stubCollection }
       const repository = (
         await createMongoSummaryLogRowStatesRepository(
-          /** @type {*} */ (stubDb)
+          /** @type {*} */ (stubDb),
+          noOrganisations
         )
       )()
 
@@ -248,7 +262,7 @@ describe('write round-trip count', () => {
       SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
     )
     const repository = (
-      await createMongoSummaryLogRowStatesRepository(database)
+      await createMongoSummaryLogRowStatesRepository(database, noOrganisations)
     )()
 
     const roundTripsFor = async (rowCount, summaryLogId) => {

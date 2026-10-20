@@ -113,7 +113,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
       const summaryLogRowStatesFactory =
-        await createMongoSummaryLogRowStatesRepository(database)
+        await createMongoSummaryLogRowStatesRepository(database, organisations)
 
       await use({
         organisations,

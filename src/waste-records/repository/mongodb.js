@@ -22,6 +22,7 @@ import {
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
+import { readsByNaturalKey } from './natural-keys.js'
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
@@ -396,20 +397,28 @@ const performFindDistinctDataKeys = (collection) => async () => {
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ *   - Resolves natural keys to the ids row states are stored under
  * @returns {Promise<import('./port.js').SummaryLogRowStatesRepositoryFactory>}
  */
-export const createMongoSummaryLogRowStatesRepository = async (db) => {
+export const createMongoSummaryLogRowStatesRepository = async (
+  db,
+  organisationsRepository
+) => {
   const collection = await ensureSummaryLogRowStatesCollection(db)
 
-  return () => ({
-    upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
-    findWasteRecordStatesForSummaryLog:
-      performFindWasteRecordStatesForSummaryLog(collection),
-    findRowStatesForSummaryLogFile:
-      performFindRowStatesForSummaryLogFile(collection),
-    findRowHistory: performFindRowHistory(collection),
-    streamRowStatesForSummaryLogs:
-      performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection)
-  })
+  return () => {
+    const byId = {
+      upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
+      findWasteRecordStatesForSummaryLog:
+        performFindWasteRecordStatesForSummaryLog(collection),
+      findRowStatesForSummaryLogFile:
+        performFindRowStatesForSummaryLogFile(collection),
+      findRowHistory: performFindRowHistory(collection),
+      streamRowStatesForSummaryLogs:
+        performStreamRowStatesForSummaryLogs(collection),
+      findDistinctDataKeys: performFindDistinctDataKeys(collection)
+    }
+    return { ...byId, ...readsByNaturalKey(byId, organisationsRepository) }
+  }
 }

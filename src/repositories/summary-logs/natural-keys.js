@@ -1,17 +1,13 @@
+import { resolveNaturalKey } from '#repositories/organisations/natural-keys.js'
+
 /**
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { StoredKey } from '#repositories/organisations/natural-keys.js'
  * @import { KeyedSummaryLogWithId, SummaryLogKey, SummaryLogWithId } from './port.js'
  */
 
 /**
- * The stored ids a key names. `accreditationId` is absent when the key
- * matches every accreditation.
- *
- * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationId?: string | null
- * }} StoredSummaryLogKey
+ * @typedef {StoredKey} StoredSummaryLogKey
  */
 
 /**
@@ -26,48 +22,15 @@
  *   toKeyed: (stored: SummaryLogWithId) => KeyedSummaryLogWithId
  * } | null>}
  */
-export const resolveSummaryLogKey = async (
-  organisationsRepository,
-  { organisationNumber, registrationNumber, accreditationNumber }
-) => {
-  const organisation = await organisationsRepository.findByOrgId(
-    Number(organisationNumber)
-  )
-  const registration = organisation?.registrations.find(
-    (candidate) => candidate.registrationNumber === registrationNumber
-  )
-  if (!organisation || !registration) {
+export const resolveSummaryLogKey = async (organisationsRepository, key) => {
+  const resolved = await resolveNaturalKey(organisationsRepository, key)
+  if (!resolved) {
     return null
   }
 
-  const accreditationNumbers = new Map(
-    organisation.accreditations.map(({ id, accreditationNumber: number }) => [
-      id,
-      number
-    ])
-  )
-
-  /** @type {StoredSummaryLogKey} */
-  const storedKey = {
-    organisationId: organisation.id,
-    registrationId: registration.id
-  }
-  if (accreditationNumber !== undefined) {
-    if (accreditationNumber === null) {
-      storedKey.accreditationId = null
-    } else {
-      const accreditation = organisation.accreditations.find(
-        (candidate) => candidate.accreditationNumber === accreditationNumber
-      )
-      if (!accreditation) {
-        return null
-      }
-      storedKey.accreditationId = accreditation.id
-    }
-  }
-
+  const { organisationNumber, registrationNumber } = key
   return {
-    storedKey,
+    storedKey: resolved.storedKey,
     toKeyed: ({
       id,
       version,
@@ -85,8 +48,7 @@ export const resolveSummaryLogKey = async (
         organisationNumber,
         registrationNumber,
         ...(accreditationId !== undefined && {
-          accreditationNumber:
-            accreditationId && accreditationNumbers.get(accreditationId)
+          accreditationNumber: resolved.accreditationNumberOf(accreditationId)
         })
       }
     })

@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { readsByNaturalKey } from './natural-keys.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
@@ -200,7 +202,7 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @returns {import('./port.js').SummaryLogRowStatesRepository}
+ * @returns {Omit<import('./port.js').SummaryLogRowStatesRepository, keyof import('./natural-keys.js').ReadsByNaturalKey>}
  */
 const repositoryOver = (storage) => ({
   /**
@@ -264,12 +266,18 @@ const repositoryOver = (storage) => ({
 
 /**
  * @param {SummaryLogRowState[]} [initialSummaryLogRowStates]
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [organisationsRepository]
+ *   - Resolves natural keys to the ids row states are stored under
  * @returns {import('./port.js').SummaryLogRowStatesRepositoryFactory}
  */
 export const createInMemorySummaryLogRowStatesRepository = (
-  initialSummaryLogRowStates = []
+  initialSummaryLogRowStates = [],
+  organisationsRepository = createInMemoryOrganisationsRepository()()
 ) => {
   const storage = initialSummaryLogRowStates
 
-  return () => repositoryOver(storage)
+  return () => {
+    const byId = repositoryOver(storage)
+    return { ...byId, ...readsByNaturalKey(byId, organisationsRepository) }
+  }
 }

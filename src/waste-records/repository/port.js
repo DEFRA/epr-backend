@@ -41,6 +41,32 @@
  */
 
 /**
+ * Names a registration by the numbers the domain issues, in place of its
+ * database ids.
+ *
+ * @typedef {Omit<import('#repositories/organisations/natural-keys.js').NaturalKey, 'accreditationNumber'>} RegistrationKey
+ */
+
+/**
+ * Names a ledger by the numbers the domain issues, in place of its database
+ * ids.
+ *
+ * @typedef {RegistrationKey & {
+ *   accreditationNumber: string | null
+ * }} LedgerKey - `accreditationNumber` is `null` for registered-only
+ */
+
+/**
+ * A row one submission committed, named by its ledger's numbers in place of
+ * its database ids. The accreditation number is `null` for registered-only,
+ * and absent when the organisation no longer holds the accreditation.
+ *
+ * @typedef {WasteRecordState & RegistrationKey & {
+ *   accreditationNumber?: string | null
+ * }} KeyedRowState
+ */
+
+/**
  * @typedef {Object} SummaryLogRowStatesRepository
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
@@ -62,6 +88,13 @@
  *   summary log document's id. Spans every ledger partition of the
  *   registration, so a caller that does not know the accreditation reads it
  *   back off the rows.
+ * @property {(key: LedgerKey, summaryLogId: string) => Promise<WasteRecordState[]>} findWasteRecordStates
+ *   As `findWasteRecordStatesForSummaryLog`, for the ledger the key names.
+ *   Returns an empty list when the key names no ledger.
+ * @property {(key: RegistrationKey, fileId: string) => Promise<KeyedRowState[]>} findRowStatesForFile
+ *   As `findRowStatesForSummaryLogFile`, for the registration the key names,
+ *   each row carrying the number of the accreditation it was committed under.
+ *   Returns an empty list when the key names no registration.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
  * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
