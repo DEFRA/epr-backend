@@ -13,6 +13,9 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const mockLogger = createMockLogger()
@@ -148,6 +151,57 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('an operator signed in with Defra ID', () => {
+    let linkedOrganisation
+    let otherOrganisation
+
+    beforeAll(async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const repository = organisationsRepositoryFactory()
+      linkedOrganisation = await buildActiveOrg(repository)
+      otherOrganisation = await buildApprovedOrg(repository)
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () =>
+            createInMemorySummaryLogsRepository()(mockLogger),
+          organisationsRepository: organisationsRepositoryFactory,
+          uploadsRepository: createInMemoryUploadsRepository()
+        }
+      })
+
+      await server.initialize()
+    })
+
+    const uploadTo = (organisation) =>
+      server.inject({
+        method: 'POST',
+        url: buildUrl(
+          organisation.id,
+          organisation.registrations[0].id,
+          new Date().getFullYear()
+        ),
+        headers: {
+          Authorization: `Bearer ${defraIdMockAuthTokens.validToken}`
+        },
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+    it('returns 201 for the organisation the operator is linked to', async () => {
+      const response = await uploadTo(linkedOrganisation)
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('returns 403 for another organisation', async () => {
+      const response = await uploadTo(otherOrganisation)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
     })
   })
 

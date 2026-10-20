@@ -259,6 +259,39 @@ describe('GET accreditation overseas-sites', () => {
     expect(JSON.parse(response.payload)).toStrictEqual({})
   })
 
+  it("returns only the requested registration's sites, not another registration's in the same organisation", async () => {
+    const { registration, accreditation } = buildScenario()
+    const otherAccreditation = buildAccreditation({
+      wasteProcessingType: 'exporter'
+    })
+    const otherRegistration = buildRegistration({
+      wasteProcessingType: 'exporter',
+      accreditationId: otherAccreditation.id,
+      overseasSites: {}
+    })
+    const organisationWithTwoRegistrations = buildOrganisation({
+      registrations: [registration, otherRegistration],
+      accreditations: [accreditation, otherAccreditation]
+    })
+    await startServer({
+      organisation: organisationWithTwoRegistrations,
+      sites: [siteOne, siteTwo]
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisationWithTwoRegistrations.id,
+        registrationId: otherRegistration.id,
+        accreditationId: otherAccreditation.id
+      }),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({})
+  })
+
   it('401s when not authenticated', async () => {
     const { organisation, registration, accreditation } = buildScenario()
     await startServer({ organisation, sites: [siteOne, siteTwo] })

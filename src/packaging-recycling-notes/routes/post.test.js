@@ -30,6 +30,12 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { packagingRecyclingNotesCreatePath } from './post.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -990,6 +996,73 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
+    })
+  })
+
+  describe('an accreditation approved again after it was cancelled', () => {
+    let server
+
+    afterAll(async () => {
+      await server?.stop()
+    })
+
+    it('creates a PRN', async () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.PLASTIC,
+        reprocessingType: REPROCESSING_TYPE.OUTPUT,
+        accreditationNumber: 'ACC-001',
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: new Date('2025-12-01') },
+          { status: 'approved', updatedAt: new Date('2026-01-01') },
+          { status: 'cancelled', updatedAt: new Date('2026-03-01') },
+          { status: 'approved', updatedAt: new Date('2026-04-01') }
+        ]
+      })
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
+      const organisation = buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+      const ids = {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      }
+
+      server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository(),
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            organisation
+          ]),
+          ledgerRepository: createInMemoryLedgerRepository([
+            partialMock(
+              buildLedgerEvent({
+                ...ids,
+                number: 1,
+                payload: { summaryLogId: 'log-1', creditTotal: 500 },
+                openingBalance: { amount: 0, availableAmount: 0 },
+                closingBalance: SEED_BALANCE
+              })
+            )
+          ])
+        }
+      })
+      await server.initialize()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${ids.organisationId}/registrations/${ids.registrationId}/accreditations/${ids.accreditationId}/packaging-recycling-notes`,
+        ...asOperator(),
+        payload: validPayload
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
   })
 })

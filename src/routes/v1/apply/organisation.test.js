@@ -202,6 +202,55 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toEqual(message)
   })
 
+  it('returns 422 if payload is missing its form pages', async ({ server }) => {
+    const payload = structuredClone(organisationFixture)
+    delete payload.meta.definition.pages
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract email from answers')
+  })
+
+  it('returns 422 if payload is missing its answer data', async ({
+    server
+  }) => {
+    const payload = structuredClone(organisationFixture)
+    delete payload.data
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    const body = JSON.parse(response.payload)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(body.message).toEqual('Could not extract email from answers')
+  })
+
+  it('returns 200 when the nations answer is missing, since nations are not required', async ({
+    server
+  }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockImplementation((name) => {
+      if (name === 'counters') {
+        return { findOneAndUpdate: mockFindOneAndUpdate }
+      }
+      return { insertOne: mockInsertOne }
+    })
+
+    const payload = structuredClone(organisationFixture)
+    delete payload.data.main.VcdRNr
+
+    const response = await server.inject({ method: 'POST', url, payload })
+
+    expect(response.statusCode).toEqual(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual({
+      orgId: 500122,
+      orgName: 'ACME ltd',
+      referenceNumber: '12345678901234567890abcd'
+    })
+  })
+
   it('returns 422 if payload is missing regulatorEmail', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
