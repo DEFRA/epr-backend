@@ -84,7 +84,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     expect(body(response)).toEqual({
       organisationNumber: String(organisation.orgId),
       name: 'ACME ltd',
-      tradingName: 'ACME ltd',
+      displayName: 'ACME ltd',
       status: { current: 'created' },
       submittedToRegulator: { code: 'ea' },
       linkedDefraOrganisation: {
@@ -192,6 +192,55 @@ describe('GET /organisations/{organisationNumber}', () => {
     expect(body(response).linkedDefraOrganisation.linkedAt).toBe(
       linked.linkedAt
     )
+  })
+
+  describe('display name', () => {
+    /** @param {{ name: string, tradingName?: string }} companyDetails */
+    const displayNameFor = async (companyDetails) => {
+      const base = buildOrganisation()
+      const organisation = {
+        ...base,
+        companyDetails: { ...base.companyDetails, ...companyDetails }
+      }
+      await serve(organisation)
+      return body(await get(`/organisations/${organisation.orgId}`))
+    }
+
+    it('is the trading name when the organisation has one', async () => {
+      expect(
+        await displayNameFor({
+          name: 'Kirkby Plastics Ltd',
+          tradingName: 'Kirkby Recycling'
+        })
+      ).toMatchObject({
+        name: 'Kirkby Plastics Ltd',
+        displayName: 'Kirkby Recycling'
+      })
+    })
+
+    it('is the company name when there is no trading name', async () => {
+      expect(
+        await displayNameFor({
+          name: 'Kirkby Plastics Ltd',
+          tradingName: undefined
+        })
+      ).toMatchObject({ displayName: 'Kirkby Plastics Ltd' })
+    })
+
+    it('is the company name when the trading name is blank', async () => {
+      expect(
+        await displayNameFor({ name: 'Kirkby Plastics Ltd', tradingName: '  ' })
+      ).toMatchObject({ displayName: 'Kirkby Plastics Ltd' })
+    })
+
+    it('serves no trading name', async () => {
+      expect(
+        await displayNameFor({
+          name: 'Kirkby Plastics Ltd',
+          tradingName: 'Kirkby Recycling'
+        })
+      ).not.toHaveProperty('tradingName')
+    })
   })
 
   it('returns 404 for an unknown organisation number', async () => {
