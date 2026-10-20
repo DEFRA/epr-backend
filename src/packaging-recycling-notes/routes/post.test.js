@@ -37,6 +37,8 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
@@ -1000,27 +1002,23 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
   })
 
-  describe('an accreditation approved again after it was cancelled', () => {
-    /** @type {Awaited<ReturnType<typeof createTestServer>>} */
-    let server
+  describe('an accreditation whose status comes from its status history', () => {
+    /** @type {StatusHistoryEntry[]} */
+    const cancelledHistory = [
+      { status: 'created', updatedAt: new Date('2025-12-01') },
+      { status: 'approved', updatedAt: new Date('2026-01-01') },
+      { status: 'cancelled', updatedAt: new Date('2026-03-01') }
+    ]
 
-    afterAll(async () => {
-      await server?.stop()
-    })
-
-    it('creates a PRN', async () => {
+    /** @param {StatusHistoryEntry[]} statusHistory */
+    const createPrnOn = async (statusHistory) => {
       const accreditation = buildAccreditation({
         material: MATERIAL.PLASTIC,
         reprocessingType: REPROCESSING_TYPE.OUTPUT,
         accreditationNumber: 'ACC-001',
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: new Date('2025-12-01') },
-          { status: 'approved', updatedAt: new Date('2026-01-01') },
-          { status: 'cancelled', updatedAt: new Date('2026-03-01') },
-          { status: 'approved', updatedAt: new Date('2026-04-01') }
-        ]
+        statusHistory
       })
       const registration = buildRegistration({
         accreditationId: accreditation.id
@@ -1035,7 +1033,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         accreditationId: accreditation.id
       }
 
-      server = await createTestServer({
+      const server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository(),
@@ -1047,12 +1045,32 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       })
       await server.initialize()
 
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${ids.organisationId}/registrations/${ids.registrationId}/accreditations/${ids.accreditationId}/packaging-recycling-notes`,
-        ...asOperator(),
-        payload: validPayload
-      })
+      try {
+        return await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${ids.organisationId}/registrations/${ids.registrationId}/accreditations/${ids.accreditationId}/packaging-recycling-notes`,
+          ...asOperator(),
+          payload: validPayload
+        })
+      } finally {
+        await server.stop()
+      }
+    }
+
+    it('refuses a PRN while the accreditation is cancelled', async () => {
+      const response = await createPrnOn(cancelledHistory)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Cannot create a PRN on a cancelled accreditation'
+      )
+    })
+
+    it('creates a PRN once the accreditation is approved again', async () => {
+      const response = await createPrnOn([
+        ...cancelledHistory,
+        { status: 'approved', updatedAt: new Date('2026-04-01') }
+      ])
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })

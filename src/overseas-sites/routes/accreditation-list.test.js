@@ -260,14 +260,16 @@ describe('GET accreditation overseas-sites', () => {
   })
 
   it("returns only the requested registration's sites, not another registration's in the same organisation", async () => {
-    const { registration, accreditation } = buildScenario()
+    const { registration, accreditation } = buildScenario({
+      overseasSites: { '001': { overseasSiteId: SITE_ONE_ID } }
+    })
     const otherAccreditation = buildAccreditation({
       wasteProcessingType: 'exporter'
     })
     const otherRegistration = buildRegistration({
       wasteProcessingType: 'exporter',
       accreditationId: otherAccreditation.id,
-      overseasSites: {}
+      overseasSites: { '002': { overseasSiteId: SITE_TWO_ID } }
     })
     const organisationWithTwoRegistrations = buildOrganisation({
       registrations: [registration, otherRegistration],
@@ -289,7 +291,18 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({})
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      '002': {
+        name: 'Alpha Reprocessor',
+        country: 'France',
+        address: {
+          line1: '1 Rue de Test',
+          townOrCity: 'Paris'
+        },
+        coordinates: null,
+        validFrom: null
+      }
+    })
   })
 
   it('401s when not authenticated', async () => {

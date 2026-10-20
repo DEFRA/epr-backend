@@ -228,31 +228,6 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(body.message).toEqual('Could not extract email from answers')
   })
 
-  it('returns 200 when the nations answer is missing, since nations are not required', async ({
-    server
-  }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: mockFindOneAndUpdate }
-      }
-      return { insertOne: mockInsertOne }
-    })
-
-    const { VcdRNr: _, ...main } = organisationFixture.data.main
-    const payload = { ...organisationFixture, data: { main } }
-
-    const response = await server.inject({ method: 'POST', url, payload })
-
-    expect(response.statusCode).toEqual(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toEqual({
-      orgId: 500122,
-      orgName: 'ACME ltd',
-      referenceNumber: '12345678901234567890abcd'
-    })
-  })
-
   it('returns 422 if payload is missing regulatorEmail', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',

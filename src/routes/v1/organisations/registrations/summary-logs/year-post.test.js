@@ -14,8 +14,10 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
+import {
+  COMPANY_2_ID,
+  defraIdMockAuthTokens
+} from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -167,7 +169,17 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
         createInMemoryOrganisationsRepository([])
       const repository = organisationsRepositoryFactory()
       linkedOrganisation = await buildActiveOrg(repository)
-      otherOrganisation = await buildApprovedOrg(repository)
+      otherOrganisation = await buildActiveOrg(repository, {
+        linkedDefraOrganisation: {
+          orgId: COMPANY_2_ID,
+          orgName: 'Company 2 Name',
+          linkedBy: {
+            email: 'someone.else@example.com',
+            id: '550e8400-e29b-41d4-a716-446655440002'
+          },
+          linkedAt: new Date().toISOString()
+        }
+      })
 
       server = await createTestServer({
         repositories: {
@@ -202,7 +214,7 @@ describe('POST .../registrations/{registrationId}/summary-logs/{year}', () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    it('returns 403 for another organisation', async () => {
+    it('returns 403 for an active organisation linked to someone else', async () => {
       const response = await uploadTo(otherOrganisation)
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
