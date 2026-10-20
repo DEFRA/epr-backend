@@ -298,6 +298,16 @@ describe('report routes by natural key', () => {
         expect(detail).not.toHaveProperty('registrationId')
       })
 
+      it('refuses the expansion to an operator', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=detail`,
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      })
+
       it('refuses an expansion it does not offer', async () => {
         const response = await server.inject({
           method: 'GET',

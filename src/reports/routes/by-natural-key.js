@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -117,6 +118,25 @@ const mapRead = (request, h, response) => {
  */
 const expandableReportsGetDetail = {
   ...reportsGetDetail,
+  handler: (request, h) => {
+    if (
+      request.query.expand === REPORT_EXPANSION.detail &&
+      // The route's auth admits only credentials with a scope.
+      !(
+        /** @type {string[]} */ (request.auth.credentials.scope).includes(
+          SCOPES.adminRead
+        )
+      )
+    ) {
+      throw Boom.forbidden('Expanding a report needs admin.read')
+    }
+    return reportsGetDetail.handler(
+      /** @type {Parameters<typeof reportsGetDetail.handler>[0]} */ (
+        /** @type {unknown} */ (request)
+      ),
+      /** @type {HapiResponseToolkit} */ (h)
+    )
+  },
   options: {
     ...reportsGetDetail.options,
     validate: {
