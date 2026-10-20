@@ -35,13 +35,6 @@ import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { reportRoutesByNaturalKey } from '#reports/routes/by-natural-key.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
-import {
-  registrationAccreditationGet,
-  registrationAccreditationsGet,
-  registrationGet
-} from '#routes/v1/organisations/registrations/get.js'
-import { registrationsList } from '#routes/v1/organisations/registrations/list/get.js'
-import { registrationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/waste-balance-ledger/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -98,11 +91,6 @@ const router = {
         ...reportRoutesByNaturalKey,
         adminMeGet,
         accreditationWasteBalanceLedgerGet,
-        registrationsList,
-        registrationGet,
-        registrationAccreditationsGet,
-        registrationAccreditationGet,
-        registrationWasteBalanceLedgerGet,
         dlqMessagesGet,
         dlqPurgePost
       ])

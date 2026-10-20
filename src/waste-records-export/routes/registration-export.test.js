@@ -14,35 +14,32 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-import {
-  registrationWasteRecordsExport,
-  registrationWasteRecordsExportPath
-} from './registration-export.js'
-
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const ORGANISATION_ID = 'org-1'
 const ORGANISATION_NUMBER = 500123
 const REGISTRATION_ID = 'reg-1'
+const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
-const buildRegistration = (overrides = {}) => {
+const buildRegistration = () => {
   const [, exporterRegistration] = buildReadOrganisation().registrations
   return {
     ...exporterRegistration,
     id: REGISTRATION_ID,
     material: 'plastic',
     submittedToRegulator: 'ea',
-    registrationNumber: 'R26ER5000000002PA',
+    registrationNumber: REGISTRATION_NUMBER,
     accreditation: null,
     overseasSites: {},
-    status: REGISTRATION_STATUS.CREATED,
-    ...overrides
+    status: REGISTRATION_STATUS.APPROVED,
+    statusHistory: granted('approved'),
+    validFrom: '2026-02-01'
   }
 }
 
-const receivedRowState = (overrides = {}) => ({
+const receivedRowState = () => ({
   rowId: '1001',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -51,8 +48,7 @@ const receivedRowState = (overrides = {}) => ({
     outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
     reasons: [],
     transactionAmount: 0
-  },
-  ...overrides
+  }
 })
 
 const submittedLog = (fileId, submittedAt) => ({
@@ -69,17 +65,9 @@ const submittedLog = (fileId, submittedAt) => ({
  * row-state adapters, so the route's own wiring is what is under test. An
  * empty `ledgerEvents` stands for a registration that has never submitted.
  *
- * @param {{
- *   rows?: any[],
- *   registration?: any,
- *   ledgerEvents?: LedgerEvent[],
- *   findRegistrationById?: () => Promise<any>,
- *   findById?: () => Promise<any>
- * }} [options]
+ * @param {{ ledgerEvents?: LedgerEvent[] }} [options]
  */
 const createServer = async ({
-  rows = [receivedRowState()],
-  registration = buildRegistration(),
   ledgerEvents = /** @type {LedgerEvent[]} */ ([
     buildLedgerEvent({
       organisationId: ORGANISATION_ID,
@@ -87,16 +75,14 @@ const createServer = async ({
       accreditationId: null,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
     })
-  ]),
-  findRegistrationById = () => Promise.resolve(registration),
-  findById
+  ])
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
     orgId: ORGANISATION_NUMBER,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
-    registrations: [registration]
+    registrations: [/** @type {any} */ (buildRegistration())]
   })
 
   const summaryLogRowStatesRepository =
@@ -107,19 +93,23 @@ const createServer = async ({
       registrationId: REGISTRATION_ID,
       accreditationId: null
     },
-    rows,
+    [receivedRowState()],
     FILE_ID
   )
 
   return createTestServer({
     repositories: {
+      // The export serves the records the path resolved, so nothing reads
+      // them again by id.
       organisationsRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
-        findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
+        findById: vi.fn(() => Promise.reject(new Error('read again'))),
         findByOrgId: vi.fn((orgId) =>
           Promise.resolve(orgId === organisation.orgId ? organisation : null)
         ),
-        findRegistrationById: vi.fn(findRegistrationById)
+        findRegistrationById: vi.fn(() =>
+          Promise.reject(new Error('read again'))
+        )
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => createInMemoryLedgerRepository(ledgerEvents)(),
@@ -135,20 +125,11 @@ const createServer = async ({
   })
 }
 
-const url = `/v1/organisations/${ORGANISATION_ID}/registrations/${REGISTRATION_ID}/waste-records/export.csv`
+const registrations = `/organisations/${ORGANISATION_NUMBER}/registrations`
+const url = `${registrations}/${REGISTRATION_NUMBER}/waste-records/export.csv`
 
-describe(`GET ${registrationWasteRecordsExportPath}`, () => {
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/waste-records/export.csv', () => {
   setupAuthContext()
-
-  it('is registered at the stated path', () => {
-    expect(registrationWasteRecordsExport.method).toBe('GET')
-    expect(registrationWasteRecordsExport.path).toBe(
-      registrationWasteRecordsExportPath
-    )
-    expect(registrationWasteRecordsExportPath).toBe(
-      '/v1/organisations/{organisationId}/registrations/{registrationId}/waste-records/export.csv'
-    )
-  })
 
   it('streams the latest records of the registration as CSV', async () => {
     const server = await createServer()
@@ -183,22 +164,6 @@ describe(`GET ${registrationWasteRecordsExportPath}`, () => {
     )
   })
 
-  it('serves the download unnamed when the registration number cannot be read', async () => {
-    const server = await createServer({
-      findRegistrationById: () => Promise.reject(new Error('no registration'))
-    })
-
-    const response = await server.inject({
-      method: 'GET',
-      url,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(response.headers['content-disposition']).toBeUndefined()
-    expect(response.payload).toContain('Acme Ltd')
-  })
-
   it('serves a header-only CSV for a registration that has never submitted', async () => {
     const server = await createServer({ ledgerEvents: [] })
 
@@ -212,6 +177,27 @@ describe(`GET ${registrationWasteRecordsExportPath}`, () => {
     const lines = response.payload.split('\n').filter((line) => line !== '')
     expect(lines).toHaveLength(1)
     expect(lines[0]).toContain('Organisation Name')
+  })
+
+  it.each([
+    [
+      'an unknown organisation number',
+      `/organisations/999999/registrations/${REGISTRATION_NUMBER}/waste-records/export.csv`
+    ],
+    [
+      'a registration number the organisation does not serve',
+      `${registrations}/R26XX0000000000PL/waste-records/export.csv`
+    ]
+  ])('returns 404 for %s', async (_, exportUrl) => {
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: exportUrl,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   describe('authorisation', () => {
@@ -263,78 +249,5 @@ describe(`GET ${registrationWasteRecordsExportPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
-  })
-})
-
-describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/waste-records/export.csv', () => {
-  setupAuthContext()
-
-  const approved = buildRegistration({
-    status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: granted('approved'),
-    validFrom: '2026-02-01'
-  })
-  const registrations = `/organisations/${ORGANISATION_NUMBER}/registrations`
-
-  it('serves the export the route by database id serves', async () => {
-    const server = await createServer({ registration: approved })
-
-    const byId = await server.inject({
-      method: 'GET',
-      url,
-      ...asServiceMaintainer()
-    })
-    const byNumber = await server.inject({
-      method: 'GET',
-      url: `${registrations}/${approved.registrationNumber}/waste-records/export.csv`,
-      ...asServiceMaintainer()
-    })
-
-    expect(byNumber.statusCode).toBe(StatusCodes.OK)
-    expect(byNumber.payload).toBe(byId.payload)
-    expect(byNumber.headers['content-disposition']).toMatch(
-      new RegExp(`^attachment; filename="${approved.registrationNumber}-`)
-    )
-  })
-
-  it('serves the records it resolved without reading them again', async () => {
-    const server = await createServer({
-      registration: approved,
-      findById: () => Promise.reject(new Error('read again')),
-      findRegistrationById: () => Promise.reject(new Error('read again'))
-    })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `${registrations}/${approved.registrationNumber}/waste-records/export.csv`,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(response.payload).toContain('Acme Ltd')
-    expect(response.headers['content-disposition']).toMatch(
-      new RegExp(`^attachment; filename="${approved.registrationNumber}-`)
-    )
-  })
-
-  it.each([
-    [
-      'an unknown organisation number',
-      `/organisations/999999/registrations/${approved.registrationNumber}/waste-records/export.csv`
-    ],
-    [
-      'a registration number the organisation does not serve',
-      `${registrations}/R26XX0000000000PL/waste-records/export.csv`
-    ]
-  ])('returns 404 for %s', async (_, exportUrl) => {
-    const server = await createServer({ registration: approved })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: exportUrl,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 })

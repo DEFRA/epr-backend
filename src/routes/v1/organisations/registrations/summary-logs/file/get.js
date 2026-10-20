@@ -12,9 +12,6 @@ import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 export const summaryLogFilePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file'
 
-export const summaryLogFileByFileIdPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}'
-
 const downloadAuth = {
   auth: {
     scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
@@ -79,7 +76,6 @@ export const summaryLogFile = {
  */
 export const summaryLogFileByFileId = {
   method: 'GET',
-  path: summaryLogFileByFileIdPath,
   options: downloadAuth,
   handler: serveFile(
     (repository, id, registrationNumber) =>

@@ -14,9 +14,6 @@ import { streamSubmissionCsvToReadable } from '#waste-records-export/application
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
-export const summaryLogRecordsCsvPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}/records.csv'
-
 const CSV_EXTENSION = 'csv'
 
 /**
@@ -42,7 +39,6 @@ const submittedSummaryLogForFile = (summaryLogs, fileId) =>
  */
 export const summaryLogRecordsCsv = {
   method: 'GET',
-  path: summaryLogRecordsCsvPath,
   options: {
     auth: {
       scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
