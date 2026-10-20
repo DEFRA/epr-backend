@@ -12,6 +12,7 @@ import {
   isRegistrationAccredited
 } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import { toReportListItem } from '#reports/application/report-calendar.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
 
 /**
@@ -20,29 +21,13 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { CalendarPeriod } from '#reports/domain/build-calendar-periods.js'
  * @import {
- *   ReportsRepository,
- *   ReportSummary,
- *   ReportListItem
+ *   ReportsRepository
  * } from '#reports/repository/port.js'
  */
 
 /**
  * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
  */
-
-/**
- * Curates the full report summary down to the list-response shape so the
- * calendar endpoint doesn't leak heavy activity payloads.
- * @param {ReportSummary | null} current
- * @returns {ReportListItem | null}
- */
-const toReportListItem = (current) => {
-  if (!current) {
-    return null
-  }
-  const { id, status, submissionNumber, submittedAt, submittedBy } = current
-  return { id, status, submissionNumber, submittedAt, submittedBy }
-}
 
 /**
  * Chooses the period builder for this request. The opt-in ?expand=submissions

@@ -659,6 +659,70 @@ describe('report routes by natural key', () => {
     expect(JSON.parse(response.payload).cadence).toBe('quarterly')
   })
 
+  describe('year calendar', () => {
+    const calendar = (/** @type {string} */ number, year = YEAR) => ({
+      method: /** @type {const} */ ('GET'),
+      url: `${registrations}/${number}/reports/${year}/calendar`,
+      ...asServiceMaintainer()
+    })
+
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date('2027-01-02T12:00:00Z')
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('serves registered-only periods only for a registered-only registration', async () => {
+      const response = await server.inject(calendar(REGISTERED_ONLY_NUMBER))
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.year).toBe(YEAR)
+      expect(body).not.toHaveProperty('accredited')
+      expect(body).not.toHaveProperty('cadence')
+      expect(body.registeredOnly.reportingPeriods).toHaveLength(4)
+      expect(body.registeredOnly.reportingPeriods[0]).toMatchObject({
+        cadence: 'quarterly',
+        startDate: '2026-02-01'
+      })
+    })
+
+    it('splits an accredited registration at the accreditation start', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      const body = JSON.parse(response.payload)
+      expect(body.registeredOnly.reportingPeriods.at(-1)).toMatchObject({
+        period: 2,
+        endDate: '2026-06-30'
+      })
+      expect(body.accredited.accreditationNumber).toBe(
+        accredited.accreditationNumber
+      )
+      expect(
+        body.accredited.reportingPeriods.map(
+          (/** @type {{ period: number }} */ { period }) => period
+        )
+      ).toEqual([7, 8, 9, 10, 11, 12])
+    })
+
+    it('serves only the requested year', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
+
+      expect(JSON.parse(response.payload)).toEqual({ year: 2025 })
+    })
+
+    it('rejects a year outside the supported range', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER, 1999))
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
   it.each([
     [
       'an unknown organisation',
@@ -679,6 +743,10 @@ describe('report routes by natural key', () => {
     [
       'the calendar of an unknown registration',
       `${registrations}/R26XX0000000000PL/reports/calendar`
+    ],
+    [
+      'the year calendar of an unknown registration',
+      `${registrations}/R26XX0000000000PL/reports/${YEAR}/calendar`
     ]
   ])('returns 404 for %s', async (_, url) => {
     const response = await server.inject({
