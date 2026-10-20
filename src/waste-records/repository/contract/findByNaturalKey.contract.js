@@ -1,16 +1,14 @@
-import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 
 import {
-  buildAccreditation,
-  buildOrganisation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+  storeNumberedRegistration,
+  uniqueNumber
+} from '#repositories/organisations/contract/natural-key-test-data.js'
 import { buildSummaryLogRowStateEntry } from '../test-data.js'
 
 /**
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { SummaryLogRowStatesRepository, SummaryLogRowStatesRepositoryFactory } from '../port.js'
+ * @import { KeyedRowState, SummaryLogRowStatesRepository, SummaryLogRowStatesRepositoryFactory } from '../port.js'
  *
  * @typedef {{
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepositoryFactory,
@@ -18,57 +16,28 @@ import { buildSummaryLogRowStateEntry } from '../test-data.js'
  * }} NaturalKeyFixtures
  */
 
-/** @param {string} prefix */
-const uniqueNumber = (prefix) =>
-  `${prefix}${randomUUID().slice(0, 8).toUpperCase()}`
-
 /**
- * Stores an organisation holding one registration with a current and a
- * previous accreditation, and returns its numbers and stored ids.
+ * The registration's numbered records, and the stored ids of each of its
+ * ledgers.
  *
  * @param {OrganisationsRepository} organisationsRepository
  */
 const storeRegistration = async (organisationsRepository) => {
-  const current = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
-  })
-  const previous = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
-  })
-  const registration = buildRegistration({
-    registrationNumber: uniqueNumber('REG'),
-    accreditationId: current.id
-  })
-  const organisation = buildOrganisation({
-    registrations: [registration],
-    accreditations: [current, previous]
-  })
-  await organisationsRepository.insert(organisation)
-
-  const ids = {
-    organisationId: organisation.id,
-    registrationId: registration.id
-  }
+  const stored = await storeNumberedRegistration(organisationsRepository)
   return {
-    key: {
-      organisationNumber: String(organisation.orgId),
-      registrationNumber: registration.registrationNumber
-    },
-    unknownOrganisationNumber: String(organisation.orgId + 1),
+    ...stored,
     ledgers: {
-      current: { ...ids, accreditationId: current.id },
-      previous: { ...ids, accreditationId: previous.id },
-      registeredOnly: { ...ids, accreditationId: null }
-    },
-    current,
-    previous
+      current: { ...stored.ids, accreditationId: stored.current.id },
+      previous: { ...stored.ids, accreditationId: stored.previous.id },
+      registeredOnly: { ...stored.ids, accreditationId: null }
+    }
   }
 }
 
 const STORED_IDS = ['id', 'organisationId', 'registrationId', 'accreditationId']
 
-/** @param {object} found */
-const storedIdsIn = (found) => STORED_IDS.filter((key) => key in found)
+/** @param {KeyedRowState | undefined} found */
+const storedIdsIn = (found) => STORED_IDS.filter((key) => found && key in found)
 
 /** @param {import('vitest').TestAPI<NaturalKeyFixtures>} it */
 export const testFindByNaturalKeyBehaviour = (it) => {
