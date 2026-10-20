@@ -15,6 +15,5 @@ export { createPackagingRecyclingNotesRepository } from './repository/mongodb.js
 
 // Route exports
 export { packagingRecyclingNotesList } from './routes/get.js'
-export { packagingRecyclingNoteById } from './routes/get-by-id.js'
 export { packagingRecyclingNotesCreate } from './routes/post.js'
 export { packagingRecyclingNotesUpdateStatus } from './routes/status.js'

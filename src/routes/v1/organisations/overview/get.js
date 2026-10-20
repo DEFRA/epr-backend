@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { organisationsOverviewResponseSchema } from './response.schema.js'
 
@@ -65,7 +66,10 @@ export const organisationsOverviewGet = {
             accreditation: {
               id: linkedAccreditation.id,
               accreditationNumber: linkedAccreditation.accreditationNumber,
-              status: linkedAccreditation.status
+              status: linkedAccreditation.status,
+              year: linkedAccreditation.validFrom
+                ? deriveAccreditationYear(linkedAccreditation)
+                : null
             }
           })
         }
@@ -73,6 +77,7 @@ export const organisationsOverviewGet = {
 
       const response = {
         id: organisation.id,
+        organisationNumber: String(organisation.orgId),
         companyName: organisation.companyDetails.name,
         registrations
       }

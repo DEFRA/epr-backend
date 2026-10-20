@@ -21,7 +21,7 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (/** @type {any} */ ...args) => mockCdpAuditing(...args)
 }))
 
-describe('PUT /v1/organisations/{organisationId}/user', () => {
+describe('PUT /organisations/{organisationNumber}/user', () => {
   setupAuthContext()
 
   /** @type {import('#test/create-test-server.js').TestServer} */
@@ -50,7 +50,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
       await organisationsRepository.insert(org)
       return {
         method: 'PUT',
-        url: `/v1/organisations/${org.id}/user`
+        url: `/organisations/${org.orgId}/user`
       }
     }
   })
@@ -76,13 +76,13 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
       {
         token: defraIdMockAuthTokens.validToken,
         description: 'Defra standard user linked to the organisation',
-        expectedStatus: StatusCodes.OK
+        expectedStatus: StatusCodes.NO_CONTENT
       },
       {
         token: defraIdMockAuthTokens.unknownButAuthorisedUserToken,
         description:
           'Defra user with a relationship pointing to the organisation',
-        expectedStatus: StatusCodes.OK
+        expectedStatus: StatusCodes.NO_CONTENT
       },
       {
         token: generateValidTokenWith({
@@ -101,7 +101,7 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
         const org = await buildActiveOrg(organisationsRepository)
         const response = await server.inject({
           method: 'PUT',
-          url: `/v1/organisations/${org.id}/user`,
+          url: `/organisations/${org.orgId}/user`,
           headers: { Authorization: `Bearer ${token}` }
         })
         expect(response.statusCode).toBe(expectedStatus)
@@ -126,11 +126,11 @@ describe('PUT /v1/organisations/{organisationId}/user', () => {
       const newUserToken = generateValidTokenWith(user)
       const response = await server.inject({
         method: 'PUT',
-        url: `/v1/organisations/${orgBefore.id}/user`,
+        url: `/organisations/${orgBefore.orgId}/user`,
         headers: { Authorization: `Bearer ${newUserToken}` }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
     }
 
     describe('when user not present in organisation', () => {

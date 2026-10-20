@@ -6,20 +6,13 @@ import { fetchReportBySubmissionNumber } from '#reports/application/report-servi
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { periodParamsSchema, extractChangedBy } from './shared.js'
-
-export const reportsDeletePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
+import { extractChangedBy } from './shared.js'
 
 export const reportsDelete = {
   method: 'DELETE',
-  path: reportsDeletePath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      params: periodParamsSchema
-    }
+    tags: ['api']
   },
   /**
    * @param {HapiRequest & {
