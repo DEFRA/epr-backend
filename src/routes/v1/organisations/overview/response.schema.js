@@ -28,7 +28,7 @@ const linkedDefraOrganisationSchema = Joi.object({
 
 export const organisationsOverviewResponseSchema = Joi.object({
   id: Joi.string().required(),
-  organisationNumber: Joi.number().integer().required(),
+  organisationNumber: Joi.string().required(),
   companyName: Joi.string().required(),
   registrations: Joi.array().items(registrationSchema).required(),
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional()

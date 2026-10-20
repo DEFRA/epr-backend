@@ -79,7 +79,9 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
       ...asServiceMaintainer()
     })
 
-    expect(JSON.parse(response.payload).organisationNumber).toBe(org.orgId)
+    expect(JSON.parse(response.payload).organisationNumber).toBe(
+      String(org.orgId)
+    )
   })
 
   it('returns companyName from organisation companyDetails', async () => {

@@ -77,7 +77,7 @@ export const organisationsOverviewGet = {
 
       const response = {
         id: organisation.id,
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         companyName: organisation.companyDetails.name,
         registrations
       }
