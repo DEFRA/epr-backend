@@ -20,7 +20,12 @@ import { reportsPost } from './post.js'
 import { reportsRequestResubmission } from './request-resubmission.js'
 import { reportsStatus } from './status.js'
 import { reportsUnsubmit } from './unsubmit.js'
-import { reportResourceSchema, toReportResource } from './report-resource.js'
+import {
+  REPORT_EXPANSION,
+  reportResourceSchema,
+  toReportDetail,
+  toReportResource
+} from './report-resource.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { submissionNumberSchema } from './shared.js'
 
@@ -77,12 +82,33 @@ const respondWithReport = (map) => ({
  */
 const serveReport = (request, h, body, statusCode) =>
   h
-    .response(
-      toReportResource(body, {
+    .response({
+      ...toReportResource(body, {
         submissionNumber: request.params.submissionNumber
+      }),
+      ...(request.query.expand === REPORT_EXPANSION.detail && {
+        detail: toReportDetail(body)
       })
-    )
+    })
     .code(statusCode)
+
+/**
+ * The report detail read, which can be asked to expand the resource with the
+ * report as the service holds it.
+ * @type {NaturalKeyRoute}
+ */
+const expandableReportsGetDetail = {
+  ...reportsGetDetail,
+  options: {
+    ...reportsGetDetail.options,
+    validate: {
+      ...reportsGetDetail.options.validate,
+      query: Joi.object({
+        expand: Joi.string().valid(...Object.values(REPORT_EXPANSION))
+      })
+    }
+  }
+}
 
 /**
  * Serves the report detail handler's body as the report resource.
@@ -163,7 +189,7 @@ const assertPeriodWithinAccreditation = async (request) => {
 
 /** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
 const submissionRoutes = [
-  [reportsGetDetail, '', respondWithReport(mapDetail)],
+  [expandableReportsGetDetail, '', respondWithReport(mapDetail)],
   [reportsPost, '', respondWithReport(mapCreated)],
   [reportsPatch, '', respondWithReport(mapCommand)],
   [reportsDelete, ''],

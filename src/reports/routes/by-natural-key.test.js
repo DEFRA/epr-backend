@@ -246,6 +246,68 @@ describe('report routes by natural key', () => {
         expect(body).not.toHaveProperty('createdBy')
       })
 
+      it('serves no detail unless asked to', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: submitted,
+          ...asServiceMaintainer()
+        })
+
+        expect(JSON.parse(response.payload)).not.toHaveProperty('detail')
+      })
+
+      it('expands a report with all of it but its database ids', async () => {
+        const stored = await reportsRepository.findReportById(seeded.submitted)
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=detail`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const { detail, ...resource } = JSON.parse(response.payload)
+        expect(resource).toMatchObject({ status: REPORT_STATUS.SUBMITTED })
+        const {
+          id: _id,
+          organisationId: _organisationId,
+          registrationId: _registrationId,
+          ...held
+        } = stored
+        expect(detail).toStrictEqual({
+          ...JSON.parse(JSON.stringify(held)),
+          details: expect.any(Object),
+          canRequestResubmission: expect.any(Boolean)
+        })
+        expect(detail.status.submitted.by).toHaveProperty('id')
+      })
+
+      it('expands a preview with what it was generated from', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submission(reports, periods.created)}?expand=detail`,
+          ...asServiceMaintainer()
+        })
+
+        const { detail } = JSON.parse(response.payload)
+        expect(detail).toMatchObject({
+          operatorCategory: expect.any(String),
+          diagnostics: expect.any(Object)
+        })
+        expect(detail).not.toHaveProperty('organisationId')
+        expect(detail).not.toHaveProperty('registrationId')
+      })
+
+      it('refuses an expansion it does not offer', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=everything`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('says a stale report is stale, without ids', async () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,

@@ -45,7 +45,8 @@ import {
  *   exportActivity?: ExportActivity,
  *   wasteSent?: WasteSent,
  *   prn?: PrnData,
- *   source?: { summaryLogId: string, lastUploadedAt: string | null }
+ *   source?: { summaryLogId: string, lastUploadedAt: string | null },
+ *   detail?: Record<string, unknown>
  * }} ReportResourceBase
  *
  * @typedef {ReportResourceBase & {
@@ -55,9 +56,6 @@ import {
  *   createdBy: Person,
  *   submittedAt?: string,
  *   submittedBy?: Person,
- *   unsubmittedAt?: string,
- *   unsubmittedBy?: Person,
- *   statusHistory: { status: StoredStatus, at: string, by: Person }[],
  *   version: number,
  *   supportingInformation?: string,
  *   stale?: { summaryLogChanged?: { uploadedAt: string }, prnCancelled?: { occurredAt: string } },
@@ -91,14 +89,6 @@ const submission = (status) => {
   const { at, by } = /** @type {ReportSubmittedSlot} */ (status.submitted)
   return { submittedAt: at, submittedBy: toPerson(by) }
 }
-
-/**
- * @param {ReportStatusObject} status
- */
-const unsubmission = ({ unsubmitted }) =>
-  unsubmitted
-    ? { unsubmittedAt: unsubmitted.at, unsubmittedBy: toPerson(unsubmitted.by) }
-    : {}
 
 /**
  * @param {ReportSource | undefined} source
@@ -157,12 +147,6 @@ const toStoredResource = (report) => ({
   createdAt: report.status.created.at,
   createdBy: toPerson(report.status.created.by),
   ...submission(report.status),
-  ...unsubmission(report.status),
-  statusHistory: report.status.history.map(({ status, at, by }) => ({
-    status,
-    at,
-    by: toPerson(by)
-  })),
   version: report.version,
   canRequestResubmission: report.canRequestResubmission,
   recyclingActivity: report.recyclingActivity,
@@ -237,6 +221,25 @@ export function toReportResource(body, { submissionNumber }) {
     : toStoredResource(body)
 }
 
+/** The expansions a report read can ask for with `?expand=`. */
+export const REPORT_EXPANSION = Object.freeze({ detail: 'detail' })
+
+/**
+ * The report as the service holds it, for a reader that needs all of it: only
+ * the database ids are left out, as the natural-key routes never serve them.
+ * @param {StoredReportBody | PreviewBody} body
+ * @returns {Record<string, unknown>}
+ */
+export const toReportDetail = (body) => {
+  const {
+    id: _id,
+    organisationId: _organisationId,
+    registrationId: _registrationId,
+    ...detail
+  } = /** @type {Record<string, unknown>} */ (body)
+  return detail
+}
+
 const personSchema = Joi.object({
   name: Joi.string(),
   position: Joi.string().required()
@@ -287,7 +290,12 @@ const periodKeys = {
   canRequestResubmission: Joi.boolean().required(),
   exportActivity: exportActivitySchema,
   wasteSent: wasteSentSchema,
-  source: sourceSchema
+  source: sourceSchema,
+  detail: Joi.object({
+    id: Joi.forbidden(),
+    organisationId: Joi.forbidden(),
+    registrationId: Joi.forbidden()
+  }).unknown()
 }
 
 const storedReportSchema = Joi.object({
@@ -300,19 +308,6 @@ const storedReportSchema = Joi.object({
   createdBy: personSchema.required(),
   submittedAt: Joi.string().isoDate(),
   submittedBy: personSchema,
-  unsubmittedAt: Joi.string().isoDate(),
-  unsubmittedBy: personSchema,
-  statusHistory: Joi.array()
-    .items(
-      Joi.object({
-        status: Joi.string()
-          .valid(...Object.values(REPORT_STATUS))
-          .required(),
-        at: Joi.string().isoDate().required(),
-        by: personSchema.required()
-      })
-    )
-    .required(),
   version: Joi.number().integer().min(1).required(),
   recyclingActivity: recyclingActivitySchema,
   prn: prnSchema,

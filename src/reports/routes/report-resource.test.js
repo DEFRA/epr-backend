@@ -138,13 +138,6 @@ describe('toReportResource', () => {
         status: 'in_progress',
         createdAt: body.status.created.at,
         createdBy: CREATOR,
-        statusHistory: [
-          {
-            status: 'in_progress',
-            at: body.status.created.at,
-            by: CREATOR
-          }
-        ],
         version: 1,
         canRequestResubmission: false,
         recyclingActivity: NO_ROWS_RECEIVED,
@@ -263,11 +256,6 @@ describe('toReportResource', () => {
         createdAt: stored.status.created.at,
         createdBy: CREATOR,
         submittedBy: { name: 'Alice', position: 'Officer' },
-        statusHistory: stored.status.history.map(({ status, at, by }) => ({
-          status,
-          at,
-          by: { name: by.name, position: by.position }
-        })),
         version: 3,
         canRequestResubmission: true,
         recyclingActivity: NO_ROWS_RECEIVED,
@@ -395,70 +383,6 @@ describe('toReportResource', () => {
       expect(resource.status).toBe('ready_to_submit')
       expect(resource).not.toHaveProperty('submittedAt')
       expect(resource).not.toHaveProperty('submittedBy')
-    })
-
-    it('says who unsubmitted it and when, without their id or email', async () => {
-      const repository = newRepository()
-      const id = await createAndSubmitReport(repository)
-      await repository.updateReportStatus({
-        reportId: id,
-        version: 3,
-        status: REPORT_STATUS.READY_TO_SUBMIT,
-        slot: REPORT_STATUS_SLOT.UNSUBMITTED,
-        changedBy: CHANGED_BY
-      })
-      const stored = await repository.findReportById(id)
-
-      const resource = toReportResource(await bodyOf(repository, id), {
-        submissionNumber: 1
-      })
-
-      expect(resource).toMatchObject({
-        unsubmittedAt: stored.status.unsubmitted?.at,
-        unsubmittedBy: { name: 'Bob', position: 'Manager' }
-      })
-      expect(reportResourceSchema.validate(resource).error).toBeUndefined()
-    })
-
-    it('says nothing of an unsubmission that has not happened', async () => {
-      const repository = newRepository()
-      const id = await createAndSubmitReport(repository)
-
-      const resource = toReportResource(await bodyOf(repository, id), {
-        submissionNumber: 1
-      })
-
-      expect(resource).not.toHaveProperty('unsubmittedAt')
-      expect(resource).not.toHaveProperty('unsubmittedBy')
-    })
-
-    it('lists every status it has had, without ids or emails', async () => {
-      const repository = newRepository()
-      const id = await createAndSubmitReport(repository)
-      await repository.updateReportStatus({
-        reportId: id,
-        version: 3,
-        status: REPORT_STATUS.READY_TO_SUBMIT,
-        slot: REPORT_STATUS_SLOT.UNSUBMITTED,
-        changedBy: CHANGED_BY
-      })
-
-      const resource = toReportResource(await bodyOf(repository, id), {
-        submissionNumber: 1
-      })
-
-      expect(
-        resource.statusHistory.map(({ status, by }) => ({ status, by }))
-      ).toStrictEqual([
-        { status: 'in_progress', by: CREATOR },
-        { status: 'ready_to_submit', by: expect.any(Object) },
-        { status: 'submitted', by: { name: 'Alice', position: 'Officer' } },
-        { status: 'ready_to_submit', by: { name: 'Bob', position: 'Manager' } }
-      ])
-      for (const { by } of resource.statusHistory) {
-        expect(by).not.toHaveProperty('id')
-        expect(by).not.toHaveProperty('email')
-      }
     })
 
     it.each([
@@ -726,6 +650,27 @@ describe('reportResourceSchema', () => {
     expect(
       reportResourceSchema.validate({ ...servedPreview, id: 'report-1' }).error
     ).toBeDefined()
+  })
+
+  it.each(['id', 'organisationId', 'registrationId'])(
+    'rejects detail carrying the database id %s',
+    (key) => {
+      expect(
+        reportResourceSchema.validate({
+          ...servedPreview,
+          detail: { [key]: 'db-id' }
+        }).error
+      ).toBeDefined()
+    }
+  )
+
+  it('accepts detail of any other shape', () => {
+    expect(
+      reportResourceSchema.validate({
+        ...servedPreview,
+        detail: { schemaVersion: 1, status: { history: [] } }
+      }).error
+    ).toBeUndefined()
   })
 
   it('rejects a nested key it does not list', () => {
