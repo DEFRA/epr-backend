@@ -9,11 +9,21 @@ import { organisationPath, viewRoute } from './view-route.js'
 const organisationQuery = { year: yearSchema() }
 
 /**
+ * The trading name when there is one, otherwise the company name.
+ * @param {Organisation} organisation
+ */
+const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
+
+/**
  * @param {Organisation} organisation
  * @param {OrganisationQuery} query
  */
-const organisationFor = (organisation, { year }) =>
-  year === undefined ? organisation : organisationInYear(organisation, year)
+const organisationFor = (organisation, { year }) => ({
+  ...(year === undefined
+    ? organisation
+    : organisationInYear(organisation, year)),
+  displayName: displayNameOf(organisation)
+})
 
 export const organisationViewGet = viewRoute(
   organisationPath,
