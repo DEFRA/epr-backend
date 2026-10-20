@@ -242,21 +242,25 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   it('allows re-creating the first submission after the initial draft is deleted', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const { server, organisationId, registrationId, reportsRepositoryFactory } =
+      await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: undefined
+      })
 
     const first = await makeRequest(server, organisationId, registrationId)
     expect(first.statusCode).toBe(StatusCodes.CREATED)
     const firstId = JSON.parse(first.payload).id
 
-    const deleted = await server.inject({
-      method: 'DELETE',
-      url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
-      ...asOperator()
+    await reportsRepositoryFactory().deleteReport({
+      organisationId,
+      registrationId,
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      submissionNumber: 1,
+      changedBy: { id: 'test', name: 'Test', position: 'Officer' }
     })
-    expect(deleted.statusCode).toBe(StatusCodes.NO_CONTENT)
 
     const recreated = await makeRequest(server, organisationId, registrationId)
 

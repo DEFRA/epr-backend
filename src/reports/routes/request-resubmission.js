@@ -4,10 +4,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditReportRequestResubmission } from '#reports/application/audit.js'
 import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
-import { extractChangedBy, periodParamsSchema } from './shared.js'
-
-export const reportsRequestResubmissionPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/request-resubmission'
+import { extractChangedBy } from './shared.js'
 
 /**
  * Lets an operator self-trigger resubmission on their own submitted report.
@@ -15,13 +12,9 @@ export const reportsRequestResubmissionPath =
  */
 export const reportsRequestResubmission = {
   method: 'POST',
-  path: reportsRequestResubmissionPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      params: periodParamsSchema
-    }
+    tags: ['api']
   },
   /**
    * @param {HapiRequest & {

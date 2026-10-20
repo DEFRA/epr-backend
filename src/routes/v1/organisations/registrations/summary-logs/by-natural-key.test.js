@@ -14,6 +14,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { config } from '#root/config.js'
 import {
   REPROCESSOR_NUMBER,
@@ -421,6 +422,49 @@ describe('summary-log routes by natural key', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+    })
+
+    it('audits the download of a file by its id', async () => {
+      vi.mocked(auditSummaryLogDownload).mockClear()
+
+      await server.inject({
+        method: 'GET',
+        url: `${files}/${fileId}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
+        summaryLogId: fileId,
+        organisationId: organisation.id,
+        registrationId: registeredOnlyRegistration.id
+      })
+    })
+
+    it('does not find a file no summary log holds', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${files}/file-unknown`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it.each([
+      ['refuses an unauthenticated caller', {}, StatusCodes.UNAUTHORIZED],
+      [
+        'refuses a caller holding neither scope',
+        asServiceMaintainer({ scope: ['standardUser'] }),
+        StatusCodes.FORBIDDEN
+      ]
+    ])('%s a file by its id', async (_, auth, statusCode) => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${files}/${fileId}`,
+        ...auth
+      })
+
+      expect(response.statusCode).toBe(statusCode)
     })
 
     it("downloads a file's records as CSV", async () => {

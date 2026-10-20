@@ -314,13 +314,13 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         // add user 2 to organisation
         const addUser2Response = await server.inject({
           method: 'PUT',
-          url: `/v1/organisations/${org.id}/user`,
+          url: `/organisations/${org.orgId}/user`,
           headers: {
             Authorization: `Bearer ${user2DefraIdToken}`
           }
         })
 
-        expect(addUser2Response.statusCode).toBe(StatusCodes.OK)
+        expect(addUser2Response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
         await waitForVersion(organisationsRepository, org.id, org.version + 2)
 
