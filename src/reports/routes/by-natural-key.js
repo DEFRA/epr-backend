@@ -22,6 +22,7 @@ import { reportsStatus } from './status.js'
 import { reportsUnsubmit } from './unsubmit.js'
 import {
   REPORT_EXPANSION,
+  expandableReportResourceSchema,
   reportResourceSchema,
   toReportDetail,
   toReportResource
@@ -66,13 +67,21 @@ const streams = [
 
 /**
  * @param {NaturalKeyResponse['map']} map
+ * @param {NaturalKeyResponse['schema']} [schema]
  * @returns {NaturalKeyResponse}
  */
-const respondWithReport = (map) => ({
-  schema: reportResourceSchema,
+const respondWithReport = (map, schema = reportResourceSchema) => ({
+  schema,
   failAction: reportResponseFailAction,
   map
 })
+
+/**
+ * @param {SubmissionRequest} request
+ * @param {ReportDetailBody} body
+ */
+const toResource = (request, body) =>
+  toReportResource(body, { submissionNumber: request.params.submissionNumber })
 
 /**
  * @param {SubmissionRequest} request
@@ -81,16 +90,25 @@ const respondWithReport = (map) => ({
  * @param {number} statusCode
  */
 const serveReport = (request, h, body, statusCode) =>
-  h
+  h.response(toResource(request, body)).code(statusCode)
+
+/**
+ * Serves the report read, expanded with `detail` when asked.
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ * @param {ResponseObject} response
+ */
+const mapRead = (request, h, response) => {
+  const body = /** @type {ReportDetailBody} */ (response.source)
+  return h
     .response({
-      ...toReportResource(body, {
-        submissionNumber: request.params.submissionNumber
-      }),
+      ...toResource(request, body),
       ...(request.query.expand === REPORT_EXPANSION.detail && {
         detail: toReportDetail(body)
       })
     })
-    .code(statusCode)
+    .code(response.statusCode)
+}
 
 /**
  * The report detail read, which can be asked to expand the resource with the
@@ -189,7 +207,11 @@ const assertPeriodWithinAccreditation = async (request) => {
 
 /** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
 const submissionRoutes = [
-  [expandableReportsGetDetail, '', respondWithReport(mapDetail)],
+  [
+    expandableReportsGetDetail,
+    '',
+    respondWithReport(mapRead, expandableReportResourceSchema)
+  ],
   [reportsPost, '', respondWithReport(mapCreated)],
   [reportsPatch, '', respondWithReport(mapCommand)],
   [reportsDelete, ''],

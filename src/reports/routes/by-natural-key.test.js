@@ -308,6 +308,18 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('expands only a read, not a command', async () => {
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `${inProgress}?expand=detail`,
+          payload: { supportingInformation: 'Updated by number' },
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(JSON.parse(response.payload)).not.toHaveProperty('detail')
+      })
+
       it('says a stale report is stale, without ids', async () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,

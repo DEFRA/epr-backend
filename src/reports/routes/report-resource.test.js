@@ -14,6 +14,7 @@ import {
 } from '#reports/domain/report-status.js'
 import {
   PREVIEW_STATUS,
+  expandableReportResourceSchema,
   reportResourceSchema,
   toReportResource
 } from './report-resource.js'
@@ -656,7 +657,7 @@ describe('reportResourceSchema', () => {
     'rejects detail carrying the database id %s',
     (key) => {
       expect(
-        reportResourceSchema.validate({
+        expandableReportResourceSchema.validate({
           ...servedPreview,
           detail: { [key]: 'db-id' }
         }).error
@@ -666,11 +667,17 @@ describe('reportResourceSchema', () => {
 
   it('accepts detail of any other shape', () => {
     expect(
-      reportResourceSchema.validate({
+      expandableReportResourceSchema.validate({
         ...servedPreview,
         detail: { schemaVersion: 1, status: { history: [] } }
       }).error
     ).toBeUndefined()
+  })
+
+  it('rejects detail on a resource that is not a read', () => {
+    expect(
+      reportResourceSchema.validate({ ...servedPreview, detail: {} }).error
+    ).toBeDefined()
   })
 
   it('rejects a nested key it does not list', () => {

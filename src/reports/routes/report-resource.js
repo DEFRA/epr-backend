@@ -290,12 +290,7 @@ const periodKeys = {
   canRequestResubmission: Joi.boolean().required(),
   exportActivity: exportActivitySchema,
   wasteSent: wasteSentSchema,
-  source: sourceSchema,
-  detail: Joi.object({
-    id: Joi.forbidden(),
-    organisationId: Joi.forbidden(),
-    registrationId: Joi.forbidden()
-  }).unknown()
+  source: sourceSchema
 }
 
 const storedReportSchema = Joi.object({
@@ -333,4 +328,16 @@ const previewSchema = Joi.object({
 export const reportResourceSchema = Joi.alternatives().try(
   storedReportSchema,
   previewSchema
+)
+
+const detailSchema = Joi.object({
+  id: Joi.forbidden(),
+  organisationId: Joi.forbidden(),
+  registrationId: Joi.forbidden()
+}).unknown()
+
+/** The report resource a read can expand with `detail`. */
+export const expandableReportResourceSchema = Joi.alternatives().try(
+  storedReportSchema.keys({ detail: detailSchema }),
+  previewSchema.keys({ detail: detailSchema })
 )
