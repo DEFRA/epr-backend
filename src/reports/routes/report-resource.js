@@ -55,6 +55,9 @@ import {
  *   createdBy: Person,
  *   submittedAt?: string,
  *   submittedBy?: Person,
+ *   unsubmittedAt?: string,
+ *   unsubmittedBy?: Person,
+ *   statusHistory: { status: StoredStatus, at: string, by: Person }[],
  *   version: number,
  *   supportingInformation?: string,
  *   stale?: { summaryLogChanged?: { uploadedAt: string }, prnCancelled?: { occurredAt: string } },
@@ -88,6 +91,14 @@ const submission = (status) => {
   const { at, by } = /** @type {ReportSubmittedSlot} */ (status.submitted)
   return { submittedAt: at, submittedBy: toPerson(by) }
 }
+
+/**
+ * @param {ReportStatusObject} status
+ */
+const unsubmission = ({ unsubmitted }) =>
+  unsubmitted
+    ? { unsubmittedAt: unsubmitted.at, unsubmittedBy: toPerson(unsubmitted.by) }
+    : {}
 
 /**
  * @param {ReportSource | undefined} source
@@ -146,6 +157,12 @@ const toStoredResource = (report) => ({
   createdAt: report.status.created.at,
   createdBy: toPerson(report.status.created.by),
   ...submission(report.status),
+  ...unsubmission(report.status),
+  statusHistory: report.status.history.map(({ status, at, by }) => ({
+    status,
+    at,
+    by: toPerson(by)
+  })),
   version: report.version,
   canRequestResubmission: report.canRequestResubmission,
   recyclingActivity: report.recyclingActivity,
@@ -283,6 +300,19 @@ const storedReportSchema = Joi.object({
   createdBy: personSchema.required(),
   submittedAt: Joi.string().isoDate(),
   submittedBy: personSchema,
+  unsubmittedAt: Joi.string().isoDate(),
+  unsubmittedBy: personSchema,
+  statusHistory: Joi.array()
+    .items(
+      Joi.object({
+        status: Joi.string()
+          .valid(...Object.values(REPORT_STATUS))
+          .required(),
+        at: Joi.string().isoDate().required(),
+        by: personSchema.required()
+      })
+    )
+    .required(),
   version: Joi.number().integer().min(1).required(),
   recyclingActivity: recyclingActivitySchema,
   prn: prnSchema,
