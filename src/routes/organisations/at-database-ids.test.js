@@ -88,7 +88,7 @@ describe('atDatabaseIds', () => {
     expect(params).toEqual({
       organisationId: organisation.id,
       registrationId: registration.id,
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       registrationNumber: registration.registrationNumber
     })
   })

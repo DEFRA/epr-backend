@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -28,7 +29,7 @@ const findRegistration = async (
   const organisation = await organisationsRepository
     .findById(organisationId)
     .catch((error) => {
-      if (Boom.isBoom(error, 404)) {
+      if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
         return null
       }
       throw error
@@ -42,7 +43,7 @@ const findRegistration = async (
   return {
     records: { organisation, registration },
     naturalKeys: {
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       registrationNumber: registration.registrationNumber
     }
   }

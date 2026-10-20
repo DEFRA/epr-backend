@@ -58,7 +58,7 @@ const summaryLogsListByNumber = {
 
     try {
       const summaryLogs = await summaryLogsRepository.findAll({
-        organisationNumber: String(organisationNumber),
+        organisationNumber,
         registrationNumber
       })
 
