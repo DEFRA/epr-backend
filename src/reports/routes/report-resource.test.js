@@ -14,6 +14,7 @@ import {
 } from '#reports/domain/report-status.js'
 import {
   PREVIEW_STATUS,
+  expandableReportResourceSchema,
   reportResourceSchema,
   toReportResource
 } from './report-resource.js'
@@ -649,6 +650,33 @@ describe('reportResourceSchema', () => {
   it('rejects a body with a key it does not list', () => {
     expect(
       reportResourceSchema.validate({ ...servedPreview, id: 'report-1' }).error
+    ).toBeDefined()
+  })
+
+  it.each(['id', 'organisationId', 'registrationId'])(
+    'rejects detail carrying the database id %s',
+    (key) => {
+      expect(
+        expandableReportResourceSchema.validate({
+          ...servedPreview,
+          detail: { [key]: 'db-id' }
+        }).error
+      ).toBeDefined()
+    }
+  )
+
+  it('accepts detail of any other shape', () => {
+    expect(
+      expandableReportResourceSchema.validate({
+        ...servedPreview,
+        detail: { schemaVersion: 1, status: { history: [] } }
+      }).error
+    ).toBeUndefined()
+  })
+
+  it('rejects detail on a resource that is not a read', () => {
+    expect(
+      reportResourceSchema.validate({ ...servedPreview, detail: {} }).error
     ).toBeDefined()
   })
 
