@@ -19,7 +19,7 @@ import {
 const findIn = (organisation) =>
   findRegistrationByNumber(
     createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-    organisation.orgId,
+    String(organisation.orgId),
     REPROCESSOR_NUMBER
   )
 
@@ -29,7 +29,7 @@ describe('findOrganisationByNumber', () => {
 
     const found = await findOrganisationByNumber(
       createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-      organisation.orgId
+      String(organisation.orgId)
     )
 
     expect(found.id).toBe(organisation.id)
@@ -43,7 +43,7 @@ describe('findOrganisationByNumber', () => {
     await expect(
       findOrganisationByNumber(
         createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-        organisation.orgId
+        String(organisation.orgId)
       )
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
@@ -64,7 +64,7 @@ describe('findRegistrationByNumber', () => {
     const organisationsRepository = createInMemoryOrganisationsRepository([])()
 
     await expect(
-      findRegistrationByNumber(organisationsRepository, 1, REPROCESSOR_NUMBER)
+      findRegistrationByNumber(organisationsRepository, '1', REPROCESSOR_NUMBER)
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 
