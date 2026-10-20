@@ -3,7 +3,8 @@ import Joi from 'joi'
 const accreditationSchema = Joi.object({
   id: Joi.string().required(),
   accreditationNumber: Joi.string().allow(null).required(),
-  status: Joi.string().required()
+  status: Joi.string().required(),
+  year: Joi.number().integer().allow(null).required()
 })
 
 const registrationSchema = Joi.object({
@@ -27,6 +28,7 @@ const linkedDefraOrganisationSchema = Joi.object({
 
 export const organisationsOverviewResponseSchema = Joi.object({
   id: Joi.string().required(),
+  organisationNumber: Joi.number().integer().required(),
   companyName: Joi.string().required(),
   registrations: Joi.array().items(registrationSchema).required(),
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional()

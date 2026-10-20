@@ -49,7 +49,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Array.isArray(result.registrations)).toBe(true)
   })
 
-  it('returns only id, companyName, and registrations fields at the top level', async () => {
+  it('returns only id, organisationNumber, companyName, and registrations fields at the top level', async () => {
     const org = buildOrganisation()
     await organisationsRepository.insert(org)
 
@@ -64,8 +64,22 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Object.keys(result).sort()).toEqual([
       'companyName',
       'id',
+      'organisationNumber',
       'registrations'
     ])
+  })
+
+  it('returns the organisation number', async () => {
+    const org = buildOrganisation()
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      ...asServiceMaintainer()
+    })
+
+    expect(JSON.parse(response.payload).organisationNumber).toBe(org.orgId)
   })
 
   it('returns companyName from organisation companyDetails', async () => {
@@ -227,7 +241,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(result.registrations[0].site).toBeNull()
   })
 
-  it('includes linked accreditation with id, accreditationNumber, and status', async () => {
+  it('includes linked accreditation with id, accreditationNumber, status, and year', async () => {
     const accreditation = buildAccreditation({ accreditationNumber: 'ACC0001' })
     const registration = buildRegistration({
       accreditationId: accreditation.id
@@ -251,11 +265,37 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Object.keys(reg.accreditation).sort()).toEqual([
       'accreditationNumber',
       'id',
-      'status'
+      'status',
+      'year'
     ])
     expect(reg.accreditation.id).toBe(accreditation.id)
     expect(reg.accreditation.accreditationNumber).toBe('ACC0001')
     expect(reg.accreditation.status).toBe('created')
+  })
+
+  it.each([
+    ['the year it is valid from', '2026-07-01', 2026],
+    ['no year before it is valid from any date', undefined, null]
+  ])('gives the linked accreditation %s', async (_, validFrom, year) => {
+    const accreditation = buildAccreditation({ validFrom })
+    const registration = buildRegistration({
+      accreditationId: accreditation.id
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      ...asServiceMaintainer()
+    })
+
+    expect(
+      JSON.parse(response.payload).registrations[0].accreditation.year
+    ).toBe(year)
   })
 
   it('does not include accreditation on registration when none is linked', async () => {
