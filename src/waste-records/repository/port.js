@@ -59,7 +59,7 @@
 /**
  * A row one submission committed, named by its ledger's numbers in place of
  * its database ids. The accreditation number is `null` for registered-only,
- * and absent when the organisation no longer holds the accreditation.
+ * and undefined when the organisation no longer holds the accreditation.
  *
  * @typedef {WasteRecordState & RegistrationKey & {
  *   accreditationNumber?: string | null
