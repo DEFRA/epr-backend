@@ -38,12 +38,12 @@ export const overseasSites = [approvedSite, pendingSite]
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '../port.js' */
 
 /**
  * @param {OrganisationReadRepository} repository
- * @param {number} organisationNumber
+ * @param {string} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export const findOrganisation = async (repository, organisationNumber) => {
@@ -66,11 +66,12 @@ export const granted = (status) => [
  * The timeline of a record built with `granted('approved')`.
  *
  * @param {string} validFrom
+ * @returns {StatusTimeline}
  */
-export const approvedTimeline = (validFrom) => ({
-  '2026-01-01T09:00:00.000Z': { status: 'created' },
-  [new Date(validFrom).toISOString()]: { status: 'approved' }
-})
+export const approvedTimeline = (validFrom) => [
+  { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+  { status: 'approved', at: new Date(validFrom).toISOString() }
+]
 
 export const accreditation = (overrides = {}) =>
   buildAccreditation({

@@ -63,7 +63,7 @@ describe('atNaturalKeys', () => {
     })
     expect(
       served.options.validate.params.validate({
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REPROCESSOR_NUMBER
       }).error
     ).toBeUndefined()
@@ -84,7 +84,7 @@ describe('atNaturalKeys', () => {
 
     const params = await served.handler(
       requestFor({
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REGISTERED_ONLY_NUMBER
       }),
       h
@@ -104,7 +104,7 @@ describe('atNaturalKeys', () => {
 
     const params = await served.handler(
       requestFor({
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REPROCESSOR_NUMBER,
         year: 2026
       }),
@@ -121,12 +121,12 @@ describe('atNaturalKeys', () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
 
     const params = await served.handler(
-      requestFor({ organisationNumber: organisation.orgId }),
+      requestFor({ organisationNumber: String(organisation.orgId) }),
       h
     )
 
     expect(params).toEqual({
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       organisationId: organisation.id
     })
   })
@@ -134,7 +134,7 @@ describe('atNaturalKeys', () => {
   it('puts the records it resolved on the request', async () => {
     const served = atNaturalKeys(route, '/served', registrationParams)
     const request = requestFor({
-      organisationNumber: organisation.orgId,
+      organisationNumber: String(organisation.orgId),
       registrationNumber: REGISTERED_ONLY_NUMBER
     })
 
@@ -163,7 +163,7 @@ describe('atNaturalKeys', () => {
 
     await served.handler(
       requestFor({
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REGISTERED_ONLY_NUMBER
       }),
       h
@@ -178,13 +178,13 @@ describe('atNaturalKeys', () => {
   it.each([
     [
       'an unknown organisation',
-      { organisationNumber: 999999, registrationNumber: REPROCESSOR_NUMBER },
+      { organisationNumber: '999999', registrationNumber: REPROCESSOR_NUMBER },
       false
     ],
     [
       'an unknown registration',
       {
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: 'R26XX0000000000PL'
       },
       false
@@ -192,7 +192,7 @@ describe('atNaturalKeys', () => {
     [
       'a year the registration has no accreditation for',
       {
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REPROCESSOR_NUMBER,
         year: 2027
       },
@@ -201,7 +201,7 @@ describe('atNaturalKeys', () => {
     [
       'a registration with no accreditation',
       {
-        organisationNumber: organisation.orgId,
+        organisationNumber: String(organisation.orgId),
         registrationNumber: REGISTERED_ONLY_NUMBER,
         year: 2026
       },
@@ -364,7 +364,7 @@ describe('atNaturalKeys', () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
 
     await expect(
-      served.handler(requestFor({ organisationNumber: 999999 }), h)
+      served.handler(requestFor({ organisationNumber: '999999' }), h)
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 })
