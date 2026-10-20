@@ -1,10 +1,10 @@
-import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  uniqueNumber
 } from '#repositories/organisations/contract/test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogFactory, withoutYear } from './test-data.js'
@@ -20,10 +20,6 @@ import { summaryLogFactory, withoutYear } from './test-data.js'
  *   organisationsRepository: OrganisationsRepository
  * }} NaturalKeyFixtures
  */
-
-/** @param {string} prefix */
-const uniqueNumber = (prefix) =>
-  `${prefix}${randomUUID().slice(0, 8).toUpperCase()}`
 
 /**
  * Stores an organisation holding one registration with a current and a

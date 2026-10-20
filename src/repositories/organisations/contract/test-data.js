@@ -12,6 +12,14 @@ const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 
 /**
+ * A registration or accreditation number no other test has used.
+ *
+ * @param {string} prefix
+ */
+export const uniqueNumber = (prefix) =>
+  `${prefix}${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+
+/**
  * Generates date constants for validFrom/validTo in YYYY-MM-DD format
  * @returns {{ VALID_FROM: string, VALID_TO: string }} Object with VALID_FROM (today) and VALID_TO (one year from now)
  */

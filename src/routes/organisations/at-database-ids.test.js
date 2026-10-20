@@ -27,7 +27,7 @@ const route = {
 }
 
 /**
- * @param {object} params
+ * @param {DatabaseIdParams} params
  */
 const requestFor = (params) =>
   partialMock({

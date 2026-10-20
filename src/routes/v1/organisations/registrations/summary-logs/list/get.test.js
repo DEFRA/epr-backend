@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -9,7 +8,8 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
   buildAccreditation,
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  uniqueNumber
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -21,19 +21,18 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { summaryLogsListPath } from './get.js'
 
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+
 const pathFor = (organisationId, registrationId) =>
   summaryLogsListPath
     .replace('{organisationId}', organisationId)
     .replace('{registrationId}', registrationId)
 
-/** @param {string} prefix */
-const uniqueNumber = (prefix) =>
-  `${prefix}${randomUUID().slice(0, 8).toUpperCase()}`
-
 describe(`${summaryLogsListPath} route`, () => {
   setupAuthContext()
 
   let server
+  /** @type {OrganisationsRepository} */
   let organisationsRepository
   let summaryLogsRepository
 
@@ -96,25 +95,17 @@ describe(`${summaryLogsListPath} route`, () => {
       expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
     })
 
-    it.each([
-      [
-        'organisation',
-        () => new ObjectId().toString(),
-        (ids) => ids.registrationId
-      ],
-      [
-        'registration',
-        (ids) => ids.organisationId,
-        () => new ObjectId().toString()
-      ]
-    ])(
+    it.each(['organisationId', 'registrationId'])(
       'returns 200 with an empty array for an unknown %s',
-      async (_, organisationIdFrom, registrationIdFrom) => {
-        const ids = await storeRegistration()
+      async (unknownId) => {
+        const ids = {
+          ...(await storeRegistration()),
+          [unknownId]: new ObjectId().toString()
+        }
 
         const response = await server.inject({
           method: 'GET',
-          url: pathFor(organisationIdFrom(ids), registrationIdFrom(ids)),
+          url: pathFor(ids.organisationId, ids.registrationId),
           ...asServiceMaintainer()
         })
 
