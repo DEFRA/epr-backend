@@ -2,6 +2,11 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -18,12 +23,13 @@ export const accreditationPath = `${registrationPath}/accreditations/{year}`
 
 export const organisationParams = {
   organisationNumber: Joi.string()
-    .pattern(/^[1-9]\d*$/)
+    .pattern(ORGANISATION_NUMBER_PATTERN)
+    .custom(toOrganisationNumber)
     .required()
 }
 export const registrationParams = {
   ...organisationParams,
-  registrationNumber: Joi.string().required()
+  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
 }
 
 /**

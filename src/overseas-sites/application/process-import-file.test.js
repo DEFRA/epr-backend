@@ -24,7 +24,7 @@ describe('processImportFile', () => {
     }
 
     organisationsRepository = {
-      findByOrgId: vi.fn(),
+      findByOrganisationNumber: vi.fn(),
       replaceRegistrationOverseasSites: vi.fn()
     }
 
@@ -58,7 +58,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: 'Plastic',
         accreditationNumber: 'ACC-001'
@@ -111,7 +111,7 @@ describe('processImportFile', () => {
         }
       ]
     }
-    organisationsRepository.findByOrgId.mockResolvedValue(org)
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(org)
 
     overseasSitesRepository.create
       .mockResolvedValueOnce({ id: 'site-id-aaa' })
@@ -131,7 +131,9 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    expect(organisationsRepository.findByOrgId).toHaveBeenCalledWith('500001')
+    expect(
+      organisationsRepository.findByOrganisationNumber
+    ).toHaveBeenCalledWith('500001')
     expect(overseasSitesRepository.create).toHaveBeenCalledTimes(2)
 
     // First site
@@ -158,7 +160,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: 'Plastic',
         accreditationNumber: null
@@ -182,7 +184,9 @@ describe('processImportFile', () => {
     expect(result.errors).toHaveLength(2)
     expect(result.registrationNumber).toBe('EPR/AB1234CD/R1')
 
-    expect(organisationsRepository.findByOrgId).not.toHaveBeenCalled()
+    expect(
+      organisationsRepository.findByOrganisationNumber
+    ).not.toHaveBeenCalled()
     expect(overseasSitesRepository.create).not.toHaveBeenCalled()
   })
 
@@ -228,7 +232,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 999999,
+        orgId: '999999',
         registrationNumber: 'EPR/XX0000XX/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -253,7 +257,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue(null)
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(null)
 
     const result = await processImportFile(buffer, deps())
 
@@ -272,7 +276,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/NOMATCH/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -297,7 +301,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-mongo-id-123',
       orgId: 500001,
       version: 3,
@@ -327,7 +331,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -352,7 +356,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -382,7 +386,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -407,7 +411,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -436,7 +440,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -476,7 +480,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -520,7 +524,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -545,7 +549,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -588,7 +592,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 999999,
+        orgId: '999999',
         registrationNumber: 'EPR/XX0000XX/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -613,7 +617,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue(null)
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(null)
 
     await processImportFile(buffer, deps())
 
@@ -625,7 +629,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -650,7 +654,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -678,7 +682,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -703,7 +707,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,
@@ -741,7 +745,7 @@ describe('processImportFile', () => {
 
     vi.mocked(parse).mockResolvedValue({
       metadata: {
-        orgId: 500001,
+        orgId: '500001',
         registrationNumber: 'EPR/AB1234CD/R1',
         packagingWasteCategory: null,
         accreditationNumber: null
@@ -766,7 +770,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
-    organisationsRepository.findByOrgId.mockResolvedValue({
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue({
       id: 'org-id',
       orgId: 500001,
       version: 1,

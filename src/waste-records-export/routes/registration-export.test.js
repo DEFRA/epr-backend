@@ -104,7 +104,7 @@ const createServer = async ({
       organisationsRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
         findById: vi.fn(() => Promise.reject(new Error('read again'))),
-        findByOrgId: vi.fn((organisationNumber) =>
+        findByOrganisationNumber: vi.fn((organisationNumber) =>
           Promise.resolve(
             organisationNumber === String(organisation.orgId)
               ? organisation

@@ -8,12 +8,18 @@
  * @typedef {string & { readonly __brand: 'AccreditationNumber' }} AccreditationNumber
  */
 
+export const ORGANISATION_NUMBER_PATTERN = /^[1-9]\d*$/
+
 /**
  * @param {string} value
  * @returns {OrganisationNumber}
  */
-export const toOrganisationNumber = (value) =>
-  /** @type {OrganisationNumber} */ (value)
+export const toOrganisationNumber = (value) => {
+  if (!ORGANISATION_NUMBER_PATTERN.test(value)) {
+    throw new TypeError(`'${value}' is not an organisation number`)
+  }
+  return /** @type {OrganisationNumber} */ (value)
+}
 
 /**
  * @param {string} value

@@ -17,6 +17,7 @@ import {
   normaliseCriteria,
   parseOrgIdCriterion,
   prepareForReplace,
+  storedOrgId,
   UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
@@ -418,13 +419,16 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
   )
 }
 
-const performFindByOrgId = (staleCache) => async (organisationNumber) => {
-  const found = staleCache.find((o) => o.orgId === Number(organisationNumber))
-  if (!found) {
-    return null
+const performFindByOrganisationNumber =
+  (staleCache) => async (organisationNumber) => {
+    const found = staleCache.find(
+      (o) => o.orgId === storedOrgId(organisationNumber)
+    )
+    if (!found) {
+      return null
+    }
+    return mapDocumentWithCurrentStatuses(structuredClone(found))
   }
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
-}
 
 const performReplaceRegistrationOverseasSites =
   (storage, staleCache, pendingSyncRef) =>
@@ -554,7 +558,7 @@ export const createInMemoryOrganisationsRepository = (
       findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
       findByRegistrationNumber: performFindByRegistrationNumber(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
-      findByOrgId: performFindByOrgId(staleCache),
+      findByOrganisationNumber: performFindByOrganisationNumber(staleCache),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(
         storage,
         staleCache,

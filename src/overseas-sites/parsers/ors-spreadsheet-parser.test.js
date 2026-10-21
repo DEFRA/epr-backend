@@ -14,7 +14,7 @@ const FIXTURES_DIR = join(
 /**
  * @typedef {{
  *   packagingWasteCategory?: string
- *   orgId?: number | string
+ *   orgId?: number | string | null
  *   registrationNumber?: string | null
  *   accreditationNumber?: string | null
  * }} OrsWorkbookMetadata
@@ -145,6 +145,20 @@ describe('ORS spreadsheet parser', () => {
       await expect(parse(buffer)).rejects.toThrow(SpreadsheetValidationError)
       await expect(parse(buffer)).rejects.toThrow('registration number')
     })
+
+    it.each([null, 'not a number', 0])(
+      'should throw SpreadsheetValidationError when the org ID is %j',
+      async (orgId) => {
+        const workbook = buildOrsWorkbook({ metadata: { orgId } })
+        const buffer = await writeBuffer(workbook)
+
+        await expect(parse(buffer)).rejects.toThrow(
+          new SpreadsheetValidationError(
+            'Spreadsheet is missing an organisation ID (expected in row 5, column D)'
+          )
+        )
+      }
+    )
   })
 
   describe('metadata extraction', () => {
@@ -163,7 +177,7 @@ describe('ORS spreadsheet parser', () => {
 
       expect(result.metadata).toEqual({
         packagingWasteCategory: 'Steel',
-        orgId: 500065,
+        orgId: '500065',
         registrationNumber: 'R26EX5000650066ST',
         accreditationNumber: 'A26EX5000650032ST'
       })
@@ -770,7 +784,7 @@ describe('ORS spreadsheet parser', () => {
 
       expect(result.metadata).toEqual({
         packagingWasteCategory: 'Steel',
-        orgId: 100001,
+        orgId: '100001',
         registrationNumber: 'R26EX1000010001ST',
         accreditationNumber: 'A26EX1000010001ST'
       })

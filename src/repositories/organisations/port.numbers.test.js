@@ -53,7 +53,7 @@ describe('the organisations port names records by their numbers', () => {
 
   it('finds the organisation by each of its numbers', async () => {
     const found = [
-      await repository.findByOrgId(
+      await repository.findByOrganisationNumber(
         toOrganisationNumber(String(organisation.orgId))
       ),
       await repository.findByRegistrationNumber(REGISTRATION_NUMBER),
@@ -70,7 +70,7 @@ describe('the organisations port names records by their numbers', () => {
   it('takes no database id where a number is expected', async () => {
     const found = [
       // @ts-expect-error an organisation's id is not its number
-      await repository.findByOrgId(organisation.id),
+      await repository.findByOrganisationNumber(organisation.id),
       // @ts-expect-error a registration's id is not its number
       await repository.findByRegistrationNumber(registrationId),
       // @ts-expect-error an accreditation's id is not its number
@@ -83,9 +83,9 @@ describe('the organisations port names records by their numbers', () => {
   it('takes no number of another kind, or a bare value', async () => {
     const found = [
       // @ts-expect-error the stored orgId is not an organisation number
-      await repository.findByOrgId(organisation.orgId),
+      await repository.findByOrganisationNumber(organisation.orgId),
       // @ts-expect-error a bare string is not an organisation number
-      await repository.findByOrgId(String(organisation.orgId)),
+      await repository.findByOrganisationNumber(String(organisation.orgId)),
       // @ts-expect-error an accreditation number is not a registration number
       await repository.findByRegistrationNumber(ACCREDITATION_NUMBER),
       // @ts-expect-error a registration number is not an accreditation number

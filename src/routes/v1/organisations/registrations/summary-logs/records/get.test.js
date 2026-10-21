@@ -122,7 +122,9 @@ const createServer = async ({
   const server = await createTestServer({
     repositories: {
       organisationsRepository: () => ({
-        findByOrgId: vi.fn(() => Promise.resolve(keyedOrganisation)),
+        findByOrganisationNumber: vi.fn(() =>
+          Promise.resolve(keyedOrganisation)
+        ),
         findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
         findRegistrationById: vi.fn(findRegistrationById)
       }),

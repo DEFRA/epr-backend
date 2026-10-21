@@ -31,7 +31,7 @@ export const createMockOrganisationsRepository = (overrides = {}) => ({
   findRegistrationById: vi.fn(),
   findAccreditationById: vi.fn(),
   findAllIds: vi.fn(),
-  findByOrgId: vi.fn(),
+  findByOrganisationNumber: vi.fn(),
   replaceRegistrationOverseasSites: vi.fn(),
   ...overrides
 })

@@ -28,7 +28,7 @@ describe('In-memory organisations repository', () => {
     testOrganisationsRepositoryContract(it)
   })
 
-  describe('findByOrgId', () => {
+  describe('findByOrganisationNumber', () => {
     /** @type {OrganisationsRepository} */
     let repository
 
@@ -41,7 +41,7 @@ describe('In-memory organisations repository', () => {
       const organisation = buildOrganisation()
       await repository.insert(organisation)
 
-      const found = await repository.findByOrgId(
+      const found = await repository.findByOrganisationNumber(
         toOrganisationNumber(String(organisation.orgId))
       )
 
@@ -52,7 +52,9 @@ describe('In-memory organisations repository', () => {
     })
 
     it('returns null when no organisation matches', async () => {
-      const found = await repository.findByOrgId(toOrganisationNumber('999999'))
+      const found = await repository.findByOrganisationNumber(
+        toOrganisationNumber('999999')
+      )
       expect(found).toBeNull()
     })
   })

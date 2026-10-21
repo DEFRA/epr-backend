@@ -325,6 +325,20 @@ export const testFindByNaturalKey = (it) => {
         expect(result.map(({ id }) => id)).toEqual([currentId])
       })
 
+      it('names no accreditation for a summary log whose accreditation the organisation does not hold', async () => {
+        await insert(
+          summaryLogFactory.submitted({
+            accreditationId: new ObjectId().toString()
+          })
+        )
+
+        const result = await repo.findAll(stored.key)
+
+        expect(result).toMatchObject([
+          { summaryLog: { accreditationNumber: null } }
+        ])
+      })
+
       it('counts a summary log stored before accreditations were recorded towards every accreditation', async () => {
         const unscopedId = await insert(
           withoutYear(summaryLogFactory.submitted())

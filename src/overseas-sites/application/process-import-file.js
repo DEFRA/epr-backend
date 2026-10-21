@@ -1,7 +1,6 @@
 import { parse } from '../parsers/ors-spreadsheet-parser.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
@@ -154,8 +153,8 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
 }
 
 const resolveRegistration = async (organisationsRepository, metadata) => {
-  const org = await organisationsRepository.findByOrgId(
-    toOrganisationNumber(String(metadata.orgId))
+  const org = await organisationsRepository.findByOrganisationNumber(
+    metadata.orgId
   )
   if (!org) {
     return {

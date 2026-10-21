@@ -41,7 +41,7 @@ export async function findOrganisationByNumber(
   organisationNumber
 ) {
   const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
+    await organisationsRepository.findByOrganisationNumber(organisationNumber)
   if (
     !organisation ||
     !servesOrganisation(organisation, lookupContext().today)
