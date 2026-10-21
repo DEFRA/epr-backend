@@ -1,4 +1,7 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
@@ -12,9 +15,9 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
- * Reads a summary log's numbers from its organisation record. A registration
- * or accreditation without a number, or one the organisation no longer holds,
- * gives no number, and `unmapped` says why.
+ * Reads a summary log's numbers from its organisation record. An organisation,
+ * registration or accreditation without a number, or one the organisation no
+ * longer holds, gives no number, and `unmapped` says why.
  *
  * @param {Organisation} organisation
  * @param {{ registrationId: string, accreditationId?: string | null }} ids
@@ -25,11 +28,16 @@ export const numbersForSummaryLog = (
   { registrationId, accreditationId }
 ) => {
   /** @type {SummaryLogNumbers} */
-  const numbers = {
-    organisationNumber: toOrganisationNumber(String(organisation.orgId))
-  }
+  const numbers = {}
   /** @type {string[]} */
   const unmapped = []
+
+  const organisationNumber = String(organisation.orgId)
+  if (ORGANISATION_NUMBER_PATTERN.test(organisationNumber)) {
+    numbers.organisationNumber = toOrganisationNumber(organisationNumber)
+  } else {
+    unmapped.push(`organisation ${organisation.id} has no organisation number`)
+  }
 
   const registration = organisation.registrations.find(
     ({ id }) => id === registrationId

@@ -89,4 +89,21 @@ describe('numbersForSummaryLog', () => {
       ]
     })
   })
+
+  for (const [description, orgId] of [
+    ['no orgId', undefined],
+    ['an orgId that is not an organisation number', 0]
+  ]) {
+    it(`gives no organisation number for an organisation with ${description}, and says why`, () => {
+      expect(
+        numbersForSummaryLog(
+          /** @type {Organisation} */ ({ ...buildOrganisation(), orgId }),
+          { registrationId: 'reg-1' }
+        )
+      ).toEqual({
+        numbers: { registrationNumber: 'R25SR500010912PL' },
+        unmapped: [`organisation org-1 has no organisation number`]
+      })
+    })
+  }
 })
