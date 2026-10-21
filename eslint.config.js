@@ -99,6 +99,30 @@ export default [
     }
   },
   {
+    files: ['src/repositories/organisations/contract/*.contract.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: './test-data.js',
+              importNames: [
+                'buildOrganisation',
+                'buildOrgWithName',
+                'buildOrgWithCriteria',
+                'buildReadOrganisation',
+                'buildOrganisationWithRegistration'
+              ],
+              message:
+                'Take the builders from the organisationBuilders fixture, so orgIds cannot collide within a test.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     files: ['**/*.contract.js'],
     rules: {
       'vitest/no-standalone-expect': [

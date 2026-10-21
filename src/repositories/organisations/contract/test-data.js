@@ -105,14 +105,15 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 /**
- * Builds organisations whose orgIds come from one generator. Builders from one
- * call share a sequence, so organisations inserted into the same repository
- * cannot collide on its unique orgId index.
+ * Builds organisations whose orgIds come from one generator, by default a
+ * fresh sequence. Organisations built by one set of builders never share an
+ * orgId, so a test that starts from an empty repository can insert them
+ * without hitting its unique orgId index.
  *
- * @param {() => number} [generateOrgId]
+ * @param {() => number} [nextOrgId]
  */
 export const createOrganisationBuilders = (
-  generateOrgId = createOrgIdSequence()
+  nextOrgId = createOrgIdSequence()
 ) => {
   /** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
   const buildOrganisation = (overrides = {}) => {
@@ -151,7 +152,7 @@ export const createOrganisationBuilders = (
 
     const org = {
       ...org1,
-      orgId: generateOrgId(),
+      orgId: nextOrgId(),
       id: new ObjectId().toString(),
       formSubmission: {
         id: org1.formSubmission.id,

@@ -10,6 +10,7 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
   buildOrganisation,
+  createOrganisationBuilders,
   prepareOrgUpdate
 } from './contract/test-data.js'
 import { createOrganisationsRepository } from './mongodb.js'
@@ -224,7 +225,8 @@ describe('MongoDB organisations repository', () => {
         .db(DATABASE_NAME)
         .collection(COLLECTION_NAME)
 
-      const validLinkedOrg = buildOrganisation({
+      const builders = createOrganisationBuilders()
+      const validLinkedOrg = builders.buildOrganisation({
         linkedDefraOrganisation: buildLinkedDefraOrg(
           crypto.randomUUID(),
           'Valid Org'
@@ -232,7 +234,7 @@ describe('MongoDB organisations repository', () => {
       })
       await repository.insert(validLinkedOrg)
 
-      const nullOrgIdDoc = buildOrganisation()
+      const nullOrgIdDoc = builders.buildOrganisation()
       await repository.insert(nullOrgIdDoc)
       await collection.updateOne(
         { _id: ObjectId.createFromHexString(nullOrgIdDoc.id) },
