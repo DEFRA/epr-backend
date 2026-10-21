@@ -23,68 +23,48 @@ const diagnose = (accreditations) =>
   )
 
 describe('diagnoseApprovedAccreditationYears', () => {
-  it('describes an approved accreditation valid from another year', () => {
-    const outside = accreditation({
-      accreditationNumber: 'ACC12345',
-      validFrom: '2027-01-01'
+  it('counts an approved accreditation valid from another year', () => {
+    expect(
+      diagnose([accreditation({ validFrom: '2027-01-01' })])
+    ).toStrictEqual({ scannedApproved: 1, outsideYear: 1 })
+  })
+
+  it('counts an approved accreditation valid to another year', () => {
+    expect(diagnose([accreditation({ validTo: '2027-12-31' })])).toStrictEqual({
+      scannedApproved: 1,
+      outsideYear: 1
     })
-    const organisation = buildOrganisation({ accreditations: [outside] })
-
-    const { rows } = diagnoseApprovedAccreditationYears(
-      [partialMock(organisation)],
-      2026
-    )
-
-    expect(rows).toStrictEqual([
-      {
-        organisationId: organisation.id,
-        orgId: organisation.orgId,
-        testOrganisation: false,
-        accreditationId: outside.id,
-        accreditationNumber: 'ACC12345',
-        validFrom: '2027-01-01',
-        validTo: '2026-12-31'
-      }
-    ])
   })
 
-  it('flags an approved accreditation valid to another year', () => {
-    const { rows } = diagnose([accreditation({ validTo: '2027-12-31' })])
-
-    expect(rows).toStrictEqual([
-      expect.objectContaining({ validTo: '2027-12-31' })
-    ])
-  })
-
-  it('flags an approved accreditation without a validFrom', () => {
-    const { rows } = diagnose([accreditation({ validFrom: undefined })])
-
-    expect(rows).toStrictEqual([
-      expect.objectContaining({ validFrom: undefined })
-    ])
+  it('counts an approved accreditation without a validFrom', () => {
+    expect(diagnose([accreditation({ validFrom: undefined })])).toStrictEqual({
+      scannedApproved: 1,
+      outsideYear: 1
+    })
   })
 
   it('leaves out approved accreditations valid within the year', () => {
-    const { rows } = diagnose([accreditation({})])
-
-    expect(rows).toStrictEqual([])
+    expect(diagnose([accreditation({})])).toStrictEqual({
+      scannedApproved: 1,
+      outsideYear: 0
+    })
   })
 
   it('leaves out accreditations that are not approved', () => {
-    const { rows } = diagnose([
-      accreditation({ status: 'suspended', validFrom: '2025-01-01' })
-    ])
-
-    expect(rows).toStrictEqual([])
+    expect(
+      diagnose([
+        accreditation({ status: 'suspended', validFrom: '2025-01-01' })
+      ])
+    ).toStrictEqual({ scannedApproved: 0, outsideYear: 0 })
   })
 
   it('counts the approved accreditations scanned and those outside the year', () => {
-    const { summary } = diagnose([
-      accreditation({}),
-      accreditation({ validFrom: '2025-06-01' }),
-      accreditation({ status: 'created' })
-    ])
-
-    expect(summary).toStrictEqual({ scannedApproved: 2, outsideYear: 1 })
+    expect(
+      diagnose([
+        accreditation({}),
+        accreditation({ validFrom: '2025-06-01' }),
+        accreditation({ status: 'created' })
+      ])
+    ).toStrictEqual({ scannedApproved: 2, outsideYear: 1 })
   })
 })

@@ -5,7 +5,6 @@ import { diagnoseApprovedAccreditationYears } from '#future-status-date-diagnost
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { FutureStatusDateRow } from '#future-status-date-diagnostic/application/diagnose-future-status-dates.js' */
-/** @import { AccreditationOutsideYearRow } from '#future-status-date-diagnostic/application/diagnose-approved-accreditation-years.js' */
 
 const LOCK_NAME = 'future-status-date-diagnostic'
 const ACCREDITATION_YEAR = 2026
@@ -21,19 +20,6 @@ const formatEntryLine = (row) =>
     `itemId=${row.itemId}`,
     `status=${row.status}`,
     `updatedAt=${row.updatedAt}`
-  ].join(' ')
-
-/** @param {AccreditationOutsideYearRow} row */
-const formatAccreditationLine = (row) =>
-  [
-    'Approved accreditation outside year:',
-    `organisationId=${row.organisationId}`,
-    `orgId=${row.orgId}`,
-    `testOrganisation=${row.testOrganisation}`,
-    `accreditationId=${row.accreditationId}`,
-    `accreditationNumber=${row.accreditationNumber}`,
-    `validFrom=${row.validFrom}`,
-    `validTo=${row.validTo}`
   ].join(' ')
 
 /** @param {StartedServer} server */
@@ -58,12 +44,8 @@ const runDiagnostic = async (server) => {
     ACCREDITATION_YEAR
   )
 
-  for (const row of years.rows) {
-    logger.info({ message: formatAccreditationLine(row) })
-  }
-
   logger.info({
-    message: `Approved accreditation year diagnostic: year=${ACCREDITATION_YEAR} scannedApproved=${years.summary.scannedApproved} outsideYear=${years.summary.outsideYear}`
+    message: `Approved accreditation year diagnostic: year=${ACCREDITATION_YEAR} scannedApproved=${years.scannedApproved} outsideYear=${years.outsideYear}`
   })
 }
 

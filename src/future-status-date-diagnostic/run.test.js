@@ -108,7 +108,7 @@ describe('runFutureStatusDateDiagnostic', () => {
     ])
   })
 
-  it('logs each approved accreditation valid from another year', async () => {
+  it('counts approved accreditations valid from another year without logging each one', async () => {
     const accreditation = buildAccreditation({
       accreditationNumber: toAccreditationNumber('ACC12345'),
       validFrom: '2025-01-01',
@@ -126,9 +126,20 @@ describe('runFutureStatusDateDiagnostic', () => {
 
     await runFutureStatusDateDiagnostic(server)
 
-    expect(logger.info).toHaveBeenCalledWith({
-      message: `Approved accreditation outside year: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=ACC12345 validFrom=2025-01-01 validTo=2025-12-31`
-    })
+    expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
+      [
+        {
+          message:
+            'Future status date diagnostic: scannedOrganisations=1 scannedEntries=3 futureDatedEntries=0'
+        }
+      ],
+      [
+        {
+          message:
+            'Approved accreditation year diagnostic: year=2026 scannedApproved=1 outsideYear=1'
+        }
+      ]
+    ])
   })
 
   it('releases the lock and logs an error when reading the organisations fails', async () => {
