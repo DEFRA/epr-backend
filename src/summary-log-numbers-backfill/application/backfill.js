@@ -78,12 +78,12 @@ const numbersLacking = (numbers, summaryLog) =>
  */
 const reportUnmapped = (
   id,
-  { organisationId, registrationId, accreditationId },
+  { status, organisationId, registrationId, accreditationId },
   unmapped,
   logger
 ) => {
   logger.info({
-    message: `Summary log numbers unmapped: summaryLogId=${id} organisationId=${organisationId} registrationId=${registrationId} accreditationId=${accreditationId} reasons="${unmapped.join('; ')}"`
+    message: `Summary log numbers unmapped: summaryLogId=${id} status=${status} organisationId=${organisationId} registrationId=${registrationId} accreditationId=${accreditationId} reasons="${unmapped.join('; ')}"`
   })
 }
 

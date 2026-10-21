@@ -30,7 +30,18 @@ export const testAssignNumbers = (it) => {
     }
 
     describe('findIdsWithoutNumbers', () => {
-      it('lists a summary log without an organisation or registration number', async () => {
+      it('lists a summary log without an organisation number', async () => {
+        const id = await insertLog(
+          summaryLogFactory.validating({
+            accreditationNumber: null,
+            registrationNumber: numbers.registrationNumber
+          })
+        )
+
+        expect(await repository.findIdsWithoutNumbers()).toContain(id)
+      })
+
+      it('lists a summary log without a registration number', async () => {
         const id = await insertLog(
           summaryLogFactory.validating({
             accreditationNumber: null,
@@ -111,6 +122,25 @@ export const testAssignNumbers = (it) => {
       await expect(
         repository.assignNumbers(id, 99, numbers)
       ).rejects.toMatchObject({ output: { statusCode: 409 } })
+    })
+
+    it('conflicts rather than overwrite a number already held', async () => {
+      const id = await insertLog(
+        summaryLogFactory.validating({
+          organisationNumber: numbers.organisationNumber
+        })
+      )
+      const before = await repository.findById(id)
+
+      await expect(
+        repository.assignNumbers(id, before.version, {
+          organisationNumber: '999999',
+          registrationNumber: numbers.registrationNumber
+        })
+      ).rejects.toMatchObject({ output: { statusCode: 409 } })
+      expect((await repository.findById(id)).summaryLog).toEqual(
+        before.summaryLog
+      )
     })
 
     it('throws not found for an unknown id', async () => {

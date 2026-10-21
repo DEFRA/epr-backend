@@ -121,7 +121,7 @@ describe('runSummaryLogNumbersBackfill (mongo)', () => {
     ).toBe(0)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(unmappedLines()).toEqual([
-      `Summary log numbers unmapped: summaryLogId=organisation-gone organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=undefined reasons="organisation ${missingOrganisationId} not found"`
+      `Summary log numbers unmapped: summaryLogId=organisation-gone status=submitted organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=undefined reasons="organisation ${missingOrganisationId} not found"`
     ])
   })
 

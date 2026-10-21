@@ -212,9 +212,9 @@ describe('backfillSummaryLogNumbers', () => {
       })
 
       expect(unmappedLines()).toEqual([
-        'Summary log numbers unmapped: summaryLogId=no-ids organisationId=undefined registrationId=undefined accreditationId=null reasons="summary log holds no organisation or registration id"',
-        `Summary log numbers unmapped: summaryLogId=organisation-gone organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=null reasons="organisation ${missingOrganisationId} not found"`,
-        `Summary log numbers unmapped: summaryLogId=unnumbered organisationId=${organisationId} registrationId=${unnumberedRegistrationId} accreditationId=acc-gone reasons="registration ${unnumberedRegistrationId} has no registration number; organisation ${organisationId} holds no accreditation acc-gone"`
+        'Summary log numbers unmapped: summaryLogId=no-ids status=validating organisationId=undefined registrationId=undefined accreditationId=null reasons="summary log holds no organisation or registration id"',
+        `Summary log numbers unmapped: summaryLogId=organisation-gone status=validating organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=null reasons="organisation ${missingOrganisationId} not found"`,
+        `Summary log numbers unmapped: summaryLogId=unnumbered status=validating organisationId=${organisationId} registrationId=${unnumberedRegistrationId} accreditationId=acc-gone reasons="registration ${unnumberedRegistrationId} has no registration number; organisation ${organisationId} holds no accreditation acc-gone"`
       ])
     })
   })

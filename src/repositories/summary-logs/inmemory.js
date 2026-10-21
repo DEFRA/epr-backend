@@ -108,9 +108,12 @@ const assignNumbers =
       throw Boom.notFound(`Summary log with id ${validatedId} not found`)
     }
 
-    if (existing.version !== version) {
+    const held = Object.keys(validatedNumbers).filter(
+      (key) => existing.summaryLog[key] !== undefined
+    )
+    if (existing.version !== version || held.length > 0) {
       const conflictError = new Error(
-        `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}`
+        `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
       )
       logger.error({
         err: conflictError,

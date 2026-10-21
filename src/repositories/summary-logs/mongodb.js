@@ -177,8 +177,13 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
   const validatedId = validateId(id)
   const validatedNumbers = validateSummaryLogNumbers(numbers)
 
+  const keys = Object.keys(validatedNumbers)
   /** @type {any} */
-  const filter = { _id: validatedId, version }
+  const filter = {
+    _id: validatedId,
+    version,
+    ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
+  }
   const result = await db
     .collection(COLLECTION_NAME)
     .updateOne(filter, { $set: validatedNumbers, $inc: { version: 1 } })
@@ -192,8 +197,9 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
       throw Boom.notFound(`Summary log with id ${validatedId} not found`)
     }
 
+    const held = keys.filter((key) => existing[key] !== undefined)
     const conflictError = new Error(
-      `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}`
+      `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
     )
     logger.error({
       err: conflictError,
