@@ -11,6 +11,7 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -26,6 +27,7 @@ describe('In-memory organisations repository', () => {
   })
 
   describe('findByOrgId', () => {
+    /** @type {import('./port.js').OrganisationsRepository} */
     let repository
 
     beforeEach(() => {
@@ -39,13 +41,14 @@ describe('In-memory organisations repository', () => {
 
       const found = await repository.findByOrgId(organisation.orgId)
 
-      expect(found).toBeDefined()
-      expect(found.id).toBe(organisation.id)
-      expect(found.orgId).toBe(organisation.orgId)
+      expect(found).toMatchObject({
+        id: organisation.id,
+        orgId: organisation.orgId
+      })
     })
 
     it('returns null when no organisation matches', async () => {
-      const found = await repository.findByOrgId(999999)
+      const found = await repository.findByOrgId(toOrganisationNumber(999999))
       expect(found).toBeNull()
     })
   })

@@ -4,6 +4,7 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 export const testFindByAccreditationNumberBehaviour = (it) => {
   describe('findByAccreditationNumber', () => {
+    /** @type {import('../port.js').OrganisationsRepository} */
     let repository
 
     beforeEach(
@@ -20,7 +21,9 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
       const org = buildOrganisation()
       await repository.insert(org)
 
-      const result = await repository.findByAccreditationNumber('ACC000000')
+      const result = await repository.findByAccreditationNumber(
+        toAccreditationNumber('ACC000000')
+      )
 
       expect(result).toBeNull()
     })
@@ -33,7 +36,9 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
       const otherOrg = buildOrganisation()
       await Promise.all([org, otherOrg].map((o) => repository.insert(o)))
 
-      const result = await repository.findByAccreditationNumber('ACC777777')
+      const result = await repository.findByAccreditationNumber(
+        toAccreditationNumber('ACC777777')
+      )
 
       expect(result).toMatchObject({ id: org.id })
     })
@@ -46,7 +51,9 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
       const org = buildOrganisation({ accreditations: [first, second] })
       await repository.insert(org)
 
-      const result = await repository.findByAccreditationNumber('ACC888888')
+      const result = await repository.findByAccreditationNumber(
+        toAccreditationNumber('ACC888888')
+      )
 
       expect(result).toMatchObject({ id: org.id })
     })

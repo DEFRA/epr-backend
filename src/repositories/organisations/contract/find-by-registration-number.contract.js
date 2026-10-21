@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation, buildRegistration } from './test-data.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 export const testFindByRegistrationNumberBehaviour = (it) => {
   describe('findByRegistrationNumber', () => {
+    /** @type {import('../port.js').OrganisationsRepository} */
     let repository
 
     beforeEach(
@@ -19,7 +21,9 @@ export const testFindByRegistrationNumberBehaviour = (it) => {
       const org = buildOrganisation()
       await repository.insert(org)
 
-      const result = await repository.findByRegistrationNumber('REG000000')
+      const result = await repository.findByRegistrationNumber(
+        toRegistrationNumber('REG000000')
+      )
 
       expect(result).toBeNull()
     })
@@ -32,7 +36,9 @@ export const testFindByRegistrationNumberBehaviour = (it) => {
       const otherOrg = buildOrganisation()
       await Promise.all([org, otherOrg].map((o) => repository.insert(o)))
 
-      const result = await repository.findByRegistrationNumber('REG777777')
+      const result = await repository.findByRegistrationNumber(
+        toRegistrationNumber('REG777777')
+      )
 
       expect(result).toMatchObject({ id: org.id })
     })
@@ -43,7 +49,9 @@ export const testFindByRegistrationNumberBehaviour = (it) => {
       const org = buildOrganisation({ registrations: [first, second] })
       await repository.insert(org)
 
-      const result = await repository.findByRegistrationNumber('REG888888')
+      const result = await repository.findByRegistrationNumber(
+        toRegistrationNumber('REG888888')
+      )
 
       expect(result).toMatchObject({ id: org.id })
     })

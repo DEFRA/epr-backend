@@ -18,7 +18,7 @@ import {
  * @import { TestAPI } from 'vitest'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
+ * @import { KeyedSummaryLogWithId, SummaryLogKey, SummaryLogsRepository } from '../port.js'
  *
  * @typedef {{
  *   summaryLogsRepository: SummaryLogsRepository,
@@ -43,8 +43,9 @@ const storeRegistration = async (organisationsRepository) => {
   const previous = buildAccreditation({
     accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
   })
+  const registrationNumber = toRegistrationNumber(uniqueNumber('REG'))
   const registration = buildRegistration({
-    registrationNumber: toRegistrationNumber(uniqueNumber('REG')),
+    registrationNumber,
     accreditationId: current.id
   })
   const organisation = buildOrganisation({
@@ -53,11 +54,11 @@ const storeRegistration = async (organisationsRepository) => {
   })
   await organisationsRepository.insert(organisation)
 
+  /** @type {SummaryLogKey} */
+  const key = { organisationNumber: organisation.orgId, registrationNumber }
+
   return {
-    key: {
-      organisationNumber: organisation.orgId,
-      registrationNumber: registration.registrationNumber
-    },
+    key,
     unknownOrganisationNumber: toOrganisationNumber(organisation.orgId + 1),
     ids: {
       organisationId: organisation.id,
