@@ -159,7 +159,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
-  it('stores the year given in the URL, and resolves accreditationId from the payload', async () => {
+  it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 
     const response = await submit(
@@ -173,6 +173,14 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+    const { orgId } = await env.organisationsRepository.findById(
+      env.organisationId
+    )
+    expect(stored?.summaryLog).toMatchObject({
+      organisationNumber: String(orgId),
+      registrationNumber: 'REG-123',
+      accreditationNumber: 'ACC-123'
+    })
   })
 
   it('uses the registered-only template when the payload carries no ACCREDITATION_NUMBER, but still stamps the registration accreditation', async () => {
@@ -213,7 +221,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
   })
 
-  it('stores a null accreditationId for a registration with no accreditation', async () => {
+  it('stores a null accreditationId and accreditation number for a registration with no accreditation', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'input',
@@ -245,6 +253,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.accreditationId).toBeNull()
+    expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
   it('returns 422 for an invalid year', async () => {

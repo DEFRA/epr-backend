@@ -58,6 +58,30 @@ export const testInsertBehaviour = (it) => {
         expect(found.summaryLog.registrationId).toBe('reg-789')
       })
 
+      it('stores the numbers beside the ids', async () => {
+        const id = `contract-numbers-${randomUUID()}`
+
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({
+            organisationId: 'org-456',
+            registrationId: 'reg-789',
+            year: 2026,
+            accreditationId: 'acc-123',
+            organisationNumber: '500123',
+            registrationNumber: 'R25SR500010912PL',
+            accreditationNumber: 'ACC500123'
+          })
+        )
+        const found = await repository.findById(id)
+
+        expect(found.summaryLog).toMatchObject({
+          organisationNumber: '500123',
+          registrationNumber: 'R25SR500010912PL',
+          accreditationNumber: 'ACC500123'
+        })
+      })
+
       it('throws conflict error when inserting duplicate ID', async () => {
         const id = `contract-duplicate-${randomUUID()}`
         const summaryLog = summaryLogFactory.validating()

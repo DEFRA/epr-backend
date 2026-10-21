@@ -55,6 +55,12 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
+export const numbersSchema = {
+  organisationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().optional(),
+  accreditationNumber: Joi.string().allow(null).optional()
+}
+
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
   validation: validationSchema.optional(),
@@ -67,6 +73,7 @@ export const summaryLogInsertSchema = Joi.object({
   registrationId: Joi.string().optional(),
   year: yearSchema().optional(),
   accreditationId: Joi.string().allow(null).optional(),
+  ...numbersSchema,
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
   createdAt: Joi.string().isoDate().required(),
@@ -101,7 +108,10 @@ export const summaryLogUpdateSchema = Joi.object({
   validatedAgainstSummaryLogId: Joi.forbidden(),
   // Set once at insert time - the year/accreditation a summary log belongs to is fixed
   year: Joi.forbidden(),
-  accreditationId: Joi.forbidden()
+  accreditationId: Joi.forbidden(),
+  organisationNumber: Joi.forbidden(),
+  registrationNumber: Joi.forbidden(),
+  accreditationNumber: Joi.forbidden()
 })
   .with('status', 'expiresAt')
   .with('expiresAt', 'status')
