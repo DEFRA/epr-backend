@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
 
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -142,7 +143,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     const accreditedOrganisationId = '507f1f77bcf86cd799439013'
     const accreditedRegistrationId = '507f1f77bcf86cd799439014'
     const accreditationId = '507f1f77bcf86cd799439015'
-    const accreditationNumber = 'ACC500124'
+    const accreditationNumber = toAccreditationNumber('ACC500124')
 
     let accreditedServer
     let accreditedSummaryLogsRepository

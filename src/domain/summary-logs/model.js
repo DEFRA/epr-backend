@@ -1,3 +1,5 @@
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {Object} FileUpload
  * @property {string} id
@@ -65,9 +67,9 @@
  *   registrationId?: string,
  *   year?: number,
  *   accreditationId?: string | null,
- *   organisationNumber?: string,
- *   registrationNumber?: string,
- *   accreditationNumber?: string | null,
+ *   organisationNumber?: OrganisationNumber,
+ *   registrationNumber?: RegistrationNumber,
+ *   accreditationNumber?: AccreditationNumber | null,
  *   status: SummaryLogStatus,
  *   submittedAt?: string,
  *   validatedAgainstSummaryLogId?: string,

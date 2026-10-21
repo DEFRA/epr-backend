@@ -12,6 +12,7 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
@@ -41,7 +42,7 @@ const organisation = buildOrganisation({
   accreditations: [
     buildAccreditation({
       id: accreditationId,
-      accreditationNumber: 'ACC500123'
+      accreditationNumber: toAccreditationNumber('ACC500123')
     })
   ]
 })

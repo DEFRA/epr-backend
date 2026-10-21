@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { auditSummaryLogNumbersBackfill } from './audit.js'
 
@@ -12,7 +13,7 @@ describe('auditSummaryLogNumbersBackfill', () => {
     const context = {
       summaryLogId: 'sl-1',
       previous: { version: 1 },
-      next: { organisationNumber: '500123', version: 2 }
+      next: { organisationNumber: toOrganisationNumber('500123'), version: 2 }
     }
 
     await auditSummaryLogNumbersBackfill(systemLogsRepository, context)

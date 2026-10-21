@@ -1,15 +1,14 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 
 /**
  * The numbers a summary log stores beside the ids it holds. The accreditation
  * number is `null` for a registered-only summary log, and absent when the
  * summary log holds no accreditation id.
  *
- * @typedef {{
- *   organisationNumber?: string,
- *   registrationNumber?: string,
- *   accreditationNumber?: string | null
- * }} SummaryLogNumbers
+ * @typedef {Pick<SummaryLog, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} SummaryLogNumbers
  */
 
 /**
@@ -26,7 +25,9 @@ export const numbersForSummaryLog = (
   { registrationId, accreditationId }
 ) => {
   /** @type {SummaryLogNumbers} */
-  const numbers = { organisationNumber: String(organisation.orgId) }
+  const numbers = {
+    organisationNumber: toOrganisationNumber(String(organisation.orgId))
+  }
   /** @type {string[]} */
   const unmapped = []
 
