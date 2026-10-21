@@ -20,6 +20,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const TEST_REPROCESSOR_NAME = 'Alpha Reprocessor'
 const TEST_ADDRESS_LINE1 = '1 Rue de Test'
@@ -314,7 +315,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
           accreditations: [
             buildAccreditation({
               id: '507f1f77bcf86cd799439011',
-              accreditationNumber: 'ACC-LOOKUP-099'
+              accreditationNumber: toAccreditationNumber('ACC-LOOKUP-099')
             })
           ]
         })

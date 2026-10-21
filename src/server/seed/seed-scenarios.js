@@ -19,6 +19,11 @@ import {
   REGISTRATION_STATUS,
   USER_ROLES
 } from '#domain/organisations/model.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   buildOrganisation,
@@ -39,9 +44,9 @@ const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
  * These are fixed to enable idempotent seeding.
  */
 export const SCENARIO_ORG_IDS = Object.freeze({
-  APPROVED: 50020,
-  ACTIVE: 50030,
-  ACTIVE_WITH_SUSPENDED_ACCREDITATION: 50040
+  APPROVED: toOrganisationNumber(50020),
+  ACTIVE: toOrganisationNumber(50030),
+  ACTIVE_WITH_SUSPENDED_ACCREDITATION: toOrganisationNumber(50040)
 })
 
 /**
@@ -108,11 +113,8 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
       ...reg,
       ...(accreditationId && { accreditationId }),
       status: REGISTRATION_STATUS.APPROVED,
-      registrationNumber: seededNumber(
-        'R',
-        VALID_FROM,
-        org.orgId,
-        sequenceNumber
+      registrationNumber: toRegistrationNumber(
+        seededNumber('R', VALID_FROM, org.orgId, sequenceNumber)
       ),
       cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
       ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
@@ -155,7 +157,9 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
       status: isLinked
         ? ACCREDITATION_STATUS.APPROVED
         : ACCREDITATION_STATUS.CREATED,
-      accreditationNumber: seededNumber('A', VALID_FROM, org.orgId, index + 1),
+      accreditationNumber: toAccreditationNumber(
+        seededNumber('A', VALID_FROM, org.orgId, index + 1)
+      ),
       ...(isReprocessor &&
         isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: isLinked ? VALID_FROM : null,

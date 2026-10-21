@@ -16,6 +16,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { creditedTonnageGetPath } from './credited-tonnage-get.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const SUMMARY_LOG_ID = 'sl-credited-1'
 
@@ -87,7 +88,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       partialMock(registration),
       'approved'
     )
-    org.orgId = 500123
+    org.orgId = toOrganisationNumber(500123)
 
     const linkedRegistration = org.registrations[0]
     const linkedAccreditation = org.accreditations[0]

@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
@@ -73,7 +74,7 @@ export const viewRoute = (path, schema, select, query = undefined) => ({
 async function findOrganisation(request) {
   const organisation =
     await request.organisationReadRepository.findByOrganisationNumber(
-      request.params.organisationNumber
+      toOrganisationNumber(request.params.organisationNumber)
     )
   if (!organisation) {
     throw Boom.notFound('Organisation not found')

@@ -42,6 +42,10 @@ import {
   createUploadPayload,
   pollForValidation
 } from './integration-test-helpers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 describe('Submission and placeholder tests', () => {
   let organisationId
@@ -87,7 +91,7 @@ describe('Submission and placeholder tests', () => {
         registrations: [
           partialMock({
             id: registrationId,
-            registrationNumber: 'REG-12345',
+            registrationNumber: toRegistrationNumber('REG-12345'),
             status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
@@ -100,7 +104,7 @@ describe('Submission and placeholder tests', () => {
         accreditations: [
           partialMock({
             id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
+            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,
@@ -750,7 +754,7 @@ describe('Submission and placeholder tests', () => {
         registrations: [
           partialMock({
             id: registrationId,
-            registrationNumber: 'REG-123',
+            registrationNumber: toRegistrationNumber('REG-123'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
@@ -761,7 +765,7 @@ describe('Submission and placeholder tests', () => {
         accreditations: [
           partialMock({
             id: accreditationId,
-            accreditationNumber: 'ACC-PLACEHOLDER-001',
+            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',

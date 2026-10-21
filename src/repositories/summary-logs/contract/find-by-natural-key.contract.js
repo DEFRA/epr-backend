@@ -8,6 +8,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogFactory, withoutYear } from './test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -33,13 +38,13 @@ const uniqueNumber = (prefix) =>
  */
 const storeRegistration = async (organisationsRepository) => {
   const current = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
+    accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
   })
   const previous = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
+    accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
   })
   const registration = buildRegistration({
-    registrationNumber: uniqueNumber('REG'),
+    registrationNumber: toRegistrationNumber(uniqueNumber('REG')),
     accreditationId: current.id
   })
   const organisation = buildOrganisation({
@@ -50,10 +55,10 @@ const storeRegistration = async (organisationsRepository) => {
 
   return {
     key: {
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: organisation.orgId,
       registrationNumber: registration.registrationNumber
     },
-    unknownOrganisationNumber: String(organisation.orgId + 1),
+    unknownOrganisationNumber: toOrganisationNumber(organisation.orgId + 1),
     ids: {
       organisationId: organisation.id,
       registrationId: registration.id
@@ -113,7 +118,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findLatestSubmitted({
           ...stored.key,
-          registrationNumber: uniqueNumber('REG')
+          registrationNumber: toRegistrationNumber(uniqueNumber('REG'))
         })
 
         expect(result).toBeNull()
@@ -216,7 +221,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findLatestSubmitted({
           ...stored.key,
-          accreditationNumber: uniqueNumber('ACC')
+          accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
         })
 
         expect(result).toBeNull()

@@ -46,9 +46,7 @@ export const createOrganisationReadRepository = ({
   logger
 }) => ({
   findByOrganisationNumber: async (organisationNumber) => {
-    const stored = await organisationsRepository.findByOrgId(
-      Number(organisationNumber)
-    )
+    const stored = await organisationsRepository.findByOrgId(organisationNumber)
     if (!stored) {
       return null
     }

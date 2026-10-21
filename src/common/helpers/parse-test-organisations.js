@@ -1,4 +1,5 @@
 import { config } from '#root/config.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 export function parseTestOrganisationIds() {
   const raw = config.get('testOrganisations')
@@ -16,7 +17,10 @@ export function parseTestOrganisationIds() {
     throw new Error('Invalid testOrganisations configuration: not an array')
   }
 
-  return parsed.map(Number).filter((n) => Number.isFinite(n) && n > 0)
+  return parsed
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .map(toOrganisationNumber)
 }
 
 export const TEST_ORGANISATION_IDS = new Set(parseTestOrganisationIds())

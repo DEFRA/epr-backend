@@ -9,6 +9,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { partialMock } from '#test/type-helpers.js'
 
 import { runFutureStatusDateDiagnostic } from './run.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -109,7 +110,7 @@ describe('runFutureStatusDateDiagnostic', () => {
 
   it('logs each approved accreditation valid from another year', async () => {
     const accreditation = buildAccreditation({
-      accreditationNumber: 'ACC12345',
+      accreditationNumber: toAccreditationNumber('ACC12345'),
       validFrom: '2025-01-01',
       validTo: '2025-12-31',
       statusHistory: [

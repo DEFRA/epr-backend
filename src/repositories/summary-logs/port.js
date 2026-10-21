@@ -1,5 +1,6 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Object} SummaryLogVersion
@@ -44,9 +45,9 @@
  * place of their database ids.
  *
  * @typedef {Object} SummaryLogKey
- * @property {string} organisationNumber
- * @property {string} registrationNumber
- * @property {string|null} [accreditationNumber] - `null` for registered-only;
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationNumber|null} [accreditationNumber] - `null` for registered-only;
  *   absent matches every accreditation
  */
 
@@ -56,9 +57,9 @@
  * when the summary log was stored before its accreditation was recorded.
  *
  * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
- *   organisationNumber: string,
- *   registrationNumber: string,
- *   accreditationNumber?: string | null
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditationNumber?: AccreditationNumber | null
  * }} KeyedSummaryLog
  */
 
@@ -86,8 +87,8 @@
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
- * @property {(summaryLogId: string, registrationNumber?: string) => Promise<DownloadUrlResult>} getDownloadUrl
- * @property {(fileId: string, registrationNumber?: string) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
+ * @property {(summaryLogId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
+ * @property {(fileId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
  */
 
 /**

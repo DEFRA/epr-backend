@@ -13,6 +13,7 @@ import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').AccreditationStatus} AccreditationStatus */
+/** @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber */
 
 export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'
@@ -26,7 +27,7 @@ export const accreditationStatusHistoryPath =
  * accreditations.accreditationNumber, so concurrent grants of the same
  * number are not blocked by the database.
  * @param {OrganisationsRepository} organisationsRepository
- * @param {{ validFrom: string, validTo: string, accreditationNumber: string }} grant
+ * @param {{ validFrom: string, validTo: string, accreditationNumber: AccreditationNumber }} grant
  * @returns {Promise<void>}
  */
 const assertGrantAllowed = async (organisationsRepository, grant) => {
@@ -67,7 +68,7 @@ export const accreditationStatusHistory = {
    *      toStatus: AccreditationStatus,
    *      validFrom: string,
    *      validTo: string,
-   *      accreditationNumber: string
+   *      accreditationNumber: AccreditationNumber
    *    }
    * > & {
    *    organisationsRepository: OrganisationsRepository,

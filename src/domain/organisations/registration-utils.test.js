@@ -10,6 +10,10 @@ import {
   resolveMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -23,7 +27,7 @@ const userFixture = {
 /** @type {Organisation} */
 const orgFixture = {
   id: 'org-1',
-  orgId: 500001,
+  orgId: toOrganisationNumber(500001),
   accreditations: [],
   registrations: [],
   companyDetails: { name: 'Acme Ltd' },
@@ -57,7 +61,7 @@ const regFixture = {
   submitterContactDetails: userFixture,
   suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
-  registrationNumber: 'REG-001',
+  registrationNumber: toRegistrationNumber('REG-001'),
   samplingInspectionPlanPart1FileUploads: [],
   status: 'approved',
   validFrom: '2026-01-01'

@@ -5,6 +5,7 @@ import {
   buildAccreditation,
   prepareOrgUpdate
 } from './test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 export const testFindAccreditationByIdBehaviour = (it) => {
   describe('findAccreditationById', () => {
@@ -22,11 +23,11 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
     it('returns accreditation when both organisation ID and accreditation ID are valid', async () => {
       const accreditation1 = buildAccreditation({
-        accreditationNumber: 'ACC111111'
+        accreditationNumber: toAccreditationNumber('ACC111111')
       })
 
       const accreditation2 = buildAccreditation({
-        accreditationNumber: 'ACC222222',
+        accreditationNumber: toAccreditationNumber('ACC222222'),
         material: 'plastic',
         wasteProcessingType: 'reprocessor',
         glassRecyclingProcess: undefined

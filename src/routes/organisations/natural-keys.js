@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import {
@@ -40,7 +41,7 @@ export async function findOrganisationByNumber(
   organisationNumber
 ) {
   const organisation = await organisationsRepository.findByOrgId(
-    Number(organisationNumber)
+    toOrganisationNumber(organisationNumber)
   )
   if (
     !organisation ||

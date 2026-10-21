@@ -14,6 +14,7 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
@@ -994,7 +995,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
           accreditations: [
             buildAccreditation({
               statusHistory: accreditationHistory,
-              accreditationNumber: 'ACC12345',
+              accreditationNumber: toAccreditationNumber('ACC12345'),
               validFrom: '2026-01-01',
               validTo: '2027-01-01',
               reprocessingType: 'input'

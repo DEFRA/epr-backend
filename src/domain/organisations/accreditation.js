@@ -1,4 +1,5 @@
 /** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
+/** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
@@ -83,7 +84,7 @@
 
 /**
  * @typedef {AccreditationBase & {
- *  accreditationNumber: string;
+ *  accreditationNumber: AccreditationNumber;
  *  status: Extract<AccreditationStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string
@@ -92,7 +93,7 @@
 
 /**
  * @typedef {AccreditationBase & {
- *  accreditationNumber: string | null;
+ *  accreditationNumber: AccreditationNumber | null;
  *  status: Extract<AccreditationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string

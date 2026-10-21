@@ -355,9 +355,7 @@ export const testStatusTimelineBehaviour = (it) => {
         logger
       })
 
-      expect(
-        await repository.findByOrganisationNumber(String(stored.orgId))
-      ).toBeNull()
+      expect(await repository.findByOrganisationNumber(stored.orgId)).toBeNull()
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
           `Organisation ${stored.orgId} has status undefined`

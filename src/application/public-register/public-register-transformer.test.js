@@ -16,6 +16,10 @@ import {
 } from '#domain/organisations/model.js'
 import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 describe('transform', () => {
   const baseAddress = {
@@ -356,7 +360,7 @@ describe('transform', () => {
         buildAccreditation({
           id: accreditationId.toString(),
           status: ACCREDITATION_STATUS.CREATED,
-          accreditationNumber: 'A999999PL'
+          accreditationNumber: toAccreditationNumber('A999999PL')
         })
       ]
     })
@@ -628,7 +632,7 @@ describe('transform', () => {
     const normalOrgId = 500001
 
     const testOrg = buildReadOrganisation({
-      orgId: testOrgId,
+      orgId: toOrganisationNumber(testOrgId),
       companyDetails: {
         name: 'Test Organisation',
         registeredAddress: baseAddress
@@ -649,7 +653,7 @@ describe('transform', () => {
     })
 
     const normalOrg = buildReadOrganisation({
-      orgId: normalOrgId,
+      orgId: toOrganisationNumber(normalOrgId),
       companyDetails: {
         name: 'Normal Organisation',
         registeredAddress: baseAddress

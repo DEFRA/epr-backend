@@ -3,10 +3,11 @@ import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 
 /** @import { Db } from 'mongodb' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {{
- *   deleteByOrgId: (orgId: number) => Promise<Record<string, number>>
+ *   deleteByOrgId: (orgId: OrganisationNumber) => Promise<Record<string, number>>
  * }} NonProdDataReset
  */
 

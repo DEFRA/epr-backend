@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { buildAccreditation, buildOrganisation } from './test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 export const testFindByAccreditationNumberBehaviour = (it) => {
   describe('findByAccreditationNumber', () => {
@@ -26,7 +27,7 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
 
     it('returns the organisation holding an accreditation with the number', async () => {
       const accreditation = buildAccreditation({
-        accreditationNumber: 'ACC777777'
+        accreditationNumber: toAccreditationNumber('ACC777777')
       })
       const org = buildOrganisation({ accreditations: [accreditation] })
       const otherOrg = buildOrganisation()
@@ -39,7 +40,9 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
 
     it('finds the number regardless of which accreditation on the organisation holds it', async () => {
       const first = buildAccreditation()
-      const second = buildAccreditation({ accreditationNumber: 'ACC888888' })
+      const second = buildAccreditation({
+        accreditationNumber: toAccreditationNumber('ACC888888')
+      })
       const org = buildOrganisation({ accreditations: [first, second] })
       await repository.insert(org)
 
