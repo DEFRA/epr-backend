@@ -43,23 +43,27 @@ export const numbersForSummaryLog = (
     unmapped.push(`registration ${registrationId} has no registration number`)
   }
 
+  if (accreditationId === undefined) {
+    return { numbers, unmapped }
+  }
   if (accreditationId === null) {
     numbers.accreditationNumber = null
-  } else if (accreditationId !== undefined) {
-    const accreditation = organisation.accreditations.find(
-      ({ id }) => id === accreditationId
+    return { numbers, unmapped }
+  }
+
+  const accreditation = organisation.accreditations.find(
+    ({ id }) => id === accreditationId
+  )
+  if (!accreditation) {
+    unmapped.push(
+      `organisation ${organisation.id} holds no accreditation ${accreditationId}`
     )
-    if (!accreditation) {
-      unmapped.push(
-        `organisation ${organisation.id} holds no accreditation ${accreditationId}`
-      )
-    } else if (accreditation.accreditationNumber) {
-      numbers.accreditationNumber = accreditation.accreditationNumber
-    } else {
-      unmapped.push(
-        `accreditation ${accreditationId} has no accreditation number`
-      )
-    }
+  } else if (accreditation.accreditationNumber) {
+    numbers.accreditationNumber = accreditation.accreditationNumber
+  } else {
+    unmapped.push(
+      `accreditation ${accreditationId} has no accreditation number`
+    )
   }
 
   return { numbers, unmapped }
