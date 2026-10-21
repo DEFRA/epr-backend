@@ -31,7 +31,6 @@ import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/route
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
-import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { reportRoutesByNaturalKey } from '#reports/routes/by-natural-key.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
@@ -47,8 +46,6 @@ const router = {
       )
         ? Object.values(devRoutes)
         : []
-
-      const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } = reportsRoutes
 
       const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
         'featureFlags.prnAdminCancellation'
@@ -86,8 +83,7 @@ const router = {
         ...prnAdminCancellationRoutesBehindFeatureFlag,
         ...Object.values(overseasSitesRoutes),
         ...Object.values(marketInsightsRoutes),
-        ...Object.values(coreReportsRoutes),
-        reportsUnsubmit,
+        ...Object.values(reportsRoutes),
         ...reportRoutesByNaturalKey,
         adminMeGet,
         accreditationWasteBalanceLedgerGet,
