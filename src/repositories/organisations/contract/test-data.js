@@ -99,157 +99,199 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 /**
+ * @param {number} orgId
+ * @returns {Omit<Organisation, 'status'>}
+ */
+const buildOrganisationWithOrgId = (orgId, overrides = {}) => {
+  // Build a mapping from old accreditation IDs to new ones
+  // This ensures registration.accreditationId links are preserved
+  const accreditationIdMap = new Map()
+  for (const acc of org1.accreditations) {
+    accreditationIdMap.set(acc.id, new ObjectId().toString())
+  }
+
+  // Deep clone accreditations with new IDs and properly typed fields
+  const accreditations = org1.accreditations.map((acc) => ({
+    ...acc,
+    id: accreditationIdMap.get(acc.id),
+    formSubmission: {
+      id: accreditationIdMap.get(acc.id),
+      time: new Date(acc.formSubmission.time)
+    },
+    statusHistory: createInitialStatusHistory()
+  }))
+
+  // Deep clone registrations with new IDs, updating accreditationId links
+  const registrations = org1.registrations.map((reg) => ({
+    ...reg,
+    id: new ObjectId().toString(),
+    formSubmission: {
+      id: reg.formSubmission.id,
+      time: new Date(reg.formSubmission.time)
+    },
+    statusHistory: createInitialStatusHistory(),
+    // Update accreditationId to point to the new accreditation ID
+    ...(reg.accreditationId && {
+      accreditationId: accreditationIdMap.get(reg.accreditationId)
+    })
+  }))
+
+  const org = {
+    ...org1,
+    orgId,
+    id: new ObjectId().toString(),
+    formSubmission: {
+      id: org1.formSubmission.id,
+      time: new Date(org1.formSubmission.time)
+    },
+    partnership: org1.partnership,
+    statusHistory: createInitialStatusHistory(),
+    registrations,
+    accreditations,
+    ...overrides
+  }
+
+  initializeStatusForItems(org.registrations)
+  initializeStatusForItems(org.accreditations)
+
+  // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
+  // Accreditation/Registration types require computed 'status' that only exists after read
+  return org
+}
+
+/**
+ * Gives the organisation the given company name, its first registration the
+ * given registration number and its first accreditation the given
+ * accreditation number, so the registration/accreditation links stay intact.
+ *
+ * @param {Omit<Organisation, 'status'>} base
+ * @param {{ name: string, registrationNumber?: string, accreditationNumber?: string }} criteria
+ * @returns {Omit<Organisation, 'status'>}
+ */
+const withCriteria = (
+  base,
+  { name, registrationNumber, accreditationNumber }
+) => ({
+  ...base,
+  companyDetails: { ...base.companyDetails, name },
+  registrations: base.registrations.map((registration, index) =>
+    index === 0 && registrationNumber !== undefined
+      ? {
+          ...registration,
+          registrationNumber: toRegistrationNumber(registrationNumber)
+        }
+      : registration
+  ),
+  accreditations: base.accreditations.map((accreditation, index) =>
+    index === 0 && accreditationNumber !== undefined
+      ? {
+          ...accreditation,
+          accreditationNumber: toAccreditationNumber(accreditationNumber)
+        }
+      : accreditation
+  )
+})
+
+/**
+ * Adds the computed top-level and nested 'status' fields the read path
+ * derives from statusHistory.
+ *
+ * @param {Omit<Organisation, 'status'>} org
+ * @param {Partial<Organisation>} overrides
+ * @returns {Organisation}
+ */
+const asRead = (org, overrides) => {
+  for (const registration of org.registrations) {
+    registration.status = registration.status ?? getCurrentStatus(registration)
+  }
+  for (const accreditation of org.accreditations) {
+    accreditation.status =
+      accreditation.status ?? getCurrentStatus(accreditation)
+  }
+
+  return {
+    ...org,
+    status:
+      overrides.status ??
+      /** @type {OrganisationStatus} */ (getCurrentStatus(org))
+  }
+}
+
+/**
+ * @param {Registration} registration
+ * @param {'created'|'approved'|'suspended'} [accreditationStatus]
+ */
+const registrationOverrides = (registration, accreditationStatus) => {
+  const orgOptions = { registrations: [registration] }
+
+  if (accreditationStatus && registration.accreditationId) {
+    const accreditation = buildAccreditation({
+      id: registration.accreditationId,
+      wasteProcessingType: registration.wasteProcessingType,
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-01-01' },
+        { status: accreditationStatus, updatedAt: '2024-02-01' }
+      ]
+    })
+    orgOptions.accreditations = [accreditation]
+  }
+
+  return orgOptions
+}
+
+/**
  * Builds organisations whose orgIds come from one sequence, which nextOrgId
  * also hands out. Organisations built by one set of builders never share an
  * orgId, so a test that starts from an empty repository can insert them
  * without hitting the repository's unique orgId index.
  */
 export const createOrganisationBuilders = () => {
-  let orgId = ORG_ID_START
-  const nextOrgId = () => orgId++
-
-  /** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
-  const buildOrganisation = (overrides = {}) => {
-    // Build a mapping from old accreditation IDs to new ones
-    // This ensures registration.accreditationId links are preserved
-    const accreditationIdMap = new Map()
-    for (const acc of org1.accreditations) {
-      accreditationIdMap.set(acc.id, new ObjectId().toString())
-    }
-
-    // Deep clone accreditations with new IDs and properly typed fields
-    const accreditations = org1.accreditations.map((acc) => ({
-      ...acc,
-      id: accreditationIdMap.get(acc.id),
-      formSubmission: {
-        id: accreditationIdMap.get(acc.id),
-        time: new Date(acc.formSubmission.time)
-      },
-      statusHistory: createInitialStatusHistory()
-    }))
-
-    // Deep clone registrations with new IDs, updating accreditationId links
-    const registrations = org1.registrations.map((reg) => ({
-      ...reg,
-      id: new ObjectId().toString(),
-      formSubmission: {
-        id: reg.formSubmission.id,
-        time: new Date(reg.formSubmission.time)
-      },
-      statusHistory: createInitialStatusHistory(),
-      // Update accreditationId to point to the new accreditation ID
-      ...(reg.accreditationId && {
-        accreditationId: accreditationIdMap.get(reg.accreditationId)
-      })
-    }))
-
-    const org = {
-      ...org1,
-      orgId: nextOrgId(),
-      id: new ObjectId().toString(),
-      formSubmission: {
-        id: org1.formSubmission.id,
-        time: new Date(org1.formSubmission.time)
-      },
-      partnership: org1.partnership,
-      statusHistory: createInitialStatusHistory(),
-      registrations,
-      accreditations,
-      ...overrides
-    }
-
-    initializeStatusForItems(org.registrations)
-    initializeStatusForItems(org.accreditations)
-
-    // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
-    // Accreditation/Registration types require computed 'status' that only exists after read
-    return org
+  let lastOrgId = ORG_ID_START - 1
+  const nextOrgId = () => {
+    lastOrgId += 1
+    return lastOrgId
   }
+
+  /** @returns {Omit<Organisation, 'status'>} */
+  const buildOrganisation = (overrides = {}) =>
+    buildOrganisationWithOrgId(nextOrgId(), overrides)
 
   /**
    * Builds an organisation with a known company name.
    *
    * @param {string} name
-   * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
    */
-  const buildOrgWithName = (name) => {
-    const base = buildOrganisation()
-    return {
-      ...base,
-      companyDetails: { ...base.companyDetails, name }
-    }
-  }
+  const buildOrgWithName = (name) => withCriteria(buildOrganisation(), { name })
 
   /**
-   * Builds an organisation carrying known search criteria: the first registration
-   * gets the given registration number and the first accreditation the given
-   * accreditation number. Everything else is left as buildOrganisation makes it,
-   * so the registration/accreditation links stay intact.
+   * Builds an organisation carrying known search criteria. Everything else is
+   * left as buildOrganisation makes it.
    *
    * @param {{
    *   name?: string,
    *   orgId?: number,
    *   registrationNumber?: string,
    *   accreditationNumber?: string
-   * }} [overrides]
-   * @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>}
+   * }} [criteria]
    */
   const buildOrgWithCriteria = ({
     name = 'Criteria Ltd',
     orgId,
-    registrationNumber,
-    accreditationNumber
-  } = {}) => {
-    const base = buildOrganisation(orgId === undefined ? {} : { orgId })
-    return {
-      ...base,
-      companyDetails: { ...base.companyDetails, name },
-      registrations: base.registrations.map((registration, index) =>
-        index === 0 && registrationNumber !== undefined
-          ? {
-              ...registration,
-              registrationNumber: toRegistrationNumber(registrationNumber)
-            }
-          : registration
-      ),
-      accreditations: base.accreditations.map((accreditation, index) =>
-        index === 0 && accreditationNumber !== undefined
-          ? {
-              ...accreditation,
-              accreditationNumber: toAccreditationNumber(accreditationNumber)
-            }
-          : accreditation
-      )
-    }
-  }
+    ...numbers
+  } = {}) =>
+    withCriteria(buildOrganisation(orgId === undefined ? {} : { orgId }), {
+      name,
+      ...numbers
+    })
 
   /**
-   * Builds an organisation as returned from a repository read, with the computed
-   * top-level and nested 'status' fields the read path derives from statusHistory.
-   * Use this for tests that consume an organisation (vs insert it).
+   * Builds an organisation as returned from a repository read. Use this for
+   * tests that consume an organisation (vs insert it).
    *
    * @param {Partial<Organisation>} [overrides]
-   * @returns {Organisation}
    */
-  const buildReadOrganisation = (overrides = {}) => {
-    const org = buildOrganisation(overrides)
-
-    for (const registration of org.registrations) {
-      registration.status =
-        registration.status ?? getCurrentStatus(registration)
-    }
-    for (const accreditation of org.accreditations) {
-      accreditation.status =
-        accreditation.status ?? getCurrentStatus(accreditation)
-    }
-
-    return {
-      ...org,
-      status:
-        overrides.status ??
-        /** @type {OrganisationStatus} */ (getCurrentStatus(org))
-    }
-  }
+  const buildReadOrganisation = (overrides = {}) =>
+    asRead(buildOrganisation(overrides), overrides)
 
   /**
    * Builds an organisation with the given registration, optionally linking a
@@ -260,28 +302,12 @@ export const createOrganisationBuilders = () => {
    *
    * @param {Registration} registration - From buildRegistration
    * @param {'created'|'approved'|'suspended'} [accreditationStatus] - If set, links a matching accreditation
-   * @returns {Omit<Organisation, 'status'>}
    */
   const buildOrganisationWithRegistration = (
     registration,
     accreditationStatus
-  ) => {
-    const orgOptions = { registrations: [registration] }
-
-    if (accreditationStatus && registration.accreditationId) {
-      const accreditation = buildAccreditation({
-        id: registration.accreditationId,
-        wasteProcessingType: registration.wasteProcessingType,
-        statusHistory: [
-          { status: 'created', updatedAt: '2024-01-01' },
-          { status: accreditationStatus, updatedAt: '2024-02-01' }
-        ]
-      })
-      orgOptions.accreditations = [accreditation]
-    }
-
-    return buildOrganisation(orgOptions)
-  }
+  ) =>
+    buildOrganisation(registrationOverrides(registration, accreditationStatus))
 
   return {
     nextOrgId,
