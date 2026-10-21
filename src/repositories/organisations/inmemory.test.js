@@ -13,11 +13,14 @@ import {
 } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
-/** @import { OrganisationsRepository } from './port.js' */
+/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js' */
 
 const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  organisationsRepository: async ({}, use) => {
+  organisationsRepository: async (
+    // eslint-disable-next-line no-empty-pattern
+    /** @type {object} */ {},
+    /** @type {(factory: OrganisationsRepositoryFactory) => Promise<void>} */ use
+  ) => {
     const factory = createInMemoryOrganisationsRepository([])
     await use(factory)
   }
