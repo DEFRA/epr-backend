@@ -57,6 +57,29 @@ export const testReplaceBehaviour = (it) => {
         })
       })
 
+      it('refuses to give an organisation an orgId another organisation holds', async () => {
+        const first = buildOrganisation()
+        const second = buildOrganisation()
+        await repository.insert(first)
+        await repository.insert(second)
+
+        await expect(
+          repository.replace(
+            second.id,
+            1,
+            prepareOrgUpdate(second, { orgId: first.orgId })
+          )
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Duplicate key conflict updating organisation ${second.id} (orgId)`
+            }
+          }
+        })
+      })
+
       it('throws not found error when organisation does not exist', async () => {
         const { id, ...organisation } = buildOrganisation()
 

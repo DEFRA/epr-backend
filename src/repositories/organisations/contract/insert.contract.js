@@ -90,6 +90,23 @@ export const testInsertBehaviour = (it) => {
           }
         })
       })
+
+      it('refuses an organisation whose orgId another organisation holds', async () => {
+        const first = buildOrganisation()
+        await repository.insert(first)
+
+        const second = buildOrganisation({ orgId: first.orgId })
+
+        await expect(repository.insert(second)).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
+            }
+          }
+        })
+      })
     })
 
     describe('validation', () => {

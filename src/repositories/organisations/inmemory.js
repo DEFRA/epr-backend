@@ -76,6 +76,25 @@ const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
   }
 }
 
+/**
+ * Stands in for the MongoDB adapter's unique index on orgId.
+ *
+ * @param {Array<{ _id: string, orgId: number }>} storage
+ * @param {string} id - the organisation being written
+ * @param {number} orgId - as it will be stored
+ * @param {WriteOperation} operation
+ */
+const assertOrgIdUnheldElsewhere = (storage, id, orgId, operation) => {
+  if (storage.some((org) => org._id !== id && org.orgId === orgId)) {
+    throw duplicateKeyConflict({
+      operation,
+      id,
+      conflictFields: 'orgId',
+      reason: 'fields=orgId'
+    })
+  }
+}
+
 const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
@@ -85,6 +104,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     throw Boom.conflict(`Organisation with ${id} already exists`)
   }
 
+  assertOrgIdUnheldElsewhere(storage, id, orgFields.orgId, 'inserting')
   const registrations = initializeItems(orgFields.registrations)
   const accreditations = initializeItems(orgFields.accreditations)
   assertNumbersUnheldElsewhere(
@@ -132,6 +152,12 @@ const performReplace =
       updates
     )
 
+    assertOrgIdUnheldElsewhere(
+      storage,
+      existing._id,
+      replaced.orgId,
+      'updating'
+    )
     assertNumbersUnheldElsewhere(storage, existing._id, replaced, 'updating')
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
