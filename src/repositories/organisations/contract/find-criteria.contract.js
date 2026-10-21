@@ -25,6 +25,10 @@ export const testFindWithCriteriaBehaviour = (it) => {
       }
     )
 
+    /**
+     * @param {import('../port.js').OrganisationsRepository} repository
+     * @param {string[]} names
+     */
     const insertNamed = async (repository, names) => {
       for (const name of names) {
         await repository.insert(buildOrgWithName(name))

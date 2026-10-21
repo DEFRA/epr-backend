@@ -19,10 +19,20 @@ import { testAccreditationNumberUniquenessBehaviour } from './contract/accredita
 import { testRegistrationNumberUniquenessBehaviour } from './contract/registration-number-uniqueness.contract.js'
 import { createOrganisationBuilders } from './contract/test-data.js'
 
+/** @import { TestAPI } from 'vitest' */
+/** @import { OrganisationBuilders } from './contract/test-data.js' */
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
+
+/**
+ * @param {TestAPI<{ organisationsRepository: OrganisationsRepositoryFactory }>} repositoryFactory
+ */
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   const it = repositoryFactory.extend({
-    // eslint-disable-next-line no-empty-pattern
-    organisationBuilders: async ({}, use) => {
+    organisationBuilders: async (
+      // eslint-disable-next-line no-empty-pattern
+      /** @type {object} */ {},
+      /** @type {(builders: OrganisationBuilders) => Promise<void>} */ use
+    ) => {
       await use(createOrganisationBuilders())
     }
   })
