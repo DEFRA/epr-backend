@@ -19,12 +19,10 @@ import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.j
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
-export const summaryLogsSubmitPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/submit'
+const FAILURE_MESSAGE = 'Failure submitting summary log'
 
 export const summaryLogsSubmit = {
   method: 'POST',
-  path: summaryLogsSubmitPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     response: {
@@ -103,10 +101,6 @@ export const summaryLogsSubmit = {
       return h
         .response({ status: SUMMARY_LOG_STATUS.SUBMITTING })
         .code(StatusCodes.OK)
-        .header(
-          'Location',
-          `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-        )
     } catch (error) {
       if (error.isBoom) {
         throw error
@@ -114,7 +108,7 @@ export const summaryLogsSubmit = {
 
       logger.error({
         err: error,
-        message: `Failure on ${summaryLogsSubmitPath}`,
+        message: FAILURE_MESSAGE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -126,7 +120,7 @@ export const summaryLogsSubmit = {
         }
       })
 
-      throw Boom.badImplementation(`Failure on ${summaryLogsSubmitPath}`)
+      throw Boom.badImplementation(FAILURE_MESSAGE)
     }
   }
 }

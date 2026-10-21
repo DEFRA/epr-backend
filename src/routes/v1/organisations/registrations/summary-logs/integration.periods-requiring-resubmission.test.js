@@ -198,7 +198,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
       payload: {
         uploadStatus: 'ready',
         metadata: { organisationId, registrationId },
@@ -221,18 +221,13 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       }
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
   }
 
   const getLoadsByReportingPeriod = async (env, summaryLogId) => {
     const response = await env.server.inject({
       method: 'GET',
-      url: buildGetUrl(env.organisationId, env.registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
     return JSON.parse(response.payload).loadsByReportingPeriod
@@ -250,24 +245,18 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   }
 
   const submitAndPoll = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
-    await pollWhileStatus(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId,
-      {
-        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
-        maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
-      }
-    )
+    await pollWhileStatus(server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
+      maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
+    })
   }
 
   // Generates the period's report from the just-submitted head via the real
@@ -1205,12 +1194,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // As the queue would on redelivery.
     await env.validateSummaryLog('sl-retry')
-    await pollForValidation(
-      env.server,
-      env.organisationId,
-      env.registrationId,
-      'sl-retry'
-    )
+    await pollForValidation(env.server, 'sl-retry')
 
     const loadsByReportingPeriod = await getLoadsByReportingPeriod(
       env,

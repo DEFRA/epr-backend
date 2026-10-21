@@ -265,28 +265,3 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   updatedBy: Actor | null;
  * }} PackagingRecyclingNote
  */
-
-/**
- * @typedef {{
- *   id: string;
- *   accreditationYear: number | null;
- *   createdAt: Date;
- *   isDecemberWaste: boolean;
- *   obligationYear: number;
- *   issuedToOrganisation: OrganisationNameAndId;
- *   material: string;
- *   notes: string | null;
- *   processToBeUsed: string;
- *   status: PrnStatus;
- *   tonnage: number;
- *   wasteProcessingType: string;
- * }} CreatePrnResponse
- */
-
-/**
- * @typedef {CreatePrnResponse & {
- *   issuedAt: Date | null;
- *   issuedBy: Actor | null;
- *   prnNumber: string | null;
- * }} GetPrnResponse
- */

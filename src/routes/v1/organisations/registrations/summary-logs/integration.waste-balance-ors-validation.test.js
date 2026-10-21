@@ -52,7 +52,7 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -62,16 +62,11 @@ describe('ORS waste balance validation (VAL014)', () => {
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -83,7 +78,7 @@ describe('ORS waste balance validation (VAL014)', () => {
 
       const checkResponse = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 

@@ -440,12 +440,10 @@ const updateStatusServingPrn = (request, h) =>
 /**
  * @param {NaturalKeyRoute} route
  * @param {Joi.Schema} schema
- * @param {NaturalKeyRoute['handler']} [handler]
  */
-const declaringResponse = (route, schema, handler = route.handler) => ({
+const declaringResponse = (route, schema) => ({
   ...route,
-  options: { ...route.options, response: { schema } },
-  handler
+  options: { ...route.options, response: { schema } }
 })
 
 /**
@@ -477,9 +475,8 @@ export const prnRoutesByNaturalKey = [
   atNaturalKeys(prnsList, prnsPath, accreditationParams, accredited),
   atNaturalKeys(
     declaringResponse(
-      packagingRecyclingNotesCreate,
-      prnSchema,
-      createServingPrn
+      { ...packagingRecyclingNotesCreate, handler: createServingPrn },
+      prnSchema
     ),
     prnsPath,
     accreditationParams,
@@ -497,9 +494,11 @@ export const prnRoutesByNaturalKey = [
   atNaturalKeys(prnGet, prnPath, prnParams, accredited),
   atNaturalKeys(
     declaringResponse(
-      packagingRecyclingNotesUpdateStatus,
-      prnSchema,
-      updateStatusServingPrn
+      {
+        ...packagingRecyclingNotesUpdateStatus,
+        handler: updateStatusServingPrn
+      },
+      prnSchema
     ),
     `${prnPath}/status`,
     prnParams,
@@ -509,9 +508,8 @@ export const prnRoutesByNaturalKey = [
 
 export const prnCancelByNaturalKey = atNaturalKeys(
   declaringResponse(
-    adminPackagingRecyclingNotesCancel,
-    prnSchema,
-    cancelOwnPrn
+    { ...adminPackagingRecyclingNotesCancel, handler: cancelOwnPrn },
+    prnSchema
   ),
   `${prnPath}/cancel`,
   prnParams,

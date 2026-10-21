@@ -17,6 +17,7 @@ import {
 
 import {
   asOperator,
+  accreditationUrl,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -81,7 +82,7 @@ const submitCredit = async (env, tonnage) => {
 
   await server.inject({
     method: 'POST',
-    url: buildPostUrl(organisationId, registrationId, summaryLogId),
+    url: buildPostUrl(summaryLogId),
     payload: createUploadPayload(
       organisationId,
       registrationId,
@@ -91,11 +92,11 @@ const submitCredit = async (env, tonnage) => {
     )
   })
 
-  await pollForValidation(server, organisationId, registrationId, summaryLogId)
+  await pollForValidation(server, summaryLogId)
 
   await server.inject({
     method: 'POST',
-    url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+    url: buildSubmitUrl(summaryLogId),
     ...asOperator()
   })
 
@@ -109,7 +110,7 @@ const submitCredit = async (env, tonnage) => {
 
     const checkResponse = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -121,11 +122,11 @@ const submitCredit = async (env, tonnage) => {
 }
 
 const createPrn = async (env, tonnage) => {
-  const { server, organisationId, registrationId, accreditationId } = env
+  const { server } = env
 
   const response = await server.inject({
     method: 'POST',
-    url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+    url: `${accreditationUrl}/packaging-recycling-notes`,
     ...asOperator(),
     payload: {
       issuedToOrganisation: {
@@ -146,11 +147,11 @@ const createPrn = async (env, tonnage) => {
  * the stream event.
  */
 const raiseAs = async (env, prnId, credentials) => {
-  const { server, organisationId, registrationId, accreditationId } = env
+  const { server } = env
 
   return server.inject({
     method: 'POST',
-    url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+    url: `${accreditationUrl}/packaging-recycling-notes/${prnId}/status`,
     ...asOperator(credentials),
     payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
   })

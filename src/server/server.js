@@ -16,7 +16,6 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
-import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
@@ -142,11 +141,6 @@ function getProductionPlugins(config) {
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
-
-  /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
-  if (config.get('featureFlags.devEndpoints')) {
-    plugins.push(nonProdDataResetPlugin)
-  }
 
   plugins.push(packagingRecyclingNotesRepositoryPlugin, {
     plugin: commandQueueConsumerPlugin,

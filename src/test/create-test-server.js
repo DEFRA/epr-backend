@@ -23,7 +23,6 @@ import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
-import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/plugin.js'
@@ -165,14 +164,6 @@ const repositoryConfigs = [
   }
 ]
 
-/** @type {{name: keyof ServerApp, createDefault: Function}[]} */
-const devEndpointsRepositoryConfigs = [
-  {
-    name: 'nonProdDataReset',
-    createDefault: createInMemoryNonProdDataResetPlugin
-  }
-]
-
 /**
  * Builds repository plugins from config, applying any overrides.
  * @param {{name: keyof ServerApp, createDefault: Function}[]} configs - Repository configurations
@@ -287,12 +278,6 @@ export async function createTestServer(options = {}) {
     boomErrorLogger,
     externalApiErrorFormatter,
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
-    ...buildRepositoryPlugins(
-      config.get('featureFlags.devEndpoints')
-        ? devEndpointsRepositoryConfigs
-        : [],
-      options.repositories ?? {}
-    ),
     prnEventsPlugin,
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     {
