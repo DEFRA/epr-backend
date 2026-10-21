@@ -373,7 +373,7 @@ const baseConfig = {
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
     summaryLogNumbersBackfill: {
-      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary logs stored without them, rather than only reporting them (PAE-2034)',
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary logs stored without them, rather than only reporting them',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_NUMBERS_BACKFILL'

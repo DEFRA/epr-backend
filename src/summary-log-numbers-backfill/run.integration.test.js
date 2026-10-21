@@ -104,7 +104,7 @@ const unmappedLines = () =>
   vi
     .mocked(logger.info)
     .mock.calls.map(([{ message }]) => message)
-    .filter((message) => message.startsWith('Summary log numbers unmapped'))
+    .filter((message) => message?.startsWith('Summary log numbers unmapped'))
 
 describe('runSummaryLogNumbersBackfill (mongo)', () => {
   it('dry run writes and audits nothing, and reports what it cannot map', async (/** @type {*} */ {
