@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrgWithCriteria } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { createOrganisationsListView } from './organisations-list-view.js'
+
+const { buildOrgWithCriteria } = createOrganisationBuilders()
 
 /**
  * An organisation carrying every field the list route used to hand out: the

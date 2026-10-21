@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildOrganisation,
-  buildReadOrganisation,
-  createOrganisationBuilders
-} from './test-data.js'
+import { createOrganisationBuilders } from './test-data.js'
 import { getCurrentStatus } from '../status.js'
+
+const { buildOrganisation, buildReadOrganisation } =
+  createOrganisationBuilders()
 
 describe('test-data', () => {
   describe('buildOrganisation', () => {
@@ -16,13 +15,17 @@ describe('test-data', () => {
   })
 
   describe('createOrganisationBuilders', () => {
-    it('should give every organisation from one set of builders a distinct orgId', () => {
+    it('should never hand out the same orgId twice from one set of builders', () => {
       const builders = createOrganisationBuilders()
+      const draws = [
+        () => builders.buildOrganisation().orgId,
+        (/** @type {number} */ index) =>
+          builders.buildOrgWithName(`Org ${index}`).orgId,
+        () => builders.nextOrgId()
+      ]
 
-      const orgIds = Array.from({ length: 1000 }, (_, index) =>
-        index % 2 === 0
-          ? builders.buildOrganisation().orgId
-          : builders.buildOrgWithName(`Org ${index}`).orgId
+      const orgIds = Array.from({ length: 999 }, (_, index) =>
+        draws[index % draws.length](index)
       )
 
       expect(new Set(orgIds).size).toBe(orgIds.length)

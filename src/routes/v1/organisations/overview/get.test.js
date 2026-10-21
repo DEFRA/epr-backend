@@ -4,8 +4,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import {
   buildAccreditation,
   buildLinkedDefraOrg,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
@@ -15,6 +15,8 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { organisationsOverviewGetPath } from './get.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const makePath = (id) =>
   organisationsOverviewGetPath.replace('{organisationId}', id)

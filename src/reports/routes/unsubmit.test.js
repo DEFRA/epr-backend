@@ -5,7 +5,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
@@ -14,6 +14,8 @@ import {
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import * as reportAudit from '#reports/application/audit.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 

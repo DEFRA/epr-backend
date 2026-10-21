@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import {
-  buildOrganisation,
-  buildOrgWithCriteria,
-  buildOrgWithName
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -14,6 +10,9 @@ import {
   testOnlyServiceMaintainerCanAccess,
   testRegulatorCanRead
 } from '#vite/helpers/test-invalid-roles-scenarios.js'
+
+const { buildOrganisation, buildOrgWithCriteria, buildOrgWithName } =
+  createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 

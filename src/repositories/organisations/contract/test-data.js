@@ -13,12 +13,6 @@ import {
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 const ORG_ID_START = 500000
-export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
-
-const createOrgIdSequence = () => {
-  let nextOrgId = ORG_ID_START
-  return () => nextOrgId++
-}
 
 /**
  * Generates date constants for validFrom/validTo in YYYY-MM-DD format
@@ -105,16 +99,15 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 /**
- * Builds organisations whose orgIds come from one generator, by default a
- * fresh sequence. Organisations built by one set of builders never share an
+ * Builds organisations whose orgIds come from one sequence, which nextOrgId
+ * also hands out. Organisations built by one set of builders never share an
  * orgId, so a test that starts from an empty repository can insert them
- * without hitting its unique orgId index.
- *
- * @param {() => number} [nextOrgId]
+ * without hitting the repository's unique orgId index.
  */
-export const createOrganisationBuilders = (
-  nextOrgId = createOrgIdSequence()
-) => {
+export const createOrganisationBuilders = () => {
+  let orgId = ORG_ID_START
+  const nextOrgId = () => orgId++
+
   /** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
   const buildOrganisation = (overrides = {}) => {
     // Build a mapping from old accreditation IDs to new ones
@@ -291,6 +284,7 @@ export const createOrganisationBuilders = (
   }
 
   return {
+    nextOrgId,
     buildOrganisation,
     buildOrgWithName,
     buildOrgWithCriteria,
@@ -300,14 +294,6 @@ export const createOrganisationBuilders = (
 }
 
 /** @typedef {ReturnType<typeof createOrganisationBuilders>} OrganisationBuilders */
-
-export const {
-  buildOrganisation,
-  buildOrgWithName,
-  buildOrgWithCriteria,
-  buildReadOrganisation,
-  buildOrganisationWithRegistration
-} = createOrganisationBuilders(generateOrgId)
 
 const mergeArrayById = (existing, updates) => {
   const updatesById = new Map(updates.map((item) => [item.id, item]))

@@ -9,14 +9,15 @@ import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation,
-  createOrganisationBuilders,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { OrganisationsRepositoryFactory } from './port.js'
@@ -225,8 +226,7 @@ describe('MongoDB organisations repository', () => {
         .db(DATABASE_NAME)
         .collection(COLLECTION_NAME)
 
-      const builders = createOrganisationBuilders()
-      const validLinkedOrg = builders.buildOrganisation({
+      const validLinkedOrg = buildOrganisation({
         linkedDefraOrganisation: buildLinkedDefraOrg(
           crypto.randomUUID(),
           'Valid Org'
@@ -234,7 +234,7 @@ describe('MongoDB organisations repository', () => {
       })
       await repository.insert(validLinkedOrg)
 
-      const nullOrgIdDoc = builders.buildOrganisation()
+      const nullOrgIdDoc = buildOrganisation()
       await repository.insert(nullOrgIdDoc)
       await collection.updateOne(
         { _id: ObjectId.createFromHexString(nullOrgIdDoc.id) },

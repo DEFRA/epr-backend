@@ -1,6 +1,6 @@
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -22,6 +22,8 @@ import {
   yoda
 } from './organisation-read-test-helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 

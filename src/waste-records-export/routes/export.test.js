@@ -13,7 +13,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -21,6 +21,8 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 /**
  * Vary a complete registration, so a fixture stays one however few of its

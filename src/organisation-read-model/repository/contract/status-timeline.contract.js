@@ -1,4 +1,4 @@
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   REPROCESSOR_NUMBER,
@@ -6,6 +6,8 @@ import {
   findOrganisation,
   reprocessor
 } from './organisation-read-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 

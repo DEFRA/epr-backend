@@ -11,7 +11,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -24,6 +24,8 @@ import {
   exporterAccreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2026-03-31T09:00:00.000Z')

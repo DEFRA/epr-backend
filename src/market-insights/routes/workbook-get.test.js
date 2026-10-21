@@ -1,9 +1,10 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import ExcelJS from 'exceljs'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asRegulator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { buildMarketInsightsWorkbook } from '#market-insights/application/build-workbook.js'
@@ -14,6 +15,10 @@ import {
   reread
 } from '#market-insights/application/workbook/published-workbook-test-helpers.js'
 import { marketInsightsWorkbookPath } from './workbook-get.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import { ServerInjectResponse } from '@hapi/hapi' */
 /** @import { TestServer } from '#test/create-test-server.js' */

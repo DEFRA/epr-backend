@@ -5,7 +5,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
@@ -15,6 +15,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { buildUpdatedPrn } from './patch.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const YEAR = 2026
 

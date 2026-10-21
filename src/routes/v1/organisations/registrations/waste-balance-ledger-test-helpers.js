@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 
@@ -6,13 +7,16 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 const ANOTHER_ORGANISATION_ID = 'another-organisation-id'
 

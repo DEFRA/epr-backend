@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import {
-  buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
@@ -12,6 +12,8 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js' */
 

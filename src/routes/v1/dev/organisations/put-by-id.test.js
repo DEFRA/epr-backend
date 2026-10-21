@@ -1,6 +1,6 @@
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -9,6 +9,8 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach } from 'vitest'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 
