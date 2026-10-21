@@ -12,6 +12,7 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { partialMock } from '#test/type-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -31,6 +32,26 @@ const it = base.extend({
 describe('In-memory organisations repository', () => {
   describe('organisations repository contract', () => {
     testOrganisationsRepositoryContract(it)
+  })
+
+  describe('seeding', () => {
+    it('refuses two seeded organisations with the same orgId', () => {
+      const first = buildOrganisation()
+      const second = buildOrganisation({ orgId: first.orgId })
+
+      expect(() =>
+        createInMemoryOrganisationsRepository([
+          partialMock(first),
+          partialMock(second)
+        ])
+      ).toThrow(
+        expect.objectContaining({
+          isBoom: true,
+          output: expect.objectContaining({ statusCode: 409 }),
+          message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
+        })
+      )
+    })
   })
 
   describe('findByOrganisationNumber', () => {

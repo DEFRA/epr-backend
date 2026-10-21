@@ -560,6 +560,9 @@ export const createInMemoryOrganisationsRepository = (
     _id: id,
     ...rest
   }))
+  storage.forEach(({ _id, orgId }, index) =>
+    assertOrgIdUnheldElsewhere(storage.slice(0, index), _id, orgId, 'inserting')
+  )
 
   const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
