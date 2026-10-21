@@ -30,9 +30,6 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
  * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
  */
 
-export const reportsGetPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
-
 /**
  * Curates the full report summary down to the list-response shape so the
  * calendar endpoint doesn't leak heavy activity payloads.
@@ -62,15 +59,10 @@ const selectPeriodBuilder = (request) =>
 
 export const reportsGet = {
   method: 'GET',
-  path: reportsGetPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required()
-      }),
       query: Joi.object({
         expand: Joi.string().valid('submissions')
       })

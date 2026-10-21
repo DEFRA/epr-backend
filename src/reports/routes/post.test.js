@@ -17,34 +17,40 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import {
-  buildOrganisation,
-  buildOrganisationWithRegistration,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+  accreditation,
+  exporter,
+  exporterAccreditation,
+  granted,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { reportsPostPath } from './post.js'
+import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
-describe(`POST ${reportsPostPath}`, () => {
-  setupAuthContext()
+const YEAR = 2026
+const QUARTER = 1
+// The accreditation from the read-model fixtures starts in July.
+const MONTH = 7
 
-  const makeUrl = (orgId, regId, year, cadence, period, submissionNumber) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}`
+describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/.../submissions/{submissionNumber}', () => {
+  setupAuthContext()
 
   const SUMMARY_LOG_ID = 'sl-1'
   const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
@@ -63,7 +69,8 @@ describe(`POST ${reportsPostPath}`, () => {
   ]
 
   /**
-   * @param {Omit<Organisation, 'status'>} org
+   * @param {{ id: string }} org
+   * @param {Record<string, any>} registration
    * @param {SummaryLogRowStateEntry[]} [rows]
    */
   const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
@@ -96,50 +103,40 @@ describe(`POST ${reportsPostPath}`, () => {
   }
 
   /**
-   * Builds an organisations repository seeded with one registration. An
-   * accredited registration is linked to an approved accreditation and passed
-   * as the repository's initial org (insert would reset its status history);
-   * a registered-only registration is inserted.
-   */
-  const buildOrganisationsRepository = async (registration, accredited) => {
-    if (accredited) {
-      const org = buildOrganisationWithRegistration(
-        partialMock(registration),
-        'approved'
-      )
-      return {
-        org,
-        factory: createInMemoryOrganisationsRepository([partialMock(org)])
-      }
-    }
-
-    const org = buildOrganisation({ registrations: [registration] })
-    const factory = createInMemoryOrganisationsRepository()
-    await factory().insert(org)
-    return { org, factory }
-  }
-
-  /**
    * @param {object} [registrationOverrides]
    * @param {object} [options]
    * @param {boolean} [options.reportDataValidationEnabled]
    * @param {SummaryLogRowStateEntry[]} [options.rows]
-   * @param {boolean} [options.accredited] - Link an approved accreditation (monthly cadence).
+   * @param {boolean} [options.accredited] - Report through the accreditation (monthly cadence).
+   * @param {object} [options.accreditationOverrides]
+   * @param {(ids: { organisationId: string, registrationId: string, accreditationId: string }) => PackagingRecyclingNote[]} [options.prns]
    */
   const createServer = async (
     registrationOverrides = {},
-    { reportDataValidationEnabled = false, rows, accredited = false } = {}
+    {
+      reportDataValidationEnabled = false,
+      rows,
+      accredited = false,
+      accreditationOverrides = {},
+      prns = () => []
+    } = {}
   ) => {
-    const registration = buildRegistration(
-      accredited
-        ? {
-            accreditationId: new ObjectId().toString(),
-            ...registrationOverrides
-          }
-        : registrationOverrides
-    )
-    const { org, factory: organisationsRepositoryFactory } =
-      await buildOrganisationsRepository(registration, accredited)
+    const isExporter =
+      /** @type {{ wasteProcessingType?: string }} */ (registrationOverrides)
+        .wasteProcessingType === 'exporter'
+    const accreditationRecord = accredited
+      ? (isExporter ? exporterAccreditation : accreditation)(
+          accreditationOverrides
+        )
+      : undefined
+    const registration = (isExporter ? exporter : reprocessor)({
+      ...registrationOverrides,
+      ...(accreditationRecord && { accreditationId: accreditationRecord.id })
+    })
+    const org = buildOrganisation({
+      registrations: [registration],
+      ...(accreditationRecord && { accreditations: [accreditationRecord] })
+    })
 
     const { ledgerRepository, summaryLogRowStatesRepository } =
       await seedRepositories(org, registration, rows)
@@ -147,61 +144,101 @@ describe(`POST ${reportsPostPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
         ledgerRepository,
         summaryLogRowStatesRepository,
-        reportsRepository: reportsRepositoryFactory
+        reportsRepository: reportsRepositoryFactory,
+        packagingRecyclingNotesRepository:
+          createInMemoryPackagingRecyclingNotesRepository(
+            prns({
+              organisationId: org.id,
+              registrationId: registration.id,
+              accreditationId: /** @type {string} */ (accreditationRecord?.id)
+            })
+          )
       },
       config: {
         featureFlags: { reportDataValidation: reportDataValidationEnabled }
       }
     })
 
+    const registrationPath = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+
+    /**
+     * @param {{ year?: number, period?: number, submissionNumber?: number }} [submission]
+     */
+    const url = ({
+      year = YEAR,
+      period = accredited ? MONTH : QUARTER,
+      submissionNumber = 1
+    } = {}) =>
+      accredited
+        ? `${registrationPath}/accreditations/${year}/reports/monthly/${period}/submissions/${submissionNumber}`
+        : `${registrationPath}/reports/${year}/quarterly/${period}/submissions/${submissionNumber}`
+
     return {
       server,
       organisationId: org.id,
       registrationId: registration.id,
-      reportsRepositoryFactory
+      reportsRepositoryFactory,
+      url,
+      /** @param {{ year?: number, period?: number, submissionNumber?: number }} [submission] */
+      post: (submission) =>
+        server.inject({
+          method: 'POST',
+          url: url(submission),
+          ...asOperator()
+        }),
+      /** @param {{ year?: number, period?: number, submissionNumber?: number }} [submission] */
+      get: (submission) =>
+        server.inject({ method: 'GET', url: url(submission), ...asOperator() })
     }
   }
 
-  const makeRequest = (
-    server,
-    orgId,
-    regId,
-    year = 2025,
-    cadence = 'quarterly',
-    period = 1,
+  /**
+   * The id of the stored registered-only report for the quarter.
+   * @param {Awaited<ReturnType<typeof createServer>>} created
+   * @param {number} [submissionNumber]
+   */
+  const storedQuarterlyReport = (
+    { reportsRepositoryFactory, organisationId, registrationId },
     submissionNumber = 1
   ) =>
-    server.inject({
-      method: 'POST',
-      url: makeUrl(orgId, regId, year, cadence, period, submissionNumber),
-      ...asOperator()
-    })
+    fetchReportBySubmissionNumber(
+      reportsRepositoryFactory(),
+      organisationId,
+      registrationId,
+      YEAR,
+      'quarterly',
+      QUARTER,
+      submissionNumber
+    )
+
+  const registeredOnlyReprocessor = { wasteProcessingType: 'reprocessor' }
+
+  /** An accreditation the read model still serves but which is no longer live. */
+  const cancelledAccreditation = {
+    status: 'cancelled',
+    statusHistory: granted('cancelled')
+  }
 
   it('returns 201 with created report including data sections', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const created = await createServer(registeredOnlyReprocessor)
 
-    const response = await makeRequest(server, organisationId, registrationId)
+    const response = await created.post()
 
     expect(response.statusCode).toBe(StatusCodes.CREATED)
     const payload = JSON.parse(response.payload)
-    expect(payload.id).toBeDefined()
-    expect(payload.status.currentStatus).toBe('in_progress')
-    expect(payload.status.history).toStrictEqual([
-      expect.objectContaining({
-        status: 'in_progress',
-        at: expect.any(String)
-      })
-    ])
-    expect(payload.material).toBe('glass_re_melt')
-    expect(payload.wasteProcessingType).toBe('reprocessor')
-    expect(payload.details.material).toBe('glass')
-    expect(payload.details.site).toBeDefined()
+    expect(payload).toMatchObject({
+      year: YEAR,
+      cadence: 'quarterly',
+      period: QUARTER,
+      submissionNumber: 1,
+      status: REPORT_STATUS.IN_PROGRESS,
+      createdAt: expect.any(String)
+    })
     expect(payload.recyclingActivity).toStrictEqual({
       suppliers: [],
       totalTonnageReceived: 0,
@@ -215,104 +252,73 @@ describe(`POST ${reportsPostPath}`, () => {
       finalDestinations: []
     })
     expect(payload.exportActivity).toBeUndefined()
+
+    const stored = await storedQuarterlyReport(created)
+    expect(stored).toMatchObject({
+      material: 'glass_re_melt',
+      wasteProcessingType: 'reprocessor'
+    })
   })
 
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const created = await createServer(registeredOnlyReprocessor)
 
-    const first = await makeRequest(server, organisationId, registrationId)
-    const firstPayload = JSON.parse(first.payload)
-    const response = await makeRequest(server, organisationId, registrationId)
+    await created.post()
+    const existing = await storedQuarterlyReport(created)
+    const response = await created.post()
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     expect(JSON.parse(response.payload)).toEqual({
       statusCode: StatusCodes.CONFLICT,
       error: 'Conflict',
-      message: 'Report already exists for quarterly period 1 of 2025',
+      message: `Report already exists for quarterly period 1 of ${YEAR}`,
       existingReport: {
-        id: firstPayload.id,
+        id: existing?.id,
         cadence: 'quarterly',
-        period: 1,
-        year: 2025
+        period: QUARTER,
+        year: YEAR
       }
     })
   })
 
   it('allows re-creating the first submission after the initial draft is deleted', async () => {
-    const { server, organisationId, registrationId, reportsRepositoryFactory } =
-      await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+    const created = await createServer(registeredOnlyReprocessor)
+    const { organisationId, registrationId, reportsRepositoryFactory } = created
 
-    const first = await makeRequest(server, organisationId, registrationId)
+    const first = await created.post()
     expect(first.statusCode).toBe(StatusCodes.CREATED)
-    const firstId = JSON.parse(first.payload).id
+    const firstId = (await storedQuarterlyReport(created))?.id
 
     await reportsRepositoryFactory().deleteReport({
       organisationId,
       registrationId,
-      year: 2025,
+      year: YEAR,
       cadence: 'quarterly',
-      period: 1,
+      period: QUARTER,
       submissionNumber: 1,
       changedBy: { id: 'test', name: 'Test', position: 'Officer' }
     })
 
-    const recreated = await makeRequest(server, organisationId, registrationId)
+    const recreated = await created.post()
 
     expect(recreated.statusCode).toBe(StatusCodes.CREATED)
-    const payload = JSON.parse(recreated.payload)
-    expect(payload.submissionNumber).toBe(1)
-    expect(payload.id).not.toBe(firstId)
-  })
-
-  it('returns 404 when registration not found', async () => {
-    const { server, organisationId } = await createServer()
-    const unknownRegId = new ObjectId().toString()
-
-    const response = await makeRequest(server, organisationId, unknownRegId)
-
-    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(recreated.payload).submissionNumber).toBe(1)
+    expect((await storedQuarterlyReport(created))?.id).not.toBe(firstId)
   })
 
   it('creates report for non-glass material registration', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'exporter',
-      accreditationId: undefined
-    })
+    const created = await createServer({ wasteProcessingType: 'exporter' })
 
-    const response = await makeRequest(
-      server,
-      organisationId,
-      registrationId,
-      2025,
-      'quarterly',
-      1
-    )
+    const response = await created.post()
 
     expect(response.statusCode).toBe(StatusCodes.CREATED)
-    const payload = JSON.parse(response.payload)
-    expect(payload.material).toBe('plastic')
+    expect((await storedQuarterlyReport(created))?.material).toBe('plastic')
   })
 
   it('returns 400 with structured invalidPeriod when period exceeds the cadence range', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const { post } = await createServer(registeredOnlyReprocessor)
 
-    const response = await makeRequest(
-      server,
-      organisationId,
-      registrationId,
-      2025,
-      'quarterly',
-      5
-    )
+    const response = await post({ period: 5 })
 
     expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     expect(JSON.parse(response.payload)).toEqual({
@@ -328,19 +334,9 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   it('returns 400 with structured periodNotEnded when the period has not yet ended', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const { post } = await createServer(registeredOnlyReprocessor)
 
-    const response = await makeRequest(
-      server,
-      organisationId,
-      registrationId,
-      2099,
-      'quarterly',
-      1
-    )
+    const response = await post({ year: 2099 })
 
     expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     expect(JSON.parse(response.payload)).toEqual({
@@ -356,59 +352,13 @@ describe(`POST ${reportsPostPath}`, () => {
     })
   })
 
-  it('returns 400 with structured cadence when accredited registration uses quarterly cadence', async () => {
-    const accreditationId = new ObjectId().toString()
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId
-    })
-    const org = buildOrganisationWithRegistration(
-      partialMock(registration),
-      'approved'
-    )
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([partialMock(org)])
-
-    const server = await createTestServer({
-      repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
-        reportsRepository: createInMemoryReportsRepository()
-      }
+  it('returns 400 with structured cadence when the accreditation for the year is no longer live', async () => {
+    const { post } = await createServer(registeredOnlyReprocessor, {
+      accredited: true,
+      accreditationOverrides: cancelledAccreditation
     })
 
-    const response = await makeRequest(
-      server,
-      org.id,
-      registration.id,
-      2025,
-      'quarterly',
-      1
-    )
-
-    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-    expect(JSON.parse(response.payload)).toEqual({
-      statusCode: StatusCodes.BAD_REQUEST,
-      error: 'Bad Request',
-      message:
-        "Cadence 'quarterly' does not match registration type — expected 'monthly'",
-      cadence: { actual: 'quarterly', expected: 'monthly' }
-    })
-  })
-
-  it('returns 400 with structured cadence when registered-only registration uses monthly cadence', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
-
-    const response = await makeRequest(
-      server,
-      organisationId,
-      registrationId,
-      2025,
-      'monthly',
-      1
-    )
+    const response = await post()
 
     expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     expect(JSON.parse(response.payload)).toEqual({
@@ -422,19 +372,12 @@ describe(`POST ${reportsPostPath}`, () => {
 
   describe('indexed warn log shape per helper', () => {
     it('cadence mismatch attaches CADENCE_MISMATCH code and cadence event.reason', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
+      const { server, post } = await createServer(registeredOnlyReprocessor, {
+        accredited: true,
+        accreditationOverrides: cancelledAccreditation
       })
 
-      await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2025,
-        'monthly',
-        1
-      )
+      await post()
 
       expect(server.loggerMocks.warn).toHaveBeenCalledWith({
         message:
@@ -459,19 +402,9 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('invalid period attaches INVALID_PERIOD code and flat event.reason', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const { server, post } = await createServer(registeredOnlyReprocessor)
 
-      await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2025,
-        'quarterly',
-        5
-      )
+      await post({ period: 5 })
 
       expect(server.loggerMocks.warn).toHaveBeenCalledWith({
         message: 'Invalid period 5 for cadence quarterly',
@@ -494,19 +427,9 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('period not ended attaches PERIOD_NOT_ENDED code and flat event.reason', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const { server, post } = await createServer(registeredOnlyReprocessor)
 
-      await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2099,
-        'quarterly',
-        1
-      )
+      await post({ year: 2099 })
 
       expect(server.loggerMocks.warn).toHaveBeenCalledWith({
         message: 'Cannot create report for period 1 — period has not yet ended',
@@ -531,22 +454,19 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('report already exists attaches REPORT_ALREADY_EXISTS code and existingId as event.reference', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const created = await createServer(registeredOnlyReprocessor)
 
-      const first = await makeRequest(server, organisationId, registrationId)
-      const existingId = JSON.parse(first.payload).id
+      await created.post()
+      const existingId = (await storedQuarterlyReport(created))?.id
 
-      await makeRequest(server, organisationId, registrationId)
+      await created.post()
 
-      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-        message: 'Report already exists for quarterly period 1 of 2025',
+      expect(created.server.loggerMocks.warn).toHaveBeenCalledWith({
+        message: `Report already exists for quarterly period 1 of ${YEAR}`,
         error: {
           code: 'report_already_exists',
           id: expect.any(String),
-          message: 'Report already exists for quarterly period 1 of 2025',
+          message: `Report already exists for quarterly period 1 of ${YEAR}`,
           stack_trace: expect.any(String),
           type: 'Conflict'
         },
@@ -555,7 +475,7 @@ describe(`POST ${reportsPostPath}`, () => {
           action: 'create_report',
           kind: 'event',
           outcome: 'failure',
-          reason: 'cadence=quarterly period=1 year=2025',
+          reason: `cadence=quarterly period=1 year=${YEAR}`,
           reference: existingId
         },
         http: { response: { status_code: StatusCodes.CONFLICT } }
@@ -564,14 +484,11 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   it('returns 422 for invalid cadence', async () => {
-    const { server, organisationId, registrationId } = await createServer({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
+    const { server, url } = await createServer(registeredOnlyReprocessor)
 
     const response = await server.inject({
       method: 'POST',
-      url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1, 1),
+      url: url().replace('/quarterly/', '/biweekly/'),
       ...asOperator()
     })
 
@@ -582,23 +499,20 @@ describe(`POST ${reportsPostPath}`, () => {
     beforeEach(() => vi.clearAllMocks())
 
     it('logs error details when an unexpected error occurs', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const { server, post } = await createServer(registeredOnlyReprocessor)
 
       const unexpectedError = new Error('unexpected failure')
       vi.mocked(reportAudit.auditReportCreate).mockRejectedValueOnce(
         unexpectedError
       )
 
-      const response = await makeRequest(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       expect(server.loggerMocks.error).toHaveBeenCalledWith(
         expect.objectContaining({
           err: unexpectedError,
-          message: `Failure on ${reportsPostPath}`,
+          message: reportsPostFailureMessage,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -613,23 +527,20 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('routes an expected 4xx boom to warn (not error) with full structured event', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const created = await createServer(registeredOnlyReprocessor)
 
-      const first = await makeRequest(server, organisationId, registrationId)
-      const existingId = JSON.parse(first.payload).id
-      const response = await makeRequest(server, organisationId, registrationId)
+      await created.post()
+      const existingId = (await storedQuarterlyReport(created))?.id
+      const response = await created.post()
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(server.loggerMocks.error).not.toHaveBeenCalled()
-      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-        message: 'Report already exists for quarterly period 1 of 2025',
+      expect(created.server.loggerMocks.error).not.toHaveBeenCalled()
+      expect(created.server.loggerMocks.warn).toHaveBeenCalledWith({
+        message: `Report already exists for quarterly period 1 of ${YEAR}`,
         error: {
           code: 'report_already_exists',
           id: expect.any(String),
-          message: 'Report already exists for quarterly period 1 of 2025',
+          message: `Report already exists for quarterly period 1 of ${YEAR}`,
           stack_trace: expect.any(String),
           type: 'Conflict'
         },
@@ -638,7 +549,7 @@ describe(`POST ${reportsPostPath}`, () => {
           action: 'create_report',
           kind: 'event',
           outcome: 'failure',
-          reason: 'cadence=quarterly period=1 year=2025',
+          reason: `cadence=quarterly period=1 year=${YEAR}`,
           reference: existingId
         },
         http: { response: { status_code: StatusCodes.CONFLICT } }
@@ -650,21 +561,20 @@ describe(`POST ${reportsPostPath}`, () => {
     beforeEach(() => vi.clearAllMocks())
 
     it('calls auditReportCreate with correct params on success', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
+      const { organisationId, registrationId, post } = await createServer(
+        registeredOnlyReprocessor
+      )
 
-      await makeRequest(server, organisationId, registrationId)
+      await post()
 
       expect(reportAudit.auditReportCreate).toHaveBeenCalledWith(
         expect.any(Object),
         {
           organisationId,
           registrationId,
-          year: 2025,
+          year: YEAR,
           cadence: 'quarterly',
-          period: 1,
+          period: QUARTER,
           submissionNumber: expect.anything(),
           reportId: expect.any(String),
           createdAt: expect.any(String)
@@ -674,66 +584,41 @@ describe(`POST ${reportsPostPath}`, () => {
   })
 
   it('includes prn issuedTonnage when creating report for accredited registration', async () => {
-    const accreditationId = new ObjectId().toString()
-    const issuedAt = new Date('2025-01-15T00:00:00.000Z')
+    const issuedAt = new Date('2026-07-15T00:00:00.000Z')
 
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId
-    })
-    const org = buildOrganisationWithRegistration(
-      partialMock(registration),
-      'approved'
-    )
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([partialMock(org)])
-
-    const prn = {
-      ...buildAwaitingAcceptancePrn({
-        organisation: { id: org.id, name: 'Test Organisation' },
-        registrationId: registration.id,
-        accreditation: {
-          id: accreditationId,
-          accreditationNumber: 'ACC-TEST-001',
-          accreditationYear: 2025,
-          material: 'glass',
-          glassRecyclingProcess: 'glass_re_melt',
-          submittedToRegulator: 'ea',
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-        },
-        tonnage: 250,
-        status: {
-          currentStatus: 'awaiting_acceptance',
-          currentStatusAt: issuedAt,
-          issued: {
-            at: issuedAt,
-            by: { id: 'issuer', name: 'Issuer', position: 'Manager' }
-          },
-          history: []
+    const { post } = await createServer(registeredOnlyReprocessor, {
+      accredited: true,
+      prns: ({ organisationId, registrationId, accreditationId }) => [
+        {
+          ...buildAwaitingAcceptancePrn({
+            organisation: { id: organisationId, name: 'Test Organisation' },
+            registrationId,
+            accreditation: {
+              id: accreditationId,
+              accreditationNumber: 'ACC-TEST-001',
+              accreditationYear: YEAR,
+              material: 'glass',
+              glassRecyclingProcess: 'glass_re_melt',
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+            },
+            tonnage: 250,
+            status: {
+              currentStatus: 'awaiting_acceptance',
+              currentStatusAt: issuedAt,
+              issued: {
+                at: issuedAt,
+                by: { id: 'issuer', name: 'Issuer', position: 'Manager' }
+              },
+              history: []
+            }
+          }),
+          id: new ObjectId().toString()
         }
-      }),
-      id: new ObjectId().toString()
-    }
-
-    const { ledgerRepository, summaryLogRowStatesRepository } =
-      await seedRepositories(org, registration)
-
-    const server = await createTestServer({
-      repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
-        ledgerRepository,
-        summaryLogRowStatesRepository,
-        reportsRepository: createInMemoryReportsRepository(),
-        packagingRecyclingNotesRepository:
-          createInMemoryPackagingRecyclingNotesRepository([prn])
-      }
+      ]
     })
 
-    const response = await server.inject({
-      method: 'POST',
-      url: makeUrl(org.id, registration.id, 2025, 'monthly', 1, 1),
-      ...asOperator()
-    })
+    const response = await post()
 
     expect(response.statusCode).toBe(StatusCodes.CREATED)
     const payload = JSON.parse(response.payload)
@@ -750,17 +635,17 @@ describe(`POST ${reportsPostPath}`, () => {
     ) => ({
       organisationId,
       registrationId,
-      year: 2025,
+      year: YEAR,
       cadence: 'quarterly',
-      period: 1,
-      startDate: calendarDate('2025-01-01'),
-      endDate: calendarDate('2025-03-31'),
-      dueDate: calendarDate('2025-05-20'),
+      period: QUARTER,
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-03-31'),
+      dueDate: calendarDate('2026-05-20'),
       changedBy,
       submissionNumber,
       material: 'plastic',
       wasteProcessingType: 'exporter',
-      source: { summaryLogId: 'sl-1', lastUploadedAt: '2025-01-15' },
+      source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-01-15' },
       prn: null,
       recyclingActivity: {
         suppliers: [],
@@ -799,41 +684,25 @@ describe(`POST ${reportsPostPath}`, () => {
         organisationId,
         registrationId,
         summaryLogId: 'sl-2',
-        uploadedAt: '2025-06-01T12:00:00.000Z',
-        periods: [{ year: 2025, cadence: 'quarterly', period: 1 }]
+        uploadedAt: '2026-06-01T12:00:00.000Z',
+        periods: [{ year: YEAR, cadence: 'quarterly', period: QUARTER }]
       })
 
     const setup = async () => {
-      const {
-        server,
-        organisationId,
-        registrationId,
-        reportsRepositoryFactory
-      } = await createServer({
-        wasteProcessingType: 'exporter',
-        accreditationId: undefined
-      })
+      const { organisationId, registrationId, reportsRepositoryFactory, post } =
+        await createServer({ wasteProcessingType: 'exporter' })
       return {
-        server,
         organisationId,
         registrationId,
-        repo: reportsRepositoryFactory()
+        repo: reportsRepositoryFactory(),
+        /** @param {number} submissionNumber */
+        postSubmission: (submissionNumber) => post({ submissionNumber })
       }
     }
 
-    const postSubmission = (server, organisationId, registrationId, n) =>
-      makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2025,
-        'quarterly',
-        1,
-        n
-      )
-
     it('creates submission 2 when submission 1 is submitted and flagged', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
+      const { organisationId, registrationId, repo, postSubmission } =
+        await setup()
 
       const { id } = await repo.createReport(
         buildSubmission(organisationId, registrationId, 1)
@@ -841,31 +710,22 @@ describe(`POST ${reportsPostPath}`, () => {
       await submitReport(repo, id)
       await flagPeriod(repo, organisationId, registrationId)
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
+      const response = await postSubmission(2)
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
       expect(JSON.parse(response.payload).submissionNumber).toBe(2)
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
+      const { organisationId, registrationId, repo, postSubmission } =
+        await setup()
 
       const { id } = await repo.createReport(
         buildSubmission(organisationId, registrationId, 1)
       )
       await submitReport(repo, id)
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
+      const response = await postSubmission(2)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       expect(JSON.parse(response.payload).reason).toBe(
@@ -874,18 +734,14 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is still in progress', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
+      const { organisationId, registrationId, repo, postSubmission } =
+        await setup()
 
       await repo.createReport(
         buildSubmission(organisationId, registrationId, 1)
       )
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
+      const response = await postSubmission(2)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       expect(JSON.parse(response.payload).reason).toBe(
@@ -894,14 +750,9 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when no submission 1 exists', async () => {
-      const { server, organisationId, registrationId } = await setup()
+      const { postSubmission } = await setup()
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
+      const response = await postSubmission(2)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       expect(JSON.parse(response.payload).reason).toBe(
@@ -910,7 +761,8 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('rejects submission 3 when submission 2 is not yet submitted', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
+      const { organisationId, registrationId, repo, postSubmission } =
+        await setup()
 
       const { id } = await repo.createReport(
         buildSubmission(organisationId, registrationId, 1)
@@ -921,12 +773,7 @@ describe(`POST ${reportsPostPath}`, () => {
         buildSubmission(organisationId, registrationId, 2)
       )
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        3
-      )
+      const response = await postSubmission(3)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       expect(JSON.parse(response.payload).reason).toBe(
@@ -935,7 +782,8 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('returns report_already_exists when a submission 2 already exists, even with the flag off', async () => {
-      const { server, organisationId, registrationId, repo } = await setup()
+      const { organisationId, registrationId, repo, postSubmission } =
+        await setup()
 
       const { id } = await repo.createReport(
         buildSubmission(organisationId, registrationId, 1)
@@ -946,12 +794,7 @@ describe(`POST ${reportsPostPath}`, () => {
         buildSubmission(organisationId, registrationId, 2)
       )
 
-      const response = await postSubmission(
-        server,
-        organisationId,
-        registrationId,
-        2
-      )
+      const response = await postSubmission(2)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       const payload = JSON.parse(response.payload)
@@ -959,8 +802,8 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.existingReport).toMatchObject({
         id: existingDraftId,
         cadence: 'quarterly',
-        period: 1,
-        year: 2025
+        period: QUARTER,
+        year: YEAR
       })
     })
   })
@@ -1004,16 +847,7 @@ describe(`POST ${reportsPostPath}`, () => {
         data
       })
 
-    const regOnlyExporter = {
-      wasteProcessingType: 'exporter',
-      accreditationId: undefined
-    }
-
-    const postRegOnly = (server, organisationId, registrationId) =>
-      makeRequest(server, organisationId, registrationId, 2025, 'quarterly', 1)
-
-    const postAccredited = (server, organisationId, registrationId) =>
-      makeRequest(server, organisationId, registrationId, 2025, 'monthly', 1)
+    const exporterRegistration = { wasteProcessingType: 'exporter' }
 
     // The payload is a flat list of issues, one per missing field. Each issue
     // locates the field by sheet and row; the frontend maps the field to copy.
@@ -1021,30 +855,26 @@ describe(`POST ${reportsPostPath}`, () => {
       fields.map((field) => ({ sheet, rowId, field }))
 
     it('creates the report when the flag is off despite incomplete in-period data', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        {
-          rows: [
-            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
-              TONNAGE_RECEIVED_FOR_EXPORT: 5
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        rows: [
+          regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+            MONTH_RECEIVED_FOR_EXPORT: '2026-01',
+            TONNAGE_RECEIVED_FOR_EXPORT: 5
+          })
+        ]
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('creates the report when the flag is on but no completeness rule is triggered', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        { reportDataValidationEnabled: true }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        reportDataValidationEnabled: true
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
@@ -1052,53 +882,43 @@ describe(`POST ${reportsPostPath}`, () => {
     it('creates the report when a triggered row has every mandatory field filled', async () => {
       // The supplier rule fires (received tonnage > 0) but the row is complete,
       // so the gate finds nothing missing and creation proceeds.
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        {
-          reportDataValidationEnabled: true,
-          rows: [
-            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
-              TONNAGE_RECEIVED_FOR_EXPORT: 5,
-              SUPPLIER_NAME: 'Acme Waste Ltd',
-              SUPPLIER_ADDRESS: '1 Depot Road',
-              SUPPLIER_POSTCODE: 'AB1 2CD',
-              SUPPLIER_EMAIL: 'ops@acme.example',
-              SUPPLIER_PHONE_NUMBER: '01234 567890',
-              ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        reportDataValidationEnabled: true,
+        rows: [
+          regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+            MONTH_RECEIVED_FOR_EXPORT: '2026-01',
+            TONNAGE_RECEIVED_FOR_EXPORT: 5,
+            SUPPLIER_NAME: 'Acme Waste Ltd',
+            SUPPLIER_ADDRESS: '1 Depot Road',
+            SUPPLIER_POSTCODE: 'AB1 2CD',
+            SUPPLIER_EMAIL: 'ops@acme.example',
+            SUPPLIER_PHONE_NUMBER: '01234 567890',
+            ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+          })
+        ]
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('blocks the report on an incomplete triggered row from outside the report period', async () => {
-      // Whole-summary-log scoping (PAE-1420 pivot): export tonnage with a June
-      // export date and a blank OSR_ID. The January report does not aggregate
-      // this row, but its incompleteness still blocks report creation.
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'exporter' },
-        {
-          accredited: true,
-          reportDataValidationEnabled: true,
-          rows: [
-            accreditedRow({
-              DATE_OF_EXPORT: '2025-06-15',
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
-            })
-          ]
-        }
-      )
+      // Whole-summary-log scoping (PAE-1420 pivot): export tonnage with a
+      // September export date and a blank OSR_ID. The July report does not
+      // aggregate this row, but its incompleteness still blocks report creation.
+      const { post } = await createServer(exporterRegistration, {
+        accredited: true,
+        reportDataValidationEnabled: true,
+        rows: [
+          accreditedRow({
+            DATE_OF_EXPORT: '2026-09-15',
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+          })
+        ]
+      })
 
-      const response = await postAccredited(
-        server,
-        organisationId,
-        registrationId
-      )
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1111,25 +931,18 @@ describe(`POST ${reportsPostPath}`, () => {
       // AC4: a positive export tonnage requires an export date. The OSR_ID is
       // present so the overseas-site rule is satisfied; only the missing export
       // date fails creation.
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'exporter' },
-        {
-          accredited: true,
-          reportDataValidationEnabled: true,
-          rows: [
-            accreditedRow({
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
-              OSR_ID: 'ORS-0001'
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        accredited: true,
+        reportDataValidationEnabled: true,
+        rows: [
+          accreditedRow({
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+            OSR_ID: 'ORS-0001'
+          })
+        ]
+      })
 
-      const response = await postAccredited(
-        server,
-        organisationId,
-        registrationId
-      )
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1141,28 +954,21 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('accredited: an in-period packed row fires the supplier, export and interim rules together', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'exporter' },
-        {
-          accredited: true,
-          reportDataValidationEnabled: true,
-          rows: [
-            accreditedRow({
-              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
-              DATE_OF_EXPORT: '2025-01-20',
-              TONNAGE_RECEIVED_FOR_EXPORT: 5,
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
-              DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes'
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        accredited: true,
+        reportDataValidationEnabled: true,
+        rows: [
+          accreditedRow({
+            DATE_RECEIVED_FOR_EXPORT: '2026-07-10',
+            DATE_OF_EXPORT: '2026-07-20',
+            TONNAGE_RECEIVED_FOR_EXPORT: 5,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+            DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes'
+          })
+        ]
+      })
 
-      const response = await postAccredited(
-        server,
-        organisationId,
-        registrationId
-      )
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1180,51 +986,41 @@ describe(`POST ${reportsPostPath}`, () => {
     it('does not gate the report-detail retrieval path (GET) with the flag on', async () => {
       // The gate lives only in report creation: retrieval must still return the
       // on-the-fly report even when the same in-period data would block a POST.
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'exporter' },
-        {
-          accredited: true,
-          reportDataValidationEnabled: true,
-          rows: [
-            accreditedRow({
-              DATE_RECEIVED_FOR_EXPORT: '2025-01-10',
-              DATE_OF_EXPORT: '2025-01-20',
-              TONNAGE_RECEIVED_FOR_EXPORT: 5,
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
-            })
-          ]
-        }
-      )
-
-      const response = await server.inject({
-        method: 'GET',
-        url: makeUrl(organisationId, registrationId, 2025, 'monthly', 1, 1),
-        ...asOperator()
+      const { get } = await createServer(exporterRegistration, {
+        accredited: true,
+        reportDataValidationEnabled: true,
+        rows: [
+          accreditedRow({
+            DATE_RECEIVED_FOR_EXPORT: '2026-07-10',
+            DATE_OF_EXPORT: '2026-07-20',
+            TONNAGE_RECEIVED_FOR_EXPORT: 5,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+          })
+        ]
       })
+
+      const response = await get()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload).reason).toBeUndefined()
     })
 
     it('registered-only: fires the applicable rule on each split row', async () => {
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        {
-          reportDataValidationEnabled: true,
-          rows: [
-            regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
-              MONTH_RECEIVED_FOR_EXPORT: '2025-01',
-              TONNAGE_RECEIVED_FOR_EXPORT: 5
-            }),
-            regOnlyRow('row-2', WASTE_RECORD_TYPE.EXPORTED, {
-              DATE_OF_EXPORT: '2025-02-10',
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        reportDataValidationEnabled: true,
+        rows: [
+          regOnlyRow('row-1', WASTE_RECORD_TYPE.RECEIVED, {
+            MONTH_RECEIVED_FOR_EXPORT: '2026-01',
+            TONNAGE_RECEIVED_FOR_EXPORT: 5
+          }),
+          regOnlyRow('row-2', WASTE_RECORD_TYPE.EXPORTED, {
+            DATE_OF_EXPORT: '2026-02-10',
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+          })
+        ]
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1248,12 +1044,12 @@ describe(`POST ${reportsPostPath}`, () => {
         })
       )
 
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        { reportDataValidationEnabled: true, rows }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        reportDataValidationEnabled: true,
+        rows
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1265,24 +1061,21 @@ describe(`POST ${reportsPostPath}`, () => {
       // The facility type is a 'Choose option' dropdown on the shared exporter
       // Sent-on sheet, so registered-only must flag an unselected one exactly as
       // the accredited schema does (defra-h9hv).
-      const { server, organisationId, registrationId } = await createServer(
-        regOnlyExporter,
-        {
-          reportDataValidationEnabled: true,
-          rows: [
-            regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
-              DATE_LOAD_LEFT_SITE: '2025-03-01',
-              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
-              FINAL_DESTINATION_NAME: 'Port Recyclers',
-              FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
-              FINAL_DESTINATION_ADDRESS: '2 Quay Street',
-              FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
-            })
-          ]
-        }
-      )
+      const { post } = await createServer(exporterRegistration, {
+        reportDataValidationEnabled: true,
+        rows: [
+          regOnlyRow('row-1', WASTE_RECORD_TYPE.SENT_ON, {
+            DATE_LOAD_LEFT_SITE: '2026-03-01',
+            TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+            FINAL_DESTINATION_NAME: 'Port Recyclers',
+            FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
+            FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+            FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+          })
+        ]
+      })
 
-      const response = await postRegOnly(server, organisationId, registrationId)
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1342,163 +1135,123 @@ describe(`POST ${reportsPostPath}`, () => {
       {
         name: 'accredited on input',
         processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-        registration: { wasteProcessingType: 'reprocessor' },
-        accredited: true,
-        post: (server, orgId, regId) =>
-          makeRequest(server, orgId, regId, 2025, 'monthly', 1)
+        accredited: true
       },
       {
         name: 'accredited on output',
         processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
-        registration: { wasteProcessingType: 'reprocessor' },
-        accredited: true,
-        post: (server, orgId, regId) =>
-          makeRequest(server, orgId, regId, 2025, 'monthly', 1)
+        accredited: true
       },
       {
         name: 'registered-only',
         processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
-        registration: {
-          wasteProcessingType: 'reprocessor',
-          accreditationId: undefined
-        },
-        accredited: false,
-        post: (server, orgId, regId) =>
-          makeRequest(server, orgId, regId, 2025, 'quarterly', 1)
+        accredited: false
       }
     ]
 
-    describe.each(TEMPLATES)(
-      '$name',
-      ({ processingType, registration, accredited, post }) => {
-        it('blocks report creation when a received row is missing supplier details (AC1)', async () => {
-          const { server, organisationId, registrationId } = await createServer(
-            registration,
-            {
-              accredited,
-              reportDataValidationEnabled: true,
-              rows: [
-                reprocessorRow(
-                  processingType,
-                  'row-1',
-                  WASTE_RECORD_TYPE.RECEIVED,
-                  { TONNAGE_RECEIVED_FOR_RECYCLING: 5 }
-                )
-              ]
-            }
-          )
-
-          const response = await post(server, organisationId, registrationId)
-
-          expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-          const payload = JSON.parse(response.payload)
-          expect(payload.reason).toBe('report_data_incomplete')
-          expect(payload.total).toBe(SUPPLIER_FIELDS.length)
-          expect(payload.issues).toEqual(
-            issuesFor('Received', 'row-1', SUPPLIER_FIELDS)
-          )
+    describe.each(TEMPLATES)('$name', ({ processingType, accredited }) => {
+      it('blocks report creation when a received row is missing supplier details (AC1)', async () => {
+        const { post } = await createServer(registeredOnlyReprocessor, {
+          accredited,
+          reportDataValidationEnabled: true,
+          rows: [
+            reprocessorRow(
+              processingType,
+              'row-1',
+              WASTE_RECORD_TYPE.RECEIVED,
+              {
+                TONNAGE_RECEIVED_FOR_RECYCLING: 5
+              }
+            )
+          ]
         })
 
-        it('blocks report creation when a sent-on row is missing the final destination (AC2)', async () => {
-          const { server, organisationId, registrationId } = await createServer(
-            registration,
-            {
-              accredited,
-              reportDataValidationEnabled: true,
-              rows: [
-                reprocessorRow(
-                  processingType,
-                  'row-1',
-                  WASTE_RECORD_TYPE.SENT_ON,
-                  { TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2 }
-                )
-              ]
-            }
-          )
+        const response = await post()
 
-          const response = await post(server, organisationId, registrationId)
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        const payload = JSON.parse(response.payload)
+        expect(payload.reason).toBe('report_data_incomplete')
+        expect(payload.total).toBe(SUPPLIER_FIELDS.length)
+        expect(payload.issues).toEqual(
+          issuesFor('Received', 'row-1', SUPPLIER_FIELDS)
+        )
+      })
 
-          expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-          const payload = JSON.parse(response.payload)
-          expect(payload.reason).toBe('report_data_incomplete')
-          expect(payload.total).toBe(DESTINATION_FIELDS.length)
-          expect(payload.issues).toEqual(
-            issuesFor('Sent on', 'row-1', DESTINATION_FIELDS)
-          )
+      it('blocks report creation when a sent-on row is missing the final destination (AC2)', async () => {
+        const { post } = await createServer(registeredOnlyReprocessor, {
+          accredited,
+          reportDataValidationEnabled: true,
+          rows: [
+            reprocessorRow(processingType, 'row-1', WASTE_RECORD_TYPE.SENT_ON, {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2
+            })
+          ]
         })
 
-        it('creates the report when every triggered row is complete', async () => {
-          const { server, organisationId, registrationId } = await createServer(
-            registration,
-            {
-              accredited,
-              reportDataValidationEnabled: true,
-              rows: [
-                reprocessorRow(
-                  processingType,
-                  'row-1',
-                  WASTE_RECORD_TYPE.RECEIVED,
-                  {
-                    TONNAGE_RECEIVED_FOR_RECYCLING: 5,
-                    SUPPLIER_NAME: 'Acme Waste Ltd',
-                    SUPPLIER_ADDRESS: '1 Depot Road',
-                    SUPPLIER_POSTCODE: 'AB1 2CD',
-                    SUPPLIER_EMAIL: 'ops@acme.example',
-                    SUPPLIER_PHONE_NUMBER: '01234 567890',
-                    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
-                  }
-                ),
-                reprocessorRow(
-                  processingType,
-                  'row-2',
-                  WASTE_RECORD_TYPE.SENT_ON,
-                  {
-                    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
-                    FINAL_DESTINATION_NAME: 'Port Recyclers',
-                    FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
-                    FINAL_DESTINATION_ADDRESS: '2 Quay Street',
-                    FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
-                  }
-                )
-              ]
-            }
-          )
+        const response = await post()
 
-          const response = await post(server, organisationId, registrationId)
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        const payload = JSON.parse(response.payload)
+        expect(payload.reason).toBe('report_data_incomplete')
+        expect(payload.total).toBe(DESTINATION_FIELDS.length)
+        expect(payload.issues).toEqual(
+          issuesFor('Sent on', 'row-1', DESTINATION_FIELDS)
+        )
+      })
 
-          expect(response.statusCode).toBe(StatusCodes.CREATED)
+      it('creates the report when every triggered row is complete', async () => {
+        const { post } = await createServer(registeredOnlyReprocessor, {
+          accredited,
+          reportDataValidationEnabled: true,
+          rows: [
+            reprocessorRow(
+              processingType,
+              'row-1',
+              WASTE_RECORD_TYPE.RECEIVED,
+              {
+                TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+                SUPPLIER_NAME: 'Acme Waste Ltd',
+                SUPPLIER_ADDRESS: '1 Depot Road',
+                SUPPLIER_POSTCODE: 'AB1 2CD',
+                SUPPLIER_EMAIL: 'ops@acme.example',
+                SUPPLIER_PHONE_NUMBER: '01234 567890',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baling'
+              }
+            ),
+            reprocessorRow(processingType, 'row-2', WASTE_RECORD_TYPE.SENT_ON, {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+              FINAL_DESTINATION_NAME: 'Port Recyclers',
+              FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+              FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+              FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+            })
+          ]
         })
-      }
-    )
+
+        const response = await post()
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+    })
 
     it('does not gate a record type that carries no completeness rule', async () => {
       // The reprocessed-loads (processed) record type has no report-mandatory
       // rule, so the gate skips it: a processing type with a policy still leaves
       // unruled record types untouched.
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'reprocessor' },
-        {
-          accredited: true,
-          reportDataValidationEnabled: true,
-          rows: [
-            reprocessorRow(
-              PROCESSING_TYPES.REPROCESSOR_INPUT,
-              'row-1',
-              WASTE_RECORD_TYPE.PROCESSED,
-              { PRODUCT_TONNAGE: 5 }
-            )
-          ]
-        }
-      )
+      const { post } = await createServer(registeredOnlyReprocessor, {
+        accredited: true,
+        reportDataValidationEnabled: true,
+        rows: [
+          reprocessorRow(
+            PROCESSING_TYPES.REPROCESSOR_INPUT,
+            'row-1',
+            WASTE_RECORD_TYPE.PROCESSED,
+            { PRODUCT_TONNAGE: 5 }
+          )
+        ]
+      })
 
-      const response = await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2025,
-        'monthly',
-        1
-      )
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
@@ -1509,36 +1262,26 @@ describe(`POST ${reportsPostPath}`, () => {
       // exactly as the accredited schemas do. The same incomplete data must
       // still return the on-the-fly report on GET: the gate lives only in
       // report creation.
-      const { server, organisationId, registrationId } = await createServer(
-        { wasteProcessingType: 'reprocessor', accreditationId: undefined },
-        {
-          reportDataValidationEnabled: true,
-          rows: [
-            reprocessorRow(
-              PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
-              'row-1',
-              WASTE_RECORD_TYPE.SENT_ON,
-              {
-                DATE_LOAD_LEFT_SITE: '2025-03-01',
-                TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
-                FINAL_DESTINATION_NAME: 'Port Recyclers',
-                FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
-                FINAL_DESTINATION_ADDRESS: '2 Quay Street',
-                FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
-              }
-            )
-          ]
-        }
-      )
+      const { post, get } = await createServer(registeredOnlyReprocessor, {
+        reportDataValidationEnabled: true,
+        rows: [
+          reprocessorRow(
+            PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+            'row-1',
+            WASTE_RECORD_TYPE.SENT_ON,
+            {
+              DATE_LOAD_LEFT_SITE: '2026-03-01',
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 2,
+              FINAL_DESTINATION_NAME: 'Port Recyclers',
+              FINAL_DESTINATION_FACILITY_TYPE: 'Choose option',
+              FINAL_DESTINATION_ADDRESS: '2 Quay Street',
+              FINAL_DESTINATION_POSTCODE: 'EF3 4GH'
+            }
+          )
+        ]
+      })
 
-      const response = await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2025,
-        'quarterly',
-        1
-      )
+      const response = await post()
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       const payload = JSON.parse(response.payload)
@@ -1550,11 +1293,7 @@ describe(`POST ${reportsPostPath}`, () => {
         })
       ])
 
-      const getResponse = await server.inject({
-        method: 'GET',
-        url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1, 1),
-        ...asOperator()
-      })
+      const getResponse = await get()
 
       expect(getResponse.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(getResponse.payload).reason).toBeUndefined()

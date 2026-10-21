@@ -13,7 +13,6 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
-  periodParamsSchema,
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
@@ -30,8 +29,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
 
-export const reportsPostPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
+export const reportsPostFailureMessage = 'Failure on report create'
 
 /**
  * @param {TypedLogger} logger
@@ -40,7 +38,7 @@ export const reportsPostPath =
 const logUnexpectedError = (logger, error) => {
   logger.error({
     err: error,
-    message: `Failure on ${reportsPostPath}`,
+    message: reportsPostFailureMessage,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -55,13 +53,9 @@ const logUnexpectedError = (logger, error) => {
 
 export const reportsPost = {
   method: 'POST',
-  path: reportsPostPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
-    validate: {
-      params: periodParamsSchema
-    },
     response: {
       schema: reportDetailResponseSchema,
       failAction: reportResponseFailAction
@@ -155,7 +149,7 @@ export const reportsPost = {
 
       logUnexpectedError(logger, error)
 
-      throw Boom.badImplementation(`Failure on ${reportsPostPath}`)
+      throw Boom.badImplementation(reportsPostFailureMessage)
     }
   }
 }

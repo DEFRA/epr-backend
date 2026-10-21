@@ -10,22 +10,15 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import { periodParamsSchema, extractChangedBy } from './shared.js'
-
-export const reportsUnsubmitPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/unsubmit'
+import { extractChangedBy } from './shared.js'
 
 export const reportsUnsubmit = {
   method: 'POST',
-  path: reportsUnsubmitPath,
   options: {
     auth: {
       scope: [SCOPES.adminWrite]
     },
-    tags: ['api', 'admin'],
-    validate: {
-      params: periodParamsSchema
-    }
+    tags: ['api', 'admin']
   },
   /**
    * @param {HapiRequest & {
