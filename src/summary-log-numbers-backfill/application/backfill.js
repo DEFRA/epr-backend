@@ -2,11 +2,13 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { auditSummaryLogNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogNumbers } from '#domain/summary-logs/numbers.js' */
+/** @import { SummaryLogStatus } from '#domain/summary-logs/status.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -14,6 +16,7 @@ import { auditSummaryLogNumbersBackfill } from './audit.js'
 /**
  * @typedef {Object} BackfillResult
  * @property {number} missing - summary logs lacking a number when the run started
+ * @property {number} inFlight - left for a later run while a worker may be writing them
  * @property {number} mapped - given at least one number (would be, on a dry run)
  * @property {number} unmapped - left lacking a number, each logged with the reason
  * @property {number} failed - not written; retried on the next run
@@ -26,6 +29,18 @@ import { auditSummaryLogNumbersBackfill } from './audit.js'
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
  */
+
+/**
+ * A worker writes these summary logs back at the version it read, so a
+ * version bump here would fail its write. Each settles or expires.
+ *
+ * @type {ReadonlySet<SummaryLogStatus>}
+ */
+const IN_FLIGHT_STATUSES = new Set([
+  SUMMARY_LOG_STATUS.PREPROCESSING,
+  SUMMARY_LOG_STATUS.VALIDATING,
+  SUMMARY_LOG_STATUS.SUBMITTING
+])
 
 /**
  * @param {OrganisationsRepository} organisationsRepository
@@ -97,7 +112,7 @@ const reportUnmapped = (
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
- * @returns {Promise<{ mapped: boolean, unmapped: boolean, auditFailed: boolean } | null>} null if gone
+ * @returns {Promise<{ inFlight: boolean, mapped: boolean, unmapped: boolean, auditFailed: boolean } | null>} null if gone
  */
 const backfillOne = async (
   { summaryLogsRepository, systemLogsRepository, organisationsRepository },
@@ -110,6 +125,14 @@ const backfillOne = async (
     return null
   }
   const { summaryLog, version } = before
+  if (IN_FLIGHT_STATUSES.has(summaryLog.status)) {
+    return {
+      inFlight: true,
+      mapped: false,
+      unmapped: false,
+      auditFailed: false
+    }
+  }
 
   const { numbers, unmapped } = await lookUpNumbers(
     organisationsRepository,
@@ -121,6 +144,7 @@ const backfillOne = async (
 
   const lacking = numbersLacking(numbers, summaryLog)
   const outcome = {
+    inFlight: false,
     mapped: Object.keys(lacking).length > 0,
     unmapped: unmapped.length > 0,
     auditFailed: false
@@ -168,6 +192,7 @@ export const backfillSummaryLogNumbers = async (
   const ids = await repositories.summaryLogsRepository.findIdsWithoutNumbers()
   const result = {
     missing: ids.length,
+    inFlight: 0,
     mapped: 0,
     unmapped: 0,
     failed: 0,
@@ -178,6 +203,7 @@ export const backfillSummaryLogNumbers = async (
     try {
       const outcome = await backfillOne(repositories, id, isDryRun, logger)
       if (outcome) {
+        result.inFlight += Number(outcome.inFlight)
         result.mapped += Number(outcome.mapped)
         result.unmapped += Number(outcome.unmapped)
         result.auditFailed += Number(outcome.auditFailed)

@@ -38,7 +38,7 @@ const runBackfill = async (server) => {
     logger
   )
 
-  const { missing, mapped, unmapped, failed, auditFailed } =
+  const { missing, inFlight, mapped, unmapped, failed, auditFailed } =
     await backfillSummaryLogNumbers(
       {
         summaryLogsRepository,
@@ -51,7 +51,7 @@ const runBackfill = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Summary log numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed}`
+    message: `Summary log numbers backfill (${mode}): missing=${missing} inFlight=${inFlight} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed}`
   })
 }
 

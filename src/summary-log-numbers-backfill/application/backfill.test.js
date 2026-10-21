@@ -92,19 +92,19 @@ describe('backfillSummaryLogNumbers', () => {
   it('adds the numbers each summary log lacks and audits each as the system user', async () => {
     await summaryLogsRepository.insert(
       'accredited',
-      summaryLogFactory.validating({ ...ids, accreditationId })
+      summaryLogFactory.validated({ ...ids, accreditationId })
     )
     await summaryLogsRepository.insert(
       'registered-only',
-      summaryLogFactory.validating({ ...ids, accreditationId: null })
+      summaryLogFactory.validated({ ...ids, accreditationId: null })
     )
     await summaryLogsRepository.insert(
       'before-accreditation',
-      withoutYear(summaryLogFactory.validating(ids))
+      withoutYear(summaryLogFactory.validated(ids))
     )
     await summaryLogsRepository.insert(
       'partly-numbered',
-      summaryLogFactory.validating({
+      summaryLogFactory.validated({
         ...ids,
         accreditationId: null,
         organisationNumber: '500123'
@@ -113,6 +113,7 @@ describe('backfillSummaryLogNumbers', () => {
 
     expect(await run(false)).toEqual({
       missing: 4,
+      inFlight: 0,
       mapped: 4,
       unmapped: 0,
       failed: 0,
@@ -164,11 +165,12 @@ describe('backfillSummaryLogNumbers', () => {
   it('reports what it would add without writing or auditing on a dry run', async () => {
     await summaryLogsRepository.insert(
       'accredited',
-      summaryLogFactory.validating({ ...ids, accreditationId })
+      summaryLogFactory.validated({ ...ids, accreditationId })
     )
 
     expect(await run(true)).toEqual({
       missing: 1,
+      inFlight: 0,
       mapped: 1,
       unmapped: 0,
       failed: 0,
@@ -179,6 +181,32 @@ describe('backfillSummaryLogNumbers', () => {
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
+  it('leaves alone a summary log that a worker may be writing, and counts it', async () => {
+    for (const status of ['preprocessing', 'validating', 'submitting']) {
+      await summaryLogsRepository.insert(
+        status,
+        summaryLogFactory[status]({ ...ids, accreditationId })
+      )
+    }
+
+    expect(await run(false)).toEqual({
+      missing: 3,
+      inFlight: 3,
+      mapped: 0,
+      unmapped: 0,
+      failed: 0,
+      auditFailed: 0
+    })
+
+    for (const status of ['preprocessing', 'validating', 'submitting']) {
+      const { version, summaryLog } =
+        await summaryLogsRepository.findById(status)
+      expect(version).toBe(1)
+      expect(summaryLog).not.toHaveProperty('organisationNumber')
+    }
+    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+  })
+
   describe.each([
     ['a backfill', false],
     ['a dry run', true]
@@ -186,18 +214,18 @@ describe('backfillSummaryLogNumbers', () => {
     it('logs one line for each summary log it cannot map, saying why', async () => {
       await summaryLogsRepository.insert(
         'no-ids',
-        summaryLogFactory.validating()
+        summaryLogFactory.validated()
       )
       await summaryLogsRepository.insert(
         'organisation-gone',
-        summaryLogFactory.validating({
+        summaryLogFactory.validated({
           organisationId: missingOrganisationId,
           registrationId
         })
       )
       await summaryLogsRepository.insert(
         'unnumbered',
-        summaryLogFactory.validating({
+        summaryLogFactory.validated({
           organisationId,
           registrationId: unnumberedRegistrationId,
           accreditationId: 'acc-gone'
@@ -206,6 +234,7 @@ describe('backfillSummaryLogNumbers', () => {
 
       expect(await run(isDryRun)).toEqual({
         missing: 3,
+        inFlight: 0,
         mapped: 1,
         unmapped: 3,
         failed: 0,
@@ -213,9 +242,9 @@ describe('backfillSummaryLogNumbers', () => {
       })
 
       expect(unmappedLines()).toEqual([
-        'Summary log numbers unmapped: summaryLogId=no-ids status=validating organisationId=undefined registrationId=undefined accreditationId=null reasons="summary log holds no organisation or registration id"',
-        `Summary log numbers unmapped: summaryLogId=organisation-gone status=validating organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=null reasons="organisation ${missingOrganisationId} not found"`,
-        `Summary log numbers unmapped: summaryLogId=unnumbered status=validating organisationId=${organisationId} registrationId=${unnumberedRegistrationId} accreditationId=acc-gone reasons="registration ${unnumberedRegistrationId} has no registration number; organisation ${organisationId} holds no accreditation acc-gone"`
+        'Summary log numbers unmapped: summaryLogId=no-ids status=validated organisationId=undefined registrationId=undefined accreditationId=null reasons="summary log holds no organisation or registration id"',
+        `Summary log numbers unmapped: summaryLogId=organisation-gone status=validated organisationId=${missingOrganisationId} registrationId=${registrationId} accreditationId=null reasons="organisation ${missingOrganisationId} not found"`,
+        `Summary log numbers unmapped: summaryLogId=unnumbered status=validated organisationId=${organisationId} registrationId=${unnumberedRegistrationId} accreditationId=acc-gone reasons="registration ${unnumberedRegistrationId} has no registration number; organisation ${organisationId} holds no accreditation acc-gone"`
       ])
     })
   })
@@ -223,7 +252,7 @@ describe('backfillSummaryLogNumbers', () => {
   it('still adds the numbers it can find to a summary log it cannot fully map', async () => {
     await summaryLogsRepository.insert(
       'unnumbered',
-      summaryLogFactory.validating({
+      summaryLogFactory.validated({
         organisationId,
         registrationId: unnumberedRegistrationId
       })
@@ -242,15 +271,16 @@ describe('backfillSummaryLogNumbers', () => {
   it('leaves only the unmapped summary logs for the next run', async () => {
     await summaryLogsRepository.insert(
       'accredited',
-      summaryLogFactory.validating({ ...ids, accreditationId })
+      summaryLogFactory.validated({ ...ids, accreditationId })
     )
-    await summaryLogsRepository.insert('no-ids', summaryLogFactory.validating())
+    await summaryLogsRepository.insert('no-ids', summaryLogFactory.validated())
     await run(false)
     await settle()
     systemLogsRepository.insert.mockClear()
 
     expect(await run(false)).toEqual({
       missing: 1,
+      inFlight: 0,
       mapped: 0,
       unmapped: 1,
       failed: 0,
@@ -266,6 +296,7 @@ describe('backfillSummaryLogNumbers', () => {
 
     expect(await run(false)).toEqual({
       missing: 1,
+      inFlight: 0,
       mapped: 0,
       unmapped: 0,
       failed: 0,
@@ -276,11 +307,11 @@ describe('backfillSummaryLogNumbers', () => {
   it('logs a failed write, counts it and carries on', async () => {
     await summaryLogsRepository.insert(
       'conflicted',
-      summaryLogFactory.validating(ids)
+      summaryLogFactory.validated(ids)
     )
     await summaryLogsRepository.insert(
       'written',
-      summaryLogFactory.validating(ids)
+      summaryLogFactory.validated(ids)
     )
     const conflict = Boom.conflict('Version conflict')
     const assignNumbers = summaryLogsRepository.assignNumbers
@@ -292,6 +323,7 @@ describe('backfillSummaryLogNumbers', () => {
 
     expect(await run(false)).toEqual({
       missing: 2,
+      inFlight: 0,
       mapped: 1,
       unmapped: 0,
       failed: 1,
@@ -306,13 +338,14 @@ describe('backfillSummaryLogNumbers', () => {
   it('counts a failed organisation lookup as a failure, not as unmapped', async () => {
     await summaryLogsRepository.insert(
       'lookup-fails',
-      summaryLogFactory.validating(ids)
+      summaryLogFactory.validated(ids)
     )
     const outage = new Error('connection lost')
     organisationsRepository.findById = vi.fn().mockRejectedValue(outage)
 
     expect(await run(false)).toEqual({
       missing: 1,
+      inFlight: 0,
       mapped: 0,
       unmapped: 0,
       failed: 1,
@@ -327,13 +360,14 @@ describe('backfillSummaryLogNumbers', () => {
   it('counts a written but unaudited summary log apart from failures', async () => {
     await summaryLogsRepository.insert(
       'unaudited',
-      summaryLogFactory.validating(ids)
+      summaryLogFactory.validated(ids)
     )
     const auditError = new Error('system logs down')
     systemLogsRepository.insert.mockRejectedValue(auditError)
 
     expect(await run(false)).toEqual({
       missing: 1,
+      inFlight: 0,
       mapped: 1,
       unmapped: 0,
       failed: 0,
