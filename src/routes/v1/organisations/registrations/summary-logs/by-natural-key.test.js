@@ -399,6 +399,53 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
+  describe("a registration's summary logs", () => {
+    it('are listed without database ids', async () => {
+      const { summaryLogId } = await seed(
+        {
+          registrationId: accreditedRegistration.id,
+          accreditationId: accredited.id
+        },
+        summaryLogFactory.submitted
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: summaryLogs,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const [log] = JSON.parse(response.payload).summaryLogs
+      expect(log).toMatchObject({
+        summaryLogId,
+        year: YEAR,
+        status: SUMMARY_LOG_STATUS.SUBMITTED
+      })
+      expect(log).not.toHaveProperty('accreditationId')
+    })
+
+    it('are refused to an operator', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: summaryLogs,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    it('are not found under an unknown registration', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${registrations}/R26XX0000000000PL/summary-logs`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
   describe("a registration's summary-log files", () => {
     const files = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/files`
     const fileId = 'file-submitted'
