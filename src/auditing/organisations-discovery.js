@@ -1,4 +1,4 @@
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/port.js' */
 /** @import {DefraIdRelationship} from '#common/helpers/auth/types.js' */
 
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
@@ -30,7 +30,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  */
 
 /**
- * @param {Organisation | null} linkedOrg
+ * @param {LinkedOrganisationSummary | null} linkedOrg
  * @returns {AuditLinkedOrg | null}
  */
 function toAuditLinked(linkedOrg) {
@@ -49,7 +49,7 @@ function toAuditLinked(linkedOrg) {
 }
 
 /**
- * @param {Organisation[]} linkableOrgs
+ * @param {OrganisationSummary[]} linkableOrgs
  * @returns {AuditUnlinkedOrg[]}
  */
 function toAuditUnlinked(linkableOrgs) {
@@ -66,8 +66,8 @@ function toAuditUnlinked(linkableOrgs) {
  * @param {{
  *   defraIdOrg: { id: string; name: string }
  *   defraIdRelationships: DefraIdRelationship[]
- *   linkedOrg: Organisation | null
- *   linkableOrgs: Organisation[]
+ *   linkedOrg: LinkedOrganisationSummary | null
+ *   linkableOrgs: OrganisationSummary[]
  * }} params
  */
 export async function auditOrganisationsDiscovery(

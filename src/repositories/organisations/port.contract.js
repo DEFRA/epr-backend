@@ -4,8 +4,8 @@ import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testFindAllLinkedBehaviour } from './contract/find-all-linked.contract.js'
 import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-defra-org-id.contract.js'
-import { testFindByAccreditationNumberBehaviour } from './contract/find-by-accreditation-number.contract.js'
-import { testFindByRegistrationNumberBehaviour } from './contract/find-by-registration-number.contract.js'
+import { testIsAccreditationNumberInUseBehaviour } from './contract/is-accreditation-number-in-use.contract.js'
+import { testIsRegistrationNumberInUseBehaviour } from './contract/is-registration-number-in-use.contract.js'
 import { testFindWithCriteriaBehaviour } from './contract/find-criteria.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testReplaceBehaviour } from './contract/replace.contract.js'
@@ -26,8 +26,8 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testFindAllIdsBehaviour(repositoryFactory)
   testFindAllLinkedBehaviour(repositoryFactory)
   testFindByLinkedDefraOrgIdBehaviour(repositoryFactory)
-  testFindByAccreditationNumberBehaviour(repositoryFactory)
-  testFindByRegistrationNumberBehaviour(repositoryFactory)
+  testIsAccreditationNumberInUseBehaviour(repositoryFactory)
+  testIsRegistrationNumberInUseBehaviour(repositoryFactory)
   testFindWithCriteriaBehaviour(repositoryFactory)
   testFindRegistrationByIdBehaviour(repositoryFactory)
   testFindAccreditationByIdBehaviour(repositoryFactory)

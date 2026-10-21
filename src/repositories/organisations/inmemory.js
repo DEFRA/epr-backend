@@ -308,13 +308,19 @@ const performFind =
     return { items, page, pageSize, totalItems, totalPages }
   }
 
-const toLinkedOrganisationSummary = (org) => ({
+/** @returns {import('./port.js').OrganisationSummary} */
+const toOrganisationSummary = (org) => ({
   id: org._id.toString(),
   orgId: org.orgId,
   companyDetails: { name: org.companyDetails.name },
-  status: getCurrentStatus(org),
+  status: getCurrentStatus(org)
+})
+
+/** @returns {import('./port.js').LinkedOrganisationSummary} */
+const toLinkedOrganisationSummary = (org) => ({
+  ...toOrganisationSummary(org),
   linkedDefraOrganisation: {
-    ...org.linkedDefraOrganisation,
+    ...structuredClone(org.linkedDefraOrganisation),
     linkedAt: new Date(org.linkedDefraOrganisation.linkedAt).toISOString()
   }
 })
@@ -356,38 +362,24 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
     return null
   }
 
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
+  return toLinkedOrganisationSummary(found)
 }
 
-const performFindByAccreditationNumber =
-  (staleCache) => async (accreditationNumber) => {
-    const found = staleCache.find((org) =>
+const performIsAccreditationNumberInUse =
+  (staleCache) => async (accreditationNumber) =>
+    staleCache.some((org) =>
       org.accreditations.some(
         (acc) => acc.accreditationNumber === accreditationNumber
       )
     )
 
-    if (!found) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
-  }
-
-const performFindByRegistrationNumber =
-  (staleCache) => async (registrationNumber) => {
-    const found = staleCache.find((org) =>
+const performIsRegistrationNumberInUse =
+  (staleCache) => async (registrationNumber) =>
+    staleCache.some((org) =>
       org.registrations.some(
         (reg) => reg.registrationNumber === registrationNumber
       )
     )
-
-    if (!found) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
-  }
 
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
@@ -414,9 +406,7 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
     return isInitialUser
   })
 
-  return matches.map((org) =>
-    mapDocumentWithCurrentStatuses(structuredClone(org))
-  )
+  return matches.map(toOrganisationSummary)
 }
 
 const performFindByOrganisationNumber =
@@ -555,8 +545,8 @@ export const createInMemoryOrganisationsRepository = (
       findById,
       findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
-      findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
-      findByRegistrationNumber: performFindByRegistrationNumber(staleCache),
+      isAccreditationNumberInUse: performIsAccreditationNumberInUse(staleCache),
+      isRegistrationNumberInUse: performIsRegistrationNumberInUse(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrganisationNumber: performFindByOrganisationNumber(staleCache),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(

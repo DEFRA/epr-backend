@@ -333,6 +333,24 @@ export const testFindBehaviour = (it) => {
         expect(result).toEqual([])
       })
 
+      it('returns only the summary fields', async () => {
+        const matchingOrg = buildOrgWithSubmitter(INITIAL_USER_EMAIL)
+        await repository.insert(matchingOrg)
+        await approveOrg(matchingOrg)
+
+        const result =
+          await repository.findAllLinkableForUser(INITIAL_USER_EMAIL)
+
+        expect(result).toEqual([
+          {
+            id: matchingOrg.id,
+            orgId: matchingOrg.orgId,
+            companyDetails: { name: matchingOrg.companyDetails.name },
+            status: ORGANISATION_STATUS.APPROVED
+          }
+        ])
+      })
+
       it('returns empty array when no organisations match criteria', async () => {
         const orgWithDifferentUser = buildOrgWithSubmitter(OTHER_USER_EMAIL)
         await repository.insert(orgWithDifferentUser)

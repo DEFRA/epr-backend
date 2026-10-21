@@ -4,7 +4,7 @@ import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 /** @import {DefraIdTokenPayload, UserRoleAndScopes} from '#auth/types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {OrganisationSummary} from '#repositories/organisations/port.js' */
 
 /**
  * Defra ID authenticates operators, and only operators, so an identity this
@@ -49,7 +49,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
 /**
  * @param {HapiRequest} request
- * @param {Organisation} usersLinkedOrg
+ * @param {Pick<OrganisationSummary, 'id' | 'orgId'>} usersLinkedOrg
  */
 const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
   const { organisationId, organisationNumber } = request.params
@@ -62,7 +62,7 @@ const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
 }
 
 /**
- * @param {Organisation} organisation
+ * @param {Pick<OrganisationSummary, 'status'>} organisation
  */
 const organisationIsActive = (organisation) => {
   return organisation.status === ORGANISATION_STATUS.ACTIVE

@@ -78,13 +78,12 @@ export const registrationStatusHistory = {
     if (grant) {
       // Granting issues the registration number, which must not already be
       // in use by any registration in any organisation, whatever its status.
-      // This uniqueness is enforced here only: there is no unique index on
-      // registrations.registrationNumber, so concurrent grants of the same
-      // number are not blocked by the database.
-      const holder = await organisationsRepository.findByRegistrationNumber(
+      // The unique index on registrations.registrationNumber also blocks
+      // concurrent grants of the same number; this check gives the clear 422.
+      const inUse = await organisationsRepository.isRegistrationNumberInUse(
         grant.registrationNumber
       )
-      if (holder) {
+      if (inUse) {
         throw Boom.badData(
           `Registration number ${grant.registrationNumber} is already in use`
         )
