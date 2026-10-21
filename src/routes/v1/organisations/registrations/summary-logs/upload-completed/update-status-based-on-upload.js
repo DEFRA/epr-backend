@@ -14,6 +14,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -153,14 +154,22 @@ const insertNewSummaryLog = async (
           registrationId
         )
 
-  const summaryLog = buildSummaryLogData(
-    upload,
-    undefined,
-    organisationId,
-    registrationId,
-    year,
-    accreditationId
+  const { numbers } = numbersForSummaryLog(
+    await organisationsRepository.findById(organisationId),
+    { registrationId, accreditationId }
   )
+
+  const summaryLog = {
+    ...buildSummaryLogData(
+      upload,
+      undefined,
+      organisationId,
+      registrationId,
+      year,
+      accreditationId
+    ),
+    ...numbers
+  }
 
   const validatedAgainstSummaryLogId = await validatedAgainstSummaryLogIdFor(
     summaryLogsRepository,

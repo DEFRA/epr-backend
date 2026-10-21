@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
 
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -27,6 +28,8 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 
 const organisationId = '507f1f77bcf86cd799439011'
 const registrationId = '507f1f77bcf86cd799439012'
+const orgId = 500123
+const registrationNumber = 'R25SR500010912PL'
 
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
@@ -54,8 +57,13 @@ const createTestOrganisationsRepository = () =>
     {
       ...buildOrganisation({
         id: organisationId,
+        orgId,
         registrations: [
-          buildRegistration({ id: registrationId, accreditationId: undefined })
+          buildRegistration({
+            id: registrationId,
+            registrationNumber,
+            accreditationId: undefined
+          })
         ]
       }),
       status: 'active'
@@ -102,7 +110,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     await server.stop()
   })
 
-  it('stores the year from the path and the accreditation from the registration', async () => {
+  it('stores the year from the path, the accreditation from the registration, and their numbers', async () => {
     const summaryLogId = randomUUID()
 
     const response = await server.inject({
@@ -118,7 +126,10 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       organisationId,
       registrationId,
       year: 2026,
-      accreditationId: null
+      accreditationId: null,
+      organisationNumber: String(orgId),
+      registrationNumber,
+      accreditationNumber: null
     })
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBeDefined()
 
@@ -132,6 +143,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     const accreditedOrganisationId = '507f1f77bcf86cd799439013'
     const accreditedRegistrationId = '507f1f77bcf86cd799439014'
     const accreditationId = '507f1f77bcf86cd799439015'
+    const accreditationNumber = toAccreditationNumber('ACC500124')
 
     let accreditedServer
     let accreditedSummaryLogsRepository
@@ -157,6 +169,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
               accreditations: [
                 buildAccreditation({
                   id: accreditationId,
+                  accreditationNumber,
                   statusHistory: [{ status: 'approved', updatedAt: new Date() }]
                 })
               ]
@@ -180,7 +193,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       await accreditedServer.stop()
     })
 
-    it('stores the accreditation from the registration', async () => {
+    it('stores the accreditation from the registration, and its number', async () => {
       const summaryLogId = randomUUID()
 
       const response = await accreditedServer.inject({
@@ -207,7 +220,8 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       )
       expect(stored.summaryLog).toMatchObject({
         year: 2026,
-        accreditationId
+        accreditationId,
+        accreditationNumber
       })
     })
   })

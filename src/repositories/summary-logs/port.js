@@ -1,6 +1,7 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {SummaryLogNumbers} from '#domain/summary-logs/numbers.js' */
 
 /**
  * @typedef {Object} SummaryLogVersion
@@ -81,6 +82,8 @@
  * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
+ * @property {() => Promise<string[]>} findIdsWithoutNumbers - ids of summary logs lacking a number beside one of their ids
+ * @property {(id: string, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
  * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted in any year
