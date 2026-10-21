@@ -130,11 +130,11 @@ const listWithoutAccreditationIds = {
         h
       )
     )
-    const { summaryLogs } =
+    const { summaryLogs: listed } =
       /** @type {{ summaryLogs: Record<string, unknown>[] }} */ (
         response.source
       )
-    for (const log of summaryLogs) {
+    for (const log of listed) {
       delete log.accreditationId
     }
     return response
