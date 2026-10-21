@@ -17,25 +17,33 @@ import { testOrgStatusTransitionBehaviour } from './contract/org-status.contract
 import { testRegAccStatusTransitionBehaviour } from './contract/reg-acc-status-transition.contract.js'
 import { testAccreditationNumberUniquenessBehaviour } from './contract/accreditation-number-uniqueness.contract.js'
 import { testRegistrationNumberUniquenessBehaviour } from './contract/registration-number-uniqueness.contract.js'
+import { createOrganisationBuilders } from './contract/test-data.js'
 
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
-  testInsertBehaviour(repositoryFactory)
-  testReplaceBehaviour(repositoryFactory)
-  testFindBehaviour(repositoryFactory)
-  testFindByIdsBehaviour(repositoryFactory)
-  testFindAllIdsBehaviour(repositoryFactory)
-  testFindAllLinkedBehaviour(repositoryFactory)
-  testFindByLinkedDefraOrgIdBehaviour(repositoryFactory)
-  testFindByAccreditationNumberBehaviour(repositoryFactory)
-  testFindByRegistrationNumberBehaviour(repositoryFactory)
-  testFindWithCriteriaBehaviour(repositoryFactory)
-  testFindRegistrationByIdBehaviour(repositoryFactory)
-  testFindAccreditationByIdBehaviour(repositoryFactory)
-  testDataIsolationBehaviour(repositoryFactory)
-  testRegAccApprovalValidation(repositoryFactory)
-  testAccreditationLinkValidation(repositoryFactory)
-  testOrgStatusTransitionBehaviour(repositoryFactory)
-  testRegAccStatusTransitionBehaviour(repositoryFactory)
-  testAccreditationNumberUniquenessBehaviour(repositoryFactory)
-  testRegistrationNumberUniquenessBehaviour(repositoryFactory)
+  const it = repositoryFactory.extend({
+    // eslint-disable-next-line no-empty-pattern
+    organisationBuilders: async ({}, use) => {
+      await use(createOrganisationBuilders())
+    }
+  })
+
+  testInsertBehaviour(it)
+  testReplaceBehaviour(it)
+  testFindBehaviour(it)
+  testFindByIdsBehaviour(it)
+  testFindAllIdsBehaviour(it)
+  testFindAllLinkedBehaviour(it)
+  testFindByLinkedDefraOrgIdBehaviour(it)
+  testFindByAccreditationNumberBehaviour(it)
+  testFindByRegistrationNumberBehaviour(it)
+  testFindWithCriteriaBehaviour(it)
+  testFindRegistrationByIdBehaviour(it)
+  testFindAccreditationByIdBehaviour(it)
+  testDataIsolationBehaviour(it)
+  testRegAccApprovalValidation(it)
+  testAccreditationLinkValidation(it)
+  testOrgStatusTransitionBehaviour(it)
+  testRegAccStatusTransitionBehaviour(it)
+  testAccreditationNumberUniquenessBehaviour(it)
+  testRegistrationNumberUniquenessBehaviour(it)
 }

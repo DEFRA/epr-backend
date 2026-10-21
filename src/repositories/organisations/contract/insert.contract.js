@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

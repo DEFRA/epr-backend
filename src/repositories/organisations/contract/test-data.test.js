@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { buildOrganisation, buildReadOrganisation } from './test-data.js'
+import {
+  buildOrganisation,
+  buildReadOrganisation,
+  createOrganisationBuilders
+} from './test-data.js'
 import { getCurrentStatus } from '../status.js'
 
 describe('test-data', () => {
@@ -8,6 +12,20 @@ describe('test-data', () => {
       const org = buildOrganisation()
 
       expect(org).not.toHaveProperty('status')
+    })
+  })
+
+  describe('createOrganisationBuilders', () => {
+    it('should give every organisation from one set of builders a distinct orgId', () => {
+      const builders = createOrganisationBuilders()
+
+      const orgIds = Array.from({ length: 1000 }, (_, index) =>
+        index % 2 === 0
+          ? builders.buildOrganisation().orgId
+          : builders.buildOrgWithName(`Org ${index}`).orgId
+      )
+
+      expect(new Set(orgIds).size).toBe(orgIds.length)
     })
   })
 

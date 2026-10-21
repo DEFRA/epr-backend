@@ -1,27 +1,35 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrgWithCriteria, buildOrgWithName } from './test-data.js'
 
-const insertNamed = async (repository, names) => {
-  for (const name of names) {
-    await repository.insert(buildOrgWithName(name))
-  }
-}
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 const namesOf = (result) => result.items.map((o) => o.companyDetails.name)
 
 export const testFindWithCriteriaBehaviour = (it) => {
   describe('find', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrgWithCriteria']} */
+    let buildOrgWithCriteria
+    /** @type {OrganisationBuilders['buildOrgWithName']} */
+    let buildOrgWithName
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrgWithCriteria = organisationBuilders.buildOrgWithCriteria
+        buildOrgWithName = organisationBuilders.buildOrgWithName
       }
     )
+
+    const insertNamed = async (repository, names) => {
+      for (const name of names) {
+        await repository.insert(buildOrgWithName(name))
+      }
+    }
 
     describe('empty collection', () => {
       it('returns items=[], totalItems=0, totalPages=0', async () => {

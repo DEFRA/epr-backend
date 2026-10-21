@@ -5,11 +5,9 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import {
-  buildOrganisation,
-  prepareOrgUpdate,
-  getValidDateRange
-} from './test-data.js'
+import { prepareOrgUpdate, getValidDateRange } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testRegAccStatusTransitionBehaviour = (it) => {
   // Date strings for validFrom/validTo
@@ -17,14 +15,18 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
 
   describe('registration/accreditation status transitions', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

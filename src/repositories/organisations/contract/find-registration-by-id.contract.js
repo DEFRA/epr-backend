@@ -1,23 +1,28 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
-  buildOrganisation,
   buildRegistration,
   buildAccreditation,
   prepareOrgUpdate
 } from './test-data.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testFindRegistrationByIdBehaviour = (it) => {
   describe('findRegistrationById', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

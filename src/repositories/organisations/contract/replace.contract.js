@@ -6,26 +6,31 @@ import {
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildOrganisation,
   buildRegistration,
   prepareOrgUpdate,
   getValidDateRange
 } from './test-data.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testReplaceBehaviour = (it) => {
   describe('replace', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     // Date strings for validFrom/validTo
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
