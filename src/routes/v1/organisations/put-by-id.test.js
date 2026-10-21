@@ -469,6 +469,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
   setupAuthContext()
   let server
   let organisationsRepository
+  let overseasSitesRepository
 
   const knownSiteId = new ObjectId().toString()
 
@@ -504,6 +505,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
         updatedAt: new Date()
       }
     ])
+    overseasSitesRepository = overseasSitesRepoFactory()
 
     server = await createTestServer({
       repositories: {
@@ -730,15 +732,8 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     expect(finalExporter.overseasSites).toEqual({})
 
     // The overseas site record itself must still exist
-    const siteResponse = await server.inject({
-      method: 'GET',
-      url: `/v1/overseas-sites/${knownSiteId}`,
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(siteResponse.statusCode).toBe(StatusCodes.OK)
-    const site = JSON.parse(siteResponse.payload)
-    expect(site.id).toBe(knownSiteId)
+    const site = await overseasSitesRepository.findById(knownSiteId)
+    expect(site?.id).toBe(knownSiteId)
   })
 })
 
