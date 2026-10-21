@@ -131,6 +131,7 @@ describe('processImportFile', () => {
       errors: []
     })
 
+    expect(organisationsRepository.findByOrgId).toHaveBeenCalledWith('500001')
     expect(overseasSitesRepository.create).toHaveBeenCalledTimes(2)
 
     // First site

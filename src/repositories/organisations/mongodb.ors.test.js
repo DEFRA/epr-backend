@@ -103,7 +103,7 @@ describe('Organisations repository - ORS operations', () => {
       const org = buildOrganisation({ orgId: 500042 })
       await database.collection(COLLECTION_NAME).insertOne(org)
 
-      const found = await repository.findByOrgId(toOrganisationNumber(500042))
+      const found = await repository.findByOrgId(toOrganisationNumber('500042'))
       assertPresent(found)
 
       expect(found.orgId).toBe(500042)
@@ -111,7 +111,7 @@ describe('Organisations repository - ORS operations', () => {
     })
 
     it('returns null when orgId does not exist', async ({ repository }) => {
-      const found = await repository.findByOrgId(toOrganisationNumber(999999))
+      const found = await repository.findByOrgId(toOrganisationNumber('999999'))
       expect(found).toBeNull()
     })
   })

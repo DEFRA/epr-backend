@@ -418,8 +418,8 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
   )
 }
 
-const performFindByOrgId = (staleCache) => async (orgId) => {
-  const found = staleCache.find((o) => o.orgId === orgId)
+const performFindByOrgId = (staleCache) => async (organisationNumber) => {
+  const found = staleCache.find((o) => o.orgId === Number(organisationNumber))
   if (!found) {
     return null
   }

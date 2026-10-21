@@ -1,4 +1,5 @@
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
@@ -355,7 +356,11 @@ export const testStatusTimelineBehaviour = (it) => {
         logger
       })
 
-      expect(await repository.findByOrganisationNumber(stored.orgId)).toBeNull()
+      expect(
+        await repository.findByOrganisationNumber(
+          toOrganisationNumber(String(stored.orgId))
+        )
+      ).toBeNull()
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
           `Organisation ${stored.orgId} has status undefined`

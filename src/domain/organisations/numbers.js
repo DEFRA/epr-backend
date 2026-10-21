@@ -3,17 +3,17 @@
  * accreditation. Each is branded so that a database id, or another kind of
  * number, cannot be passed where one is expected.
  *
- * @typedef {number & { readonly __brand: 'OrganisationNumber' }} OrganisationNumber
+ * @typedef {string & { readonly __brand: 'OrganisationNumber' }} OrganisationNumber
  * @typedef {string & { readonly __brand: 'RegistrationNumber' }} RegistrationNumber
  * @typedef {string & { readonly __brand: 'AccreditationNumber' }} AccreditationNumber
  */
 
 /**
- * @param {number | string} value - as stored, or as a route path carries it
+ * @param {string} value
  * @returns {OrganisationNumber}
  */
 export const toOrganisationNumber = (value) =>
-  /** @type {OrganisationNumber} */ (Number(value))
+  /** @type {OrganisationNumber} */ (value)
 
 /**
  * @param {string} value

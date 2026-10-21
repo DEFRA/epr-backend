@@ -55,11 +55,16 @@ const storeRegistration = async (organisationsRepository) => {
   await organisationsRepository.insert(organisation)
 
   /** @type {SummaryLogKey} */
-  const key = { organisationNumber: organisation.orgId, registrationNumber }
+  const key = {
+    organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+    registrationNumber
+  }
 
   return {
     key,
-    unknownOrganisationNumber: toOrganisationNumber(organisation.orgId + 1),
+    unknownOrganisationNumber: toOrganisationNumber(
+      String(organisation.orgId + 1)
+    ),
     ids: {
       organisationId: organisation.id,
       registrationId: registration.id

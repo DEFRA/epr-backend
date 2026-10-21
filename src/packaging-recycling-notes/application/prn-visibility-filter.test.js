@@ -3,7 +3,6 @@ import { describe, test, expect, vi } from 'vitest'
 
 import { createPrnVisibilityFilter } from './prn-visibility-filter.js'
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Collection } from 'mongodb' */
 
@@ -45,10 +44,7 @@ describe('#createPrnVisibilityFilter', () => {
     ])
 
     const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
-      testOrganisationIds: [
-        toOrganisationNumber(500521),
-        toOrganisationNumber(500002)
-      ]
+      testOrganisationIds: [500521, 500002]
     })
 
     expect(mockDb.collection).toHaveBeenCalledWith('epr-organisations')
@@ -66,7 +62,7 @@ describe('#createPrnVisibilityFilter', () => {
     const mockDb = createMockDb([])
 
     const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
-      testOrganisationIds: [toOrganisationNumber(999999)]
+      testOrganisationIds: [999999]
     })
 
     expect(prnVisibilityFilter.excludeOrganisationIds).toEqual([])
@@ -77,10 +73,7 @@ describe('#createPrnVisibilityFilter', () => {
     const mockDb = createMockDb([{ _id: org500521Id, orgId: 500521 }])
 
     const prnVisibilityFilter = await createPrnVisibilityFilter(mockDb.db, {
-      testOrganisationIds: [
-        toOrganisationNumber(500521),
-        toOrganisationNumber(999999)
-      ]
+      testOrganisationIds: [500521, 999999]
     })
 
     expect(prnVisibilityFilter.excludeOrganisationIds).toEqual([

@@ -3,12 +3,11 @@ import Joi from 'joi'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js' */
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {HapiRequest & {
  *   nonProdDataReset: NonProdDataReset
- *   params: { id: OrganisationNumber }
+ *   params: { id: number }
  * }} DeleteByIdRequest
  */
 

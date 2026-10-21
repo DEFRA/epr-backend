@@ -21,7 +21,6 @@ import {
 } from '#domain/organisations/model.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -44,9 +43,9 @@ const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
  * These are fixed to enable idempotent seeding.
  */
 export const SCENARIO_ORG_IDS = Object.freeze({
-  APPROVED: toOrganisationNumber(50020),
-  ACTIVE: toOrganisationNumber(50030),
-  ACTIVE_WITH_SUSPENDED_ACCREDITATION: toOrganisationNumber(50040)
+  APPROVED: 50020,
+  ACTIVE: 50030,
+  ACTIVE_WITH_SUSPENDED_ACCREDITATION: 50040
 })
 
 /**

@@ -26,7 +26,6 @@ import { createMongoSummaryLogRowStatesRepository } from '#waste-records/reposit
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
 import { nonProdDataResetPlugin } from './mongodb.plugin.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')
@@ -398,7 +397,7 @@ describe('non-prod data reset (mongo)', () => {
     it('returns all-zero counts when the organisation does not exist', async ({
       reset
     }) => {
-      const counts = await reset.deleteByOrgId(toOrganisationNumber(999999))
+      const counts = await reset.deleteByOrgId(999999)
 
       expect(counts).toEqual(EMPTY_COUNTS)
     })
@@ -410,9 +409,7 @@ describe('non-prod data reset (mongo)', () => {
         isProduction: true
       })
 
-      await expect(
-        productionReset.deleteByOrgId(toOrganisationNumber(123))
-      ).rejects.toThrow()
+      await expect(productionReset.deleteByOrgId(123)).rejects.toThrow()
 
       expect(productionLoggerError).toHaveBeenCalledWith({
         message:
@@ -454,7 +451,7 @@ describe('non-prod data reset (mongo)', () => {
         name: 'Orphan'
       })
 
-      const counts = await reset.deleteByOrgId(toOrganisationNumber(orgId))
+      const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['overseas-sites']).toBe(0)
       expect(await database.collection('overseas-sites').countDocuments()).toBe(
@@ -502,7 +499,7 @@ describe('non-prod data reset (mongo)', () => {
         .collection('epr-organisations')
         .insertOne({ _id: new ObjectId(), orgId })
 
-      const counts = await reset.deleteByOrgId(toOrganisationNumber(orgId))
+      const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['epr-organisations']).toBe(1)
       expect(counts['overseas-sites']).toBe(0)

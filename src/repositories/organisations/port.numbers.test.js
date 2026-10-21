@@ -51,15 +51,11 @@ describe('the organisations port names records by their numbers', () => {
     await repository.insert(organisation)
   })
 
-  it('reads an organisation number from a route path', () => {
-    expect(toOrganisationNumber(String(organisation.orgId))).toBe(
-      organisation.orgId
-    )
-  })
-
   it('finds the organisation by each of its numbers', async () => {
     const found = [
-      await repository.findByOrgId(organisation.orgId),
+      await repository.findByOrgId(
+        toOrganisationNumber(String(organisation.orgId))
+      ),
       await repository.findByRegistrationNumber(REGISTRATION_NUMBER),
       await repository.findByAccreditationNumber(ACCREDITATION_NUMBER)
     ]
@@ -86,8 +82,10 @@ describe('the organisations port names records by their numbers', () => {
 
   it('takes no number of another kind, or a bare value', async () => {
     const found = [
-      // @ts-expect-error a bare number is not an organisation number
-      await repository.findByOrgId(Number(organisation.orgId)),
+      // @ts-expect-error the stored orgId is not an organisation number
+      await repository.findByOrgId(organisation.orgId),
+      // @ts-expect-error a bare string is not an organisation number
+      await repository.findByOrgId(String(organisation.orgId)),
       // @ts-expect-error an accreditation number is not a registration number
       await repository.findByRegistrationNumber(ACCREDITATION_NUMBER),
       // @ts-expect-error a registration number is not an accreditation number
@@ -95,6 +93,7 @@ describe('the organisations port names records by their numbers', () => {
     ]
 
     expect(found.map((match) => match?.id ?? null)).toEqual([
+      organisation.id,
       organisation.id,
       null,
       null

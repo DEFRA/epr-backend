@@ -467,8 +467,10 @@ const findAllIds = (db) => async () => {
   )
 }
 
-const performFindByOrgId = (db) => async (orgId) => {
-  const doc = await db.collection(COLLECTION_NAME).findOne({ orgId })
+const performFindByOrgId = (db) => async (organisationNumber) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ orgId: Number(organisationNumber) })
 
   if (!doc) {
     return null

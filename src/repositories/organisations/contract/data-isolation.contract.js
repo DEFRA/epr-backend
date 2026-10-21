@@ -1,6 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
@@ -58,7 +57,7 @@ export const testDataIsolationBehaviour = (it) => {
         await repository.insert(org)
 
         // mutate input after insert
-        org.orgId = toOrganisationNumber(999999)
+        org.orgId = 999999
 
         const result = await repository.findById(org.id)
         expect(result.orgId).toBe(originalOrgId)
