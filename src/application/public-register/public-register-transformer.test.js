@@ -16,6 +16,7 @@ import {
 } from '#domain/organisations/model.js'
 import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 describe('transform', () => {
   const baseAddress = {
@@ -356,7 +357,7 @@ describe('transform', () => {
         buildAccreditation({
           id: accreditationId.toString(),
           status: ACCREDITATION_STATUS.CREATED,
-          accreditationNumber: 'A999999PL'
+          accreditationNumber: toAccreditationNumber('A999999PL')
         })
       ]
     })

@@ -14,6 +14,7 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { organisationsOverviewGetPath } from './get.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const makePath = (id) =>
   organisationsOverviewGetPath.replace('{organisationId}', id)
@@ -244,7 +245,9 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
   })
 
   it('includes linked accreditation with id, accreditationNumber, status, and year', async () => {
-    const accreditation = buildAccreditation({ accreditationNumber: 'ACC0001' })
+    const accreditation = buildAccreditation({
+      accreditationNumber: toAccreditationNumber('ACC0001')
+    })
     const registration = buildRegistration({
       accreditationId: accreditation.id
     })

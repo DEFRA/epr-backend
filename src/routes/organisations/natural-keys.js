@@ -14,6 +14,7 @@ import {
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  */
 
@@ -32,16 +33,15 @@ const lookupContext = () => ({
  * organisation the organisation read model serves can be found.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {string} organisationNumber
+ * @param {OrganisationNumber} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export async function findOrganisationByNumber(
   organisationsRepository,
   organisationNumber
 ) {
-  const organisation = await organisationsRepository.findByOrgId(
-    Number(organisationNumber)
-  )
+  const organisation =
+    await organisationsRepository.findByOrganisationNumber(organisationNumber)
   if (
     !organisation ||
     !servesOrganisation(organisation, lookupContext().today)
@@ -57,8 +57,8 @@ export async function findOrganisationByNumber(
  * built from the read model resolves and nothing else does.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {string} organisationNumber
- * @param {string} registrationNumber
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
  */
 export async function findRegistrationByNumber(
@@ -105,7 +105,7 @@ export function servedRegistrations(organisation) {
  * cannot show elsewhere in the organisation does not stop the lookup.
  *
  * @param {Organisation} organisation
- * @param {string} registrationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {Registration | null}
  */
 function servedRegistrationByNumber(organisation, registrationNumber) {

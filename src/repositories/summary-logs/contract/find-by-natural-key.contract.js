@@ -8,12 +8,17 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogFactory, withoutYear } from './test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @import { TestAPI } from 'vitest'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
+ * @import { KeyedSummaryLogWithId, SummaryLogKey, SummaryLogsRepository } from '../port.js'
  *
  * @typedef {{
  *   summaryLogsRepository: SummaryLogsRepository,
@@ -33,13 +38,14 @@ const uniqueNumber = (prefix) =>
  */
 const storeRegistration = async (organisationsRepository) => {
   const current = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
+    accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
   })
   const previous = buildAccreditation({
-    accreditationNumber: uniqueNumber('ACC')
+    accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
   })
+  const registrationNumber = toRegistrationNumber(uniqueNumber('REG'))
   const registration = buildRegistration({
-    registrationNumber: uniqueNumber('REG'),
+    registrationNumber,
     accreditationId: current.id
   })
   const organisation = buildOrganisation({
@@ -48,12 +54,17 @@ const storeRegistration = async (organisationsRepository) => {
   })
   await organisationsRepository.insert(organisation)
 
+  /** @type {SummaryLogKey} */
+  const key = {
+    organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+    registrationNumber
+  }
+
   return {
-    key: {
-      organisationNumber: String(organisation.orgId),
-      registrationNumber: registration.registrationNumber
-    },
-    unknownOrganisationNumber: String(organisation.orgId + 1),
+    key,
+    unknownOrganisationNumber: toOrganisationNumber(
+      String(organisation.orgId + 1)
+    ),
     ids: {
       organisationId: organisation.id,
       registrationId: registration.id
@@ -113,7 +124,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findLatestSubmitted({
           ...stored.key,
-          registrationNumber: uniqueNumber('REG')
+          registrationNumber: toRegistrationNumber(uniqueNumber('REG'))
         })
 
         expect(result).toBeNull()
@@ -216,7 +227,7 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repo.findLatestSubmitted({
           ...stored.key,
-          accreditationNumber: uniqueNumber('ACC')
+          accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
         })
 
         expect(result).toBeNull()
@@ -312,6 +323,20 @@ export const testFindByNaturalKey = (it) => {
         })
 
         expect(result.map(({ id }) => id)).toEqual([currentId])
+      })
+
+      it('names no accreditation for a summary log whose accreditation the organisation does not hold', async () => {
+        await insert(
+          summaryLogFactory.submitted({
+            accreditationId: new ObjectId().toString()
+          })
+        )
+
+        const result = await repo.findAll(stored.key)
+
+        expect(result).toMatchObject([
+          { summaryLog: { accreditationNumber: null } }
+        ])
       })
 
       it('counts a summary log stored before accreditations were recorded towards every accreditation', async () => {

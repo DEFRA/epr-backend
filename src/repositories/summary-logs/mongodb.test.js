@@ -10,6 +10,7 @@ import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
@@ -113,7 +114,10 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertSubmitted(summaryLogsRepository)
 
-      await summaryLogsRepository.getDownloadUrl(id, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        id,
+        toRegistrationNumber('R26ER5000000002PA')
+      )
 
       expect(await lastSignedDisposition()).toBe(
         'attachment; filename="R26ER5000000002PA-2024-01-01-000000.xlsx"'
@@ -130,10 +134,16 @@ describe('MongoDB summary logs repository', () => {
         submittedAt: '2024-01-01T16:42:07.000Z'
       })
 
-      await summaryLogsRepository.getDownloadUrl(morning, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        morning,
+        toRegistrationNumber('R26ER5000000002PA')
+      )
       const first = await lastSignedDisposition()
 
-      await summaryLogsRepository.getDownloadUrl(afternoon, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        afternoon,
+        toRegistrationNumber('R26ER5000000002PA')
+      )
 
       expect(first).toBe(
         'attachment; filename="R26ER5000000002PA-2024-01-01-091530.xlsx"'

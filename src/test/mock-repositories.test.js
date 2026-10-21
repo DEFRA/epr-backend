@@ -28,7 +28,7 @@ describe('mock-repositories', () => {
         'findRegistrationById',
         'findAccreditationById',
         'findAllIds',
-        'findByOrgId',
+        'findByOrganisationNumber',
         'replaceRegistrationOverseasSites'
       ]
     },
@@ -38,6 +38,8 @@ describe('mock-repositories', () => {
         'insert',
         'update',
         'findById',
+        'findIdsWithoutNumbers',
+        'assignNumbers',
         'findLatestSubmittedForOrgReg',
         'findAllByOrgReg',
         'findLatestSubmitted',

@@ -3,6 +3,10 @@ import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation, OrganisationStatus} from '#domain/organisations/model.js' */
@@ -193,12 +197,18 @@ export const buildOrgWithCriteria = ({
     companyDetails: { ...base.companyDetails, name },
     registrations: base.registrations.map((registration, index) =>
       index === 0 && registrationNumber !== undefined
-        ? { ...registration, registrationNumber }
+        ? {
+            ...registration,
+            registrationNumber: toRegistrationNumber(registrationNumber)
+          }
         : registration
     ),
     accreditations: base.accreditations.map((accreditation, index) =>
       index === 0 && accreditationNumber !== undefined
-        ? { ...accreditation, accreditationNumber }
+        ? {
+            ...accreditation,
+            accreditationNumber: toAccreditationNumber(accreditationNumber)
+          }
         : accreditation
     )
   }

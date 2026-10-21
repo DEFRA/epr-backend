@@ -27,6 +27,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { WithId } from 'mongodb' */
 /** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
 
 /**
@@ -358,6 +359,14 @@ export const parseOrgIdCriterion = (value) => ({
   businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
   documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
 })
+
+/**
+ * The orgId an organisation is stored under.
+ *
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {number}
+ */
+export const storedOrgId = (organisationNumber) => Number(organisationNumber)
 
 /**
  * The pattern both adapters match numbers with: the whole value, escaped.

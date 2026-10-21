@@ -10,6 +10,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -46,9 +47,8 @@ export const createOrganisationReadRepository = ({
   logger
 }) => ({
   findByOrganisationNumber: async (organisationNumber) => {
-    const stored = await organisationsRepository.findByOrgId(
-      Number(organisationNumber)
-    )
+    const stored =
+      await organisationsRepository.findByOrganisationNumber(organisationNumber)
     if (!stored) {
       return null
     }
@@ -101,7 +101,7 @@ function toOrganisation(stored, context) {
   const { companyDetails, linkedDefraOrganisation } = stored
 
   return {
-    organisationNumber: String(stored.orgId),
+    organisationNumber: toOrganisationNumber(String(stored.orgId)),
     name: companyDetails.name,
     ...omitNullish({
       companiesHouseNumber: companyDetails.companiesHouseNumber,

@@ -31,7 +31,7 @@ export const createMockOrganisationsRepository = (overrides = {}) => ({
   findRegistrationById: vi.fn(),
   findAccreditationById: vi.fn(),
   findAllIds: vi.fn(),
-  findByOrgId: vi.fn(),
+  findByOrganisationNumber: vi.fn(),
   replaceRegistrationOverseasSites: vi.fn(),
   ...overrides
 })
@@ -47,6 +47,8 @@ export const createMockSummaryLogsRepository = (overrides = {}) => ({
   insert: vi.fn(),
   update: vi.fn(),
   findById: vi.fn(),
+  findIdsWithoutNumbers: vi.fn(),
+  assignNumbers: vi.fn(),
   findLatestSubmittedForOrgReg: vi.fn(),
   findAllByOrgReg: vi.fn(),
   findLatestSubmitted: vi.fn(),

@@ -9,6 +9,7 @@ import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-
 import { testFindAllByOrgReg } from './contract/find-all-by-org-reg.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 import { testFindByNaturalKey } from './contract/find-by-natural-key.contract.js'
+import { testAssignNumbers } from './contract/assign-numbers.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -23,5 +24,6 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testFindAllByOrgReg(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
     testFindByNaturalKey(repositoryFactory)
+    testAssignNumbers(repositoryFactory)
   })
 }

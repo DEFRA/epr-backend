@@ -16,6 +16,7 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -94,7 +95,7 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
     wasteProcessingType: registration.wasteProcessingType,
     reprocessingType: 'input',
     ...(accStatus !== 'created' && {
-      accreditationNumber: 'ACC123456',
+      accreditationNumber: toAccreditationNumber('ACC123456'),
       validFrom: '2024-01-01',
       validTo: '2026-12-31'
     }),

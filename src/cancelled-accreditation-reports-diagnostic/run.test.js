@@ -17,6 +17,7 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { runCancelledAccreditationReportsDiagnostic } from './run.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -86,7 +87,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
   it('logs each cancelled accreditation, each of its reports and the summary', async () => {
     const accreditation = buildAccreditation({
       status: 'cancelled',
-      accreditationNumber: 'A26RE000001PA',
+      accreditationNumber: toAccreditationNumber('A26RE000001PA'),
       material: 'paper',
       validFrom: '2026-01-01',
       validTo: '2026-12-31',

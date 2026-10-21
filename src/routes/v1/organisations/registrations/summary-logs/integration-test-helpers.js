@@ -30,6 +30,10 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -843,7 +847,7 @@ const buildComplexTestOrg = ({
   const registration = {
     ...servableRegistration,
     id: registrationId,
-    registrationNumber: 'REG-123',
+    registrationNumber: toRegistrationNumber('REG-123'),
     status: /** @type {'approved'} */ ('approved'),
     statusHistory: /** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */ ([
       { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
@@ -874,7 +878,7 @@ const buildComplexTestOrg = ({
           partialMock({
             ...buildAccreditation({ wasteProcessingType: processingType }),
             id: accreditationId,
-            accreditationNumber: 'ACC-123',
+            accreditationNumber: toAccreditationNumber('ACC-123'),
             validFrom: accreditationValidFrom,
             validTo: VALID_TO,
             material,

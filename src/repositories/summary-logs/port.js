@@ -1,5 +1,7 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {SummaryLogNumbers} from '#domain/summary-logs/numbers.js' */
 
 /**
  * @typedef {Object} SummaryLogVersion
@@ -44,9 +46,9 @@
  * place of their database ids.
  *
  * @typedef {Object} SummaryLogKey
- * @property {string} organisationNumber
- * @property {string} registrationNumber
- * @property {string|null} [accreditationNumber] - `null` for registered-only;
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationNumber|null} [accreditationNumber] - `null` for registered-only;
  *   absent matches every accreditation
  */
 
@@ -56,9 +58,9 @@
  * when the summary log was stored before its accreditation was recorded.
  *
  * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
- *   organisationNumber: string,
- *   registrationNumber: string,
- *   accreditationNumber?: string | null
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditationNumber?: AccreditationNumber | null
  * }} KeyedSummaryLog
  */
 
@@ -80,14 +82,16 @@
  * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
+ * @property {() => Promise<string[]>} findIdsWithoutNumbers - ids of summary logs lacking a number beside one of their ids
+ * @property {(id: string, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
  * @property {(scope: SummaryLogScope) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted in any year
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
- * @property {(summaryLogId: string, registrationNumber?: string) => Promise<DownloadUrlResult>} getDownloadUrl
- * @property {(fileId: string, registrationNumber?: string) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
+ * @property {(summaryLogId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
+ * @property {(fileId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
  */
 
 /**
