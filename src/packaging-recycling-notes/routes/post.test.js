@@ -36,6 +36,7 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
@@ -1015,7 +1016,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       const accreditation = buildAccreditation({
         material: MATERIAL.PLASTIC,
         reprocessingType: REPROCESSING_TYPE.OUTPUT,
-        accreditationNumber: 'ACC-001',
+        accreditationNumber: toAccreditationNumber('ACC-001'),
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
         statusHistory

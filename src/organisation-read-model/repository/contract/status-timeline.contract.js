@@ -1,4 +1,5 @@
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
@@ -356,7 +357,9 @@ export const testStatusTimelineBehaviour = (it) => {
       })
 
       expect(
-        await repository.findByOrganisationNumber(String(stored.orgId))
+        await repository.findByOrganisationNumber(
+          toOrganisationNumber(String(stored.orgId))
+        )
       ).toBeNull()
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(

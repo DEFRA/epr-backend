@@ -12,6 +12,10 @@ import {
   findOrganisationByNumber,
   findRegistrationByNumber
 } from './natural-keys.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @param {ReturnType<typeof buildOrganisation>} organisation
@@ -19,8 +23,8 @@ import {
 const findIn = (organisation) =>
   findRegistrationByNumber(
     createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-    String(organisation.orgId),
-    REPROCESSOR_NUMBER
+    toOrganisationNumber(String(organisation.orgId)),
+    toRegistrationNumber(REPROCESSOR_NUMBER)
   )
 
 describe('findOrganisationByNumber', () => {
@@ -29,7 +33,7 @@ describe('findOrganisationByNumber', () => {
 
     const found = await findOrganisationByNumber(
       createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-      String(organisation.orgId)
+      toOrganisationNumber(String(organisation.orgId))
     )
 
     expect(found.id).toBe(organisation.id)
@@ -43,7 +47,7 @@ describe('findOrganisationByNumber', () => {
     await expect(
       findOrganisationByNumber(
         createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-        String(organisation.orgId)
+        toOrganisationNumber(String(organisation.orgId))
       )
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
@@ -64,7 +68,11 @@ describe('findRegistrationByNumber', () => {
     const organisationsRepository = createInMemoryOrganisationsRepository([])()
 
     await expect(
-      findRegistrationByNumber(organisationsRepository, '1', REPROCESSOR_NUMBER)
+      findRegistrationByNumber(
+        organisationsRepository,
+        toOrganisationNumber('1'),
+        toRegistrationNumber(REPROCESSOR_NUMBER)
+      )
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 

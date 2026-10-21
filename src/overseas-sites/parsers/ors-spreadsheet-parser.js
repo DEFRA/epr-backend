@@ -5,6 +5,11 @@ import {
   SpreadsheetValidationError,
   extractCellValue
 } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const ORS_SHEET_NAME = 'ORS ID Log'
 
@@ -105,7 +110,7 @@ const extractMetadata = (worksheet) => ({
     worksheet.getRow(META_ROW.PACKAGING_WASTE_CATEGORY).getCell(META_VALUE_COL)
       .value
   ),
-  orgId: cellToValue(
+  orgId: cellToString(
     worksheet.getRow(META_ROW.ORG_ID).getCell(META_VALUE_COL).value
   ),
   registrationNumber: cellToString(
@@ -190,6 +195,12 @@ export const parse = async (buffer) => {
     )
   }
 
+  if (!metadata.orgId || !ORGANISATION_NUMBER_PATTERN.test(metadata.orgId)) {
+    throw new SpreadsheetValidationError(
+      'Spreadsheet is missing an organisation ID (expected in row 5, column D)'
+    )
+  }
+
   const sites = []
   const errors = []
   const seenOrsIds = new Set()
@@ -227,5 +238,13 @@ export const parse = async (buffer) => {
     }
   }
 
-  return { metadata, sites, errors }
+  return {
+    metadata: {
+      ...metadata,
+      orgId: toOrganisationNumber(metadata.orgId),
+      registrationNumber: toRegistrationNumber(metadata.registrationNumber)
+    },
+    sites,
+    errors
+  }
 }

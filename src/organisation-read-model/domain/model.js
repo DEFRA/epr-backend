@@ -1,4 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
+/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -14,7 +15,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *     }
  *   }
  *   name: string
- *   organisationNumber: string
+ *   organisationNumber: OrganisationNumber
  *   registeredAddress?: UkAddress
  *   registrations: Record<string, Registration>
  *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
@@ -65,7 +66,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * }} OverseasSite
  *
  * @typedef {{
- *   accreditationNumber: string
+ *   accreditationNumber: AccreditationNumber
  *   prnIssuance: { signatories: Contact[], tonnageBand: string }
  *   status: Status<'approved' | 'suspended' | 'cancelled'>
  *   submitterContactDetails: Contact

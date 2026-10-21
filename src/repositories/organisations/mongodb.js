@@ -14,6 +14,7 @@ import {
   normaliseCriteria,
   parseOrgIdCriterion,
   prepareForReplace,
+  storedOrgId,
   UNIQUE_NUMBER_FIELDS
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
@@ -467,8 +468,10 @@ const findAllIds = (db) => async () => {
   )
 }
 
-const performFindByOrgId = (db) => async (orgId) => {
-  const doc = await db.collection(COLLECTION_NAME).findOne({ orgId })
+const performFindByOrganisationNumber = (db) => async (organisationNumber) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ orgId: storedOrgId(organisationNumber) })
 
   if (!doc) {
     return null
@@ -565,7 +568,7 @@ export const createOrganisationsRepository = async (
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
-      findByOrgId: performFindByOrgId(db),
+      findByOrganisationNumber: performFindByOrganisationNumber(db),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }

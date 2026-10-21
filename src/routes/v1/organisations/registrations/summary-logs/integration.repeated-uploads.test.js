@@ -31,6 +31,10 @@ import {
   pollForValidation,
   pollWhileStatus
 } from './integration-test-helpers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 describe('Repeated uploads of identical data', () => {
   let organisationId
@@ -77,7 +81,7 @@ describe('Repeated uploads of identical data', () => {
         registrations: [
           partialMock({
             id: registrationId,
-            registrationNumber: 'REG-12345',
+            registrationNumber: toRegistrationNumber('REG-12345'),
             status: 'approved',
             material: 'glass',
             glassRecyclingProcess: ['glass_re_melt'],
@@ -92,7 +96,7 @@ describe('Repeated uploads of identical data', () => {
         accreditations: [
           partialMock({
             id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
+            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
             material: 'glass',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,

@@ -6,6 +6,7 @@ import {
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
@@ -20,7 +21,7 @@ const downloadAuth = {
 }
 
 /**
- * @param {(repository: SummaryLogsRepository, id: string, registrationNumber?: string) => Promise<{ url: string }>} sign
+ * @param {(repository: SummaryLogsRepository, id: string, registrationNumber?: RegistrationNumber) => Promise<{ url: string }>} sign
  * @param {(params: Record<string, string>) => string} idOf
  * @returns {(request: HapiRequest & {
  *   params: Record<string, string>,

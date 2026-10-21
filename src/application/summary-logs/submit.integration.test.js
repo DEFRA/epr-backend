@@ -32,6 +32,10 @@ import { summaryLogRowStatesForRegistration } from '#waste-records/application/r
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const mockRecordDecemberWasteRows = vi.fn()
 
@@ -85,7 +89,7 @@ const buildTestOrg = (organisationId, registrationId) => {
     registrations: [
       partialMock({
         id: registrationId,
-        registrationNumber: 'REG-123',
+        registrationNumber: toRegistrationNumber('REG-123'),
         status: 'approved',
         material: 'paper',
         wasteProcessingType: 'reprocessor',
@@ -98,7 +102,7 @@ const buildTestOrg = (organisationId, registrationId) => {
     accreditations: [
       partialMock({
         id: accreditationId,
-        accreditationNumber: 'ACC-123',
+        accreditationNumber: toAccreditationNumber('ACC-123'),
         material: 'paper',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',

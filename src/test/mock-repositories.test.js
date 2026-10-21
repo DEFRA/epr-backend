@@ -28,7 +28,7 @@ describe('mock-repositories', () => {
         'findRegistrationById',
         'findAccreditationById',
         'findAllIds',
-        'findByOrgId',
+        'findByOrganisationNumber',
         'replaceRegistrationOverseasSites'
       ]
     },

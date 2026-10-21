@@ -21,6 +21,7 @@ import {
   reprocessorAt,
   yoda
 } from './organisation-read-test-helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -36,7 +37,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [buildOrganisation({ orgId: 500001 })]
       })
 
-      expect(await repository.findByOrganisationNumber('500002')).toBeNull()
+      expect(
+        await repository.findByOrganisationNumber(
+          toOrganisationNumber('500002')
+        )
+      ).toBeNull()
     })
 
     it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({

@@ -14,6 +14,10 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -58,7 +62,7 @@ describe('csv-columns', () => {
     submitterContactDetails: userFixture,
     suppliers: 'Local authority kerbside collections',
     wasteProcessingType: 'reprocessor',
-    registrationNumber: 'REG-001',
+    registrationNumber: toRegistrationNumber('REG-001'),
     samplingInspectionPlanPart1FileUploads: [],
     status: 'approved',
     statusHistory: [],
@@ -190,7 +194,7 @@ describe('csv-columns', () => {
       submittedToRegulator: 'ea',
       submitterContactDetails: userFixture,
       wasteProcessingType: 'reprocessor',
-      accreditationNumber: 'ACC-001',
+      accreditationNumber: toAccreditationNumber('ACC-001'),
       status: 'approved',
       validFrom: '2026-01-01',
       validTo: '2026-12-31'
@@ -554,7 +558,7 @@ describe('csv-columns', () => {
         ...baseInput,
         registration: {
           ...regFixture,
-          registrationNumber: 'REG-CHANGED',
+          registrationNumber: toRegistrationNumber('REG-CHANGED'),
           material: 'wood'
         }
       })

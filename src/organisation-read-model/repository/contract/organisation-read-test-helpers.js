@@ -4,6 +4,10 @@ import {
   buildAccreditation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
 export const EXPORTER_NUMBER = 'R26EX5001180042PL'
@@ -47,8 +51,9 @@ export const overseasSites = [approvedSite, pendingSite]
  * @returns {Promise<Organisation>}
  */
 export const findOrganisation = async (repository, organisationNumber) => {
-  const organisation =
-    await repository.findByOrganisationNumber(organisationNumber)
+  const organisation = await repository.findByOrganisationNumber(
+    toOrganisationNumber(organisationNumber)
+  )
   expect(organisation).not.toBeNull()
   return /** @type {Organisation} */ (organisation)
 }
@@ -75,7 +80,7 @@ export const approvedTimeline = (validFrom) => [
 
 export const accreditation = (overrides = {}) =>
   buildAccreditation({
-    accreditationNumber: ACCREDITATION_NUMBER,
+    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
     validFrom: '2026-07-01',
     validTo: '2026-12-31',
     statusHistory: granted('approved'),

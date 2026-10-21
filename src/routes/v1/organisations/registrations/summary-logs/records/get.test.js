@@ -16,6 +16,7 @@ import { encodeRow } from '#waste-records-export/application/stream-csv-export.j
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -121,7 +122,9 @@ const createServer = async ({
   const server = await createTestServer({
     repositories: {
       organisationsRepository: () => ({
-        findByOrgId: vi.fn(() => Promise.resolve(keyedOrganisation)),
+        findByOrganisationNumber: vi.fn(() =>
+          Promise.resolve(keyedOrganisation)
+        ),
         findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
         findRegistrationById: vi.fn(findRegistrationById)
       }),
@@ -290,7 +293,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const before = await download()
 
     const [registration] = organisation.registrations
-    registration.registrationNumber = 'R26ER5999999999PA'
+    registration.registrationNumber = toRegistrationNumber('R26ER5999999999PA')
     registration.material = 'wood'
     registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
     organisation.accreditations[0].status = 'cancelled'

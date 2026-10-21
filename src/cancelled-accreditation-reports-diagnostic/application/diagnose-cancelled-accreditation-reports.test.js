@@ -13,6 +13,7 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accreditation-reports.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
@@ -21,7 +22,7 @@ import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accr
 const cancelledAccreditation = (overrides = {}) =>
   buildAccreditation({
     status: 'cancelled',
-    accreditationNumber: 'A26RE000001PA',
+    accreditationNumber: toAccreditationNumber('A26RE000001PA'),
     material: 'paper',
     validFrom: '2026-01-01',
     validTo: '2026-12-31',

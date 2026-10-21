@@ -153,7 +153,9 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
 }
 
 const resolveRegistration = async (organisationsRepository, metadata) => {
-  const org = await organisationsRepository.findByOrgId(metadata.orgId)
+  const org = await organisationsRepository.findByOrganisationNumber(
+    metadata.orgId
+  )
   if (!org) {
     return {
       error: {

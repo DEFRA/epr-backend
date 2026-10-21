@@ -14,6 +14,7 @@ import {
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -217,8 +218,8 @@ const templateFor = (payload, registration) =>
     ...registration,
     accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
       ? {
-          accreditationNumber: String(
-            payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+          accreditationNumber: toAccreditationNumber(
+            String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
           )
         }
       : null

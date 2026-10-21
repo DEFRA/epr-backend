@@ -10,6 +10,7 @@ import {
   resolveMaterial
 } from './registration-utils.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -57,7 +58,7 @@ const regFixture = {
   submitterContactDetails: userFixture,
   suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
-  registrationNumber: 'REG-001',
+  registrationNumber: toRegistrationNumber('REG-001'),
   samplingInspectionPlanPart1FileUploads: [],
   status: 'approved',
   validFrom: '2026-01-01'
