@@ -55,7 +55,7 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
-export const numbersSchema = {
+const numbersSchema = {
   organisationNumber: Joi.string().optional(),
   registrationNumber: Joi.string().optional(),
   accreditationNumber: Joi.string().allow(null).optional()
@@ -92,6 +92,10 @@ export const summaryLogInsertSchema = Joi.object({
     otherwise: Joi.forbidden()
   })
 }).messages(commonMessages)
+
+export const summaryLogNumbersSchema = Joi.object(numbersSchema)
+  .min(1)
+  .messages({ 'object.min': 'numbers must contain at least one number' })
 
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),

@@ -17,6 +17,7 @@ import { resolveSummaryLogKey } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
+  validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -139,6 +140,60 @@ const update = (db, logger) => async (id, version, updates) => {
 
     const conflictError = new Error(
       `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+    )
+    logger.error({
+      err: conflictError,
+      message: `Version conflict detected for summary log ${validatedId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+        reference: validatedId
+      }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+}
+
+const WITHOUT_NUMBERS = {
+  $or: [
+    { organisationNumber: { $exists: false } },
+    { registrationNumber: { $exists: false } },
+    {
+      accreditationId: { $exists: true },
+      accreditationNumber: { $exists: false }
+    }
+  ]
+}
+
+const findIdsWithoutNumbers = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(WITHOUT_NUMBERS, { projection: { _id: 1 } })
+    .toArray()
+  return docs.map((doc) => doc._id)
+}
+
+const assignNumbers = (db, logger) => async (id, version, numbers) => {
+  const validatedId = validateId(id)
+  const validatedNumbers = validateSummaryLogNumbers(numbers)
+
+  /** @type {any} */
+  const filter = { _id: validatedId, version }
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .updateOne(filter, { $set: validatedNumbers, $inc: { version: 1 } })
+
+  if (result.matchedCount === 0) {
+    /** @type {any} */
+    const findFilter = { _id: validatedId }
+    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    const conflictError = new Error(
+      `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}`
     )
     logger.error({
       err: conflictError,
@@ -538,6 +593,8 @@ export const createSummaryLogsRepository = async (
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
+    findIdsWithoutNumbers: findIdsWithoutNumbers(db),
+    assignNumbers: assignNumbers(db, logger),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     findAllByOrgReg: findAllByOrgReg(db),
     findLatestSubmitted: findLatestSubmitted(db, organisationsRepository),

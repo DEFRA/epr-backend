@@ -13,6 +13,7 @@ import { resolveSummaryLogKey } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
+  validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -76,6 +77,58 @@ const update =
       summaryLog: structuredClone({
         ...existing.summaryLog,
         ...validatedUpdates
+      })
+    })
+    scheduleStaleCacheSync(storage, staleCache)
+  }
+
+/** @param {import('#domain/summary-logs/model.js').SummaryLog} summaryLog */
+const lacksNumbers = ({
+  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) =>
+  organisationNumber === undefined ||
+  registrationNumber === undefined ||
+  (accreditationId !== undefined && accreditationNumber === undefined)
+
+const findIdsWithoutNumbers = (storage) => async () =>
+  [...storage]
+    .filter(([, { summaryLog }]) => lacksNumbers(summaryLog))
+    .map(([id]) => id)
+
+const assignNumbers =
+  (storage, staleCache, logger) => async (id, version, numbers) => {
+    const validatedId = validateId(id)
+    const validatedNumbers = validateSummaryLogNumbers(numbers)
+    const existing = storage.get(validatedId)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    if (existing.version !== version) {
+      const conflictError = new Error(
+        `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}`
+      )
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    storage.set(validatedId, {
+      version: existing.version + 1,
+      summaryLog: structuredClone({
+        ...existing.summaryLog,
+        ...validatedNumbers
       })
     })
     scheduleStaleCacheSync(storage, staleCache)
@@ -433,6 +486,8 @@ export const createInMemorySummaryLogsRepository = (
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
+    findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
+    assignNumbers: assignNumbers(storage, staleCache, logger),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     findAllByOrgReg: findAllByOrgReg(staleCache),
     findLatestSubmitted: findLatestSubmitted(
