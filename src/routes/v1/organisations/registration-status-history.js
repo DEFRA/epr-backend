@@ -9,7 +9,7 @@ import { registrationStatusHistoryPayloadSchema } from './registration-status-hi
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').RegistrationStatus} RegistrationStatus */
-/** @typedef {import('#domain/organisations/numbers.js').RegistrationNumber} RegistrationNumber */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 export const registrationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/status-history'

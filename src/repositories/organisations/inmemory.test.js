@@ -13,6 +13,8 @@ import {
 } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
+/** @import { OrganisationsRepository } from './port.js' */
+
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
   organisationsRepository: async ({}, use) => {
@@ -27,7 +29,7 @@ describe('In-memory organisations repository', () => {
   })
 
   describe('findByOrgId', () => {
-    /** @type {import('./port.js').OrganisationsRepository} */
+    /** @type {OrganisationsRepository} */
     let repository
 
     beforeEach(() => {

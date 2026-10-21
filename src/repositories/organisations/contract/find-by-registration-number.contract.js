@@ -2,14 +2,16 @@ import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation, buildRegistration } from './test-data.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
+/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
+
 export const testFindByRegistrationNumberBehaviour = (it) => {
   describe('findByRegistrationNumber', () => {
-    /** @type {import('../port.js').OrganisationsRepository} */
+    /** @type {OrganisationsRepository} */
     let repository
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
+        /** @type {{ organisationsRepository: OrganisationsRepositoryFactory }} */ {
           organisationsRepository
         }
       ) => {

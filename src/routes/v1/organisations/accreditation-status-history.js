@@ -13,7 +13,7 @@ import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').AccreditationStatus} AccreditationStatus */
-/** @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 
 export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'
