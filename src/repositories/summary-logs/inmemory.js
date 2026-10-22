@@ -225,10 +225,29 @@ const findAllByOrgReg =
 
 /**
  * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation. One stored before
- * its year was recorded matches every year. `null` and `undefined` are the
- * same year, as in MongoDB.
+ * accreditation number, and matches every accreditation.
  *
+ * @param {SummaryLogKey['accreditationNumber']} accreditationNumber
+ * @returns {SummaryLogMatch}
+ */
+const matchesAccreditation = (accreditationNumber) => (summaryLog) =>
+  accreditationNumber === undefined ||
+  summaryLog.accreditationNumber === undefined ||
+  summaryLog.accreditationNumber === accreditationNumber
+
+/**
+ * A summary log stored before its year was recorded matches every year.
+ * `null` and `undefined` are the same year, as in MongoDB.
+ *
+ * @param {SummaryLogKey['year']} year
+ * @returns {SummaryLogMatch}
+ */
+const matchesYear = (year) => (summaryLog) =>
+  year === undefined ||
+  (summaryLog.year ?? null) === null ||
+  summaryLog.year === year
+
+/**
  * @param {SummaryLogKey} key
  * @returns {SummaryLogMatch}
  */
@@ -238,12 +257,8 @@ const matchesKey = (key) => {
   return (summaryLog) =>
     summaryLog.organisationNumber === organisationNumber &&
     summaryLog.registrationNumber === registrationNumber &&
-    (accreditationNumber === undefined ||
-      summaryLog.accreditationNumber === undefined ||
-      summaryLog.accreditationNumber === accreditationNumber) &&
-    (year === undefined ||
-      (summaryLog.year ?? null) === null ||
-      summaryLog.year === year)
+    matchesAccreditation(accreditationNumber)(summaryLog) &&
+    matchesYear(year)(summaryLog)
 }
 
 /** @param {SummaryLogStore} staleCache */
