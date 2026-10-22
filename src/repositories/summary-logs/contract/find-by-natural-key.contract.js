@@ -361,6 +361,21 @@ export const testFindByNaturalKey = (it) => {
           expect(result?.id).toBe(targetId)
         })
 
+        it('counts a summary log stored with its year but before accreditations were recorded towards every accreditation in that year', async () => {
+          const legacyId = await insert({
+            ...withoutYear(summaryLogFactory.submitted()),
+            year: 2026
+          })
+
+          const result = await repo.findLatestSubmitted({
+            ...stored.key,
+            year: 2026,
+            accreditationNumber: stored.current.accreditationNumber
+          })
+
+          expect(result?.id).toBe(legacyId)
+        })
+
         it('counts a summary log stored before years were recorded towards every year', async () => {
           const legacyId = await insert(
             withoutYear(summaryLogFactory.submitted())

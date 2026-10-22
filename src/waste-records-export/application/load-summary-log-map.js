@@ -9,8 +9,8 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * keyed by the submission's *file* id — the value the waste balance ledger
  * records and the export looks a row up by, not the summary log document's
  * id. Used by stream-csv-export to populate the "Submitted At" column without
- * N+1 lookups during streaming. A registration that was never given a number
- * never submitted a summary log.
+ * N+1 lookups during streaming. Summary logs are found by the registration's
+ * number, so a registration without one shows no submission times.
  *
  * Memory cost is small (count is bounded by submissions per registration —
  * typically dozens at most).

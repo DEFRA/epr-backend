@@ -91,18 +91,8 @@ async function ensureCollection(db) {
   // reached from the ledger is looked up that way.
   await collection.createIndex({ 'file.id': 1 })
 
-  // Serves the year-scoped findLatestSubmitted, which filters by the numbers,
-  // year and status and sorts by submittedAt descending
-  await collection.createIndex({
-    organisationNumber: 1,
-    registrationNumber: 1,
-    year: 1,
-    accreditationNumber: 1,
-    status: 1,
-    submittedAt: -1
-  })
-
-  // Serves findLatestSubmitted in every year, and findAll
+  // Serves findLatestSubmitted and findAll. A registration holds few enough
+  // summary logs that the year and accreditation are filtered after it.
   await collection.createIndex({
     organisationNumber: 1,
     registrationNumber: 1,

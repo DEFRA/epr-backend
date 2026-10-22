@@ -181,7 +181,7 @@ describe('MongoDB summary logs repository', () => {
       })
     })
 
-    it('reads by number through indexes on the numbers, and drops the year-scoped id index no read uses', async ({
+    it('reads by number through an index on the numbers, and drops the year-scoped id index no read uses', async ({
       mongoClient
     }) => {
       const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
@@ -198,14 +198,6 @@ describe('MongoDB summary logs repository', () => {
       await createSummaryLogsRepository(database, mockS3Config)
 
       const keys = (await collection.indexes()).map(({ key }) => key)
-      expect(keys).toContainEqual({
-        organisationNumber: 1,
-        registrationNumber: 1,
-        year: 1,
-        accreditationNumber: 1,
-        status: 1,
-        submittedAt: -1
-      })
       expect(keys).toContainEqual({
         organisationNumber: 1,
         registrationNumber: 1,
