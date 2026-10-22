@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { collateUsers } from './collate-users.js'
 import {
   ACCREDITATION_STATUS,
+  ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   USER_ROLES
 } from '#domain/organisations/model.js'
 
 /**
- * @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js'
+ * @import {AccreditationStatus, CollatedUser, Organisation, OrganisationStatus, RegistrationStatus} from '#domain/organisations/model.js'
  * @import {Registration} from '#domain/organisations/registration.js'
  * @import {Accreditation} from '#domain/organisations/accreditation.js'
  *
@@ -19,12 +20,14 @@ describe('collateUsers', () => {
    * @param {{
    *   registrations?: Registration[]
    *   accreditations?: Accreditation[]
-   *   users?: TestPerson[]
+   *   status?: OrganisationStatus
+   *   users?: CollatedUser[]
    *   submitterContactDetails?: TestPerson
    * }} [options]
    * @returns {Organisation}
    */
   const buildOrg = ({
+    status = ORGANISATION_STATUS.CREATED,
     registrations = [],
     accreditations = [],
     users = [],
@@ -35,7 +38,7 @@ describe('collateUsers', () => {
   } = {}) =>
     /** @type {Organisation} */ (
       /** @type {unknown} */ ({
-        statusHistory: [{ status: 'created', updatedAt: new Date() }],
+        statusHistory: [{ status, updatedAt: new Date() }],
         submitterContactDetails,
         users,
         registrations,
@@ -288,5 +291,41 @@ describe('collateUsers', () => {
         roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
       }
     ])
+  })
+
+  it('gives the org-level submitter only the standard role when the org is not created or approved', () => {
+    const org = buildOrg({ status: ORGANISATION_STATUS.ACTIVE })
+
+    expect(collateUsers(org)).toEqual([
+      {
+        fullName: 'Org Submitter',
+        email: 'org-submitter@example.com',
+        roles: [USER_ROLES.STANDARD]
+      }
+    ])
+  })
+
+  it('dedupes users sharing a contactId even when their emails differ', () => {
+    const org = buildOrg({
+      users: [
+        {
+          contactId: 'contact-1',
+          fullName: 'Original',
+          email: 'original@example.com',
+          roles: [USER_ROLES.STANDARD]
+        },
+        {
+          contactId: 'contact-1',
+          fullName: 'Changed Email',
+          email: 'changed@example.com',
+          roles: [USER_ROLES.STANDARD]
+        }
+      ]
+    })
+
+    const emails = collateUsers(org).map((u) => u.email)
+
+    expect(emails).toContain('original@example.com')
+    expect(emails).not.toContain('changed@example.com')
   })
 })
