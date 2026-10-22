@@ -1,6 +1,5 @@
 import Joi from 'joi'
 
-import { yearSchema } from '#common/validation/year-schema.js'
 import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 
 /**
@@ -50,10 +49,3 @@ export const uploadCompletedPayloadSchema = Joi.object({
     'any.required': '{#label} is required',
     'string.empty': '{#label} cannot be empty'
   })
-
-export const uploadCompletedYearParamsSchema = Joi.object({
-  organisationId: Joi.string().required(),
-  registrationId: Joi.string().required(),
-  year: yearSchema().required(),
-  summaryLogId: Joi.string().required()
-})

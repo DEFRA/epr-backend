@@ -769,7 +769,15 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     // these tests verify they hold for a registration granted through this
     // endpoint specifically, without re-testing the behaviours themselves.
     it('cannot create a PRN for the granted registration, because it has no accreditation to create one under', async () => {
-      const fixture = buildOrgWithRegistrationStatus('created')
+      // An approved organisation, so the PRN route finds it and the granted
+      // registration by their natural keys.
+      const fixture = {
+        ...buildOrgWithRegistrationStatus('created'),
+        statusHistory:
+          /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
+            { status: 'approved', updatedAt: new Date('2024-01-01') }
+          ])
+      }
       // buildOrgWithRegistrationStatus puts the target (reprocessor)
       // registration first and the unrelated exporter registration second.
       const registration = fixture.registrations[0]
@@ -829,7 +837,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       // create endpoint 404s before considering the payload at all.
       const createResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${new ObjectId().toHexString()}/packaging-recycling-notes`,
+        url: `/organisations/${fixture.orgId}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
         ...asOperator(),
         payload: {
           issuedToOrganisation: { id: 'org-2', name: 'Recipient Org' },
@@ -838,6 +846,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
 
       expect(createResponse.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(JSON.parse(createResponse.payload).message).toBe(
+        'Accreditation not found'
+      )
     })
 
     it('leaves the granted registration in the registered-only state that drives template selection, waste balance and cadence', async () => {

@@ -1,40 +1,10 @@
-import Joi from 'joi'
-
-import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
-import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
-import {
-  linkOrganisation,
-  organisationsLink
-} from '#routes/v1/organisations/link.js'
+import { organisationsLink } from '#routes/v1/organisations/link.js'
 import { organisationsUserPut } from '#routes/v1/organisations/user/put.js'
 import { atNaturalKeys } from './at-natural-keys.js'
-import { linkedDefraOrganisationViewSchema } from './response.schema.js'
 import { organisationParams, organisationPath } from './view-route.js'
 
-const linkedOrganisationSchema = Joi.object({
-  status: Joi.string()
-    .valid(...ORGANISATION_STATUSES)
-    .required(),
-  linkedDefraOrganisation: linkedDefraOrganisationViewSchema.required()
-})
-
 export const organisationLink = atNaturalKeys(
-  {
-    ...organisationsLink,
-    options: {
-      ...organisationsLink.options,
-      tags: ['api'],
-      response: {
-        schema: linkedOrganisationSchema,
-        modify: true,
-        options: { stripUnknown: true }
-      }
-    },
-    handler: linkOrganisation((status, linked) => ({
-      status,
-      linkedDefraOrganisation: toLinkedDefraOrganisation(linked)
-    }))
-  },
+  organisationsLink,
   `${organisationPath}/link`,
   organisationParams
 )

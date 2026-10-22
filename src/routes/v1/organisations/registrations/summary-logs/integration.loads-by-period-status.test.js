@@ -82,7 +82,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -92,20 +92,15 @@ describe('loadsByReportingPeriod population at validate time', () => {
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
   }
 
   const getCheckPage = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -127,24 +122,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
   }
 
   const submitAndPoll = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
-    await pollWhileStatus(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId,
-      {
-        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
-        maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
-      }
-    )
+    await pollWhileStatus(server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
+      maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
+    })
   }
 
   // Submits a January 2025 monthly report so loads dated in January fall into a
@@ -1115,10 +1104,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
     await submitAndPoll(env, 'sl-submitted-period')
 
-    const { server, organisationId, registrationId } = env
+    const { server } = env
     const response = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, 'sl-submitted-period'),
+      url: buildGetUrl('sl-submitted-period'),
       ...asOperator()
     })
     const body = JSON.parse(response.payload)

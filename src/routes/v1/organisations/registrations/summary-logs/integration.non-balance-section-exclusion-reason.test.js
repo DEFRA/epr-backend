@@ -81,7 +81,7 @@ describe('by-design non-waste-balance sections carry an explicit exclusion reaso
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -91,16 +91,11 @@ describe('by-design non-waste-balance sections carry an explicit exclusion reaso
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     const response = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 

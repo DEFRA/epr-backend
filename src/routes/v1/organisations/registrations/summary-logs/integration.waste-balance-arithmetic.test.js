@@ -18,6 +18,7 @@ import {
 
 import {
   asOperator,
+  accreditationUrl,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -76,7 +77,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -86,26 +87,21 @@ describe('Waste balance arithmetic integration tests', () => {
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     return server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
   }
 
   const submitAndPoll = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -118,7 +114,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
       const checkResponse = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -186,11 +182,11 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   const createPrn = async (env, tonnage) => {
-    const { server, organisationId, registrationId, accreditationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+      url: `${accreditationUrl}/packaging-recycling-notes`,
       ...asOperator(),
       payload: {
         issuedToOrganisation: {
@@ -206,11 +202,11 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   const transitionPrnStatus = async (env, prnId, status) => {
-    const { server, organisationId, registrationId, accreditationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+      url: `${accreditationUrl}/packaging-recycling-notes/${prnId}/status`,
       ...asOperator(),
       payload: { status }
     })
