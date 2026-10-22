@@ -4,12 +4,15 @@ import { randomUUID } from 'node:crypto'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+  ACCREDITATION_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -21,28 +24,35 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 const organisationId = '6512a0c2f1e4b8a9d0c3e111'
 const registrationId = '6512a0c2f1e4b8a9d0c3e222'
+const accreditationId = '6512a0c2f1e4b8a9d0c3e333'
 const unnumberedRegistrationId = '6512a0c2f1e4b8a9d0c3e444'
 const missingOrganisationId = '6512a0c2f1e4b8a9d0c3e999'
 const missingRegistrationId = '6512a0c2f1e4b8a9d0c3e888'
 
+// The accreditation from the read-model fixtures covers 2026.
+const YEAR = 2026
+
 const numbers = {
   organisationNumber: '500123',
-  registrationNumber: 'R25SR500010912PL'
+  registrationNumber: 'R25SR500010912PL',
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 
 const organisation = buildOrganisation({
   id: organisationId,
   orgId: 500123,
   registrations: [
-    buildRegistration({
+    reprocessor({
       id: registrationId,
-      registrationNumber: numbers.registrationNumber
+      registrationNumber: numbers.registrationNumber,
+      accreditationId
     }),
-    buildRegistration({
+    reprocessor({
       id: unnumberedRegistrationId,
       registrationNumber: null
     })
-  ]
+  ],
+  accreditations: [accreditation({ id: accreditationId })]
 })
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -87,6 +97,7 @@ describe('backfillReportNumbers', () => {
         buildCreateReportParams({
           organisationId,
           registrationId,
+          year: YEAR,
           ...overrides
         })
       )
@@ -133,11 +144,28 @@ describe('backfillReportNumbers', () => {
           reportId: partlyNumbered,
           organisationId,
           registrationId,
-          next: { registrationNumber: numbers.registrationNumber }
+          next: {
+            registrationNumber: numbers.registrationNumber,
+            accreditationNumber: numbers.accreditationNumber
+          }
         }
       })
     )
     expect(unmappedLines()).toEqual([])
+  })
+
+  it('gives a quarterly report a null accreditation number', async () => {
+    const id = await createReport({
+      cadence: CADENCE.quarterly,
+      period: 1
+    })
+
+    await run(false)
+
+    expect(await stored(id)).toMatchObject({
+      ...numbers,
+      accreditationNumber: null
+    })
   })
 
   it('reports what it would add without writing or auditing on a dry run', async () => {
@@ -164,16 +192,19 @@ describe('backfillReportNumbers', () => {
         organisationId: missingOrganisationId
       })
       const unnumbered = await createReport({
-        registrationId: unnumberedRegistrationId
+        registrationId: unnumberedRegistrationId,
+        cadence: CADENCE.quarterly,
+        period: 1
       })
       const registrationGone = await createReport({
         registrationId: missingRegistrationId
       })
+      const unaccredited = await createReport({ year: YEAR - 1 })
 
       expect(await run(isDryRun)).toEqual({
-        missing: 3,
-        mapped: 2,
-        unmapped: 3,
+        missing: 4,
+        mapped: 3,
+        unmapped: 4,
         failed: 0,
         auditFailed: 0
       })
@@ -181,18 +212,24 @@ describe('backfillReportNumbers', () => {
       expect(unmappedLines()).toEqual([
         `Report numbers unmapped: reportId=${organisationGone} organisationId=${missingOrganisationId} registrationId=${registrationId} reasons="organisation ${missingOrganisationId} not found"`,
         `Report numbers unmapped: reportId=${unnumbered} organisationId=${organisationId} registrationId=${unnumberedRegistrationId} reasons="registration ${unnumberedRegistrationId} has no registration number"`,
-        `Report numbers unmapped: reportId=${registrationGone} organisationId=${organisationId} registrationId=${missingRegistrationId} reasons="organisation ${organisationId} holds no registration ${missingRegistrationId}"`
+        `Report numbers unmapped: reportId=${registrationGone} organisationId=${organisationId} registrationId=${missingRegistrationId} reasons="organisation ${organisationId} holds no registration ${missingRegistrationId}"`,
+        `Report numbers unmapped: reportId=${unaccredited} organisationId=${organisationId} registrationId=${registrationId} reasons="registration ${registrationId} has no single accreditation for ${YEAR - 1}"`
       ])
     })
   })
 
-  it('still adds the number it can find to a report it cannot fully map', async () => {
-    const id = await createReport({ registrationId: unnumberedRegistrationId })
+  it('still adds the numbers it can find to a report it cannot fully map', async () => {
+    const id = await createReport({
+      registrationId: unnumberedRegistrationId,
+      cadence: CADENCE.quarterly,
+      period: 1
+    })
 
     await run(false)
 
     expect(await stored(id)).toMatchObject({
-      organisationNumber: numbers.organisationNumber
+      organisationNumber: numbers.organisationNumber,
+      accreditationNumber: null
     })
     expect(await stored(id)).not.toHaveProperty('registrationNumber')
   })
@@ -285,7 +322,7 @@ describe('backfillReportNumbers', () => {
     expect(await stored(id)).toMatchObject(numbers)
     expect(logger.error).toHaveBeenCalledWith({
       err: auditError,
-      message: `Numbers written but audit failed for report ${id}: {"organisationNumber":"500123","registrationNumber":"R25SR500010912PL"}`
+      message: `Numbers written but audit failed for report ${id}: ${JSON.stringify(numbers)}`
     })
   })
 })

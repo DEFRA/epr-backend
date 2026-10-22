@@ -21,7 +21,9 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 vi.mock('../config.js', async (importOriginal) => {
   const actual = /** @type {*} */ (await importOriginal())
-  return { config: { ...actual.config, get: vi.fn() } }
+  return {
+    config: { ...actual.config, get: vi.fn((key) => actual.config.get(key)) }
+  }
 })
 
 /** @import { Db } from 'mongodb' */
@@ -100,7 +102,8 @@ const seed = async (database) => {
     registrationId: registration.id,
     numbers: {
       organisationNumber: String(organisation.orgId),
-      registrationNumber: registration.registrationNumber
+      registrationNumber: registration.registrationNumber,
+      accreditationNumber: null
     }
   }
 }

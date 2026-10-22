@@ -2,9 +2,12 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { numbersFor } from '#domain/organisations/numbers.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+import { accreditationsForYear } from '#routes/organisations/natural-keys.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -26,17 +29,54 @@ import { auditReportNumbersBackfill } from './audit.js'
  */
 
 /**
+ * The accreditation a report was made under, found as the accredited report
+ * routes find it: a monthly report's is its registration's accreditation for
+ * the report's year, and a quarterly report has none.
+ *
+ * @param {Organisation} organisation
+ * @param {Report} report
+ * @returns {{ accreditationId?: string | null, unmapped: string[] }}
+ */
+const accreditationOf = (organisation, { registrationId, cadence, year }) => {
+  if (cadence === CADENCE.quarterly) {
+    return { accreditationId: null, unmapped: [] }
+  }
+  const registration = organisation.registrations.find(
+    ({ id }) => id === registrationId
+  )
+  if (!registration) {
+    return { unmapped: [] }
+  }
+  const [accreditation, ...others] = accreditationsForYear(
+    organisation,
+    registration,
+    year
+  )
+  if (accreditation === undefined || others.length > 0) {
+    return {
+      unmapped: [
+        `registration ${registrationId} has no single accreditation for ${year}`
+      ]
+    }
+  }
+  return { accreditationId: accreditation.id, unmapped: [] }
+}
+
+/**
  * @param {OrganisationsRepository} organisationsRepository
  * @param {Report} report
  * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[] }>}
  */
-const lookUpNumbers = async (
-  organisationsRepository,
-  { organisationId, registrationId }
-) => {
+const lookUpNumbers = async (organisationsRepository, report) => {
+  const { organisationId, registrationId } = report
   try {
     const organisation = await organisationsRepository.findById(organisationId)
-    return numbersFor(organisation, { registrationId })
+    const accreditation = accreditationOf(organisation, report)
+    const { numbers, unmapped } = numbersFor(organisation, {
+      registrationId,
+      accreditationId: accreditation.accreditationId
+    })
+    return { numbers, unmapped: [...unmapped, ...accreditation.unmapped] }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
       return {
@@ -138,8 +178,8 @@ const backfillOne = async (
 }
 
 /**
- * Adds to each report the organisation and registration numbers it lacks,
- * read from its organisation record. Logs one line for each report it cannot
+ * Adds to each report the organisation, registration and accreditation numbers
+ * it lacks, read from its organisation record. Logs one line for each report it cannot
  * fully map, saying why. A failure is logged and swallowed so one bad report
  * never stops the sweep.
  *

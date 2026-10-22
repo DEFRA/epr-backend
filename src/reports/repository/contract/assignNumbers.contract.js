@@ -4,7 +4,8 @@ import { buildCreateReportParams } from './test-data.js'
 
 const numbers = {
   organisationNumber: '500123',
-  registrationNumber: 'R25SR500010912PL'
+  registrationNumber: 'R25SR500010912PL',
+  accreditationNumber: 'A26ER5000000001PA'
 }
 
 export const testAssignNumbersBehaviour = (it) => {
@@ -27,7 +28,8 @@ export const testAssignNumbersBehaviour = (it) => {
     describe('findIdsWithoutNumbers', () => {
       it('lists a report without an organisation number', async () => {
         const id = await createReport({
-          registrationNumber: numbers.registrationNumber
+          registrationNumber: numbers.registrationNumber,
+          accreditationNumber: numbers.accreditationNumber
         })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([id])
@@ -35,14 +37,30 @@ export const testAssignNumbersBehaviour = (it) => {
 
       it('lists a report without a registration number', async () => {
         const id = await createReport({
-          organisationNumber: numbers.organisationNumber
+          organisationNumber: numbers.organisationNumber,
+          accreditationNumber: numbers.accreditationNumber
         })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([id])
       })
 
-      it('does not list a report holding both numbers', async () => {
+      it('lists a report without an accreditation number', async () => {
+        const id = await createReport({
+          organisationNumber: numbers.organisationNumber,
+          registrationNumber: numbers.registrationNumber
+        })
+
+        expect(await repository.findIdsWithoutNumbers()).toEqual([id])
+      })
+
+      it('does not list a report holding every number', async () => {
         await createReport(numbers)
+
+        expect(await repository.findIdsWithoutNumbers()).toEqual([])
+      })
+
+      it('does not list a registered-only report, whose accreditation number is null', async () => {
+        await createReport({ ...numbers, accreditationNumber: null })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([])
       })
@@ -87,6 +105,26 @@ export const testAssignNumbersBehaviour = (it) => {
         })
       ).rejects.toMatchObject({ output: { statusCode: 409 } })
       expect(await repository.findReportById(id)).toEqual(before)
+    })
+
+    it('sets a null accreditation number on a registered-only report', async () => {
+      const id = await createReport()
+
+      await repository.assignNumbers(id, { accreditationNumber: null })
+
+      expect(await repository.findReportById(id)).toMatchObject({
+        accreditationNumber: null
+      })
+    })
+
+    it('conflicts rather than overwrite a null accreditation number', async () => {
+      const id = await createReport({ accreditationNumber: null })
+
+      await expect(
+        repository.assignNumbers(id, {
+          accreditationNumber: numbers.accreditationNumber
+        })
+      ).rejects.toMatchObject({ output: { statusCode: 409 } })
     })
 
     it('throws not found for an unknown id', async () => {

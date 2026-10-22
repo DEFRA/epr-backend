@@ -266,7 +266,8 @@ const performFindIdsWithoutNumbers = async (db) => {
       {
         $or: [
           { organisationNumber: { $exists: false } },
-          { registrationNumber: { $exists: false } }
+          { registrationNumber: { $exists: false } },
+          { accreditationNumber: { $exists: false } }
         ]
       },
       { projection: { _id: 0, id: 1 } }

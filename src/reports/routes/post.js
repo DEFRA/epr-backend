@@ -105,7 +105,10 @@ export const reportsPost = {
 
       assertCadence(cadence, registration)
 
-      const { numbers } = numbersFor(app.organisation, { registrationId })
+      const { numbers } = numbersFor(app.organisation, {
+        registrationId,
+        accreditationId: params.accreditationId
+      })
 
       const createdReport = await createReportForPeriod({
         reportsRepository,

@@ -88,11 +88,12 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
-    it('stores the organisation and registration numbers beside their ids', async () => {
+    it('stores the organisation, registration and accreditation numbers beside their ids', async () => {
       const { id } = await repository.createReport(
         buildCreateReportParams({
           organisationNumber: '500123',
-          registrationNumber: 'R25SR500010912PL'
+          registrationNumber: 'R25SR500010912PL',
+          accreditationNumber: 'A26ER5000000001PA'
         })
       )
 
@@ -100,7 +101,18 @@ export const testCreateReportBehaviour = (it) => {
         organisationId: DEFAULT_ORG_ID,
         organisationNumber: '500123',
         registrationId: DEFAULT_REG_ID,
-        registrationNumber: 'R25SR500010912PL'
+        registrationNumber: 'R25SR500010912PL',
+        accreditationNumber: 'A26ER5000000001PA'
+      })
+    })
+
+    it('stores a null accreditation number for a registered-only report', async () => {
+      const { id } = await repository.createReport(
+        buildCreateReportParams({ accreditationNumber: null })
+      )
+
+      expect(await repository.findReportById(id)).toMatchObject({
+        accreditationNumber: null
       })
     })
 

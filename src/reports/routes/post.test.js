@@ -186,6 +186,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId: registration.id,
       organisationNumber: String(org.orgId),
       registrationNumber: registration.registrationNumber,
+      accreditationNumber: accreditationRecord?.accreditationNumber,
       reportsRepositoryFactory,
       url,
       /** @param {{ year?: number, period?: number, submissionNumber?: number }} [submission] */
@@ -264,7 +265,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
   })
 
-  it('stores the organisation and registration numbers beside their ids', async () => {
+  it('stores the organisation and registration numbers beside their ids, and a null accreditation number', async () => {
     const created = await createServer(registeredOnlyReprocessor)
 
     await created.post()
@@ -273,8 +274,30 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       organisationId: created.organisationId,
       organisationNumber: created.organisationNumber,
       registrationId: created.registrationId,
-      registrationNumber: created.registrationNumber
+      registrationNumber: created.registrationNumber,
+      accreditationNumber: null
     })
+  })
+
+  it('stores the accreditation number on a report made through the accreditation', async () => {
+    const created = await createServer(registeredOnlyReprocessor, {
+      accredited: true
+    })
+
+    await created.post()
+
+    expect(
+      await fetchReportBySubmissionNumber(
+        created.reportsRepositoryFactory(),
+        created.organisationId,
+        created.registrationId,
+        YEAR,
+        'monthly',
+        MONTH,
+        1
+      )
+    ).toMatchObject({ accreditationNumber: created.accreditationNumber })
+    expect(created.accreditationNumber).toBeDefined()
   })
 
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {

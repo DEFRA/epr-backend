@@ -257,8 +257,10 @@ const findReportById = async (reports, reportId) => {
 const findIdsWithoutNumbers = async (reports) =>
   [...reports.values()]
     .filter(
-      ({ organisationNumber, registrationNumber }) =>
-        organisationNumber === undefined || registrationNumber === undefined
+      ({ organisationNumber, registrationNumber, accreditationNumber }) =>
+        organisationNumber === undefined ||
+        registrationNumber === undefined ||
+        accreditationNumber === undefined
     )
     .map(({ id }) => id)
 
