@@ -15,6 +15,7 @@ import {
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  */
 
@@ -143,6 +144,22 @@ export function accreditationsForYear(organisation, registration, year) {
     (candidate) =>
       toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
   )
+}
+
+/**
+ * The registration as the read model shows it, with its accreditations by
+ * year. Only a registration the read model serves reaches a route, so the
+ * conversion always succeeds.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @returns {ReadModelRegistration}
+ */
+export function readModelRegistration(organisation, registration) {
+  const [, served] = /** @type {[string, ReadModelRegistration]} */ (
+    toRegistrationEntry(registration, organisation, lookupContext())
+  )
+  return served
 }
 
 /**

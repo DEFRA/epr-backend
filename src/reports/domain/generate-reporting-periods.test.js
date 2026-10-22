@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
 import {
   generateAllPeriodsForYear,
+  generatePeriodsInRange,
   generateReportingPeriods
 } from './generate-reporting-periods.js'
 
@@ -198,5 +200,37 @@ describe('generateReportingPeriods', () => {
 
       expect(periods.map((p) => p.period)).toEqual([1, 2])
     })
+  })
+})
+
+describe('generatePeriodsInRange', () => {
+  const range = (/** @type {string} */ from, /** @type {string} */ to) =>
+    generatePeriodsInRange(
+      'quarterly',
+      calendarDate(from),
+      calendarDate(to)
+    ).map(({ period, startDate, endDate }) => [period, startDate, endDate])
+
+  it('trims the first and last period to the range', () => {
+    expect(range('2026-02-01', '2026-05-14')).toEqual([
+      [1, '2026-02-01', '2026-03-31'],
+      [2, '2026-04-01', '2026-05-14']
+    ])
+  })
+
+  it('returns one period when the range sits inside it', () => {
+    expect(range('2026-02-01', '2026-02-14')).toEqual([
+      [1, '2026-02-01', '2026-02-14']
+    ])
+  })
+
+  it('keeps the normal due date of a trimmed period', () => {
+    const [period] = generatePeriodsInRange(
+      'quarterly',
+      calendarDate('2026-01-01'),
+      calendarDate('2026-02-14')
+    )
+
+    expect(period.dueDate).toBe('2026-04-20')
   })
 })
