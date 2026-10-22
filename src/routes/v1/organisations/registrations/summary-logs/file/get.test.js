@@ -5,19 +5,19 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  REPROCESSOR_NUMBER,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import './get.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -27,32 +27,48 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: (...args) => mockAuditSummaryLogDownload(...args)
 }))
 
-describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file', () => {
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{summaryLogId}/file', () => {
   setupAuthContext()
 
+  const registration = reprocessor()
+  const organisation = buildOrganisation({ registrations: [registration] })
   const summaryLogId = new ObjectId().toString()
-  const organisationId = new ObjectId().toString()
-  const registrationId = new ObjectId().toString()
+  const organisationId = organisation.id
+  const registrationId = registration.id
+  const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
-  const createServer = async (options = {}) => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+  const fileUrl = (logId = summaryLogId) => `${summaryLogs}/${logId}/file`
+
+  const createServer = async () => {
     const summaryLogsRepository =
-      summaryLogsRepositoryFactory(createMockLogger())
+      createInMemorySummaryLogsRepository()(createMockLogger())
 
     const server = await createTestServer({
       repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory,
-        ...options.repositories
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        summaryLogsRepository: () => summaryLogsRepository
       }
     })
 
     return { server, summaryLogsRepository }
   }
 
+  const insertSubmitted = (summaryLogsRepository) =>
+    summaryLogsRepository.insert(
+      summaryLogId,
+      summaryLogFactory.submitted({
+        organisationId,
+        registrationId,
+        file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+      })
+    )
+
   const makeRequest = (server, logId = summaryLogId) =>
     server.inject({
       method: 'GET',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${logId}/file`,
+      url: fileUrl(logId),
       ...asServiceMaintainer()
     })
 
@@ -63,14 +79,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   describe('when summary log exists and is submitted', () => {
     it('redirects to the download URL', async () => {
       const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
-        })
-      )
+      await insertSubmitted(summaryLogsRepository)
 
       const response = await makeRequest(server)
 
@@ -81,14 +90,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     it('records an audit log entry for the download', async () => {
       const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
-        })
-      )
+      await insertSubmitted(summaryLogsRepository)
 
       await makeRequest(server)
 
@@ -104,14 +106,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     it('logs the download with structured event data', async () => {
       const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
-        })
-      )
+      await insertSubmitted(summaryLogsRepository)
 
       await makeRequest(server)
 
@@ -126,14 +121,26 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         })
       )
     })
+
+    it('names the download after the registration number', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSubmitted(summaryLogsRepository)
+      const getDownloadUrl = vi.spyOn(summaryLogsRepository, 'getDownloadUrl')
+
+      await makeRequest(server)
+
+      expect(getDownloadUrl).toHaveBeenCalledWith(
+        summaryLogId,
+        REPROCESSOR_NUMBER
+      )
+    })
   })
 
   describe('when summary log does not exist', () => {
     it('returns 404', async () => {
       const { server } = await createServer()
-      const nonExistentId = new ObjectId().toString()
 
-      const response = await makeRequest(server, nonExistentId)
+      const response = await makeRequest(server, new ObjectId().toString())
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
@@ -153,75 +160,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
   })
 
-  describe('naming the download', () => {
-    /** @param {string | null} [registrationNumber] */
-    const withRegistration = async (
-      registrationNumber = 'R26ER5000000002PA'
-    ) => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const summaryLogsRepository =
-        summaryLogsRepositoryFactory(createMockLogger())
-      const getDownloadUrl = vi.spyOn(summaryLogsRepository, 'getDownloadUrl')
-
-      const server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: () => summaryLogsRepository,
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            partialMock(
-              buildOrganisation({
-                id: organisationId,
-                registrations: [
-                  buildRegistration({
-                    id: registrationId,
-                    registrationNumber
-                  })
-                ]
-              })
-            )
-          ])
-        }
-      })
-
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
-        })
-      )
-
-      return { server, getDownloadUrl }
-    }
-
-    it('passes the registration number through to the store', async () => {
-      const { server, getDownloadUrl } = await withRegistration()
-
-      await makeRequest(server)
-
-      expect(getDownloadUrl).toHaveBeenCalledWith(
-        summaryLogId,
-        'R26ER5000000002PA'
-      )
-    })
-
-    it('names nothing when the registration has no number', async () => {
-      const { server, getDownloadUrl } = await withRegistration(null)
-
-      await makeRequest(server)
-
-      expect(getDownloadUrl).toHaveBeenCalledWith(summaryLogId, undefined)
-    })
-  })
-
   describe('authentication', () => {
     it('returns 401 when not authenticated', async () => {
       const { server } = await createServer()
 
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`
-      })
+      const response = await server.inject({ method: 'GET', url: fileUrl() })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
@@ -231,7 +174,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        url: fileUrl(),
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 
@@ -246,7 +189,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        url: fileUrl(),
         ...asServiceMaintainer({ scope })
       })
 
@@ -255,18 +198,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     it('serves the file to a caller holding both scopes and no admin scope', async () => {
       const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
-        })
-      )
+      await insertSubmitted(summaryLogsRepository)
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        url: fileUrl(),
         ...asServiceMaintainer({
           scope: ['summary-log.read', 'organisation.read']
         })

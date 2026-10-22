@@ -1,6 +1,5 @@
 import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
-import * as summaryLogsRoutes from '#routes/v1/organisations/registrations/summary-logs/index.js'
 import * as organisationRoutes from '#routes/v1/organisations/index.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
@@ -55,7 +54,6 @@ const router = {
         health,
         ...apply,
         ...Object.values(meRoutes),
-        ...Object.values(summaryLogsRoutes),
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
         ...Object.values(organisationRoutes),
