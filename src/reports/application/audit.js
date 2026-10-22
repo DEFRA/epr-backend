@@ -12,7 +12,8 @@ import {
  * @import {
  *   MarkReportStaleResult,
  *   MarkSubmittedReportRequiringResubmissionResult,
- *   Report
+ *   Report,
+ *   ReportNumbers
  * } from '#reports/repository/port.js'
  */
 
@@ -36,6 +37,8 @@ export const MARK_STALE_ACTION = Object.freeze({
   SUMMARY_LOG_CHANGED: 'mark-stale-sl-upload',
   PRN_CANCELLED: 'mark-stale-prn-cancelled'
 })
+
+const NUMBERS_BACKFILL_ACTION = 'numbers-backfill-migration'
 
 /**
  * Audits a report status transition via CDP audit and system logs.
@@ -373,4 +376,32 @@ export async function auditReportRequestResubmission(request, params) {
 
   safeAudit(payload)
   await recordSystemLog(request, payload)
+}
+
+/**
+ * Audits the numbers the backfill added to one report.
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {{
+ *   reportId: string,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   next: ReportNumbers
+ * }} context
+ */
+export async function auditReportNumbersBackfill(
+  systemLogsRepository,
+  context
+) {
+  const payload = {
+    user: SYSTEM_ACTOR,
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: NUMBERS_BACKFILL_ACTION
+    },
+    context
+  }
+
+  safeAudit(payload)
+  await recordSystemLogs(systemLogsRepository, [payload])
 }
