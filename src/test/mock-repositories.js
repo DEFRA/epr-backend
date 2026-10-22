@@ -129,7 +129,6 @@ export const createMockOverseasSitesRepository = (overrides = {}) => ({
   findById: vi.fn(),
   findByProperties: vi.fn(),
   create: vi.fn(),
-  update: vi.fn(),
   remove: vi.fn(),
   findAll: vi.fn(),
   findByIds: vi.fn(),

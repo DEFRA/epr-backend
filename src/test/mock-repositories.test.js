@@ -89,7 +89,6 @@ describe('mock-repositories', () => {
         'findById',
         'findByProperties',
         'create',
-        'update',
         'remove',
         'findAll',
         'findByIds'
