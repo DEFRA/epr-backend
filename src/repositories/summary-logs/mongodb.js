@@ -338,19 +338,21 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) =>
 const keyFilter = (key) => {
   const { organisationNumber, registrationNumber, accreditationNumber, year } =
     validateSummaryLogKey(key)
-  const clauses = [
-    ...(accreditationNumber === undefined
-      ? []
-      : [
-          {
-            $or: [
-              { accreditationNumber },
-              { accreditationNumber: { $exists: false } }
-            ]
-          }
-        ]),
-    ...(year === undefined ? [] : [{ $or: [{ year }, { year: null }] }])
-  ]
+  /** @type {Filter<SummaryLogDocument>[]} */
+  const clauses = []
+  if (accreditationNumber !== undefined) {
+    clauses.push({
+      $or: [
+        { accreditationNumber },
+        { accreditationNumber: { $exists: false } }
+      ]
+    })
+  }
+  if (year !== undefined) {
+    clauses.push({
+      $or: [{ year }, { year: { $exists: false } }, { year: { $type: 'null' } }]
+    })
+  }
   return {
     organisationNumber,
     registrationNumber,

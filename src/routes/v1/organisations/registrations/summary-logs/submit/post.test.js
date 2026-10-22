@@ -15,6 +15,7 @@ import {
   PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -28,6 +29,9 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
+
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { SummaryLogNumbers } from '#domain/summary-logs/numbers.js' */
 
 const mockAuditSummaryLogSubmit = vi.fn()
 const mockRecordStatusTransition = vi.fn()
@@ -46,11 +50,11 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
  * The numbers an upload stores beside a registered-only summary log's ids,
  * by the registration's id.
  *
- * @type {Map<string, object>}
+ * @type {Map<string, SummaryLogNumbers>}
  */
 const numbersByRegistrationId = new Map()
 
-/** @param {{ registrationId?: string }} overrides */
+/** @param {Pick<SummaryLog, 'registrationId'>} overrides */
 const numbersFor = ({ registrationId }) =>
   numbersByRegistrationId.get(registrationId ?? '')
 
@@ -98,7 +102,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     ])()
     const summaryLogs = `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs`
     numbersByRegistrationId.set(registration.id, {
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
       registrationNumber: registration.registrationNumber,
       accreditationNumber: null
     })

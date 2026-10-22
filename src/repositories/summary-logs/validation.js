@@ -1,5 +1,7 @@
 import Boom from '@hapi/boom'
 
+/** @import { SummaryLogKey } from '#domain/summary-logs/numbers.js' */
+
 import {
   idSchema,
   summaryLogInsertSchema,
@@ -59,6 +61,10 @@ export const validateSummaryLogNumbers = (numbers) => {
   return value
 }
 
+/**
+ * @param {SummaryLogKey} key
+ * @returns {SummaryLogKey}
+ */
 export const validateSummaryLogKey = (key) => {
   const { error, value } = summaryLogKeySchema.validate(key, {
     abortEarly: false
