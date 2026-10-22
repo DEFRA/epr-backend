@@ -214,7 +214,7 @@ jobs:
 
       - name: Write journey test summary
         if: always()
-        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@PAE-2132-flaky-journey-summary
+        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@main
         with:
           build-start: ${{ steps.build-timer.outputs.start }}
           test-start: ${{ steps.test-timer.outputs.start }}
@@ -236,7 +236,7 @@ jobs:
           merge-multiple: true
 
       - name: Write journey test summary
-        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@PAE-2132-flaky-journey-summary
+        uses: DEFRA/epr-re-ex-service/.github/actions/journey-test-summary@main
         with:
           outcome: ${{ needs.test-journey.result }}
 
