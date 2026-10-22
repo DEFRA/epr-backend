@@ -137,6 +137,29 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
         expect(relinked.statusHistory).toHaveLength(3)
       })
 
+      it('rejects an organisation that is already linked and keeps its link', async () => {
+        const approved = await insertApprovedOrg()
+        const link = aLink()
+        await repository.linkDefraOrganisation(numberOf(approved), 2, link)
+        await repository.findById(approved.id, 3)
+
+        await expect(
+          repository.linkDefraOrganisation(numberOf(approved), 3, aLink())
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: 'Organisation is already linked to a Defra organisation'
+            }
+          }
+        })
+
+        const unchanged = await repository.findById(approved.id)
+        expect(unchanged.version).toBe(3)
+        expect(unchanged.linkedDefraOrganisation?.orgId).toBe(link.orgId)
+      })
+
       it('rejects an organisation that cannot become active', async () => {
         const org = buildOrganisation()
         await repository.insert(org)

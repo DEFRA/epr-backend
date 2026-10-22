@@ -323,9 +323,10 @@ export const prepareForReplace = (existing, updates) => {
 /**
  * What linking writes to a stored organisation: the validated link, and the
  * status history entry that activates the organisation. An organisation that
- * is already active (unlinked and being re-linked) gets no new entry.
+ * is already active (unlinked and being re-linked) gets no new entry. An
+ * organisation that is linked must be unlinked first.
  *
- * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
+ * @param {{ statusHistory: StatusHistoryEntryInput[], linkedDefraOrganisation?: LinkedDefraOrganisation }} existing
  * @param {LinkedDefraOrganisation} linkedDefraOrganisation
  * @returns {{
  *   linkedDefraOrganisation: LinkedDefraOrganisation,
@@ -333,6 +334,11 @@ export const prepareForReplace = (existing, updates) => {
  * }}
  */
 export const prepareLink = (existing, linkedDefraOrganisation) => {
+  if (existing.linkedDefraOrganisation) {
+    throw Boom.conflict(
+      'Organisation is already linked to a Defra organisation'
+    )
+  }
   const validated = validateLinkedDefraOrganisation(linkedDefraOrganisation)
   const status = getCurrentStatus(existing)
   if (status === ORGANISATION_STATUS.ACTIVE) {

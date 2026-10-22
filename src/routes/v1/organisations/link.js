@@ -9,6 +9,7 @@ import { linkedDefraOrganisationViewSchema } from '#routes/organisations/respons
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const linkedOrganisationSchema = Joi.object({
   status: Joi.string()
@@ -37,8 +38,7 @@ export const organisationsLink = {
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords,
-   *    params: { organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }
+   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
@@ -92,10 +92,10 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    const { id, version: currentVersion } = organisation
+    const { id, orgId, version: currentVersion } = organisation
 
     await organisationsRepository.linkDefraOrganisation(
-      request.params.organisationNumber,
+      toOrganisationNumber(String(orgId)),
       currentVersion,
       linkedDefraOrg
     )

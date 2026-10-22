@@ -17,14 +17,16 @@ import {
   normaliseCriteria,
   parseOrgIdCriterion,
   prepareForReplace,
-  organisationNumberNotFound,
-  prepareLink,
-  prepareUsers,
   storedOrgId,
   UNIQUE_NUMBER_FIELDS,
   versionConflict
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import {
+  performLinkDefraOrganisation,
+  performReplaceUsers,
+  performUnlinkDefraOrganisation
+} from './inmemory.targeted-updates.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -146,9 +148,7 @@ const performReplace =
     }
 
     if (existing.version !== version) {
-      throw Boom.conflict(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
+      throw versionConflict(version, existing.version)
     }
 
     const replaced = prepareForReplace(
@@ -166,62 +166,6 @@ const performReplace =
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update
-    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-  }
-
-/**
- * Finds the stored organisation to update at `version`. Throws 404 when the
- * organisation does not exist and 409 when it is at another version.
- */
-const storedAtVersion = (storage, organisationNumber, version) => {
-  const existing = storage.find(
-    (o) => o.orgId === storedOrgId(organisationNumber)
-  )
-  if (!existing) {
-    throw organisationNumberNotFound(organisationNumber)
-  }
-  if (existing.version !== version) {
-    throw versionConflict(version, existing.version)
-  }
-  return existing
-}
-
-const performLinkDefraOrganisation =
-  (storage, staleCache, pendingSyncRef) =>
-  async (organisationNumber, version, linkedDefraOrganisation) => {
-    const existing = storedAtVersion(storage, organisationNumber, version)
-    const link = prepareLink(existing, linkedDefraOrganisation)
-
-    existing.linkedDefraOrganisation = structuredClone(
-      link.linkedDefraOrganisation
-    )
-    if (link.statusHistoryEntry) {
-      existing.statusHistory.push(link.statusHistoryEntry)
-    }
-    existing.version += 1
-
-    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-  }
-
-const performUnlinkDefraOrganisation =
-  (storage, staleCache, pendingSyncRef) =>
-  async (organisationNumber, version) => {
-    const existing = storedAtVersion(storage, organisationNumber, version)
-
-    delete existing.linkedDefraOrganisation
-    existing.version += 1
-
-    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-  }
-
-const performReplaceUsers =
-  (storage, staleCache, pendingSyncRef) =>
-  async (organisationNumber, version, users) => {
-    const existing = storedAtVersion(storage, organisationNumber, version)
-
-    existing.users = structuredClone(prepareUsers(existing, users))
-    existing.version += 1
-
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
@@ -616,6 +560,8 @@ export const createInMemoryOrganisationsRepository = (
 
   const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
+  const syncStaleCache = () =>
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
 
   const findByIdFromCache = performFindById(staleCache)
 
@@ -629,15 +575,13 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       linkDefraOrganisation: performLinkDefraOrganisation(
         storage,
-        staleCache,
-        pendingSyncRef
+        syncStaleCache
       ),
       unlinkDefraOrganisation: performUnlinkDefraOrganisation(
         storage,
-        staleCache,
-        pendingSyncRef
+        syncStaleCache
       ),
-      replaceUsers: performReplaceUsers(storage, staleCache, pendingSyncRef),
+      replaceUsers: performReplaceUsers(storage, syncStaleCache),
       findAll: performFindAll(staleCache),
       find: performFind(staleCache),
       findAllLinked: performFindAllLinked(staleCache),

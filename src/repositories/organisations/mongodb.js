@@ -14,9 +14,6 @@ import {
   normaliseCriteria,
   parseOrgIdCriterion,
   prepareForReplace,
-  organisationNumberNotFound,
-  prepareLink,
-  prepareUsers,
   storedOrgId,
   UNIQUE_NUMBER_FIELDS,
   versionConflict
@@ -24,10 +21,13 @@ import {
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
+import {
+  performLinkDefraOrganisation,
+  performReplaceUsers,
+  performUnlinkDefraOrganisation
+} from './mongodb.targeted-updates.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 /** @import { WriteOperation } from './helpers.js' */
 
@@ -152,92 +152,9 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 
   if (result.matchedCount === 0) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-    )
-  }
-}
-
-/**
- * Applies a targeted update to the organisation at `version`, and bumps the
- * version. Throws 404 when the organisation does not exist and 409 when it is
- * at another version.
- *
- * @param {Db} db
- * @param {OrganisationNumber} organisationNumber
- * @param {number} version
- * @param {object} update - a MongoDB update document
- * @returns {Promise<void>}
- */
-const updateAtVersion = async (db, organisationNumber, version, update) => {
-  const collection = db.collection(COLLECTION_NAME)
-  const orgId = storedOrgId(organisationNumber)
-  const result = await collection.updateOne(
-    { orgId, version },
-    { ...update, $inc: { version: 1 } }
-  )
-  if (result.matchedCount > 0) {
-    return
-  }
-
-  const current = await collection.findOne(
-    { orgId },
-    { projection: { version: 1 } }
-  )
-  if (!current) {
-    throw organisationNumberNotFound(organisationNumber)
-  }
-  throw versionConflict(version, current.version)
-}
-
-/**
- * Reads the organisation to update at `version`. Throws 404 when the
- * organisation does not exist and 409 when it is at another version.
- *
- * @param {Db} db
- * @param {OrganisationNumber} organisationNumber
- * @param {number} version
- * @returns {Promise<Organisation>}
- */
-const findAtVersion = async (db, organisationNumber, version) => {
-  const existing = await db
-    .collection(COLLECTION_NAME)
-    .findOne({ orgId: storedOrgId(organisationNumber) })
-  if (!existing) {
-    throw organisationNumberNotFound(organisationNumber)
-  }
-  if (existing.version !== version) {
     throw versionConflict(version, existing.version)
   }
-  return mapDocumentWithCurrentStatuses(existing)
 }
-
-const performLinkDefraOrganisation =
-  (db) => async (organisationNumber, version, linkedDefraOrganisation) => {
-    const existing = await findAtVersion(db, organisationNumber, version)
-    const link = prepareLink(existing, linkedDefraOrganisation)
-    await updateAtVersion(db, organisationNumber, version, {
-      $set: { linkedDefraOrganisation: link.linkedDefraOrganisation },
-      ...(link.statusHistoryEntry && {
-        $push: { statusHistory: link.statusHistoryEntry }
-      })
-    })
-  }
-
-const performUnlinkDefraOrganisation =
-  (db) => async (organisationNumber, version) => {
-    await updateAtVersion(db, organisationNumber, version, {
-      $unset: { linkedDefraOrganisation: '' }
-    })
-  }
-
-const performReplaceUsers =
-  (db) => async (organisationNumber, version, users) => {
-    const existing = await findAtVersion(db, organisationNumber, version)
-    await updateAtVersion(db, organisationNumber, version, {
-      $set: { users: prepareUsers(existing, users) }
-    })
-  }
 
 /**
  * @returns {(
@@ -647,9 +564,13 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
-      linkDefraOrganisation: performLinkDefraOrganisation(db),
-      replaceUsers: performReplaceUsers(db),
-      unlinkDefraOrganisation: performUnlinkDefraOrganisation(db),
+      linkDefraOrganisation: performLinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
+      replaceUsers: performReplaceUsers(db.collection(COLLECTION_NAME)),
+      unlinkDefraOrganisation: performUnlinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
       findById,
       findAll: performFindAll(db),
       find: performFind(db),
