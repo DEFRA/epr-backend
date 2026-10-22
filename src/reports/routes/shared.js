@@ -1,5 +1,9 @@
 import Joi from 'joi'
 
+export const calendarQuerySchema = Joi.object({
+  expand: Joi.string().valid('submissions')
+})
+
 export const submissionNumberSchema = Joi.number().integer().min(1).required()
 
 /**
