@@ -4,20 +4,32 @@ import { ObjectId } from 'mongodb'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  REPROCESSOR_NUMBER,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/document', () => {
+const { buildOrganisation } = createOrganisationBuilders()
+
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{summaryLogId}/document', () => {
   setupAuthContext()
 
+  const registration = reprocessor()
+  const organisation = buildOrganisation({ registrations: [registration] })
   const summaryLogId = new ObjectId().toString()
-  const organisationId = new ObjectId().toString()
-  const registrationId = new ObjectId().toString()
+  const organisationId = organisation.id
+  const registrationId = registration.id
+  const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
   const meta = {
     PROCESSING_TYPE: 'reprocessor-input',
@@ -82,6 +94,9 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     const server = await createTestServer({
       repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
         summaryLogsRepository: summaryLogsRepositoryFactory,
         ...options.repositories
       }
@@ -90,10 +105,13 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     return { server, summaryLogsRepository }
   }
 
+  const documentUrl = (logId = summaryLogId) =>
+    `${summaryLogs}/${logId}/document`
+
   const makeRequest = (server, logId = summaryLogId) =>
     server.inject({
       method: 'GET',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${logId}/document`,
+      url: documentUrl(logId),
       ...asServiceMaintainer()
     })
 
@@ -102,7 +120,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   })
 
   describe('when the summary log exists', () => {
-    it('returns the whole stored document, including fields the operator view strips', async () => {
+    it('returns the whole stored document, without its database ids, including fields the operator view strips', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
@@ -121,11 +139,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.result).toMatchObject({
         version: 2,
         status: 'submitted',
-        organisationId,
-        registrationId,
         meta,
         loadsByReportingPeriod
       })
+      expect(response.result).not.toHaveProperty('organisationId')
+      expect(response.result).not.toHaveProperty('registrationId')
       // the populated per-period rows survive the round trip intact, including
       // the balance-affecting tonnage delta and the exclusion reason
       expect(
@@ -166,7 +184,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`
+        url: documentUrl()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -177,7 +195,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
+        url: documentUrl(),
         ...asUnscopedAdminUser()
       })
 
@@ -189,7 +207,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/document`,
+        url: documentUrl(),
         ...asUnscopedAdminUser({ scope: [SCOPES.summaryLogRead] })
       })
 
