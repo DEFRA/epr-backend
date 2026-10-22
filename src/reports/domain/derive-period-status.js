@@ -15,14 +15,18 @@ import { PERIOD_STATUS } from './period-status.js'
  * period is overdue once the current UTC date is past its due date, i.e. from
  * the 21st when the due date is the 20th.
  * @param {{ endDate: CalendarDate, dueDate: CalendarDate, report: { status: ReportStatus } | null }} period
+ * @param {Date} [now]
  * @returns {PeriodStatus | null}
  */
-export const derivePeriodStatus = ({ endDate, dueDate, report }) => {
+export const derivePeriodStatus = (
+  { endDate, dueDate, report },
+  now = new Date()
+) => {
   if (report !== null) {
     return report.status
   }
 
-  const today = utcCalendarDate(new Date())
+  const today = utcCalendarDate(now)
 
   const periodEnded = today.localeCompare(endDate) > 0
   if (!periodEnded) {

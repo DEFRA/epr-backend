@@ -15,6 +15,7 @@ import {
 } from '#routes/organisations/view-route.js'
 import { reportsDelete } from './delete.js'
 import { reportsGet } from './get.js'
+import { reportsYearCalendar } from './get-year-calendar.js'
 import { reportsGetDetail } from './get-detail.js'
 import { reportsPatch } from './patch.js'
 import { reportsPost } from './post.js'
@@ -258,5 +259,10 @@ export const reportRoutesByNaturalKey = [
     reportsGet,
     `${registrationPath}/reports/calendar`,
     registrationParams
+  ),
+  atNaturalKeys(
+    reportsYearCalendar,
+    `${registrationPath}/reports/{year}/calendar`,
+    { ...registrationParams, year: yearSchema().required() }
   )
 ]

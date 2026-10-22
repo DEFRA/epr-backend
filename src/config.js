@@ -360,6 +360,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORT_DATA_VALIDATION'
     },
+    midYearStatusTransition: {
+      doc: 'Feature Flag: Full support for a registration that moves from registered-only to accredited part way through a year (PAE-1598)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_MID_YEAR_STATUS_TRANSITION'
+    },
     prnAdminCancellation: {
       doc: 'Feature Flag: Allow an admin to cancel an accepted PRN/PERN (PAE-1823)',
       format: Boolean,

@@ -49,6 +49,26 @@ export const reportsCalendarResponseSchema = Joi.object({
   reportingPeriods: Joi.array().items(reportingPeriodSchema).required()
 })
 
+const yearCalendarPeriodSchema = (cadence) =>
+  reportingPeriodSchema.keys({
+    cadence: Joi.string().valid(cadence).required()
+  })
+
+export const reportsYearCalendarResponseSchema = Joi.object({
+  year: Joi.number().integer().required(),
+  registeredOnly: Joi.object({
+    reportingPeriods: Joi.array()
+      .items(yearCalendarPeriodSchema(CADENCE.quarterly))
+      .required()
+  }),
+  accredited: Joi.object({
+    accreditationNumber: Joi.string().required(),
+    reportingPeriods: Joi.array()
+      .items(yearCalendarPeriodSchema(CADENCE.monthly))
+      .required()
+  })
+})
+
 /**
  * Response contract for the report-detail GET/POST, shared by every reports page
  * in the frontend. Validates the sections the frontend consumes - notably `prn`,

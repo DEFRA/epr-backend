@@ -986,9 +986,15 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // After Q1 closed, the ORS registry renames the site. Site name and country
     // are excluded from the comparison, so a rename never reaches the diff.
-    await env.overseasSitesRepository.update(TEST_OVERSEAS_SITE_ID, {
-      name: 'Renamed Overseas Site'
-    })
+    const { findByIds } = env.overseasSitesRepository
+    vi.spyOn(env.overseasSitesRepository, 'findByIds').mockImplementation(
+      async (ids) =>
+        (await findByIds(ids)).map((site) =>
+          site.id === TEST_OVERSEAS_SITE_ID
+            ? { ...site, name: 'Renamed Overseas Site' }
+            : site
+        )
+    )
 
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
