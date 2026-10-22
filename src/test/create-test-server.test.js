@@ -99,7 +99,7 @@ describe('createTestServer', () => {
       })
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'DELETE',
         url: '/v1/dev/organisations/506544'
       })
 
@@ -110,7 +110,7 @@ describe('createTestServer', () => {
       const server = await createTestServer()
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'DELETE',
         url: '/v1/dev/organisations/506544'
       })
 
