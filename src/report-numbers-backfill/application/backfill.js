@@ -16,7 +16,8 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @typedef {Object} BackfillResult
  * @property {number} missing - reports lacking a number when the run started
  * @property {number} mapped - given at least one number (would be, on a dry run)
- * @property {number} unmapped - left lacking a number, each logged with the reason
+ * @property {number} unmapped - left lacking a number
+ * @property {Record<string, string[]>} unmappedReasons - the ids of the reports left lacking a number, by reason
  * @property {number} failed - not written; retried on the next run
  * @property {number} auditFailed - written but not audited
  */
@@ -28,24 +29,32 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @property {OrganisationsRepository} organisationsRepository
  */
 
+/** @type {[keyof ReportNumbers, string][]} */
+const NO_NUMBER = [
+  ['organisationNumber', 'no organisation number'],
+  ['registrationNumber', 'no registration number'],
+  ['accreditationNumber', 'no accreditation number']
+]
+
 /**
  * The accreditation a report was made under, found as the accredited report
  * routes find it: a monthly report's is its registration's accreditation for
- * the report's year, and a quarterly report has none.
+ * the report's year, and a quarterly report has none. Undefined where no
+ * single accreditation can be found.
  *
  * @param {Organisation} organisation
  * @param {Report} report
- * @returns {{ accreditationId?: string | null, unmapped: string[] }}
+ * @returns {string | null | undefined}
  */
-const accreditationOf = (organisation, { registrationId, cadence, year }) => {
+const accreditationIdOf = (organisation, { registrationId, cadence, year }) => {
   if (cadence === CADENCE.quarterly) {
-    return { accreditationId: null, unmapped: [] }
+    return null
   }
   const registration = organisation.registrations.find(
     ({ id }) => id === registrationId
   )
   if (!registration) {
-    return { unmapped: [] }
+    return undefined
   }
   const [accreditation, ...others] = accreditationsForYear(
     organisation,
@@ -53,13 +62,9 @@ const accreditationOf = (organisation, { registrationId, cadence, year }) => {
     year
   )
   if (accreditation === undefined || others.length > 0) {
-    return {
-      unmapped: [
-        `registration ${registrationId} has no single accreditation for ${year}`
-      ]
-    }
+    return undefined
   }
-  return { accreditationId: accreditation.id, unmapped: [] }
+  return accreditation.id
 }
 
 /**
@@ -68,21 +73,21 @@ const accreditationOf = (organisation, { registrationId, cadence, year }) => {
  * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[] }>}
  */
 const lookUpNumbers = async (organisationsRepository, report) => {
-  const { organisationId, registrationId } = report
   try {
-    const organisation = await organisationsRepository.findById(organisationId)
-    const accreditation = accreditationOf(organisation, report)
-    const { numbers, unmapped } = numbersFor(organisation, {
-      registrationId,
-      accreditationId: accreditation.accreditationId
+    const organisation = await organisationsRepository.findById(
+      report.organisationId
+    )
+    const { numbers } = numbersFor(organisation, {
+      registrationId: report.registrationId,
+      accreditationId: accreditationIdOf(organisation, report)
     })
-    return { numbers, unmapped: [...unmapped, ...accreditation.unmapped] }
+    const unmapped = NO_NUMBER.filter(
+      ([key]) => numbers[key] === undefined
+    ).map(([, reason]) => reason)
+    return { numbers, unmapped }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
-      return {
-        numbers: {},
-        unmapped: [`organisation ${organisationId} not found`]
-      }
+      return { numbers: {}, unmapped: ['organisation not found'] }
     }
     throw error
   }
@@ -123,7 +128,7 @@ const numbersLacking = (numbers, report) =>
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
- * @returns {Promise<{ mapped: boolean, unmapped: boolean, auditFailed: boolean } | null>} null if gone
+ * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
  */
 const backfillOne = async (
   { reportsRepository, systemLogsRepository, organisationsRepository },
@@ -141,16 +146,11 @@ const backfillOne = async (
     organisationsRepository,
     report
   )
-  if (unmapped.length > 0) {
-    logger.info({
-      message: `Report numbers unmapped: reportId=${id} organisationId=${organisationId} registrationId=${registrationId} reasons="${unmapped.join('; ')}"`
-    })
-  }
 
   const lacking = numbersLacking(numbers, report)
   const outcome = {
     mapped: Object.keys(lacking).length > 0,
-    unmapped: unmapped.length > 0,
+    unmapped,
     auditFailed: false
   }
   if (!outcome.mapped || isDryRun) {
@@ -179,9 +179,9 @@ const backfillOne = async (
 
 /**
  * Adds to each report the organisation, registration and accreditation numbers
- * it lacks, read from its organisation record. Logs one line for each report it cannot
- * fully map, saying why. A failure is logged and swallowed so one bad report
- * never stops the sweep.
+ * it lacks, read from its organisation record. Each report it cannot fully map
+ * is returned under every reason that applies. A failure is logged and
+ * swallowed so one bad report never stops the sweep.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
@@ -196,6 +196,8 @@ export const backfillReportNumbers = async (
     missing: ids.length,
     mapped: 0,
     unmapped: 0,
+    /** @type {Record<string, string[]>} */
+    unmappedReasons: {},
     failed: 0,
     auditFailed: 0
   }
@@ -205,7 +207,13 @@ export const backfillReportNumbers = async (
       const outcome = await backfillOne(repositories, id, isDryRun, logger)
       if (outcome) {
         result.mapped += Number(outcome.mapped)
-        result.unmapped += Number(outcome.unmapped)
+        result.unmapped += Number(outcome.unmapped.length > 0)
+        for (const reason of outcome.unmapped) {
+          result.unmappedReasons[reason] = [
+            ...(result.unmappedReasons[reason] ?? []),
+            id
+          ]
+        }
         result.auditFailed += Number(outcome.auditFailed)
       }
     } catch (error) {

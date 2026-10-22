@@ -23,6 +23,9 @@ vi.mock('./application/backfill.js', () => ({
 }))
 vi.mock('../config.js', () => ({ config: { get: vi.fn() } }))
 
+const reportIds = (/** @type {number} */ from, /** @type {number} */ to) =>
+  Array.from({ length: to - from + 1 }, (_, i) => `report-${from + i}`)
+
 describe('runReportNumbersBackfill', () => {
   /** @type {*} */
   let lock
@@ -34,15 +37,19 @@ describe('runReportNumbersBackfill', () => {
     lock = { free: vi.fn() }
     server = { db: {}, locker: { lock: vi.fn().mockResolvedValue(lock) } }
     vi.mocked(backfillReportNumbers).mockResolvedValue({
-      missing: 3,
+      missing: 15,
       mapped: 2,
-      unmapped: 1,
+      unmapped: 13,
+      unmappedReasons: {
+        'organisation not found': reportIds(1, 12),
+        'no accreditation number': reportIds(13, 13)
+      },
       failed: 0,
       auditFailed: 0
     })
   })
 
-  it('runs as a dry run when the flag is off, and logs the counts', async () => {
+  it('runs as a dry run when the flag is off, and logs the counts with up to ten reports for each reason', async () => {
     vi.mocked(config.get).mockReturnValue(false)
 
     await runReportNumbersBackfill(server)
@@ -55,7 +62,7 @@ describe('runReportNumbersBackfill', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Report numbers backfill (dry-run): missing=3 mapped=2 unmapped=1 failed=0 auditFailed=0'
+        'Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (report-1, report-2, report-3, report-4, report-5, report-6, report-7, report-8, report-9, report-10); no accreditation number: 1 (report-13)"'
     })
     expect(lock.free).toHaveBeenCalled()
   })

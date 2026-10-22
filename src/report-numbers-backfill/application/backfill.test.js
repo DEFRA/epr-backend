@@ -109,12 +109,6 @@ describe('backfillReportNumbers', () => {
   const systemLogs = async () =>
     (await systemLogsRepository.find({ limit: 10 })).systemLogs
 
-  const unmappedLines = () =>
-    vi
-      .mocked(logger.info)
-      .mock.calls.map(([{ message }]) => message)
-      .filter((message) => message?.startsWith('Report numbers unmapped'))
-
   it('adds the numbers each report lacks and audits each as the system user', async () => {
     const unnumbered = await createReport({ period: MONTHLY_PERIODS.January })
     const partlyNumbered = await createReport({
@@ -126,6 +120,7 @@ describe('backfillReportNumbers', () => {
       missing: 2,
       mapped: 2,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 0,
       auditFailed: 0
     })
@@ -151,7 +146,6 @@ describe('backfillReportNumbers', () => {
         }
       })
     )
-    expect(unmappedLines()).toEqual([])
   })
 
   it('gives a quarterly report a null accreditation number', async () => {
@@ -175,6 +169,7 @@ describe('backfillReportNumbers', () => {
       missing: 1,
       mapped: 1,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 0,
       auditFailed: 0
     })
@@ -187,7 +182,7 @@ describe('backfillReportNumbers', () => {
     ['a backfill', false],
     ['a dry run', true]
   ])('on %s', (_, isDryRun) => {
-    it('logs one line for each report it cannot map, saying why', async () => {
+    it('returns each report it cannot map under every reason that applies, logging none of them', async () => {
       const organisationGone = await createReport({
         organisationId: missingOrganisationId
       })
@@ -205,16 +200,15 @@ describe('backfillReportNumbers', () => {
         missing: 4,
         mapped: 3,
         unmapped: 4,
+        unmappedReasons: {
+          'organisation not found': [organisationGone],
+          'no registration number': [unnumbered, registrationGone],
+          'no accreditation number': [registrationGone, unaccredited]
+        },
         failed: 0,
         auditFailed: 0
       })
-
-      expect(unmappedLines()).toEqual([
-        `Report numbers unmapped: reportId=${organisationGone} organisationId=${missingOrganisationId} registrationId=${registrationId} reasons="organisation ${missingOrganisationId} not found"`,
-        `Report numbers unmapped: reportId=${unnumbered} organisationId=${organisationId} registrationId=${unnumberedRegistrationId} reasons="registration ${unnumberedRegistrationId} has no registration number"`,
-        `Report numbers unmapped: reportId=${registrationGone} organisationId=${organisationId} registrationId=${missingRegistrationId} reasons="organisation ${organisationId} holds no registration ${missingRegistrationId}"`,
-        `Report numbers unmapped: reportId=${unaccredited} organisationId=${organisationId} registrationId=${registrationId} reasons="registration ${registrationId} has no single accreditation for ${YEAR - 1}"`
-      ])
+      expect(logger.info).not.toHaveBeenCalled()
     })
   })
 
@@ -236,7 +230,7 @@ describe('backfillReportNumbers', () => {
 
   it('leaves only the unmapped reports for the next run', async () => {
     await createReport({ period: MONTHLY_PERIODS.January })
-    await createReport({
+    const organisationGone = await createReport({
       period: MONTHLY_PERIODS.February,
       organisationId: missingOrganisationId
     })
@@ -246,6 +240,7 @@ describe('backfillReportNumbers', () => {
       missing: 1,
       mapped: 0,
       unmapped: 1,
+      unmappedReasons: { 'organisation not found': [organisationGone] },
       failed: 0,
       auditFailed: 0
     })
@@ -259,6 +254,7 @@ describe('backfillReportNumbers', () => {
       missing: 1,
       mapped: 0,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 0,
       auditFailed: 0
     })
@@ -273,6 +269,7 @@ describe('backfillReportNumbers', () => {
       missing: 1,
       mapped: 0,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 1,
       auditFailed: 0
     })
@@ -297,6 +294,7 @@ describe('backfillReportNumbers', () => {
       missing: 2,
       mapped: 1,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 1,
       auditFailed: 0
     })
@@ -316,6 +314,7 @@ describe('backfillReportNumbers', () => {
       missing: 1,
       mapped: 1,
       unmapped: 0,
+      unmappedReasons: {},
       failed: 0,
       auditFailed: 1
     })

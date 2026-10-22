@@ -99,7 +99,6 @@ const seed = async (database) => {
 
   return {
     collection,
-    registrationId: registration.id,
     numbers: {
       organisationNumber: String(organisation.orgId),
       registrationNumber: registration.registrationNumber,
@@ -122,21 +121,13 @@ const enableBackfill = (/** @type {boolean} */ enabled) =>
       key === 'featureFlags.reportNumbersBackfill' ? enabled : undefined
     )
 
-const unmappedLine = (/** @type {string} */ registrationId) =>
-  `Report numbers unmapped: reportId=${reportIds.organisationGone} organisationId=${missingOrganisationId} registrationId=${registrationId} reasons="organisation ${missingOrganisationId} not found"`
-
-const unmappedLines = () =>
-  vi
-    .mocked(logger.info)
-    .mock.calls.map(([{ message }]) => message)
-    .filter((message) => message?.startsWith('Report numbers unmapped'))
+const unmappedReasons = `unmappedReasons="organisation not found: 1 (${reportIds.organisationGone})"`
 
 describe('runReportNumbersBackfill (mongo)', () => {
   it('dry run writes and audits nothing, and reports what it cannot map', async (/** @type {*} */ {
     database
   }) => {
-    vi.mocked(logger.info).mockClear()
-    const { collection, registrationId } = await seed(database)
+    const { collection } = await seed(database)
     enableBackfill(false)
 
     await runReportNumbersBackfill(serverFor(database))
@@ -145,18 +136,15 @@ describe('runReportNumbersBackfill (mongo)', () => {
       await collection.countDocuments({ organisationNumber: { $exists: true } })
     ).toBe(0)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
-    expect(unmappedLines()).toEqual([unmappedLine(registrationId)])
     expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Report numbers backfill (dry-run): missing=3 mapped=2 unmapped=1 failed=0 auditFailed=0'
+      message: `Report numbers backfill (dry-run): missing=3 mapped=2 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
     })
   })
 
   it('adds the numbers, leaves the version alone, audits each change and is idempotent', async (/** @type {*} */ {
     database
   }) => {
-    vi.mocked(logger.info).mockClear()
-    const { collection, registrationId, numbers } = await seed(database)
+    const { collection, numbers } = await seed(database)
     enableBackfill(true)
     const server = serverFor(database)
 
@@ -190,13 +178,8 @@ describe('runReportNumbersBackfill (mongo)', () => {
     expect(logs[0].createdBy.id).toBe('system')
     expect(logs[0].event.action).toBe('numbers-backfill-migration')
 
-    expect(unmappedLines()).toEqual([
-      unmappedLine(registrationId),
-      unmappedLine(registrationId)
-    ])
     expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0'
+      message: `Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
     })
   })
 })
