@@ -1,25 +1,10 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { beforeEach, describe, expect } from 'vitest'
+import { notFound, numberOf, versionConflict } from './test-data.js'
 
 /** @import { CollatedUser } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from './test-data.js' */
 /** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
-
-const versionConflict = (version, currentVersion) => ({
-  isBoom: true,
-  output: {
-    statusCode: 409,
-    payload: {
-      message: `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
-    }
-  }
-})
-
-const notFound = { isBoom: true, output: { statusCode: 404 } }
-
-/** @param {{ orgId: number }} organisation */
-const numberOf = ({ orgId }) => toOrganisationNumber(String(orgId))
 
 /** @type {CollatedUser} */
 const aUser = {

@@ -4,31 +4,18 @@ import {
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
   getValidDateRange,
-  prepareOrgUpdate
+  notFound,
+  numberOf,
+  prepareOrgUpdate,
+  versionConflict
 } from './test-data.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 /** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
-
-const versionConflict = (version, currentVersion) => ({
-  isBoom: true,
-  output: {
-    statusCode: 409,
-    payload: {
-      message: `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
-    }
-  }
-})
-
-const notFound = { isBoom: true, output: { statusCode: 404 } }
-
-/** @param {{ orgId: number }} organisation */
-const numberOf = ({ orgId }) => toOrganisationNumber(String(orgId))
 
 export const testLinkDefraOrganisationBehaviour = (it) => {
   describe('linking to a Defra organisation', () => {
