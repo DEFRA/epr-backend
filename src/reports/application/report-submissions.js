@@ -199,7 +199,7 @@ async function buildSubmissionRows(
     const accreditationNumber = resolveAccreditationNumber(registration, org)
     const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
-    // Match the operator calendar: an accredited operator owes monthly reports
+    // Match the operator calendar: an accredited operator has monthly reporting obligations
     // only from the date their accreditation began.
     const validFrom = activeAccreditationValidFrom(
       resolveAccreditation(registration, org)
