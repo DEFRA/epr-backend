@@ -7,12 +7,13 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { parseSummaryLogUri } from './parse-uri.js'
-import { resolveSummaryLogKey } from './natural-keys.js'
+import { keyedBy } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
+  validateSummaryLogKey,
   validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
@@ -82,20 +83,9 @@ const update =
     scheduleStaleCacheSync(storage, staleCache)
   }
 
-/** @param {import('#domain/summary-logs/model.js').SummaryLog} summaryLog */
-const lacksNumbers = ({
-  accreditationId,
-  organisationNumber,
-  registrationNumber,
-  accreditationNumber
-}) =>
-  organisationNumber === undefined ||
-  registrationNumber === undefined ||
-  (accreditationId !== undefined && accreditationNumber === undefined)
-
 const findIdsWithoutNumbers = (storage) => async () =>
   [...storage]
-    .filter(([, { summaryLog }]) => lacksNumbers(summaryLog))
+    .filter(([, { summaryLog }]) => !holdsNumbers(summaryLog))
     .map(([id]) => id)
 
 const assignNumbers =
@@ -148,39 +138,10 @@ const findById = (staleCache) => async (id) => {
 }
 
 /**
- * A year/accreditation match that also matches legacy documents, so they
- * keep counting until the backfill assigns them a scope. When the caller
- * doesn't know the year (`year === undefined`), every document matches,
- * keeping the registration-wide behaviour untouched.
- *
- * - No `year`: matches every year and accreditation.
- * - A `year` but no `accreditationId`: a backfilled legacy document, which
- *   matches any accreditation in its year. Year-scoped inserts always write
- *   it (`null` for registered-only), so undefined only means it predates it.
- *
- * `null` and `undefined` are the same value, as in MongoDB.
- *
- * @param {import('#domain/summary-logs/model.js').SummaryLog} summaryLog
- * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
- * @returns {boolean}
- */
-const matchesYear = (summaryLog, { year, accreditationId }) => {
-  if (year === undefined || (summaryLog.year ?? null) === null) {
-    return true
-  }
-  return (
-    summaryLog.year === year &&
-    (summaryLog.accreditationId === undefined ||
-      (summaryLog.accreditationId ?? null) === (accreditationId ?? null))
-  )
-}
-
-/**
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { StoredSummaryLogKey } from './natural-keys.js'
- * @import { SummaryLogKey, SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  *
  * @typedef {Map<string, SummaryLogVersion>} SummaryLogStore
  * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
@@ -219,18 +180,6 @@ const latestSubmitted = (staleCache, matches) => {
     summaryLog: structuredClone(latest.doc.summaryLog)
   }
 }
-
-const findLatestSubmittedForOrgReg =
-  (staleCache) =>
-  /** @param {import('./port.js').SummaryLogScope} scope */
-  async ({ organisationId, registrationId, year, accreditationId }) =>
-    latestSubmitted(
-      staleCache,
-      (summaryLog) =>
-        summaryLog.organisationId === organisationId &&
-        summaryLog.registrationId === registrationId &&
-        matchesYear(summaryLog, { year, accreditationId })
-    )
 
 /** @type {Set<SummaryLogStatus>} */
 const TERMINAL_STATUS = new Set([
@@ -276,55 +225,42 @@ const findAllByOrgReg =
 
 /**
  * A summary log stored before its accreditation was recorded has no
- * `accreditationId`, and matches every accreditation, as in `matchesYear`.
+ * accreditation number, and matches every accreditation. One stored before
+ * its year was recorded matches every year. `null` and `undefined` are the
+ * same year, as in MongoDB.
  *
- * @param {StoredSummaryLogKey} storedKey
+ * @param {SummaryLogKey} key
  * @returns {SummaryLogMatch}
  */
-const matchesStoredKey =
-  ({ organisationId, registrationId, accreditationId }) =>
-  (summaryLog) =>
-    summaryLog.organisationId === organisationId &&
-    summaryLog.registrationId === registrationId &&
-    (accreditationId === undefined ||
-      summaryLog.accreditationId === undefined ||
-      summaryLog.accreditationId === accreditationId)
+const matchesKey = (key) => {
+  const { organisationNumber, registrationNumber, accreditationNumber, year } =
+    validateSummaryLogKey(key)
+  return (summaryLog) =>
+    summaryLog.organisationNumber === organisationNumber &&
+    summaryLog.registrationNumber === registrationNumber &&
+    (accreditationNumber === undefined ||
+      summaryLog.accreditationNumber === undefined ||
+      summaryLog.accreditationNumber === accreditationNumber) &&
+    (year === undefined ||
+      (summaryLog.year ?? null) === null ||
+      summaryLog.year === year)
+}
 
-/**
- * @param {SummaryLogStore} staleCache
- * @param {OrganisationsRepository} organisationsRepository
- */
+/** @param {SummaryLogStore} staleCache */
 const findLatestSubmitted =
-  (staleCache, organisationsRepository) =>
+  (staleCache) =>
   /** @param {SummaryLogKey} key */
   async (key) => {
-    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
-    if (!resolved) {
-      return null
-    }
-    const found = latestSubmitted(
-      staleCache,
-      matchesStoredKey(resolved.storedKey)
-    )
-    return found && resolved.toKeyed(found)
+    const found = latestSubmitted(staleCache, matchesKey(key))
+    return found && keyedBy(key)(found)
   }
 
-/**
- * @param {SummaryLogStore} staleCache
- * @param {OrganisationsRepository} organisationsRepository
- */
+/** @param {SummaryLogStore} staleCache */
 const findAll =
-  (staleCache, organisationsRepository) =>
+  (staleCache) =>
   /** @param {SummaryLogKey} key */
-  async (key) => {
-    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
-    if (!resolved) {
-      return []
-    }
-    return uploads(staleCache, matchesStoredKey(resolved.storedKey)).map(
-      resolved.toKeyed
-    )
-  }
+  async (key) =>
+    uploads(staleCache, matchesKey(key)).map(keyedBy(key))
 
 const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
   const statsMap = Array.from(staleCache.values()).reduce(
@@ -475,13 +411,9 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
- * @param {OrganisationsRepository} [organisationsRepository]
- *   - Resolves natural keys to the ids summary logs are stored under
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createInMemorySummaryLogsRepository = (
-  organisationsRepository = createInMemoryOrganisationsRepository()()
-) => {
+export const createInMemorySummaryLogsRepository = () => {
   const storage = new Map()
   const staleCache = new Map()
 
@@ -491,13 +423,9 @@ export const createInMemorySummaryLogsRepository = (
     findById: findById(staleCache),
     findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
     assignNumbers: assignNumbers(storage, staleCache, logger),
-    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     findAllByOrgReg: findAllByOrgReg(staleCache),
-    findLatestSubmitted: findLatestSubmitted(
-      staleCache,
-      organisationsRepository
-    ),
-    findAll: findAll(staleCache, organisationsRepository),
+    findLatestSubmitted: findLatestSubmitted(staleCache),
+    findAll: findAll(staleCache),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(

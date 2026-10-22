@@ -132,7 +132,7 @@ const createServer = async ({
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       summaryLogsRepository: () => ({
-        findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
+        findAll: vi.fn().mockResolvedValue(summaryLogs)
       })
     }
   })

@@ -42,8 +42,23 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
   }
 }))
 
+/**
+ * The numbers an upload stores beside a registered-only summary log's ids,
+ * by the registration's id.
+ *
+ * @type {Map<string, object>}
+ */
+const numbersByRegistrationId = new Map()
+
+/** @param {{ registrationId?: string }} overrides */
+const numbersFor = ({ registrationId }) =>
+  numbersByRegistrationId.get(registrationId ?? '')
+
 const seedValidatingSummaryLog = async (repository, id, overrides = {}) => {
-  await repository.insert(id, summaryLogFactory.validating(overrides))
+  await repository.insert(id, {
+    ...summaryLogFactory.validating(overrides),
+    ...numbersFor(overrides)
+  })
   return waitForVersion(repository, id, 1)
 }
 
@@ -58,7 +73,10 @@ const seedValidatedSummaryLog = async (repository, id, overrides = {}) => {
 }
 
 const seedSubmittedSummaryLog = async (repository, id, overrides = {}) => {
-  await repository.insert(id, summaryLogFactory.submitted(overrides))
+  await repository.insert(id, {
+    ...summaryLogFactory.submitted(overrides),
+    ...numbersFor(overrides)
+  })
   return waitForVersion(repository, id, 1)
 }
 
@@ -79,6 +97,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       partialMock(organisation)
     ])()
     const summaryLogs = `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs`
+    numbersByRegistrationId.set(registration.id, {
+      organisationNumber: String(organisation.orgId),
+      registrationNumber: registration.registrationNumber,
+      accreditationNumber: null
+    })
     return {
       organisationId: organisation.id,
       registrationId: registration.id,

@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -14,9 +13,8 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @typedef {{ mongoClient: MongoClient, organisationsRepository: OrganisationsRepository, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -35,9 +33,6 @@ const mockS3Config = {
   preSignedUrlExpiry: SIXTY_SECONDS
 }
 
-/** @type {OrganisationsRepository} */
-const noOrganisations = partialMock({})
-
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
@@ -46,22 +41,9 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
       await client.close()
     },
 
-    organisationsRepository: async ({ mongoClient }, use) => {
+    summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
       const database = mongoClient.db(DATABASE_NAME)
-      const factory = await createOrganisationsRepository(database)
-      await use(factory())
-    },
-
-    summaryLogsRepositoryFactory: async (
-      { mongoClient, organisationsRepository },
-      use
-    ) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      const factory = await createSummaryLogsRepository(
-        database,
-        mockS3Config,
-        organisationsRepository
-      )
+      const factory = await createSummaryLogsRepository(database, mockS3Config)
       await use(factory)
     },
 
@@ -165,7 +147,7 @@ describe('MongoDB summary logs repository', () => {
   })
 
   describe('legacy index migration', () => {
-    it('creates the year-scoped lock before dropping only the pre-year-scoping lock', async () => {
+    it('creates the year-scoped lock before dropping the pre-year-scoping lock', async () => {
       const calls = []
       const createdIndexes = []
 
@@ -179,10 +161,11 @@ describe('MongoDB summary logs repository', () => {
         }
       })
 
-      await createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
+      await createSummaryLogsRepository(mockDb, mockS3Config)
 
       expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
-        'drop:organisationId_1_registrationId_1'
+        'drop:organisationId_1_registrationId_1',
+        'drop:organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
       ])
       expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
         calls.indexOf('drop:organisationId_1_registrationId_1')
@@ -198,8 +181,45 @@ describe('MongoDB summary logs repository', () => {
       })
     })
 
+    it('reads by number through indexes on the numbers, and drops the year-scoped id index no read uses', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+      const collection = database.collection('summary-logs')
+      await collection.createIndex({
+        organisationId: 1,
+        registrationId: 1,
+        year: 1,
+        accreditationId: 1,
+        status: 1,
+        submittedAt: -1
+      })
+
+      await createSummaryLogsRepository(database, mockS3Config)
+
+      const keys = (await collection.indexes()).map(({ key }) => key)
+      expect(keys).toContainEqual({
+        organisationNumber: 1,
+        registrationNumber: 1,
+        year: 1,
+        accreditationNumber: 1,
+        status: 1,
+        submittedAt: -1
+      })
+      expect(keys).toContainEqual({
+        organisationNumber: 1,
+        registrationNumber: 1,
+        status: 1,
+        submittedAt: -1
+      })
+      expect(keys).not.toContainEqual(
+        expect.objectContaining({ year: 1, accreditationId: 1, status: 1 })
+      )
+      await database.dropDatabase()
+    })
+
     it.each(['IndexNotFound', 'NamespaceNotFound'])(
-      'ignores %s when dropping the legacy lock index',
+      'ignores %s when dropping a retired index',
       async (codeName) => {
         const mockDb = createMockDb({
           dropIndex: async () => {
@@ -209,7 +229,7 @@ describe('MongoDB summary logs repository', () => {
         })
 
         await expect(
-          createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
+          createSummaryLogsRepository(mockDb, mockS3Config)
         ).resolves.toBeDefined()
       }
     )
@@ -222,7 +242,7 @@ describe('MongoDB summary logs repository', () => {
       })
 
       await expect(
-        createSummaryLogsRepository(mockDb, mockS3Config, noOrganisations)
+        createSummaryLogsRepository(mockDb, mockS3Config)
       ).rejects.toThrow('Connection timeout')
     })
   })
@@ -239,8 +259,7 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config,
-        noOrganisations
+        mockS3Config
       )
       const repository = repositoryFactory(createMockLogger())
 
@@ -270,8 +289,7 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config,
-        noOrganisations
+        mockS3Config
       )
       const repository = repositoryFactory(createMockLogger())
 
@@ -292,8 +310,7 @@ describe('MongoDB summary logs repository', () => {
 
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
-        mockS3Config,
-        noOrganisations
+        mockS3Config
       )
       const repository = repositoryFactory(createMockLogger())
 

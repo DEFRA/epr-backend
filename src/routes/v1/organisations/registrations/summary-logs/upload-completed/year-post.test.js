@@ -323,7 +323,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () => ({
             findById: async () => null,
-            findLatestSubmittedForOrgReg: async () => null,
+            findLatestSubmitted: async () => null,
             insert: async () => {
               throw insertError
             }
