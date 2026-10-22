@@ -9,6 +9,8 @@ import { testIsRegistrationNumberInUseBehaviour } from './contract/is-registrati
 import { testFindWithCriteriaBehaviour } from './contract/find-criteria.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testReplaceBehaviour } from './contract/replace.contract.js'
+import { testLinkDefraOrganisationBehaviour } from './contract/link-defra-organisation.contract.js'
+import { testReplaceUsersBehaviour } from './contract/replace-users.contract.js'
 import { testDataIsolationBehaviour } from './contract/data-isolation.contract.js'
 import { testFindRegistrationByIdBehaviour } from './contract/find-registration-by-id.contract.js'
 import { testFindAccreditationByIdBehaviour } from './contract/find-accreditation-by-id.contract.js'
@@ -39,6 +41,8 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
 
   testInsertBehaviour(it)
   testReplaceBehaviour(it)
+  testLinkDefraOrganisationBehaviour(it)
+  testReplaceUsersBehaviour(it)
   testFindBehaviour(it)
   testFindByIdsBehaviour(it)
   testFindAllIdsBehaviour(it)

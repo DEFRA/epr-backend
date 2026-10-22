@@ -9,6 +9,7 @@ import {
   statusHistoryItemSchema
 } from './organisation.js'
 import { accreditationSchema } from './accreditation.js'
+import { collatedUserSchema, linkedDefraOrganisationSchema } from './base.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details
@@ -71,6 +72,22 @@ export const validateStatusHistory = (statusHistory) => {
   }
 
   return value
+}
+
+export const validateLinkedDefraOrganisation = (data) => {
+  return validateWithSchema(
+    linkedDefraOrganisationSchema.required(),
+    data,
+    'Invalid linked Defra organisation'
+  )
+}
+
+export const validateUsers = (data) => {
+  return validateWithSchema(
+    Joi.array().items(collatedUserSchema).required(),
+    data,
+    'Invalid users'
+  )
 }
 
 export const validateRegistration = (data) => {

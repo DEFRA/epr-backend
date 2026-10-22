@@ -3,7 +3,6 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
 import { linkedDefraOrganisationViewSchema } from '#routes/organisations/response.schema.js'
@@ -38,7 +37,8 @@ export const organisationsLink = {
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
+   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords,
+   *    params: { organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
@@ -92,13 +92,13 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    const { id, version: currentVersion, ...organisationData } = organisation
+    const { id, version: currentVersion } = organisation
 
-    await organisationsRepository.replace(id, currentVersion, {
-      ...organisationData,
-      status: ORGANISATION_STATUS.ACTIVE,
-      linkedDefraOrganisation: linkedDefraOrg
-    })
+    await organisationsRepository.linkDefraOrganisation(
+      request.params.organisationNumber,
+      currentVersion,
+      linkedDefraOrg
+    )
 
     await auditOrganisationLinking(request, id, {
       id: linkedDefraOrg.orgId,

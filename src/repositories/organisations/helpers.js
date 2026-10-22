@@ -1,7 +1,10 @@
+import Boom from '@hapi/boom'
 import {
   normaliseOrganisationFromDb,
+  validateLinkedDefraOrganisation,
   validateOrganisationUpdate,
-  validateStatusHistory
+  validateStatusHistory,
+  validateUsers
 } from './schema/index.js'
 import {
   applyRegistrationStatusToLinkedAccreditations,
@@ -17,15 +20,17 @@ import {
 } from './schema/helpers.js'
 import {
   assertAccreditationStatusTransitionValid,
+  assertOrgStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { CollatedUser, LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
@@ -314,6 +319,64 @@ export const prepareForReplace = (existing, updates) => {
     version: existing.version + 1
   }
 }
+
+/**
+ * What linking writes to a stored organisation: the validated link, and the
+ * status history entry that activates the organisation. An organisation that
+ * is already active (unlinked and being re-linked) gets no new entry.
+ *
+ * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
+ * @param {LinkedDefraOrganisation} linkedDefraOrganisation
+ * @returns {{
+ *   linkedDefraOrganisation: LinkedDefraOrganisation,
+ *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
+ * }}
+ */
+export const prepareLink = (existing, linkedDefraOrganisation) => {
+  const validated = validateLinkedDefraOrganisation(linkedDefraOrganisation)
+  const status = getCurrentStatus(existing)
+  if (status === ORGANISATION_STATUS.ACTIVE) {
+    return { linkedDefraOrganisation: validated, statusHistoryEntry: null }
+  }
+
+  assertOrgStatusTransitionValid(status, ORGANISATION_STATUS.ACTIVE)
+  return {
+    linkedDefraOrganisation: validated,
+    statusHistoryEntry: {
+      status: ORGANISATION_STATUS.ACTIVE,
+      updatedAt: new Date()
+    }
+  }
+}
+
+/**
+ * The users a stored organisation holds once `users` replaces its own: the
+ * given users, then the submitters, approved persons and signatories its
+ * records name, without duplicates. `replace` collates users the same way.
+ *
+ * @param {Parameters<typeof collateUsers>[0]} existing
+ * @param {CollatedUser[]} users
+ * @returns {CollatedUser[]}
+ */
+export const prepareUsers = (existing, users) =>
+  collateUsers({ ...existing, users: validateUsers(users) })
+
+/**
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {Error}
+ */
+export const organisationNumberNotFound = (organisationNumber) =>
+  Boom.notFound(`Organisation with number ${organisationNumber} not found`)
+
+/**
+ * @param {number} version
+ * @param {number} currentVersion
+ * @returns {Error}
+ */
+export const versionConflict = (version, currentVersion) =>
+  Boom.conflict(
+    `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
+  )
 
 export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
