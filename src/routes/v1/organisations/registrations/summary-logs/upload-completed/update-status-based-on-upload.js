@@ -13,7 +13,6 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -27,7 +26,7 @@ import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: number,
- *   accreditationId?: string | null
+ *   accreditationId: string | null
  * }} UploadLocation
  */
 
@@ -75,37 +74,6 @@ const buildSummaryLogData = (
 }
 
 /**
- * A year-scoped upload whose path names no accreditation takes the
- * registration's currently approved (or suspended) one — not asked for on the upload itself,
- * since a summary log's template must already match it or meta-business
- * validation rejects the file. A cancelled or rejected accreditation still
- * linked to the registration doesn't count: the upload is treated as
- * registered-only.
- *
- * @param {OrganisationsRepository} organisationsRepository
- * @param {string} organisationId
- * @param {string} registrationId
- * @returns {Promise<string | null>}
- */
-const resolveAccreditationId = async (
-  organisationsRepository,
-  organisationId,
-  registrationId
-) => {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
-
-  if (!isRegistrationAccredited(registration)) {
-    return null
-  }
-
-  return /** @type {{ accreditation: { id: string } }} */ (registration)
-    .accreditation.id
-}
-
-/**
  * The prior submission a validating summary log is checked against: only
  * meaningful while it's about to be validated, since it drives whether that
  * validation flags restated periods as stale.
@@ -143,17 +111,8 @@ const insertNewSummaryLog = async (
   summaryLogId,
   upload,
   newStatus,
-  { organisationId, registrationId, year, accreditationId: pathAccreditationId }
+  { organisationId, registrationId, year, accreditationId }
 ) => {
-  const accreditationId =
-    pathAccreditationId !== undefined
-      ? pathAccreditationId
-      : await resolveAccreditationId(
-          organisationsRepository,
-          organisationId,
-          registrationId
-        )
-
   const { numbers } = numbersForSummaryLog(
     await organisationsRepository.findById(organisationId),
     { registrationId, accreditationId }

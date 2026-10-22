@@ -2,21 +2,21 @@ import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
 
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import {
-  buildAccreditation,
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-
-import { summaryLogsUploadCompletedYearPath } from './year-post.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -31,7 +31,7 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 const organisationId = '507f1f77bcf86cd799439011'
 const registrationId = '507f1f77bcf86cd799439012'
 const orgId = 500123
-const registrationNumber = 'R25SR500010912PL'
+const registrationNumber = REPROCESSOR_NUMBER
 
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
@@ -52,27 +52,20 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
 })
 
 const uploadCompletedUrl = (year, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${year}/${summaryLogId}/upload-completed`
+  `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
-    {
-      ...buildOrganisation({
+    partialMock(
+      buildOrganisation({
         id: organisationId,
         orgId,
-        registrations: [
-          buildRegistration({
-            id: registrationId,
-            registrationNumber,
-            accreditationId: undefined
-          })
-        ]
-      }),
-      status: 'active'
-    }
+        registrations: [reprocessor({ id: registrationId })]
+      })
+    )
   ])()
 
-describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
+describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
   // but the route itself is unauthenticated.
   setupAuthContext()
@@ -112,7 +105,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     await server.stop()
   })
 
-  it('stores the year from the path, the accreditation from the registration, and their numbers', async () => {
+  it('stores the year from the path, no accreditation, and the numbers', async () => {
     const summaryLogId = randomUUID()
 
     const response = await server.inject({
@@ -141,11 +134,20 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     })
   })
 
-  describe('when the registration has an active accreditation', () => {
+  describe('when the path names an accreditation', () => {
     const accreditedOrganisationId = '507f1f77bcf86cd799439013'
     const accreditedRegistrationId = '507f1f77bcf86cd799439014'
-    const accreditationId = '507f1f77bcf86cd799439015'
-    const accreditationNumber = toAccreditationNumber('ACC500124')
+    const accredited = accreditation()
+    const accreditedOrganisation = buildOrganisation({
+      id: accreditedOrganisationId,
+      registrations: [
+        reprocessor({
+          id: accreditedRegistrationId,
+          accreditationId: accredited.id
+        })
+      ],
+      accreditations: [accredited]
+    })
 
     let accreditedServer
     let accreditedSummaryLogsRepository
@@ -158,26 +160,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
 
       const accreditedOrganisationsRepository =
         createInMemoryOrganisationsRepository([
-          {
-            ...buildOrganisation({
-              id: accreditedOrganisationId,
-              registrations: [
-                buildRegistration({
-                  id: accreditedRegistrationId,
-                  accreditationId,
-                  statusHistory: [{ status: 'approved', updatedAt: new Date() }]
-                })
-              ],
-              accreditations: [
-                buildAccreditation({
-                  id: accreditationId,
-                  accreditationNumber,
-                  statusHistory: [{ status: 'approved', updatedAt: new Date() }]
-                })
-              ]
-            }),
-            status: 'active'
-          }
+          partialMock(accreditedOrganisation)
         ])()
 
       accreditedServer = await createTestServer({
@@ -195,12 +178,12 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       await accreditedServer.stop()
     })
 
-    it('stores the accreditation from the registration, and its number', async () => {
+    it('stores the accreditation the path names, and its number', async () => {
       const summaryLogId = randomUUID()
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${accreditedOrganisationId}/registrations/${accreditedRegistrationId}/summary-logs/2026/${summaryLogId}/upload-completed`,
+        url: `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -222,8 +205,8 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       )
       expect(stored.summaryLog).toMatchObject({
         year: 2026,
-        accreditationId,
-        accreditationNumber
+        accreditationId: accredited.id,
+        accreditationNumber: ACCREDITATION_NUMBER
       })
     })
   })
@@ -380,7 +363,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       expect(failingServer.loggerMocks.error).toHaveBeenCalledWith(
         expect.objectContaining({
           err: insertError,
-          message: `Failure on ${summaryLogsUploadCompletedYearPath}`,
+          message: 'Failure completing summary log upload',
           event: {
             category: 'server',
             action: 'response_failure'

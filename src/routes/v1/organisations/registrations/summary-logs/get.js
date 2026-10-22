@@ -13,12 +13,8 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
-export const summaryLogsGetPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}'
-
 export const summaryLogsGet = {
   method: 'GET',
-  path: summaryLogsGetPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead]),
     tags: ['api'],

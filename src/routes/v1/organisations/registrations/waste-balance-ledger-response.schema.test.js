@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { wasteBalanceLedgerResponseSchema } from './waste-balance-ledger-response.schema.js'
+import { naturalKeyLedgerResponseSchema } from './waste-balance-ledger-response.schema.js'
 
 const commonKeys = () => ({
   number: 1,
@@ -27,22 +27,12 @@ const prnEvent = (overrides = {}) => ({
   ...overrides
 })
 
-/**
- * @param {unknown[]} events
- * @param {string | null} [accreditationId]
- */
-const ledgerOf = (events, accreditationId = 'acc-1') => ({
-  ledger: {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    accreditationId
-  },
-  events
-})
+/** @param {unknown[]} events */
+const ledgerOf = (events) => ({ events })
 
 /** @param {unknown} value */
 const errorFrom = (value) =>
-  wasteBalanceLedgerResponseSchema.validate(value).error?.message
+  naturalKeyLedgerResponseSchema.validate(value).error?.message
 
 /**
  * An event is one of two whole shapes, so a refusal names the shape that came
@@ -52,7 +42,7 @@ const errorFrom = (value) =>
  * @param {unknown} event
  */
 const refusalOf = (event) => {
-  const { error } = wasteBalanceLedgerResponseSchema.validate(ledgerOf([event]))
+  const { error } = naturalKeyLedgerResponseSchema.validate(ledgerOf([event]))
   /** @type {Array<{ message: string }>} */
   const arms = error?.details[0]?.context?.details ?? []
 
@@ -92,10 +82,6 @@ describe('the waste balance ledger response schema', () => {
     const event = summaryLogEvent({ createdBy: { id: 'system' } })
 
     expect(errorFrom(ledgerOf([event]))).toBeUndefined()
-  })
-
-  it('names the registered-only ledger by a null accreditation', () => {
-    expect(errorFrom(ledgerOf([], null))).toBeUndefined()
   })
 
   it('refuses an event that names both a summary log and a note', () => {

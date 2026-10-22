@@ -10,10 +10,7 @@ import {
   formatS3Info,
   updateStatusBasedOnUpload
 } from './update-status-based-on-upload.js'
-import {
-  uploadCompletedPayloadSchema,
-  uploadCompletedYearParamsSchema
-} from './year-post.schema.js'
+import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
@@ -25,29 +22,23 @@ import {
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  */
 
-export const summaryLogsUploadCompletedYearPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{year}/{summaryLogId}/upload-completed'
+const FAILURE_MESSAGE = 'Failure completing summary log upload'
 
 /**
- * The callback for an upload that started via the year-scoped create route.
- * `year` is carried on the path rather than a query string, since every
- * upload reaching this route already knows it at create time. On the
- * natural-key routes the path names the accreditation (`null` for
- * registered-only); otherwise it's the registration's current live link.
+ * The callback for an upload, under the address it was started at. The path
+ * carries the year and names the accreditation (`null` for registered-only).
  */
 export const summaryLogsUploadCompletedYear = {
   method: 'POST',
-  path: summaryLogsUploadCompletedYearPath,
   options: {
     auth: false,
     validate: {
-      params: uploadCompletedYearParamsSchema,
       payload: uploadCompletedPayloadSchema
     }
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string, accreditationId?: string | null },
+   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string, accreditationId: string | null },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
@@ -108,7 +99,7 @@ export const summaryLogsUploadCompletedYear = {
 
       logger.error({
         err: error,
-        message: `Failure on ${summaryLogsUploadCompletedYearPath}`,
+        message: FAILURE_MESSAGE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -120,9 +111,7 @@ export const summaryLogsUploadCompletedYear = {
         }
       })
 
-      throw Boom.badImplementation(
-        `Failure on ${summaryLogsUploadCompletedYearPath}`
-      )
+      throw Boom.badImplementation(FAILURE_MESSAGE)
     }
   }
 }
