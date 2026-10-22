@@ -518,7 +518,7 @@ describe('Submission and placeholder tests', () => {
     it('should allow a service maintainer to download the submitted file', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        url: `${buildGetUrl(summaryLogId)}/file`,
         ...asServiceMaintainer()
       })
 
