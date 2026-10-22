@@ -3,10 +3,6 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -35,7 +31,6 @@ const {
   auditMarkReportsStale,
   auditMarkReportsRequiringResubmission,
   auditReportRequestResubmission,
-  auditReportNumbersBackfill,
   MARK_STALE_ACTION
 } = await import('./audit.js')
 
@@ -495,45 +490,6 @@ describe('auditReportRequestResubmission', () => {
         action: 'request-resubmission'
       },
       context: params
-    })
-  })
-})
-
-describe('auditReportNumbersBackfill', () => {
-  const systemActor = { id: 'system', email: 'system', scope: [], role: null }
-  const event = {
-    category: 'waste-reporting',
-    subCategory: 'reports',
-    action: 'numbers-backfill-migration'
-  }
-  const context = {
-    reportId: 'rep-1',
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    next: {
-      organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
-    }
-  }
-
-  it('sends CDP audit event as the system user', async () => {
-    await auditReportNumbersBackfill(systemLogsRepository, context)
-
-    expect(mockAudit).toHaveBeenCalledWith({
-      event,
-      context,
-      user: systemActor
-    })
-  })
-
-  it('records system log', async () => {
-    await auditReportNumbersBackfill(systemLogsRepository, context)
-
-    expect(await findStoredLog()).toEqual({
-      createdAt: new Date('2025-06-01T12:00:00.000Z'),
-      createdBy: systemActor,
-      event,
-      context
     })
   })
 })

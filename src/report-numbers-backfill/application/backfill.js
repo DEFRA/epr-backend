@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { numbersFor } from '#domain/organisations/numbers.js'
-import { auditReportNumbersBackfill } from '#reports/application/audit.js'
+import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */

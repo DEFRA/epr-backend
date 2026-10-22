@@ -273,7 +273,7 @@ describe('backfillReportNumbers', () => {
   it('counts a written but unaudited report apart from failures', async () => {
     const id = await createReport()
     const auditError = new Error('system logs down')
-    systemLogsRepository.insertMany = () => Promise.reject(auditError)
+    systemLogsRepository.insert = () => Promise.reject(auditError)
 
     expect(await run(false)).toEqual({
       missing: 1,
