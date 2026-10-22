@@ -2,10 +2,10 @@ import {
   mapDocumentWithCurrentStatuses,
   organisationNumberNotFound,
   prepareLink,
-  prepareUsers,
   storedOrgId,
   versionConflict
 } from './helpers.js'
+import { validateUsers } from './schema/index.js'
 
 /**
  * Finds the stored organisation to update at `version`. Throws 404 when the
@@ -62,7 +62,7 @@ export const performReplaceUsers =
   (storage, syncStaleCache) => async (organisationNumber, version, users) => {
     const existing = storedAtVersion(storage, organisationNumber, version)
 
-    existing.users = structuredClone(prepareUsers(asRead(existing), users))
+    existing.users = structuredClone(validateUsers(users))
     existing.version += 1
 
     syncStaleCache()

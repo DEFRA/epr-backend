@@ -14,6 +14,13 @@ const aUser = {
   roles: [USER_ROLES.STANDARD]
 }
 
+/** @type {CollatedUser} */
+const anotherUser = {
+  email: 'another.user@example.com',
+  fullName: 'Another User',
+  roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+}
+
 export const testReplaceUsersBehaviour = (it) => {
   describe('replacing users', () => {
     /** @type {OrganisationsRepository} */
@@ -40,16 +47,13 @@ export const testReplaceUsersBehaviour = (it) => {
     }
 
     describe('replaceUsers', () => {
-      it('stores the users before those the records name', async () => {
+      it('stores exactly the users given', async () => {
         const org = await insertOrg()
 
         await repository.replaceUsers(numberOf(org), 1, [aUser])
 
         const { users } = await repository.findById(org.id, 2)
-        expect(users[0]).toEqual(aUser)
-        expect(users.map(({ email }) => email)).toContain(
-          org.submitterContactDetails.email
-        )
+        expect(users).toEqual([aUser])
       })
 
       it('changes nothing else on the organisation', async () => {
@@ -67,14 +71,14 @@ export const testReplaceUsersBehaviour = (it) => {
         expect(rest).toEqual(restBefore)
       })
 
-      it('removes a user the records do not name', async () => {
+      it('removes a user left out of the list', async () => {
         const org = await insertOrg()
-        await repository.replaceUsers(numberOf(org), 1, [aUser])
+        await repository.replaceUsers(numberOf(org), 1, [aUser, anotherUser])
 
-        await repository.replaceUsers(numberOf(org), 2, [])
+        await repository.replaceUsers(numberOf(org), 2, [anotherUser])
 
         const { users } = await repository.findById(org.id, 3)
-        expect(users.map(({ email }) => email)).not.toContain(aUser.email)
+        expect(users).toEqual([anotherUser])
       })
 
       it('rejects an invalid user', async () => {

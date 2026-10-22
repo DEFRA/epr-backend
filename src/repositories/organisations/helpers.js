@@ -3,8 +3,7 @@ import {
   normaliseOrganisationFromDb,
   validateLinkedDefraOrganisation,
   validateOrganisationUpdate,
-  validateStatusHistory,
-  validateUsers
+  validateStatusHistory
 } from './schema/index.js'
 import {
   applyRegistrationStatusToLinkedAccreditations,
@@ -30,7 +29,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { CollatedUser, LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
@@ -345,18 +344,6 @@ export const prepareLink = (existing, linkedDefraOrganisation) => {
     statusHistoryEntry: createStatusHistoryEntry(ORGANISATION_STATUS.ACTIVE)
   }
 }
-
-/**
- * The users a stored organisation holds once `users` replaces its own: the
- * given users, then the submitters, approved persons and signatories its
- * records name, without duplicates. `replace` collates users the same way.
- *
- * @param {Parameters<typeof collateUsers>[0]} existing
- * @param {CollatedUser[]} users
- * @returns {CollatedUser[]}
- */
-export const prepareUsers = (existing, users) =>
-  collateUsers({ ...existing, users: validateUsers(users) })
 
 /**
  * @param {OrganisationNumber} organisationNumber

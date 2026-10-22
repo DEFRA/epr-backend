@@ -2,10 +2,10 @@ import {
   mapDocumentWithCurrentStatuses,
   organisationNumberNotFound,
   prepareLink,
-  prepareUsers,
   storedOrgId,
   versionConflict
 } from './helpers.js'
+import { validateUsers } from './schema/index.js'
 
 /** @import { Collection } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -113,12 +113,7 @@ export const performUnlinkDefraOrganisation =
 /** @param {Collection} collection */
 export const performReplaceUsers =
   (collection) => async (organisationNumber, version, users) => {
-    const existing = await findAtVersion(
-      collection,
-      organisationNumber,
-      version
-    )
     await updateAtVersion(collection, organisationNumber, version, {
-      $set: { users: prepareUsers(existing, users) }
+      $set: { users: validateUsers(users) }
     })
   }
