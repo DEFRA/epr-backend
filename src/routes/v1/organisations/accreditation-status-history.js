@@ -6,8 +6,10 @@ import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
-import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
+import {
+  accreditationStatusHistoryPayloadSchema,
+  accreditationStatusTransitionSchema
+} from './accreditation-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
@@ -61,9 +63,8 @@ export const accreditationStatusHistory = {
 
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<
-   *    { fromStatus: AccreditationStatus, toStatus: AccreditationStatus } |
+   *    { toStatus: AccreditationStatus } |
    *    {
-   *      fromStatus: AccreditationStatus,
    *      toStatus: AccreditationStatus,
    *      validFrom: string,
    *      validTo: string,
@@ -81,7 +82,7 @@ export const accreditationStatusHistory = {
     const { organisationsRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
     const payload = request.payload
-    const { fromStatus, toStatus } = payload
+    const { toStatus } = payload
 
     // The created -> approved arm of the payload schema requires both grant
     // fields; the other arms forbid them.
@@ -105,9 +106,15 @@ export const accreditationStatusHistory = {
       )
     }
 
-    if (accreditation.status !== fromStatus) {
+    // Only built transitions are accepted, so a move the domain allows but
+    // nothing offers (approved -> created) or a same-status no-op, which the
+    // repository would silently skip, is a 422.
+    const { error } = accreditationStatusTransitionSchema.validate(
+      Object.assign({ fromStatus: accreditation.status }, payload)
+    )
+    if (error) {
       throw Boom.badData(
-        `Cannot transition accreditation from ${fromStatus}: its status is ${accreditation.status}`
+        `Cannot transition accreditation from ${accreditation.status} to ${toStatus}`
       )
     }
 
@@ -125,12 +132,6 @@ export const accreditationStatusHistory = {
         `Cannot transition accreditation to approved: its registration is ${registration.status}`
       )
     }
-
-    // Route-level check is required, not belt-and-braces: the repository's
-    // assertAndHandleItemStateTransition skips validation when the status is
-    // unchanged, so suspended -> suspended via replace() would otherwise be a
-    // silent no-op instead of the required 422.
-    assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
       await assertGrantAllowed(organisationsRepository, grant)

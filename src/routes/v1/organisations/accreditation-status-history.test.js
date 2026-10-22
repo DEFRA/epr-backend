@@ -158,25 +158,21 @@ const prnsRepositoryAwaitingAuthorisation = (
     child: vi.fn()
   })
 
-const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
-const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
-const cancelPayload = { fromStatus: 'suspended', toStatus: 'cancelled' }
-const reinstateAfterAppealPayload = {
-  fromStatus: 'cancelled',
-  toStatus: 'approved'
-}
+const suspendPayload = { toStatus: 'suspended' }
+const reinstatePayload = { toStatus: 'approved' }
+const cancelPayload = { toStatus: 'cancelled' }
+const reinstateAfterAppealPayload = { toStatus: 'approved' }
 // validTo deliberately differs from the seeded fixture value so the grant
 // assertions prove the persisted window came from the request, not the
 // application data that was already there.
 const grantPayload = {
-  fromStatus: 'created',
   toStatus: 'approved',
   validFrom: '2026-08-01',
   validTo: '2027-03-31',
   accreditationNumber: 'ACC999999'
 }
-const rejectPayload = { fromStatus: 'created', toStatus: 'rejected' }
-const reopenPayload = { fromStatus: 'rejected', toStatus: 'created' }
+const rejectPayload = { toStatus: 'rejected' }
+const reopenPayload = { toStatus: 'created' }
 
 describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history', () => {
   setupAuthContext()
@@ -352,7 +348,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
   })
 
-  describe('fromStatus mismatch', () => {
+  describe('current status mismatch', () => {
     it.each(['created', 'suspended', 'rejected', 'cancelled'])(
       'returns 422 when suspending an accreditation that is currently %s',
       async (status) => {
@@ -369,7 +365,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from approved: its status is ${status}`
+            `Cannot transition accreditation from ${status} to suspended`
           )
         )
       }
@@ -453,7 +449,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from suspended: its status is ${status}`
+            `Cannot transition accreditation from ${status} to approved`
           )
         )
       }
@@ -520,7 +516,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from suspended: its status is ${status}`
+            `Cannot transition accreditation from ${status} to cancelled`
           )
         )
       }
@@ -588,7 +584,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
-    it.each(['approved', 'created', 'rejected', 'suspended'])(
+    // Suspended is left out: approving a suspended accreditation is the other
+    // reinstatement, and succeeds.
+    it.each(['approved', 'created', 'rejected'])(
       'returns 422 when the accreditation is currently %s',
       async (status) => {
         const ctx = await seedOrg(status, { registrationStatus: 'approved' })
@@ -604,7 +602,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from cancelled: its status is ${status}`
+            `Cannot transition accreditation from ${status} to approved`
           )
         )
       }
@@ -790,7 +788,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /Cannot transition accreditation from created: its status is suspended/
+        /Cannot transition accreditation from suspended to approved/
       )
     })
   })
@@ -859,7 +857,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from created: its status is ${status}`
+            `Cannot transition accreditation from ${status} to rejected`
           )
         )
       }
@@ -926,7 +924,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         const body = JSON.parse(response.payload)
         expect(body.message).toMatch(
           new RegExp(
-            `Cannot transition accreditation from rejected: its status is ${status}`
+            `Cannot transition accreditation from ${status} to created`
           )
         )
       }
@@ -934,10 +932,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
   })
 
   describe('to-approved transitions require an approved registration (PAE-1800)', () => {
-    const reinstatePayloadArm = {
-      fromStatus: 'cancelled',
-      toStatus: 'approved'
-    }
+    const reinstatePayloadArm = { toStatus: 'approved' }
 
     describe.each([
       { arm: 'grant', accStatus: 'created', payload: grantPayload },
@@ -966,27 +961,50 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
   describe('payload validation', () => {
     it.each([
-      ['payload is missing', undefined],
-      ['payload is empty', {}],
-      ['payload uses the old status-only shape', { status: 'suspended' }],
+      ['payload is missing', 'approved', undefined],
+      ['payload is empty', 'approved', {}],
+      [
+        'payload uses the old status-only shape',
+        'approved',
+        { status: 'suspended' }
+      ],
+      [
+        'payload still sends fromStatus',
+        'approved',
+        { fromStatus: 'approved', toStatus: 'suspended' }
+      ],
       [
         // Direct approved -> cancelled is deliberately unsupported: an
         // accreditation reaches cancelled only via suspended (PAE-1624, ADR
         // 0042). The registration-cancellation cascade is the sole exception.
-        'the from/to pair is a direct approved to cancelled (suspend first)',
-        { fromStatus: 'approved', toStatus: 'cancelled' }
+        'the move is a direct approved to cancelled (suspend first)',
+        'approved',
+        { toStatus: 'cancelled' }
       ],
       [
-        'the from/to pair is not a supported transition',
-        { fromStatus: 'cancelled', toStatus: 'suspended' }
+        'the move is not a supported transition',
+        'cancelled',
+        { toStatus: 'suspended' }
       ],
       [
-        'toStatus is not a known status',
-        { fromStatus: 'approved', toStatus: 'nonsense' }
+        'the domain allows the move but nothing offers it',
+        'approved',
+        { toStatus: 'created' }
       ],
-      ['payload has unexpected fields', { ...suspendPayload, reason: 'x' }],
+      [
+        'the move would not change the status',
+        'suspended',
+        { toStatus: 'suspended' }
+      ],
+      ['toStatus is not a known status', 'approved', { toStatus: 'nonsense' }],
+      [
+        'payload has unexpected fields',
+        'approved',
+        { ...suspendPayload, reason: 'x' }
+      ],
       [
         'a non-grant transition carries grant fields',
+        'suspended',
         {
           ...reinstatePayload,
           validFrom: '2026-08-01',
@@ -995,33 +1013,43 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ],
       [
         'a grant is missing validFrom',
+        'created',
         { ...grantPayload, validFrom: undefined }
       ],
-      ['a grant is missing validTo', { ...grantPayload, validTo: undefined }],
+      [
+        'a grant is missing validTo',
+        'created',
+        { ...grantPayload, validTo: undefined }
+      ],
       [
         'a grant is missing the accreditation number',
+        'created',
         { ...grantPayload, accreditationNumber: undefined }
       ],
       [
         'a grant has an invalid validFrom date',
+        'created',
         { ...grantPayload, validFrom: '2026-13-45' }
       ],
       [
         'a grant has a validFrom day that does not exist in that month',
+        'created',
         { ...grantPayload, validFrom: '2026-02-30' }
       ],
       [
         'a grant has an invalid validTo date',
+        'created',
         { ...grantPayload, validTo: '2027-13-45' }
       ],
       [
         'a grant has a validTo day that does not exist in that month',
+        'created',
         { ...grantPayload, validTo: '2027-02-30' }
       ],
       [
         'a grant uses the legacy appliesFrom field name',
+        'created',
         {
-          fromStatus: 'created',
           toStatus: 'approved',
           appliesFrom: '2026-08-01',
           validTo: '2027-03-31',
@@ -1030,10 +1058,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ],
       [
         'a grant has an empty accreditation number',
+        'created',
         { ...grantPayload, accreditationNumber: ' ' }
       ]
-    ])('returns 422 when %s', async (_label, payload) => {
-      const ctx = await seedOrg('approved')
+    ])('returns 422 when %s', async (_label, status, payload) => {
+      const ctx = await seedOrg(status)
 
       const response = await server.inject({
         method: 'POST',

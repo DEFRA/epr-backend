@@ -125,7 +125,6 @@ const statusHistoryUrl = ({ organisationId, registrationId }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/status-history`
 
 const grantPayload = {
-  fromStatus: 'created',
   toStatus: 'approved',
   validFrom: '2026-08-01',
   registrationNumber: 'REG999999'
@@ -389,10 +388,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const body = JSON.parse(response.payload)
-        expect(body.message).toMatch(
-          new RegExp(
-            `Cannot transition registration from created: its status is ${status}`
-          )
+        expect(body.message).toBe(
+          `Cannot transition registration from ${status} to approved`
         )
       }
     )
@@ -405,7 +402,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     { name: 'reinstate (PAE-1616)', from: 'cancelled', to: 'approved' }
   ])('$name', ({ from, to }) => {
     const payload = (overrides = {}) => ({
-      fromStatus: from,
       toStatus: to,
       ...overrides
     })
@@ -502,7 +498,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       expect(JSON.parse(response.payload).message).toBe(
-        `Cannot transition registration from ${from}: its status is ${wrongStatus}`
+        `Cannot transition registration from ${wrongStatus} to ${to}`
       )
     })
   })
@@ -535,7 +531,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { fromStatus: 'approved', toStatus: 'cancelled' },
+        payload: { toStatus: 'cancelled' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -585,7 +581,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { fromStatus: 'cancelled', toStatus: 'approved' },
+        payload: { toStatus: 'approved' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -646,7 +642,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           organisationId: fixture.id,
           registrationId: targetRegistration.id
         }),
-        payload: { fromStatus: 'cancelled', toStatus: 'approved' },
+        payload: { toStatus: 'approved' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -660,50 +656,73 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
   describe('payload validation', () => {
     it.each([
-      ['payload is missing', undefined],
-      ['payload is empty', {}],
-      ['payload uses the old status-only shape', { status: 'approved' }],
+      ['payload is missing', 'created', undefined],
+      ['payload is empty', 'created', {}],
       [
-        'the from/to pair is not a supported transition',
-        { fromStatus: 'created', toStatus: 'cancelled' }
+        'payload uses the old status-only shape',
+        'created',
+        { status: 'approved' }
       ],
       [
-        'the from/to pair is not a supported transition (reverse direction)',
-        { fromStatus: 'approved', toStatus: 'rejected' }
+        'payload still sends fromStatus',
+        'created',
+        { fromStatus: 'created', toStatus: 'rejected' }
       ],
       [
-        'toStatus is not a known status',
-        { fromStatus: 'created', toStatus: 'nonsense' }
+        'the move is not a supported transition',
+        'created',
+        { toStatus: 'cancelled' }
       ],
       [
-        'grant fields are sent with a non-grant pair',
-        {
-          fromStatus: 'created',
-          toStatus: 'rejected',
-          registrationNumber: 'REG123456'
-        }
+        'the move is not a supported transition (reverse direction)',
+        'approved',
+        { toStatus: 'rejected' }
       ],
-      ['payload has unexpected fields', { ...grantPayload, reason: 'x' }],
+      [
+        'the domain allows the move but nothing offers it',
+        'approved',
+        { toStatus: 'created' }
+      ],
+      [
+        'the move would not change the status',
+        'approved',
+        { toStatus: 'approved' }
+      ],
+      ['toStatus is not a known status', 'created', { toStatus: 'nonsense' }],
+      [
+        'grant fields are sent with a non-grant move',
+        'created',
+        { toStatus: 'rejected', registrationNumber: 'REG123456' }
+      ],
+      [
+        'payload has unexpected fields',
+        'created',
+        { ...grantPayload, reason: 'x' }
+      ],
       [
         'a grant is missing validFrom',
+        'created',
         { ...grantPayload, validFrom: undefined }
       ],
       [
         'a grant is missing the registration number',
+        'created',
         { ...grantPayload, registrationNumber: undefined }
       ],
       [
         'a grant has an invalid validFrom date',
+        'created',
         { ...grantPayload, validFrom: '2026-13-45' }
       ],
       [
         'a grant has a validFrom day that does not exist in that month',
+        'created',
         { ...grantPayload, validFrom: '2026-02-30' }
       ],
       [
         'a grant uses the legacy appliesFrom field name',
+        'created',
         {
-          fromStatus: 'created',
           toStatus: 'approved',
           appliesFrom: '2026-08-01',
           registrationNumber: 'REG999999'
@@ -711,10 +730,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ],
       [
         'a grant has an empty registration number',
+        'created',
         { ...grantPayload, registrationNumber: ' ' }
       ]
-    ])('returns 422 when %s', async (_label, payload) => {
-      const ctx = await seedOrg('created')
+    ])('returns 422 when %s', async (_label, status, payload) => {
+      const ctx = await seedOrg(status)
 
       const response = await server.inject({
         method: 'POST',

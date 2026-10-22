@@ -2,8 +2,10 @@ import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
-import { assertRegistrationStatusTransitionValid } from '#domain/organisations/status.js'
-import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
+import {
+  registrationStatusHistoryPayloadSchema,
+  registrationStatusTransitionSchema
+} from './registration-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
@@ -29,9 +31,8 @@ export const registrationStatusHistory = {
 
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<
-   *    { fromStatus: RegistrationStatus, toStatus: RegistrationStatus } |
+   *    { toStatus: RegistrationStatus } |
    *    {
-   *      fromStatus: RegistrationStatus,
    *      toStatus: RegistrationStatus,
    *      validFrom: string,
    *      registrationNumber: RegistrationNumber
@@ -48,7 +49,7 @@ export const registrationStatusHistory = {
     const { organisationsRepository } = request
     const { organisationId, registrationId } = request.params
     const payload = request.payload
-    const { fromStatus, toStatus } = payload
+    const { toStatus } = payload
 
     // The created -> approved arm of the payload schema requires both grant
     // fields; the other arms forbid them.
@@ -63,17 +64,17 @@ export const registrationStatusHistory = {
       throw Boom.notFound(`Registration with id ${registrationId} not found`)
     }
 
-    if (registration.status !== fromStatus) {
+    // Only built transitions are accepted, so a move the domain allows but
+    // nothing offers (approved -> created) or a same-status no-op, which the
+    // repository would silently skip, is a 422.
+    const { error } = registrationStatusTransitionSchema.validate(
+      Object.assign({ fromStatus: registration.status }, payload)
+    )
+    if (error) {
       throw Boom.badData(
-        `Cannot transition registration from ${fromStatus}: its status is ${registration.status}`
+        `Cannot transition registration from ${registration.status} to ${toStatus}`
       )
     }
-
-    // Route-level check is required, not belt-and-braces: the repository's
-    // assertAndHandleItemStateTransition skips validation when the status is
-    // unchanged, so a same-status replace() would otherwise be a silent
-    // no-op instead of the required 422.
-    assertRegistrationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
       // Granting issues the registration number, which must not already be

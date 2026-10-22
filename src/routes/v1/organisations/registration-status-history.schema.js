@@ -3,11 +3,10 @@ import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 
 /**
- * Discriminated union over the explicit from/to status pair: each supported
- * transition declares its own arm with the parameters it requires, so the
- * endpoint only accepts transitions that have been built. The handler still
- * checks the registration really is in fromStatus and that the transition is
- * in the domain map.
+ * Discriminated union over the from/to status pair: each supported transition
+ * declares its own arm with the parameters it requires, so the endpoint only
+ * accepts transitions that have been built. The caller sends the toStatus; the
+ * handler supplies fromStatus from the stored registration.
  */
 
 // Granting issues the registration number and sets validFrom (PAE-1814).
@@ -50,12 +49,22 @@ const cancelledToApprovedSchema = Joi.object({
   toStatus: Joi.string().valid(REGISTRATION_STATUS.APPROVED).required()
 })
 
+const transitionArms = [
+  createdToApprovedSchema,
+  createdToRejectedSchema,
+  rejectedToCreatedSchema,
+  approvedToCancelledSchema,
+  cancelledToApprovedSchema
+]
+
+export const registrationStatusTransitionSchema = Joi.alternatives()
+  .try(...transitionArms)
+  .required()
+
 export const registrationStatusHistoryPayloadSchema = Joi.alternatives()
   .try(
-    createdToApprovedSchema,
-    createdToRejectedSchema,
-    rejectedToCreatedSchema,
-    approvedToCancelledSchema,
-    cancelledToApprovedSchema
+    ...transitionArms.map((arm) =>
+      arm.fork('fromStatus', (schema) => schema.forbidden())
+    )
   )
   .required()
