@@ -11,8 +11,7 @@ const summaryLogRowSchema = Joi.object({
   status: Joi.string()
     .valid(SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS)
     .required(),
-  year: Joi.number().integer().optional(),
-  accreditationId: Joi.string().allow(null).optional()
+  year: Joi.number().integer().optional()
 })
 
 export const summaryLogsListResponseSchema = Joi.object({

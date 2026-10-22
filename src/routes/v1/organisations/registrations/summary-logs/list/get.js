@@ -10,12 +10,10 @@ import { summaryLogsListResponseSchema } from './response.schema.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
-export const summaryLogsListPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
+const LIST_FAILURE = 'Failure listing summary logs'
 
 export const summaryLogsList = {
   method: 'GET',
-  path: summaryLogsListPath,
   options: {
     auth: {
       scope: [SCOPES.adminRead]
@@ -47,10 +45,7 @@ export const summaryLogsList = {
         filename: summaryLog.file.name,
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
         status: summaryLog.status,
-        ...(summaryLog.year !== undefined && { year: summaryLog.year }),
-        ...(summaryLog.accreditationId !== undefined && {
-          accreditationId: summaryLog.accreditationId
-        })
+        ...(summaryLog.year !== undefined && { year: summaryLog.year })
       }))
 
       logger.info({
@@ -65,7 +60,7 @@ export const summaryLogsList = {
     } catch (error) {
       logger.error({
         err: error,
-        message: `Failure on ${summaryLogsListPath}`,
+        message: LIST_FAILURE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -77,7 +72,7 @@ export const summaryLogsList = {
         }
       })
 
-      throw Boom.badImplementation(`Failure on ${summaryLogsListPath}`)
+      throw Boom.badImplementation(LIST_FAILURE)
     }
   }
 }

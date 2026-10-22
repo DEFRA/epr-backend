@@ -11,6 +11,7 @@ import {
 import { summaryLogDocument } from './document/get.js'
 import { summaryLogFile, summaryLogFileByFileId } from './file/get.js'
 import { summaryLogsGet } from './get.js'
+import { summaryLogsList } from './list/get.js'
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { summaryLogRecordsCsv } from './records/get.js'
 import { summaryLogsSubmit } from './submit/post.js'
@@ -134,6 +135,7 @@ export const summaryLogRoutesByNaturalKey = [
       { accredited }
     )
   ]),
+  atNaturalKeys(summaryLogsList, summaryLogs, registrationParams),
   atNaturalKeys(
     withoutDatabaseIds(summaryLogsGet, ['accreditationId']),
     summaryLog,
