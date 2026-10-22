@@ -11,7 +11,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -137,7 +137,7 @@ describe('summary-log routes by natural key', () => {
    */
   const seed = async (overrides, build) => {
     const summaryLogId = randomUUID()
-    const { numbers } = numbersForSummaryLog(partialMock(organisation), {
+    const { numbers } = numbersFor(partialMock(organisation), {
       accreditationId: null,
       ...overrides
     })

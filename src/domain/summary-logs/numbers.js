@@ -1,10 +1,4 @@
-import {
-  ORGANISATION_NUMBER_PATTERN,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
-
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 
 /**
@@ -61,68 +55,4 @@ export const summaryLogKeyOf = (summaryLog) => {
     ...(accreditationNumber !== undefined && { accreditationNumber }),
     ...(year !== undefined && { year })
   }
-}
-
-/**
- * Reads a summary log's numbers from its organisation record. An organisation,
- * registration or accreditation without a number, or one the organisation no
- * longer holds, gives no number, and `unmapped` says why.
- *
- * @param {Organisation} organisation
- * @param {{ registrationId: string, accreditationId?: string | null }} ids
- * @returns {{ numbers: SummaryLogNumbers, unmapped: string[] }}
- */
-export const numbersForSummaryLog = (
-  organisation,
-  { registrationId, accreditationId }
-) => {
-  /** @type {SummaryLogNumbers} */
-  const numbers = {}
-  /** @type {string[]} */
-  const unmapped = []
-
-  const organisationNumber = String(organisation.orgId)
-  if (ORGANISATION_NUMBER_PATTERN.test(organisationNumber)) {
-    numbers.organisationNumber = toOrganisationNumber(organisationNumber)
-  } else {
-    unmapped.push(`organisation ${organisation.id} has no organisation number`)
-  }
-
-  const registration = organisation.registrations.find(
-    ({ id }) => id === registrationId
-  )
-  if (!registration) {
-    unmapped.push(
-      `organisation ${organisation.id} holds no registration ${registrationId}`
-    )
-  } else if (registration.registrationNumber) {
-    numbers.registrationNumber = registration.registrationNumber
-  } else {
-    unmapped.push(`registration ${registrationId} has no registration number`)
-  }
-
-  if (accreditationId === undefined) {
-    return { numbers, unmapped }
-  }
-  if (accreditationId === null) {
-    numbers.accreditationNumber = null
-    return { numbers, unmapped }
-  }
-
-  const accreditation = organisation.accreditations.find(
-    ({ id }) => id === accreditationId
-  )
-  if (!accreditation) {
-    unmapped.push(
-      `organisation ${organisation.id} holds no accreditation ${accreditationId}`
-    )
-  } else if (accreditation.accreditationNumber) {
-    numbers.accreditationNumber = accreditation.accreditationNumber
-  } else {
-    unmapped.push(
-      `accreditation ${accreditationId} has no accreditation number`
-    )
-  }
-
-  return { numbers, unmapped }
 }

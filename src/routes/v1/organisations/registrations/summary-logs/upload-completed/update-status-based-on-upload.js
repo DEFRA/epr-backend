@@ -13,10 +13,8 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import {
-  numbersForSummaryLog,
-  summaryLogKeyOf
-} from '#domain/summary-logs/numbers.js'
+import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -113,7 +111,7 @@ const insertNewSummaryLog = async (
   upload,
   { organisationId, registrationId, year, accreditationId }
 ) => {
-  const { numbers } = numbersForSummaryLog(
+  const { numbers } = numbersFor(
     await organisationsRepository.findById(organisationId),
     { registrationId, accreditationId }
   )

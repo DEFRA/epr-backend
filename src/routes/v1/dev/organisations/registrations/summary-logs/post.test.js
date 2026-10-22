@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
-import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -352,7 +352,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
         registrationId: env.registrationId,
         accreditationId: env.accreditationId
       }
-      const { numbers } = numbersForSummaryLog(
+      const { numbers } = numbersFor(
         await env.organisationsRepository.findById(env.organisationId),
         ids
       )
