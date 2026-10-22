@@ -22,10 +22,9 @@ export const accreditationStatusHistoryPath =
  * Grant-only validations. Granting sets the whole validity window from the
  * supplied dates, so reject a window that would be inverted. Granting also
  * issues the accreditation number, which must not already be in use by any
- * accreditation in any organisation, whatever its status. This uniqueness is
- * enforced here only: there is no unique index on
- * accreditations.accreditationNumber, so concurrent grants of the same
- * number are not blocked by the database.
+ * accreditation in any organisation, whatever its status. The unique index on
+ * accreditations.accreditationNumber also blocks concurrent grants of the
+ * same number; this check gives the clear 422.
  * @param {OrganisationsRepository} organisationsRepository
  * @param {{ validFrom: string, validTo: string, accreditationNumber: AccreditationNumber }} grant
  * @returns {Promise<void>}
@@ -37,10 +36,10 @@ const assertGrantAllowed = async (organisationsRepository, grant) => {
     )
   }
 
-  const holder = await organisationsRepository.findByAccreditationNumber(
+  const inUse = await organisationsRepository.isAccreditationNumberInUse(
     grant.accreditationNumber
   )
-  if (holder) {
+  if (inUse) {
     throw Boom.badData(
       `Accreditation number ${grant.accreditationNumber} is already in use`
     )

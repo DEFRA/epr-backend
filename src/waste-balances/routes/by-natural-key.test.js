@@ -4,8 +4,17 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+import {
+  COMPANY_2_ID,
+  defraIdMockAuthTokens,
+  generateValidTokenWith
+} from '#vite/helpers/create-defra-id-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import {
   buildLedgerEvent,
   buildPrnCreatedEvent
@@ -22,7 +31,9 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
@@ -354,5 +365,148 @@ describe('ledger and waste balance routes by natural key', () => {
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
+  })
+})
+
+/**
+ * Who may read an accreditation's ledger, over real tokens: injected
+ * credentials can't show which scopes a caller earns. An operator earns no
+ * ledger scope, even for their own active organisation, which holds them
+ * `organisation.read` - so the ledger scope is required, not merely accepted.
+ */
+describe('GET R/accreditations/{year}/ledger access control', () => {
+  setupAuthContext()
+
+  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  let server
+  /** @type {string} */
+  let ownLedger
+  /** @type {string} */
+  let otherLedger
+
+  /** @param {{ orgId: number }} org */
+  const ledgerOf = ({ orgId }) =>
+    `/organisations/${orgId}/registrations/REG${orgId}/accreditations/${new Date().getUTCFullYear()}/ledger`
+
+  beforeAll(async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const repository = organisationsRepositoryFactory()
+    ownLedger = ledgerOf(await buildActiveOrg(repository))
+    otherLedger = ledgerOf(
+      await buildActiveOrg(repository, {
+        linkedDefraOrganisation: {
+          orgId: COMPANY_2_ID,
+          orgName: 'Company 2 Name',
+          linkedBy: {
+            email: 'someone.else@example.com',
+            id: '550e8400-e29b-41d4-a716-446655440002'
+          },
+          linkedAt: new Date().toISOString()
+        }
+      })
+    )
+
+    server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
+  })
+
+  /**
+   * @param {string} token
+   * @param {string} [url]
+   */
+  const getWithToken = (token, url = ownLedger) =>
+    server.inject({
+      method: 'GET',
+      url,
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+  it.each([
+    ['a regulator standard user', entraIdMockAuthTokens.regulatorToken],
+    ['a service maintainer', entraIdMockAuthTokens.validToken],
+    [
+      'a read-only service maintainer',
+      entraIdMockAuthTokens.readOnlyMaintainerToken
+    ],
+    ['the support tier', entraIdMockAuthTokens.supportToken]
+  ])('returns 200 for %s', async (_who, token) => {
+    const response = await getWithToken(token)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('returns 403 for an operator reading their own organisation', async () => {
+    const response = await getWithToken(defraIdMockAuthTokens.validToken)
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+
+  it('returns 403 for an operator reading another organisation', async () => {
+    const response = await getWithToken(
+      defraIdMockAuthTokens.validToken,
+      otherLedger
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+
+  it('returns 403 for an operator linked to no organisation in the service', async () => {
+    const response = await getWithToken(
+      generateValidTokenWith({
+        currentRelationshipId: 'org-relationship-id',
+        relationships: ['org-relationship-id:company-002:another-company-name']
+      })
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const response = await server.inject({ method: 'GET', url: ownLedger })
+
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+  })
+})
+
+describe('GET R/accreditations/{year}/ledger response validation', () => {
+  setupAuthContext()
+
+  it('refuses to serve an event its response schema does not allow', async () => {
+    // No adapter stores an event whose kind and payload disagree; this one
+    // reaches the schema as a note-kind event carrying a summary log.
+    const ledgerRepository = {
+      ...createInMemoryLedgerRepository()(),
+      findAllInLedger: async () => [
+        {
+          id: 'stored-event-1',
+          ...accreditedLedgerId,
+          number: 1,
+          kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+          payload: { summaryLogId: 'log-1', creditTotal: 100 },
+          openingBalance: { amount: 0, availableAmount: 0 },
+          closingBalance: { amount: 100, availableAmount: 100 },
+          createdAt: new Date('2026-01-15T10:00:00.000Z'),
+          createdBy: { id: 'user-1' }
+        }
+      ]
+    }
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        ledgerRepository
+      }
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${accreditationPath(2026)}/ledger`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
   })
 })

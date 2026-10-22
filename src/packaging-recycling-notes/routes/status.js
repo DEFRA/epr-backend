@@ -26,8 +26,7 @@ import { writeConflictRefusal } from './write-conflict-refusal.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
-export const packagingRecyclingNotesUpdateStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
+const UPDATE_STATUS_FAILURE = 'Failure updating a PRN status'
 
 const statusValues = Object.values(PRN_STATUS)
 
@@ -54,21 +53,6 @@ const updateStatusPayloadSchema = Joi.object({
 })
 
 /**
- * Build response from updated PRN
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- */
-const buildResponse = (prn) => ({
-  id: prn.id,
-  prnNumber: prn.prnNumber,
-  tonnage: prn.tonnage,
-  material: prn.accreditation?.material,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  obligationYear: prn.obligationYear,
-  status: prn.status.currentStatus,
-  updatedAt: prn.updatedAt
-})
-
-/**
  * Builds the acting user from request credentials, defaulting id/name when
  * absent and only carrying email when it's actually a string.
  * @param {HapiRequest['auth']} auth
@@ -85,10 +69,9 @@ const buildUser = (auth) => {
 /**
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
- * @param {string} path
  * @param {TypedLogger} logger
  */
-const mapUpdateStatusError = (error, path, logger) => {
+const mapUpdateStatusError = (error, logger) => {
   const conflict = writeConflictRefusal(error)
   if (conflict) {
     return conflict
@@ -111,14 +94,14 @@ const mapUpdateStatusError = (error, path, logger) => {
 
   logger.error({
     err: error,
-    message: `Failure on ${path}`,
+    message: UPDATE_STATUS_FAILURE,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
     }
   })
 
-  return Boom.badImplementation(`Failure on ${path}`)
+  return Boom.badImplementation(UPDATE_STATUS_FAILURE)
 }
 
 /**
@@ -193,29 +176,17 @@ export const updatePrnStatusHandler =
 
       return h.response(respond(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      throw mapUpdateStatusError(
-        error,
-        packagingRecyclingNotesUpdateStatusPath,
-        logger
-      )
+      throw mapUpdateStatusError(error, logger)
     }
   }
 
 export const packagingRecyclingNotesUpdateStatus = {
   method: 'POST',
-  path: packagingRecyclingNotesUpdateStatusPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required(),
-        accreditationId: Joi.string().required(),
-        id: Joi.string().hex().length(24).required()
-      }),
       payload: updateStatusPayloadSchema
     }
-  },
-  handler: updatePrnStatusHandler(buildResponse)
+  }
 }

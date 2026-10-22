@@ -315,18 +315,28 @@ const performFind =
     return { items, page, pageSize, totalItems, totalPages }
   }
 
-const LINKED_ORG_PROJECTION = {
+const ORG_SUMMARY_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
-  statusHistory: 1,
+  statusHistory: 1
+}
+
+const LINKED_ORG_PROJECTION = {
+  ...ORG_SUMMARY_PROJECTION,
   linkedDefraOrganisation: 1
 }
 
-const toLinkedOrganisationSummary = (doc) => ({
+/** @returns {import('./port.js').OrganisationSummary} */
+const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
   orgId: doc.orgId,
   companyDetails: { name: doc.companyDetails.name },
-  status: getCurrentStatus(doc),
+  status: getCurrentStatus(doc)
+})
+
+/** @returns {import('./port.js').LinkedOrganisationSummary} */
+const toLinkedOrganisationSummary = (doc) => ({
+  ...toOrganisationSummary(doc),
   linkedDefraOrganisation: {
     ...doc.linkedDefraOrganisation,
     linkedAt: new Date(doc.linkedDefraOrganisation.linkedAt).toISOString()
@@ -373,66 +383,60 @@ const performFindByIds = (db) => async (ids) => {
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ 'linkedDefraOrganisation.orgId': defraOrgId })
+    .findOne(
+      { 'linkedDefraOrganisation.orgId': defraOrgId },
+      { projection: LINKED_ORG_PROJECTION }
+    )
 
   if (!doc) {
     return null
   }
 
-  return mapDocumentWithCurrentStatuses(doc)
+  return toLinkedOrganisationSummary(doc)
 }
 
-const performFindByAccreditationNumber =
-  (db) => async (accreditationNumber) => {
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ 'accreditations.accreditationNumber': accreditationNumber })
-
-    if (!doc) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(doc)
-  }
-
-const performFindByRegistrationNumber = (db) => async (registrationNumber) => {
+const isInUse = async (db, filter) => {
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ 'registrations.registrationNumber': registrationNumber })
-
-  if (!doc) {
-    return null
-  }
-
-  return mapDocumentWithCurrentStatuses(doc)
+    .findOne(filter, { projection: { _id: 1 } })
+  return doc !== null
 }
+
+const performIsAccreditationNumberInUse = (db) => async (accreditationNumber) =>
+  isInUse(db, { 'accreditations.accreditationNumber': accreditationNumber })
+
+const performIsRegistrationNumberInUse = (db) => async (registrationNumber) =>
+  isInUse(db, { 'registrations.registrationNumber': registrationNumber })
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
-    .find({
-      // Must not be linked — matches never-linked (field absent) and unlinked
-      // (field cleared to null by the unlink flow)
-      linkedDefraOrganisation: null,
-      // Must be approved, or active but unlinked (check last status in
-      // statusHistory) — both are re-linkable candidates
-      $expr: {
-        $in: [
-          { $arrayElemAt: ['$statusHistory.status', -1] },
-          LINKABLE_ORGANISATION_STATUSES
-        ]
-      },
-      // User must be an initial user (case-insensitive email match)
-      users: {
-        $elemMatch: {
-          email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
-          roles: USER_ROLES.INITIAL
+    .find(
+      {
+        // Must not be linked — matches never-linked (field absent) and unlinked
+        // (field cleared to null by the unlink flow)
+        linkedDefraOrganisation: null,
+        // Must be approved, or active but unlinked (check last status in
+        // statusHistory) — both are re-linkable candidates
+        $expr: {
+          $in: [
+            { $arrayElemAt: ['$statusHistory.status', -1] },
+            LINKABLE_ORGANISATION_STATUSES
+          ]
+        },
+        // User must be an initial user (case-insensitive email match)
+        users: {
+          $elemMatch: {
+            email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
+            roles: USER_ROLES.INITIAL
+          }
         }
-      }
-    })
+      },
+      { projection: ORG_SUMMARY_PROJECTION }
+    )
     .toArray()
 
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+  return docs.map(toOrganisationSummary)
 }
 
 const findAllIds = (db) => async () => {
@@ -563,8 +567,8 @@ export const createOrganisationsRepository = async (
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
-      findByAccreditationNumber: performFindByAccreditationNumber(db),
-      findByRegistrationNumber: performFindByRegistrationNumber(db),
+      isAccreditationNumberInUse: performIsAccreditationNumberInUse(db),
+      isRegistrationNumberInUse: performIsRegistrationNumberInUse(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),

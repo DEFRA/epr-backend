@@ -134,12 +134,7 @@ describe('an operator accredited in July uploading their registered-only summary
         'january-to-june.xlsx'
       )
     })
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     const { summaryLog: validated } = await waitForVersion(
       env.summaryLogsRepository,
@@ -166,15 +161,9 @@ describe('an operator accredited in July uploading their registered-only summary
       ...asOperator()
     })
     expect(submitted.statusCode).toBe(StatusCodes.OK)
-    await pollWhileStatus(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId,
-      {
-        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
-      }
-    )
+    await pollWhileStatus(server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+    })
 
     const submittedEvent = await env.ledgerRepository.findLatestInLedgerByKind(
       { organisationId, registrationId, accreditationId: null },

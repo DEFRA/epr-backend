@@ -119,7 +119,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
 
         uploadResponse = await server.inject({
           method: 'POST',
-          url: buildPostUrl(organisationId, registrationId, summaryLogId),
+          url: buildPostUrl(summaryLogId),
           payload: createUploadPayload(
             organisationId,
             registrationId,
@@ -138,16 +138,11 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         let response
 
         beforeEach(async () => {
-          await pollForValidation(
-            server,
-            organisationId,
-            registrationId,
-            summaryLogId
-          )
+          await pollForValidation(server, summaryLogId)
 
           response = await server.inject({
             method: 'GET',
-            url: buildGetUrl(organisationId, registrationId, summaryLogId),
+            url: buildGetUrl(summaryLogId),
             ...asOperator()
           })
         })
@@ -338,7 +333,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
 
         uploadResponse = await server.inject({
           method: 'POST',
-          url: buildPostUrl(organisationId, registrationId, summaryLogId),
+          url: buildPostUrl(summaryLogId),
           payload: createUploadPayload(
             organisationId,
             registrationId,
@@ -357,16 +352,11 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         let response
 
         beforeEach(async () => {
-          await pollForValidation(
-            server,
-            organisationId,
-            registrationId,
-            summaryLogId
-          )
+          await pollForValidation(server, summaryLogId)
 
           response = await server.inject({
             method: 'GET',
-            url: buildGetUrl(organisationId, registrationId, summaryLogId),
+            url: buildGetUrl(summaryLogId),
             ...asOperator()
           })
         })
@@ -532,7 +522,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
 
         await server.inject({
           method: 'POST',
-          url: buildPostUrl(organisationId, registrationId, summaryLogId),
+          url: buildPostUrl(summaryLogId),
           payload: createUploadPayload(
             organisationId,
             registrationId,
@@ -544,12 +534,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       })
 
       it('should treat whitespace-only field as empty, not as a system error', async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         const { summaryLog } =
           await summaryLogsRepository.findById(summaryLogId)

@@ -16,7 +16,6 @@ import {
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
-import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -25,7 +24,7 @@ import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
- * @import { CreatePrnResponse, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -41,8 +40,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * }} PackagingRecyclingNotesCreatePayload
  */
 
-export const packagingRecyclingNotesCreatePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
+const CREATE_PRN_FAILURE = 'Failure creating a PRN'
 
 /**
  * Response-body `code` the create-draft 409 carries when tonnage exceeds the
@@ -120,28 +118,6 @@ const buildPrnData = ({
 }
 
 /**
- * @param {PackagingRecyclingNote} prn
- * @param {{ wasteProcessingType: string }} accreditation
- * @returns {CreatePrnResponse}
- */
-const buildResponse = (prn, { wasteProcessingType }) => ({
-  id: prn.id,
-  accreditationYear: prn.accreditation.accreditationYear,
-  createdAt: prn.createdAt,
-  isDecemberWaste: prn.isDecemberWaste,
-  obligationYear: prn.obligationYear,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  material: prn.accreditation.material,
-  notes: prn.notes ?? null,
-  processToBeUsed: /** @type {string} */ (
-    getProcessCode(prn.accreditation.material)
-  ),
-  status: prn.status.currentStatus,
-  tonnage: prn.tonnage,
-  wasteProcessingType
-})
-
-/**
  * Maps an error thrown while creating a PRN to the appropriate Boom response.
  * @param {{ isBoom?: boolean, message?: string }} error
  * @param {{ error: (details: object) => void }} logger
@@ -154,7 +130,7 @@ const throwCreatePrnError = (error, logger) => {
 
   logger.error({
     err: error,
-    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    message: CREATE_PRN_FAILURE,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -166,9 +142,7 @@ const throwCreatePrnError = (error, logger) => {
     }
   })
 
-  throw Boom.badImplementation(
-    `Failure on ${packagingRecyclingNotesCreatePath}`
-  )
+  throw Boom.badImplementation(CREATE_PRN_FAILURE)
 }
 
 /**
@@ -262,13 +236,13 @@ const buildOrganisationSnapshot = ({
 /**
  * Creates a draft PRN and responds with the body that `respond` builds from it.
  *
- * @param {(prn: PackagingRecyclingNote, accreditation: { wasteProcessingType: string }) => object} respond
+ * @param {(prn: PackagingRecyclingNote) => object} respond
  */
 export const createPrn =
   (respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
-   *   app: Partial<ResolvedRecords>,
+   *   app: ResolvedRecords,
    *   organisationsRepository: OrganisationsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
@@ -294,13 +268,10 @@ export const createPrn =
     const now = new Date()
 
     try {
-      const [accreditation, org] = await Promise.all([
-        organisationsRepository.findAccreditationById(
-          organisationId,
-          accreditationId
-        ),
-        app.organisation ?? organisationsRepository.findById(organisationId)
-      ])
+      const accreditation = await organisationsRepository.findAccreditationById(
+        organisationId,
+        accreditationId
+      )
 
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
@@ -326,7 +297,7 @@ export const createPrn =
 
       const organisation = buildOrganisationSnapshot({
         organisationId,
-        companyDetails: org.companyDetails
+        companyDetails: app.organisation.companyDetails
       })
 
       const prnData = buildPrnData({
@@ -354,7 +325,7 @@ export const createPrn =
         }
       })
 
-      return h.response(respond(prn, accreditation)).code(StatusCodes.CREATED)
+      return h.response(respond(prn)).code(StatusCodes.CREATED)
     } catch (error) {
       throwCreatePrnError(error, logger)
     }
@@ -362,13 +333,11 @@ export const createPrn =
 
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
-  path: packagingRecyclingNotesCreatePath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
       payload: packagingRecyclingNotesCreatePayloadSchema
     }
-  },
-  handler: createPrn(buildResponse)
+  }
 }

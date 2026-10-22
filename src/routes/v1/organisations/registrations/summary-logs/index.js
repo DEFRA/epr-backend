@@ -1,7 +1,3 @@
-export { summaryLogsYearCreate } from './year-post.js'
-export { summaryLogsGet } from './get.js'
 export { summaryLogDocument } from './document/get.js'
 export { summaryLogsList } from './list/get.js'
-export { summaryLogsUploadCompletedYear } from './upload-completed/year-post.js'
-export { summaryLogsSubmit } from './submit/post.js'
 export { summaryLogFile } from './file/get.js'

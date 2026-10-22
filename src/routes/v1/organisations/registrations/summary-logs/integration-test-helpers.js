@@ -23,6 +23,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 
+import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -38,7 +39,7 @@ import {
 const { buildReadOrganisation } = createOrganisationBuilders()
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
-/** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { AppliedForMaterial, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
@@ -182,6 +183,11 @@ const VALID_TO = '2025-12-31'
 // A registered overseas site whose approval starts after the default export
 // date, so OSR_ID 200 resolves to found-but-unapproved (ORS_NOT_APPROVED).
 const UNAPPROVED_VALID_FROM = '2025-06-01'
+/** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */
+const APPROVED_HISTORY = [
+  { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+  { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+]
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
   const tonnage = overrides.tonnageReceived ?? 1000
@@ -454,16 +460,34 @@ export const createUploadPayload = (
   numberOfRejectedFiles: fileStatus === UPLOAD_STATUS.REJECTED ? 1 : 0
 })
 
-export const buildGetUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-
+/** The natural keys every organisation these helpers build is served under. */
+export const TEST_ORGANISATION_NUMBER = 500999
+export const TEST_REGISTRATION_NUMBER = 'REG-123'
 const UPLOAD_YEAR = 2025
 
-export const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${UPLOAD_YEAR}/${summaryLogId}/upload-completed`
+export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
+export const accreditationUrl = `${registrationUrl}/accreditations/${UPLOAD_YEAR}`
 
-export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
+/** @param {string} summaryLogId */
+export const buildGetUrl = (summaryLogId) =>
+  `${registrationUrl}/summary-logs/${summaryLogId}`
+
+/**
+ * @param {string} summaryLogId
+ * @param {{ accredited?: boolean }} [options]
+ */
+export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
+  uploadCompletedPath({
+    organisationNumber: String(TEST_ORGANISATION_NUMBER),
+    registrationNumber: TEST_REGISTRATION_NUMBER,
+    year: UPLOAD_YEAR,
+    accredited,
+    summaryLogId
+  })
+
+/** @param {string} summaryLogId */
+export const buildSubmitUrl = (summaryLogId) =>
+  `${buildGetUrl(summaryLogId)}/submit`
 
 const POLL_INTERVAL_MS = 50
 const DEFAULT_MAX_ATTEMPTS = 20
@@ -471,21 +495,13 @@ const DEFAULT_MAX_ATTEMPTS = 20
 /**
  * Poll until summary log status changes from the specified status.
  * @param {HapiServer} server - Test server instance
- * @param {string} organisationId - Organisation ID
- * @param {string} registrationId - Registration ID
  * @param {string} summaryLogId - Summary log ID
  * @param {object} [options] - Polling options
  * @param {string} [options.waitWhile] - Status to wait while (defaults to VALIDATING)
  * @param {number} [options.maxAttempts] - Maximum poll attempts (defaults to 20)
  * @returns {Promise<string>} Final status after polling
  */
-export const pollWhileStatus = async (
-  server,
-  organisationId,
-  registrationId,
-  summaryLogId,
-  options = {}
-) => {
+export const pollWhileStatus = async (server, summaryLogId, options = {}) => {
   const {
     waitWhile = SUMMARY_LOG_STATUS.VALIDATING,
     maxAttempts = DEFAULT_MAX_ATTEMPTS
@@ -498,7 +514,7 @@ export const pollWhileStatus = async (
 
     const checkResponse = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -509,13 +525,12 @@ export const pollWhileStatus = async (
   return status
 }
 
-export const pollForValidation = (
-  server,
-  organisationId,
-  registrationId,
-  summaryLogId
-) =>
-  pollWhileStatus(server, organisationId, registrationId, summaryLogId, {
+/**
+ * @param {HapiServer} server
+ * @param {string} summaryLogId
+ */
+export const pollForValidation = (server, summaryLogId) =>
+  pollWhileStatus(server, summaryLogId, {
     waitWhile: SUMMARY_LOG_STATUS.VALIDATING,
     maxAttempts: DEFAULT_MAX_ATTEMPTS
   })
@@ -782,6 +797,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     organisationId,
     registrationId,
     accreditationId,
+    accredited,
     fileDataMap,
     ledgerRepository,
     summaryLogRowStatesRepository,
@@ -818,6 +834,44 @@ const createTestSubmitterWorker = ({
 })
 
 /**
+ * A registration the organisation read model serves under the test keys, so
+ * the natural-key routes find it. Built on the full fixture, whose own
+ * accreditation link is dropped: the overrides decide it.
+ *
+ * @param {Record<string, unknown> & { wasteProcessingType: string }} overrides
+ */
+export const servedTestRegistration = (overrides) => {
+  const { accreditationId: _fixtureLink, ...fixture } = buildRegistration({
+    wasteProcessingType: overrides.wasteProcessingType
+  })
+  return partialMock({
+    ...fixture,
+    registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+    status: 'approved',
+    statusHistory: APPROVED_HISTORY,
+    validFrom: VALID_FROM,
+    ...overrides
+  })
+}
+
+/**
+ * An accreditation the organisation read model serves, built on the full
+ * fixture.
+ *
+ * @param {Record<string, unknown> & { wasteProcessingType: string }} overrides
+ */
+export const servedTestAccreditation = (overrides) =>
+  partialMock({
+    ...buildAccreditation(
+      partialMock({ wasteProcessingType: overrides.wasteProcessingType })
+    ),
+    statusHistory: APPROVED_HISTORY,
+    validFrom: VALID_FROM,
+    validTo: VALID_TO,
+    ...overrides
+  })
+
+/**
  * Creates a complex test organisation with registrations and accreditations.
  * @param {object} options
  * @param {string} options.registrationId
@@ -841,26 +895,13 @@ const buildComplexTestOrg = ({
   accredited = true,
   accreditationValidFrom = VALID_FROM
 }) => {
-  // Built on the full fixtures so the read model serves them, letting the
-  // natural-key routes find them. The fixture's own accreditation link is
-  // dropped: `accredited` decides it.
-  const { accreditationId: _fixtureLink, ...servableRegistration } =
-    buildRegistration({ wasteProcessingType: processingType })
   const registration = {
-    ...servableRegistration,
     id: registrationId,
-    registrationNumber: toRegistrationNumber('REG-123'),
-    status: /** @type {'approved'} */ ('approved'),
-    statusHistory: /** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */ ([
-      { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-      { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-    ]),
     material: /** @type {AppliedForMaterial} */ (material),
     wasteProcessingType: processingType,
     reprocessingType: /** @type {ReprocessingType} */ (reprocessingType),
     formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: REGULATOR.EA,
-    validFrom: VALID_FROM,
     // A registered-only operator has no accreditation, which makes the
     // registration report on a quarterly cadence rather than monthly.
     ...(accredited && { accreditationId }),
@@ -873,12 +914,13 @@ const buildComplexTestOrg = ({
   }
 
   return buildReadOrganisation({
+    orgId: TEST_ORGANISATION_NUMBER,
     status: 'active',
-    registrations: [partialMock(registration)],
+    registrations: [servedTestRegistration(registration)],
     accreditations: accredited
       ? [
-          partialMock({
-            ...buildAccreditation({ wasteProcessingType: processingType }),
+          servedTestAccreditation({
+            wasteProcessingType: processingType,
             id: accreditationId,
             accreditationNumber: toAccreditationNumber('ACC-123'),
             validFrom: accreditationValidFrom,
@@ -891,10 +933,7 @@ const buildComplexTestOrg = ({
                 postcode: 'AB1 2CD'
               }
             },
-            statusHistory: /** @type {StatusHistoryEntry[]} */ ([
-              { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-            ])
+            statusHistory: APPROVED_HISTORY
           })
         ]
       : []

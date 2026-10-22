@@ -78,6 +78,26 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
       })
     })
 
+    it('returns only the summary fields and the link', async () => {
+      const defraOrgId = crypto.randomUUID()
+      const linkedDefraOrganisation = buildLinkedDefraOrg(
+        defraOrgId,
+        'Test Defra Org'
+      )
+      const org = buildOrganisation({ linkedDefraOrganisation })
+      await repository.insert(org)
+
+      const result = await repository.findByLinkedDefraOrgId(defraOrgId)
+
+      expect(result).toEqual({
+        id: org.id,
+        orgId: org.orgId,
+        companyDetails: { name: org.companyDetails.name },
+        status: 'created',
+        linkedDefraOrganisation
+      })
+    })
+
     it('returns only the organisation matching the Defra org ID when multiple exist', async () => {
       const defraOrgId1 = crypto.randomUUID()
       const defraOrgId2 = crypto.randomUUID()

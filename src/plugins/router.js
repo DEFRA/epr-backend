@@ -27,13 +27,11 @@ import {
   prnRoutesByNaturalKey
 } from '#packaging-recycling-notes/routes/by-natural-key.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
-import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportRoutesByNaturalKey } from '#reports/routes/by-natural-key.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
-import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -72,7 +70,6 @@ const router = {
         ...Object.values(prnTonnageRoutes),
         ...Object.values(wasteBalanceAvailabilityRoutes),
         ...Object.values(linkedOrganisationsRoutes),
-        ...Object.values(packagingRecyclingNotesRoutes),
         packagingRecyclingNotesAccept,
         packagingRecyclingNotesList,
         packagingRecyclingNotesReject,
@@ -86,7 +83,6 @@ const router = {
         ...Object.values(reportsRoutes),
         ...reportRoutesByNaturalKey,
         adminMeGet,
-        accreditationWasteBalanceLedgerGet,
         dlqMessagesGet,
         dlqPurgePost
       ])

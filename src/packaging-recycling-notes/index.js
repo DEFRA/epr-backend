@@ -14,6 +14,5 @@ export { PRN_STATUS, PRN_STATUS_TRANSITIONS } from './domain/model.js'
 export { createPackagingRecyclingNotesRepository } from './repository/mongodb.js'
 
 // Route exports
-export { packagingRecyclingNotesList } from './routes/get.js'
 export { packagingRecyclingNotesCreate } from './routes/post.js'
 export { packagingRecyclingNotesUpdateStatus } from './routes/status.js'

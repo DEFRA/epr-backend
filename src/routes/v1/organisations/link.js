@@ -1,57 +1,51 @@
 import { SCOPES } from '#auth/constants.js'
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
+import { linkedDefraOrganisationViewSchema } from '#routes/organisations/response.schema.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
 
-/**
- * @typedef {{
- *   id: string;
- *   name: string;
- *   linkedAt: string;
- *   linkedBy: {
- *     email: string
- *     id: string
- *   }
- * }} LinkedDefraOrganisationResponse
- */
+const linkedOrganisationSchema = Joi.object({
+  status: Joi.string()
+    .valid(...ORGANISATION_STATUSES)
+    .required(),
+  linkedDefraOrganisation: linkedDefraOrganisationViewSchema.required()
+})
 
 /**
- * @typedef {Object} LinkedOrganisationResponse
- * @property {string} status
- * @property {LinkedDefraOrganisationResponse} linked
+ * Links the Defra ID organisation in the user's token to the organisation.
  */
-
-/**
- * @import { LinkedDefraOrganisation } from '#domain/organisations/model.js'
- *
- * @typedef {(status: string, linked: LinkedDefraOrganisation) => object} RespondToLink
- */
-
-/**
- * Links the Defra ID organisation in the user's token to the organisation, and
- * responds with the body that `respond` builds.
- *
- * @param {RespondToLink} respond
- */
-export const linkOrganisation =
-  (respond) =>
+export const organisationsLink = {
+  method: 'POST',
+  options: {
+    auth: {
+      scope: [SCOPES.organisationLinkedWrite]
+    },
+    tags: ['api'],
+    response: {
+      schema: linkedOrganisationSchema,
+      modify: true,
+      options: { stripUnknown: true }
+    }
+  },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    params: { organisationId: string },
-   *    app: Partial<import('#routes/organisations/at-natural-keys.js').ResolvedRecords>
+   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
-  async (request, h) => {
-    const { organisationId } = request.params
+  handler: async (request, h) => {
     const { organisationsRepository } = request
+    const { organisation } = request.app
     const {
       decoded: { payload: tokenPayload }
     } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
@@ -63,11 +57,6 @@ export const linkOrganisation =
     if (!defraIdOrgId || !defraIdOrgName) {
       throw Boom.badRequest('Missing organisation information in user token')
     }
-
-    // throws Boom.notFound if organisation does not exist
-    const organisation =
-      request.app.organisation ??
-      (await organisationsRepository.findById(organisationId))
 
     const { email, id: credentialId } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
@@ -123,33 +112,10 @@ export const linkOrganisation =
     )
 
     return h
-      .response(respond(updatedOrganisation.status, linkedDefraOrg))
+      .response({
+        status: updatedOrganisation.status,
+        linkedDefraOrganisation: toLinkedDefraOrganisation(linkedDefraOrg)
+      })
       .code(StatusCodes.OK)
   }
-
-/**
- * @param {string} status
- * @param {LinkedDefraOrganisation} linked
- * @returns {LinkedOrganisationResponse}
- */
-const toLinkedOrganisationResponse = (status, linked) => ({
-  status,
-  linked: {
-    id: linked.orgId,
-    name: linked.orgName,
-    linkedAt: linked.linkedAt,
-    linkedBy: linked.linkedBy
-  }
-})
-
-export const organisationsLink = {
-  method: 'POST',
-  path: '/v1/organisations/{organisationId}/link',
-  options: {
-    auth: {
-      scope: [SCOPES.organisationLinkedWrite]
-    },
-    tags: ['api', 'admin']
-  },
-  handler: linkOrganisation(toLinkedOrganisationResponse)
 }
