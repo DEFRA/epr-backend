@@ -112,7 +112,7 @@ export async function generateReportCompliance(
     const accreditationNumber = resolveAccreditationNumber(registration, org)
     const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
-    // An accredited operator owes monthly reports only from the date their
+    // An accredited operator has monthly reporting obligations only from the date their
     // accreditation began, so bound obligations to validFrom (matches the
     // operator calendar and the admin export).
     const validFrom = activeAccreditationValidFrom(

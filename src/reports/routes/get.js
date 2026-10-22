@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes'
-import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -12,7 +11,9 @@ import {
   isRegistrationAccredited
 } from '#domain/organisations/registration-utils.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import { toReportListItem } from '#reports/application/report-calendar.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
+import { calendarQuerySchema } from './shared.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -20,29 +21,13 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { CalendarPeriod } from '#reports/domain/build-calendar-periods.js'
  * @import {
- *   ReportsRepository,
- *   ReportSummary,
- *   ReportListItem
+ *   ReportsRepository
  * } from '#reports/repository/port.js'
  */
 
 /**
- * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
+ * @typedef {(mergedPeriods: MergedPeriod[], now?: Date) => CalendarPeriod[]} PeriodBuilder
  */
-
-/**
- * Curates the full report summary down to the list-response shape so the
- * calendar endpoint doesn't leak heavy activity payloads.
- * @param {ReportSummary | null} current
- * @returns {ReportListItem | null}
- */
-const toReportListItem = (current) => {
-  if (!current) {
-    return null
-  }
-  const { id, status, submissionNumber, submittedAt, submittedBy } = current
-  return { id, status, submissionNumber, submittedAt, submittedBy }
-}
 
 /**
  * Chooses the period builder for this request. The opt-in ?expand=submissions
@@ -63,9 +48,7 @@ export const reportsGet = {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
-      query: Joi.object({
-        expand: Joi.string().valid('submissions')
-      })
+      query: calendarQuerySchema
     },
     response: {
       schema: reportsCalendarResponseSchema
@@ -99,7 +82,7 @@ export const reportsGet = {
      */
     const currentYear = new Date().getUTCFullYear()
 
-    // An accredited operator owes monthly reports only from the date their
+    // An accredited operator has monthly reporting obligations only from the date their
     // accreditation began; generateReportingPeriods bounds to validFrom.
     const validFrom = activeAccreditationValidFrom(registration.accreditation)
     const computedPeriods = generateReportingPeriods(

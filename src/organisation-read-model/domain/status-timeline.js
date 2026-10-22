@@ -1,28 +1,16 @@
-import {
-  calendarDate,
-  utcCalendarDate
-} from '#common/helpers/date-formatter.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { dayBefore } from '#common/helpers/dates/calendar-day.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { StatusTimeline } from './model.js' */
 
-/** @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange */
+/** @typedef {import('#common/helpers/dates/date-range.js').CalendarDateRange} CalendarDateRange */
 
 /**
  * One status per day, keyed by ISO 8601 date (ADR-0051).
  *
  * @typedef {Record<CalendarDate, { status: string }>} DailyTimeline
  */
-
-/**
- * @param {CalendarDate} date
- * @returns {CalendarDate}
- */
-const dayBefore = (date) => {
-  const day = new Date(date)
-  day.setUTCDate(day.getUTCDate() - 1)
-  return utcCalendarDate(day)
-}
 
 /**
  * @param {CalendarDate} date
