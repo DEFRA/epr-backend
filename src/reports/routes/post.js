@@ -28,6 +28,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
@@ -63,7 +64,8 @@ export const reportsPost = {
     }
   },
   /**
-   * @param {HapiRequest & {
+   * @param {Omit<HapiRequest, 'app'> & {
+   *   app: ResolvedRecords,
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -83,6 +85,7 @@ export const reportsPost = {
       reportsRepository,
       overseasSitesRepository,
       params,
+      app,
       logger
     } = request
     const {
@@ -102,10 +105,7 @@ export const reportsPost = {
 
       assertCadence(cadence, registration)
 
-      const { numbers } = numbersFor(
-        await organisationsRepository.findById(organisationId),
-        { registrationId }
-      )
+      const { numbers } = numbersFor(app.organisation, { registrationId })
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
