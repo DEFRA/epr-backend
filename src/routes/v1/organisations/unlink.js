@@ -1,5 +1,6 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
@@ -30,19 +31,19 @@ export const organisationsUnlink = {
     const { organisationsRepository } = request
     const {
       id,
+      orgId,
       version: currentVersion,
-      ...organisation
+      linkedDefraOrganisation: linkedOrg
     } = await organisationsRepository.findById(organisationId)
 
-    if (!organisation.linkedDefraOrganisation) {
+    if (!linkedOrg) {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
-    const linkedOrg = organisation.linkedDefraOrganisation
-    await organisationsRepository.replace(id, currentVersion, {
-      ...organisation,
-      linkedDefraOrganisation: undefined
-    })
+    await organisationsRepository.unlinkDefraOrganisation(
+      toOrganisationNumber(String(orgId)),
+      currentVersion
+    )
 
     await auditOrganisationUnlinking(request, id, {
       id: linkedOrg.orgId,

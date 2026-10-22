@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
@@ -343,6 +344,32 @@ export const buildLinkedDefraOrg = (orgId, orgName) => ({
   },
   linkedAt: new Date().toISOString()
 })
+
+/**
+ * The organisation number an organisation is addressed by.
+ *
+ * @param {{ orgId: number }} organisation
+ */
+export const numberOf = ({ orgId }) => toOrganisationNumber(String(orgId))
+
+/**
+ * What an update at a stale version rejects with.
+ *
+ * @param {number} version
+ * @param {number} currentVersion
+ */
+export const versionConflict = (version, currentVersion) => ({
+  isBoom: true,
+  output: {
+    statusCode: 409,
+    payload: {
+      message: `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
+    }
+  }
+})
+
+/** What an update of an organisation that does not exist rejects with. */
+export const notFound = { isBoom: true, output: { statusCode: 404 } }
 
 export const prepareOrgUpdate = (org, updates = {}) => {
   const { id: _, ...orgWithoutId } = org

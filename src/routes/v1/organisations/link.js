@@ -3,13 +3,13 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
 import { linkedDefraOrganisationViewSchema } from '#routes/organisations/response.schema.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const linkedOrganisationSchema = Joi.object({
   status: Joi.string()
@@ -92,13 +92,13 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    const { id, version: currentVersion, ...organisationData } = organisation
+    const { id, orgId, version: currentVersion } = organisation
 
-    await organisationsRepository.replace(id, currentVersion, {
-      ...organisationData,
-      status: ORGANISATION_STATUS.ACTIVE,
-      linkedDefraOrganisation: linkedDefraOrg
-    })
+    await organisationsRepository.linkDefraOrganisation(
+      toOrganisationNumber(String(orgId)),
+      currentVersion,
+      linkedDefraOrg
+    )
 
     await auditOrganisationLinking(request, id, {
       id: linkedDefraOrg.orgId,

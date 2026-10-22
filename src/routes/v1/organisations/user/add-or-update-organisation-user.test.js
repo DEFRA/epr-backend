@@ -26,7 +26,7 @@ describe('addOrUpdateOrganisationUser', () => {
     vi.clearAllMocks()
 
     mockOrganisationsRepository = {
-      replace: vi.fn()
+      replaceUsers: vi.fn()
     }
 
     mockRequest = {
@@ -42,6 +42,7 @@ describe('addOrUpdateOrganisationUser', () => {
 
     mockOrganisation = {
       id: new ObjectId().toString(),
+      orgId: 500001,
       version: 1,
       users: []
     }
@@ -62,21 +63,15 @@ describe('addOrUpdateOrganisationUser', () => {
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_ADDED)
 
       expect(
-        mockOrganisationsRepository.replace
-      ).toHaveBeenCalledExactlyOnceWith(
-        mockOrganisation.id,
-        mockOrganisation.version,
+        mockOrganisationsRepository.replaceUsers
+      ).toHaveBeenCalledExactlyOnceWith('500001', mockOrganisation.version, [
         {
-          users: [
-            {
-              contactId: 'contact-123',
-              email: 'newuser@example.com',
-              fullName: 'John Doe',
-              roles: [USER_ROLES.STANDARD]
-            }
-          ]
+          contactId: 'contact-123',
+          email: 'newuser@example.com',
+          fullName: 'John Doe',
+          roles: [USER_ROLES.STANDARD]
         }
-      )
+      ])
     })
 
     test('should handle names with special characters', async () => {
@@ -89,8 +84,8 @@ describe('addOrUpdateOrganisationUser', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
-      const newUser = updateCall[2].users[0]
+      const updateCall = mockOrganisationsRepository.replaceUsers.mock.calls[0]
+      const newUser = updateCall[2][0]
 
       expect(newUser.fullName).toBe("O'Brien Smith-Jones")
     })
@@ -271,6 +266,7 @@ describe('addOrUpdateOrganisationUser', () => {
       mockOrganisation = /** @type {Organisation} */ (
         /** @type {unknown} */ ({
           id: new ObjectId().toString(),
+          orgId: 500001,
           version: 1
           // users property is missing/undefined
         })
@@ -283,27 +279,22 @@ describe('addOrUpdateOrganisationUser', () => {
       )
 
       expect(
-        mockOrganisationsRepository.replace
-      ).toHaveBeenCalledExactlyOnceWith(
-        mockOrganisation.id,
-        mockOrganisation.version,
+        mockOrganisationsRepository.replaceUsers
+      ).toHaveBeenCalledExactlyOnceWith('500001', mockOrganisation.version, [
         {
-          users: [
-            {
-              contactId: 'contact-123',
-              email: 'newuser@example.com',
-              fullName: 'John Doe',
-              roles: [USER_ROLES.STANDARD]
-            }
-          ]
+          contactId: 'contact-123',
+          email: 'newuser@example.com',
+          fullName: 'John Doe',
+          roles: [USER_ROLES.STANDARD]
         }
-      )
+      ])
     })
 
     test('should add user when users property is null', async () => {
       mockOrganisation = /** @type {Organisation} */ (
         /** @type {unknown} */ ({
           id: new ObjectId().toString(),
+          orgId: 500001,
           version: 1,
           users: null
         })
@@ -316,21 +307,15 @@ describe('addOrUpdateOrganisationUser', () => {
       )
 
       expect(
-        mockOrganisationsRepository.replace
-      ).toHaveBeenCalledExactlyOnceWith(
-        mockOrganisation.id,
-        mockOrganisation.version,
+        mockOrganisationsRepository.replaceUsers
+      ).toHaveBeenCalledExactlyOnceWith('500001', mockOrganisation.version, [
         {
-          users: [
-            {
-              contactId: 'contact-123',
-              email: 'newuser@example.com',
-              fullName: 'John Doe',
-              roles: [USER_ROLES.STANDARD]
-            }
-          ]
+          contactId: 'contact-123',
+          email: 'newuser@example.com',
+          fullName: 'John Doe',
+          roles: [USER_ROLES.STANDARD]
         }
-      )
+      ])
     })
 
     test('should initialize empty users array when adding first user', async () => {
@@ -342,8 +327,8 @@ describe('addOrUpdateOrganisationUser', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
-      const usersArray = updateCall[2].users
+      const updateCall = mockOrganisationsRepository.replaceUsers.mock.calls[0]
+      const usersArray = updateCall[2]
 
       expect(usersArray).toHaveLength(1)
       expect(usersArray[0].email).toBe('newuser@example.com')
@@ -371,8 +356,8 @@ describe('addOrUpdateOrganisationUser', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
-      const newUser = updateCall[2].users[0]
+      const updateCall = mockOrganisationsRepository.replaceUsers.mock.calls[0]
+      const newUser = updateCall[2][0]
 
       expect(newUser.fullName).toBe(expectedFullName)
     })
@@ -386,12 +371,14 @@ describe('addOrUpdateOrganisationUser', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replaceUsers).toHaveBeenCalledOnce()
     })
 
     test('should propagate repository errors', async () => {
       const repositoryError = new Error('Database connection failed')
-      mockOrganisationsRepository.replace.mockRejectedValue(repositoryError)
+      mockOrganisationsRepository.replaceUsers.mockRejectedValue(
+        repositoryError
+      )
 
       await expect(
         addOrUpdateOrganisationUser(

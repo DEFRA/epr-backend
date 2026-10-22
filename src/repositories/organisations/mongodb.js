@@ -15,11 +15,17 @@ import {
   parseOrgIdCriterion,
   prepareForReplace,
   storedOrgId,
-  UNIQUE_NUMBER_FIELDS
+  UNIQUE_NUMBER_FIELDS,
+  versionConflict
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
+import {
+  performLinkDefraOrganisation,
+  performReplaceUsers,
+  performUnlinkDefraOrganisation
+} from './mongodb.targeted-updates.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
@@ -146,9 +152,7 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 
   if (result.matchedCount === 0) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-    )
+    throw versionConflict(version, existing.version)
   }
 }
 
@@ -560,6 +564,13 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
+      linkDefraOrganisation: performLinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
+      replaceUsers: performReplaceUsers(db.collection(COLLECTION_NAME)),
+      unlinkDefraOrganisation: performUnlinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
       findById,
       findAll: performFindAll(db),
       find: performFind(db),
