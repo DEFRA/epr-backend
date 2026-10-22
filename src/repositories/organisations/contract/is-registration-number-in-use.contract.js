@@ -6,8 +6,8 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
 
-export const testFindByRegistrationNumberBehaviour = (it) => {
-  describe('findByRegistrationNumber', () => {
+export const testIsRegistrationNumberInUseBehaviour = (it) => {
+  describe('isRegistrationNumberInUse', () => {
     /** @type {OrganisationsRepository} */
     let repository
     /** @type {OrganisationBuilders['buildOrganisation']} */
@@ -25,18 +25,18 @@ export const testFindByRegistrationNumberBehaviour = (it) => {
       }
     )
 
-    it('returns null when no registration holds the number', async () => {
+    it('is false when no registration holds the number', async () => {
       const org = buildOrganisation()
       await repository.insert(org)
 
-      const result = await repository.findByRegistrationNumber(
+      const result = await repository.isRegistrationNumberInUse(
         toRegistrationNumber('REG000000')
       )
 
-      expect(result).toBeNull()
+      expect(result).toBe(false)
     })
 
-    it('returns the organisation holding a registration with the number', async () => {
+    it('is true when an organisation holds a registration with the number', async () => {
       const registration = buildRegistration({
         registrationNumber: 'REG777777'
       })
@@ -44,24 +44,24 @@ export const testFindByRegistrationNumberBehaviour = (it) => {
       const otherOrg = buildOrganisation()
       await Promise.all([org, otherOrg].map((o) => repository.insert(o)))
 
-      const result = await repository.findByRegistrationNumber(
+      const result = await repository.isRegistrationNumberInUse(
         toRegistrationNumber('REG777777')
       )
 
-      expect(result).toMatchObject({ id: org.id })
+      expect(result).toBe(true)
     })
 
-    it('finds the number regardless of which registration on the organisation holds it', async () => {
+    it('is true regardless of which registration on the organisation holds the number', async () => {
       const first = buildRegistration()
       const second = buildRegistration({ registrationNumber: 'REG888888' })
       const org = buildOrganisation({ registrations: [first, second] })
       await repository.insert(org)
 
-      const result = await repository.findByRegistrationNumber(
+      const result = await repository.isRegistrationNumberInUse(
         toRegistrationNumber('REG888888')
       )
 
-      expect(result).toMatchObject({ id: org.id })
+      expect(result).toBe(true)
     })
   })
 }

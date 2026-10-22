@@ -53,33 +53,29 @@ describe('the organisations port names records by their numbers', () => {
     await repository.insert(organisation)
   })
 
-  it('finds the organisation by each of its numbers', async () => {
-    const found = [
-      await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(organisation.orgId))
-      ),
-      await repository.findByRegistrationNumber(REGISTRATION_NUMBER),
-      await repository.findByAccreditationNumber(ACCREDITATION_NUMBER)
-    ]
+  it('finds the organisation by its number, and its other numbers in use', async () => {
+    const found = await repository.findByOrganisationNumber(
+      toOrganisationNumber(String(organisation.orgId))
+    )
 
-    expect(found.map((match) => match?.id)).toEqual([
-      organisation.id,
-      organisation.id,
-      organisation.id
-    ])
+    expect(found?.id).toBe(organisation.id)
+    expect([
+      await repository.isRegistrationNumberInUse(REGISTRATION_NUMBER),
+      await repository.isAccreditationNumberInUse(ACCREDITATION_NUMBER)
+    ]).toEqual([true, true])
   })
 
   it('takes no database id where a number is expected', async () => {
-    const found = [
-      // @ts-expect-error an organisation's id is not its number
-      await repository.findByOrganisationNumber(organisation.id),
+    // @ts-expect-error an organisation's id is not its number
+    expect(await repository.findByOrganisationNumber(organisation.id)).toBe(
+      null
+    )
+    expect([
       // @ts-expect-error a registration's id is not its number
-      await repository.findByRegistrationNumber(registrationId),
+      await repository.isRegistrationNumberInUse(registrationId),
       // @ts-expect-error an accreditation's id is not its number
-      await repository.findByAccreditationNumber(accreditation.id)
-    ]
-
-    expect(found).toEqual([null, null, null])
+      await repository.isAccreditationNumberInUse(accreditation.id)
+    ]).toEqual([false, false])
   })
 
   it('takes no number of another kind, or a bare value', async () => {
@@ -87,18 +83,18 @@ describe('the organisations port names records by their numbers', () => {
       // @ts-expect-error the stored orgId is not an organisation number
       await repository.findByOrganisationNumber(organisation.orgId),
       // @ts-expect-error a bare string is not an organisation number
-      await repository.findByOrganisationNumber(String(organisation.orgId)),
-      // @ts-expect-error an accreditation number is not a registration number
-      await repository.findByRegistrationNumber(ACCREDITATION_NUMBER),
-      // @ts-expect-error a registration number is not an accreditation number
-      await repository.findByAccreditationNumber(REGISTRATION_NUMBER)
+      await repository.findByOrganisationNumber(String(organisation.orgId))
     ]
 
-    expect(found.map((match) => match?.id ?? null)).toEqual([
+    expect(found.map((match) => match?.id)).toEqual([
       organisation.id,
-      organisation.id,
-      null,
-      null
+      organisation.id
     ])
+    expect([
+      // @ts-expect-error an accreditation number is not a registration number
+      await repository.isRegistrationNumberInUse(ACCREDITATION_NUMBER),
+      // @ts-expect-error a registration number is not an accreditation number
+      await repository.isAccreditationNumberInUse(REGISTRATION_NUMBER)
+    ]).toEqual([false, false])
   })
 })

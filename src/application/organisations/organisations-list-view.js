@@ -1,6 +1,6 @@
 /**
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { FindParams, OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { FindParams, OrganisationsRepository, OrganisationSummary } from '#repositories/organisations/port.js'
  */
 
 /**
@@ -11,11 +11,7 @@
  * already publishes, and the id that pairs a registration with its
  * accreditation.
  *
- * @typedef {{
- *   id: string,
- *   orgId: number,
- *   companyDetails: { name: string },
- *   status: string,
+ * @typedef {OrganisationSummary & {
  *   submittedToRegulator: string,
  *   registrations: Array<{ registrationNumber?: string | null, accreditationId?: string }>,
  *   accreditations: Array<{ id: string, accreditationNumber?: string | null }>
