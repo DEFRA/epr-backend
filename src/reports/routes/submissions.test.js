@@ -5,12 +5,16 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { getReportSubmissionsPath } from './submissions.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`GET ${getReportSubmissionsPath}`, () => {
   setupAuthContext()

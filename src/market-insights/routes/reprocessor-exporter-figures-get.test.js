@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   describe,
   it,
@@ -24,11 +25,15 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import {
   marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 

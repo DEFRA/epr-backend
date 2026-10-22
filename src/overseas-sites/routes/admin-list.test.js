@@ -11,8 +11,8 @@ import {
 
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -21,6 +21,8 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const TEST_REPROCESSOR_NAME = 'Alpha Reprocessor'
 const TEST_ADDRESS_LINE1 = '1 Rue de Test'

@@ -1,9 +1,9 @@
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asUnscopedAdminUser } from '#test/inject-auth.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
@@ -15,6 +15,10 @@ import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { describe, expect, it } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe('GET /v1/me/organisations', () => {
   setupAuthContext()

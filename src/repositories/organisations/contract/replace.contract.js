@@ -6,26 +6,31 @@ import {
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildOrganisation,
   buildRegistration,
   prepareOrgUpdate,
   getValidDateRange
 } from './test-data.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testReplaceBehaviour = (it) => {
   describe('replace', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     // Date strings for validFrom/validTo
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -49,6 +54,29 @@ export const testReplaceBehaviour = (it) => {
           submittedToRegulator: orgData.submittedToRegulator,
           submitterContactDetails: orgData.submitterContactDetails,
           companyDetails: orgData.companyDetails
+        })
+      })
+
+      it('refuses to give an organisation an orgId another organisation holds', async () => {
+        const first = buildOrganisation()
+        const second = buildOrganisation()
+        await repository.insert(first)
+        await repository.insert(second)
+
+        await expect(
+          repository.replace(
+            second.id,
+            1,
+            prepareOrgUpdate(second, { orgId: first.orgId })
+          )
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Duplicate key conflict updating organisation ${second.id} (orgId)`
+            }
+          }
         })
       })
 

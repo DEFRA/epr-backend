@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import {
-  buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
@@ -12,12 +12,18 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { partialMock } from '#test/type-helpers.js'
 
-/** @import { OrganisationsRepository } from './port.js' */
+const { buildOrganisation } = createOrganisationBuilders()
+
+/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js' */
 
 const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  organisationsRepository: async ({}, use) => {
+  organisationsRepository: async (
+    // eslint-disable-next-line no-empty-pattern
+    /** @type {object} */ {},
+    /** @type {(factory: OrganisationsRepositoryFactory) => Promise<void>} */ use
+  ) => {
     const factory = createInMemoryOrganisationsRepository([])
     await use(factory)
   }
@@ -26,6 +32,26 @@ const it = base.extend({
 describe('In-memory organisations repository', () => {
   describe('organisations repository contract', () => {
     testOrganisationsRepositoryContract(it)
+  })
+
+  describe('seeding', () => {
+    it('refuses two seeded organisations with the same orgId', () => {
+      const first = buildOrganisation()
+      const second = buildOrganisation({ orgId: first.orgId })
+
+      expect(() =>
+        createInMemoryOrganisationsRepository([
+          partialMock(first),
+          partialMock(second)
+        ])
+      ).toThrow(
+        expect.objectContaining({
+          isBoom: true,
+          output: expect.objectContaining({ statusCode: 409 }),
+          message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
+        })
+      )
+    })
   })
 
   describe('findByOrganisationNumber', () => {

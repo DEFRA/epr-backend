@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { assert } from 'vitest'
 import {
   WASTE_BALANCE_ACCREDITATION_TYPES,
@@ -10,7 +11,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { assertPresent, partialMock } from '#test/type-helpers.js'
@@ -23,6 +24,10 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */

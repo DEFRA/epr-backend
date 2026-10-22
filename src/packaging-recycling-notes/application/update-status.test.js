@@ -18,8 +18,8 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
-  buildAccreditation
+  buildAccreditation,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -30,6 +30,8 @@ import {
 import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
 import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const mockRecordStatusTransition = vi.fn()
 const mockOnCancelled = vi.fn()

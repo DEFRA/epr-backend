@@ -12,13 +12,13 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import {
-  insertAccreditedOperator,
+  createAccreditedOperatorInserter,
   storedMaterial
 } from '#vite/helpers/insert-accredited-operator.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { frameOf } from './cells.js'
@@ -30,6 +30,11 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */

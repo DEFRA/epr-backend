@@ -8,7 +8,7 @@ import {
 } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -29,6 +29,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'

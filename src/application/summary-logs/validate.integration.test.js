@@ -9,7 +9,7 @@ import {
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -20,6 +20,8 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */

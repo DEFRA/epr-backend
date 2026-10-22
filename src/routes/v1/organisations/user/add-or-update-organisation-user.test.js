@@ -1,5 +1,5 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { ObjectId } from 'mongodb'
@@ -8,6 +8,8 @@ import {
   addOrUpdateOrganisationUser,
   ORGANISATION_USER_RESULTS
 } from './add-or-update-organisation-user.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import {HapiRequest} from '#common/hapi-types.js'

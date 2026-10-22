@@ -6,7 +6,7 @@ import {
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -15,11 +15,16 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   body,
-  buildAccreditedOrganisation,
+  createAccreditedOrganisationBuilder,
   exporterResponse,
   reprocessorResponse,
   useViewServer
 } from './organisation-view-test-helpers.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildAccreditedOrganisation =
+  createAccreditedOrganisationBuilder(organisationBuilders)
 
 const reinstatedThenCancelledOnNewYearsDay = () => {
   const statusHistory = [

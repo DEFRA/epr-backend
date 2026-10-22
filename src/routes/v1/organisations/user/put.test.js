@@ -1,8 +1,8 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith
@@ -13,6 +13,10 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
 const mockCdpAuditing = vi.fn()

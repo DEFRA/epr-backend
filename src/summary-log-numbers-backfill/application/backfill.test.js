@@ -9,14 +9,16 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 import { backfillSummaryLogNumbers } from './backfill.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const organisationId = '6512a0c2f1e4b8a9d0c3e111'
 const registrationId = '6512a0c2f1e4b8a9d0c3e222'

@@ -4,7 +4,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildLedgerEvent,
@@ -21,6 +21,8 @@ import {
   exporterAccreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 

@@ -1,8 +1,9 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
@@ -10,6 +11,9 @@ import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 

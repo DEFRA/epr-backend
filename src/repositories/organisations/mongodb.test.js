@@ -9,13 +9,15 @@ import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { OrganisationsRepositoryFactory } from './port.js'

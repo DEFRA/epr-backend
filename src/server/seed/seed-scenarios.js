@@ -25,11 +25,13 @@ import {
 } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
-  buildOrganisation,
   getValidDateRange,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */

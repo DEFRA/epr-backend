@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
@@ -12,11 +12,15 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  buildOrganisation,
   prepareOrgUpdate,
-  getValidDateRange
+  getValidDateRange,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 // ---------------------------------------------------------------------------
 // Helpers

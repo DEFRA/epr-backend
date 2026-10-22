@@ -1,26 +1,28 @@
 import { beforeEach, describe, expect } from 'vitest'
-import {
-  buildOrganisation,
-  getValidDateRange,
-  prepareOrgUpdate
-} from './test-data.js'
+import { getValidDateRange, prepareOrgUpdate } from './test-data.js'
 import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

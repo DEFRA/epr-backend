@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -18,6 +18,8 @@ import { partialMock } from '#test/type-helpers.js'
 
 import { runCancelledAccreditationReportsDiagnostic } from './run.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
