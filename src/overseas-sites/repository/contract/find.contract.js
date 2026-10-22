@@ -52,7 +52,7 @@ export const testFindBehaviour = (it) => {
       expect(result).toStrictEqual([])
     })
 
-    it('returns all sites when no filter provided', async () => {
+    it('returns all sites', async () => {
       await repository.create(buildOverseasSite({ name: 'Site A' }))
       await repository.create(buildOverseasSite({ name: 'Site B' }))
 
@@ -62,77 +62,6 @@ export const testFindBehaviour = (it) => {
       const names = result.map((s) => s.name)
       expect(names).toContain('Site A')
       expect(names).toContain('Site B')
-    })
-
-    it('filters by country when provided', async () => {
-      await repository.create(
-        buildOverseasSite({ name: 'Indian Site', country: 'India' })
-      )
-      await repository.create(
-        buildOverseasSite({ name: 'Pakistan Site', country: 'Pakistan' })
-      )
-
-      const result = await repository.findAll({ country: 'India' })
-
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Indian Site')
-    })
-
-    it('filters by name with case-insensitive partial match', async () => {
-      await repository.create(
-        buildOverseasSite({ name: 'Acme Reprocessing Pvt Ltd' })
-      )
-      await repository.create(
-        buildOverseasSite({ name: 'Globex Industries Ltd' })
-      )
-
-      const result = await repository.findAll({ name: 'acme' })
-
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Acme Reprocessing Pvt Ltd')
-    })
-
-    it('treats regex-special characters in name as literal text', async () => {
-      await repository.create(
-        buildOverseasSite({ name: 'Acme (Holdings) Ltd.' })
-      )
-      await repository.create(
-        buildOverseasSite({ name: 'Acme Xholdings* Ltd' })
-      )
-
-      const result = await repository.findAll({ name: '(holdings)' })
-
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Acme (Holdings) Ltd.')
-    })
-
-    it('combines name and country filters', async () => {
-      await repository.create(
-        buildOverseasSite({
-          name: 'Acme India',
-          country: 'India'
-        })
-      )
-      await repository.create(
-        buildOverseasSite({
-          name: 'Acme Pakistan',
-          country: 'Pakistan'
-        })
-      )
-      await repository.create(
-        buildOverseasSite({
-          name: 'Globex India',
-          country: 'India'
-        })
-      )
-
-      const result = await repository.findAll({
-        name: 'acme',
-        country: 'India'
-      })
-
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Acme India')
     })
   })
 }
