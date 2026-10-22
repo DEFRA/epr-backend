@@ -51,6 +51,15 @@ describe('joinDateRanges', () => {
     ).toEqual([range('2026-01-01', '2026-05-31')])
   })
 
+  it('keeps the end of a range that contains the next', () => {
+    expect(
+      joinDateRanges([
+        range('2026-01-01', '2026-12-31'),
+        range('2026-03-01', '2026-03-31')
+      ])
+    ).toEqual([range('2026-01-01', '2026-12-31')])
+  })
+
   it('joins ranges that follow on from each other', () => {
     expect(
       joinDateRanges([

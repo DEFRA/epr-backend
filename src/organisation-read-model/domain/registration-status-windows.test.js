@@ -70,7 +70,7 @@ describe('registrationStatusWindows', () => {
       })
     })
 
-    it('owes nothing in a year before registration', () => {
+    it('has no reporting obligations in a year before registration', () => {
       expect(windows({ year: 2024 })).toEqual({
         registeredOnly: [],
         accredited: []
@@ -347,7 +347,7 @@ describe('registrationStatusWindows', () => {
     })
 
     describe('registration cancelled mid-year', () => {
-      it('owes nothing once the registration and its accreditation are cancelled', () => {
+      it('has no reporting obligations once the registration and its accreditation are cancelled', () => {
         expect(
           windows({
             registration: [approvedOn('2025-06-02'), cancelledOn('2026-08-01')],

@@ -5,6 +5,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { yearCalendar } from '#reports/application/report-calendar.js'
 import { readModelRegistration } from '#routes/organisations/natural-keys.js'
 import { reportsYearCalendarResponseSchema } from './response.schema.js'
+import { calendarQuerySchema } from './shared.js'
 
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
@@ -12,15 +13,12 @@ import { reportsYearCalendarResponseSchema } from './response.schema.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
-export const reportsYearCalendarPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/calendar'
-
 export const reportsYearCalendar = {
   method: 'GET',
-  path: reportsYearCalendarPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
+    validate: { query: calendarQuerySchema },
     response: { schema: reportsYearCalendarResponseSchema }
   },
   /**
@@ -39,7 +37,10 @@ export const reportsYearCalendar = {
     const calendar = yearCalendar({
       registration: readModelRegistration(organisation, registration),
       storedReports,
-      year
+      year,
+      allSubmissions:
+        /** @type {{ expand?: string }} */ (request.query).expand ===
+        'submissions'
     })
 
     return h.response(calendar).code(StatusCodes.OK)

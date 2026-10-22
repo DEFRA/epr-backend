@@ -62,7 +62,7 @@ export const reportsYearCalendarResponseSchema = Joi.object({
       .required()
   }),
   accredited: Joi.object({
-    accreditationNumber: Joi.string(),
+    accreditationNumber: Joi.string().required(),
     reportingPeriods: Joi.array()
       .items(yearCalendarPeriodSchema(CADENCE.monthly))
       .required()

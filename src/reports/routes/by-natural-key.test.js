@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { config } from '#root/config.js'
 import {
   asOperator,
   asServiceMaintainer,
@@ -671,10 +672,28 @@ describe('report routes by natural key', () => {
         toFake: ['Date'],
         now: new Date('2027-01-02T12:00:00Z')
       })
+      config.set('featureFlags.midYearStatusTransition', true)
     })
 
     afterEach(() => {
       vi.useRealTimers()
+      config.reset('featureFlags.midYearStatusTransition')
+    })
+
+    it('serves only the current status, in whole periods, with mid-year status transition off', async () => {
+      config.set('featureFlags.midYearStatusTransition', false)
+
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      const body = JSON.parse(response.payload)
+      expect(body).not.toHaveProperty('registeredOnly')
+      expect(body.accredited.reportingPeriods[0]).toMatchObject({
+        cadence: 'monthly',
+        period: 2,
+        startDate: '2026-02-01',
+        endDate: '2026-02-28'
+      })
+      expect(body.accredited.reportingPeriods).toHaveLength(11)
     })
 
     it('serves registered-only periods only for a registered-only registration', async () => {
@@ -714,6 +733,24 @@ describe('report routes by natural key', () => {
       const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
 
       expect(JSON.parse(response.payload)).toEqual({ year: 2025 })
+    })
+
+    it('lists every submission when asked to expand them', async () => {
+      const response = await server.inject({
+        ...calendar(REGISTERED_ONLY_NUMBER),
+        url: `${calendar(REGISTERED_ONLY_NUMBER).url}?expand=submissions`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('refuses an expansion it does not offer', async () => {
+      const response = await server.inject({
+        ...calendar(REGISTERED_ONLY_NUMBER),
+        url: `${calendar(REGISTERED_ONLY_NUMBER).url}?expand=everything`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
     it('rejects a year outside the supported range', async () => {

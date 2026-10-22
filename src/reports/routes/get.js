@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes'
-import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -14,6 +13,7 @@ import {
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { toReportListItem } from '#reports/application/report-calendar.js'
 import { reportsCalendarResponseSchema } from './response.schema.js'
+import { calendarQuerySchema } from './shared.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -26,7 +26,7 @@ import { reportsCalendarResponseSchema } from './response.schema.js'
  */
 
 /**
- * @typedef {(mergedPeriods: MergedPeriod[]) => CalendarPeriod[]} PeriodBuilder
+ * @typedef {(mergedPeriods: MergedPeriod[], now?: Date) => CalendarPeriod[]} PeriodBuilder
  */
 
 /**
@@ -48,9 +48,7 @@ export const reportsGet = {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
-      query: Joi.object({
-        expand: Joi.string().valid('submissions')
-      })
+      query: calendarQuerySchema
     },
     response: {
       schema: reportsCalendarResponseSchema
@@ -84,7 +82,7 @@ export const reportsGet = {
      */
     const currentYear = new Date().getUTCFullYear()
 
-    // An accredited operator owes monthly reports only from the date their
+    // An accredited operator has monthly reporting obligations only from the date their
     // accreditation began; generateReportingPeriods bounds to validFrom.
     const validFrom = activeAccreditationValidFrom(registration.accreditation)
     const computedPeriods = generateReportingPeriods(

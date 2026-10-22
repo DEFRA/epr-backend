@@ -48,6 +48,7 @@ export const restrictDateRanges = (ranges, bounds) =>
  * change the input.
  *
  * - 1 Jan to 31 May and 1 Jun to 9 Sep become 1 Jan to 9 Sep
+ * - 1 Jan to 31 Dec and 1 Mar to 31 Mar become 1 Jan to 31 Dec
  * - 1 Jan to 31 Mar and 1 Sep to 31 Dec stay separate
  *
  * @param {CalendarDateRange[]} ranges
@@ -59,7 +60,7 @@ export const joinDateRanges = (ranges) =>
     .reduce((joined, range) => {
       const last = joined.at(-1)
       if (last && range.from.localeCompare(dayAfter(last.to)) <= 0) {
-        last.to = range.to
+        last.to = later(last.to, range.to)
       } else {
         joined.push({ ...range })
       }

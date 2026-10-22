@@ -1,4 +1,6 @@
+import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { config } from '#root/config.js'
 import { yearCalendar } from './report-calendar.js'
 
 /**
@@ -30,7 +32,10 @@ const registeredSinceLastYear = (accreditation) =>
         ? {
             2026: {
               accreditationNumber: 'ACC-2026',
-              status: { timeline: accreditation }
+              status: {
+                current: accreditation.at(-1)?.status,
+                timeline: accreditation
+              }
             }
           }
         : {}
@@ -38,14 +43,32 @@ const registeredSinceLastYear = (accreditation) =>
   )
 
 /**
+ * @param {boolean} enabled
+ */
+const withMidYearStatusTransition = (enabled) => {
+  beforeEach(() => {
+    config.set('featureFlags.midYearStatusTransition', enabled)
+  })
+  afterEach(() => {
+    config.reset('featureFlags.midYearStatusTransition')
+  })
+}
+
+/**
  * @param {{
  *   registration: Registration,
  *   storedReports?: PeriodicReport[],
+ *   allSubmissions?: boolean,
  *   now?: Date
  * }} params
  */
-const calendar = ({ registration, storedReports = [], now = AFTER_YEAR_END }) =>
-  yearCalendar({ registration, storedReports, year: 2026, now })
+const calendar = ({
+  registration,
+  storedReports = [],
+  allSubmissions,
+  now = AFTER_YEAR_END
+}) =>
+  yearCalendar({ registration, storedReports, year: 2026, allSubmissions, now })
 
 /**
  * @param {{ period: number, startDate: string, endDate: string }[] | undefined} periods
@@ -63,7 +86,9 @@ const spans = (periods = []) =>
 const periodNumbers = (periods = []) => periods.map(({ period }) => period)
 
 describe('yearCalendar', () => {
-  it('owes a part quarter and a part month when accredited mid-quarter', () => {
+  withMidYearStatusTransition(true)
+
+  it('has part-period reporting obligations for a quarter and a month when accredited mid-quarter', () => {
     const result = calendar({
       registration: registeredSinceLastYear([approvedOn('2026-02-15')])
     })
@@ -79,7 +104,7 @@ describe('yearCalendar', () => {
     expect(result.accredited?.reportingPeriods).toHaveLength(11)
   })
 
-  it('owes one month when the accreditation is cancelled and reinstated within it', () => {
+  it('has one reporting obligation for a month in which the accreditation is cancelled and reinstated', () => {
     const result = calendar({
       registration: registeredSinceLastYear([
         approvedOn('2026-01-01'),
@@ -102,7 +127,7 @@ describe('yearCalendar', () => {
     ])
   })
 
-  it('owes one quarter when registered-only twice within it', () => {
+  it('has one reporting obligation for a quarter registered-only twice within it', () => {
     const result = calendar({
       registration: registeredSinceLastYear([
         approvedOn('2026-01-01'),
@@ -150,6 +175,22 @@ describe('yearCalendar', () => {
       1, 2
     ])
     expect(result).not.toHaveProperty('accredited')
+  })
+
+  it('says whether a period is due or overdue as of the given date', () => {
+    const result = calendar({
+      registration: registeredSinceLastYear(),
+      now: new Date('2026-07-15T12:00:00Z')
+    })
+
+    expect(
+      result.registeredOnly?.reportingPeriods.map(
+        ({ period, periodStatus }) => ({ period, periodStatus })
+      )
+    ).toEqual([
+      { period: 1, periodStatus: PERIOD_STATUS.OVERDUE },
+      { period: 2, periodStatus: PERIOD_STATUS.DUE }
+    ])
   })
 
   describe('stored reports', () => {
@@ -200,6 +241,86 @@ describe('yearCalendar', () => {
       })
     })
 
+    it('does not list accredited reports for an accreditation the read model dropped', () => {
+      const storedMarch = /** @type {PeriodicReport} */ (
+        /** @type {unknown} */ ({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          year: 2026,
+          reports: {
+            monthly: {
+              3: {
+                startDate: '2026-03-01',
+                endDate: '2026-03-31',
+                dueDate: '2026-04-20',
+                current: submittedReport
+              }
+            }
+          }
+        })
+      )
+
+      const result = calendar({
+        registration: registeredSinceLastYear(),
+        storedReports: [storedMarch]
+      })
+
+      expect(result).not.toHaveProperty('accredited')
+    })
+
+    describe('resubmitted period', () => {
+      const resubmittedQuarterOne = /** @type {PeriodicReport} */ (
+        /** @type {unknown} */ ({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          year: 2026,
+          reports: {
+            quarterly: {
+              1: {
+                startDate: '2026-01-01',
+                endDate: '2026-03-31',
+                dueDate: '2026-04-20',
+                current: {
+                  ...submittedReport,
+                  id: 'report-2',
+                  submissionNumber: 2
+                },
+                previousSubmissions: [submittedReport]
+              }
+            }
+          }
+        })
+      )
+
+      /**
+       * @param {boolean} [allSubmissions]
+       */
+      const quarterOneSubmissions = (allSubmissions) =>
+        calendar({
+          registration: registeredSinceLastYear(),
+          storedReports: [resubmittedQuarterOne],
+          allSubmissions
+        })
+          .registeredOnly?.reportingPeriods.filter(({ period }) => period === 1)
+          .map(({ submissionNumber, periodStatus }) => ({
+            submissionNumber,
+            periodStatus
+          }))
+
+      it('shows only the current submission', () => {
+        expect(quarterOneSubmissions()).toEqual([
+          { submissionNumber: 2, periodStatus: PERIOD_STATUS.SUBMITTED }
+        ])
+      })
+
+      it('shows every submission, oldest first, when all are asked for', () => {
+        expect(quarterOneSubmissions(true)).toEqual([
+          { submissionNumber: 1, periodStatus: PERIOD_STATUS.SUBMITTED },
+          { submissionNumber: 2, periodStatus: PERIOD_STATUS.SUBMITTED }
+        ])
+      })
+    })
+
     it('ignores stored reports from other years', () => {
       const result = calendar({
         registration: registeredSinceLastYear(),
@@ -210,5 +331,56 @@ describe('yearCalendar', () => {
         result.registeredOnly?.reportingPeriods.map(({ report }) => report)
       ).toEqual([null, null, null, null])
     })
+  })
+})
+
+describe('yearCalendar with mid-year status transition off', () => {
+  withMidYearStatusTransition(false)
+
+  it('lists whole accredited months over every registered day for an accredited registration', () => {
+    const result = calendar({
+      registration: registeredSinceLastYear([approvedOn('2026-02-15')])
+    })
+
+    expect(result).not.toHaveProperty('registeredOnly')
+    expect(spans(result.accredited?.reportingPeriods.slice(0, 2))).toEqual([
+      { period: 1, startDate: '2026-01-01', endDate: '2026-01-31' },
+      { period: 2, startDate: '2026-02-01', endDate: '2026-02-28' }
+    ])
+    expect(result.accredited?.reportingPeriods).toHaveLength(12)
+  })
+
+  it('lists whole registered-only quarters once the accreditation is cancelled', () => {
+    const result = calendar({
+      registration: registeredSinceLastYear([
+        approvedOn('2026-01-01'),
+        cancelledOn('2026-07-10')
+      ])
+    })
+
+    expect(result).not.toHaveProperty('accredited')
+    expect(spans(result.registeredOnly?.reportingPeriods)).toEqual([
+      { period: 1, startDate: '2026-01-01', endDate: '2026-03-31' },
+      { period: 2, startDate: '2026-04-01', endDate: '2026-06-30' },
+      { period: 3, startDate: '2026-07-01', endDate: '2026-09-30' },
+      { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
+    ])
+  })
+
+  it('lists whole quarters from the one a registration was approved in', () => {
+    const registration = /** @type {Registration} */ (
+      /** @type {unknown} */ ({
+        status: { timeline: [approvedOn('2026-05-15')] },
+        accreditations: {}
+      })
+    )
+
+    expect(
+      spans(calendar({ registration }).registeredOnly?.reportingPeriods)
+    ).toEqual([
+      { period: 2, startDate: '2026-04-01', endDate: '2026-06-30' },
+      { period: 3, startDate: '2026-07-01', endDate: '2026-09-30' },
+      { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
+    ])
   })
 })
