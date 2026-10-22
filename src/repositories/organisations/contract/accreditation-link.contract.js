@@ -10,24 +10,29 @@ import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
-  buildOrganisation,
   buildRegistration,
   getValidDateRange,
   prepareOrgUpdate
 } from './test-data.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testAccreditationLinkValidation = (it) => {
   describe('accreditation link validation', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
     const { VALID_FROM } = getValidDateRange()
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

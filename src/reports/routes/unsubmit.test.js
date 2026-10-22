@@ -1,4 +1,3 @@
-import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -6,55 +5,54 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
-import {
-  buildOrganisationWithRegistration,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY
 } from '#reports/repository/contract/test-data.js'
+import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
-import { reportsUnsubmitPath } from './unsubmit.js'
 import * as reportAudit from '#reports/application/audit.js'
 
-/** @import { Registration } from '#domain/organisations/registration.js' */
+const { buildOrganisation } = createOrganisationBuilders()
+
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
 }))
 
-describe(`POST ${reportsUnsubmitPath}`, () => {
+const YEAR = 2026
+
+/**
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   year: number,
+ *   cadence: string,
+ *   period: number
+ * }} Period
+ */
+
+describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/unsubmit', () => {
   setupAuthContext()
 
-  const makeUrl = (
-    orgId,
-    regId,
-    year = 2024,
-    cadence = 'monthly',
-    period = 1,
-    submissionNumber = 1
-  ) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/submissions/${submissionNumber}/unsubmit`
-
-  const buildServerWithSubmittedReport = async () => {
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
-    const org = buildOrganisationWithRegistration(
-      /** @type {Registration} */ (registration)
-    )
+  /**
+   * @param {(reportsRepository: ReportsRepository, period: Period) => Promise<unknown>} seed
+   */
+  const createServer = async (seed) => {
+    const registration = reprocessor()
+    const org = buildOrganisation({ registrations: [registration] })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
 
-    const reportId = await createAndSubmitReport(reportsRepository, {
+    const reportId = await seed(reportsRepository, {
       organisationId: org.id,
       registrationId: registration.id,
-      year: 2024,
-      cadence: 'monthly',
+      year: YEAR,
+      cadence: 'quarterly',
       period: 1
     })
 
@@ -71,432 +69,291 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       server,
       organisationId: org.id,
       registrationId: registration.id,
-      reportId,
-      reportsRepository
+      reportId: /** @type {string} */ (reportId),
+      reportsRepository,
+      /** @param {number} [submissionNumber] */
+      urlFor: (submissionNumber = 1) =>
+        `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/${submissionNumber}/unsubmit`
     }
   }
 
-  const buildServerWithReportInStatus = async (targetStatus) => {
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
-    const org = buildOrganisationWithRegistration(
-      /** @type {Registration} */ (registration)
+  const createServerWithSubmittedReport = () =>
+    createServer((reportsRepository, period) =>
+      createAndSubmitReport(reportsRepository, period)
     )
 
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const reportsRepository = reportsRepositoryFactory()
-
-    const report = await reportsRepository.createReport(
-      buildCreateReportParams({
-        organisationId: org.id,
-        registrationId: registration.id
+  // Submission 1 has been superseded by a later submitted resubmission
+  // (submission 2, the current one). Reproduces the PAE-1657 finding.
+  const createServerWithTwoSubmittedSubmissions = () =>
+    createServer(async (reportsRepository, period) => {
+      const supersededReportId = await createAndSubmitReport(
+        reportsRepository,
+        { ...period, submissionNumber: 1 }
+      )
+      await createAndSubmitReport(reportsRepository, {
+        ...period,
+        submissionNumber: 2
       })
-    )
+      return supersededReportId
+    })
 
-    if (targetStatus === 'ready_to_submit') {
-      await reportsRepository.updateReportStatus({
-        reportId: report.id,
-        version: 1,
-        status: 'ready_to_submit',
-        slot: REPORT_STATUS_SLOT.READY,
-        changedBy: DEFAULT_CHANGED_BY
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('successful unsubmit', () => {
+    it('returns 200 with the report back in ready_to_submit', async () => {
+      const { server, urlFor } = await createServerWithSubmittedReport()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
       })
-    }
 
-    const server = await createTestServer({
-      repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(org)
-        ]),
-        reportsRepository: reportsRepositoryFactory
-      }
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toMatchObject({
+        status: 'ready_to_submit'
+      })
     })
 
-    return { server, organisationId: org.id, registrationId: registration.id }
-  }
+    it('preserves status.created, status.ready and status.submitted; sets status.unsubmitted', async () => {
+      const { server, urlFor, reportsRepository, reportId } =
+        await createServerWithSubmittedReport()
 
-  // A period holding two submitted submissions: submission 1 has been
-  // superseded by a later submitted resubmission (submission 2, the current
-  // one). Reproduces Tony Bruce's PAE-1657 finding.
-  const buildServerWithTwoSubmittedSubmissions = async () => {
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor',
-      accreditationId: undefined
-    })
-    const org = buildOrganisationWithRegistration(
-      /** @type {Registration} */ (registration)
-    )
+      await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
+      })
 
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const reportsRepository = reportsRepositoryFactory()
-
-    const period = {
-      organisationId: org.id,
-      registrationId: registration.id,
-      year: 2024,
-      cadence: 'monthly',
-      period: 1
-    }
-    const supersededReportId = await createAndSubmitReport(reportsRepository, {
-      ...period,
-      submissionNumber: 1
-    })
-    const currentReportId = await createAndSubmitReport(reportsRepository, {
-      ...period,
-      submissionNumber: 2
-    })
-
-    const server = await createTestServer({
-      repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(org)
-        ]),
-        reportsRepository: reportsRepositoryFactory
-      }
-    })
-
-    return {
-      server,
-      organisationId: org.id,
-      registrationId: registration.id,
-      supersededReportId,
-      currentReportId,
-      reportsRepository
-    }
-  }
-
-  describe('when feature flag is enabled', () => {
-    describe('successful unsubmit', () => {
-      beforeEach(() => vi.clearAllMocks())
-
-      it('returns 200 with status ready_to_submit', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithSubmittedReport()
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(JSON.parse(response.payload)).toEqual({
-          status: 'ready_to_submit'
+      const updated = await reportsRepository.findReportById(reportId)
+      expect(updated.status.currentStatus).toBe('ready_to_submit')
+      expect(updated.status[REPORT_STATUS_SLOT.CREATED]).toBeDefined()
+      expect(updated.status[REPORT_STATUS_SLOT.READY]).toBeDefined()
+      expect(updated.status[REPORT_STATUS_SLOT.SUBMITTED]).toBeDefined()
+      expect(updated.status[REPORT_STATUS_SLOT.UNSUBMITTED]).toMatchObject({
+        at: expect.any(String),
+        by: expect.objectContaining({
+          id: 'test-maintainer-id',
+          position: 'Service Maintainer'
         })
       })
+    })
 
-      it('preserves status.created, status.ready and status.submitted; sets status.unsubmitted', async () => {
-        const {
-          server,
+    it('appends ready_to_submit to status.history', async () => {
+      const { server, urlFor, reportsRepository, reportId } =
+        await createServerWithSubmittedReport()
+
+      await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
+      })
+
+      const updated = await reportsRepository.findReportById(reportId)
+
+      const lastEntry =
+        /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
+          updated.status.history.at(-1)
+        )
+      expect(lastEntry.status).toBe('ready_to_submit')
+    })
+
+    it('calls auditReportStatusTransition with correct params', async () => {
+      const { server, urlFor, organisationId, registrationId, reportId } =
+        await createServerWithSubmittedReport()
+
+      await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
+      })
+
+      expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
+        expect.any(Object),
+        {
           organisationId,
           registrationId,
-          reportsRepository,
-          reportId
-        } = await buildServerWithSubmittedReport()
-
-        await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        const updated = await reportsRepository.findReportById(reportId)
-        expect(updated.status.currentStatus).toBe('ready_to_submit')
-        expect(updated.status[REPORT_STATUS_SLOT.CREATED]).toBeDefined()
-        expect(updated.status[REPORT_STATUS_SLOT.READY]).toBeDefined()
-        expect(updated.status[REPORT_STATUS_SLOT.SUBMITTED]).toBeDefined()
-        expect(updated.status[REPORT_STATUS_SLOT.UNSUBMITTED]).toMatchObject({
-          at: expect.any(String),
-          by: expect.objectContaining({
-            id: 'test-maintainer-id',
-            position: 'Service Maintainer'
-          })
-        })
-      })
-
-      it('appends ready_to_submit to status.history', async () => {
-        const {
-          server,
-          organisationId,
-          registrationId,
-          reportsRepository,
-          reportId
-        } = await buildServerWithSubmittedReport()
-
-        await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        const updated = await reportsRepository.findReportById(reportId)
-
-        const lastEntry =
-          /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
-            updated.status.history.at(-1)
-          )
-        expect(lastEntry.status).toBe('ready_to_submit')
-      })
-
-      it('calls auditReportStatusTransition with correct params', async () => {
-        const { server, organisationId, registrationId, reportId } =
-          await buildServerWithSubmittedReport()
-
-        await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
-          expect.any(Object),
-          {
-            organisationId,
-            registrationId,
-            year: 2024,
-            cadence: 'monthly',
-            period: 1,
-            submissionNumber: expect.anything(),
-            reportId,
-            previous: expect.objectContaining({
-              status: expect.objectContaining({ currentStatus: 'submitted' })
-            }),
-            next: expect.objectContaining({
-              status: expect.objectContaining({
-                currentStatus: 'ready_to_submit'
-              })
+          year: YEAR,
+          cadence: 'quarterly',
+          period: 1,
+          submissionNumber: 1,
+          reportId,
+          previous: expect.objectContaining({
+            status: expect.objectContaining({ currentStatus: 'submitted' })
+          }),
+          next: expect.objectContaining({
+            status: expect.objectContaining({
+              currentStatus: 'ready_to_submit'
             })
-          }
-        )
-      })
+          })
+        }
+      )
+    })
+  })
+
+  describe('authorisation', () => {
+    it('returns 401 for an unauthenticated request', async () => {
+      const { server, urlFor } = await createServerWithSubmittedReport()
+
+      const response = await server.inject({ method: 'POST', url: urlFor() })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    describe('authorisation', () => {
-      it('returns 401 for an unauthenticated request', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithSubmittedReport()
+    it('returns 403 for an operator', async () => {
+      const { server, urlFor } = await createServerWithSubmittedReport()
 
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId)
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asOperator()
       })
 
-      it('returns 403 for a standard user', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithSubmittedReport()
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+  })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asOperator()
-        })
+  describe('error handling', () => {
+    it('returns 404 when no report exists for the period', async () => {
+      const { server, urlFor } = await createServer(async () => undefined)
 
-        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
       })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    describe('error handling', () => {
-      it('returns 404 when no report exists for the period', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'reprocessor'
-        })
-        const org = buildOrganisationWithRegistration(
-          /** @type {Registration} */ (registration)
-        )
+    it('returns 409 when report is in_progress', async () => {
+      const { server, urlFor } = await createServer(
+        (reportsRepository, period) =>
+          reportsRepository.createReport(buildCreateReportParams(period))
+      )
 
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: createInMemoryOrganisationsRepository([
-              partialMock(org)
-            ]),
-            reportsRepository: createInMemoryReportsRepository()
-          }
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(org.id, registration.id),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
       })
 
-      it('returns 409 when report is in_progress', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithReportInStatus('in_progress')
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
+    it('returns 409 when report is ready_to_submit', async () => {
+      const { server, urlFor } = await createServer(
+        async (reportsRepository, period) => {
+          const report = await reportsRepository.createReport(
+            buildCreateReportParams(period)
+          )
+          await reportsRepository.updateReportStatus({
+            reportId: report.id,
+            version: 1,
+            status: 'ready_to_submit',
+            slot: REPORT_STATUS_SLOT.READY,
+            changedBy: DEFAULT_CHANGED_BY
+          })
+        }
+      )
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(),
+        ...asServiceMaintainer()
       })
 
-      it('returns 409 when report is ready_to_submit', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithReportInStatus('ready_to_submit')
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      })
-
-      it('returns 409 when report is marked as requiring resubmission', async () => {
-        const { server, organisationId, registrationId, reportsRepository } =
-          await buildServerWithSubmittedReport()
-
-        const flagged =
+    it('returns 409 when report is marked as requiring resubmission', async () => {
+      const { server, urlFor } = await createServer(
+        async (reportsRepository, period) => {
+          await createAndSubmitReport(reportsRepository, period)
           await reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
             {
-              organisationId,
-              registrationId,
-              year: 2024,
-              cadence: 'monthly',
-              period: 1,
+              ...period,
               submissionNumber: 1,
               requestedBy: DEFAULT_CHANGED_BY,
               requestedAt: new Date().toISOString()
             }
           )
-        expect(flagged).not.toBeNull()
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      })
-    })
-
-    describe('superseded submission', () => {
-      beforeEach(() => vi.clearAllMocks())
-
-      it('returns 409 when unsubmitting a submission superseded by a later one', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithTwoSubmittedSubmissions()
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 1),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      })
-
-      it('leaves the superseded submission submitted after a rejected unsubmit', async () => {
-        const {
-          server,
-          organisationId,
-          registrationId,
-          supersededReportId,
-          reportsRepository
-        } = await buildServerWithTwoSubmittedSubmissions()
-
-        await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 1),
-          ...asServiceMaintainer()
-        })
-
-        const report =
-          await reportsRepository.findReportById(supersededReportId)
-        expect(report.status.currentStatus).toBe('submitted')
-      })
-
-      it('allows unsubmitting the latest submitted submission', async () => {
-        const { server, organisationId, registrationId } =
-          await buildServerWithTwoSubmittedSubmissions()
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(organisationId, registrationId, 2024, 'monthly', 1, 2),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-      })
-
-      it('returns 409 when unsubmitting a submitted submission while a later resubmission draft is in progress', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'reprocessor',
-          accreditationId: undefined
-        })
-        const org = buildOrganisationWithRegistration(
-          /** @type {Registration} */ (registration)
-        )
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        const period = {
-          organisationId: org.id,
-          registrationId: registration.id,
-          year: 2024,
-          cadence: 'monthly',
-          period: 1
         }
-        await createAndSubmitReport(reportsRepository, {
-          ...period,
-          submissionNumber: 1
-        })
-        // Submission 2 is a draft (in_progress). Even though submission 1 is the
-        // latest *submitted* one, a later submission exists, so unsubmit of 1 is
-        // rejected: only the absolute latest submission may be unsubmitted.
-        await reportsRepository.createReport(
-          buildCreateReportParams({ ...period, submissionNumber: 2 })
-        )
-
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: createInMemoryOrganisationsRepository([
-              partialMock(org)
-            ]),
-            reportsRepository: reportsRepositoryFactory
-          }
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url: makeUrl(org.id, registration.id, 2024, 'monthly', 1, 1),
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      })
-    })
-  })
-
-  describe('when feature flag is disabled', () => {
-    it('returns 404', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
-      const server = await createTestServer({
-        repositories: {}
-      })
+      )
 
       const response = await server.inject({
         method: 'POST',
-        url: makeUrl(organisationId, registrationId),
+        url: urlFor(),
         ...asServiceMaintainer()
       })
 
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    })
+  })
+
+  describe('superseded submission', () => {
+    it('returns 409 when unsubmitting a submission superseded by a later one', async () => {
+      const { server, urlFor } = await createServerWithTwoSubmittedSubmissions()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(1),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    })
+
+    it('leaves the superseded submission submitted after a rejected unsubmit', async () => {
+      const { server, urlFor, reportId, reportsRepository } =
+        await createServerWithTwoSubmittedSubmissions()
+
+      await server.inject({
+        method: 'POST',
+        url: urlFor(1),
+        ...asServiceMaintainer()
+      })
+
+      const report = await reportsRepository.findReportById(reportId)
+      expect(report.status.currentStatus).toBe('submitted')
+    })
+
+    it('allows unsubmitting the latest submitted submission', async () => {
+      const { server, urlFor } = await createServerWithTwoSubmittedSubmissions()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(2),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns 409 when unsubmitting a submitted submission while a later resubmission draft is in progress', async () => {
+      // Submission 1 is the latest *submitted* one, but a later draft exists:
+      // only the absolute latest submission may be unsubmitted.
+      const { server, urlFor } = await createServer(
+        async (reportsRepository, period) => {
+          await createAndSubmitReport(reportsRepository, {
+            ...period,
+            submissionNumber: 1
+          })
+          await reportsRepository.createReport(
+            buildCreateReportParams({ ...period, submissionNumber: 2 })
+          )
+        }
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(1),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     })
   })
 })

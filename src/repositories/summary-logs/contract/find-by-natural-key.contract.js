@@ -3,8 +3,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogFactory, withoutYear } from './test-data.js'
@@ -13,6 +13,8 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { TestAPI } from 'vitest'

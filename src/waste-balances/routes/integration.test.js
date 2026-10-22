@@ -9,11 +9,13 @@ import {
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
   async () => import('#adapters/sqs-command-executor/mock.plugin.js')

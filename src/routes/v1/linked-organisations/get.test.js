@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -12,6 +12,8 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { linkedOrganisationsGetAllPath } from './get.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 

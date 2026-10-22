@@ -1,11 +1,13 @@
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseNaturalKeyFormats } from './diagnose-natural-key-formats.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @param {{

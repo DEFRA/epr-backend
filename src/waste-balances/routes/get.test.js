@@ -3,14 +3,16 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 

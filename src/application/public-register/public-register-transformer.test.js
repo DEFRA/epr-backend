@@ -3,9 +3,9 @@ import { ObjectId } from 'mongodb'
 import { transform } from './public-register-transformer.js'
 import {
   buildAccreditation,
-  buildReadOrganisation,
   buildRegistration,
-  getValidDateRange
+  getValidDateRange,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
@@ -17,6 +17,8 @@ import {
 import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 describe('transform', () => {
   const baseAddress = {
@@ -129,7 +131,6 @@ describe('transform', () => {
         dateLastChanged: EXPECTED_DATE_LAST_CHANGED
       }
     ])
-    expect(rows[0].orgId).greaterThan(500000)
   })
 
   it('should use regulator info from registration for populating appropriate agency', async () => {

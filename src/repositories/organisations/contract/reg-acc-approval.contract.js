@@ -2,7 +2,6 @@ import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
-  buildOrganisation,
   buildRegistration,
   prepareOrgUpdate,
   getValidDateRange
@@ -17,20 +16,26 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testRegAccApprovalValidation = (it) => {
   // Date strings for validFrom/validTo
   const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   describe('approval validation', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

@@ -12,35 +12,43 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import {
-  buildOrganisationWithRegistration,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
-import { reportsGetPath } from './get.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { exporter } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+
+const { buildOrganisationWithRegistration } = createOrganisationBuilders()
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { TestServer } from '#test/create-test-server.js'
  */
 
-describe(`GET ${reportsGetPath}`, () => {
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/reports/calendar', () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/calendar`
+  /**
+   * @param {{ orgId: number }} org
+   * @param {Registration} registration
+   */
+  const calendarUrl = (org, registration) =>
+    `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/calendar`
 
-  describe('when feature flag is enabled', () => {
+  /**
+   * @param {object} overrides
+   * @returns {Registration}
+   */
+  const servedRegistration = (overrides) =>
+    /** @type {Registration} */ (exporter(overrides))
+
+  describe('for a registration served by natural key', () => {
     /**
-     * @returns {Promise<{ server: TestServer, organisationId: string, registrationId: string }>}
+     * @returns {Promise<{ server: TestServer, organisationId: string, registrationId: string, calendar: string }>}
      */
     const createServer = async (
       registrationOverrides = {},
       reportsRepositoryFactory,
       accreditationStatus
     ) => {
-      const registration = /** @type {Registration} */ (
-        buildRegistration(registrationOverrides)
-      )
+      const registration = servedRegistration(registrationOverrides)
       const org = buildOrganisationWithRegistration(
         registration,
         accreditationStatus
@@ -63,26 +71,27 @@ describe(`GET ${reportsGetPath}`, () => {
       return {
         server,
         organisationId: org.id,
-        registrationId: registration.id
+        registrationId: registration.id,
+        calendar: calendarUrl(org, registration)
       }
     }
 
-    const makeRequest = (server, orgId, regId) =>
+    const makeRequest = (server, calendar) =>
       server.inject({
         method: 'GET',
-        url: makeUrl(orgId, regId),
+        url: calendar,
         ...asOperator()
       })
 
     it('returns 200 for a regulator standard user', async () => {
-      const { server, organisationId, registrationId } = await createServer({
+      const { server, calendar } = await createServer({
         wasteProcessingType: 'exporter',
         accreditationId: undefined
       })
 
       const response = await server.inject({
         method: 'GET',
-        url: makeUrl(organisationId, registrationId),
+        url: calendar,
         headers: {
           Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
         }
@@ -93,47 +102,35 @@ describe(`GET ${reportsGetPath}`, () => {
 
     describe('registered-only operator (no accreditation)', () => {
       it('returns 200', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
 
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('returns quarterly cadence', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(payload.cadence).toBe('quarterly')
       })
 
       it('returns reportingPeriods with dueDate', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         for (const period of payload.reportingPeriods) {
@@ -142,16 +139,12 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('returns only ended quarterly periods', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const currentQuarter = Math.floor(new Date().getUTCMonth() / 3) + 1
@@ -161,16 +154,12 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('does not include the current in-progress quarter', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const currentQuarter = Math.floor(new Date().getUTCMonth() / 3) + 1
@@ -182,16 +171,12 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('omits report field when no persisted report exists', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(payload.reportingPeriods.every((p) => p.report === null)).toBe(
@@ -200,16 +185,12 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('returns submissionNumber 1 for all periods when no reports exist', async () => {
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(
@@ -222,7 +203,7 @@ describe(`GET ${reportsGetPath}`, () => {
       const currentYear = new Date().getUTCFullYear()
 
       it('returns monthly cadence', async () => {
-        const { server, organisationId, registrationId } = await createServer(
+        const { server, calendar } = await createServer(
           {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
@@ -231,18 +212,14 @@ describe(`GET ${reportsGetPath}`, () => {
           'approved'
         )
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(payload.cadence).toBe('monthly')
       })
 
       it('returns monthly cadence for suspended accreditation', async () => {
-        const { server, organisationId, registrationId } = await createServer(
+        const { server, calendar } = await createServer(
           {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
@@ -251,18 +228,14 @@ describe(`GET ${reportsGetPath}`, () => {
           'suspended'
         )
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(payload.cadence).toBe('monthly')
       })
 
       it('returns only ended monthly periods', async () => {
-        const { server, organisationId, registrationId } = await createServer(
+        const { server, calendar } = await createServer(
           {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
@@ -271,11 +244,7 @@ describe(`GET ${reportsGetPath}`, () => {
           'approved'
         )
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const currentMonth = new Date().getUTCMonth() + 1
@@ -285,7 +254,7 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('includes dueDate for each monthly period', async () => {
-        const { server, organisationId, registrationId } = await createServer(
+        const { server, calendar } = await createServer(
           {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
@@ -294,11 +263,7 @@ describe(`GET ${reportsGetPath}`, () => {
           'approved'
         )
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
@@ -326,12 +291,9 @@ describe(`GET ${reportsGetPath}`, () => {
           status = 'approved'
         }
       ) => {
-        const registration = /** @type {Registration} */ (
-          buildRegistration({
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          })
-        )
+        const registration = servedRegistration({
+          accreditationId: new ObjectId().toString()
+        })
         const org = buildOrganisationWithRegistration(registration, status)
         org.accreditations[0].validFrom = validFrom
 
@@ -343,19 +305,11 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        return {
-          server,
-          organisationId: org.id,
-          registrationId: registration.id
-        }
+        return { server, calendar: calendarUrl(org, registration) }
       }
 
-      const periodsFor = async ({ server, organisationId, registrationId }) => {
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+      const periodsFor = async ({ server, calendar }) => {
+        const response = await makeRequest(server, calendar)
         return JSON.parse(response.payload).reportingPeriods.map(
           (p) => p.period
         )
@@ -389,22 +343,11 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('does not trim a registered-only (quarterly) operator', async () => {
-        const registration = /** @type {Registration} */ (
-          buildRegistration({
-            wasteProcessingType: 'exporter',
-            accreditationId: undefined
-          })
-        )
-        const org = buildOrganisationWithRegistration(registration)
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: createInMemoryOrganisationsRepository([
-              partialMock(org)
-            ])
-          }
+        const { server, calendar } = await createServer({
+          accreditationId: undefined
         })
 
-        const response = await makeRequest(server, org.id, registration.id)
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         // Q1 is the only ended quarter at Jun 10; unaffected by the trim.
@@ -417,7 +360,7 @@ describe(`GET ${reportsGetPath}`, () => {
       it.each(['created', 'rejected', 'cancelled'])(
         'returns quarterly cadence when linked accreditation status is %s',
         async (accreditationStatus) => {
-          const { server, organisationId, registrationId } = await createServer(
+          const { server, calendar } = await createServer(
             {
               wasteProcessingType: 'exporter',
               accreditationId: new ObjectId().toString()
@@ -426,11 +369,7 @@ describe(`GET ${reportsGetPath}`, () => {
             accreditationStatus
           )
 
-          const response = await makeRequest(
-            server,
-            organisationId,
-            registrationId
-          )
+          const response = await makeRequest(server, calendar)
           const payload = JSON.parse(response.payload)
 
           expect(payload.cadence).toBe('quarterly')
@@ -439,16 +378,12 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('returns quarterly cadence when accreditationId points to nothing (unhydrated)', async () => {
         // No accreditation in org, so registration.accreditation hydrates to null
-        const { server, organisationId, registrationId } = await createServer({
+        const { server, calendar } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(payload.cadence).toBe('quarterly')
@@ -458,14 +393,15 @@ describe(`GET ${reportsGetPath}`, () => {
     describe('with persisted reports', () => {
       it('includes report object for period with persisted report', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -500,11 +436,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
@@ -516,14 +448,15 @@ describe(`GET ${reportsGetPath}`, () => {
       it('emits a requires_resubmission skeleton alongside a flagged submitted period', async () => {
         const year = new Date().getUTCFullYear()
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         const { id } = await reportsRepository.createReport({
@@ -579,11 +512,7 @@ describe(`GET ${reportsGetPath}`, () => {
           periods: [{ year, cadence: 'monthly', period: 1 }]
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const januaryItems = payload.reportingPeriods.filter(
@@ -616,14 +545,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('curates the report shape: excludes activity payloads', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -658,11 +588,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
@@ -679,14 +605,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('handles deleted report (null currentReportId)', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -730,11 +657,7 @@ describe(`GET ${reportsGetPath}`, () => {
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
@@ -743,14 +666,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('returns submissionNumber from stored report when report exists', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -785,11 +709,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
@@ -798,14 +718,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('returns submissionNumber 1 for period without a persisted report', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -840,11 +761,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const february = payload.reportingPeriods.find((p) => p.period === 2)
@@ -853,14 +770,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('returns report as null for period without persisted report', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         const reportsRepository = reportsRepositoryFactory()
         await reportsRepository.createReport({
@@ -895,11 +813,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         const february = payload.reportingPeriods.find((p) => p.period === 2)
@@ -957,7 +871,7 @@ describe(`GET ${reportsGetPath}`, () => {
 
       const setup = async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
+        const ctx = await createServer(
           {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
@@ -965,20 +879,11 @@ describe(`GET ${reportsGetPath}`, () => {
           reportsRepositoryFactory,
           'approved'
         )
-        return {
-          server,
-          organisationId,
-          registrationId,
-          repo: reportsRepositoryFactory()
-        }
+        return { ...ctx, repo: reportsRepositoryFactory() }
       }
 
-      const periodItems = async (server, organisationId, registrationId, p) => {
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+      const periodItems = async (server, calendar, p) => {
+        const response = await makeRequest(server, calendar)
         return JSON.parse(response.payload).reportingPeriods.filter(
           (item) => item.period === p
         )
@@ -1085,7 +990,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('emits the submitted original and a requires_resubmission slot carrying the ready-to-submit draft', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         const sub1 = await seedFlaggedSubmittedPeriod(repo, {
           organisationId,
@@ -1101,12 +1007,7 @@ describe(`GET ${reportsGetPath}`, () => {
           toStatus: REPORT_STATUS.READY_TO_SUBMIT
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(2)
         expect(january.map((p) => p.periodStatus).sort()).toStrictEqual([
@@ -1131,7 +1032,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('collapses to a single submitted item once the resubmission is itself submitted', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         await seedFlaggedSubmittedPeriod(repo, {
           organisationId,
@@ -1147,12 +1049,7 @@ describe(`GET ${reportsGetPath}`, () => {
           toStatus: REPORT_STATUS.SUBMITTED
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(1)
         expect(january[0].periodStatus).toBe('submitted')
@@ -1162,7 +1059,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('keeps the resubmission slot at requires_resubmission while the draft is in progress', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         await seedFlaggedSubmittedPeriod(repo, {
           organisationId,
@@ -1177,12 +1075,7 @@ describe(`GET ${reportsGetPath}`, () => {
           period: 1
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(2)
         const resub = january.find(
@@ -1198,7 +1091,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('curates the resubmission item report to the list shape', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         await seedFlaggedSubmittedPeriod(repo, {
           organisationId,
@@ -1214,12 +1108,7 @@ describe(`GET ${reportsGetPath}`, () => {
           toStatus: REPORT_STATUS.READY_TO_SUBMIT
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
         const resub = january.find(
           (p) => p.periodStatus === 'requires_resubmission'
         )
@@ -1237,7 +1126,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('reverts to the pre-draft skeleton after the resubmission draft is deleted', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         const sub1 = await seedFlaggedSubmittedPeriod(repo, {
           organisationId,
@@ -1262,12 +1152,7 @@ describe(`GET ${reportsGetPath}`, () => {
           changedBy
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(2)
         const original = january.find((p) => p.periodStatus === 'submitted')
@@ -1280,7 +1165,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('emits an independent submitted and requires_resubmission pair for each flagged period', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         for (const period of [1, 2]) {
           await seedFlaggedSubmittedPeriod(repo, {
@@ -1299,12 +1185,7 @@ describe(`GET ${reportsGetPath}`, () => {
         }
 
         for (const period of [1, 2]) {
-          const items = await periodItems(
-            server,
-            organisationId,
-            registrationId,
-            period
-          )
+          const items = await periodItems(server, calendar, period)
           expect(items.map((p) => p.periodStatus).sort()).toStrictEqual([
             'requires_resubmission',
             'submitted'
@@ -1314,7 +1195,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('emits a single item for a submitted period that was never flagged', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         await seedSubmittedPeriod(repo, {
           organisationId,
@@ -1323,12 +1205,7 @@ describe(`GET ${reportsGetPath}`, () => {
           period: 1
         })
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(1)
         expect(january[0].periodStatus).toBe('submitted')
@@ -1336,7 +1213,8 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('emits a single in-progress item for a period with only a first-submission draft', async () => {
         const year = new Date().getUTCFullYear()
-        const { server, organisationId, registrationId, repo } = await setup()
+        const { server, organisationId, registrationId, calendar, repo } =
+          await setup()
 
         await repo.createReport(
           buildCreatePayload({
@@ -1348,12 +1226,7 @@ describe(`GET ${reportsGetPath}`, () => {
           })
         )
 
-        const january = await periodItems(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await periodItems(server, calendar, 1)
 
         expect(january).toHaveLength(1)
         expect(january[0].periodStatus).toBe('in_progress')
@@ -1363,13 +1236,14 @@ describe(`GET ${reportsGetPath}`, () => {
     describe('periodic reports under a different cadence', () => {
       it('ignores periodic reports stored under a mismatched cadence', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: undefined
-          },
-          reportsRepositoryFactory
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: undefined
+            },
+            reportsRepositoryFactory
+          )
 
         // Create a report under monthly cadence, but the handler will query quarterly
         const reportsRepository = reportsRepositoryFactory()
@@ -1405,11 +1279,7 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -1444,17 +1314,8 @@ describe(`GET ${reportsGetPath}`, () => {
           'approved'
         )
 
-      const findPeriod = async (
-        server,
-        organisationId,
-        registrationId,
-        period
-      ) => {
-        const response = await makeRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+      const findPeriod = async (server, calendar, period) => {
+        const response = await makeRequest(server, calendar)
         const payload = JSON.parse(response.payload)
 
         return payload.reportingPeriods.find((p) => p.period === period)
@@ -1466,15 +1327,9 @@ describe(`GET ${reportsGetPath}`, () => {
       ])(
         'derives "$expected" for an ended period $when with no report',
         async ({ period, expected }) => {
-          const { server, organisationId, registrationId } =
-            await createAccreditedServer()
+          const { server, calendar } = await createAccreditedServer()
 
-          const item = await findPeriod(
-            server,
-            organisationId,
-            registrationId,
-            period
-          )
+          const item = await findPeriod(server, calendar, period)
 
           expect(item.report).toBeNull()
           expect(item.periodStatus).toBe(expected)
@@ -1483,14 +1338,15 @@ describe(`GET ${reportsGetPath}`, () => {
 
       it('derives periodStatus from the stored report status when a report exists', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const { server, organisationId, registrationId } = await createServer(
-          {
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          },
-          reportsRepositoryFactory,
-          'approved'
-        )
+        const { server, organisationId, registrationId, calendar } =
+          await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            reportsRepositoryFactory,
+            'approved'
+          )
 
         await reportsRepositoryFactory().createReport({
           organisationId,
@@ -1524,39 +1380,22 @@ describe(`GET ${reportsGetPath}`, () => {
           }
         })
 
-        const january = await findPeriod(
-          server,
-          organisationId,
-          registrationId,
-          1
-        )
+        const january = await findPeriod(server, calendar, 1)
 
         expect(january.report.status).toBe('in_progress')
         expect(january.periodStatus).toBe('in_progress')
       })
     })
 
-    describe('registration not found', () => {
-      it('returns 404', async () => {
-        const { server, organisationId } = await createServer()
-        const unknownRegId = new ObjectId().toString()
-
-        const response = await makeRequest(server, organisationId, unknownRegId)
-
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      })
-    })
-
     describe('service maintainer access', () => {
       it('returns 200 for a service maintainer', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'reprocessor',
+        const { server, calendar } = await createServer({
           accreditationId: undefined
         })
 
         const response = await server.inject({
           method: 'GET',
-          url: makeUrl(organisationId, registrationId),
+          url: calendar,
           ...asServiceMaintainer()
         })
 
@@ -1708,10 +1547,10 @@ describe(`GET ${reportsGetPath}`, () => {
         return { ...ctx, repo: reportsRepositoryFactory() }
       }
 
-      const expandRequest = (server, organisationId, registrationId) =>
+      const expandRequest = (server, calendar) =>
         server.inject({
           method: 'GET',
-          url: `${makeUrl(organisationId, registrationId)}?expand=submissions`,
+          url: `${calendar}?expand=submissions`,
           ...asOperator()
         })
 
@@ -1721,7 +1560,7 @@ describe(`GET ${reportsGetPath}`, () => {
         )
 
       it('lists every submission per period when expand=submissions', async () => {
-        const { server, organisationId, registrationId, repo } =
+        const { server, organisationId, registrationId, calendar, repo } =
           await createExporterServer()
         const { sub1, sub2 } = await seedResubmittedPeriod(
           repo,
@@ -1729,11 +1568,7 @@ describe(`GET ${reportsGetPath}`, () => {
           registrationId
         )
 
-        const response = await expandRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await expandRequest(server, calendar)
         const january = januaryItems(response)
 
         expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
@@ -1746,7 +1581,7 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('surfaces a requires_resubmission skeleton with no draft yet', async () => {
-        const { server, organisationId, registrationId, repo } =
+        const { server, organisationId, registrationId, calendar, repo } =
           await createExporterServer()
         const sub1 = await seedSubmitted(
           repo,
@@ -1757,11 +1592,7 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         await flagForResubmission(repo, organisationId, registrationId)
 
-        const response = await expandRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await expandRequest(server, calendar)
         const january = januaryItems(response)
 
         expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
@@ -1774,7 +1605,7 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('shows the flagged submission once with the in-flight resubmission draft', async () => {
-        const { server, organisationId, registrationId, repo } =
+        const { server, organisationId, registrationId, calendar, repo } =
           await createExporterServer()
         const sub1 = await seedSubmitted(
           repo,
@@ -1786,11 +1617,7 @@ describe(`GET ${reportsGetPath}`, () => {
         await flagForResubmission(repo, organisationId, registrationId)
         const draft = await seedDraft(repo, organisationId, registrationId, 2)
 
-        const response = await expandRequest(
-          server,
-          organisationId,
-          registrationId
-        )
+        const response = await expandRequest(server, calendar)
         const january = januaryItems(response)
 
         expect(january.map((p) => p.submissionNumber)).toEqual([1, 2])
@@ -1804,13 +1631,13 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('collapses superseded submissions when the arg is absent', async () => {
-        const { server, organisationId, registrationId, repo } =
+        const { server, organisationId, registrationId, calendar, repo } =
           await createExporterServer()
         await seedResubmittedPeriod(repo, organisationId, registrationId)
 
         const response = await server.inject({
           method: 'GET',
-          url: makeUrl(organisationId, registrationId),
+          url: calendar,
           ...asOperator()
         })
 
@@ -1820,36 +1647,16 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('rejects an unknown expand value', async () => {
-        const { server, organisationId, registrationId } =
-          await createExporterServer()
+        const { server, calendar } = await createExporterServer()
 
         const response = await server.inject({
           method: 'GET',
-          url: `${makeUrl(organisationId, registrationId)}?expand=everything`,
+          url: `${calendar}?expand=everything`,
           ...asOperator()
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
-    })
-  })
-
-  describe('when feature flag is disabled', () => {
-    it('returns 404', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
-      const server = await createTestServer({
-        repositories: {}
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: makeUrl(organisationId, registrationId),
-        ...asOperator()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 })

@@ -1,10 +1,14 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 

@@ -9,14 +9,16 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedYearPath } from './year-post.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const mockRecordStatusTransition = vi.fn()
 

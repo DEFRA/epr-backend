@@ -10,8 +10,8 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import {
   buildAccreditation,
-  buildReadOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -34,6 +34,8 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntry, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */

@@ -47,7 +47,6 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
-import { runFutureStatusDateDiagnostic } from '#future-status-date-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
 import { runSummaryLogNumbersBackfill } from '#summary-log-numbers-backfill/run.js'
 
@@ -226,7 +225,6 @@ async function createServer(options = {}) {
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
-    void runFutureStatusDateDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
     void runSummaryLogNumbersBackfill(startedServer)
   })

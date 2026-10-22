@@ -7,11 +7,15 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogUploadsReportPath } from './get.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import { generateOrgId } from '#repositories/organisations/contract/test-data.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { nextOrgId } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
@@ -40,7 +44,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
   describe('successful requests', () => {
     it('returns 200 with summary log uploads report data', async () => {
-      const orgId = generateOrgId()
+      const orgId = nextOrgId()
       const org = await buildApprovedOrg(organisationsRepository, { orgId })
       const registration = org.registrations[0]
 

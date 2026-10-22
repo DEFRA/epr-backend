@@ -1,6 +1,6 @@
 import {
   buildAccreditation,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   APPROVED_SITE_ID,
@@ -16,6 +16,8 @@ import {
   reprocessor,
   reprocessorAt
 } from './organisation-read-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from '../port.contract.js' */
 
