@@ -4,6 +4,7 @@ import {
   restrictDateRanges,
   subtractDateRanges
 } from '#common/helpers/dates/date-range.js'
+import { HELD_ACCREDITATION_STATUSES } from './model.js'
 import { statusRanges } from './status-timeline.js'
 
 /** @import { CalendarDateRange } from '#common/helpers/dates/date-range.js' */
@@ -21,19 +22,19 @@ const registeredWindows = (registration, year) =>
   )
 
 /**
- * A suspended accreditation is still accredited.
- *
  * @param {Registration} registration
  * @param {CalendarDateRange} year
  * @param {number} yearNumber
  * @returns {CalendarDateRange[]}
  */
 const accreditedWindows = (registration, year, yearNumber) => {
-  const held = statusRanges(
+  const ranges = statusRanges(
     registration.accreditations[yearNumber]?.status.timeline ?? [],
     year.to
   )
-  return joinDateRanges([...(held.approved ?? []), ...(held.suspended ?? [])])
+  return joinDateRanges(
+    [...HELD_ACCREDITATION_STATUSES].flatMap((status) => ranges[status] ?? [])
+  )
 }
 
 /**
