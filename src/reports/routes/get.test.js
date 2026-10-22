@@ -12,8 +12,10 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import { buildOrganisationWithRegistration } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { exporter } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+
+const { buildOrganisationWithRegistration } = createOrganisationBuilders()
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'

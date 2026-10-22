@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -14,6 +14,8 @@ import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accreditation-reports.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */

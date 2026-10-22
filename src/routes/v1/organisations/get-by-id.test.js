@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -12,7 +12,11 @@ import {
   testRegulatorCanRead
 } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 

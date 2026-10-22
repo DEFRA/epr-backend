@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -81,6 +86,23 @@ export const testInsertBehaviour = (it) => {
             statusCode: 409,
             payload: {
               message: `Organisation with ${organisation.id} already exists`
+            }
+          }
+        })
+      })
+
+      it('refuses an organisation whose orgId another organisation holds', async () => {
+        const first = buildOrganisation()
+        await repository.insert(first)
+
+        const second = buildOrganisation({ orgId: first.orgId })
+
+        await expect(repository.insert(second)).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
             }
           }
         })

@@ -1,6 +1,6 @@
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -23,6 +23,8 @@ import {
 } from './organisation-read-test-helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
+const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
+
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
 /**
@@ -34,12 +36,12 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       organisationReadRepositoryWith
     }) => {
       const repository = await organisationReadRepositoryWith({
-        organisations: [buildOrganisation({ orgId: 500001 })]
+        organisations: [buildOrganisation()]
       })
 
       expect(
         await repository.findByOrganisationNumber(
-          toOrganisationNumber('500002')
+          toOrganisationNumber(String(nextOrgId()))
         )
       ).toBeNull()
     })

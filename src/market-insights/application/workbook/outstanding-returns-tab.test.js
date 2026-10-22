@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
@@ -7,7 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
@@ -21,6 +22,10 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */

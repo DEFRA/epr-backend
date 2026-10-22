@@ -6,19 +6,23 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
   defraIdMockAuthTokens
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 

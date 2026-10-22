@@ -6,7 +6,7 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -28,6 +28,8 @@ import {
   REPROCESSED_LOADS_HEADERS,
   createReprocessedRowValues
 } from './integration-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 

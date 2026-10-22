@@ -11,8 +11,8 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -26,6 +26,8 @@ import { createMongoSummaryLogRowStatesRepository } from '#waste-records/reposit
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
 import { nonProdDataResetPlugin } from './mongodb.plugin.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')

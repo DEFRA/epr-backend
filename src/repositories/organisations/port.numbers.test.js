@@ -8,10 +8,12 @@ import {
 } from '#domain/organisations/numbers.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
