@@ -121,21 +121,31 @@ describe('summary-log routes by natural key', () => {
   })
 
   /**
-   * @param {object} overrides
+   * @typedef {{
+   *   registrationId: string,
+   *   accreditationId?: string | null,
+   *   [field: string]: unknown
+   * }} SeedOverrides
+   */
+
+  /**
+   * Stores a summary log under its ids and the numbers an upload stores
+   * beside them.
+   *
+   * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
    */
   const seed = async (overrides, build) => {
     const summaryLogId = randomUUID()
-    const summaryLog = build({
-      organisationId: organisation.id,
-      year: YEAR,
+    const { numbers } = numbersForSummaryLog(partialMock(organisation), {
+      accreditationId: null,
       ...overrides
     })
     await summaryLogsRepository.insert(
       summaryLogId,
       partialMock({
-        ...summaryLog,
-        ...numbersForSummaryLog(partialMock(organisation), summaryLog).numbers
+        ...build({ organisationId: organisation.id, year: YEAR, ...overrides }),
+        ...numbers
       })
     )
     return {
@@ -147,7 +157,7 @@ describe('summary-log routes by natural key', () => {
   /**
    * A summary log ready to submit: validated against no prior submission.
    *
-   * @param {object} overrides
+   * @param {SeedOverrides} overrides
    */
   const seedValidated = async (overrides) => {
     const { summaryLogId, version, summaryLog } = await seed(

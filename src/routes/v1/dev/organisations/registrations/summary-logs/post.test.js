@@ -348,18 +348,20 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers with a conflict and supersedes the log when a submission landed while it validated', async () => {
     const env = await createEnvironment()
     const minted = beforeTransitionToSubmitting(env, async () => {
-      const landed = summaryLogFactory.submitted({
-        organisationId: env.organisationId,
+      const ids = {
         registrationId: env.registrationId,
-        year: ACCREDITED_YEAR,
         accreditationId: env.accreditationId
-      })
+      }
       const { numbers } = numbersForSummaryLog(
         await env.organisationsRepository.findById(env.organisationId),
-        landed
+        ids
       )
       await env.summaryLogsRepository.insert('landed-meanwhile', {
-        ...landed,
+        ...summaryLogFactory.submitted({
+          organisationId: env.organisationId,
+          year: ACCREDITED_YEAR,
+          ...ids
+        }),
         ...numbers
       })
     })

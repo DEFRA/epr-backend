@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { numbersForSummaryLog, summaryLogKeyOf } from './numbers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -128,7 +129,7 @@ describe('summaryLogKeyOf', () => {
         summaryLog({
           year: 2026,
           accreditationId: 'acc-1',
-          accreditationNumber: /** @type {any} */ ('ACC500123')
+          accreditationNumber: toAccreditationNumber('ACC500123')
         })
       )
     ).toEqual({
