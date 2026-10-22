@@ -10,7 +10,7 @@ import {
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
@@ -38,6 +38,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { body } from '#routes/organisations/organisation-view-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'

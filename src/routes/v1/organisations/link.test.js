@@ -4,15 +4,15 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  buildOrganisation,
   prepareOrgUpdate,
-  getValidDateRange
+  getValidDateRange,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -23,6 +23,10 @@ import {
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationLinkedMetric = vi.fn()

@@ -2,9 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from './create-test-server.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 

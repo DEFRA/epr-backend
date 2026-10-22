@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -11,7 +12,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -29,6 +30,9 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const januaryToFebruary2026 = marketInsightsWasteBalancePath
   .replace('{year}', '2026')

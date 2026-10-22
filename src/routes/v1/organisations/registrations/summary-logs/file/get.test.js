@@ -6,8 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -18,6 +18,8 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import './get.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const mockAuditSummaryLogDownload = vi.fn()
 

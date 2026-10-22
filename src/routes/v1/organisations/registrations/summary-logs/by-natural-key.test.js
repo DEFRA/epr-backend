@@ -9,7 +9,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -26,6 +26,8 @@ import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 

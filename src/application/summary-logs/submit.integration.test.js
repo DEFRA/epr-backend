@@ -6,7 +6,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildCreateReportParams,
@@ -36,6 +36,8 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 const mockRecordDecemberWasteRows = vi.fn()
 

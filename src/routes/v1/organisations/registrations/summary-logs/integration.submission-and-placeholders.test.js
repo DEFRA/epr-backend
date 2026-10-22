@@ -13,7 +13,7 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -46,6 +46,8 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 describe('Submission and placeholder tests', () => {
   let organisationId

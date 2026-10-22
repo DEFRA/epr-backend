@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { atNaturalKeys } from './at-natural-keys.js'
@@ -11,6 +11,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { organisationParams, registrationParams } from './view-route.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { ServerRoute } from '@hapi/hapi'

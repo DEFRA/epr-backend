@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient } from 'mongodb'
@@ -8,7 +9,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { insertAccreditedOperator } from '#vite/helpers/insert-accredited-operator.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { NATION, REGULATOR } from '#domain/organisations/model.js'
@@ -16,6 +17,10 @@ import {
   marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const insertAccreditedOperator =
+  createAccreditedOperatorInserter(organisationBuilders)
 
 /** @param {string} path */
 const januaryToFebruary2026For = (path) =>

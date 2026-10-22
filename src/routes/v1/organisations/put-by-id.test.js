@@ -1,9 +1,9 @@
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -15,6 +15,8 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */

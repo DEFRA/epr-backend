@@ -3,14 +3,15 @@ import { assertPresent } from '#test/type-helpers.js'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  buildOrganisation,
-  generateOrgId
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation, nextOrgId } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe('generateSummaryLogUploadsReport', () => {
   let organisationRepo
@@ -23,7 +24,7 @@ describe('generateSummaryLogUploadsReport', () => {
     organisationRepo = createInMemoryOrganisationsRepository()()
     summaryLogsRepo = createInMemorySummaryLogsRepository()(logger)
 
-    const orgId = generateOrgId()
+    const orgId = nextOrgId()
     org = await buildApprovedOrg(organisationRepo, { orgId })
     registration = org.registrations[0]
     accreditation = org.accreditations[0]
@@ -109,7 +110,7 @@ describe('generateSummaryLogUploadsReport', () => {
 
     // Create second org
     const org2 = await buildApprovedOrg(organisationRepo, {
-      orgId: generateOrgId()
+      orgId: nextOrgId()
     })
     const registration2 = org2.registrations[0]
 
@@ -254,7 +255,7 @@ describe('generateSummaryLogUploadsReport', () => {
   it('returns empty strings when the registration and accreditation carry no numbers', async () => {
     const createdAt = '2026-01-15T10:30:00.000Z'
 
-    const unapprovedOrg = buildOrganisation({ orgId: generateOrgId() })
+    const unapprovedOrg = buildOrganisation({ orgId: nextOrgId() })
     await organisationRepo.insert(unapprovedOrg)
 
     await summaryLogsRepo.insert(

@@ -2,8 +2,8 @@ import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { assertCadence } from '#reports/application/assert-cadence.js'
@@ -17,6 +17,8 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 

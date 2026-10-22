@@ -6,7 +6,7 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
@@ -15,6 +15,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 

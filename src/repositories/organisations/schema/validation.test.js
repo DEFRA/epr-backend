@@ -14,10 +14,12 @@ import {
 } from '#domain/organisations/model.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 describe('validateStatusHistory', () => {
   it('throws badImplementation when statusHistory item has invalid status', () => {

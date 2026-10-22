@@ -1,7 +1,7 @@
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { prepareOrgUpdate } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { buildApprovedOrg } from './build-approved-org.js'
+import { createApprovedOrgBuilder } from './build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
@@ -9,28 +9,40 @@ import {
   VALID_TOKEN_CONTACT_ID
 } from './create-defra-id-test-tokens.js'
 
-export async function buildActiveOrg(organisationsRepository, overrides) {
-  const org = await buildApprovedOrg(organisationsRepository, overrides)
-  const INITIAL_VERSION = org.version
+/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
-  const linkedDefraOrg = {
-    orgId: COMPANY_1_ID,
-    orgName: COMPANY_1_NAME,
-    linkedBy: {
-      email: USER_PRESENT_IN_ORG1_EMAIL,
-      id: VALID_TOKEN_CONTACT_ID
-    },
-    linkedAt: new Date().toISOString()
+/** @param {OrganisationBuilders} builders */
+export const createActiveOrgBuilder = (builders) => {
+  const buildApprovedOrg = createApprovedOrgBuilder(builders)
+
+  /**
+   * @param {OrganisationsRepository} organisationsRepository
+   * @param {object} [overrides]
+   */
+  return async function buildActiveOrg(organisationsRepository, overrides) {
+    const org = await buildApprovedOrg(organisationsRepository, overrides)
+    const INITIAL_VERSION = org.version
+
+    const linkedDefraOrg = {
+      orgId: COMPANY_1_ID,
+      orgName: COMPANY_1_NAME,
+      linkedBy: {
+        email: USER_PRESENT_IN_ORG1_EMAIL,
+        id: VALID_TOKEN_CONTACT_ID
+      },
+      linkedAt: new Date().toISOString()
+    }
+
+    await organisationsRepository.replace(
+      org.id,
+      INITIAL_VERSION,
+      prepareOrgUpdate(org, {
+        status: ORGANISATION_STATUS.ACTIVE,
+        linkedDefraOrganisation: org.linkedDefraOrganisation ?? linkedDefraOrg
+      })
+    )
+
+    return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
   }
-
-  await organisationsRepository.replace(
-    org.id,
-    INITIAL_VERSION,
-    prepareOrgUpdate(org, {
-      status: ORGANISATION_STATUS.ACTIVE,
-      linkedDefraOrganisation: org.linkedDefraOrganisation ?? linkedDefraOrg
-    })
-  )
-
-  return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
 }

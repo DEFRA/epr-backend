@@ -2,7 +2,7 @@ import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -14,13 +14,17 @@ import {
   asSupport,
   asUnscopedAdminUser
 } from '#test/inject-auth.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationUnlinkedMetric = vi.fn()

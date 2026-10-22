@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildAccreditation, buildOrganisation } from './test-data.js'
+import { buildAccreditation } from './test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 /** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
 
@@ -8,14 +10,18 @@ export const testFindByAccreditationNumberBehaviour = (it) => {
   describe('findByAccreditationNumber', () => {
     /** @type {OrganisationsRepository} */
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

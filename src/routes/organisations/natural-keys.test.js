@@ -1,4 +1,4 @@
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
@@ -16,6 +16,8 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @param {ReturnType<typeof buildOrganisation>} organisation

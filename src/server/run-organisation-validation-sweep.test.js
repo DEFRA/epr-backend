@@ -4,12 +4,13 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
   buildRegistration,
-  buildAccreditation
+  buildAccreditation,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-
 import { runOrganisationValidationSweep } from './run-organisation-validation-sweep.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
