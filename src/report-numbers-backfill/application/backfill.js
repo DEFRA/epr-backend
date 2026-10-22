@@ -178,6 +178,23 @@ const backfillOne = async (
 }
 
 /**
+ * @param {BackfillResult} result
+ * @param {string} id
+ * @param {{ mapped: boolean, unmapped: string[], auditFailed: boolean }} outcome
+ */
+const tally = (result, id, outcome) => {
+  result.mapped += Number(outcome.mapped)
+  result.unmapped += Number(outcome.unmapped.length > 0)
+  for (const reason of outcome.unmapped) {
+    result.unmappedReasons[reason] = [
+      ...(result.unmappedReasons[reason] ?? []),
+      id
+    ]
+  }
+  result.auditFailed += Number(outcome.auditFailed)
+}
+
+/**
  * Adds to each report the organisation, registration and accreditation numbers
  * it lacks, read from its organisation record. Each report it cannot fully map
  * is returned under every reason that applies. A failure is logged and
@@ -206,15 +223,7 @@ export const backfillReportNumbers = async (
     try {
       const outcome = await backfillOne(repositories, id, isDryRun, logger)
       if (outcome) {
-        result.mapped += Number(outcome.mapped)
-        result.unmapped += Number(outcome.unmapped.length > 0)
-        for (const reason of outcome.unmapped) {
-          result.unmappedReasons[reason] = [
-            ...(result.unmappedReasons[reason] ?? []),
-            id
-          ]
-        }
-        result.auditFailed += Number(outcome.auditFailed)
+        tally(result, id, outcome)
       }
     } catch (error) {
       logger.error({
