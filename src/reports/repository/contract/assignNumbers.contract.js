@@ -98,7 +98,15 @@ export const testAssignNumbersBehaviour = (it) => {
     for (const [description, invalid] of [
       ['no numbers', {}],
       ['an unknown field', { year: 2026 }],
-      ['a non-string number', { organisationNumber: 500123 }]
+      ['a non-string number', { organisationNumber: 500123 }],
+      ['an undefined number', { organisationNumber: undefined }],
+      [
+        'an undefined number beside a real one',
+        {
+          organisationNumber: undefined,
+          registrationNumber: numbers.registrationNumber
+        }
+      ]
     ]) {
       it(`rejects ${description}`, async () => {
         const id = await createReport()

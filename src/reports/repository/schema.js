@@ -185,7 +185,15 @@ export const createReportSchema = Joi.object({
   ...reportDataFieldsSchema
 })
 
-export const reportNumbersSchema = Joi.object(numbersSchema).min(1).required()
+export const reportNumbersSchema = Joi.object(numbersSchema)
+  .min(1)
+  .custom((numbers, helpers) =>
+    Object.values(numbers).includes(undefined)
+      ? helpers.error('object.undefinedNumber')
+      : numbers
+  )
+  .messages({ 'object.undefinedNumber': 'a number must not be undefined' })
+  .required()
 
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
