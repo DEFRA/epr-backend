@@ -184,6 +184,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      organisationNumber: String(org.orgId),
+      registrationNumber: registration.registrationNumber,
       reportsRepositoryFactory,
       url,
       /** @param {{ year?: number, period?: number, submissionNumber?: number }} [submission] */
@@ -259,6 +261,19 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(stored).toMatchObject({
       material: 'glass_re_melt',
       wasteProcessingType: 'reprocessor'
+    })
+  })
+
+  it('stores the organisation and registration numbers beside their ids', async () => {
+    const created = await createServer(registeredOnlyReprocessor)
+
+    await created.post()
+
+    expect(await storedQuarterlyReport(created)).toMatchObject({
+      organisationId: created.organisationId,
+      organisationNumber: created.organisationNumber,
+      registrationId: created.registrationId,
+      registrationNumber: created.registrationNumber
     })
   })
 

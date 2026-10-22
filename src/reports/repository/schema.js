@@ -158,9 +158,15 @@ export const reportDataFieldsSchema = {
   supportingInformation: Joi.string().optional()
 }
 
+const numbersSchema = {
+  organisationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().optional()
+}
+
 export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
+  ...numbersSchema,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
@@ -178,6 +184,8 @@ export const createReportSchema = Joi.object({
   changedBy: userSummarySchema,
   ...reportDataFieldsSchema
 })
+
+export const reportNumbersSchema = Joi.object(numbersSchema).min(1).required()
 
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),

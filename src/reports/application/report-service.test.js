@@ -23,6 +23,10 @@ import {
   createReportsService
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 
 /**
@@ -133,6 +137,10 @@ const defaultParams = () => {
   return {
     organisationId,
     registrationId: registration.id,
+    numbers: {
+      organisationNumber: toOrganisationNumber('500123'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+    },
     registration,
     year: 2024,
     cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (

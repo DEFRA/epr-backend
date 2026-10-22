@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { assertCadence } from '#reports/application/assert-cadence.js'
 import { auditReportCreate } from '#reports/application/audit.js'
@@ -101,6 +102,11 @@ export const reportsPost = {
 
       assertCadence(cadence, registration)
 
+      const { numbers } = numbersFor(
+        await organisationsRepository.findById(organisationId),
+        { registrationId }
+      )
+
       const createdReport = await createReportForPeriod({
         reportsRepository,
         ledgerRepository,
@@ -109,6 +115,7 @@ export const reportsPost = {
         overseasSitesRepository,
         organisationId,
         registrationId,
+        numbers,
         registration,
         year,
         cadence,

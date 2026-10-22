@@ -88,6 +88,22 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
+    it('stores the organisation and registration numbers beside their ids', async () => {
+      const { id } = await repository.createReport(
+        buildCreateReportParams({
+          organisationNumber: '500123',
+          registrationNumber: 'R25SR500010912PL'
+        })
+      )
+
+      expect(await repository.findReportById(id)).toMatchObject({
+        organisationId: DEFAULT_ORG_ID,
+        organisationNumber: '500123',
+        registrationId: DEFAULT_REG_ID,
+        registrationNumber: 'R25SR500010912PL'
+      })
+    })
+
     it('throws conflict when creating duplicate report for same period and submissionNumber', async () => {
       await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.February })

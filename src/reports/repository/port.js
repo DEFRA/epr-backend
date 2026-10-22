@@ -2,6 +2,8 @@
  * @typedef {import('#reports/domain/report-status.js').ReportStatus} ReportStatus
  */
 
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
  */
@@ -208,6 +210,8 @@
  * @property {number} submissionNumber
  * @property {string} organisationId
  * @property {string} registrationId
+ * @property {OrganisationNumber} [organisationNumber]
+ * @property {RegistrationNumber} [registrationNumber]
  * @property {number} year
  * @property {string} cadence
  * @property {number} period
@@ -318,6 +322,8 @@
  * @typedef {Object} CreateReportParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
+ * @property {OrganisationNumber} [organisationNumber]
+ * @property {RegistrationNumber} [registrationNumber]
  * @property {number} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
@@ -337,6 +343,11 @@
  * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
  * @property {ReportSource} source
+ */
+
+/**
+ * The numbers a report stores beside its organisation and registration ids.
+ * @typedef {Pick<Report, 'organisationNumber' | 'registrationNumber'>} ReportNumbers
  */
 
 /**
@@ -416,6 +427,12 @@
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
  *   read from the denormalised `status.submitted` slot. Used to detect a period
  *   closing during the summary log validate-to-submit window.
+ * @property {() => Promise<string[]>} findIdsWithoutNumbers
+ *   The ids of reports lacking the organisation or registration number.
+ * @property {(reportId: string, numbers: ReportNumbers) => Promise<void>} assignNumbers
+ *   Adds numbers to a report stored without them, refusing to overwrite a
+ *   number it already holds. Leaves the version alone, so a user editing the
+ *   report can still save it.
  */
 
 /**

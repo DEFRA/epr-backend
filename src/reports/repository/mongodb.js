@@ -8,6 +8,7 @@ import {
   validateFindPeriodicReports,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
+  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -33,6 +34,7 @@ import {
  *   FindPeriodicReportsParams,
  *   PeriodicReport,
  *   Report,
+ *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
@@ -255,6 +257,58 @@ const performFindReportById = async (db, reportId) => {
 }
 
 /**
+ * @param {Db} db
+ * @returns {Promise<string[]>}
+ */
+const performFindIdsWithoutNumbers = async (db) => {
+  const docs = await reportsCollection(db)
+    .find(
+      {
+        $or: [
+          { organisationNumber: { $exists: false } },
+          { registrationNumber: { $exists: false } }
+        ]
+      },
+      { projection: { _id: 0, id: 1 } }
+    )
+    .toArray()
+  return docs.map(({ id }) => id)
+}
+
+/**
+ * @param {Db} db
+ * @param {string} reportId
+ * @param {ReportNumbers} numbers
+ * @returns {Promise<void>}
+ */
+const performAssignNumbers = async (db, reportId, numbers) => {
+  const validatedId = validateFindReportById(reportId)
+  const validatedNumbers = validateReportNumbers(numbers)
+  const keys = Object.keys(validatedNumbers)
+
+  const result = await reportsCollection(db).updateOne(
+    {
+      id: validatedId,
+      ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
+    },
+    { $set: validatedNumbers }
+  )
+  if (result.matchedCount > 0) {
+    return
+  }
+
+  const existing = await reportsCollection(db).findOne(
+    { id: validatedId },
+    { projection: { _id: 0 } }
+  )
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${validatedId}`)
+  }
+  const held = keys.filter((key) => existing[key] !== undefined)
+  throw Boom.conflict(`Report ${validatedId} already holds ${held.join(', ')}`)
+}
+
+/**
  * Hard-deletes the report identified by the given period slot and submissionNumber.
  *
  * @param {Db} db
@@ -464,6 +518,9 @@ export const createReportsRepository = async (db) => {
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      performHasReportSubmittedSince(db, organisationId, registrationId, since)
+      performHasReportSubmittedSince(db, organisationId, registrationId, since),
+    findIdsWithoutNumbers: () => performFindIdsWithoutNumbers(db),
+    assignNumbers: (reportId, numbers) =>
+      performAssignNumbers(db, reportId, numbers)
   })
 }

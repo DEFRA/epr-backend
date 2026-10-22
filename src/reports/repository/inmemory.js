@@ -23,6 +23,7 @@ import {
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
   validateMarkSubmittedReportRequiringResubmissionByOperator,
+  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -36,6 +37,7 @@ import {
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
+ *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
@@ -246,6 +248,44 @@ const findReportById = async (reports, reportId) => {
     throw Boom.notFound(`Report not found: ${validatedId}`)
   }
   return mapReport(structuredClone(report))
+}
+
+/**
+ * @param {Map<string, Report>} reports
+ * @returns {Promise<string[]>}
+ */
+const findIdsWithoutNumbers = async (reports) =>
+  [...reports.values()]
+    .filter(
+      ({ organisationNumber, registrationNumber }) =>
+        organisationNumber === undefined || registrationNumber === undefined
+    )
+    .map(({ id }) => id)
+
+/**
+ * @param {Map<string, Report>} reports
+ * @param {string} reportId
+ * @param {ReportNumbers} numbers
+ * @returns {Promise<void>}
+ */
+const assignNumbers = async (reports, reportId, numbers) => {
+  const validatedId = validateFindReportById(reportId)
+  const validatedNumbers = validateReportNumbers(numbers)
+  const report = reports.get(validatedId)
+  if (!report) {
+    throw Boom.notFound(`Report not found: ${validatedId}`)
+  }
+
+  const held = Object.keys(validatedNumbers).filter(
+    (key) => report[key] !== undefined
+  )
+  if (held.length > 0) {
+    throw Boom.conflict(
+      `Report ${validatedId} already holds ${held.join(', ')}`
+    )
+  }
+
+  reports.set(validatedId, { ...report, ...validatedNumbers })
 }
 
 /**
@@ -672,6 +712,9 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      hasReportSubmittedSince(reports, organisationId, registrationId, since)
+      hasReportSubmittedSince(reports, organisationId, registrationId, since),
+    findIdsWithoutNumbers: () => findIdsWithoutNumbers(reports),
+    assignNumbers: (reportId, numbers) =>
+      assignNumbers(reports, reportId, numbers)
   })
 }
