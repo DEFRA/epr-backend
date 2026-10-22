@@ -11,6 +11,7 @@ import {
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { backfillReportNumbers } from './backfill.js'
 
@@ -44,14 +45,19 @@ const organisation = buildOrganisation({
   ]
 })
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+
 describe('backfillReportNumbers', () => {
-  /** @type {*} */
+  /** @type {ReportsRepository} */
   let reportsRepository
-  /** @type {*} */
+  /** @type {SystemLogsRepository} */
   let systemLogsRepository
-  /** @type {*} */
+  /** @type {OrganisationsRepository} */
   let organisationsRepository
-  /** @type {*} */
+  /** @type {TypedLogger} */
   let logger
 
   beforeEach(() => {
@@ -59,10 +65,11 @@ describe('backfillReportNumbers', () => {
     reportsRepository = createInMemoryReportsRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
     organisationsRepository = createInMemoryOrganisationsRepository([
-      /** @type {*} */ (organisation)
+      partialMock(organisation)
     ])()
   })
 
+  /** @param {boolean} isDryRun */
   const run = (isDryRun) =>
     backfillReportNumbers(
       {
@@ -85,15 +92,17 @@ describe('backfillReportNumbers', () => {
       )
     ).id
 
+  /** @param {string} id */
   const stored = (id) => reportsRepository.findReportById(id)
 
   const systemLogs = async () =>
     (await systemLogsRepository.find({ limit: 10 })).systemLogs
 
   const unmappedLines = () =>
-    logger.info.mock.calls
-      .map(([{ message }]) => message)
-      .filter((message) => message.startsWith('Report numbers unmapped'))
+    vi
+      .mocked(logger.info)
+      .mock.calls.map(([{ message }]) => message)
+      .filter((message) => message?.startsWith('Report numbers unmapped'))
 
   it('adds the numbers each report lacks and audits each as the system user', async () => {
     const unnumbered = await createReport({ period: MONTHLY_PERIODS.January })

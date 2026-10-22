@@ -7,6 +7,7 @@ import { describe, expect, vi } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { partialMock } from '#test/type-helpers.js'
 import { config } from '../config.js'
 
 import { runReportNumbersBackfill } from './run.js'
@@ -22,6 +23,8 @@ vi.mock('../config.js', async (importOriginal) => {
   const actual = /** @type {*} */ (await importOriginal())
   return { config: { ...actual.config, get: vi.fn() } }
 })
+
+/** @import { Db } from 'mongodb' */
 
 const DATABASE_NAME = 'epr-backend'
 const missingOrganisationId = new ObjectId().toString()
@@ -69,7 +72,8 @@ const storedReport = (id, organisationId, registrationId, period) => ({
   }
 })
 
-const seed = async (/** @type {*} */ database) => {
+/** @param {Db} database */
+const seed = async (database) => {
   const collection = database.collection('reports')
   await collection.deleteMany({})
   await database.collection('system-logs').deleteMany({})
@@ -101,8 +105,9 @@ const seed = async (/** @type {*} */ database) => {
   }
 }
 
-const serverFor = (/** @type {*} */ db) =>
-  /** @type {*} */ ({
+/** @param {Db} db */
+const serverFor = (db) =>
+  partialMock({
     db,
     locker: { lock: async () => ({ free: async () => {} }) }
   })
