@@ -342,10 +342,7 @@ export const prepareLink = (existing, linkedDefraOrganisation) => {
   assertOrgStatusTransitionValid(status, ORGANISATION_STATUS.ACTIVE)
   return {
     linkedDefraOrganisation: validated,
-    statusHistoryEntry: {
-      status: ORGANISATION_STATUS.ACTIVE,
-      updatedAt: new Date()
-    }
+    statusHistoryEntry: createStatusHistoryEntry(ORGANISATION_STATUS.ACTIVE)
   }
 }
 
