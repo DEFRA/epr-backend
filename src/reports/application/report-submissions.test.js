@@ -1,5 +1,6 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -215,16 +216,21 @@ describe('generateReportSubmissions (integration)', () => {
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
-    const byPeriod = Object.fromEntries(
-      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
-    )
-
-    expect(byPeriod['Jan 2025'].submittedDate).toBe(
-      FIXED_DATE.toISOString().slice(0, 10)
-    )
-    expect(byPeriod['Q1 2026'].submittedDate).toBe(
-      FIXED_DATE.toISOString().slice(0, 10)
-    )
+    expect(
+      result.reportSubmissions.map(({ reportingPeriod, submittedDate }) => ({
+        reportingPeriod,
+        submittedDate
+      }))
+    ).toEqual([
+      {
+        reportingPeriod: 'Q1 2026',
+        submittedDate: FIXED_DATE.toISOString().slice(0, 10)
+      },
+      {
+        reportingPeriod: 'Jan 2025',
+        submittedDate: FIXED_DATE.toISOString().slice(0, 10)
+      }
+    ])
   })
 
   it('trims monthly obligation rows to the accreditation validFrom (PAE-1737)', async () => {
@@ -487,6 +493,10 @@ const makeReportsRepo = (allPeriodicReports = []) =>
   })
 
 describe('generateReportSubmissions (edge cases)', () => {
+  afterEach(() => {
+    config.reset('featureFlags.midYearStatusTransition')
+  })
+
   it('skips registrations with created status', async () => {
     const org = buildOrg({
       registrations: [buildRegistrationMock({ status: 'created' })]
@@ -715,7 +725,6 @@ describe('generateReportSubmissions (edge cases)', () => {
       makeOrgsRepo([org]),
       makeReportsRepo()
     )
-    config.reset('featureFlags.midYearStatusTransition')
 
     expect(
       result.reportSubmissions.map(
@@ -744,7 +753,8 @@ describe('generateReportSubmissions (edge cases)', () => {
     ])
   })
 
-  it('skips a registration the read model does not serve', async () => {
+  it('skips a registration the read model does not serve, logging why', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
     const org = buildOrg({
       registrations: [buildRegistrationMock({ validFrom: undefined })]
     })
@@ -755,5 +765,9 @@ describe('generateReportSubmissions (edge cases)', () => {
     )
 
     expect(result.reportSubmissions).toEqual([])
+    expect(warn).toHaveBeenCalledWith({
+      message: 'Registration REG-001 has no validFrom'
+    })
+    warn.mockRestore()
   })
 })

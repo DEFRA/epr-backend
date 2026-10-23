@@ -5,7 +5,11 @@ import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#routes/organisations/natural-keys.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { logger } from '#common/helpers/logging/logger.js'
+
+/** @param {string} message */
+const logDrop = (message) => logger.warn({ message })
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
@@ -77,7 +81,8 @@ export function groupByRegistration(allPeriodicReports) {
  * has a key, `${year}:${cadence}:${period}`, for each ended period the
  * registration has a reporting obligation for, as the year calendar lists them,
  * holding the original submitted date or null. An absent key is "N/A". A
- * registration the organisation read model does not serve has no entry.
+ * registration the organisation read model does not serve has no entry, and
+ * the reason is logged.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
@@ -102,7 +107,7 @@ export async function generateReportCompliance(
   const entries = new Map()
 
   for (const { org, registration } of registrations) {
-    const readModel = toReadModelRegistration(org, registration)
+    const readModel = toReadModelRegistration(org, registration, logDrop)
     if (!readModel) {
       continue
     }

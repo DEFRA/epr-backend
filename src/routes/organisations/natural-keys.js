@@ -148,31 +148,18 @@ export function accreditationsForYear(organisation, registration, year) {
 
 /**
  * The registration as the read model shows it, with its accreditations by
- * year, or null when the read model does not serve it.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- * @returns {ReadModelRegistration | null}
- */
-export function toReadModelRegistration(organisation, registration) {
-  return (
-    toRegistrationEntry(registration, organisation, lookupContext())?.[1] ??
-    null
-  )
-}
-
-/**
- * The registration as the read model shows it. Only a registration the read
- * model serves reaches a route, so the conversion always succeeds.
+ * year. Only a registration the read model serves reaches a route, so the
+ * conversion always succeeds.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
  * @returns {ReadModelRegistration}
  */
 export function readModelRegistration(organisation, registration) {
-  return /** @type {ReadModelRegistration} */ (
-    toReadModelRegistration(organisation, registration)
+  const [, served] = /** @type {[string, ReadModelRegistration]} */ (
+    toRegistrationEntry(registration, organisation, lookupContext())
   )
+  return served
 }
 
 /**

@@ -10,8 +10,7 @@ import {
 import {
   findAccreditationForYear,
   findOrganisationByNumber,
-  findRegistrationByNumber,
-  toReadModelRegistration
+  findRegistrationByNumber
 } from './natural-keys.js'
 import {
   toOrganisationNumber,
@@ -126,35 +125,6 @@ describe('findRegistrationByNumber', () => {
     const found = await findIn(organisation)
 
     expect(found.registration.id).toBe(registration.id)
-  })
-})
-
-describe('toReadModelRegistration', () => {
-  /**
-   * @param {ReturnType<typeof reprocessor>} registration
-   */
-  const stored = async (registration) => {
-    const organisation = buildOrganisation({ registrations: [registration] })
-    const found = await createInMemoryOrganisationsRepository([
-      partialMock(organisation)
-    ])().findById(organisation.id)
-    return { organisation: found, registration: found.registrations[0] }
-  }
-
-  it('shows a registration the read model serves', async () => {
-    const { organisation, registration } = await stored(reprocessor())
-
-    expect(toReadModelRegistration(organisation, registration)?.validFrom).toBe(
-      '2026-02-01'
-    )
-  })
-
-  it('gives null for a registration the read model cannot show', async () => {
-    const { organisation, registration } = await stored(
-      reprocessor({ validFrom: undefined })
-    )
-
-    expect(toReadModelRegistration(organisation, registration)).toBeNull()
   })
 })
 

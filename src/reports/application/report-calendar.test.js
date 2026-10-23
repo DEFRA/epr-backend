@@ -402,6 +402,24 @@ describe('reportingPeriodsByKind', () => {
     })
   )
 
+  const storedFirstQuarter = /** @type {PeriodicReport} */ (
+    /** @type {unknown} */ ({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      year: 2026,
+      reports: {
+        quarterly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: { id: 'report-2', submissionNumber: 1 }
+          }
+        }
+      }
+    })
+  )
+
   /**
    * @param {Registration} registration
    * @param {PeriodicReport[]} [storedReports]
@@ -433,6 +451,21 @@ describe('reportingPeriodsByKind', () => {
   describe('with mid-year status transition off', () => {
     withMidYearStatusTransition(false)
 
+    it('lists only the stored reports of an accreditation cancelled since', () => {
+      const result = byKind(
+        registeredSinceLastYear([
+          approvedOn('2026-02-15'),
+          cancelledOn('2026-07-10')
+        ]),
+        [storedMarch]
+      )
+
+      expect(result.accredited.map(({ period }) => period)).toEqual([3])
+      expect(result.registeredOnly.map(({ period }) => period)).toEqual([
+        1, 3, 4
+      ])
+    })
+
     it('lists only the current kind, in whole periods', () => {
       const result = byKind(registeredSinceLastYear([approvedOn('2026-02-15')]))
 
@@ -463,6 +496,27 @@ describe('reportingPeriodsByKind', () => {
 
         expect(result.accredited.map(({ period }) => period)).not.toContain(3)
         expect(result.accredited[0].period).toBe(4)
+      })
+
+      it('lists a stored report of an accreditation cancelled since', () => {
+        const result = byKind(
+          registeredSinceLastYear([
+            approvedOn('2026-02-15'),
+            cancelledOn('2026-07-10')
+          ]),
+          [storedMarch]
+        )
+
+        expect(result.accredited.map(({ period }) => period)).toContain(3)
+      })
+
+      it('lists a stored registered-only report from before the accreditation', () => {
+        const result = byKind(
+          registeredSinceLastYear([approvedOn('2026-01-01')]),
+          [storedFirstQuarter]
+        )
+
+        expect(result.registeredOnly.map(({ period }) => period)).toEqual([1])
       })
     }
   )

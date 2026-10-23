@@ -17,9 +17,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import {
+  REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { config } from '#root/config.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -539,12 +541,18 @@ describe('generateReportCompliance', () => {
       )
     })
 
-    it('has no entry for a registration the read model does not serve', async () => {
+    it('has no entry for a registration the read model does not serve, logging why', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+
       const result = await complianceFor(
         organisationWith({ validFrom: undefined })
       )
 
       expect(result.entries).toEqual(new Map())
+      expect(warn).toHaveBeenCalledWith({
+        message: `Registration ${REPROCESSOR_NUMBER} has no validFrom`
+      })
+      warn.mockRestore()
     })
   })
 })

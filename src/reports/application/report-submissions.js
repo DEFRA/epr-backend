@@ -13,7 +13,11 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#routes/organisations/natural-keys.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { logger } from '#common/helpers/logging/logger.js'
+
+/** @param {string} message */
+const logDrop = (message) => logger.warn({ message })
 
 /**
  * @typedef {Object} TonnageFields
@@ -190,15 +194,13 @@ async function buildSubmissionRows(
 
   /** @type {ReportSubmissionsRow[]} */
   return registrations.flatMap(({ org, registration }) => {
-    const readModel = toReadModelRegistration(org, registration)
+    const readModel = toReadModelRegistration(org, registration, logDrop)
     if (!readModel) {
       return []
     }
 
     const periodicReports =
       reportsByKey.get(`${org.id}::${registration.id}`) ?? []
-    // The current year's reporting periods, then each earlier year's stored
-    // reports.
     const earlierYears = [
       ...new Set(
         periodicReports
