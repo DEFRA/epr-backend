@@ -9,8 +9,3 @@ export const wasteBalanceSchema = Joi.object({
   // Present only when the accreditation holds a separate December portion.
   nonDecemberAvailableAmount: Joi.number()
 })
-
-export const wasteBalanceResponseSchema = Joi.object().pattern(
-  Joi.string().pattern(/^[a-f0-9]{24}$/),
-  wasteBalanceSchema
-)
