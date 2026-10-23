@@ -78,7 +78,7 @@ export const testAssignNumbersBehaviour = (it) => {
       expect(await repository.findById(id)).toStrictEqual({
         ...before,
         organisation: {
-          ...before.organisation,
+          ...before?.organisation,
           organisationNumber: numbers.organisationNumber
         },
         registrationNumber: numbers.registrationNumber
@@ -93,7 +93,7 @@ export const testAssignNumbersBehaviour = (it) => {
         organisationNumber: numbers.organisationNumber
       })
 
-      expect((await repository.findById(id)).organisation).toMatchObject({
+      expect((await repository.findById(id))?.organisation).toMatchObject({
         organisationNumber: numbers.organisationNumber
       })
       expect(await repository.findIdsWithoutNumbers()).toContain(id)

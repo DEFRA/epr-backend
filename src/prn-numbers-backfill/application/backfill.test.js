@@ -96,8 +96,17 @@ describe('backfillPrnNumbers', () => {
   }
 
   /** @param {string} id */
-  const stored = async (id) => {
+  const findStored = async (id) => {
     const prn = await prnRepository.findById(id)
+    if (!prn) {
+      throw new Error(`PRN ${id} not stored`)
+    }
+    return prn
+  }
+
+  /** @param {string} id */
+  const stored = async (id) => {
+    const prn = await findStored(id)
     return {
       organisationNumber: prn.organisation.organisationNumber,
       registrationNumber: prn.registrationNumber
@@ -146,11 +155,11 @@ describe('backfillPrnNumbers', () => {
 
   it('leaves the version alone', async () => {
     const id = await createPrn()
-    const { version } = await prnRepository.findById(id)
+    const { version } = await findStored(id)
 
     await run(false)
 
-    expect((await prnRepository.findById(id)).version).toBe(version)
+    expect((await findStored(id)).version).toBe(version)
   })
 
   it('reports what it would add without writing or auditing on a dry run', async () => {
