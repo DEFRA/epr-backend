@@ -202,7 +202,8 @@ describe('backfillPrnNumbers', () => {
         unmapped: 3,
         unmappedReasons: {
           'organisation not found': [organisationGone],
-          'no registration number': [unnumbered, registrationGone]
+          'no registration number': [unnumbered],
+          'registration not found': [registrationGone]
         },
         failed: 0,
         auditFailed: 0
