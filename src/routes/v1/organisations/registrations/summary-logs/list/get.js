@@ -9,6 +9,7 @@ import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/view-route.js' */
 
 const LIST_FAILURE = 'Failure listing summary logs'
 
@@ -25,20 +26,20 @@ export const summaryLogsList = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string },
+   *   params: RegistrationParams,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { summaryLogsRepository, params, logger } = request
-    const { organisationId, registrationId } = params
+    const { organisationNumber, registrationNumber } = params
 
     try {
-      const summaryLogs = await summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      )
+      const summaryLogs = await summaryLogsRepository.findAll({
+        organisationNumber,
+        registrationNumber
+      })
 
       const summaryLogList = summaryLogs.map(({ id, summaryLog }) => ({
         summaryLogId: id,
@@ -49,7 +50,7 @@ export const summaryLogsList = {
       }))
 
       logger.info({
-        message: `Summary log list retrieved: organisationId=${organisationId}, registrationId=${registrationId}, count=${summaryLogs.length}`,
+        message: `Summary log list retrieved: organisationNumber=${organisationNumber}, registrationNumber=${registrationNumber}, count=${summaryLogs.length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
