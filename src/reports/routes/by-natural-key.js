@@ -14,7 +14,6 @@ import {
   registrationPath
 } from '#routes/organisations/view-route.js'
 import { reportsDelete } from './delete.js'
-import { reportsGet } from './get.js'
 import { reportsYearCalendar } from './get-year-calendar.js'
 import { reportsGetDetail } from './get-detail.js'
 import { reportsPatch } from './patch.js'
@@ -254,11 +253,6 @@ export const reportRoutesByNaturalKey = [
         ...(accredited && { before: assertPeriodWithinAccreditation })
       })
     )
-  ),
-  atNaturalKeys(
-    reportsGet,
-    `${registrationPath}/reports/calendar`,
-    registrationParams
   ),
   atNaturalKeys(
     reportsYearCalendar,

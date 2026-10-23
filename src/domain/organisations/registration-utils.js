@@ -76,24 +76,6 @@ export function isRegistrationAccredited({ accreditation }) {
 }
 
 /**
- * Returns the `validFrom` of a live (approved/suspended) accreditation, or null
- * when the accreditation is absent or not live. Used to bound an accredited
- * operator's monthly report obligations to the date their accreditation began.
- *
- * @param {{ status: AccreditationStatus, validFrom?: string | null } | null | undefined} accreditation
- * @returns {string | null}
- */
-export function activeAccreditationValidFrom(accreditation) {
-  if (
-    accreditation &&
-    ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
-  ) {
-    return accreditation.validFrom ?? null
-  }
-  return null
-}
-
-/**
  * Whether the registration is approved and active during a specific year
  * @param {Registration} registration
  * @param {number} year
