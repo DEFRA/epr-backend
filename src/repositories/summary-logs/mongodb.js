@@ -13,10 +13,11 @@ import Boom from '@hapi/boom'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
-import { resolveSummaryLogKey } from './natural-keys.js'
+import { keyedBy } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
+  validateSummaryLogKey,
   validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
@@ -26,10 +27,26 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
 
 const LEGACY_SUBMITTING_LOCK_INDEX_NAME = 'organisationId_1_registrationId_1'
+const RETIRED_YEAR_SCOPED_ID_INDEX_NAME =
+  'organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
 const IGNORABLE_DROP_INDEX_ERRORS = new Set([
   'IndexNotFound',
   'NamespaceNotFound'
 ])
+
+/**
+ * @param {import('mongodb').Collection} collection
+ * @param {string} name
+ */
+async function dropIndexIfPresent(collection, name) {
+  try {
+    await collection.dropIndex(name)
+  } catch (error) {
+    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
+      throw error
+    }
+  }
+}
 
 /**
  * Creates the submitting lock over
@@ -52,13 +69,7 @@ async function ensureSubmittingLockIndex(collection) {
     }
   )
 
-  try {
-    await collection.dropIndex(LEGACY_SUBMITTING_LOCK_INDEX_NAME)
-  } catch (error) {
-    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
-      throw error
-    }
-  }
+  await dropIndexIfPresent(collection, LEGACY_SUBMITTING_LOCK_INDEX_NAME)
 }
 
 /**
@@ -80,25 +91,24 @@ async function ensureCollection(db) {
   // reached from the ledger is looked up that way.
   await collection.createIndex({ 'file.id': 1 })
 
-  // Optimises the year-scoped findLatestSubmittedForOrgReg query, which filters
-  // by org/reg/year/accreditationId/status and sorts by submittedAt descending
+  // Serves findLatestSubmitted and findAll. A registration holds few enough
+  // summary logs that the year and accreditation are filtered after it.
   await collection.createIndex({
-    organisationId: 1,
-    registrationId: 1,
-    year: 1,
-    accreditationId: 1,
+    organisationNumber: 1,
+    registrationNumber: 1,
     status: 1,
     submittedAt: -1
   })
 
-  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
-  // and sorts by submittedAt descending
+  // Serves findAllByOrgReg
   await collection.createIndex({
     organisationId: 1,
     registrationId: 1,
     status: 1,
     submittedAt: -1
   })
+
+  await dropIndexIfPresent(collection, RETIRED_YEAR_SCOPED_ID_INDEX_NAME)
 
   return collection
 }
@@ -227,39 +237,10 @@ const findById = (db) => async (id) => {
 }
 
 /**
- * A year/accreditation filter that also matches legacy documents, so they
- * keep counting until the backfill assigns them a scope. Omitted entirely
- * when the caller doesn't know the year, keeping the registration-wide
- * behaviour untouched.
- *
- * - No `year`: matches every year and accreditation. `{ year: null }` covers
- *   a missing key and a stored `null`, as MongoDB stores a JS `undefined`
- *   property as BSON `null`.
- * - A `year` but no `accreditationId` key: a backfilled legacy document,
- *   which matches any accreditation in its year. Year-scoped inserts always
- *   write the key (a string, or `null` for registered-only), so an absent key
- *   only ever means the document predates it.
- *
- * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
- * @returns {any}
- */
-const yearFilter = ({ year, accreditationId }) =>
-  year === undefined
-    ? {}
-    : {
-        $or: [
-          { year, accreditationId },
-          { year, accreditationId: { $exists: false } },
-          { year: null }
-        ]
-      }
-
-/**
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { StoredSummaryLogKey } from './natural-keys.js'
- * @import { SummaryLogKey, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { SummaryLogWithId } from './port.js'
  *
  * @typedef {SummaryLog & { _id: string, version: number }} SummaryLogDocument
  */
@@ -293,16 +274,6 @@ const latestSubmitted = async (db, filter) => {
     summaryLog: normaliseStoredSummaryLog(summaryLog)
   }
 }
-
-const findLatestSubmittedForOrgReg =
-  (db) =>
-  /** @param {import('./port.js').SummaryLogScope} scope */
-  async ({ organisationId, registrationId, year, accreditationId }) =>
-    latestSubmitted(db, {
-      organisationId,
-      registrationId,
-      ...yearFilter({ year, accreditationId })
-    })
 
 /**
  * Submitted and failed summary logs, newest upload first.
@@ -348,55 +319,52 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) =>
 
 /**
  * A summary log stored before its accreditation was recorded has no
- * `accreditationId`, and matches every accreditation, as in `yearFilter`.
+ * accreditation number, and matches every accreditation. One stored before
+ * its year was recorded matches every year.
  *
- * @param {StoredSummaryLogKey} storedKey
+ * @param {SummaryLogKey} key
  * @returns {Filter<SummaryLogDocument>}
  */
-const storedKeyFilter = ({
-  organisationId,
-  registrationId,
-  accreditationId
-}) =>
-  accreditationId === undefined
-    ? { organisationId, registrationId }
-    : {
-        organisationId,
-        registrationId,
-        $or: [{ accreditationId }, { accreditationId: { $exists: false } }]
-      }
+const keyFilter = (key) => {
+  const { organisationNumber, registrationNumber, accreditationNumber, year } =
+    validateSummaryLogKey(key)
+  /** @type {Filter<SummaryLogDocument>[]} */
+  const clauses = []
+  if (accreditationNumber !== undefined) {
+    clauses.push({
+      $or: [
+        { accreditationNumber },
+        { accreditationNumber: { $exists: false } }
+      ]
+    })
+  }
+  if (year !== undefined) {
+    clauses.push({
+      $or: [{ year }, { year: { $exists: false } }, { year: { $type: 'null' } }]
+    })
+  }
+  return {
+    organisationNumber,
+    registrationNumber,
+    ...(clauses.length > 0 && { $and: clauses })
+  }
+}
 
-/**
- * @param {Db} db
- * @param {OrganisationsRepository} organisationsRepository
- */
+/** @param {Db} db */
 const findLatestSubmitted =
-  (db, organisationsRepository) =>
+  (db) =>
   /** @param {SummaryLogKey} key */
   async (key) => {
-    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
-    if (!resolved) {
-      return null
-    }
-    const found = await latestSubmitted(db, storedKeyFilter(resolved.storedKey))
-    return found && resolved.toKeyed(found)
+    const found = await latestSubmitted(db, keyFilter(key))
+    return found && keyedBy(key)(found)
   }
 
-/**
- * @param {Db} db
- * @param {OrganisationsRepository} organisationsRepository
- */
+/** @param {Db} db */
 const findAll =
-  (db, organisationsRepository) =>
+  (db) =>
   /** @param {SummaryLogKey} key */
-  async (key) => {
-    const resolved = await resolveSummaryLogKey(organisationsRepository, key)
-    if (!resolved) {
-      return []
-    }
-    const found = await uploads(db, storedKeyFilter(resolved.storedKey))
-    return found.map(resolved.toKeyed)
-  }
+  async (key) =>
+    (await uploads(db, keyFilter(key))).map(keyedBy(key))
 
 const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
   const docs = await db
@@ -584,15 +552,9 @@ const getDownloadUrlByFileId =
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {SummaryLogsS3Config} s3Config - S3 configuration for download URLs
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- *   - Resolves natural keys to the ids summary logs are stored under
  * @returns {Promise<import('./port.js').SummaryLogsRepositoryFactory>}
  */
-export const createSummaryLogsRepository = async (
-  db,
-  s3Config,
-  organisationsRepository
-) => {
+export const createSummaryLogsRepository = async (db, s3Config) => {
   await ensureCollection(db)
 
   return (logger) => ({
@@ -601,10 +563,9 @@ export const createSummaryLogsRepository = async (
     findById: findById(db),
     findIdsWithoutNumbers: findIdsWithoutNumbers(db),
     assignNumbers: assignNumbers(db, logger),
-    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     findAllByOrgReg: findAllByOrgReg(db),
-    findLatestSubmitted: findLatestSubmitted(db, organisationsRepository),
-    findAll: findAll(db, organisationsRepository),
+    findLatestSubmitted: findLatestSubmitted(db),
+    findAll: findAll(db),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),

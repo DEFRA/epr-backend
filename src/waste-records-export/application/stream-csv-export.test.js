@@ -42,6 +42,7 @@ const collect = async (gen) => {
 
 const baseOrg = (overrides = {}) => ({
   id: 'org-1',
+  orgId: 500001,
   companyDetails: { name: 'Acme Ltd' },
   submittedToRegulator: 'ea',
   registrations: [],
@@ -51,6 +52,7 @@ const baseOrg = (overrides = {}) => ({
 
 const baseRegistration = (overrides = {}) => ({
   id: 'reg-1',
+  registrationNumber: 'REG-1',
   material: 'plastic',
   submittedToRegulator: 'ea',
   accreditation: {
@@ -146,7 +148,7 @@ const approvedAccreditation = (overrides = {}) => ({
 const DEFAULT_SUMMARY_LOG_FILE_ID = 'file-1'
 
 /**
- * A summary log document as `findAllByOrgReg` returns it: its own id, and the
+ * A summary log document as `findAll` returns it: its own id, and the
  * file id the submission is addressed by.
  *
  * @param {string} fileId
@@ -220,7 +222,8 @@ const buildDeps = async ({
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository: {
-      findAllByOrgReg: async (org, reg) => summaryLogs[`${org}/${reg}`] ?? []
+      findAll: async ({ organisationNumber, registrationNumber }) =>
+        summaryLogs[`${organisationNumber}/${registrationNumber}`] ?? []
     },
     overseasSitesRepository: {
       findAll: async () => sites
@@ -249,7 +252,7 @@ describe('streamCsvExport', () => {
       orgs: [baseOrg({ registrations: [baseRegistration()] })],
       seeds: [{ rows: [receivedRowState()] }],
       summaryLogs: {
-        'org-1/reg-1': [
+        '500001/REG-1': [
           summaryLogDocument(
             DEFAULT_SUMMARY_LOG_FILE_ID,
             '2026-04-15T09:00:00Z'

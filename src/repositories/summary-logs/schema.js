@@ -97,6 +97,13 @@ export const summaryLogNumbersSchema = Joi.object(numbersSchema)
   .min(1)
   .messages({ 'object.min': 'numbers must contain at least one number' })
 
+export const summaryLogKeySchema = Joi.object({
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.string().allow(null).optional(),
+  year: yearSchema().optional()
+})
+
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   validation: validationSchema.optional(),
