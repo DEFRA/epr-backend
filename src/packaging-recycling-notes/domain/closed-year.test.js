@@ -86,6 +86,16 @@ describe('closed year', () => {
         description: 'the producer accepting',
         fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         newStatus: PRN_STATUS.ACCEPTED
+      },
+      {
+        description: 'a move to awaiting authorisation it does not name',
+        fromStatus: PRN_STATUS.AWAITING_CANCELLATION,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+      },
+      {
+        description: 'a move to awaiting acceptance it does not name',
+        fromStatus: PRN_STATUS.ACCEPTED,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE
       }
     ])('should leave $description open after the year has closed', (write) => {
       expect(

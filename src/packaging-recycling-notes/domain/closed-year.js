@@ -8,6 +8,8 @@ import {
   relevantYearWindowRefusal
 } from './relevant-year.js'
 
+/** @import { PrnStatus } from './model.js' */
+
 /**
  * Once an accreditation's relevant year has closed, at the end of 31 January
  * after it, no evidence can be raised against it and issued evidence can no
@@ -18,13 +20,14 @@ import {
  * note is the write to `draft`, which has no status before it.
  */
 
-/** @import { PrnStatus } from './model.js' */
-
 /** @type {ReadonlyArray<{ from?: PrnStatus, to: PrnStatus }>} */
 const CLOSES_WITH_THE_YEAR = [
   { to: PRN_STATUS.DRAFT },
-  { to: PRN_STATUS.AWAITING_AUTHORISATION },
-  { to: PRN_STATUS.AWAITING_ACCEPTANCE },
+  { from: PRN_STATUS.DRAFT, to: PRN_STATUS.AWAITING_AUTHORISATION },
+  {
+    from: PRN_STATUS.AWAITING_AUTHORISATION,
+    to: PRN_STATUS.AWAITING_ACCEPTANCE
+  },
   ...[...ADMIN_CANCELLABLE_PREVIOUS_STATUSES].map((from) => ({
     from,
     to: PRN_STATUS.CANCELLED
