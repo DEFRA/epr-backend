@@ -55,10 +55,12 @@ export const testCreateBehaviour = (it) => {
         const prnInput = buildPrn({
           organisation: {
             id: 'org-preserve-test',
+            organisationNumber: '500123',
             name: 'Preserve Org',
             tradingName: 'Preserve Trading'
           },
           registrationId: 'reg-preserve-test',
+          registrationNumber: 'R25SR500010912PL',
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
@@ -85,10 +87,12 @@ export const testCreateBehaviour = (it) => {
 
         expect(found.organisation).toStrictEqual({
           id: 'org-preserve-test',
+          organisationNumber: '500123',
           name: 'Preserve Org',
           tradingName: 'Preserve Trading'
         })
         expect(found.registrationId).toBe('reg-preserve-test')
+        expect(found.registrationNumber).toBe('R25SR500010912PL')
         expect(found.accreditation).toStrictEqual({
           id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',

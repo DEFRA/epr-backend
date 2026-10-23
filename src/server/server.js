@@ -50,6 +50,7 @@ import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accredita
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
 import { runSummaryLogNumbersBackfill } from '#summary-log-numbers-backfill/run.js'
 import { runReportNumbersBackfill } from '#report-numbers-backfill/run.js'
+import { runPrnNumbersBackfill } from '#prn-numbers-backfill/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -229,6 +230,7 @@ async function createServer(options = {}) {
     void runNaturalKeyFormatDiagnostic(startedServer)
     void runSummaryLogNumbersBackfill(startedServer)
     void runReportNumbersBackfill(startedServer)
+    void runPrnNumbersBackfill(startedServer)
   })
 
   return server
