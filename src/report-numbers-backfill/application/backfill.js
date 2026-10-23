@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { accreditationsForYear } from '#routes/organisations/natural-keys.js'
+import { findAccreditationForYear } from '#routes/organisations/natural-keys.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -56,15 +56,14 @@ const accreditationIdOf = (organisation, { registrationId, cadence, year }) => {
   if (!registration) {
     return undefined
   }
-  const [accreditation, ...others] = accreditationsForYear(
-    organisation,
-    registration,
-    year
-  )
-  if (accreditation === undefined || others.length > 0) {
-    return undefined
+  try {
+    return findAccreditationForYear(organisation, registration, year).id
+  } catch (error) {
+    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
+      return undefined
+    }
+    throw error
   }
-  return accreditation.id
 }
 
 /**

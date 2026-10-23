@@ -10,6 +10,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -231,7 +232,7 @@ describe('backfillReportNumbers', () => {
   it('does not report a number the report already holds as unmapped', async () => {
     const id = await createReport({ registrationId: unnumberedRegistrationId })
     await reportsRepository.assignNumbers(id, {
-      accreditationNumber: numbers.accreditationNumber
+      accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
     })
 
     expect((await run(false)).unmappedReasons).toEqual({
@@ -314,6 +315,21 @@ describe('backfillReportNumbers', () => {
       message: `Failed to backfill numbers for report ${failing}`
     })
     expect(await stored(written)).toMatchObject(numbers)
+  })
+
+  it('counts an organisation whose accreditations cannot be read as a failure, not as unmapped', async () => {
+    await createReport()
+    organisationsRepository.findById = async () =>
+      partialMock({ ...organisation, accreditations: undefined })
+
+    expect(await run(false)).toEqual({
+      missing: 1,
+      mapped: 0,
+      unmapped: 0,
+      unmappedReasons: {},
+      failed: 1,
+      auditFailed: 0
+    })
   })
 
   it('counts a written but unaudited report apart from failures', async () => {
