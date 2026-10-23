@@ -14,6 +14,7 @@ import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -54,6 +55,7 @@ const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
  * @param {Object} params
  * @param {{ id: string; name: string; tradingName?: string }} params.organisation
  * @param {string} params.registrationId
+ * @param {import('#domain/organisations/numbers.js').RegistrationNumber} [params.registrationNumber]
  * @param {Object} params.accreditation
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {{ id: string; name: string }} params.user
@@ -86,6 +88,7 @@ const snapshotAccreditation = (accreditation) => {
 const buildPrnData = ({
   organisation,
   registrationId,
+  registrationNumber,
   accreditation,
   payload,
   user,
@@ -98,6 +101,7 @@ const buildPrnData = ({
     schemaVersion: 2,
     organisation,
     registrationId,
+    ...(registrationNumber && { registrationNumber }),
     accreditation: accreditationSnapshot,
     obligationYear: accreditationSnapshot.accreditationYear,
     issuedToOrganisation: payload.issuedToOrganisation,
@@ -220,15 +224,18 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
 /**
  * @param {Object} params
  * @param {string} params.organisationId
+ * @param {import('#domain/organisations/numbers.js').OrganisationNumber} [params.organisationNumber]
  * @param {Object} params.companyDetails
  * @param {string} params.companyDetails.name
  * @param {string} [params.companyDetails.tradingName]
  */
 const buildOrganisationSnapshot = ({
   organisationId,
+  organisationNumber,
   companyDetails: { name, tradingName }
 }) => ({
   id: organisationId,
+  ...(organisationNumber && { organisationNumber }),
   name,
   ...(tradingName && { tradingName })
 })
@@ -295,14 +302,18 @@ export const createPrn =
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
+      const { numbers } = numbersFor(app.organisation, { registrationId })
+
       const organisation = buildOrganisationSnapshot({
         organisationId,
+        organisationNumber: numbers.organisationNumber,
         companyDetails: app.organisation.companyDetails
       })
 
       const prnData = buildPrnData({
         organisation,
         registrationId,
+        registrationNumber: numbers.registrationNumber,
         accreditation,
         payload,
         user,
