@@ -202,6 +202,29 @@ export function toRegistrationEntry(registration, organisation, context) {
 }
 
 /**
+ * The registration as the read model shows it, or null when the read model
+ * does not serve it, with the reason passed to `onDrop`. Its overseas sites are
+ * left out, as reporting does not need them.
+ *
+ * @param {StoredOrganisation} organisation
+ * @param {StoredRegistration} registration
+ * @param {OnDrop} [onDrop]
+ * @returns {Registration | null}
+ */
+export function toReadModelRegistration(
+  organisation,
+  registration,
+  onDrop = () => {}
+) {
+  const entry = toRegistrationEntry(registration, organisation, {
+    onDrop,
+    overseasSitesById: new Map(),
+    today: new Date().toISOString().slice(0, 10)
+  })
+  return entry?.[1] ?? null
+}
+
+/**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
  * @param {Record<string, AccreditationCommon>} accreditations

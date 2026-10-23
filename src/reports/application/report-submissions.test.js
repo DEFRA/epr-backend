@@ -1,5 +1,6 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -11,6 +12,11 @@ import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
+import {
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { config } from '#root/config.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -186,7 +192,11 @@ describe('generateReportSubmissions (integration)', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    // Accredited for 2025 only, so registered only in 2026.
+    const org = await buildApprovedOrg(orgRepo, undefined, {
+      VALID_FROM: '2025-01-01',
+      VALID_TO: '2025-12-31'
+    })
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
@@ -200,22 +210,27 @@ describe('generateReportSubmissions (integration)', () => {
       organisationId: org.id,
       registrationId: reg.id,
       year: 2026,
-      cadence: 'monthly',
+      cadence: 'quarterly',
       period: 1
     })
 
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
-    const byPeriod = Object.fromEntries(
-      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
-    )
-
-    expect(byPeriod['Jan 2025'].submittedDate).toBe(
-      FIXED_DATE.toISOString().slice(0, 10)
-    )
-    expect(byPeriod['Jan 2026'].submittedDate).toBe(
-      FIXED_DATE.toISOString().slice(0, 10)
-    )
+    expect(
+      result.reportSubmissions.map(({ reportingPeriod, submittedDate }) => ({
+        reportingPeriod,
+        submittedDate
+      }))
+    ).toEqual([
+      {
+        reportingPeriod: 'Q1 2026',
+        submittedDate: FIXED_DATE.toISOString().slice(0, 10)
+      },
+      {
+        reportingPeriod: 'Jan 2025',
+        submittedDate: FIXED_DATE.toISOString().slice(0, 10)
+      }
+    ])
   })
 
   it('trims monthly obligation rows to the accreditation validFrom (PAE-1737)', async () => {
@@ -429,20 +444,41 @@ const buildOrg = (overrides = {}) => ({
   ...overrides
 })
 
+const approvedFromJanuary = [{ status: 'approved', updatedAt: '2026-01-01' }]
+
 const buildRegistrationMock = (overrides = {}) => ({
+  ...reprocessor({
+    validFrom: '2026-01-01',
+    statusHistory: approvedFromJanuary
+  }),
   id: 'reg-1',
   status: 'approved',
   material: 'plastic',
-  wasteProcessingType: 'reprocessor',
   accreditationId: null,
   glassRecyclingProcess: null,
   registrationNumber: 'REG-001',
   submittedToRegulator: 'ea',
   submitterContactDetails: {
+    fullName: 'Submitter',
     phone: '01234567890',
     email: 'submitter@example.com'
   },
-  approvedPersons: [{ phone: '09876543210', email: 'ap@example.com' }],
+  approvedPersons: [
+    { fullName: 'Approver', phone: '09876543210', email: 'ap@example.com' }
+  ],
+  ...overrides
+})
+
+const buildAccreditationMock = (overrides = {}) => ({
+  ...accreditation({
+    validFrom: '2026-01-01',
+    statusHistory: approvedFromJanuary
+  }),
+  id: 'acc-1',
+  status: 'approved',
+  material: 'plastic',
+  glassRecyclingProcess: null,
+  accreditationNumber: 'ACC-001',
   ...overrides
 })
 
@@ -457,6 +493,10 @@ const makeReportsRepo = (allPeriodicReports = []) =>
   })
 
 describe('generateReportSubmissions (edge cases)', () => {
+  afterEach(() => {
+    config.reset('featureFlags.midYearStatusTransition')
+  })
+
   it('skips registrations with created status', async () => {
     const org = buildOrg({
       registrations: [buildRegistrationMock({ status: 'created' })]
@@ -528,7 +568,7 @@ describe('generateReportSubmissions (edge cases)', () => {
 
   it('returns empty string for accreditationNumber when accreditation has null accreditationNumber', async () => {
     const org = buildOrg({
-      accreditations: [{ id: 'acc-1', accreditationNumber: null }],
+      accreditations: [buildAccreditationMock({ accreditationNumber: null })],
       registrations: [
         buildRegistrationMock({
           status: 'approved',
@@ -548,7 +588,10 @@ describe('generateReportSubmissions (edge cases)', () => {
   it('uses quarterly cadence and empty accreditationNumber when accreditation status is not approved or suspended', async () => {
     const org = buildOrg({
       accreditations: [
-        { id: 'acc-1', status: 'created', accreditationNumber: 'ACC-001' }
+        buildAccreditationMock({
+          status: 'created',
+          statusHistory: [{ status: 'created', updatedAt: '2026-01-01' }]
+        })
       ],
       registrations: [
         buildRegistrationMock({
@@ -571,11 +614,14 @@ describe('generateReportSubmissions (edge cases)', () => {
   it('uses monthly cadence and accreditationNumber when accreditation status is suspended', async () => {
     const org = buildOrg({
       accreditations: [
-        {
-          id: 'acc-1',
+        buildAccreditationMock({
           status: ACCREDITATION_STATUS.SUSPENDED,
+          statusHistory: [
+            ...approvedFromJanuary,
+            { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-03-01' }
+          ],
           accreditationNumber: 'ACC-999'
-        }
+        })
       ],
       registrations: [
         buildRegistrationMock({
@@ -661,5 +707,67 @@ describe('generateReportSubmissions (edge cases)', () => {
     const orgNames = result.reportSubmissions.map((r) => r.organisationName)
     expect(orgNames).not.toContain('Test Org Ltd')
     expect(orgNames).toContain('Normal Org Ltd')
+  })
+
+  it('lists rows for both kinds, split at the accreditation date, with mid-year status transition on', async () => {
+    config.set('featureFlags.midYearStatusTransition', true)
+    const org = buildOrg({
+      accreditations: [
+        buildAccreditationMock({
+          validFrom: '2026-02-15',
+          statusHistory: [{ status: 'approved', updatedAt: '2026-02-15' }]
+        })
+      ],
+      registrations: [buildRegistrationMock({ accreditationId: 'acc-1' })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(
+      result.reportSubmissions.map(
+        ({ reportType, reportingPeriod, accreditationNumber }) => ({
+          reportType,
+          reportingPeriod,
+          accreditationNumber
+        })
+      )
+    ).toEqual([
+      {
+        reportType: 'Quarterly',
+        reportingPeriod: 'Q1 2026',
+        accreditationNumber: ''
+      },
+      {
+        reportType: 'Monthly',
+        reportingPeriod: 'Feb 2026',
+        accreditationNumber: 'ACC-001'
+      },
+      {
+        reportType: 'Monthly',
+        reportingPeriod: 'Mar 2026',
+        accreditationNumber: 'ACC-001'
+      }
+    ])
+  })
+
+  it('skips a registration the read model does not serve, logging why', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    const org = buildOrg({
+      registrations: [buildRegistrationMock({ validFrom: undefined })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(result.reportSubmissions).toEqual([])
+    expect(warn).toHaveBeenCalledWith({
+      message: 'Registration REG-001 has no validFrom'
+    })
+    warn.mockRestore()
   })
 })

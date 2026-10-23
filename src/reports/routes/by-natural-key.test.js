@@ -689,11 +689,33 @@ describe('report routes by natural key', () => {
       expect(body).not.toHaveProperty('registeredOnly')
       expect(body.accredited.reportingPeriods[0]).toMatchObject({
         cadence: 'monthly',
-        period: 2,
-        startDate: '2026-02-01',
-        endDate: '2026-02-28'
+        period: 7,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31'
       })
-      expect(body.accredited.reportingPeriods).toHaveLength(11)
+      expect(body.accredited.reportingPeriods).toHaveLength(6)
+    })
+
+    it('leaves out a stored report for a month before the accreditation began', async () => {
+      await reportsRepository.createReport(
+        buildCreateReportParams({
+          organisationId: organisation.id,
+          registrationId: accreditedRegistration.id,
+          year: YEAR,
+          cadence: 'monthly',
+          period: 3,
+          ...COMPLETE_REPORT,
+          prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 }
+        })
+      )
+
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      expect(
+        JSON.parse(response.payload).accredited.reportingPeriods.map(
+          (/** @type {{ period: number }} */ { period }) => period
+        )
+      ).toEqual([7, 8, 9, 10, 11, 12])
     })
 
     it('serves registered-only periods only for a registered-only registration', async () => {

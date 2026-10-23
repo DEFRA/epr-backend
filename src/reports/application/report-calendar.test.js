@@ -1,7 +1,7 @@
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
-import { yearCalendar } from './report-calendar.js'
+import { reportingPeriodsByKind, yearCalendar } from './report-calendar.js'
 
 /**
  * @import { Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
@@ -337,20 +337,20 @@ describe('yearCalendar', () => {
 describe('yearCalendar with mid-year status transition off', () => {
   withMidYearStatusTransition(false)
 
-  it('lists whole accredited months over every registered day for an accredited registration', () => {
+  it('lists whole accredited months from the one the accreditation began in', () => {
     const result = calendar({
       registration: registeredSinceLastYear([approvedOn('2026-02-15')])
     })
 
     expect(result).not.toHaveProperty('registeredOnly')
     expect(spans(result.accredited?.reportingPeriods.slice(0, 2))).toEqual([
-      { period: 1, startDate: '2026-01-01', endDate: '2026-01-31' },
-      { period: 2, startDate: '2026-02-01', endDate: '2026-02-28' }
+      { period: 2, startDate: '2026-02-01', endDate: '2026-02-28' },
+      { period: 3, startDate: '2026-03-01', endDate: '2026-03-31' }
     ])
-    expect(result.accredited?.reportingPeriods).toHaveLength(12)
+    expect(result.accredited?.reportingPeriods).toHaveLength(11)
   })
 
-  it('lists whole registered-only quarters once the accreditation is cancelled', () => {
+  it('lists whole registered-only quarters from the one the accreditation was cancelled in', () => {
     const result = calendar({
       registration: registeredSinceLastYear([
         approvedOn('2026-01-01'),
@@ -360,8 +360,6 @@ describe('yearCalendar with mid-year status transition off', () => {
 
     expect(result).not.toHaveProperty('accredited')
     expect(spans(result.registeredOnly?.reportingPeriods)).toEqual([
-      { period: 1, startDate: '2026-01-01', endDate: '2026-03-31' },
-      { period: 2, startDate: '2026-04-01', endDate: '2026-06-30' },
       { period: 3, startDate: '2026-07-01', endDate: '2026-09-30' },
       { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
     ])
@@ -383,4 +381,143 @@ describe('yearCalendar with mid-year status transition off', () => {
       { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
     ])
   })
+})
+
+describe('reportingPeriodsByKind', () => {
+  const storedMarch = /** @type {PeriodicReport} */ (
+    /** @type {unknown} */ ({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      year: 2026,
+      reports: {
+        monthly: {
+          3: {
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: { id: 'report-1', submissionNumber: 1 }
+          }
+        }
+      }
+    })
+  )
+
+  const storedFirstQuarter = /** @type {PeriodicReport} */ (
+    /** @type {unknown} */ ({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      year: 2026,
+      reports: {
+        quarterly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: { id: 'report-2', submissionNumber: 1 }
+          }
+        }
+      }
+    })
+  )
+
+  /**
+   * @param {Registration} registration
+   * @param {PeriodicReport[]} [storedReports]
+   */
+  const byKind = (registration, storedReports = []) =>
+    reportingPeriodsByKind({
+      registration,
+      storedReports,
+      year: 2026,
+      now: AFTER_YEAR_END
+    })
+
+  describe('with mid-year status transition on', () => {
+    withMidYearStatusTransition(true)
+
+    it('lists both kinds, split at the accreditation date', () => {
+      const result = byKind(registeredSinceLastYear([approvedOn('2026-02-15')]))
+
+      expect(spans(result.registeredOnly)).toEqual([
+        { period: 1, startDate: '2026-01-01', endDate: '2026-02-14' }
+      ])
+      expect(spans(result.accredited.slice(0, 1))).toEqual([
+        { period: 2, startDate: '2026-02-15', endDate: '2026-02-28' }
+      ])
+      expect(result.accreditationNumber).toBe('ACC-2026')
+    })
+  })
+
+  describe('with mid-year status transition off', () => {
+    withMidYearStatusTransition(false)
+
+    it('lists only the stored reports of an accreditation cancelled since', () => {
+      const result = byKind(
+        registeredSinceLastYear([
+          approvedOn('2026-02-15'),
+          cancelledOn('2026-07-10')
+        ]),
+        [storedMarch]
+      )
+
+      expect(result.accredited.map(({ period }) => period)).toEqual([3])
+      expect(result.registeredOnly.map(({ period }) => period)).toEqual([
+        1, 3, 4
+      ])
+    })
+
+    it('lists only the current kind, in whole periods', () => {
+      const result = byKind(registeredSinceLastYear([approvedOn('2026-02-15')]))
+
+      expect(result.registeredOnly).toEqual([])
+      expect(spans(result.accredited.slice(0, 1))).toEqual([
+        { period: 2, startDate: '2026-02-01', endDate: '2026-02-28' }
+      ])
+    })
+  })
+
+  it('leaves out a stored accredited report with no accreditation for the year', () => {
+    const result = byKind(registeredSinceLastYear(), [storedMarch])
+
+    expect(result.accredited).toEqual([])
+    expect(result.accreditationNumber).toBeUndefined()
+  })
+
+  describe.each([true, false])(
+    'with mid-year status transition %s',
+    (midYearStatusTransition) => {
+      withMidYearStatusTransition(midYearStatusTransition)
+
+      it('leaves out a stored report for a month before the accreditation began', () => {
+        const result = byKind(
+          registeredSinceLastYear([approvedOn('2026-04-10')]),
+          [storedMarch]
+        )
+
+        expect(result.accredited.map(({ period }) => period)).not.toContain(3)
+        expect(result.accredited[0].period).toBe(4)
+      })
+
+      it('lists a stored report of an accreditation cancelled since', () => {
+        const result = byKind(
+          registeredSinceLastYear([
+            approvedOn('2026-02-15'),
+            cancelledOn('2026-07-10')
+          ]),
+          [storedMarch]
+        )
+
+        expect(result.accredited.map(({ period }) => period)).toContain(3)
+      })
+
+      it('lists a stored registered-only report from before the accreditation', () => {
+        const result = byKind(
+          registeredSinceLastYear([approvedOn('2026-01-01')]),
+          [storedFirstQuarter]
+        )
+
+        expect(result.registeredOnly.map(({ period }) => period)).toEqual([1])
+      })
+    }
+  )
 })
