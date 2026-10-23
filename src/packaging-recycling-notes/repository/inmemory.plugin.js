@@ -397,9 +397,10 @@ const performPersistProjection =
  */
 const performFindIdsWithoutNumbers = (storage) => async () =>
   [...storage.values()]
-    .filter((prn) =>
-      Object.values(numbersHeld(prn)).some((number) => number === undefined)
-    )
+    .filter((prn) => {
+      const { organisationNumber, registrationNumber } = numbersHeld(prn)
+      return !organisationNumber || !registrationNumber
+    })
     .map(({ id }) => id)
 
 /**
