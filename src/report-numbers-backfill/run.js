@@ -51,12 +51,12 @@ const runBackfill = async (server) => {
 }
 
 /**
- * Startup backfill of the organisation and registration numbers on reports
- * stored before they were written beside the ids. Flag off (the default) only
- * reports what it would add; on writes them through the reports repository,
- * auditing each change. Both modes log one summary line, which says why reports
- * cannot be mapped. Idempotent,
- * so safe to leave enabled across restarts.
+ * Startup backfill of the organisation, registration and accreditation numbers
+ * on reports stored before they were written beside the ids. A quarterly report
+ * gets a null accreditation number. Flag off (the default) only reports what it
+ * would add; on writes them through the reports repository, auditing each
+ * change. Both modes log one summary line, which says why reports cannot be
+ * mapped. Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */

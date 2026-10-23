@@ -379,7 +379,7 @@ const baseConfig = {
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
     reportNumbersBackfill: {
-      doc: 'Feature Flag: Let the startup backfill write the organisation and registration numbers onto reports stored without them, rather than only reporting them',
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto reports stored without them, rather than only reporting them',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_REPORT_NUMBERS_BACKFILL'
