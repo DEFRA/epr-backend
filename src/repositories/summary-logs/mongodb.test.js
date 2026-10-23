@@ -9,7 +9,10 @@ import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
@@ -165,7 +168,8 @@ describe('MongoDB summary logs repository', () => {
 
       expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
         'drop:organisationId_1_registrationId_1',
-        'drop:organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
+        'drop:organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1',
+        'drop:organisationId_1_registrationId_1_status_1_submittedAt_-1'
       ])
       expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
         calls.indexOf('drop:organisationId_1_registrationId_1')
@@ -206,6 +210,27 @@ describe('MongoDB summary logs repository', () => {
       })
       expect(keys).not.toContainEqual(
         expect.objectContaining({ year: 1, accreditationId: 1, status: 1 })
+      )
+      await database.dropDatabase()
+    })
+
+    it('drops the id index the list by registration read through', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+      const collection = database.collection('summary-logs')
+      await collection.createIndex({
+        organisationId: 1,
+        registrationId: 1,
+        status: 1,
+        submittedAt: -1
+      })
+
+      await createSummaryLogsRepository(database, mockS3Config)
+
+      const keys = (await collection.indexes()).map(({ key }) => key)
+      expect(keys).not.toContainEqual(
+        expect.objectContaining({ organisationId: 1, status: 1 })
       )
       await database.dropDatabase()
     })
@@ -361,21 +386,19 @@ describe('MongoDB summary logs repository', () => {
       ])
     })
 
-    it('findAllByOrgReg returns them as strings', async ({
+    it('findAll returns them as strings', async ({
       mongoClient,
       summaryLogsRepository
     }) => {
-      const organisationId = `org-${randomUUID()}`
-      const registrationId = `reg-${randomUUID()}`
-      await insertLegacySummaryLog(mongoClient, {
-        organisationId,
-        registrationId
-      })
+      const key = {
+        organisationNumber: toOrganisationNumber(
+          String(Math.floor(Math.random() * 1e9) + 1)
+        ),
+        registrationNumber: toRegistrationNumber(`reg-${randomUUID()}`)
+      }
+      await insertLegacySummaryLog(mongoClient, key)
 
-      const results = await summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      )
+      const results = await summaryLogsRepository.findAll(key)
 
       expect(results[0]?.summaryLog.loads?.added.valid.rowIds).toEqual([
         '1000',

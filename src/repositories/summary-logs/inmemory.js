@@ -214,15 +214,6 @@ const uploads = (staleCache, matches) => {
   return found.map(({ _uploadedAt: _u, ...rest }) => rest)
 }
 
-const findAllByOrgReg =
-  (staleCache) => async (organisationId, registrationId) =>
-    uploads(
-      staleCache,
-      (summaryLog) =>
-        summaryLog.organisationId === organisationId &&
-        summaryLog.registrationId === registrationId
-    )
-
 /**
  * A summary log stored before its accreditation was recorded has no
  * accreditation number, and matches every accreditation.
@@ -438,7 +429,6 @@ export const createInMemorySummaryLogsRepository = () => {
     findById: findById(staleCache),
     findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
     assignNumbers: assignNumbers(storage, staleCache, logger),
-    findAllByOrgReg: findAllByOrgReg(staleCache),
     findLatestSubmitted: findLatestSubmitted(staleCache),
     findAll: findAll(staleCache),
     findAllSummaryLogStatsByRegistrationId:

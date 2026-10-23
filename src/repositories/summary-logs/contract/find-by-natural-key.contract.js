@@ -440,6 +440,57 @@ export const testFindByNaturalKey = (it) => {
         expect(result.flatMap(storedIdsIn)).toEqual([])
       })
 
+      it('returns every failure status and no status still in progress', async () => {
+        for (const build of [
+          summaryLogFactory.preprocessing,
+          summaryLogFactory.validating,
+          summaryLogFactory.validated,
+          summaryLogFactory.submitting,
+          summaryLogFactory.superseded
+        ]) {
+          await insert(build(registeredOnly))
+        }
+        for (const build of [
+          summaryLogFactory.submitted,
+          summaryLogFactory.rejected,
+          summaryLogFactory.invalid,
+          summaryLogFactory.validationFailed,
+          summaryLogFactory.submissionFailed
+        ]) {
+          await insert(build(registeredOnly))
+        }
+
+        const result = await repo.findAll(stored.key)
+
+        expect(
+          result.map(({ summaryLog }) => summaryLog.status).sort()
+        ).toEqual(
+          [
+            SUMMARY_LOG_STATUS.SUBMITTED,
+            SUMMARY_LOG_STATUS.REJECTED,
+            SUMMARY_LOG_STATUS.INVALID,
+            SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+          ].sort()
+        )
+      })
+
+      it("ignores another registration's summary logs", async () => {
+        const other = aRegistration()
+        const ownId = await insert(summaryLogFactory.submitted(registeredOnly))
+        await insert(summaryLogFactory.submitted(registeredOnly), {
+          ...other,
+          key: {
+            ...other.key,
+            organisationNumber: stored.key.organisationNumber
+          }
+        })
+
+        const result = await repo.findAll(stored.key)
+
+        expect(result.map(({ id }) => id)).toEqual([ownId])
+      })
+
       it('finds only the accreditation the key names', async () => {
         await insert(summaryLogFactory.submitted(accredited(stored.previous)))
         const currentId = await insert(
