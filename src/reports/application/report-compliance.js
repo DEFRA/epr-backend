@@ -1,18 +1,15 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
-import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import {
-  mergeReportingPeriods,
-  selectSubmittedReports
-} from '#reports/domain/merge-reporting-periods.js'
+import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
-import {
-  activeAccreditationValidFrom,
-  getReportableRegistrations,
-  resolveAccreditation,
-  resolveAccreditationNumber
-} from '#domain/organisations/registration-utils.js'
+import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
+import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { logger } from '#common/helpers/logging/logger.js'
+
+/** @param {string} message */
+const logDrop = (message) => logger.warn({ message })
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
@@ -80,11 +77,12 @@ export function groupByRegistration(allPeriodicReports) {
 /**
  * Builds a map of report compliance data for all approved/cancelled registrations.
  *
- * Each entry in `entries` is keyed by `registrationId` and contains only the
- * periods that were actually submitted (`submittedDates`). The consumer can
- * determine whether an absent key represents "not yet submitted" or "N/A" by
- * comparing the compliance period's cadence against the registration's cadence
- * (encoded in the key as `${year}:${cadence}:${period}`).
+ * Each entry in `entries` is keyed by `registrationId`. Its `submittedDates`
+ * has a key, `${year}:${cadence}:${period}`, for each ended period the
+ * registration has a reporting obligation for, as the year calendar lists them,
+ * holding the original submitted date or null. An absent key is "N/A". A
+ * registration the organisation read model does not serve has no entry, and
+ * the reason is logged.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
@@ -109,53 +107,61 @@ export async function generateReportCompliance(
   const entries = new Map()
 
   for (const { org, registration } of registrations) {
-    const accreditationNumber = resolveAccreditationNumber(registration, org)
-    const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
-
-    // An accredited operator has monthly reporting obligations only from the date their
-    // accreditation began, so bound obligations to validFrom (matches the
-    // operator calendar and the admin export).
-    const validFrom = activeAccreditationValidFrom(
-      resolveAccreditation(registration, org)
-    )
-
-    const periodicReports =
-      reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
-
-    /** @type {Map<string, string | null>} */
-    const submittedDates = new Map()
-
-    for (const year of years) {
-      const computedPeriods = generateReportingPeriods(
-        cadence,
-        year,
-        now,
-        validFrom
-      )
-      const merged = mergeReportingPeriods(
-        computedPeriods,
-        periodicReports,
-        cadence
-      )
-
-      for (const mergedPeriod of merged) {
-        submittedDates.set(
-          periodKey({
-            year: mergedPeriod.year,
-            cadence,
-            period: mergedPeriod.period
-          }),
-          originalSubmittedDate(mergedPeriod)
-        )
-      }
+    const readModel = toReadModelRegistration(org, registration, logDrop)
+    if (!readModel) {
+      continue
     }
 
     entries.set(registration.id, {
       registrationId: registration.id,
       organisationId: org.id,
-      submittedDates
+      submittedDates: submittedDatesFor({
+        registration: readModel,
+        storedReports:
+          reportsByRegistration.get(`${org.id}::${registration.id}`) ?? [],
+        years,
+        now
+      })
     })
   }
 
   return { periods, entries }
+}
+
+/**
+ * @param {{
+ *   registration: NonNullable<ReturnType<typeof toReadModelRegistration>>,
+ *   storedReports: import('#reports/repository/port.js').PeriodicReport[],
+ *   years: number[],
+ *   now: Date
+ * }} params
+ * @returns {Map<string, string | null>}
+ */
+function submittedDatesFor({ registration, storedReports, years, now }) {
+  /** @type {Map<string, string | null>} */
+  const submittedDates = new Map()
+
+  for (const year of years) {
+    const { registeredOnly, accredited } = reportingPeriodsByKind({
+      registration,
+      storedReports,
+      year,
+      now
+    })
+    const byCadence = /** @type {const} */ ([
+      [CADENCE.quarterly, registeredOnly],
+      [CADENCE.monthly, accredited]
+    ])
+
+    for (const [cadence, merged] of byCadence) {
+      for (const mergedPeriod of merged) {
+        submittedDates.set(
+          periodKey({ year, cadence, period: mergedPeriod.period }),
+          originalSubmittedDate(mergedPeriod)
+        )
+      }
+    }
+  }
+
+  return submittedDates
 }
