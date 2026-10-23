@@ -520,6 +520,23 @@ describe('PRN routes by natural key', () => {
       })
     })
 
+    it('should list a PRN raised in the January after the year under that year', async () => {
+      vi.setSystemTime(new Date('2027-01-15T10:00:00.000Z'))
+      const created = await server.inject({
+        method: 'POST',
+        url: prns,
+        payload: {
+          issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
+          tonnage: 10
+        },
+        ...asOperator()
+      })
+
+      const response = await server.inject({ url: prns, ...asOperator() })
+
+      expect(idsOf(response)).toContain(body(created).id)
+    })
+
     it('serves the created PRN', async () => {
       const response = await server.inject({
         method: 'POST',
