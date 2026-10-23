@@ -23,7 +23,6 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 
 const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockCdpAuditing = vi.fn()
@@ -54,7 +53,7 @@ const ADMIN_USER = {
   scope: [...ADMIN_ROLES.service_maintainer_write]
 }
 
-describe('DELETE /v1/organisations/{organisationId}/link', () => {
+describe('DELETE /organisations/{organisationNumber}/link', () => {
   setupAuthContext()
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
@@ -79,7 +78,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
   })
 
   describe('access control', () => {
-    const unlinkUrl = `/v1/organisations/${buildOrganisation().id}/link`
+    const unlinkUrl = '/organisations/999999/link'
 
     it('returns 401 when the request is not authenticated', async () => {
       const response = await server.inject({
@@ -125,7 +124,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
     it('returns 404 when the organisation does not exist', async () => {
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/organisations/${buildOrganisation().id}/link`,
+        url: '/organisations/999999/link',
         ...asServiceMaintainerWrite()
       })
 
@@ -137,7 +136,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
 
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/organisations/${org.id}/link`,
+        url: `/organisations/${org.orgId}/link`,
         ...asServiceMaintainerWrite()
       })
 
@@ -155,7 +154,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: `/v1/organisations/${org.id}/link`,
+          url: `/organisations/${org.orgId}/link`,
           ...asServiceMaintainerWrite()
         })
 
