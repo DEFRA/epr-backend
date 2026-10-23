@@ -108,8 +108,9 @@ export const closedYearConflict = (
  * The 409 for a write refused because its year has closed, or `undefined` for
  * any other error.
  * @param {unknown} error
+ * @param {string} [reference] - what was refused, for the log line
  */
-export const closedYearConflictFor = (error) =>
+export const closedYearConflictFor = (error, reference) =>
   error instanceof RelevantYearWindowExpiredError
-    ? closedYearConflict(error)
+    ? closedYearConflict(error, reference)
     : undefined

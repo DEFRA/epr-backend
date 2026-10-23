@@ -70,9 +70,10 @@ const buildUser = (auth) => {
 /**
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
+ * @param {string} id
  * @param {TypedLogger} logger
  */
-const mapUpdateStatusError = (error, logger) => {
+const mapUpdateStatusError = (error, id, logger) => {
   const conflict = writeConflictRefusal(error)
   if (conflict) {
     return conflict
@@ -82,7 +83,7 @@ const mapUpdateStatusError = (error, logger) => {
     return Boom.forbidden(error.message)
   }
 
-  const closedYear = closedYearConflictFor(error)
+  const closedYear = closedYearConflictFor(error, `prnId=${id}`)
   if (closedYear) {
     return closedYear
   }
@@ -182,7 +183,7 @@ export const updatePrnStatusHandler =
 
       return h.response(respond(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      throw mapUpdateStatusError(error, logger)
+      throw mapUpdateStatusError(error, id, logger)
     }
   }
 

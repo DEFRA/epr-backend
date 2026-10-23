@@ -174,6 +174,17 @@ describe('closed year', () => {
       expect(conflict?.output.payload.code).toBe('RELEVANT_YEAR_CLOSED')
     })
 
+    it('should name what was refused in the log reason', () => {
+      const conflict = closedYearConflictFor(
+        new RelevantYearWindowExpiredError(2026),
+        'prnId=prn-1'
+      )
+
+      expect(conflict?.event?.reason).toBe(
+        'prnId=prn-1 rejected=RELEVANT_YEAR_CLOSED'
+      )
+    })
+
     it('should give nothing for any other error', () => {
       expect(closedYearConflictFor(new Error('elsewhere'))).toBeUndefined()
     })

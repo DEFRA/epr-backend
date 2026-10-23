@@ -3,9 +3,8 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
 /**
- * Prior statuses a PRN/PERN can be admin-cancelled from. `accepted` since
- * PAE-1823; `awaiting_acceptance` added for PAE-1859 (cancelling a note stuck
- * awaiting the recipient's response).
+ * Prior statuses a PRN/PERN can be admin-cancelled from: `accepted`, and
+ * `awaiting_acceptance` for a note stuck awaiting the recipient's response.
  *
  * The single source of truth for admin-cancellable statuses, so the closed-year
  * rule and a caller's own cancellability guard can never drift apart.

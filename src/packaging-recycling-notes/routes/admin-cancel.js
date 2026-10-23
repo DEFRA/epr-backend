@@ -189,7 +189,7 @@ const mapAdminCancelError = (error, path, id, logger) => {
     return Boom.conflict(error.message)
   }
 
-  const closedYear = closedYearConflictFor(error)
+  const closedYear = closedYearConflictFor(error, `prnId=${id}`)
   if (closedYear) {
     return closedYear
   }
