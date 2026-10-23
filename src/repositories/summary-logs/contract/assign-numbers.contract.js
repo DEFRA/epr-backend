@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { describe, beforeEach, expect } from 'vitest'
-import { summaryLogFactory, withoutYear } from './test-data.js'
+import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
 const numbers = {
@@ -74,8 +74,8 @@ export const testAssignNumbers = (it) => {
             accreditationNumber: null
           })
         )
-        const withoutAccreditationId = await insertLog(
-          withoutYear(
+        const unscopedId = await insertLog(
+          withoutAccreditationId(
             summaryLogFactory.validating({
               organisationNumber: numbers.organisationNumber,
               registrationNumber: numbers.registrationNumber
@@ -87,7 +87,7 @@ export const testAssignNumbers = (it) => {
 
         expect(ids).not.toContain(accreditedId)
         expect(ids).not.toContain(registeredOnlyId)
-        expect(ids).not.toContain(withoutAccreditationId)
+        expect(ids).not.toContain(unscopedId)
       })
     })
 
