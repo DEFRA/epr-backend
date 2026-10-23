@@ -28,12 +28,6 @@ import { auditPrnNumbersBackfill } from './audit.js'
  * @property {OrganisationsRepository} organisationsRepository
  */
 
-/** @type {[keyof PrnNumbers, string][]} */
-const NO_NUMBER = [
-  ['organisationNumber', 'no organisation number'],
-  ['registrationNumber', 'no registration number']
-]
-
 /**
  * The numbers the PRN's organisation record gives, and why any number the PRN
  * lacks cannot be found.
@@ -54,9 +48,19 @@ const lookUpNumbers = async (organisationsRepository, prn) => {
     const lacking = Object.fromEntries(
       Object.entries(numbers).filter(([key]) => held[key] === undefined)
     )
-    const unmapped = NO_NUMBER.filter(
-      ([key]) => numbers[key] === undefined && held[key] === undefined
-    ).map(([, reason]) => reason)
+    const holdsRegistration = organisation.registrations.some(
+      ({ id }) => id === prn.registrationId
+    )
+    /** @type {Record<keyof PrnNumbers, string>} */
+    const reasons = {
+      organisationNumber: 'no organisation number',
+      registrationNumber: holdsRegistration
+        ? 'no registration number'
+        : 'registration not found'
+    }
+    const unmapped = Object.entries(reasons)
+      .filter(([key]) => numbers[key] === undefined && held[key] === undefined)
+      .map(([, reason]) => reason)
     return { lacking, unmapped }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
