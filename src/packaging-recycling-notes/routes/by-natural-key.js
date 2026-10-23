@@ -58,7 +58,7 @@ import { createStatusesValidator } from './validation.js'
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} PrnRequest
  *
- * @typedef {{ at: string, by?: { name: string } }} PrnOperation
+ * @typedef {{ at: string, by?: { name: string, position?: string } }} PrnOperation
  * @typedef {PrnOperation & { status: PrnStatus }} PrnStatusChange
  *
  * @typedef {{
@@ -138,7 +138,10 @@ const isoDateTime = Joi.string().isoDate().required()
 
 const prnOperationKeys = {
   at: isoDateTime,
-  by: Joi.object({ name: Joi.string().required() })
+  by: Joi.object({
+    name: Joi.string().required(),
+    position: Joi.string()
+  })
 }
 
 const prnStatusSchema = Joi.string()
@@ -261,7 +264,9 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
  */
 const toPrnOperation = ({ at, by }) => ({
   at: new Date(at).toISOString(),
-  ...(by.name && { by: { name: by.name } })
+  ...(by.name && {
+    by: { name: by.name, ...(by.position && { position: by.position }) }
+  })
 })
 
 const toPrnResource = (
