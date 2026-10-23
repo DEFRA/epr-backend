@@ -15,10 +15,7 @@ import {
   AccreditationStatusError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
-import {
-  RelevantYearWindowExpiredError,
-  relevantYearClosedConflict
-} from '#packaging-recycling-notes/domain/relevant-year.js'
+import { closedYearConflictFor } from '#packaging-recycling-notes/domain/closed-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
@@ -85,11 +82,9 @@ const mapUpdateStatusError = (error, logger) => {
     return Boom.forbidden(error.message)
   }
 
-  if (error instanceof RelevantYearWindowExpiredError) {
-    return relevantYearClosedConflict(
-      error,
-      `relevantYear=${error.relevantYear}`
-    )
+  const closedYear = closedYearConflictFor(error)
+  if (closedYear) {
+    return closedYear
   }
 
   if (

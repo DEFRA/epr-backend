@@ -16,9 +16,9 @@ import {
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import {
-  relevantYearClosedConflict,
-  relevantYearWindowRefusal
-} from '#packaging-recycling-notes/domain/relevant-year.js'
+  closedYearConflict,
+  closedYearRefusal
+} from '#packaging-recycling-notes/domain/closed-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
@@ -210,15 +210,13 @@ const assertSufficientAvailableBalance = async ({
  * @param {Date} now
  */
 const assertRelevantYearOpen = (accreditation, now) => {
-  const refusal = relevantYearWindowRefusal(
-    deriveAccreditationYear(accreditation),
+  const refusal = closedYearRefusal({
+    accreditationYear: deriveAccreditationYear(accreditation),
+    newStatus: PRN_STATUS.DRAFT,
     now
-  )
+  })
   if (refusal) {
-    throw relevantYearClosedConflict(
-      refusal,
-      `accreditationId=${accreditation.id}`
-    )
+    throw closedYearConflict(refusal, `accreditationId=${accreditation.id}`)
   }
 }
 

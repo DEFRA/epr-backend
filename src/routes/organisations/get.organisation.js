@@ -1,6 +1,6 @@
 import { yearSchema } from '#common/validation/year-schema.js'
 import { organisationInYear } from '#organisation-read-model/domain/years.js'
-import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
+import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
 import { organisationViewSchema } from './response.schema.js'
 import { organisationPath, viewRoute } from './view-route.js'
 
@@ -26,7 +26,7 @@ const withRelevantYearOpen = (accreditations, now) =>
       year,
       {
         ...accreditation,
-        relevantYearOpen: isBeforeEndOfRelevantYear(Number(year), now)
+        relevantYearOpen: isRelevantYearOpen(Number(year), now)
       }
     ])
   )

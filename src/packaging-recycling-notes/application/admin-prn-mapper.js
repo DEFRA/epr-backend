@@ -1,6 +1,6 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
-import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancellation.js'
+import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote

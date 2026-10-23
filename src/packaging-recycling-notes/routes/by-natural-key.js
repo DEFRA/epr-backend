@@ -8,7 +8,7 @@ import {
   catchUpPrnProjection,
   getProjectedPrnById
 } from '#packaging-recycling-notes/application/get-projected-prn.js'
-import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/cancellation.js'
+import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
