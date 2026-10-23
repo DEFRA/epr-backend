@@ -1,6 +1,5 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
@@ -19,7 +18,7 @@ export const organisationsUnlink = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
    *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
@@ -29,9 +28,9 @@ export const organisationsUnlink = {
    */
   handler: async (request, h) => {
     const { organisationsRepository } = request
+    const { organisationNumber } = request.params
     const {
       id,
-      orgId,
       version: currentVersion,
       linkedDefraOrganisation: linkedOrg
     } = request.app.organisation
@@ -41,7 +40,7 @@ export const organisationsUnlink = {
     }
 
     await organisationsRepository.unlinkDefraOrganisation(
-      toOrganisationNumber(String(orgId)),
+      organisationNumber,
       currentVersion
     )
 
