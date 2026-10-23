@@ -1,4 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { buildPrn, buildDraftPrn } from './test-data.js'
 
 export const testCreateBehaviour = (it) => {
@@ -55,12 +59,12 @@ export const testCreateBehaviour = (it) => {
         const prnInput = buildPrn({
           organisation: {
             id: 'org-preserve-test',
-            organisationNumber: '500123',
+            organisationNumber: toOrganisationNumber('500123'),
             name: 'Preserve Org',
             tradingName: 'Preserve Trading'
           },
           registrationId: 'reg-preserve-test',
-          registrationNumber: 'R25SR500010912PL',
+          registrationNumber: toRegistrationNumber('R25SR500010912PL'),
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
