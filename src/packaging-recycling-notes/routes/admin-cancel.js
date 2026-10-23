@@ -15,7 +15,7 @@ import {
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { ADMIN_CANCELLABLE_PREVIOUS_STATUSES } from '#packaging-recycling-notes/domain/cancellation.js'
-import { RelevantYearWindowExpiredError } from '#packaging-recycling-notes/domain/relevant-year.js'
+import { closedYearConflictFor } from '#packaging-recycling-notes/domain/closed-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
@@ -189,16 +189,9 @@ const mapAdminCancelError = (error, path, id, logger) => {
     return Boom.conflict(error.message)
   }
 
-  if (error instanceof RelevantYearWindowExpiredError) {
-    logger.info({
-      message: `Admin cancel refused: ${error.message}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-        reference: id
-      }
-    })
-    return Boom.conflict(error.message)
+  const closedYear = closedYearConflictFor(error, `prnId=${id}`)
+  if (closedYear) {
+    return closedYear
   }
 
   if (error.isBoom) {

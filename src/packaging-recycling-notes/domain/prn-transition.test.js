@@ -136,10 +136,10 @@ describe('a transition the state machine refuses', () => {
     expect(outcome).toEqual({ error: expect.any(UnauthorisedTransitionError) })
   })
 
-  it('returns the relevant-year refusal when the cancellation window has closed', () => {
+  it('returns the closed-year refusal once the year has closed', () => {
     const outcome = decide({
-      fromStatus: PRN_STATUS.ACCEPTED,
-      newStatus: PRN_STATUS.CANCELLED,
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       now: new Date('2027-02-01T00:00:00.000Z')
     })
 

@@ -15,6 +15,10 @@ import {
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import {
+  closedYearConflict,
+  closedYearRefusal
+} from '#packaging-recycling-notes/domain/closed-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
@@ -24,6 +28,7 @@ import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
+ * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
@@ -201,6 +206,21 @@ const assertSufficientAvailableBalance = async ({
 }
 
 /**
+ * @param {Accreditation} accreditation
+ * @param {Date} now
+ */
+const assertRelevantYearOpen = (accreditation, now) => {
+  const refusal = closedYearRefusal({
+    accreditationYear: deriveAccreditationYear(accreditation),
+    newStatus: PRN_STATUS.DRAFT,
+    now
+  })
+  if (refusal) {
+    throw closedYearConflict(refusal, `accreditationId=${accreditation.id}`)
+  }
+}
+
+/**
  * @param {Object} params
  * @param {Object} params.accreditation
  * @param {boolean} params.isDecemberWaste
@@ -276,6 +296,8 @@ export const createPrn =
       if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
         throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
       }
+
+      assertRelevantYearOpen(accreditation, now)
 
       assertDecemberWasteDeclarable({
         accreditation,

@@ -1,5 +1,6 @@
 import { yearSchema } from '#common/validation/year-schema.js'
 import { organisationInYear } from '#organisation-read-model/domain/years.js'
+import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
 import { organisationViewSchema } from './response.schema.js'
 import { organisationPath, viewRoute } from './view-route.js'
 
@@ -15,15 +16,49 @@ const organisationQuery = { year: yearSchema() }
 const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
+ * Each accreditation, keyed by its year, with whether that year is still open.
+ * @param {Record<string, object>} accreditations
+ * @param {Date} now
+ */
+const withRelevantYearOpen = (accreditations, now) =>
+  Object.fromEntries(
+    Object.entries(accreditations).map(([year, accreditation]) => [
+      year,
+      {
+        ...accreditation,
+        relevantYearOpen: isRelevantYearOpen(Number(year), now)
+      }
+    ])
+  )
+
+/**
+ * @param {Organisation['registrations']} registrations
+ * @param {Date} now
+ */
+const registrationsAt = (registrations, now) =>
+  Object.fromEntries(
+    Object.entries(registrations).map(([number, registration]) => [
+      number,
+      {
+        ...registration,
+        accreditations: withRelevantYearOpen(registration.accreditations, now)
+      }
+    ])
+  )
+
+/**
  * @param {Organisation} organisation
  * @param {OrganisationQuery} query
  */
-const organisationFor = (organisation, { year }) => ({
-  ...(year === undefined
-    ? organisation
-    : organisationInYear(organisation, year)),
-  displayName: displayNameOf(organisation)
-})
+const organisationFor = (organisation, { year }) => {
+  const inYear =
+    year === undefined ? organisation : organisationInYear(organisation, year)
+  return {
+    ...inYear,
+    displayName: displayNameOf(organisation),
+    registrations: registrationsAt(inYear.registrations, new Date())
+  }
+}
 
 export const organisationViewGet = viewRoute(
   organisationPath,

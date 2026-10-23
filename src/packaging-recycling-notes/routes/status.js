@@ -15,6 +15,7 @@ import {
   AccreditationStatusError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { closedYearConflictFor } from '#packaging-recycling-notes/domain/closed-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
@@ -69,9 +70,10 @@ const buildUser = (auth) => {
 /**
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
+ * @param {string} id
  * @param {TypedLogger} logger
  */
-const mapUpdateStatusError = (error, logger) => {
+const mapUpdateStatusError = (error, id, logger) => {
   const conflict = writeConflictRefusal(error)
   if (conflict) {
     return conflict
@@ -79,6 +81,11 @@ const mapUpdateStatusError = (error, logger) => {
 
   if (error instanceof AccreditationStatusError) {
     return Boom.forbidden(error.message)
+  }
+
+  const closedYear = closedYearConflictFor(error, `prnId=${id}`)
+  if (closedYear) {
+    return closedYear
   }
 
   if (
@@ -176,7 +183,7 @@ export const updatePrnStatusHandler =
 
       return h.response(respond(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      throw mapUpdateStatusError(error, logger)
+      throw mapUpdateStatusError(error, id, logger)
     }
   }
 
