@@ -291,6 +291,101 @@ describe('ledger and waste balance routes by natural key', () => {
     })
   })
 
+  describe('GET R/accreditations/{year}/waste-balance', () => {
+    it('serves the accreditation’s balance', async () => {
+      await server.app.ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          ...accreditedLedgerId,
+          closingBalance: {
+            amount: 120,
+            availableAmount: 100,
+            decemberAmount: 10,
+            decemberAvailableAmount: 10
+          }
+        })
+      ])
+
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(body(response)).toEqual({
+        amount: 120,
+        availableAmount: 100,
+        decemberAmount: 10,
+        decemberAvailableAmount: 10,
+        nonDecemberAvailableAmount: 90
+      })
+    })
+
+    it('serves zeros for an accreditation with no ledger', async () => {
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(body(response)).toEqual({ amount: 0, availableAmount: 0 })
+    })
+
+    it('serves a drained December pool as zero, not absent', async () => {
+      await server.app.ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          ...accreditedLedgerId,
+          closingBalance: {
+            amount: 1000,
+            availableAmount: 750,
+            decemberAmount: 0,
+            decemberAvailableAmount: 0
+          }
+        })
+      ])
+
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(body(response)).toEqual({
+        amount: 1000,
+        availableAmount: 750,
+        decemberAmount: 0,
+        decemberAvailableAmount: 0,
+        nonDecemberAvailableAmount: 750
+      })
+    })
+
+    it('derives the non-December available amount without float error', async () => {
+      await server.app.ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          ...accreditedLedgerId,
+          closingBalance: {
+            amount: 1000,
+            availableAmount: 10.3,
+            decemberAmount: 400,
+            decemberAvailableAmount: 5.0
+          }
+        })
+      ])
+
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(body(response).nonDecemberAvailableAmount).toBe(5.3)
+    })
+
+    it('returns 404 for a year the registration holds no accreditation', async () => {
+      const response = await get(`${accreditationPath(2027)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a registered-only registration', async () => {
+      const response = await get(
+        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/2026/waste-balance`
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 422 for a year out of range', async () => {
+      const response = await get(`${accreditationPath(2101)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
   describe('GET /organisations/{organisationNumber}/waste-balances/{year}', () => {
     const wasteBalances = (year) =>
       `/organisations/${organisation.orgId}/waste-balances/${year}`
@@ -369,6 +464,38 @@ describe('ledger and waste balance routes by natural key', () => {
 })
 
 /**
+ * A server holding the default operator's active organisation and another
+ * operator's, with the accreditation path of each.
+ */
+const buildAccessServer = async () => {
+  const organisationsRepositoryFactory = createInMemoryOrganisationsRepository(
+    []
+  )
+  const repository = organisationsRepositoryFactory()
+  /** @param {{ orgId: number }} org */
+  const accreditationOf = ({ orgId }) =>
+    `/organisations/${orgId}/registrations/REG${orgId}/accreditations/${new Date().getUTCFullYear()}`
+  const own = accreditationOf(await buildActiveOrg(repository))
+  const other = accreditationOf(
+    await buildActiveOrg(repository, {
+      linkedDefraOrganisation: {
+        orgId: COMPANY_2_ID,
+        orgName: 'Company 2 Name',
+        linkedBy: {
+          email: 'someone.else@example.com',
+          id: '550e8400-e29b-41d4-a716-446655440002'
+        },
+        linkedAt: new Date().toISOString()
+      }
+    })
+  )
+  const server = await createTestServer({
+    repositories: { organisationsRepository: organisationsRepositoryFactory }
+  })
+  return { server, own, other }
+}
+
+/**
  * Who may read an accreditation's ledger, over real tokens: injected
  * credentials can't show which scopes a caller earns. An operator earns no
  * ledger scope, even for their own active organisation, which holds them
@@ -384,32 +511,11 @@ describe('GET R/accreditations/{year}/ledger access control', () => {
   /** @type {string} */
   let otherLedger
 
-  /** @param {{ orgId: number }} org */
-  const ledgerOf = ({ orgId }) =>
-    `/organisations/${orgId}/registrations/REG${orgId}/accreditations/${new Date().getUTCFullYear()}/ledger`
-
   beforeAll(async () => {
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository([])
-    const repository = organisationsRepositoryFactory()
-    ownLedger = ledgerOf(await buildActiveOrg(repository))
-    otherLedger = ledgerOf(
-      await buildActiveOrg(repository, {
-        linkedDefraOrganisation: {
-          orgId: COMPANY_2_ID,
-          orgName: 'Company 2 Name',
-          linkedBy: {
-            email: 'someone.else@example.com',
-            id: '550e8400-e29b-41d4-a716-446655440002'
-          },
-          linkedAt: new Date().toISOString()
-        }
-      })
-    )
-
-    server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
-    })
+    const access = await buildAccessServer()
+    server = access.server
+    ownLedger = `${access.own}/ledger`
+    otherLedger = `${access.other}/ledger`
   })
 
   /**
@@ -465,6 +571,67 @@ describe('GET R/accreditations/{year}/ledger access control', () => {
 
   it('returns 401 when not authenticated', async () => {
     const response = await server.inject({ method: 'GET', url: ownLedger })
+
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+  })
+})
+
+/**
+ * Who may read an accreditation's waste balance, over real tokens. Unlike the
+ * ledger, an operator may read their own organisation's balance.
+ */
+describe('GET R/accreditations/{year}/waste-balance access control', () => {
+  setupAuthContext()
+
+  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  let server
+  /** @type {string} */
+  let ownBalance
+  /** @type {string} */
+  let otherBalance
+
+  beforeAll(async () => {
+    const access = await buildAccessServer()
+    server = access.server
+    ownBalance = `${access.own}/waste-balance`
+    otherBalance = `${access.other}/waste-balance`
+  })
+
+  /**
+   * @param {string} token
+   * @param {string} [url]
+   */
+  const getWithToken = (token, url = ownBalance) =>
+    server.inject({
+      method: 'GET',
+      url,
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+  it.each([
+    [
+      'an operator reading their own organisation',
+      defraIdMockAuthTokens.validToken
+    ],
+    ['a regulator standard user', entraIdMockAuthTokens.regulatorToken],
+    ['a service maintainer', entraIdMockAuthTokens.validToken]
+  ])('returns 200 for %s', async (_who, token) => {
+    const response = await getWithToken(token)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('returns 403 for an operator reading another organisation', async () => {
+    const response = await getWithToken(
+      defraIdMockAuthTokens.validToken,
+      otherBalance
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    const response = await server.inject({ method: 'GET', url: ownBalance })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
   })
