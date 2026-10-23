@@ -659,11 +659,11 @@ const performAssignNumbers = async (db, id, numbers) => {
     return
   }
 
-  const existing = await db.collection(COLLECTION_NAME).findOne({ _id })
+  const existing = await performFindById(db, id)
   if (!existing) {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
-  const held = numbersHeld(/** @type {*} */ (existing))
+  const held = numbersHeld(existing)
   const conflicting = keys.filter((key) => held[key] !== undefined)
   throw Boom.conflict(`PRN ${id} already holds ${conflicting.join(', ')}`)
 }
