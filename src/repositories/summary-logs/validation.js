@@ -1,8 +1,11 @@
 import Boom from '@hapi/boom'
 
+/** @import { SummaryLogKey } from '#domain/summary-logs/numbers.js' */
+
 import {
   idSchema,
   summaryLogInsertSchema,
+  summaryLogKeySchema,
   summaryLogNumbersSchema,
   summaryLogUpdateSchema
 } from './schema.js'
@@ -53,6 +56,23 @@ export const validateSummaryLogNumbers = (numbers) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badData(`Invalid numbers: ${details}`)
+  }
+
+  return value
+}
+
+/**
+ * @param {SummaryLogKey} key
+ * @returns {SummaryLogKey}
+ */
+export const validateSummaryLogKey = (key) => {
+  const { error, value } = summaryLogKeySchema.validate(key, {
+    abortEarly: false
+  })
+
+  if (error) {
+    const details = error.details.map((d) => d.message).join('; ')
+    throw Boom.badData(`Invalid summary log key: ${details}`)
   }
 
   return value

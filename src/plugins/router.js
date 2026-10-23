@@ -16,7 +16,6 @@ import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availa
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import * as marketInsightsRoutes from '#market-insights/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
-import { adminAccreditationPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-accreditation-list.js'
 import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
@@ -73,7 +72,6 @@ const router = {
         packagingRecyclingNotesReject,
         ...prnRoutesByNaturalKey,
         ...summaryLogUploadsReportRoutes,
-        adminAccreditationPackagingRecyclingNotesList,
         adminPackagingRecyclingNotesList,
         ...prnAdminCancellationRoutesBehindFeatureFlag,
         ...Object.values(overseasSitesRoutes),

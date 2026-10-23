@@ -11,6 +11,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -120,16 +121,32 @@ describe('summary-log routes by natural key', () => {
   })
 
   /**
-   * @param {object} overrides
+   * @typedef {{
+   *   registrationId: string,
+   *   accreditationId?: string | null,
+   *   [field: string]: unknown
+   * }} SeedOverrides
+   */
+
+  /**
+   * Stores a summary log under its ids and the numbers an upload stores
+   * beside them.
+   *
+   * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
    */
   const seed = async (overrides, build) => {
     const summaryLogId = randomUUID()
+    const { numbers } = numbersForSummaryLog(partialMock(organisation), {
+      accreditationId: null,
+      ...overrides
+    })
     await summaryLogsRepository.insert(
       summaryLogId,
-      partialMock(
-        build({ organisationId: organisation.id, year: YEAR, ...overrides })
-      )
+      partialMock({
+        ...build({ organisationId: organisation.id, year: YEAR, ...overrides }),
+        ...numbers
+      })
     )
     return {
       summaryLogId,
@@ -140,7 +157,7 @@ describe('summary-log routes by natural key', () => {
   /**
    * A summary log ready to submit: validated against no prior submission.
    *
-   * @param {object} overrides
+   * @param {SeedOverrides} overrides
    */
   const seedValidated = async (overrides) => {
     const { summaryLogId, version, summaryLog } = await seed(

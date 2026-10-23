@@ -2,24 +2,22 @@
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
-/** @import { WasteSentSummary } from '#reports/repository/port.js' */
+/** @import { PeriodicReport, WasteSentSummary } from '#reports/repository/port.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import {
-  mergeReportingPeriods,
-  selectSubmittedReports
-} from '#reports/domain/merge-reporting-periods.js'
+import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
-import {
-  activeAccreditationValidFrom,
-  getReportableRegistrations,
-  resolveAccreditation,
-  resolveAccreditationNumber
-} from '#domain/organisations/registration-utils.js'
+import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
+import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { logger } from '#common/helpers/logging/logger.js'
+
+/** @param {string} message */
+const logDrop = (message) => logger.warn({ message })
 
 /**
  * @typedef {Object} TonnageFields
@@ -196,51 +194,76 @@ async function buildSubmissionRows(
 
   /** @type {ReportSubmissionsRow[]} */
   return registrations.flatMap(({ org, registration }) => {
-    const accreditationNumber = resolveAccreditationNumber(registration, org)
-    const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
+    const readModel = toReadModelRegistration(org, registration, logDrop)
+    if (!readModel) {
+      return []
+    }
 
-    // Match the operator calendar: an accredited operator has monthly reporting obligations
-    // only from the date their accreditation began.
-    const validFrom = activeAccreditationValidFrom(
-      resolveAccreditation(registration, org)
-    )
-    const computedPeriods = generateReportingPeriods(
-      cadence,
-      currentYear,
-      undefined,
-      validFrom
-    )
     const periodicReports =
       reportsByKey.get(`${org.id}::${registration.id}`) ?? []
-    const merged = mergeReportingPeriods(
-      computedPeriods,
-      periodicReports,
-      cadence
-    )
-
-    return merged.flatMap((mergedPeriod) => {
-      // One row per submitted report, so a resubmitted period fans out. A period
-      // with nothing submitted still gets a single blank row (`null`), keeping
-      // outstanding periods visible. The feed is the only consumer of this
-      // projection, so it derives it here rather than the merge stamping it onto
-      // every period for the calendar path to strip straight back off.
-      const submitted = selectSubmittedReports({
-        current: mergedPeriod.report,
-        previousSubmissions: mergedPeriod.previousSubmissions
-      })
-      const reports = submitted.length ? submitted : [null]
-      return reports.map((report) =>
-        buildRow(
-          org,
-          registration,
-          cadence,
-          mergedPeriod,
-          accreditationNumber,
-          report
-        )
+    const earlierYears = [
+      ...new Set(
+        periodicReports
+          .map(({ year }) => year)
+          .filter((year) => year < currentYear)
       )
-    })
+    ]
+
+    return [currentYear, ...earlierYears].flatMap((year) =>
+      periodRows(org, registration, readModel, periodicReports, year, {
+        storedOnly: year !== currentYear
+      })
+    )
   })
+}
+
+/**
+ * @param {Organisation} org
+ * @param {ReportableRegistration} registration
+ * @param {ReadModelRegistration} readModel
+ * @param {PeriodicReport[]} periodicReports
+ * @param {number} year
+ * @param {{ storedOnly: boolean }} options
+ * @returns {ReportSubmissionsRow[]}
+ */
+function periodRows(
+  org,
+  registration,
+  readModel,
+  periodicReports,
+  year,
+  { storedOnly }
+) {
+  const { registeredOnly, accredited, accreditationNumber } =
+    reportingPeriodsByKind({
+      registration: readModel,
+      storedReports: periodicReports,
+      year
+    })
+  const byCadence = /** @type {const} */ ([
+    [CADENCE.quarterly, registeredOnly, ''],
+    [CADENCE.monthly, accredited, accreditationNumber ?? '']
+  ])
+
+  return byCadence.flatMap(([cadence, merged, number]) =>
+    merged
+      .filter((mergedPeriod) => !storedOnly || mergedPeriod.report)
+      .flatMap((mergedPeriod) => {
+        // One row per submitted report, so a resubmitted period fans out. A
+        // period with nothing submitted still gets a single blank row (`null`),
+        // keeping outstanding periods visible. The feed is the only consumer of
+        // this projection, so it derives it here rather than the merge stamping
+        // it onto every period for the calendar path to strip straight back off.
+        const submitted = selectSubmittedReports({
+          current: mergedPeriod.report,
+          previousSubmissions: mergedPeriod.previousSubmissions
+        })
+        const reports = submitted.length ? submitted : [null]
+        return reports.map((report) =>
+          buildRow(org, registration, cadence, mergedPeriod, number, report)
+        )
+      })
+  )
 }
 
 /**

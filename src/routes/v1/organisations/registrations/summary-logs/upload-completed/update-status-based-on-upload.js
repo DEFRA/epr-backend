@@ -13,7 +13,10 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import {
+  numbersForSummaryLog,
+  summaryLogKeyOf
+} from '#domain/summary-logs/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -79,21 +82,20 @@ const buildSummaryLogData = (
  * validation flags restated periods as stale.
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {string} newStatus
- * @param {{ organisationId: string, registrationId: string, year: number, accreditationId: string | null | undefined }} scope
+ * @param {SummaryLog} summaryLog
  * @returns {Promise<string | undefined>}
  */
 const validatedAgainstSummaryLogIdFor = async (
   summaryLogsRepository,
-  newStatus,
-  scope
+  summaryLog
 ) => {
-  if (newStatus !== SUMMARY_LOG_STATUS.VALIDATING) {
+  if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
     return undefined
   }
 
-  const latestSubmitted =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg(scope)
+  const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
+    summaryLogKeyOf(summaryLog)
+  )
   return latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
 }
 
@@ -102,7 +104,6 @@ const validatedAgainstSummaryLogIdFor = async (
  * @param {OrganisationsRepository} organisationsRepository
  * @param {string} summaryLogId
  * @param {SummaryLogUpload} upload
- * @param {string} newStatus
  * @param {UploadLocation} location
  */
 const insertNewSummaryLog = async (
@@ -110,7 +111,6 @@ const insertNewSummaryLog = async (
   organisationsRepository,
   summaryLogId,
   upload,
-  newStatus,
   { organisationId, registrationId, year, accreditationId }
 ) => {
   const { numbers } = numbersForSummaryLog(
@@ -132,8 +132,7 @@ const insertNewSummaryLog = async (
 
   const validatedAgainstSummaryLogId = await validatedAgainstSummaryLogIdFor(
     summaryLogsRepository,
-    newStatus,
-    { organisationId, registrationId, year, accreditationId }
+    summaryLog
   )
   if (validatedAgainstSummaryLogId !== undefined) {
     summaryLog.validatedAgainstSummaryLogId = validatedAgainstSummaryLogId
@@ -200,7 +199,6 @@ export const updateStatusBasedOnUpload = async (
       organisationsRepository,
       summaryLogId,
       upload,
-      newStatus,
       location
     )
   }

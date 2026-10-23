@@ -33,7 +33,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
- * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
+ * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  * @property {Organisation} [organisation] - The organisation `organisationId` names, when the caller has already read it.
  * @property {string} [organisationId] - When set, export only this organisation.
@@ -224,7 +224,7 @@ async function* streamLatestSubmissionRows({
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
- * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
+ * @param {Pick<SummaryLogsRepository, 'findAll'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
 async function* streamRegistrationRows({
@@ -247,8 +247,8 @@ async function* streamRegistrationRows({
     overseasSites: buildOverseasSitesContext(registration, sitesById),
     summaryLogMap: await loadSummaryLogMap(
       summaryLogsRepository,
-      org.id,
-      registration.id
+      org,
+      registration
     ),
     entries,
     summaryLogRowStatesRepository
