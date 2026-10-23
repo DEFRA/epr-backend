@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -151,7 +152,7 @@ const createServerWithRepos = async ({
   }
 
   const summaryLogsRepository = {
-    findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
+    findAll: vi.fn().mockResolvedValue(summaryLogs)
   }
   const overseasSitesRepository = {
     findAll: vi.fn().mockResolvedValue(overseasSites)
@@ -208,7 +209,11 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
     it('streams a header row plus one data row for a single waste record', async () => {
       const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
+        registrations: [
+          buildRegistration({
+            registrationNumber: toRegistrationNumber('R26ER5000000002PA')
+          })
+        ]
       })
       const server = await createServerWithRepos({
         organisations: [organisation],

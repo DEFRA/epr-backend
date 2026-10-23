@@ -125,10 +125,12 @@ describe('POST /organisations/{organisationNumber}/link', () => {
     })
   }
 
-  const performUnlink = async (/** @type {string} */ organisationId) => {
+  const performUnlink = async (
+    /** @type {{ orgId: number }} */ organisation
+  ) => {
     return await server.inject({
       method: 'DELETE',
-      url: `/v1/organisations/${organisationId}/link`,
+      url: `/organisations/${organisation.orgId}/link`,
       ...asServiceMaintainerWrite()
     })
   }
@@ -248,7 +250,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
         expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
 
-        const unlinkResponse = await performUnlink(approvedOrg.id)
+        const unlinkResponse = await performUnlink(approvedOrg)
 
         expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
 
@@ -355,7 +357,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
         )
 
         // unlink
-        const unlinkResponse = await performUnlink(org.id)
+        const unlinkResponse = await performUnlink(org)
 
         expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
 

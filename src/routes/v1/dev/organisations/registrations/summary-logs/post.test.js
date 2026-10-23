@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
+import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -346,17 +347,24 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
   it('answers with a conflict and supersedes the log when a submission landed while it validated', async () => {
     const env = await createEnvironment()
-    const minted = beforeTransitionToSubmitting(env, () =>
-      env.summaryLogsRepository.insert(
-        'landed-meanwhile',
-        summaryLogFactory.submitted({
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          year: ACCREDITED_YEAR,
-          accreditationId: env.accreditationId
-        })
+    const minted = beforeTransitionToSubmitting(env, async () => {
+      const ids = {
+        registrationId: env.registrationId,
+        accreditationId: env.accreditationId
+      }
+      const { numbers } = numbersForSummaryLog(
+        await env.organisationsRepository.findById(env.organisationId),
+        ids
       )
-    )
+      await env.summaryLogsRepository.insert('landed-meanwhile', {
+        ...summaryLogFactory.submitted({
+          organisationId: env.organisationId,
+          year: ACCREDITED_YEAR,
+          ...ids
+        }),
+        ...numbers
+      })
+    })
 
     const response = await submit(
       env,

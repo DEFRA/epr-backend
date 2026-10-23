@@ -43,7 +43,6 @@ describe('mock-repositories', () => {
         'findById',
         'findIdsWithoutNumbers',
         'assignNumbers',
-        'findLatestSubmittedForOrgReg',
         'findAllByOrgReg',
         'findLatestSubmitted',
         'findAll',
