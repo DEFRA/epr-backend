@@ -649,17 +649,6 @@ describe('report routes by natural key', () => {
     )
   })
 
-  it("serves a registration's reporting calendar", async () => {
-    const response = await server.inject({
-      method: 'GET',
-      url: `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/calendar`,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).cadence).toBe('quarterly')
-  })
-
   describe('year calendar', () => {
     const calendar = (/** @type {string} */ number, year = YEAR) => ({
       method: /** @type {const} */ ('GET'),
@@ -798,10 +787,6 @@ describe('report routes by natural key', () => {
     [
       'a registration with no accreditation',
       `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/reports/monthly/1/submissions/1`
-    ],
-    [
-      'the calendar of an unknown registration',
-      `${registrations}/R26XX0000000000PL/reports/calendar`
     ],
     [
       'the year calendar of an unknown registration',

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  activeAccreditationValidFrom,
   getReportableRegistrations,
   isRegistrationAccredited,
   isRegistrationActiveInYear,
@@ -9,7 +8,6 @@ import {
   accreditationsForRegistration,
   resolveMaterial
 } from './registration-utils.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
@@ -158,48 +156,6 @@ describe('isRegistrationAccredited', () => {
 
   it('returns false when accreditation is null', () => {
     expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// activeAccreditationValidFrom
-// ---------------------------------------------------------------------------
-
-describe('activeAccreditationValidFrom', () => {
-  it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
-    'returns validFrom when accreditation status is %s',
-    (status) => {
-      expect(
-        activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
-      ).toBe('2026-03-15')
-    }
-  )
-
-  it('returns null for an active accreditation with no validFrom', () => {
-    expect(
-      activeAccreditationValidFrom({
-        status: ACCREDITATION_STATUS.APPROVED,
-        validFrom: null
-      })
-    ).toBeNull()
-  })
-
-  it.each([
-    ACCREDITATION_STATUS.CREATED,
-    ACCREDITATION_STATUS.REJECTED,
-    ACCREDITATION_STATUS.CANCELLED
-  ])('returns null when accreditation status is %s', (status) => {
-    expect(
-      activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
-    ).toBeNull()
-  })
-
-  it('returns null when accreditation is null', () => {
-    expect(activeAccreditationValidFrom(null)).toBeNull()
-  })
-
-  it('returns null when accreditation is undefined', () => {
-    expect(activeAccreditationValidFrom(undefined)).toBeNull()
   })
 })
 
