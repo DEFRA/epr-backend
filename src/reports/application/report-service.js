@@ -479,6 +479,7 @@ function summariseIncompleteDataIfEnabled(
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
+ * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
  * @param {Registration} params.registration
  * @param {number} params.year
  * @param {Cadence} params.cadence
@@ -496,6 +497,7 @@ export async function createReportForPeriod({
   overseasSitesRepository,
   organisationId,
   registrationId,
+  numbers,
   registration,
   year,
   cadence,
@@ -555,6 +557,7 @@ export async function createReportForPeriod({
   return reportsRepository.createReport({
     organisationId,
     registrationId,
+    ...numbers,
     year,
     cadence,
     period,
