@@ -211,7 +211,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -338,7 +338,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -418,7 +418,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationId=${orgBefore.id}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
