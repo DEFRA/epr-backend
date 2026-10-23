@@ -10,12 +10,29 @@ import {
   markActiveReportsStaleSchema,
   markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema,
-  markSubmittedReportRequiringResubmissionByOperatorSchema
+  markSubmittedReportRequiringResubmissionByOperatorSchema,
+  reportNumbersSchema
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, ReportNumbers } from './port.js'
  */
+
+/**
+ * @param {ReportNumbers} numbers
+ * @returns {ReportNumbers}
+ */
+export const validateReportNumbers = (numbers) => {
+  const { error, value } = reportNumbersSchema.validate(numbers, {
+    abortEarly: false
+  })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
 
 /**
  * @param {import('./port.js').CreateReportParams} params

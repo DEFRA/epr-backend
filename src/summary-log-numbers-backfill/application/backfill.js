@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { auditSummaryLogNumbersBackfill } from './audit.js'
 
@@ -60,7 +60,7 @@ const lookUpNumbers = async (
 
   try {
     const organisation = await organisationsRepository.findById(organisationId)
-    return numbersForSummaryLog(organisation, {
+    return numbersFor(organisation, {
       registrationId,
       accreditationId
     })
