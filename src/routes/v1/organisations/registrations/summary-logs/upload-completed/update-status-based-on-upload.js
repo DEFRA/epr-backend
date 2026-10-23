@@ -49,22 +49,18 @@ const buildSummaryLogData = (
   upload,
   existingFile,
   organisationId,
-  registrationId,
-  year,
-  accreditationId
+  registrationId
 ) => {
   const status = determineStatusFromUpload(upload.fileStatus)
-  const yearFields = year === undefined ? {} : { year, accreditationId }
 
-  /** @type {SummaryLog} */
+  /** @type {Omit<SummaryLog, 'year'>} */
   const data = {
     status,
     expiresAt: calculateExpiresAt(status),
     createdAt: new Date().toISOString(),
     file: buildFileData(upload, existingFile),
     organisationId,
-    registrationId,
-    ...yearFields
+    registrationId
   }
 
   if (status === SUMMARY_LOG_STATUS.REJECTED) {
@@ -116,15 +112,11 @@ const insertNewSummaryLog = async (
     { registrationId, accreditationId }
   )
 
+  /** @type {SummaryLog} */
   const summaryLog = {
-    ...buildSummaryLogData(
-      upload,
-      undefined,
-      organisationId,
-      registrationId,
-      year,
-      accreditationId
-    ),
+    ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
+    year,
+    accreditationId,
     ...numbers
   }
 
@@ -186,9 +178,7 @@ export const updateStatusBasedOnUpload = async (
       upload,
       summaryLog.file,
       organisationId,
-      registrationId,
-      undefined,
-      undefined
+      registrationId
     )
     await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {

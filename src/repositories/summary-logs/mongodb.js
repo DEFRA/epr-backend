@@ -59,9 +59,7 @@ async function dropIndexIfPresent(collection, name) {
  */
 async function ensureSubmittingLockIndex(collection) {
   // Enforces at most one summary log in 'submitting' status per
-  // org/reg/year/accreditationId. A legacy document has no `year`, so it
-  // indexes as null and still collides with any other legacy document,
-  // matching today's org/reg-only behaviour until the backfill assigns one.
+  // org/reg/year/accreditationId.
   await collection.createIndex(
     { organisationId: 1, registrationId: 1, year: 1, accreditationId: 1 },
     {
@@ -311,8 +309,7 @@ const uploads = async (db, filter) => {
 
 /**
  * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation. One stored before
- * its year was recorded matches every year.
+ * accreditation number, and matches every accreditation.
  *
  * @param {SummaryLogKey} key
  * @returns {Filter<SummaryLogDocument>}
@@ -331,9 +328,7 @@ const keyFilter = (key) => {
     })
   }
   if (year !== undefined) {
-    clauses.push({
-      $or: [{ year }, { year: { $exists: false } }, { year: { $type: 'null' } }]
-    })
+    clauses.push({ year })
   }
   return {
     organisationNumber,
