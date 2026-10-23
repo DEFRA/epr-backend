@@ -1,25 +1,17 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { auditPrnNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { PackagingRecyclingNotesRepository, PrnNumbers } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-
-/**
- * @typedef {Object} BackfillResult
- * @property {number} missing - PRNs lacking a number when the run started
- * @property {number} mapped - given at least one number (would be, on a dry run)
- * @property {number} unmapped - left lacking a number
- * @property {Record<string, string[]>} unmappedReasons - the ids of the PRNs left lacking a number, by reason
- * @property {number} failed - not written; retried on the next run
- * @property {number} auditFailed - written but not audited
- */
 
 /**
  * @typedef {Object} Repositories
@@ -127,61 +119,20 @@ const backfillOne = async (
 }
 
 /**
- * @param {BackfillResult} result
- * @param {string} id
- * @param {{ mapped: boolean, unmapped: string[], auditFailed: boolean }} outcome
- */
-const tally = (result, id, outcome) => {
-  result.mapped += Number(outcome.mapped)
-  result.unmapped += Number(outcome.unmapped.length > 0)
-  for (const reason of outcome.unmapped) {
-    result.unmappedReasons[reason] = [
-      ...(result.unmappedReasons[reason] ?? []),
-      id
-    ]
-  }
-  result.auditFailed += Number(outcome.auditFailed)
-}
-
-/**
  * Adds to each PRN the organisation and registration numbers it lacks, read
- * from its organisation record. Each PRN it cannot fully map is returned under
- * every reason that applies. A failure is logged and swallowed so one bad PRN
- * never stops the sweep.
+ * from its organisation record.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
- * @returns {Promise<BackfillResult>}
+ * @returns {Promise<ReasonedBackfillResult>}
  */
 export const backfillPrnNumbers = async (
   { logger, ...repositories },
   { isDryRun }
-) => {
-  const ids = await repositories.prnRepository.findIdsWithoutNumbers()
-  const result = {
-    missing: ids.length,
-    mapped: 0,
-    unmapped: 0,
-    /** @type {Record<string, string[]>} */
-    unmappedReasons: {},
-    failed: 0,
-    auditFailed: 0
-  }
-
-  for (const id of ids) {
-    try {
-      const outcome = await backfillOne(repositories, id, isDryRun, logger)
-      if (outcome) {
-        tally(result, id, outcome)
-      }
-    } catch (error) {
-      logger.error({
-        err: error,
-        message: `Failed to backfill numbers for PRN ${id}`
-      })
-      result.failed++
-    }
-  }
-
-  return result
-}
+) =>
+  sweepNumbersBackfillByReason({
+    ids: await repositories.prnRepository.findIdsWithoutNumbers(),
+    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
+    documentName: 'PRN',
+    logger
+  })
