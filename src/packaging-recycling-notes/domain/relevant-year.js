@@ -14,6 +14,12 @@
  */
 
 /**
+ * Response-body `code` of the 409 refusing a PRN/PERN write once its relevant
+ * year has closed, so the frontend can tell it from other conflicts.
+ */
+export const RELEVANT_YEAR_CLOSED_CODE = 'RELEVANT_YEAR_CLOSED'
+
+/**
  * Thrown when an instant falls after the end of a relevant year's window.
  */
 export class RelevantYearWindowExpiredError extends Error {
