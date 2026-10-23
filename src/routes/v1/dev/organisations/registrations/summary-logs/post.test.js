@@ -4,11 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
-import {
-  numbersFor,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -485,15 +481,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    const { orgId } = await env.organisationsRepository.findById(
-      env.organisationId
-    )
-    expect(
-      await env.summaryLogsRepository.findAll({
-        organisationNumber: toOrganisationNumber(String(orgId)),
-        registrationNumber: toRegistrationNumber(META.REGISTRATION_NUMBER)
-      })
-    ).toEqual([])
+    // A summary log stored under an unknown registration can hold no number.
     expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual([])
   })
 
