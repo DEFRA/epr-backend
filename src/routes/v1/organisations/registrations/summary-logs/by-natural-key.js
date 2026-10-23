@@ -135,7 +135,7 @@ export const summaryLogRoutesByNaturalKey = [
       { accredited }
     )
   ]),
-  atNaturalKeys(summaryLogsList, summaryLogs, registrationParams),
+  summaryLogsList,
   atNaturalKeys(
     withoutDatabaseIds(summaryLogsGet, ['accreditationId']),
     summaryLog,

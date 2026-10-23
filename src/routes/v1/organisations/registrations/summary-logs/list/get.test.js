@@ -259,6 +259,14 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
+    it('returns 404 for an unknown organisation', async () => {
+      const response = await list(
+        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
     it('returns 500 when repository throws', async () => {
       vi.spyOn(summaryLogsRepository, 'findAll').mockRejectedValue(
         new Error('Simulated Database Failure')

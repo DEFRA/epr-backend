@@ -1,13 +1,20 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { findRegistrationByNumber } from '#routes/organisations/natural-keys.js'
+import {
+  registrationParams,
+  registrationPath
+} from '#routes/organisations/view-route.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/view-route.js' */
 
@@ -15,11 +22,13 @@ const LIST_FAILURE = 'Failure listing summary logs'
 
 export const summaryLogsList = {
   method: 'GET',
+  path: `${registrationPath}/summary-logs`,
   options: {
     auth: {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
+    validate: { params: Joi.object(registrationParams) },
     response: {
       schema: summaryLogsListResponseSchema
     }
@@ -27,13 +36,21 @@ export const summaryLogsList = {
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
+   *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, params, logger } = request
+    const { organisationsRepository, summaryLogsRepository, params, logger } =
+      request
     const { organisationNumber, registrationNumber } = params
+
+    await findRegistrationByNumber(
+      organisationsRepository,
+      organisationNumber,
+      registrationNumber
+    )
 
     try {
       const summaryLogs = await summaryLogsRepository.findAll({
