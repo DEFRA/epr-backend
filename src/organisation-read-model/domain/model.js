@@ -140,6 +140,13 @@ export const ACCREDITATION_STATUSES = Object.freeze([
 ])
 
 /**
+ * A suspended accreditation is still accredited.
+ *
+ * @type {ReadonlySet<string>}
+ */
+export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
+
+/**
  * The status at the end of the latest day on or before `date`.
  *
  * @param {StatusTimeline} timeline

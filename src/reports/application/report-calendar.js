@@ -1,5 +1,7 @@
-import { joinDateRanges } from '#common/helpers/dates/date-range.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
+import { statusRanges } from '#organisation-read-model/domain/status-timeline.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -16,6 +18,7 @@ import { config } from '#root/config.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { CalendarDateRange } from '#organisation-read-model/domain/status-timeline.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
+ * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { PeriodicReport, ReportListItem, ReportSummary } from '#reports/repository/port.js'
  */
 
@@ -55,13 +58,12 @@ const onePerPeriod = (periods) => {
   return [...partsByPeriod.values()].map(fromFirstToLast)
 }
 
-const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
-
 /**
  * The reporting obligations a year has, by status. With mid-year status
  * transition on, each kind covers the days that status applied, so a period can
  * be part of a quarter or month. Otherwise only the current status's kind has
- * them, for whole periods over every registered day, as reports are made today.
+ * them, over the days that status applied, in whole periods, as reports are
+ * made today.
  *
  * @param {Registration} registration
  * @param {number} year
@@ -72,28 +74,48 @@ const reportingWindowsFor = (registration, year) => {
   if (config.get('featureFlags.midYearStatusTransition')) {
     return { ...windows, wholePeriods: false }
   }
-  const registered = joinDateRanges([
-    ...windows.registeredOnly,
-    ...windows.accredited
-  ])
   return HELD_ACCREDITATION_STATUSES.has(
     registration.accreditations[year]?.status.current
   )
-    ? { registeredOnly: [], accredited: registered, wholePeriods: true }
-    : { registeredOnly: registered, accredited: [], wholePeriods: true }
+    ? { registeredOnly: [], accredited: windows.accredited, wholePeriods: true }
+    : {
+        registeredOnly: windows.registeredOnly,
+        accredited: [],
+        wholePeriods: true
+      }
+}
+
+/**
+ * Whether the accredited report routes serve a month: they need the year's
+ * accreditation, and refuse a month ending before the day it was first
+ * approved (its validFrom).
+ *
+ * @param {Registration} registration
+ * @param {number} year
+ * @returns {(period: MergedPeriod) => boolean}
+ */
+const servesAccreditedReport = (registration, year) => {
+  const timeline = registration.accreditations[year]?.status.timeline ?? []
+  const [first] = statusRanges(timeline, yearBounds(year).end).approved ?? []
+  return ({ period }) =>
+    first !== undefined &&
+    periodBounds(CADENCE.monthly, year, period).endDate.localeCompare(
+      first.from
+    ) >= 0
 }
 
 /**
  * @param {Cadence} cadence
  * @param {CalendarDateRange[]} reportingWindows
  * @param {PeriodicReport[]} storedReports
- * @param {{ allSubmissions: boolean, now: Date, wholePeriods: boolean }} options
+ * @param {{ now: Date, wholePeriods: boolean, served: (period: MergedPeriod) => boolean }} options
+ * @returns {MergedPeriod[]}
  */
-const calendarPeriods = (
+const mergedPeriods = (
   cadence,
   reportingWindows,
   storedReports,
-  { allSubmissions, now, wholePeriods }
+  { now, wholePeriods, served }
 ) => {
   const periods = onePerPeriod(
     reportingWindows.flatMap(({ from, to }) =>
@@ -106,15 +128,56 @@ const calendarPeriods = (
         : period
     )
     .filter((period) => hasEnded(period, now))
-  const merged = mergeReportingPeriods(periods, storedReports, cadence)
-  const buildPeriods = allSubmissions
-    ? buildAllSubmissionPeriods
-    : buildCalendarPeriods
-  return buildPeriods(merged, now).map((period) => ({
-    ...period,
-    cadence,
-    report: toReportListItem(period.report)
-  }))
+  const listed = new Set(periods.map(({ period }) => period))
+  return mergeReportingPeriods(periods, storedReports, cadence).filter(
+    (period) => listed.has(period.period) || served(period)
+  )
+}
+
+/**
+ * A registration's ended reporting periods in a year, merged with its stored
+ * reports, registered-only (quarterly) and accredited (monthly) separately. A
+ * stored report outside its kind's periods is listed unless the report routes
+ * refuse it.
+ *
+ * @param {{
+ *   registration: Registration,
+ *   storedReports: PeriodicReport[],
+ *   year: number,
+ *   now?: Date
+ * }} params
+ * @returns {{
+ *   registeredOnly: MergedPeriod[],
+ *   accredited: MergedPeriod[],
+ *   accreditationNumber?: string
+ * }}
+ */
+export const reportingPeriodsByKind = ({
+  registration,
+  storedReports,
+  year,
+  now = new Date()
+}) => {
+  const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
+  const reportsInYear = storedReports.filter((report) => report.year === year)
+  const accreditation = registration.accreditations[year]
+  const options = { now, wholePeriods }
+
+  return {
+    registeredOnly: mergedPeriods(
+      CADENCE.quarterly,
+      windows.registeredOnly,
+      reportsInYear,
+      { ...options, served: () => true }
+    ),
+    accredited: mergedPeriods(
+      CADENCE.monthly,
+      windows.accredited,
+      reportsInYear,
+      { ...options, served: servesAccreditedReport(registration, year) }
+    ),
+    accreditationNumber: accreditation?.accreditationNumber
+  }
 }
 
 /**
@@ -137,25 +200,33 @@ export const yearCalendar = ({
   allSubmissions = false,
   now = new Date()
 }) => {
-  const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
-  const reportsInYear = storedReports.filter((report) => report.year === year)
-  const accreditation = registration.accreditations[year]
+  const byKind = reportingPeriodsByKind({
+    registration,
+    storedReports,
+    year,
+    now
+  })
+  const buildPeriods = allSubmissions
+    ? buildAllSubmissionPeriods
+    : buildCalendarPeriods
 
-  const options = { allSubmissions, now, wholePeriods }
+  /**
+   * @param {Cadence} cadence
+   * @param {MergedPeriod[]} merged
+   */
+  const calendarPeriods = (cadence, merged) =>
+    buildPeriods(merged, now).map((period) => ({
+      ...period,
+      cadence,
+      report: toReportListItem(period.report)
+    }))
 
   const registeredOnly = calendarPeriods(
     CADENCE.quarterly,
-    windows.registeredOnly,
-    reportsInYear,
-    options
+    byKind.registeredOnly
   )
-  const accredited = accreditation
-    ? calendarPeriods(
-        CADENCE.monthly,
-        windows.accredited,
-        reportsInYear,
-        options
-      )
+  const accredited = byKind.accreditationNumber
+    ? calendarPeriods(CADENCE.monthly, byKind.accredited)
     : []
 
   return {
@@ -165,7 +236,7 @@ export const yearCalendar = ({
     }),
     ...(accredited.length > 0 && {
       accredited: {
-        accreditationNumber: accreditation.accreditationNumber,
+        accreditationNumber: byKind.accreditationNumber,
         reportingPeriods: accredited
       }
     })
