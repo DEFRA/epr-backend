@@ -1,5 +1,6 @@
 import { stringEquals } from '#auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import partition from 'lodash.partition'
 
 /** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
@@ -79,15 +80,10 @@ export const addOrUpdateOrganisationUser = async (
       fullName: getDisplayName({ firstName, lastName }),
       roles: user?.roles ?? [USER_ROLES.STANDARD]
     }
-    const { id: _, version: _v, ...org } = organisation
-
-    await organisationsRepository.replace(
-      organisation.id,
+    await organisationsRepository.replaceUsers(
+      toOrganisationNumber(String(organisation.orgId)),
       organisation.version,
-      {
-        ...org,
-        users: [newUser, ...otherUsers]
-      }
+      [newUser, ...otherUsers]
     )
     return {
       outcome: noUser(user)

@@ -269,13 +269,29 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
         expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
 
-        await waitForVersion(organisationsRepository, org.id, org.version + 1)
+        const linked = await waitForVersion(
+          organisationsRepository,
+          org.id,
+          org.version + 1
+        )
 
-        const secondLinkResponse = await performLink(org, defraIdToken)
+        const secondLinkResponse = await performLink(
+          org,
+          defraIdJwtTokenWith({
+            email: userEmail,
+            defraIdOrganisationName: 'another org ltd'
+          })
+        )
 
         expect(secondLinkResponse.statusCode).toBe(StatusCodes.CONFLICT)
         expect(JSON.parse(secondLinkResponse.payload).message).toBe(
           'Organisation is not in a linkable state'
+        )
+
+        const unchanged = await organisationsRepository.findById(org.id)
+        expect(unchanged.version).toBe(linked.version)
+        expect(unchanged.linkedDefraOrganisation).toEqual(
+          linked.linkedDefraOrganisation
         )
       })
 
