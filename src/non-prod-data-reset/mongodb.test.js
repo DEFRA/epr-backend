@@ -109,8 +109,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       const summaryLogsFactory = await createSummaryLogsRepository(
         database,
         // @ts-expect-error -- partial S3 config sufficient for test
-        mockS3Config,
-        organisations
+        mockS3Config
       )
       const overseasSitesFactory = await createOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)

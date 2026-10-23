@@ -63,8 +63,6 @@ export const summaryLogsSubmit = {
         summaryLogsRepository,
         summaryLog,
         summaryLogId,
-        organisationId,
-        registrationId,
         version: newVersion
       })
 
