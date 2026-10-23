@@ -82,7 +82,7 @@ const lookUpNumbers = async (organisationsRepository, report) => {
       accreditationId: accreditationIdOf(organisation, report)
     })
     const unmapped = NO_NUMBER.filter(
-      ([key]) => numbers[key] === undefined
+      ([key]) => numbers[key] === undefined && report[key] === undefined
     ).map(([, reason]) => reason)
     return { numbers, unmapped }
   } catch (error) {

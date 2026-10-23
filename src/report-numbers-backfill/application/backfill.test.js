@@ -228,6 +228,17 @@ describe('backfillReportNumbers', () => {
     expect(await stored(id)).not.toHaveProperty('registrationNumber')
   })
 
+  it('does not report a number the report already holds as unmapped', async () => {
+    const id = await createReport({ registrationId: unnumberedRegistrationId })
+    await reportsRepository.assignNumbers(id, {
+      accreditationNumber: numbers.accreditationNumber
+    })
+
+    expect((await run(false)).unmappedReasons).toEqual({
+      'no registration number': [id]
+    })
+  })
+
   it('leaves only the unmapped reports for the next run', async () => {
     await createReport({ period: MONTHLY_PERIODS.January })
     const organisationGone = await createReport({
