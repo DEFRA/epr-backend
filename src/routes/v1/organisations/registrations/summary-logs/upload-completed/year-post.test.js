@@ -148,6 +148,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       ],
       accreditations: [accredited]
     })
+    const unnumbered = accreditation({ accreditationNumber: undefined })
+    const unnumberedOrganisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: unnumbered.id })],
+      accreditations: [unnumbered]
+    })
 
     let accreditedServer
     let accreditedSummaryLogsRepository
@@ -160,7 +165,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const accreditedOrganisationsRepository =
         createInMemoryOrganisationsRepository([
-          partialMock(accreditedOrganisation)
+          partialMock(accreditedOrganisation),
+          partialMock(unnumberedOrganisation)
         ])()
 
       accreditedServer = await createTestServer({
@@ -208,6 +214,21 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         accreditationId: accredited.id,
         accreditationNumber: ACCREDITATION_NUMBER
       })
+    })
+
+    it('finds no accreditation without a number, and stores nothing', async () => {
+      const summaryLogId = randomUUID()
+
+      const response = await accreditedServer.inject({
+        method: 'POST',
+        url: `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        payload: createCompletePayload('file-unnumbered')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(
+        await accreditedSummaryLogsRepository.findById(summaryLogId)
+      ).toBeNull()
     })
   })
 
@@ -323,7 +344,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () => ({
             findById: async () => null,
-            findLatestSubmittedForOrgReg: async () => null,
+            findLatestSubmitted: async () => null,
             insert: async () => {
               throw insertError
             }

@@ -158,9 +158,16 @@ export const reportDataFieldsSchema = {
   supportingInformation: Joi.string().optional()
 }
 
+const numbersSchema = {
+  organisationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().optional(),
+  accreditationNumber: Joi.string().allow(null).optional()
+}
+
 export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
+  ...numbersSchema,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
@@ -178,6 +185,16 @@ export const createReportSchema = Joi.object({
   changedBy: userSummarySchema,
   ...reportDataFieldsSchema
 })
+
+export const reportNumbersSchema = Joi.object(numbersSchema)
+  .min(1)
+  .custom((numbers, helpers) =>
+    Object.values(numbers).includes(undefined)
+      ? helpers.error('object.undefinedNumber')
+      : numbers
+  )
+  .messages({ 'object.undefinedNumber': 'a number must not be undefined' })
+  .required()
 
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),

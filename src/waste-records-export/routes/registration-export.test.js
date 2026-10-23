@@ -120,7 +120,7 @@ const createServer = async ({
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => createInMemoryLedgerRepository(ledgerEvents)(),
       summaryLogsRepository: () => ({
-        findAllByOrgReg: vi
+        findAll: vi
           .fn()
           .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
       }),

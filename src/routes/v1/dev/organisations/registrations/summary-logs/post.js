@@ -12,10 +12,13 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { numbersForSummaryLog } from '#domain/summary-logs/numbers.js'
+import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
+import {
+  numbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -31,6 +34,7 @@ import {
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
@@ -134,18 +138,12 @@ const insertValidatingLog = async (
   const { summaryLogsRepository, organisationsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const { numbers } = numbersForSummaryLog(
+  const { numbers } = numbersFor(
     await organisationsRepository.findById(organisationId),
     { registrationId, accreditationId }
   )
-  const latestSubmitted =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg({
-      organisationId,
-      registrationId,
-      year,
-      accreditationId
-    })
-  await summaryLogsRepository.insert(summaryLogId, {
+  /** @type {SummaryLog} */
+  const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
@@ -154,7 +152,13 @@ const insertValidatingLog = async (
     registrationId,
     year,
     accreditationId,
-    ...numbers,
+    ...numbers
+  }
+  const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
+    summaryLogKeyOf(summaryLog)
+  )
+  await summaryLogsRepository.insert(summaryLogId, {
+    ...summaryLog,
     validatedAgainstSummaryLogId: latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
   })
 }
@@ -183,8 +187,6 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     summaryLogsRepository,
     summaryLog: transition.summaryLog,
     summaryLogId,
-    organisationId,
-    registrationId,
     version: transition.version
   })
   if (isStale) {

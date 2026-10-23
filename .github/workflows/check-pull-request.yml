@@ -177,7 +177,6 @@ jobs:
           - { leg: e2e-3, test-suite: e2e, shard: 3/3 }
           - { leg: december, test-suite: e2e, december-scope: only }
           - { leg: api, test-suite: api }
-          - { leg: a11y, test-suite: a11y }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

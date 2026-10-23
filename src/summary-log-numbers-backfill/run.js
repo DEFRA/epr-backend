@@ -21,18 +21,14 @@ const runBackfill = async (server) => {
     await createOrganisationsRepository(server.db)
   )()
   const summaryLogsRepository = (
-    await createSummaryLogsRepository(
-      server.db,
-      {
-        s3Client: createS3Client({
-          region: config.get('awsRegion'),
-          endpoint: config.get('s3Endpoint'),
-          forcePathStyle: config.get('isDevelopment')
-        }),
-        preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
-      },
-      organisationsRepository
-    )
+    await createSummaryLogsRepository(server.db, {
+      s3Client: createS3Client({
+        region: config.get('awsRegion'),
+        endpoint: config.get('s3Endpoint'),
+        forcePathStyle: config.get('isDevelopment')
+      }),
+      preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
+    })
   )(logger)
   const systemLogsRepository = (await createSystemLogsRepository(server.db))(
     logger

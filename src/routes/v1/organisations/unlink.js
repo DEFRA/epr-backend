@@ -1,14 +1,15 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 
+/**
+ * Removes the link between the organisation and its Defra ID organisation.
+ */
 export const organisationsUnlink = {
   method: 'DELETE',
-  path: '/v1/organisations/{organisationId}/link',
   options: {
     auth: {
       scope: [SCOPES.adminWrite]
@@ -17,31 +18,29 @@ export const organisationsUnlink = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    params: { organisationId: string }
+   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationId } = request.params
-
     const { organisationsRepository } = request
+    const { organisationNumber } = request.params
     const {
       id,
-      orgId,
       version: currentVersion,
       linkedDefraOrganisation: linkedOrg
-    } = await organisationsRepository.findById(organisationId)
+    } = request.app.organisation
 
     if (!linkedOrg) {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
     await organisationsRepository.unlinkDefraOrganisation(
-      toOrganisationNumber(String(orgId)),
+      organisationNumber,
       currentVersion
     )
 
