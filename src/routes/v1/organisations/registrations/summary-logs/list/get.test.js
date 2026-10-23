@@ -9,10 +9,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  summaryLogFactory,
-  withoutYear
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import {
   REPROCESSOR_NUMBER,
   reprocessor
@@ -79,27 +76,25 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       await summaryLogsRepository.insert(
         submittedId,
-        withoutYear(
-          summaryLogFactory.submitted({
-            organisationId,
-            registrationId,
-            submittedAt: '2026-02-01T10:00:00.000Z',
-            createdAt: '2026-02-01T09:55:00.000Z',
-            file: { name: 'january.xlsx' }
-          })
-        )
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          year: 2026,
+          submittedAt: '2026-02-01T10:00:00.000Z',
+          createdAt: '2026-02-01T09:55:00.000Z',
+          file: { name: 'january.xlsx' }
+        })
       )
 
       await summaryLogsRepository.insert(
         failedId,
-        withoutYear(
-          summaryLogFactory.validationFailed({
-            organisationId,
-            registrationId,
-            createdAt: '2026-02-02T11:00:00.000Z',
-            file: { name: 'february.xlsx' }
-          })
-        )
+        summaryLogFactory.validationFailed({
+          organisationId,
+          registrationId,
+          year: 2026,
+          createdAt: '2026-02-02T11:00:00.000Z',
+          file: { name: 'february.xlsx' }
+        })
       )
 
       const response = await list()
@@ -111,25 +106,26 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             summaryLogId: failedId,
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            year: 2026
           },
           {
             summaryLogId: submittedId,
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.SUBMITTED
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            year: 2026
           }
         ]
       })
     })
 
-    it('includes the year, but not the accreditation id', async () => {
+    it('does not include the accreditation id', async () => {
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          year: 2026,
           accreditationId: 'acc-1'
         })
       )
@@ -137,23 +133,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const response = await list()
 
       const [row] = JSON.parse(response.payload).summaryLogs
-      expect(row).toMatchObject({ year: 2026 })
       expect(row).not.toHaveProperty('accreditationId')
-    })
-
-    it('omits the year for a legacy log carrying none', async () => {
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        withoutYear(
-          summaryLogFactory.submitted({ organisationId, registrationId })
-        )
-      )
-
-      const response = await list()
-
-      expect(JSON.parse(response.payload).summaryLogs[0]).not.toHaveProperty(
-        'year'
-      )
     })
 
     it('excludes intermediate statuses from the list', async () => {

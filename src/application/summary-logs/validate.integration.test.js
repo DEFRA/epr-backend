@@ -14,7 +14,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   summaryLogFactory,
-  withoutYear
+  withoutAccreditationId
 } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -146,7 +146,7 @@ describe('SummaryLogsValidator integration', () => {
       storedAccreditationId
     )
     const summaryLog = legacy
-      ? withoutYear(yearScopedSummaryLog)
+      ? withoutAccreditationId(yearScopedSummaryLog)
       : yearScopedSummaryLog
     const summaryLogId = randomUUID()
 

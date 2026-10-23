@@ -45,7 +45,7 @@ export const summaryLogsList = {
         filename: summaryLog.file.name,
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
         status: summaryLog.status,
-        ...(summaryLog.year !== undefined && { year: summaryLog.year })
+        year: summaryLog.year
       }))
 
       logger.info({

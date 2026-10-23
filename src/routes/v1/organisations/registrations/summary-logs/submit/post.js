@@ -7,7 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { summaryLogResponseSchema } from '../response.schema.js'
+import { summaryLogSubmitResponseSchema } from '../response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
@@ -26,7 +26,7 @@ export const summaryLogsSubmit = {
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     response: {
-      schema: summaryLogResponseSchema
+      schema: summaryLogSubmitResponseSchema
     },
     tags: ['api']
   },
