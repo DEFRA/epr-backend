@@ -16,7 +16,7 @@ import {
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import {
-  RELEVANT_YEAR_CLOSED_CODE,
+  relevantYearClosedConflict,
   relevantYearWindowRefusal
 } from '#packaging-recycling-notes/domain/relevant-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
@@ -215,13 +215,10 @@ const assertRelevantYearOpen = (accreditation, now) => {
     now
   )
   if (refusal) {
-    throw conflict(refusal.message, RELEVANT_YEAR_CLOSED_CODE, {
-      event: {
-        action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-        reason: `accreditationId=${accreditation.id} rejected=${RELEVANT_YEAR_CLOSED_CODE}`
-      },
-      payload: { code: RELEVANT_YEAR_CLOSED_CODE }
-    })
+    throw relevantYearClosedConflict(
+      refusal,
+      `accreditationId=${accreditation.id}`
+    )
   }
 }
 

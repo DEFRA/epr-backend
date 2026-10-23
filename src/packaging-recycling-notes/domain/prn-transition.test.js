@@ -148,6 +148,80 @@ describe('a transition the state machine refuses', () => {
     })
   })
 
+  it.for([
+    {
+      description: 'raising',
+      fromStatus: PRN_STATUS.DRAFT,
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+    },
+    {
+      description: 'issuing',
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE
+    }
+  ])(
+    'should return the relevant-year refusal when $description after the year has closed',
+    ({ fromStatus, newStatus }) => {
+      const outcome = decide({
+        fromStatus,
+        newStatus,
+        now: new Date('2027-02-01T00:00:00.000Z')
+      })
+
+      expect(outcome).toEqual({
+        error: expect.any(RelevantYearWindowExpiredError)
+      })
+    }
+  )
+
+  it.for([
+    {
+      description: 'raise',
+      fromStatus: PRN_STATUS.DRAFT,
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION
+    },
+    {
+      description: 'issue',
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE
+    }
+  ])(
+    'should $description on the last instant of 31 January after the year',
+    ({ fromStatus, newStatus }) => {
+      const outcome = decide({
+        fromStatus,
+        newStatus,
+        now: new Date('2027-01-31T23:59:59.999Z')
+      })
+
+      expect(outcome).not.toHaveProperty('error')
+    }
+  )
+
+  it.for([
+    {
+      description: 'discarding',
+      fromStatus: PRN_STATUS.DRAFT,
+      newStatus: PRN_STATUS.DISCARDED
+    },
+    {
+      description: 'deleting',
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      newStatus: PRN_STATUS.DELETED
+    }
+  ])(
+    'should allow $description after the year has closed',
+    ({ fromStatus, newStatus }) => {
+      const outcome = decide({
+        fromStatus,
+        newStatus,
+        now: new Date('2027-02-01T00:00:00.000Z')
+      })
+
+      expect(outcome).not.toHaveProperty('error')
+    }
+  )
+
   it.each([ACCREDITATION_STATUS.SUSPENDED, ACCREDITATION_STATUS.CANCELLED])(
     'returns the accreditation refusal when issuing on a %s accreditation',
     (status) => {

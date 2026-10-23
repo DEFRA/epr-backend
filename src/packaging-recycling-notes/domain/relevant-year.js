@@ -1,3 +1,6 @@
+import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
+
 /**
  * "Relevant year" is the Producer Responsibility Obligations (Packaging and
  * Packaging Waste) Regulations 2024's term for the annual period a PRN/PERN,
@@ -18,6 +21,19 @@
  * year has closed, so the frontend can tell it from other conflicts.
  */
 export const RELEVANT_YEAR_CLOSED_CODE = 'RELEVANT_YEAR_CLOSED'
+
+/**
+ * @param {RelevantYearWindowExpiredError} refusal
+ * @param {string} reference - what was refused, for the log line
+ */
+export const relevantYearClosedConflict = (refusal, reference) =>
+  conflict(refusal.message, RELEVANT_YEAR_CLOSED_CODE, {
+    event: {
+      action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
+      reason: `${reference} rejected=${RELEVANT_YEAR_CLOSED_CODE}`
+    },
+    payload: { code: RELEVANT_YEAR_CLOSED_CODE }
+  })
 
 /**
  * Thrown when an instant falls after the end of a relevant year's window.

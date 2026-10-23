@@ -11,6 +11,7 @@ import {
 } from '#waste-balances/domain/commands.js'
 import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
 import { cancellationRefusal } from './cancellation.js'
+import { relevantYearWindowRefusal } from './relevant-year.js'
 
 /**
  * @import {PrnStatus, PrnActor} from './model.js'
@@ -169,7 +170,28 @@ export class PrnLedgerRejectionError extends Error {
  */
 
 /**
- * The three rules a PRN transition must satisfy, composed. Each returns the
+ * Raising and issuing are the transitions that close with the relevant year;
+ * discarding or deleting a note left unissued stays open.
+ *
+ * @type {Set<PrnStatus>}
+ */
+const CLOSED_WITH_THE_YEAR = new Set([
+  PRN_STATUS.AWAITING_AUTHORISATION,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
+
+/**
+ * @param {PrnStatus} newStatus
+ * @param {number} accreditationYear
+ * @param {Date} now
+ */
+const closedYearRefusal = (newStatus, accreditationYear, now) =>
+  CLOSED_WITH_THE_YEAR.has(newStatus)
+    ? relevantYearWindowRefusal(accreditationYear, now)
+    : undefined
+
+/**
+ * The rules a PRN transition must satisfy, composed. Each returns the
  * refusal it found or `undefined`, so the first refusal short-circuits the rest
  * and the caller gets one answer as data. Every refusal is one of the classes
  * the routes already map, so the application throws exactly what it was handed.
@@ -193,6 +215,7 @@ const ruleTransition = ({
 }) =>
   transitionRefusal(fromStatus, newStatus, actor) ??
   cancellationRefusal(fromStatus, newStatus, accreditationYear, now) ??
+  closedYearRefusal(newStatus, accreditationYear, now) ??
   issuanceRefusal(newStatus, accreditation)
 
 /**
@@ -200,7 +223,7 @@ const ruleTransition = ({
  * it does.
  *
  * Pure: every input is a parameter, `now` and the folded ledger balance
- * included, and nothing is read or written. It is the only place the three
+ * included, and nothing is read or written. It is the only place the
  * transition rules compose and the only place a transition's balance effect is
  * looked up, so an application that routed on the target status ahead of the
  * ruling would be answering a domain question for itself.
