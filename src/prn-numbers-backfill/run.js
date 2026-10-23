@@ -3,12 +3,12 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { backfillPrnNumbers } from '#prn-numbers-backfill/application/backfill.js'
+import { LOCK_NAME as RECONCILE_LOCK_NAME } from '#server/run-reconcile-stale-prn-projections.js'
 
 import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 
-const LOCK_NAME = 'prn-numbers-backfill'
 const UNMAPPED_SAMPLE_SIZE = 10
 
 /**
@@ -59,11 +59,14 @@ const runBackfill = async (server) => {
  * change. Both modes log one summary line, which says why PRNs cannot be
  * mapped. Idempotent, so safe to leave enabled across restarts.
  *
+ * Takes the reconcile's lock, and starts once the reconcile has run, because
+ * the reconcile replaces whole PRNs and would drop numbers written beneath it.
+ *
  * @param {StartedServer} server
  */
 export const runPrnNumbersBackfill = async (server) => {
   try {
-    const lock = await server.locker.lock(LOCK_NAME)
+    const lock = await server.locker.lock(RECONCILE_LOCK_NAME)
     if (!lock) {
       logger.info({
         message: 'Unable to obtain lock, skipping PRN numbers backfill'

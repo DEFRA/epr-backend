@@ -225,12 +225,13 @@ async function createServer(options = {}) {
     )
     void runFormsDataMigration(startedServer)
     void runOrganisationValidationSweep(startedServer)
-    void runReconcileStalePrnProjections(startedServer)
+    void runReconcileStalePrnProjections(startedServer).then(() =>
+      runPrnNumbersBackfill(startedServer)
+    )
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
     void runSummaryLogNumbersBackfill(startedServer)
     void runReportNumbersBackfill(startedServer)
-    void runPrnNumbersBackfill(startedServer)
   })
 
   return server
