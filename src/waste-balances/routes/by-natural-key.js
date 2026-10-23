@@ -104,6 +104,29 @@ const accreditedLedgerGet = {
     h.response({ events: await readLedgerEvents(request) }).code(StatusCodes.OK)
 }
 
+/** The balance of the accreditation the path resolved to. */
+const accreditationWasteBalanceGet = {
+  method: 'GET',
+  options: {
+    auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
+    tags: ['api'],
+    response: { schema: wasteBalanceSchema }
+  },
+  /**
+   * @param {ResolvedRequest} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const { organisationId, registrationId, accreditationId } = request.params
+    const balance = await request.wasteBalanceService.currentBalance({
+      organisationId,
+      registrationId,
+      accreditationId
+    })
+    return h.response(toBalanceBody(balance)).code(StatusCodes.OK)
+  }
+}
+
 /**
  * The balance of each accreditation for the year, keyed by accreditation
  * number. A registration the read model does not serve, or without exactly one
@@ -173,6 +196,12 @@ export const wasteBalanceRoutesByNaturalKey = [
     {
       accredited: true
     }
+  ),
+  atNaturalKeys(
+    accreditationWasteBalanceGet,
+    `${accreditationPath}/waste-balance`,
+    yearParams,
+    { accredited: true }
   ),
   atNaturalKeys(
     organisationWasteBalancesGet,

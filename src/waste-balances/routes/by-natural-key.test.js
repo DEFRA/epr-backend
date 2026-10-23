@@ -291,6 +291,59 @@ describe('ledger and waste balance routes by natural key', () => {
     })
   })
 
+  describe('GET R/accreditations/{year}/waste-balance', () => {
+    it('serves the accreditation’s balance', async () => {
+      await server.app.ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          ...accreditedLedgerId,
+          closingBalance: {
+            amount: 120,
+            availableAmount: 100,
+            decemberAmount: 10,
+            decemberAvailableAmount: 10
+          }
+        })
+      ])
+
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(body(response)).toEqual({
+        amount: 120,
+        availableAmount: 100,
+        decemberAmount: 10,
+        decemberAvailableAmount: 10,
+        nonDecemberAvailableAmount: 90
+      })
+    })
+
+    it('serves zeros for an accreditation with no ledger', async () => {
+      const response = await get(`${accreditationPath(2026)}/waste-balance`)
+
+      expect(body(response)).toEqual({ amount: 0, availableAmount: 0 })
+    })
+
+    it('returns 404 for a year the registration holds no accreditation', async () => {
+      const response = await get(`${accreditationPath(2027)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a registered-only registration', async () => {
+      const response = await get(
+        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/2026/waste-balance`
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 422 for a year out of range', async () => {
+      const response = await get(`${accreditationPath(2101)}/waste-balance`)
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
   describe('GET /organisations/{organisationNumber}/waste-balances/{year}', () => {
     const wasteBalances = (year) =>
       `/organisations/${organisation.orgId}/waste-balances/${year}`
