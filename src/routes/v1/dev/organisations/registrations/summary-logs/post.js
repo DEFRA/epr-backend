@@ -12,13 +12,13 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import {
-  numbersForSummaryLog,
-  summaryLogKeyOf
-} from '#domain/summary-logs/numbers.js'
+  numbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -138,7 +138,7 @@ const insertValidatingLog = async (
   const { summaryLogsRepository, organisationsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const { numbers } = numbersForSummaryLog(
+  const { numbers } = numbersFor(
     await organisationsRepository.findById(organisationId),
     { registrationId, accreditationId }
   )
