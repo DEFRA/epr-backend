@@ -1,26 +1,18 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { findAccreditationForYear } from '#routes/organisations/natural-keys.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-
-/**
- * @typedef {Object} BackfillResult
- * @property {number} missing - reports lacking a number when the run started
- * @property {number} mapped - given at least one number (would be, on a dry run)
- * @property {number} unmapped - left lacking a number
- * @property {Record<string, string[]>} unmappedReasons - the ids of the reports left lacking a number, by reason
- * @property {number} failed - not written; retried on the next run
- * @property {number} auditFailed - written but not audited
- */
 
 /**
  * @typedef {Object} Repositories
@@ -177,61 +169,20 @@ const backfillOne = async (
 }
 
 /**
- * @param {BackfillResult} result
- * @param {string} id
- * @param {{ mapped: boolean, unmapped: string[], auditFailed: boolean }} outcome
- */
-const tally = (result, id, outcome) => {
-  result.mapped += Number(outcome.mapped)
-  result.unmapped += Number(outcome.unmapped.length > 0)
-  for (const reason of outcome.unmapped) {
-    result.unmappedReasons[reason] = [
-      ...(result.unmappedReasons[reason] ?? []),
-      id
-    ]
-  }
-  result.auditFailed += Number(outcome.auditFailed)
-}
-
-/**
  * Adds to each report the organisation, registration and accreditation numbers
- * it lacks, read from its organisation record. Each report it cannot fully map
- * is returned under every reason that applies. A failure is logged and
- * swallowed so one bad report never stops the sweep.
+ * it lacks, read from its organisation record.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
- * @returns {Promise<BackfillResult>}
+ * @returns {Promise<ReasonedBackfillResult>}
  */
 export const backfillReportNumbers = async (
   { logger, ...repositories },
   { isDryRun }
-) => {
-  const ids = await repositories.reportsRepository.findIdsWithoutNumbers()
-  const result = {
-    missing: ids.length,
-    mapped: 0,
-    unmapped: 0,
-    /** @type {Record<string, string[]>} */
-    unmappedReasons: {},
-    failed: 0,
-    auditFailed: 0
-  }
-
-  for (const id of ids) {
-    try {
-      const outcome = await backfillOne(repositories, id, isDryRun, logger)
-      if (outcome) {
-        tally(result, id, outcome)
-      }
-    } catch (error) {
-      logger.error({
-        err: error,
-        message: `Failed to backfill numbers for report ${id}`
-      })
-      result.failed++
-    }
-  }
-
-  return result
-}
+) =>
+  sweepNumbersBackfillByReason({
+    ids: await repositories.reportsRepository.findIdsWithoutNumbers(),
+    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
+    documentName: 'report',
+    logger
+  })

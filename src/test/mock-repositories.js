@@ -117,6 +117,8 @@ export const createMockPackagingRecyclingNotesRepository = (
   updateStatus: vi.fn(),
   updateWatermark: vi.fn(),
   persistProjection: vi.fn(),
+  findIdsWithoutNumbers: vi.fn(),
+  assignNumbers: vi.fn(),
   ...overrides
 })
 

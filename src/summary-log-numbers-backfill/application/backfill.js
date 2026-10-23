@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { sweepNumbersBackfill } from '#common/helpers/numbers-backfill.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { auditSummaryLogNumbersBackfill } from './audit.js'
@@ -178,8 +179,7 @@ const backfillOne = async (
 /**
  * Adds to each summary log the organisation, registration and accreditation
  * numbers it lacks, read from its organisation record. Logs one line for
- * each summary log it cannot fully map, saying why. A failure is logged and
- * swallowed so one bad summary log never stops the sweep.
+ * each summary log it cannot fully map, saying why.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
@@ -199,23 +199,18 @@ export const backfillSummaryLogNumbers = async (
     auditFailed: 0
   }
 
-  for (const id of ids) {
-    try {
-      const outcome = await backfillOne(repositories, id, isDryRun, logger)
-      if (outcome) {
-        result.inFlight += Number(outcome.inFlight)
-        result.mapped += Number(outcome.mapped)
-        result.unmapped += Number(outcome.unmapped)
-        result.auditFailed += Number(outcome.auditFailed)
-      }
-    } catch (error) {
-      logger.error({
-        err: error,
-        message: `Failed to backfill numbers for summary log ${id}`
-      })
-      result.failed++
-    }
-  }
+  result.failed = await sweepNumbersBackfill({
+    ids,
+    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
+    tally: (_id, outcome) => {
+      result.inFlight += Number(outcome.inFlight)
+      result.mapped += Number(outcome.mapped)
+      result.unmapped += Number(outcome.unmapped)
+      result.auditFailed += Number(outcome.auditFailed)
+    },
+    documentName: 'summary log',
+    logger
+  })
 
   return result
 }
