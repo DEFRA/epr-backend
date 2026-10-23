@@ -616,6 +616,12 @@ describe('transform', () => {
       expect(rows[0]['Jan Report']).toBe('')
     })
 
+    it("returns 'N/A' for a registration with no entry", async () => {
+      const { org } = buildEntry(new Map())
+      const rows = await transform([org], { periods, entries: new Map() })
+      expect(rows[0]['Jan Report']).toBe('N/A')
+    })
+
     it('returns formatted date when the period has been submitted', async () => {
       const { org, entries } = buildEntry(
         new Map([['2026:monthly:1', '2026-01-15']])

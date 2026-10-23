@@ -72,14 +72,18 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository()
     const organisationsRepository = organisationsRepositoryFactory()
-    const org = await buildApprovedOrg(organisationsRepository)
+    const year = new Date().getUTCFullYear()
+    const org = await buildApprovedOrg(organisationsRepository, undefined, {
+      VALID_FROM: `${year}-01-01`,
+      VALID_TO: `${year}-12-31`
+    })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
     await buildSubmittedReport(reportsRepository, {
       organisationId: org.id,
       registrationId: org.registrations[0].id,
-      year: new Date().getUTCFullYear(),
+      year,
       cadence: 'monthly',
       period: 1,
       prn: {
