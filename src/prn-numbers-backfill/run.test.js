@@ -65,6 +65,14 @@ describe('runPrnNumbersBackfill', () => {
     expect(lock.free).toHaveBeenCalled()
   })
 
+  it('takes the reconcile lock, so it never writes beneath a reconcile', async () => {
+    await runPrnNumbersBackfill(server)
+
+    expect(server.locker.lock).toHaveBeenCalledWith(
+      'reconcile-stale-prn-projections'
+    )
+  })
+
   it('writes when the flag is on', async () => {
     vi.mocked(config.get).mockReturnValue(true)
 
