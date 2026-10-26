@@ -20,7 +20,12 @@ import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/po
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildPrnCreatedEvent,
+  buildPrnIssuedEvent,
+  buildPrnRejectedEvent
+} from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
@@ -990,6 +995,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         }
       }
 
+      const ledgerEvents = () =>
+        ledgerRepository.findAllInLedger({
+          organisationId,
+          registrationId,
+          accreditationId
+        })
+
       it('refuses a draft to draft self-transition', async () => {
         const { statusCode, body } = await transitionTo(PRN_STATUS.DRAFT)
 
@@ -1016,6 +1028,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect(toDraft.body.message).toBe(
           'No transition exists from discarded to draft'
         )
+
+        const events = await ledgerEvents()
+        expect(events).toHaveLength(1)
+        expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       })
 
       it('deletes a PRN awaiting authorisation, then refuses to issue it', async () => {
@@ -1025,6 +1041,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         const deleted = await transitionTo(PRN_STATUS.DELETED)
         expect(deleted.statusCode).toBe(StatusCodes.OK)
         expect(deleted.body.status.current).toBe(PRN_STATUS.DELETED)
+        const cancelled = (await ledgerEvents()).at(-1)
+        expect(cancelled?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
+        expect(cancelled?.payload).toEqual(
+          expect.objectContaining({ prnId, amount: 100 })
+        )
+        expect(cancelled?.closingBalance).toEqual(SEED_BALANCE)
 
         const issued = await transitionTo(PRN_STATUS.AWAITING_ACCEPTANCE)
         expect(issued.statusCode).toBe(StatusCodes.BAD_REQUEST)
@@ -1033,8 +1055,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         )
       })
 
-      /** @param {string} status */
-      const expectOneTransitionAuditTo = (status) => {
+      /**
+       * @param {string} from
+       * @param {string} to
+       */
+      const expectOneTransitionAudit = (from, to) => {
         expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
         const [{ event, context }] = mockCdpAuditing.mock.calls[0]
         expect(event).toEqual({
@@ -1042,15 +1067,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           subCategory: 'packaging-recycling-notes',
           action: 'status-transition'
         })
-        expect(Object.keys(context)).toEqual([
+        expect(Object.keys(context).sort()).toEqual([
+          'next',
           'organisationId',
-          'prnId',
           'previous',
-          'next'
+          'prnId'
         ])
         expect(context.organisationId).toBe(organisationId)
         expect(context.prnId).toBe(prnId)
-        expect(context.next.status.currentStatus).toBe(status)
+        expect(context.previous.status.currentStatus).toBe(from)
+        expect(context.next.status.currentStatus).toBe(to)
       }
 
       it('audits authorising a draft', async () => {
@@ -1059,7 +1085,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         )
 
         expect(statusCode).toBe(StatusCodes.OK)
-        expectOneTransitionAuditTo(PRN_STATUS.AWAITING_AUTHORISATION)
+        expectOneTransitionAudit(
+          PRN_STATUS.DRAFT,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
       })
 
       it('audits issuing an authorised PRN', async () => {
@@ -1071,7 +1100,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         )
 
         expect(statusCode).toBe(StatusCodes.OK)
-        expectOneTransitionAuditTo(PRN_STATUS.AWAITING_ACCEPTANCE)
+        expectOneTransitionAudit(
+          PRN_STATUS.AWAITING_AUTHORISATION,
+          PRN_STATUS.AWAITING_ACCEPTANCE
+        )
       })
 
       it('cancels a rejected PRN, keeping its rejection and recording no acceptance', async () => {
@@ -1097,6 +1129,46 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               }
             })
           ])(createMockLogger())
+        const ledgerId = { organisationId, registrationId, accreditationId }
+        const issuance = { prnId, amount: 100 }
+        ledgerRepository = createInMemoryLedgerRepository([
+          partialMock(
+            buildLedgerEvent({
+              ...ledgerId,
+              payload: { summaryLogId: 'log-1', creditTotal: 500 },
+              closingBalance: SEED_BALANCE
+            })
+          ),
+          partialMock(
+            buildPrnCreatedEvent({
+              ...ledgerId,
+              number: 2,
+              payload: issuance,
+              openingBalance: SEED_BALANCE,
+              closingBalance: { amount: 500, availableAmount: 400 }
+            })
+          ),
+          partialMock(
+            buildPrnIssuedEvent({
+              ...ledgerId,
+              number: 3,
+              payload: issuance,
+              openingBalance: { amount: 500, availableAmount: 400 },
+              closingBalance: { amount: 400, availableAmount: 400 }
+            })
+          ),
+          partialMock(
+            buildPrnRejectedEvent({
+              ...ledgerId,
+              number: 4,
+              payload: issuance,
+              openingBalance: { amount: 400, availableAmount: 400 },
+              closingBalance: { amount: 400, availableAmount: 400 },
+              createdAt: rejected.at,
+              createdBy: rejected.by
+            })
+          )
+        ])()
 
         const { statusCode } = await transitionTo(PRN_STATUS.CANCELLED)
 
@@ -1105,9 +1177,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
         expect(stored?.status.rejected).toEqual(rejected)
         expect(stored?.status.accepted).toBeUndefined()
+        const credited = (await ledgerEvents()).at(-1)
+        expect(credited?.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
+        expect(credited?.payload).toEqual(expect.objectContaining(issuance))
+        expect(credited?.closingBalance).toEqual(SEED_BALANCE)
       })
 
-      it('authorises a draft while the accreditation is suspended', async () => {
+      it('authorises a draft while the accreditation is suspended, then refuses to issue it', async () => {
         organisationsRepository = organisationsRepositoryWith({
           statusHistory: [
             ...granted('approved'),
@@ -1115,12 +1191,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ]
         })
 
-        const { statusCode, body } = await transitionTo(
+        const authorised = await transitionTo(PRN_STATUS.AWAITING_AUTHORISATION)
+        expect(authorised.statusCode).toBe(StatusCodes.OK)
+        expect(authorised.body.status.current).toBe(
           PRN_STATUS.AWAITING_AUTHORISATION
         )
 
-        expect(statusCode).toBe(StatusCodes.OK)
-        expect(body.status.current).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+        const issued = await transitionTo(PRN_STATUS.AWAITING_ACCEPTANCE)
+        expect(issued.statusCode).toBe(StatusCodes.FORBIDDEN)
+        expect(issued.body.message).toBe(
+          'Cannot issue a PRN on a suspended accreditation'
+        )
       })
     })
   })
