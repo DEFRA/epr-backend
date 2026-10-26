@@ -449,7 +449,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
           const systemLogsResponse = await server.inject({
             method: 'GET',
-            url: `/v1/system-logs/search?organisationId=${finalOrgVersion.id}`,
+            url: `/v1/system-logs/search?organisationNumber=${finalOrgVersion.orgId}`,
             ...asServiceMaintainer()
           })
 

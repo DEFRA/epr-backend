@@ -189,7 +189,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationId=${unlinkedOrg.id}`,
+          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.orgId}`,
           ...asServiceMaintainerWrite()
         })
 
