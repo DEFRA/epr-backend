@@ -51,12 +51,15 @@ const registrationsAt = (registrations, now) =>
  * @param {OrganisationQuery} query
  */
 const organisationFor = (organisation, { year }) => {
+  const now = new Date()
   const inYear =
-    year === undefined ? organisation : organisationInYear(organisation, year)
+    year === undefined
+      ? organisation
+      : organisationInYear(organisation, year, now)
   return {
     ...inYear,
     displayName: displayNameOf(organisation),
-    registrations: registrationsAt(inYear.registrations, new Date())
+    registrations: registrationsAt(inYear.registrations, now)
   }
 }
 
