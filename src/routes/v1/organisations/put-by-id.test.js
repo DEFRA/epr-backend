@@ -138,7 +138,7 @@ describe('PUT /v1/organisations/{id}', () => {
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${initialOrg.orgId}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1092,7 +1092,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
     const systemLogsResponse = await server.inject({
       method: 'GET',
-      url: `/v1/system-logs/search?organisationId=${org.id}`,
+      url: `/v1/system-logs/search?organisationNumber=${org.orgId}`,
       headers: { Authorization: `Bearer ${validToken}` }
     })
 

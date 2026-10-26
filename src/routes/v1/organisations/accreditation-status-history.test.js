@@ -317,7 +317,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${ctx.organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${ctx.org.orgId}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 

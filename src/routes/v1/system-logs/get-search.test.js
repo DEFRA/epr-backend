@@ -1,5 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  createOrganisationBuilders,
+  numberOf
+} from '#repositories/organisations/contract/test-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -10,21 +15,35 @@ import { randomUUID } from 'crypto'
 
 const { validToken } = entraIdMockAuthTokens
 
+const { buildOrganisation } = createOrganisationBuilders()
+
 describe('GET /v1/system-logs/search', () => {
   setupAuthContext()
   let server
   /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */
   let systemLogsRepository
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+  let organisationsRepository
 
   beforeEach(async () => {
     const systemLogsRepositoryFactory = createSystemLogsRepository()
     systemLogsRepository = systemLogsRepositoryFactory(logger)
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    organisationsRepository = organisationsRepositoryFactory()
     server = await createTestServer({
       repositories: {
-        systemLogsRepository: systemLogsRepositoryFactory
+        systemLogsRepository: systemLogsRepositoryFactory,
+        organisationsRepository: organisationsRepositoryFactory
       }
     })
   })
+
+  const addOrganisation = async () => {
+    const organisation = buildOrganisation()
+    await organisationsRepository.insert(organisation)
+    return organisation
+  }
 
   /**
    * @param {{
@@ -112,21 +131,37 @@ describe('GET /v1/system-logs/search', () => {
       expect(result.systemLogs[0].event.subCategory).toBe('summary-log')
     })
 
-    it('returns logs filtered by organisation ID', async () => {
-      const organisationId = randomUUID()
-      await addSystemLog({ organisationId, id: 1 })
+    it('returns the logs of the organisation with that number', async () => {
+      const organisation = await addOrganisation()
+      await addSystemLog({ organisationId: organisation.id, id: 1 })
       await addSystemLog({ organisationId: randomUUID(), id: 2 })
 
-      const response = await makeRequest({ organisationId })
+      const response = await makeRequest({
+        organisationNumber: numberOf(organisation)
+      })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
-      expect(result.systemLogs[0].context.organisationId).toBe(organisationId)
+      expect(result.systemLogs[0].context.organisationId).toBe(organisation.id)
+    })
+
+    it('returns no logs for an organisation number nobody holds', async () => {
+      await addSystemLog({ organisationId: randomUUID(), id: 1 })
+
+      const response = await makeRequest({ organisationNumber: '999999999' })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({
+        systemLogs: [],
+        hasNext: false,
+        hasPrev: false
+      })
     })
 
     it('returns logs matching combined filters', async () => {
-      const organisationId = randomUUID()
+      const organisation = await addOrganisation()
+      const organisationId = organisation.id
 
       await addSystemLog({
         organisationId,
@@ -142,7 +177,7 @@ describe('GET /v1/system-logs/search', () => {
       })
 
       const response = await makeRequest({
-        organisationId,
+        organisationNumber: numberOf(organisation),
         userId: 'alice',
         subCategory: 'summary-log'
       })
@@ -248,6 +283,14 @@ describe('GET /v1/system-logs/search', () => {
         method: 'GET',
         url: '/v1/system-logs/search',
         headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 422 when the organisation number is not a number', async () => {
+      const response = await makeRequest({
+        organisationNumber: '507f1f77bcf86cd799439011'
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
