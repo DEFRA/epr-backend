@@ -37,9 +37,7 @@
  * @typedef {Object} SearchCriteria
  * @property {string} [search] - case-insensitive substring on companyDetails.name
  * @property {string} [orgId] - business orgId or the organisation's document id; unparseable values match nothing
- * @property {string} [registrationId] - exact match on registrations[].id
  * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
- * @property {string} [accreditationId] - exact match on accreditations[].id
  * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
  */
 

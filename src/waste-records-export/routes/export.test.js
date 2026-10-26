@@ -116,8 +116,7 @@ const createServerWithRepos = async ({
   overseasSites = []
 } = {}) => {
   const organisationsRepository = {
-    findAll: vi.fn().mockResolvedValue(organisations),
-    findById: vi.fn().mockResolvedValue(organisations[0])
+    findAll: vi.fn().mockResolvedValue(organisations)
   }
 
   const ledgerRepository = createInMemoryLedgerRepository(
@@ -252,66 +251,19 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     })
   })
 
-  describe('scoped to a single registration', () => {
-    it('fetches the organisation by id and filenames the download with it', async () => {
-      const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
-      })
-      const server = await createServerWithRepos({
-        organisations: [organisation],
-        seeds: [{ rows: [receivedRowState()] }]
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `${getWasteRecordsExportPath}?organisationId=org-1&registrationId=reg-1`,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(response.headers['content-disposition']).toMatch(
-        /^attachment; filename="waste-records-org-1-.+\.csv"$/
-      )
-
-      const lines = response.payload.split('\n').filter((line) => line !== '')
-      expect(lines).toHaveLength(2)
-      expect(lines[1]).toContain('Acme Ltd')
-    })
-
-    it('excludes records for registrations other than the requested one', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          buildRegistration({ id: 'reg-1' }),
-          buildRegistration({ id: 'reg-2' })
-        ]
-      })
-      const server = await createServerWithRepos({
-        organisations: [organisation],
-        seeds: [{ rows: [receivedRowState()] }]
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `${getWasteRecordsExportPath}?organisationId=org-1&registrationId=reg-1`,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      // Only reg-1's records are fetched; reg-2 is filtered out before query.
-      const lines = response.payload.split('\n').filter((line) => line !== '')
-      expect(lines).toHaveLength(2)
-    })
-
-    it('rejects a registrationId without an organisationId', async () => {
+  describe('scoping', () => {
+    it.each([
+      ['an organisationId', 'organisationId=org-1'],
+      [
+        'an organisationId and registrationId',
+        'organisationId=org-1&registrationId=reg-1'
+      ]
+    ])('rejects %s', async (_, query) => {
       const server = await createServerWithRepos()
 
       const response = await server.inject({
         method: 'GET',
-        url: `${getWasteRecordsExportPath}?registrationId=reg-1`,
+        url: `${getWasteRecordsExportPath}?${query}`,
         ...asServiceMaintainer()
       })
 

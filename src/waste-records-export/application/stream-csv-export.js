@@ -30,14 +30,13 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
+ * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
- * @property {Organisation} [organisation] - The organisation `organisationId` names, when the caller has already read it.
- * @property {string} [organisationId] - When set, export only this organisation.
- * @property {string} [registrationId] - When set (with organisationId), export only this registration.
+ * @property {Organisation} [organisation] - When set, export only this organisation.
+ * @property {string} [registrationId] - When set (with organisation), export only this registration.
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -280,7 +279,6 @@ export async function* streamCsvExport(deps) {
     summaryLogsRepository,
     overseasSitesRepository,
     organisation,
-    organisationId,
     registrationId
   } = deps
 
@@ -298,7 +296,7 @@ export async function* streamCsvExport(deps) {
 
   const orgsSorted = organisation
     ? [organisation]
-    : await resolveOrgs(organisationsRepository, organisationId)
+    : await findExportableOrgs(organisationsRepository)
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])]
       .filter((reg) => !registrationId || reg.id === registrationId)
@@ -354,21 +352,12 @@ const groupByRegistration = (entries) => {
 }
 
 /**
- * Resolve the organisations to export, sorted by id for deterministic output.
+ * Every non-test organisation, sorted by id for deterministic output.
  *
- * When an id is given the single organisation is fetched directly (and the
- * test-organisation exclusion is bypassed — an explicit request wins). The
- * unscoped path lists every organisation and drops the test ones.
- *
- * @param {Pick<OrganisationsRepository, 'findAll' | 'findById'>} organisationsRepository
- * @param {string} [organisationId]
+ * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
  * @returns {Promise<Organisation[]>}
  */
-async function resolveOrgs(organisationsRepository, organisationId) {
-  if (organisationId) {
-    return [await organisationsRepository.findById(organisationId)]
-  }
-
+async function findExportableOrgs(organisationsRepository) {
   const orgs = await organisationsRepository.findAll()
   return orgs
     .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
