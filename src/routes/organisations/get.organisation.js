@@ -6,6 +6,7 @@ import { organisationPath, viewRoute } from './view-route.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @typedef {{ year?: number }} OrganisationQuery */
+/** @typedef {{ relevantYearOpen: boolean }} RelevantYearOpen */
 
 const organisationQuery = { year: yearSchema() }
 
@@ -17,8 +18,10 @@ const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
  * Each accreditation, keyed by its year, with whether that year is still open.
- * @param {Record<string, object>} accreditations
+ * @template {object} A
+ * @param {Record<string, A>} accreditations
  * @param {Date} now
+ * @returns {Record<string, A & RelevantYearOpen>}
  */
 const withRelevantYearOpen = (accreditations, now) =>
   Object.fromEntries(
