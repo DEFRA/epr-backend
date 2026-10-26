@@ -215,5 +215,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
       expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
     })
+
+    it('returns 403, not 404, for an organisation number that does not exist', async () => {
+      const response = await uploadTo({ ...linkedOrganisation, orgId: 999999 })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
+    })
   })
 })

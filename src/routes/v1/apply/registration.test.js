@@ -61,14 +61,15 @@ describe(`${url} route`, { timeout: 10000 }, () => {
         action: AUDIT_EVENT_ACTIONS.DB_INSERT
       },
       context: {
-        orgId: expect.any(Number),
-        referenceNumber: expect.any(String)
+        orgId: 500000,
+        referenceNumber: '68a66ec3dabf09f3e442b2da'
       }
     })
 
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.any(String),
+        message:
+          'Stored registration data for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -99,6 +100,62 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
+  })
+
+  it('returns 400 if payload is a JSON value that is not an object', async ({
+    server
+  }) => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: JSON.stringify('invalid-data')
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
+    expect(JSON.parse(response.payload).message).toBe('Invalid payload')
+  })
+
+  it('returns 422 if orgId is not a number', async ({ server }) => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: {
+        meta: {
+          definition: {
+            pages: [
+              {
+                components: [
+                  {
+                    name: 'orgIdField',
+                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
+                    title: 'What is your Organisation ID number?',
+                    type: 'TextField'
+                  },
+                  {
+                    name: 'refField',
+                    shortDescription:
+                      FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
+                    title: 'What is your System Reference number?',
+                    type: 'TextField'
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        data: {
+          main: {
+            orgIdField: 'invalid value',
+            refField: 'abcdef123456fedcba654321'
+          }
+        }
+      }
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toEqual(
+      'Could not extract orgId from answers'
+    )
   })
 
   it('returns 422 if payload is missing orgId', async ({ server }) => {

@@ -86,8 +86,9 @@ describe('GET accreditation overseas-sites', () => {
 
   let server
 
-  const startServer = async ({ organisation, sites }) => {
+  const startServer = async ({ organisation, sites }, config = {}) => {
     server = await createTestServer({
+      config,
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
           organisation
@@ -443,6 +444,9 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(response.payload).message).toBe(
+      `Accreditation with id ${otherAccreditation.id} not found for registration ${registration.id}`
+    )
   })
 
   it('rejects a malformed organisation id', async () => {
@@ -460,6 +464,61 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  describe('with the basic-auth machine credential', () => {
+    const basicAuth = { username: 'basic-auth-user', password: 'changeme' }
+    /** @param {string} credentials */
+    const asBasicAuth = (credentials) => ({
+      headers: {
+        Authorization: `Basic ${Buffer.from(credentials).toString('base64')}`
+      }
+    })
+
+    it('reports every malformed path id at once', async () => {
+      const { organisation } = buildScenario()
+      await startServer({ organisation, sites: [] }, { basicAuth })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor({
+          organisationId: 'unknownOrgId',
+          registrationId: 'someRegId',
+          accreditationId: 'someAccId'
+        }),
+        ...asBasicAuth('basic-auth-user:changeme')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        '"organisationId" with value "unknownOrgId" fails to match the required pattern: /^[a-f0-9]{24}$/. ' +
+          '"registrationId" with value "someRegId" fails to match the required pattern: /^[a-f0-9]{24}$/. ' +
+          '"accreditationId" with value "someAccId" fails to match the required pattern: /^[a-f0-9]{24}$/'
+      )
+    })
+
+    it('returns 401 with wrong credentials', async () => {
+      const { organisation, registration, accreditation } = buildScenario()
+      await startServer(
+        { organisation, sites: [siteOne, siteTwo] },
+        { basicAuth }
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor({
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          accreditationId: accreditation.id
+        }),
+        ...asBasicAuth('invalid:invalid')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Missing authentication'
+      )
+    })
   })
 
   it('returns 500 and logs the failure when a repository errors unexpectedly', async () => {

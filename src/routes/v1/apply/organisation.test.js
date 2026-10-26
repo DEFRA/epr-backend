@@ -41,68 +41,91 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     mockFindOneAndUpdate.mockClear()
   })
 
-  it('returns 200 and echoes back payload on valid request', async ({
-    server
-  }) => {
-    const collectionSpy = vi.spyOn(server.db, 'collection')
+  const { VcdRNr: _nations, ...answersWithoutNations } =
+    organisationFixture.data.main
+  const organisationFixtureWithoutNations = {
+    ...organisationFixture,
+    data: { ...organisationFixture.data, main: answersWithoutNations }
+  }
 
-    collectionSpy.mockImplementation((name) => {
-      if (name === 'counters') {
-        return { findOneAndUpdate: mockFindOneAndUpdate }
-      }
-      return { insertOne: mockInsertOne }
-    })
+  it.for([
+    { description: 'with nations', payload: organisationFixture },
+    {
+      description: 'without nations',
+      payload: organisationFixtureWithoutNations
+    }
+  ])(
+    'returns 200 and stores the organisation on a valid request $description',
+    async ({ payload }, { server }) => {
+      const collectionSpy = vi.spyOn(server.db, 'collection')
 
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: organisationFixture
-    })
+      collectionSpy.mockImplementation((name) => {
+        if (name === 'counters') {
+          return { findOneAndUpdate: mockFindOneAndUpdate }
+        }
+        return { insertOne: mockInsertOne }
+      })
 
-    const orgId = 500122
-    const orgName = 'ACME ltd'
+      const response = await server.inject({
+        method: 'POST',
+        url,
+        payload
+      })
 
-    expect(response.statusCode).toEqual(StatusCodes.OK)
+      const orgId = 500122
+      const orgName = 'ACME ltd'
+      const referenceNumber = '12345678901234567890abcd'
 
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: AUDIT_EVENT_CATEGORIES.DB,
-        action: AUDIT_EVENT_ACTIONS.DB_INSERT
-      },
-      context: {
+      expect(response.statusCode).toEqual(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toEqual({
         orgId,
         orgName,
-        referenceNumber: expect.any(String)
-      }
-    })
-    expect(sendEmail).toHaveBeenCalledWith(
-      ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
-      'alice@foo.com',
-      {
-        orgId,
-        orgName,
-        referenceNumber: expect.any(String)
-      }
-    )
-    expect(sendEmail).toHaveBeenCalledWith(
-      ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
-      'test@ea.gov.uk',
-      {
-        orgId,
-        orgName,
-        referenceNumber: expect.any(String)
-      }
-    )
-    expect(server.loggerMocks.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.any(String),
+        referenceNumber
+      })
+      expect(mockInsertOne).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ orgId, orgName, nations: null })
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith({
         event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          category: AUDIT_EVENT_CATEGORIES.DB,
+          action: AUDIT_EVENT_ACTIONS.DB_INSERT
+        },
+        context: {
+          orgId,
+          orgName,
+          referenceNumber
         }
       })
-    )
-  })
+      expect(sendEmail).toHaveBeenCalledWith(
+        ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
+        'alice@foo.com',
+        {
+          orgId,
+          orgName,
+          referenceNumber
+        }
+      )
+      expect(sendEmail).toHaveBeenCalledWith(
+        ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+        'test@ea.gov.uk',
+        {
+          orgId,
+          orgName,
+          referenceNumber
+        }
+      )
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `Stored organisation data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          }
+        })
+      )
+    }
+  )
 
   it('returns 400 if payload is not an object', async ({ server }) => {
     const response = await server.inject({
@@ -126,6 +149,19 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
+  })
+
+  it('returns 400 if payload is a JSON value that is not an object', async ({
+    server
+  }) => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: JSON.stringify('invalid-data')
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
+    expect(JSON.parse(response.payload).message).toBe('Invalid payload')
   })
 
   it('returns 422 if payload is missing email', async ({ server }) => {
