@@ -65,7 +65,7 @@
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,
  *   registrationId?: string,
- *   year?: number,
+ *   year: number,
  *   accreditationId?: string | null,
  *   organisationNumber?: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,

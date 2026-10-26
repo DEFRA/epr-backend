@@ -65,7 +65,6 @@
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {() => Promise<string[]>} findIdsWithoutNumbers - ids of summary logs lacking a number beside one of their ids
  * @property {(id: string, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
- * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId

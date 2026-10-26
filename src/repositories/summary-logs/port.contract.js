@@ -5,7 +5,6 @@ import { testOptimisticConcurrency } from './contract/optimistic-concurrency.con
 import { testTransitionToSubmittingExclusive } from './contract/transition-to-submitting-exclusive.contract.js'
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
-import { testFindAllByOrgReg } from './contract/find-all-by-org-reg.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 import { testFindByNaturalKey } from './contract/find-by-natural-key.contract.js'
 import { testAssignNumbers } from './contract/assign-numbers.contract.js'
@@ -19,7 +18,6 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testTransitionToSubmittingExclusive(repositoryFactory)
     testExpiresAtBehaviour(repositoryFactory)
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
-    testFindAllByOrgReg(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
     testFindByNaturalKey(repositoryFactory)
     testAssignNumbers(repositoryFactory)

@@ -148,6 +148,15 @@ export const testInsertBehaviour = (it) => {
           ).rejects.toThrow(/Invalid summary log data.*name/)
         })
 
+        it('rejects insert without a year', async () => {
+          const id = `contract-validation-${randomUUID()}`
+          const { year: _year, ...withoutYear } = summaryLogFactory.validating()
+
+          await expect(repository.insert(id, withoutYear)).rejects.toThrow(
+            /Invalid summary log data.*year/
+          )
+        })
+
         it('rejects insert with missing URI when file status is complete', async () => {
           const id = `contract-validation-${randomUUID()}`
           await expect(
