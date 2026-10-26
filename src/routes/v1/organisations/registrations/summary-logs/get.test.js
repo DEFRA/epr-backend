@@ -9,10 +9,7 @@ import { reprocessor } from '#organisation-read-model/repository/contract/organi
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  summaryLogFactory,
-  withoutYear
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -299,28 +296,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const payload = JSON.parse(response.payload)
       expect(payload.year).toBe(2026)
       expect(payload).not.toHaveProperty('accreditationId')
-    })
-
-    it('omits year for a legacy summary log carrying none', async () => {
-      const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        partialMock(
-          withoutYear(
-            summaryLogFactory.validated({ organisationId, registrationId })
-          )
-        )
-      )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        meta: { PROCESSING_TYPE: 'EXPORTER' }
-      })
-      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
-
-      const response = await makeRequest(server)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload).not.toHaveProperty('year')
     })
   })
 

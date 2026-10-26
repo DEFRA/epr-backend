@@ -79,6 +79,22 @@ export const summaryLogResponseSchema = Joi.object({
   }),
   material: Joi.string().optional(),
   accreditationNumber: Joi.string().optional(),
-  year: Joi.number().integer().optional(),
+  year: Joi.number().integer().required(),
   accreditationId: Joi.string().allow(null).optional()
 })
+
+const statusOnlyResponseSchema = (status) =>
+  Joi.object({ status: Joi.string().valid(status).required() })
+
+const placeholderResponseSchema = statusOnlyResponseSchema(
+  SUMMARY_LOG_STATUS.PREPROCESSING
+)
+
+export const summaryLogGetResponseSchema = Joi.alternatives().conditional(
+  placeholderResponseSchema,
+  { then: placeholderResponseSchema, otherwise: summaryLogResponseSchema }
+)
+
+export const summaryLogSubmitResponseSchema = statusOnlyResponseSchema(
+  SUMMARY_LOG_STATUS.SUBMITTING
+)

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { summaryLogFactory, withoutYear } from './test-data.js'
+import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -285,7 +285,7 @@ export const testFindByNaturalKey = (it) => {
 
       it('counts a summary log stored before accreditations were recorded towards every accreditation', async () => {
         const unscopedId = await insert(
-          withoutYear(summaryLogFactory.submitted())
+          withoutAccreditationId(summaryLogFactory.submitted())
         )
 
         const result = await repo.findLatestSubmitted({
@@ -299,7 +299,7 @@ export const testFindByNaturalKey = (it) => {
 
       it('counts a summary log stored before accreditations were recorded as registered-only', async () => {
         const unscopedId = await insert(
-          withoutYear(summaryLogFactory.submitted())
+          withoutAccreditationId(summaryLogFactory.submitted())
         )
 
         const result = await repo.findLatestSubmitted({
@@ -362,29 +362,14 @@ export const testFindByNaturalKey = (it) => {
         })
 
         it('counts a summary log stored with its year but before accreditations were recorded towards every accreditation in that year', async () => {
-          const legacyId = await insert({
-            ...withoutYear(summaryLogFactory.submitted()),
-            year: 2026
-          })
-
-          const result = await repo.findLatestSubmitted({
-            ...stored.key,
-            year: 2026,
-            accreditationNumber: stored.current.accreditationNumber
-          })
-
-          expect(result?.id).toBe(legacyId)
-        })
-
-        it('counts a summary log stored before years were recorded towards every year', async () => {
           const legacyId = await insert(
-            withoutYear(summaryLogFactory.submitted())
+            withoutAccreditationId(summaryLogFactory.submitted({ year: 2026 }))
           )
 
           const result = await repo.findLatestSubmitted({
             ...stored.key,
             year: 2026,
-            accreditationNumber: null
+            accreditationNumber: stored.current.accreditationNumber
           })
 
           expect(result?.id).toBe(legacyId)
@@ -507,7 +492,7 @@ export const testFindByNaturalKey = (it) => {
 
       it('counts a summary log stored before accreditations were recorded towards every accreditation', async () => {
         const unscopedId = await insert(
-          withoutYear(summaryLogFactory.submitted())
+          withoutAccreditationId(summaryLogFactory.submitted())
         )
 
         const result = await repo.findAll({
