@@ -6,6 +6,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
 
 /** @import { WasteBalanceLedgerId } from './schema.js' */
 
@@ -58,6 +59,17 @@ export const DEFAULT_LEDGER_ID = Object.freeze({
   accreditationId: 'acc-1'
 })
 
+/** @type {Map<string, number>} */
+const organisationNumbers = new Map()
+
+/** @param {string} organisationId */
+const organisationNumberOf = (organisationId) => {
+  if (!organisationNumbers.has(organisationId)) {
+    organisationNumbers.set(organisationId, generateOrgId())
+  }
+  return toOrganisationNumber(String(organisationNumbers.get(organisationId)))
+}
+
 /**
  * The ledger identity with the numbers a submission stores beside its ids.
  *
@@ -66,7 +78,7 @@ export const DEFAULT_LEDGER_ID = Object.freeze({
  */
 export const withNumbers = (ledgerId) => ({
   ...ledgerId,
-  organisationNumber: toOrganisationNumber('500001'),
+  organisationNumber: organisationNumberOf(ledgerId.organisationId),
   registrationNumber: toRegistrationNumber(`REG-${ledgerId.registrationId}`),
   accreditationNumber:
     ledgerId.accreditationId === null
