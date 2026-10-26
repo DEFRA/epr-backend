@@ -134,8 +134,8 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  *   The ids of PRNs lacking the organisation or registration number.
  * @property {(id: string, numbers: PrnNumbers) => Promise<void>} assignNumbers
  *   Adds numbers to a PRN stored without them, refusing to overwrite a number
- *   it already holds. Leaves the version alone, so a user part way through a
- *   transition can still save it.
+ *   it already holds. Bumps the version, so a transition that read the PRN
+ *   before the numbers were added conflicts rather than drop them.
  */
 
 /**

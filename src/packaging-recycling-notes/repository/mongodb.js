@@ -652,7 +652,8 @@ const performAssignNumbers = async (db, id, numbers) => {
     {
       $set: Object.fromEntries(
         keys.map((key) => [NUMBER_PATHS[key], validated[key]])
-      )
+      ),
+      $inc: { version: 1 }
     }
   )
   if (result.matchedCount > 0) {
@@ -665,7 +666,11 @@ const performAssignNumbers = async (db, id, numbers) => {
   }
   const held = numbersHeld(existing)
   const conflicting = keys.filter((key) => held[key] !== undefined)
-  throw Boom.conflict(`PRN ${id} already holds ${conflicting.join(', ')}`)
+  throw Boom.conflict(
+    conflicting.length > 0
+      ? `PRN ${id} already holds ${conflicting.join(', ')}`
+      : `PRN ${id} changed while its numbers were being assigned`
+  )
 }
 
 /**

@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
@@ -69,21 +70,38 @@ export const testAssignNumbersBehaviour = (it) => {
       })
     })
 
-    it('sets the numbers and leaves the version and other fields alone', async () => {
+    it('sets the numbers, bumps the version and leaves the other fields alone', async () => {
       const id = await createPrn()
       const before = await repository.findById(id)
+      assert(before)
 
       await repository.assignNumbers(id, numbers)
 
       expect(await repository.findById(id)).toStrictEqual({
         ...before,
+        version: before.version + 1,
         organisation: {
-          ...before?.organisation,
+          ...before.organisation,
           organisationNumber: numbers.organisationNumber
         },
         registration: { registrationNumber: numbers.registrationNumber }
       })
       expect(await repository.findIdsWithoutNumbers()).not.toContain(id)
+    })
+
+    it('refuses a projection of the PRN read before its numbers were set', async () => {
+      const id = await createPrn()
+      const before = await repository.findById(id)
+      assert(before)
+
+      await repository.assignNumbers(id, numbers)
+
+      await expect(
+        repository.persistProjection({
+          projection: { ...before, version: before.version + 1 },
+          expectedVersion: before.version
+        })
+      ).rejects.toMatchObject({ output: { statusCode: 409 } })
     })
 
     it('sets one number, leaving the PRN listed for the other', async () => {

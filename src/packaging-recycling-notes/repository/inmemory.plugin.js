@@ -425,6 +425,7 @@ const performAssignNumbers = (storage) => async (id, numbers) => {
   const { organisationNumber, registrationNumber } = validated
   storage.set(id, {
     ...prn,
+    version: prn.version + 1,
     organisation: {
       ...prn.organisation,
       ...(organisationNumber && { organisationNumber })

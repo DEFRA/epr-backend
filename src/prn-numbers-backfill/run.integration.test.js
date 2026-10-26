@@ -129,7 +129,7 @@ describe('runPrnNumbersBackfill (mongo)', () => {
     })
   })
 
-  it('adds the numbers, leaves the version alone, audits each change and is idempotent', async (/** @type {*} */ {
+  it('adds the numbers, bumps the version once, audits each change and is idempotent', async (/** @type {*} */ {
     database
   }) => {
     const { collection, numbers } = await seed(database)
@@ -143,7 +143,7 @@ describe('runPrnNumbersBackfill (mongo)', () => {
       expect(await collection.findOne({ _id })).toMatchObject({
         organisation: { organisationNumber: numbers.organisationNumber },
         registration: { registrationNumber: numbers.registrationNumber },
-        version: 3
+        version: 4
       })
     }
     const organisationGone = await collection.findOne({

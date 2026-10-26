@@ -153,13 +153,13 @@ describe('backfillPrnNumbers', () => {
     )
   })
 
-  it('leaves the version alone', async () => {
+  it('bumps the version', async () => {
     const id = await createPrn()
     const { version } = await findStored(id)
 
     await run(false)
 
-    expect((await findStored(id)).version).toBe(version)
+    expect((await findStored(id)).version).toBe(version + 1)
   })
 
   it('reports what it would add without writing or auditing on a dry run', async () => {
