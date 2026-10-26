@@ -481,12 +481,8 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    expect(
-      await env.summaryLogsRepository.findAllByOrgReg(
-        env.organisationId,
-        'no-such-registration'
-      )
-    ).toEqual([])
+    // A summary log stored under an unknown registration can hold no number.
+    expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual([])
   })
 
   it('rejects a payload that names the template, since it is inferred from the registration', async () => {
