@@ -168,12 +168,17 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     const body = JSON.parse(response.payload)
     expect(body.status).toBe(PRN_STATUS.CANCELLED)
     expect(body.obligationYear).toBe(2026)
+    expect(body.tonnage).toBe(500)
 
     const stored = await packagingRecyclingNotesRepository.findById(prnId)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
     expect(stored?.status.cancelled?.by).toEqual({
       id: 'test-maintainer-id',
       name: 'maintainer@example.com'
+    })
+    expect(stored?.status.accepted).toEqual({
+      at: new Date('2026-01-16T10:00:00Z'),
+      by: { id: 'producer-1', name: 'Producer Contact' }
     })
     // Cancelled directly from `accepted`, bypassing the producer-rejection path
     // (`awaiting_acceptance -> awaiting_cancellation`), so `status.rejected`
