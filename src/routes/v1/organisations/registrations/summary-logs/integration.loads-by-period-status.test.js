@@ -1039,6 +1039,76 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
+  it('classifies every registered-only exporter load as valid and nonBalanceAffecting', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accredited: false
+    })
+    const table = (sheet, row) => ({
+      location: { sheet, row: TABLE_HEADER_ROW, column: 'A' },
+      headers: Object.keys(row),
+      rows: [{ rowNumber: FIRST_DATA_ROW, values: Object.values(row) }]
+    })
+
+    await upload(
+      env,
+      'sl-registered-only-exporter',
+      'file-registered-only-exporter',
+      {
+        RECEIVED_LOADS_FOR_EXPORT: table('Received', {
+          ROW_ID: 1001,
+          MONTH_RECEIVED_FOR_EXPORT: '2025-01-01',
+          SUPPLIER_NAME: 'Supplier Co',
+          SUPPLIER_ADDRESS: '1 High St',
+          SUPPLIER_POSTCODE: 'SW1A 1AA',
+          SUPPLIER_EMAIL: 'supplier@example.com',
+          SUPPLIER_PHONE_NUMBER: '01234567',
+          ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting',
+          NET_WEIGHT: 10.5,
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
+          TONNAGE_RECEIVED_FOR_EXPORT: 9.975
+        }),
+        LOADS_EXPORTED: table('Exported', {
+          ROW_ID: 2001,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
+          DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
+          OSR_ID: 100,
+          BASEL_EXPORT_CODE: 'B3020',
+          WAS_THE_WASTE_REFUSED: 'No',
+          WAS_THE_WASTE_STOPPED: 'No',
+          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: null,
+          OSR_NAME: 'Overseas Reprocessor A',
+          OSR_COUNTRY: 'Vietnam-VN',
+          CUSTOMS_CODES: '123456',
+          CONTAINER_NUMBER: 'CONT123456'
+        })
+      },
+      {
+        ...registeredOnlyMeta,
+        PROCESSING_TYPE: {
+          ...registeredOnlyMeta.PROCESSING_TYPE,
+          value: 'EXPORTER_REGISTERED_ONLY'
+        }
+      }
+    )
+    const { loads, loadsByReportingPeriod } = await getCheckPage(
+      env,
+      'sl-registered-only-exporter'
+    )
+
+    expect(loads.added.valid.rowIds).toEqual(['1001', '2001'])
+    expect(loads.added.invalid.count).toBe(0)
+    expect(loads.added.included.count).toBe(0)
+    expect(loads.added.excluded.count).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(2)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
+    ).toBe(0)
+  })
+
   // A registered-only submission has no accreditation, so its row states are
   // reachable only through the summary-log-submitted event on the unaccredited
   // ledger stream. Re-uploading identical rows must resolve that submission as

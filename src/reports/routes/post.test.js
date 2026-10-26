@@ -352,7 +352,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const response = await created.post()
 
     expect(response.statusCode).toBe(StatusCodes.CREATED)
-    expect((await storedQuarterlyReport(created))?.material).toBe('plastic')
+    const stored = await storedQuarterlyReport(created)
+    expect(stored?.material).toBe('plastic')
+    expect(stored?.wasteProcessingType).toBe('exporter')
   })
 
   it('returns 400 with structured invalidPeriod when period exceeds the cadence range', async () => {

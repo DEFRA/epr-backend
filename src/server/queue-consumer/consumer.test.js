@@ -15,6 +15,11 @@ import {
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import {
+  DEFAULT_ORG_ID,
+  DEFAULT_REG_ID,
+  createAndSubmitReport
+} from '#reports/repository/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -1160,6 +1165,43 @@ describe('createCommandQueueConsumer', () => {
             expect.objectContaining({
               err: expect.objectContaining({
                 message: expect.stringContaining('must be in submitting status')
+              })
+            })
+          )
+        })
+
+        it('marks as submission_failed when a report was submitted after the log was created', async () => {
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.submitting({
+              organisationId: DEFAULT_ORG_ID,
+              registrationId: DEFAULT_REG_ID
+            })
+          )
+          await createAndSubmitReport(reportsRepository)
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123',
+              user: TEST_USER
+            })
+          }
+
+          await handleMessage(message)
+
+          const { summaryLog } = await waitForVersion(
+            summaryLogsRepository,
+            'log-123',
+            2
+          )
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: expect.objectContaining({
+                message:
+                  'Summary log log-123 is stale: a report was submitted for this registration after the summary log was created'
               })
             })
           )

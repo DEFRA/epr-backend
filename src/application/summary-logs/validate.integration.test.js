@@ -415,6 +415,39 @@ describe('SummaryLogsValidator integration', () => {
         ])
       )
     })
+
+    it('should fail validation with one issue per required cell when every Cover cell is null', async () => {
+      const nullCell = (row) => ({
+        value: null,
+        location: { sheet: 'Cover', row, column: 'B' }
+      })
+      const metadata = {
+        REGISTRATION_NUMBER: nullCell(1),
+        PROCESSING_TYPE: nullCell(2),
+        MATERIAL: nullCell(3),
+        TEMPLATE_VERSION: nullCell(4),
+        ACCREDITATION_NUMBER: nullCell(5)
+      }
+
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(
+        updated.summaryLog.validation.issues.map(({ code, context }) => ({
+          code,
+          field: context.location.field
+        }))
+      ).toEqual([
+        { code: 'PROCESSING_TYPE_INVALID', field: 'PROCESSING_TYPE' },
+        { code: 'VALIDATION_FALLBACK_ERROR', field: 'PROCESSING_TYPE' },
+        { code: 'TEMPLATE_VERSION_INVALID', field: 'TEMPLATE_VERSION' },
+        { code: 'REGISTRATION_REQUIRED', field: 'REGISTRATION_NUMBER' }
+      ])
+    })
   })
 
   describe('accreditation number validation', () => {
