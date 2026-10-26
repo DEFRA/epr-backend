@@ -338,7 +338,7 @@ const collidesOnSubmittingLock = (candidate, subject) =>
   candidate.registrationId === subject.registrationId &&
   candidate.status === 'submitting' &&
   candidate.year === subject.year &&
-  candidate.accreditationId === subject.accreditationId
+  (candidate.accreditationId ?? null) === (subject.accreditationId ?? null)
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
