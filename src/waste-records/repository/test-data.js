@@ -67,7 +67,9 @@ export const DEFAULT_LEDGER_ID = Object.freeze({
 export const withNumbers = (ledgerId) => ({
   ...ledgerId,
   organisationNumber: toOrganisationNumber('500001'),
-  registrationNumber: toRegistrationNumber('REG-1'),
+  registrationNumber: toRegistrationNumber(`REG-${ledgerId.registrationId}`),
   accreditationNumber:
-    ledgerId.accreditationId === null ? null : toAccreditationNumber('ACC-1')
+    ledgerId.accreditationId === null
+      ? null
+      : toAccreditationNumber(`ACC-${ledgerId.accreditationId}`)
 })

@@ -127,26 +127,29 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
+ * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
  */
 const setupSubmit = async ({
   reportsRepository,
   createdAt,
   data,
-  loadsByReportingPeriod
+  loadsByReportingPeriod,
+  accreditationId = 'acc-123'
 }) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const logger = createMockLogger()
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+  const organisation = buildTestOrg(organisationId, registrationId)
   const organisationsRepository = createInMemoryOrganisationsRepository([
-    buildTestOrg(organisationId, registrationId)
+    organisation
   ])()
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
-    accreditationId: 'acc-123',
+    accreditationId,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
@@ -185,6 +188,8 @@ const setupSubmit = async ({
   return {
     deps,
     summaryLogId,
+    summaryLog,
+    organisation,
     organisationId,
     registrationId,
     summaryLogsRepository
@@ -405,4 +410,47 @@ describe('submitSummaryLog December waste metric', () => {
       1
     )
   })
+})
+
+describe('submitSummaryLog row-state numbers', () => {
+  it.each([
+    { accreditationId: 'acc-123', accreditationNumber: 'ACC-123' },
+    { accreditationId: null, accreditationNumber: null }
+  ])(
+    'stores the numbers from the organisation record on each row state, accreditation $accreditationId',
+    async ({ accreditationId, accreditationNumber }) => {
+      const {
+        deps,
+        summaryLogId,
+        summaryLog,
+        organisation,
+        organisationId,
+        registrationId
+      } = await setupSubmit({
+        reportsRepository: createInMemoryReportsRepository()(),
+        accreditationId
+      })
+
+      await submitSummaryLog(summaryLogId, deps)
+
+      const rowStates =
+        await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          organisationId,
+          registrationId,
+          summaryLog.file.id
+        )
+      expect(rowStates).toEqual([
+        expect.objectContaining({
+          organisationNumber: String(organisation.orgId),
+          registrationNumber: 'REG-123',
+          accreditationNumber
+        }),
+        expect.objectContaining({
+          organisationNumber: String(organisation.orgId),
+          registrationNumber: 'REG-123',
+          accreditationNumber
+        })
+      ])
+    }
+  )
 })

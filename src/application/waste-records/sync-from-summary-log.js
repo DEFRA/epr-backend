@@ -148,8 +148,7 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
 
 /**
  * The numbers the row states are stored with, read from the organisation
- * record. Validation refuses a summary log whose registration or
- * accreditation has no number, so every number is there.
+ * record.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  * @param {{ organisationId: string, registrationId: string }} summaryLog
