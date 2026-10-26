@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import {
   describe,
@@ -22,7 +23,8 @@ import { partialMock } from '#test/type-helpers.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
-  defraIdMockAuthTokens
+  defraIdMockAuthTokens,
+  generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -192,13 +194,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await server.stop()
     })
 
-    /** @param {Organisation} organisation */
-    const uploadTo = (organisation) =>
+    /**
+     * @param {Organisation} organisation
+     * @param {string} [token]
+     */
+    const uploadTo = (organisation, token = defraIdMockAuthTokens.validToken) =>
       server.inject({
         method: 'POST',
         url: buildUrl(organisation, new Date().getFullYear()),
         headers: {
-          Authorization: `Bearer ${defraIdMockAuthTokens.validToken}`
+          Authorization: `Bearer ${token}`
         },
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -211,6 +216,19 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('returns 403 for an active organisation linked to someone else', async () => {
       const response = await uploadTo(otherOrganisation)
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
+    })
+
+    it('returns 403 when the operator signed in for a Defra organisation linked to no organisation', async () => {
+      const relationshipId = randomUUID()
+      const token = generateValidTokenWith({
+        currentRelationshipId: relationshipId,
+        relationships: [`${relationshipId}:${randomUUID()}:Unlinked Ltd`]
+      })
+
+      const response = await uploadTo(linkedOrganisation, token)
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
       expect(JSON.parse(response.payload).message).toBe('Insufficient scope')

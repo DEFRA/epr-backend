@@ -1,13 +1,16 @@
 import { describe, expect } from 'vitest'
+/** @import { Collection } from 'mongodb' */
 import { StatusCodes } from 'http-status-codes'
 
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import { createFormCollections } from '#common/helpers/collections/create-update.js'
+import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
 import { it } from '#vite/fixtures/server-with-real-db.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { accreditationPath } from './accreditation.js'
+import { organisationPath } from './organisation.js'
 import { registrationPath } from './registration.js'
 
 /**
@@ -27,8 +30,49 @@ const withReferenceNumber = (fixture, referenceNumber) => {
   return payload
 }
 
+/** @param {typeof organisationFixture} fixture */
+const withoutNations = (fixture) => {
+  const { VcdRNr: _nations, ...answers } = fixture.data.main
+  return { ...fixture, data: { ...fixture.data, main: answers } }
+}
+
 describe('apply routes against the real collection validators', () => {
   setupAuthContext()
+
+  it.for([
+    { description: 'with nations', payload: organisationFixture },
+    {
+      description: 'without nations',
+      payload: withoutNations(organisationFixture)
+    }
+  ])(
+    'stores an organisation the collection schema accepts $description',
+    async ({ payload }, { server }) => {
+      await createFormCollections(server.db)
+      /** @type {Collection<{ _id: string, seq: number }>} */
+      const counters = server.db.collection('counters')
+      await counters.updateOne(
+        { _id: 'orgId' },
+        { $setOnInsert: { seq: 500000 } },
+        { upsert: true }
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: organisationPath,
+        payload
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { orgId, referenceNumber } = JSON.parse(response.payload)
+      expect(
+        await server.db
+          .collection('organisation')
+          .countDocuments({ orgId, orgName: 'ACME ltd' })
+      ).toBe(1)
+      expect(referenceNumber).toMatch(/^[a-f0-9]{24}$/)
+    }
+  )
 
   it.for([
     {
@@ -73,7 +117,7 @@ describe('apply routes against the real collection validators', () => {
       payload: withReferenceNumber(accreditationFixture, '500000')
     }
   ])(
-    '$url returns 500 when the reference number fails the collection schema',
+    '$url rejects with a 500 a reference number that passes the payload check but fails the collection schema',
     async ({ url, referenceNumber, payload }, { server }) => {
       await createFormCollections(server.db)
 

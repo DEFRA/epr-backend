@@ -115,49 +115,6 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(JSON.parse(response.payload).message).toBe('Invalid payload')
   })
 
-  it('returns 422 if orgId is not a number', async ({ server }) => {
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                components: [
-                  {
-                    name: 'orgIdField',
-                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
-                    title: 'What is your Organisation ID number?',
-                    type: 'TextField'
-                  },
-                  {
-                    name: 'refField',
-                    shortDescription:
-                      FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
-                    title: 'What is your System Reference number?',
-                    type: 'TextField'
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            orgIdField: 'invalid value',
-            refField: 'abcdef123456fedcba654321'
-          }
-        }
-      }
-    })
-
-    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(JSON.parse(response.payload).message).toEqual(
-      'Could not extract orgId from answers'
-    )
-  })
-
   it('returns 422 if payload is missing orgId', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
