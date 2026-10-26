@@ -398,6 +398,34 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
+  it('rejects a registration linked to a malformed accreditation id', async () => {
+    const org = await createOrganisation()
+    const [firstRegistration, ...otherRegistrations] = org.registrations
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      },
+      payload: {
+        version: org.version,
+        updateFragment: {
+          ...org,
+          registrations: [
+            { ...firstRegistration, accreditationId: 'invalid' },
+            ...otherRegistrations
+          ]
+        }
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      'Invalid organisation data: registrations.0.accreditationId: id must be a valid MongoDB ObjectId'
+    )
+  })
+
   testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
