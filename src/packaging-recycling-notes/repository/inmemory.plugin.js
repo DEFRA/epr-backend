@@ -3,11 +3,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
-import { validatePrnInsert } from './validation.js'
+import { validatePrnInsert, validatePrnNumbers } from './validation.js'
 import {
   isWatermarkRegression,
   throwWatermarkRegression
@@ -16,7 +17,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
+/** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, PrnNumbers, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -391,6 +392,49 @@ const performPersistProjection =
   }
 
 /**
+ * @param {Storage} storage
+ * @returns {() => Promise<string[]>}
+ */
+const performFindIdsWithoutNumbers = (storage) => async () =>
+  [...storage.values()]
+    .filter((prn) => {
+      const { organisationNumber, registrationNumber } = numbersHeld(prn)
+      return !organisationNumber || !registrationNumber
+    })
+    .map(({ id }) => id)
+
+/**
+ * @param {Storage} storage
+ * @returns {(id: string, numbers: PrnNumbers) => Promise<void>}
+ */
+const performAssignNumbers = (storage) => async (id, numbers) => {
+  const validated = validatePrnNumbers(numbers)
+  const prn = storage.get(id)
+  if (!prn) {
+    throw Boom.notFound(`PRN not found: ${id}`)
+  }
+
+  const held = numbersHeld(prn)
+  const conflicting = Object.keys(validated).filter(
+    (key) => held[key] !== undefined
+  )
+  if (conflicting.length > 0) {
+    throw Boom.conflict(`PRN ${id} already holds ${conflicting.join(', ')}`)
+  }
+
+  const { organisationNumber, registrationNumber } = validated
+  storage.set(id, {
+    ...prn,
+    version: prn.version + 1,
+    organisation: {
+      ...prn.organisation,
+      ...(organisationNumber && { organisationNumber })
+    },
+    ...(registrationNumber && { registration: { registrationNumber } })
+  })
+}
+
+/**
  * @param {PackagingRecyclingNote[]} [initialData]
  * @param {Organisation['id'][]} [excludeOrganisationIds]
  */
@@ -416,7 +460,9 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     sumTonnageByAccreditation: performSumTonnageByAccreditation(storage),
     updateStatus: performUpdateStatus(storage, logger),
     updateWatermark: performUpdateWatermark(storage, logger),
-    persistProjection: performPersistProjection(storage, logger)
+    persistProjection: performPersistProjection(storage, logger),
+    findIdsWithoutNumbers: performFindIdsWithoutNumbers(storage),
+    assignNumbers: performAssignNumbers(storage)
   })
 }
 

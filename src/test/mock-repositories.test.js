@@ -81,7 +81,9 @@ describe('mock-repositories', () => {
         'sumTonnageByAccreditation',
         'updateStatus',
         'updateWatermark',
-        'persistProjection'
+        'persistProjection',
+        'findIdsWithoutNumbers',
+        'assignNumbers'
       ]
     },
     createMockOverseasSitesRepository: {

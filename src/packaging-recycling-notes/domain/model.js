@@ -183,6 +183,12 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  */
 
 /**
+ * @typedef {OrganisationNameAndId & {
+ *   organisationNumber?: import('#domain/organisations/numbers.js').OrganisationNumber;
+ * }} OrganisationSnapshot
+ */
+
+/**
  * @typedef {{
  *   id: string;
  *   accreditationNumber: string;
@@ -239,8 +245,9 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   version: number;
  *   lastAppliedEventNumber?: number;
  *   prnNumber?: string | null;
- *   organisation: OrganisationNameAndId;
+ *   organisation: OrganisationSnapshot;
  *   registrationId: string;
+ *   registration?: { registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
  *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;

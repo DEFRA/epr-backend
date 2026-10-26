@@ -111,6 +111,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let ledgerRepository
   /** @type {string} */
   let url
+  /** @type {string} */
+  let registrationNumber
 
   /**
    * Serves the organisation with one accreditation, an output reprocessor's
@@ -142,7 +144,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       partialMock(organisation)
     ])()
     const year = new Date(/** @type {string} */ (accredited.validFrom))
-    url = `/organisations/${orgId}/registrations/${registration.registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
+    registrationNumber = registration.registrationNumber
+    url = `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
   }
 
   beforeAll(async () => {
@@ -247,6 +250,22 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           issuedToOrganisation: validPayload.issuedToOrganisation
         })
       )
+    })
+
+    it('stores the organisation and registration numbers beside their ids', async () => {
+      const response = await createPrn()
+
+      const stored = await packagingRecyclingNotesRepository.findById(
+        JSON.parse(response.payload).id
+      )
+      expect(stored.organisation).toMatchObject({
+        id: organisationId,
+        organisationNumber: String(orgId)
+      })
+      expect(stored).toMatchObject({
+        registrationId,
+        registration: { registrationNumber }
+      })
     })
 
     it('sets obligationYear from the accreditation year', async () => {
