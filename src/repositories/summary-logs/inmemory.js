@@ -329,6 +329,9 @@ const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   return signDownload(doc, validatedId)
 }
 
+// A missing accreditation id indexes as null in MongoDB's lock index.
+const sameAccreditationId = (a, b) => (a ?? null) === (b ?? null)
+
 /**
  * Whether `candidate` collides with `subject` for the submitting-lock check:
  * same org/reg, already submitting, and the same year and accreditation.
@@ -338,7 +341,7 @@ const collidesOnSubmittingLock = (candidate, subject) =>
   candidate.registrationId === subject.registrationId &&
   candidate.status === 'submitting' &&
   candidate.year === subject.year &&
-  (candidate.accreditationId ?? null) === (subject.accreditationId ?? null)
+  sameAccreditationId(candidate.accreditationId, subject.accreditationId)
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
