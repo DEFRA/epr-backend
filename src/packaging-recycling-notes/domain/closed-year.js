@@ -1,6 +1,5 @@
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
-import { ADMIN_CANCELLABLE_PREVIOUS_STATUSES } from './cancellation.js'
 import { PRN_STATUS } from './model.js'
 import {
   RelevantYearWindowExpiredError,
@@ -19,6 +18,20 @@ import {
  * The one statement of which PRN/PERN writes close with the year. Creating a
  * note is the write to `draft`, which has no status before it.
  */
+
+/**
+ * Prior statuses a PRN/PERN can be admin-cancelled from: `accepted`, and
+ * `awaiting_acceptance` for a note stuck awaiting the recipient's response.
+ *
+ * The single source of truth for admin-cancellable statuses, so the closed-year
+ * rule and a caller's own cancellability guard can never drift apart.
+ *
+ * @type {Set<PrnStatus>}
+ */
+export const ADMIN_CANCELLABLE_PREVIOUS_STATUSES = new Set([
+  PRN_STATUS.ACCEPTED,
+  PRN_STATUS.AWAITING_ACCEPTANCE
+])
 
 /** @type {ReadonlyArray<{ from?: PrnStatus, to: PrnStatus }>} */
 const CLOSES_WITH_THE_YEAR = [
