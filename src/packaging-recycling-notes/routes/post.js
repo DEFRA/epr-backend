@@ -31,6 +31,8 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 /**
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -225,6 +227,45 @@ const assertRelevantYearOpen = (accreditation, now) => {
 }
 
 /**
+ * The rules a draft must satisfy before it is created.
+ *
+ * @param {Object} params
+ * @param {Accreditation} params.accreditation
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId
+ * @param {PackagingRecyclingNotesCreatePayload} params.payload
+ * @param {Date} params.now
+ */
+const assertCreatable = async ({
+  accreditation,
+  ledgerRepository,
+  ledgerId,
+  payload,
+  now
+}) => {
+  if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
+    throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
+  }
+
+  assertRelevantYearOpen(accreditation, now)
+
+  assertDecemberWasteDeclarable({
+    accreditation,
+    isDecemberWaste: payload.isDecemberWaste,
+    now,
+    config: config.get('decemberWaste')
+  })
+
+  await assertSufficientAvailableBalance({
+    ledgerRepository,
+    ledgerId,
+    tonnage: payload.tonnage,
+    isDecemberWaste: payload.isDecemberWaste,
+    accreditation
+  })
+}
+
+/**
  * @param {Object} params
  * @param {Object} params.accreditation
  * @param {boolean} params.isDecemberWaste
@@ -300,25 +341,12 @@ export const createPrn =
         accreditationId
       )
 
-      if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
-        throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
-      }
-
-      assertRelevantYearOpen(accreditation, now)
-
-      assertDecemberWasteDeclarable({
+      await assertCreatable({
         accreditation,
-        isDecemberWaste: payload.isDecemberWaste,
-        now,
-        config: config.get('decemberWaste')
-      })
-
-      await assertSufficientAvailableBalance({
         ledgerRepository,
         ledgerId: { organisationId, registrationId, accreditationId },
-        tonnage: payload.tonnage,
-        isDecemberWaste: payload.isDecemberWaste,
-        accreditation
+        payload,
+        now
       })
 
       const isExport =
