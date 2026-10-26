@@ -314,6 +314,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     'refuses a %s callback followed by a %s callback, naming the move from %s to %s',
     async (firstFileStatus, secondFileStatus, fromStatus, toStatus) => {
       const summaryLogId = randomUUID()
+      /** @param {string} fileStatus */
       const payloadWithFileStatus = (fileStatus) => ({
         ...createCompletePayload(),
         form: {

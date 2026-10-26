@@ -950,43 +950,50 @@ describe('loadsByReportingPeriod population at validate time', () => {
     }
   }
 
-  const REGISTERED_ONLY_RECEIVED_HEADERS = [
-    'ROW_ID',
-    'MONTH_RECEIVED_FOR_REPROCESSING',
-    'NET_WEIGHT',
-    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-    'RECYCLABLE_PROPORTION_PERCENTAGE',
-    'TONNAGE_RECEIVED_FOR_RECYCLING',
-    'SUPPLIER_NAME',
-    'SUPPLIER_ADDRESS',
-    'SUPPLIER_POSTCODE',
-    'SUPPLIER_EMAIL',
-    'SUPPLIER_PHONE_NUMBER',
-    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
-  ]
+  /**
+   * @param {string} sheet
+   * @param {Record<string, unknown>[]} rows
+   */
+  const tableOf = (sheet, rows) => ({
+    location: { sheet, row: TABLE_HEADER_ROW, column: 'A' },
+    headers: Object.keys(rows[0] ?? {}),
+    rows: rows.map((row, index) => ({
+      rowNumber: FIRST_DATA_ROW + index,
+      values: Object.values(row)
+    }))
+  })
 
-  const createRegisteredOnlyUploadData = (rows) => ({
-    RECEIVED_LOADS_FOR_REPROCESSING: {
-      location: { sheet: 'Received', row: TABLE_HEADER_ROW, column: 'A' },
-      headers: REGISTERED_ONLY_RECEIVED_HEADERS,
-      rows: rows.map(({ rowId, month }, index) => ({
-        rowNumber: FIRST_DATA_ROW + index,
-        values: [
-          rowId,
-          month,
-          10.5,
-          'Actual weight (100%)',
-          0.95,
-          9.975,
-          'Supplier Co',
-          '1 High St',
-          'SW1A 1AA',
-          'supplier@example.com',
-          '01234567',
-          'Sorting'
-        ]
-      }))
-    }
+  /**
+   * @param {{ rowId: number, month: string }} load
+   * @param {{ monthHeader?: string, tonnageHeader?: string }} [headers]
+   */
+  const registeredOnlyReceivedRow = (
+    { rowId, month },
+    {
+      monthHeader = 'MONTH_RECEIVED_FOR_REPROCESSING',
+      tonnageHeader = 'TONNAGE_RECEIVED_FOR_RECYCLING'
+    } = {}
+  ) => ({
+    ROW_ID: rowId,
+    [monthHeader]: month,
+    NET_WEIGHT: 10.5,
+    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+    RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
+    [tonnageHeader]: 9.975,
+    SUPPLIER_NAME: 'Supplier Co',
+    SUPPLIER_ADDRESS: '1 High St',
+    SUPPLIER_POSTCODE: 'SW1A 1AA',
+    SUPPLIER_EMAIL: 'supplier@example.com',
+    SUPPLIER_PHONE_NUMBER: '01234567',
+    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
+  })
+
+  /** @param {{ rowId: number, month: string }[]} loads */
+  const createRegisteredOnlyUploadData = (loads) => ({
+    RECEIVED_LOADS_FOR_REPROCESSING: tableOf(
+      'Received',
+      loads.map((load) => registeredOnlyReceivedRow(load))
+    )
   })
 
   it('classifies registered-only loads by quarter, closing a submitted quarter', async () => {
@@ -1044,45 +1051,37 @@ describe('loadsByReportingPeriod population at validate time', () => {
       processingType: 'exporter',
       accredited: false
     })
-    const table = (sheet, row) => ({
-      location: { sheet, row: TABLE_HEADER_ROW, column: 'A' },
-      headers: Object.keys(row),
-      rows: [{ rowNumber: FIRST_DATA_ROW, values: Object.values(row) }]
-    })
 
     await upload(
       env,
       'sl-registered-only-exporter',
       'file-registered-only-exporter',
       {
-        RECEIVED_LOADS_FOR_EXPORT: table('Received', {
-          ROW_ID: 1001,
-          MONTH_RECEIVED_FOR_EXPORT: '2025-01-01',
-          SUPPLIER_NAME: 'Supplier Co',
-          SUPPLIER_ADDRESS: '1 High St',
-          SUPPLIER_POSTCODE: 'SW1A 1AA',
-          SUPPLIER_EMAIL: 'supplier@example.com',
-          SUPPLIER_PHONE_NUMBER: '01234567',
-          ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting',
-          NET_WEIGHT: 10.5,
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
-          RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
-          TONNAGE_RECEIVED_FOR_EXPORT: 9.975
-        }),
-        LOADS_EXPORTED: table('Exported', {
-          ROW_ID: 2001,
-          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
-          DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
-          OSR_ID: 100,
-          BASEL_EXPORT_CODE: 'B3020',
-          WAS_THE_WASTE_REFUSED: 'No',
-          WAS_THE_WASTE_STOPPED: 'No',
-          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: null,
-          OSR_NAME: 'Overseas Reprocessor A',
-          OSR_COUNTRY: 'Vietnam-VN',
-          CUSTOMS_CODES: '123456',
-          CONTAINER_NUMBER: 'CONT123456'
-        })
+        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
+          registeredOnlyReceivedRow(
+            { rowId: 1001, month: '2025-01-01' },
+            {
+              monthHeader: 'MONTH_RECEIVED_FOR_EXPORT',
+              tonnageHeader: 'TONNAGE_RECEIVED_FOR_EXPORT'
+            }
+          )
+        ]),
+        LOADS_EXPORTED: tableOf('Exported', [
+          {
+            ROW_ID: 2001,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
+            DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
+            OSR_ID: 100,
+            BASEL_EXPORT_CODE: 'B3020',
+            WAS_THE_WASTE_REFUSED: 'No',
+            WAS_THE_WASTE_STOPPED: 'No',
+            DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: null,
+            OSR_NAME: 'Overseas Reprocessor A',
+            OSR_COUNTRY: 'Vietnam-VN',
+            CUSTOMS_CODES: '123456',
+            CONTAINER_NUMBER: 'CONT123456'
+          }
+        ])
       },
       {
         ...registeredOnlyMeta,

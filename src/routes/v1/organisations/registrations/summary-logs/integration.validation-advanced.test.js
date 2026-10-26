@@ -1004,10 +1004,14 @@ describe('Advanced validation scenarios', () => {
         )
         expect(checkPage.status).toBe(SUMMARY_LOG_STATUS.INVALID)
         expect(
-          checkPage.validation.failures.map(({ code, location }) => ({
-            code,
-            header: location.header
-          }))
+          checkPage.validation.failures.map(
+            (
+              /** @type {{ code: string, location: { header: string } }} */ {
+                code,
+                location
+              }
+            ) => ({ code, header: location.header })
+          )
         ).toEqual([
           { code: 'INVALID_FORMAT', header: monthHeader },
           { code: 'VALUE_OUT_OF_RANGE', header: 'NET_WEIGHT' },

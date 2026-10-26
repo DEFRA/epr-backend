@@ -417,6 +417,7 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should fail validation with one issue per required cell when every Cover cell is null', async () => {
+      /** @param {number} row */
       const nullCell = (row) => ({
         value: null,
         location: { sheet: 'Cover', row, column: 'B' }
@@ -437,10 +438,14 @@ describe('SummaryLogsValidator integration', () => {
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(
-        updated.summaryLog.validation.issues.map(({ code, context }) => ({
-          code,
-          field: context.location.field
-        }))
+        updated.summaryLog.validation.issues.map(
+          (
+            /** @type {{ code: string, context: { location: { field: string } } }} */ {
+              code,
+              context
+            }
+          ) => ({ code, field: context.location.field })
+        )
       ).toEqual([
         { code: 'PROCESSING_TYPE_INVALID', field: 'PROCESSING_TYPE' },
         { code: 'VALIDATION_FALLBACK_ERROR', field: 'PROCESSING_TYPE' },
