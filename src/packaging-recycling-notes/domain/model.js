@@ -247,7 +247,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   prnNumber?: string | null;
  *   organisation: OrganisationSnapshot;
  *   registrationId: string;
- *   registrationNumber?: import('#domain/organisations/numbers.js').RegistrationNumber;
+ *   registration?: { registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
  *   obligationYear: number;
  *   issuedToOrganisation: OrganisationNameAndId;

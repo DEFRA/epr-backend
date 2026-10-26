@@ -101,7 +101,7 @@ const buildPrnData = ({
     schemaVersion: 2,
     organisation,
     registrationId,
-    ...(registrationNumber && { registrationNumber }),
+    ...(registrationNumber && { registration: { registrationNumber } }),
     accreditation: accreditationSnapshot,
     obligationYear: accreditationSnapshot.accreditationYear,
     issuedToOrganisation: payload.issuedToOrganisation,

@@ -109,7 +109,9 @@ export const prnInsertSchema = Joi.object({
   prnNumber: Joi.string().allow(null).optional(),
   organisation: organisationSnapshotSchema.required(),
   registrationId: Joi.string().required(),
-  registrationNumber: Joi.string().optional(),
+  registration: Joi.object({
+    registrationNumber: Joi.string().required()
+  }).optional(),
   accreditation: Joi.when('isExport', {
     is: true,
     then: accreditationSchema.required(),

@@ -429,7 +429,7 @@ const performAssignNumbers = (storage) => async (id, numbers) => {
       ...prn.organisation,
       ...(organisationNumber && { organisationNumber })
     },
-    ...(registrationNumber && { registrationNumber })
+    ...(registrationNumber && { registration: { registrationNumber } })
   })
 }
 

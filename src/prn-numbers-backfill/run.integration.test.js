@@ -119,7 +119,9 @@ describe('runPrnNumbersBackfill (mongo)', () => {
     await runPrnNumbersBackfill(serverFor(database))
 
     expect(
-      await collection.countDocuments({ registrationNumber: { $exists: true } })
+      await collection.countDocuments({
+        'registration.registrationNumber': { $exists: true }
+      })
     ).toBe(0)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(logger.info).toHaveBeenCalledWith({
@@ -140,14 +142,14 @@ describe('runPrnNumbersBackfill (mongo)', () => {
     for (const _id of [prnIds.draft, prnIds.issued]) {
       expect(await collection.findOne({ _id })).toMatchObject({
         organisation: { organisationNumber: numbers.organisationNumber },
-        registrationNumber: numbers.registrationNumber,
+        registration: { registrationNumber: numbers.registrationNumber },
         version: 3
       })
     }
     const organisationGone = await collection.findOne({
       _id: prnIds.organisationGone
     })
-    expect(organisationGone).not.toHaveProperty('registrationNumber')
+    expect(organisationGone).not.toHaveProperty('registration')
     expect(organisationGone?.organisation).not.toHaveProperty(
       'organisationNumber'
     )

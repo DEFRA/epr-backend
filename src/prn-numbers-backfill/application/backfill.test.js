@@ -109,7 +109,7 @@ describe('backfillPrnNumbers', () => {
     const prn = await findStored(id)
     return {
       organisationNumber: prn.organisation.organisationNumber,
-      registrationNumber: prn.registrationNumber
+      registrationNumber: prn.registration?.registrationNumber
     }
   }
 

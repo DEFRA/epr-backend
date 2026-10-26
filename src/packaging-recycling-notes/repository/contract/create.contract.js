@@ -64,7 +64,9 @@ export const testCreateBehaviour = (it) => {
             tradingName: 'Preserve Trading'
           },
           registrationId: 'reg-preserve-test',
-          registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+          registration: {
+            registrationNumber: toRegistrationNumber('R25SR500010912PL')
+          },
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
@@ -96,7 +98,9 @@ export const testCreateBehaviour = (it) => {
           tradingName: 'Preserve Trading'
         })
         expect(found.registrationId).toBe('reg-preserve-test')
-        expect(found.registrationNumber).toBe('R25SR500010912PL')
+        expect(found.registration).toStrictEqual({
+          registrationNumber: 'R25SR500010912PL'
+        })
         expect(found.accreditation).toStrictEqual({
           id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',

@@ -609,7 +609,7 @@ const performPersistProjection = async (
 /** @type {Record<keyof PrnNumbers, string>} */
 const NUMBER_PATHS = {
   organisationNumber: 'organisation.organisationNumber',
-  registrationNumber: 'registrationNumber'
+  registrationNumber: 'registration.registrationNumber'
 }
 
 /**

@@ -261,7 +261,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         id: organisationId,
         organisationNumber: String(orgId)
       })
-      expect(stored).toMatchObject({ registrationId, registrationNumber })
+      expect(stored).toMatchObject({
+        registrationId,
+        registration: { registrationNumber }
+      })
     })
 
     it('sets obligationYear from the accreditation year', async () => {

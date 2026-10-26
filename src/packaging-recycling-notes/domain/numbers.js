@@ -5,10 +5,10 @@
  * The organisation and registration numbers a PRN holds, each undefined where
  * the PRN was stored without it.
  *
- * @param {Pick<PackagingRecyclingNote, 'organisation' | 'registrationNumber'>} prn
+ * @param {Pick<PackagingRecyclingNote, 'organisation' | 'registration'>} prn
  * @returns {PrnNumbers}
  */
 export const numbersHeld = (prn) => ({
   organisationNumber: prn.organisation.organisationNumber,
-  registrationNumber: prn.registrationNumber
+  registrationNumber: prn.registration?.registrationNumber
 })

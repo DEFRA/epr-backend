@@ -40,7 +40,7 @@ export const testAssignNumbersBehaviour = (it) => {
           ...draft.organisation,
           ...(organisationNumber && { organisationNumber })
         },
-        ...(registrationNumber && { registrationNumber })
+        ...(registrationNumber && { registration: { registrationNumber } })
       })
       return prn.id
     }
@@ -81,7 +81,7 @@ export const testAssignNumbersBehaviour = (it) => {
           ...before?.organisation,
           organisationNumber: numbers.organisationNumber
         },
-        registrationNumber: numbers.registrationNumber
+        registration: { registrationNumber: numbers.registrationNumber }
       })
       expect(await repository.findIdsWithoutNumbers()).not.toContain(id)
     })
