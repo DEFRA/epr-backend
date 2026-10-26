@@ -26,6 +26,10 @@ import { createHash } from 'node:crypto'
  * @typedef {import('./port.js').NumberedLedgerId} NumberedLedgerId
  */
 
+/**
+ * @typedef {import('./port.js').LedgerLackingNumbers} LedgerLackingNumbers
+ */
+
 import {
   validateRowStateNumbers,
   validateSummaryLogRowStateInsert,
@@ -418,7 +422,7 @@ const LACKING_A_NUMBER = {
 
 /**
  * @param {Collection} collection
- * @returns {() => Promise<Array<{ ledgerId: WasteBalanceLedgerId, documents: number }>>}
+ * @returns {() => Promise<LedgerLackingNumbers[]>}
  */
 const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
   const groups = await collection
@@ -431,12 +435,22 @@ const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
             registrationId: '$registrationId',
             accreditationId: '$accreditationId'
           },
-          documents: { $sum: 1 }
+          documents: { $sum: 1 },
+          ...Object.fromEntries(
+            ROW_STATE_NUMBER_KEYS.map((key) => [
+              key,
+              { $max: { $eq: [{ $type: `$${key}` }, 'missing'] } }
+            ])
+          )
         }
       }
     ])
     .toArray()
-  return groups.map(({ _id, documents }) => ({ ledgerId: _id, documents }))
+  return groups.map((group) => ({
+    ledgerId: /** @type {WasteBalanceLedgerId} */ (group._id),
+    documents: group.documents,
+    lacking: ROW_STATE_NUMBER_KEYS.filter((key) => group[key])
+  }))
 }
 
 /**

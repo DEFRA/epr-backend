@@ -82,8 +82,24 @@ export const testNumbersBehaviour = (it) => {
         expect(found).toHaveLength(2)
         expect(found).toEqual(
           expect.arrayContaining([
-            { ledgerId: DEFAULT_LEDGER_ID, documents: 2 },
-            { ledgerId: REGISTERED_ONLY_LEDGER_ID, documents: 1 }
+            {
+              ledgerId: DEFAULT_LEDGER_ID,
+              documents: 2,
+              lacking: [
+                'organisationNumber',
+                'registrationNumber',
+                'accreditationNumber'
+              ]
+            },
+            {
+              ledgerId: REGISTERED_ONLY_LEDGER_ID,
+              documents: 1,
+              lacking: [
+                'organisationNumber',
+                'registrationNumber',
+                'accreditationNumber'
+              ]
+            }
           ])
         )
       })
@@ -101,7 +117,43 @@ export const testNumbersBehaviour = (it) => {
         )
 
         expect(await repository.findLedgerIdsWithoutNumbers()).toEqual([
-          { ledgerId: DEFAULT_LEDGER_ID, documents: 1 }
+          {
+            ledgerId: DEFAULT_LEDGER_ID,
+            documents: 1,
+            lacking: [
+              'organisationNumber',
+              'registrationNumber',
+              'accreditationNumber'
+            ]
+          }
+        ])
+      })
+
+      it('names each number any of the ledger’s row states lacks', async () => {
+        await repository.upsertSummaryLogRowStates(
+          {
+            ...DEFAULT_LEDGER_ID,
+            organisationNumber: NUMBERS.organisationNumber
+          },
+          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          {
+            ...DEFAULT_LEDGER_ID,
+            organisationNumber: NUMBERS.organisationNumber,
+            registrationNumber: NUMBERS.registrationNumber
+          },
+          [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
+          'log-2'
+        )
+
+        expect(await repository.findLedgerIdsWithoutNumbers()).toEqual([
+          {
+            ledgerId: DEFAULT_LEDGER_ID,
+            documents: 2,
+            lacking: ['registrationNumber', 'accreditationNumber']
+          }
         ])
       })
 
@@ -159,7 +211,15 @@ export const testNumbersBehaviour = (it) => {
           0
         )
         expect(await repository.findLedgerIdsWithoutNumbers()).toEqual([
-          { ledgerId: REGISTERED_ONLY_LEDGER_ID, documents: 1 }
+          {
+            ledgerId: REGISTERED_ONLY_LEDGER_ID,
+            documents: 1,
+            lacking: [
+              'organisationNumber',
+              'registrationNumber',
+              'accreditationNumber'
+            ]
+          }
         ])
       })
 

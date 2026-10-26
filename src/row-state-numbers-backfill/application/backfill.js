@@ -9,7 +9,7 @@ import { auditRowStateNumbersBackfill } from './audit.js'
 /** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-/** @import { SummaryLogRowStatesRepository, WasteBalanceLedgerId } from '#waste-records/repository/port.js' */
+/** @import { LedgerLackingNumbers, SummaryLogRowStatesRepository, WasteBalanceLedgerId } from '#waste-records/repository/port.js' */
 /** @import { RowStateNumbers } from '#waste-records/repository/schema.js' */
 
 /**
@@ -26,25 +26,28 @@ import { auditRowStateNumbersBackfill } from './audit.js'
  * @typedef {ReasonedBackfillResult} RowStateBackfillResult
  */
 
-/** @type {[keyof RowStateNumbers, string][]} */
-const NO_NUMBER = [
-  ['organisationNumber', 'no organisation number'],
-  ['registrationNumber', 'no registration number'],
-  ['accreditationNumber', 'no accreditation number']
-]
+/** @type {Record<keyof RowStateNumbers, string>} */
+const NO_NUMBER = {
+  organisationNumber: 'no organisation number',
+  registrationNumber: 'no registration number',
+  accreditationNumber: 'no accreditation number'
+}
 
 /** @param {WasteBalanceLedgerId} ledgerId */
 const ledgerKey = ({ organisationId, registrationId, accreditationId }) =>
   `${organisationId}/${registrationId}/${accreditationId}`
 
 /**
+ * The numbers the ledger's row states lack that its organisation record
+ * gives, and why the rest cannot be given.
+ *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {LedgerLackingNumbers} ledger
  * @returns {Promise<{ numbers: RowStateNumbers, unmapped: string[] }>}
  */
 const lookUpNumbers = async (
   organisationsRepository,
-  { organisationId, registrationId, accreditationId }
+  { ledgerId: { organisationId, registrationId, accreditationId }, lacking }
 ) => {
   try {
     const organisation = await organisationsRepository.findById(organisationId)
@@ -52,10 +55,16 @@ const lookUpNumbers = async (
       registrationId,
       accreditationId
     })
-    const unmapped = NO_NUMBER.filter(
-      ([key]) => numbers[key] === undefined
-    ).map(([, reason]) => reason)
-    return { numbers, unmapped }
+    return {
+      numbers: Object.fromEntries(
+        lacking
+          .filter((key) => numbers[key] !== undefined)
+          .map((key) => [key, numbers[key]])
+      ),
+      unmapped: lacking
+        .filter((key) => numbers[key] === undefined)
+        .map((key) => NO_NUMBER[key])
+    }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
       return { numbers: {}, unmapped: ['organisation not found'] }
@@ -70,7 +79,7 @@ const lookUpNumbers = async (
  * for reconciliation and counted apart from write failures.
  *
  * @param {Repositories} repositories
- * @param {{ ledgerId: WasteBalanceLedgerId, documents: number }} lacking
+ * @param {LedgerLackingNumbers} ledger
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
  * @returns {Promise<{ documents: number, mapped: number, unmapped: string[], auditFailed: boolean }>}
@@ -81,13 +90,14 @@ const backfillLedger = async (
     systemLogsRepository,
     organisationsRepository
   },
-  { ledgerId, documents },
+  ledger,
   isDryRun,
   logger
 ) => {
+  const { ledgerId, documents } = ledger
   const { numbers, unmapped } = await lookUpNumbers(
     organisationsRepository,
-    ledgerId
+    ledger
   )
   const outcome = { documents, mapped: 0, unmapped, auditFailed: false }
   if (Object.keys(numbers).length === 0) {
@@ -153,9 +163,7 @@ export const backfillRowStateNumbers = async (
     backfillOne: (key) =>
       backfillLedger(
         repositories,
-        /** @type {{ ledgerId: WasteBalanceLedgerId, documents: number }} */ (
-          byKey.get(key)
-        ),
+        /** @type {LedgerLackingNumbers} */ (byKey.get(key)),
         isDryRun,
         logger
       ),

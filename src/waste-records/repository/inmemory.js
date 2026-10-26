@@ -40,6 +40,10 @@ import { ROW_STATE_NUMBER_KEYS } from './schema.js'
  */
 
 /**
+ * @typedef {import('./port.js').LedgerLackingNumbers} LedgerLackingNumbers
+ */
+
+/**
  * @param {SummaryLogRowState} doc
  * @param {WasteBalanceLedgerId} ledgerId
  */
@@ -211,16 +215,20 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 /**
  * @param {SummaryLogRowState} doc
  */
-const lacksNumber = (doc) =>
-  ROW_STATE_NUMBER_KEYS.some((key) => doc[key] === undefined)
+const numbersLackedBy = (doc) =>
+  ROW_STATE_NUMBER_KEYS.filter((key) => doc[key] === undefined)
 
 /**
  * @param {SummaryLogRowState[]} storage
  */
 const ledgerIdsWithoutNumbers = (storage) => {
-  /** @type {Map<string, { ledgerId: WasteBalanceLedgerId, documents: number }>} */
+  /** @type {Map<string, LedgerLackingNumbers>} */
   const byLedger = new Map()
-  for (const doc of storage.filter(lacksNumber)) {
+  for (const doc of storage) {
+    const lacked = numbersLackedBy(doc)
+    if (lacked.length === 0) {
+      continue
+    }
     const { organisationId, registrationId, accreditationId } = doc
     const key = JSON.stringify([
       organisationId,
@@ -229,9 +237,13 @@ const ledgerIdsWithoutNumbers = (storage) => {
     ])
     const found = byLedger.get(key) ?? {
       ledgerId: { organisationId, registrationId, accreditationId },
-      documents: 0
+      documents: 0,
+      lacking: []
     }
     found.documents += 1
+    found.lacking = ROW_STATE_NUMBER_KEYS.filter(
+      (number) => found.lacking.includes(number) || lacked.includes(number)
+    )
     byLedger.set(key, found)
   }
   return [...byLedger.values()]

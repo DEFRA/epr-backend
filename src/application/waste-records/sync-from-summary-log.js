@@ -150,6 +150,9 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
  * The numbers the row states are stored with, read from the organisation
  * record. An id without a number gives none.
  *
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {{ organisationId: string, registrationId: string }} summaryLog
+ * @param {string | null} accreditationId
  * @returns {Promise<import('#domain/organisations/numbers.js').Numbers>}
  */
 const resolveNumbers = async (

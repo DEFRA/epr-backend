@@ -228,6 +228,28 @@ describe('backfillRowStateNumbers', () => {
     expect(rowState).not.toHaveProperty('registrationNumber')
   })
 
+  it('neither counts nor audits again a ledger whose remaining numbers it cannot find', async () => {
+    const unnumbered = {
+      organisationId,
+      registrationId: unnumberedRegistrationId,
+      accreditationId: null
+    }
+    await storeRowStates(unnumbered, 2)
+    await run(false)
+
+    expect(await run(false)).toEqual({
+      missing: 2,
+      mapped: 0,
+      unmapped: 2,
+      unmappedReasons: {
+        'no registration number': [`${ledgerKey(unnumbered)} (2)`]
+      },
+      failed: 0,
+      auditFailed: 0
+    })
+    expect(await systemLogs()).toHaveLength(1)
+  })
+
   it('leaves only the unmapped ledgers for the next run', async () => {
     const organisationGone = {
       organisationId: missingOrganisationId,
