@@ -76,11 +76,12 @@ describe('GET /organisations/{organisationNumber}', () => {
 
   const { server, serve, serveStored, get } = useViewServer()
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('serves the organisation without the fields that are not served', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01') })
-    onTestFinished(() => {
-      vi.useRealTimers()
-    })
     const linked = buildLinkedDefraOrg('defra-org-1', 'Defra Org')
     const organisation = buildAccreditedOrganisation({
       linkedDefraOrganisation: linked
@@ -304,10 +305,6 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   describe('relevant year', () => {
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
     it.for([
       {
         description: 'open during the year',
@@ -372,10 +369,6 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
     })
 
     it('serves the registrations approved in the year with that year’s accreditations', async () => {
