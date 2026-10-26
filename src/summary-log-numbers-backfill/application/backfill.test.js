@@ -4,7 +4,7 @@ import Boom from '@hapi/boom'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
   summaryLogFactory,
-  withoutYear
+  withoutAccreditationId
 } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -102,7 +102,7 @@ describe('backfillSummaryLogNumbers', () => {
     )
     await summaryLogsRepository.insert(
       'before-accreditation',
-      withoutYear(summaryLogFactory.validated(ids))
+      withoutAccreditationId(summaryLogFactory.validated(ids))
     )
     await summaryLogsRepository.insert(
       'partly-numbered',
