@@ -110,6 +110,15 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
+ * The numbers a PRN stores beside its organisation and registration ids.
+ *
+ * @typedef {{
+ *   organisationNumber?: import('#domain/organisations/numbers.js').OrganisationNumber,
+ *   registrationNumber?: import('#domain/organisations/numbers.js').RegistrationNumber
+ * }} PrnNumbers
+ */
+
+/**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
@@ -121,6 +130,12 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  * @property {(params: UpdateWatermarkParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateWatermark
  * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
+ * @property {() => Promise<string[]>} findIdsWithoutNumbers
+ *   The ids of PRNs lacking the organisation or registration number.
+ * @property {(id: string, numbers: PrnNumbers) => Promise<void>} assignNumbers
+ *   Adds numbers to a PRN stored without them, refusing to overwrite a number
+ *   it already holds. Bumps the version, so a transition that read the PRN
+ *   before the numbers were added conflicts rather than drop them.
  */
 
 /**
