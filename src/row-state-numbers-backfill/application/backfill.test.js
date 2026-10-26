@@ -11,6 +11,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { backfillRowStateNumbers } from './backfill.js'
@@ -219,6 +220,35 @@ describe('backfillRowStateNumbers', () => {
           'no accreditation number': [`${ledgerKey(unnumbered)} (2)`],
           'registration not found': [`${ledgerKey(notHeld)} (1)`],
           'accreditation not found': [`${ledgerKey(notHeld)} (1)`]
+        },
+        failed: 0,
+        auditFailed: 0
+      })
+    })
+
+    it('counts as mapped only the row states lacking a number it can find', async () => {
+      const unnumbered = {
+        organisationId,
+        registrationId: unnumberedRegistrationId,
+        accreditationId: null
+      }
+      await storeRowStates(unnumbered, 1)
+      await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+        {
+          ...unnumbered,
+          organisationNumber: toOrganisationNumber(numbers.organisationNumber),
+          accreditationNumber: null
+        },
+        [buildSummaryLogRowStateEntry({ rowId: 'row-written-since' })],
+        'log-2'
+      )
+
+      expect(await run(isDryRun)).toEqual({
+        missing: 2,
+        mapped: 1,
+        unmapped: 2,
+        unmappedReasons: {
+          'no registration number': [`${ledgerKey(unnumbered)} (2)`]
         },
         failed: 0,
         auditFailed: 0

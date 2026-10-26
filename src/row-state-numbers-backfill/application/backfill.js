@@ -113,7 +113,13 @@ const backfillLedger = async (
     return outcome
   }
   if (isDryRun) {
-    return { ...outcome, mapped: documents }
+    return {
+      ...outcome,
+      mapped: await summaryLogRowStatesRepository.countRowStatesLacking(
+        ledgerId,
+        numbers
+      )
+    }
   }
 
   const rowStates = await summaryLogRowStatesRepository.assignNumbers(

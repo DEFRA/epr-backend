@@ -454,6 +454,30 @@ const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
 }
 
 /**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RowStateNumbers} given
+ */
+const lackingGivenNumbersFilter = (ledgerId, given) => ({
+  organisationId: ledgerId.organisationId,
+  registrationId: ledgerId.registrationId,
+  accreditationId: ledgerId.accreditationId,
+  $or: Object.keys(given).map((key) => ({ [key]: { $exists: false } }))
+})
+
+/**
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
+ */
+const performCountRowStatesLacking =
+  (collection) => async (ledgerId, numbers) => {
+    const given = numbersHeldBy(validateRowStateNumbers(numbers))
+    if (Object.keys(given).length === 0) {
+      return 0
+    }
+    return collection.countDocuments(lackingGivenNumbersFilter(ledgerId, given))
+  }
+
+/**
  * One update over every row state of the ledger, each number set only where
  * the row state lacks it.
  *
@@ -462,18 +486,12 @@ const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
  */
 const performAssignNumbers = (collection) => async (ledgerId, numbers) => {
   const given = numbersHeldBy(validateRowStateNumbers(numbers))
-  const keys = Object.keys(given)
-  if (keys.length === 0) {
+  if (Object.keys(given).length === 0) {
     return 0
   }
 
   const { modifiedCount } = await collection.updateMany(
-    {
-      organisationId: ledgerId.organisationId,
-      registrationId: ledgerId.registrationId,
-      accreditationId: ledgerId.accreditationId,
-      $or: keys.map((key) => ({ [key]: { $exists: false } }))
-    },
+    lackingGivenNumbersFilter(ledgerId, given),
     [
       {
         $set: Object.fromEntries(
@@ -514,6 +532,7 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
       performStreamRowStatesForSummaryLogs(collection),
     findDistinctDataKeys: performFindDistinctDataKeys(collection),
     findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),
+    countRowStatesLacking: performCountRowStatesLacking(collection),
     assignNumbers: performAssignNumbers(collection)
   })
 }

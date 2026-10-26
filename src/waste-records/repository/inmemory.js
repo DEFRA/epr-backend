@@ -250,26 +250,42 @@ const ledgerIdsWithoutNumbers = (storage) => {
 }
 
 /**
+ * @param {SummaryLogRowState} doc
+ * @param {RowStateNumbers} numbers
+ */
+const givenNumbersLackedBy = (doc, numbers) =>
+  ROW_STATE_NUMBER_KEYS.filter(
+    (key) => numbers[key] !== undefined && doc[key] === undefined
+  )
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RowStateNumbers} numbers
+ */
+const rowStatesLacking = (storage, ledgerId, numbers) =>
+  storage.filter(
+    (doc) =>
+      matchesLedgerIdentity(doc, ledgerId) &&
+      givenNumbersLackedBy(doc, numbers).length > 0
+  )
+
+/**
  * @param {SummaryLogRowState[]} storage
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {RowStateNumbers} numbers
  */
 const assignNumbersTo = (storage, ledgerId, numbers) => {
-  let changed = 0
-  for (const doc of storage) {
-    if (!matchesLedgerIdentity(doc, ledgerId)) {
-      continue
-    }
-    const lacking = ROW_STATE_NUMBER_KEYS.filter(
-      (key) => numbers[key] !== undefined && doc[key] === undefined
-    )
+  const lacking = rowStatesLacking(storage, ledgerId, numbers)
+  for (const doc of lacking) {
     Object.assign(
       doc,
-      Object.fromEntries(lacking.map((key) => [key, numbers[key]]))
+      Object.fromEntries(
+        givenNumbersLackedBy(doc, numbers).map((key) => [key, numbers[key]])
+      )
     )
-    changed += Number(lacking.length > 0)
   }
-  return changed
+  return lacking.length
 }
 
 /**
@@ -336,6 +352,14 @@ const repositoryOver = (storage) => ({
   findDistinctDataKeys: async () => distinctDataKeys(storage),
 
   findLedgerIdsWithoutNumbers: async () => ledgerIdsWithoutNumbers(storage),
+
+  /**
+   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {RowStateNumbers} numbers
+   */
+  countRowStatesLacking: async (ledgerId, numbers) =>
+    rowStatesLacking(storage, ledgerId, validateRowStateNumbers(numbers))
+      .length,
 
   /**
    * @param {WasteBalanceLedgerId} ledgerId

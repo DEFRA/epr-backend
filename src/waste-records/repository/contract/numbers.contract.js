@@ -173,6 +173,48 @@ export const testNumbersBehaviour = (it) => {
       })
     })
 
+    describe('countRowStatesLacking', () => {
+      it('counts the ledger’s row states lacking one of the numbers given, as assignNumbers would change', async () => {
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          {
+            ...DEFAULT_LEDGER_ID,
+            organisationNumber: NUMBERS.organisationNumber,
+            accreditationNumber: NUMBERS.accreditationNumber
+          },
+          [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          REGISTERED_ONLY_LEDGER_ID,
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+        const given = { organisationNumber: NUMBERS.organisationNumber }
+
+        expect(
+          await repository.countRowStatesLacking(DEFAULT_LEDGER_ID, given)
+        ).toBe(1)
+        expect(await repository.assignNumbers(DEFAULT_LEDGER_ID, given)).toBe(1)
+      })
+
+      it('counts nothing when given no numbers', async () => {
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+
+        expect(
+          await repository.countRowStatesLacking(DEFAULT_LEDGER_ID, {})
+        ).toBe(0)
+      })
+    })
+
     describe('assignNumbers', () => {
       it('adds the numbers to every row state of the ledger, returning how many it changed', async () => {
         await repository.upsertSummaryLogRowStates(

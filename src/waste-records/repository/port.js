@@ -98,6 +98,9 @@
  *   registration or accreditation number, with how many do and which numbers
  *   they lack, in the order organisation, registration, accreditation. A
  *   registered-only row state's null accreditation number is held.
+ * @property {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>} countRowStatesLacking
+ *   How many of the ledger's row states lack one of the numbers given: the
+ *   row states `assignNumbers` would change.
  * @property {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>} assignNumbers
  *   Adds to each of the ledger's row states the numbers it lacks, keeping any
  *   it already holds, and returns how many row states it changed.
