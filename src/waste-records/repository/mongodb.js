@@ -18,10 +18,20 @@ import { createHash } from 'node:crypto'
  * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
+/**
+ * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
+ */
+
+/**
+ * @typedef {import('./port.js').NumberedLedgerId} NumberedLedgerId
+ */
+
 import {
+  validateRowStateNumbers,
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
+import { ROW_STATE_NUMBER_KEYS } from './schema.js'
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
@@ -163,6 +173,17 @@ const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
 })
 
 /**
+ * @param {RowStateNumbers} numbers
+ * @returns {RowStateNumbers}
+ */
+const numbersHeldBy = (numbers) =>
+  Object.fromEntries(
+    ROW_STATE_NUMBER_KEYS.filter((key) => numbers[key] !== undefined).map(
+      (key) => [key, numbers[key]]
+    )
+  )
+
+/**
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
  * @param {string} summaryLogId
@@ -174,6 +195,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
+        ...numbersHeldBy(candidate),
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -185,15 +207,13 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
 })
 
 /**
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {NumberedLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
  */
 const prepareRowState = (ledgerId, entry, summaryLogId) => {
   const candidate = validateSummaryLogRowStateInsert({
-    organisationId: ledgerId.organisationId,
-    registrationId: ledgerId.registrationId,
-    accreditationId: ledgerId.accreditationId,
+    ...ledgerId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     processingType: entry.processingType,
@@ -213,7 +233,7 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
  * their content-addressed identity.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
  */
 const performUpsertSummaryLogRowStates =
   (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {
@@ -392,6 +412,74 @@ const performFindDistinctDataKeys = (collection) => async () => {
   return docs.map((doc) => /** @type {string} */ (doc._id))
 }
 
+const LACKING_A_NUMBER = {
+  $or: ROW_STATE_NUMBER_KEYS.map((key) => ({ [key]: { $exists: false } }))
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {() => Promise<Array<{ ledgerId: WasteBalanceLedgerId, documents: number }>>}
+ */
+const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
+  const groups = await collection
+    .aggregate([
+      { $match: LACKING_A_NUMBER },
+      {
+        $group: {
+          _id: {
+            organisationId: '$organisationId',
+            registrationId: '$registrationId',
+            accreditationId: '$accreditationId'
+          },
+          documents: { $sum: 1 }
+        }
+      }
+    ])
+    .toArray()
+  return groups.map(({ _id, documents }) => ({ ledgerId: _id, documents }))
+}
+
+/**
+ * One update over every row state of the ledger, each number set only where
+ * the row state lacks it.
+ *
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
+ */
+const performAssignNumbers = (collection) => async (ledgerId, numbers) => {
+  const given = numbersHeldBy(validateRowStateNumbers(numbers))
+  const keys = Object.keys(given)
+  if (keys.length === 0) {
+    return 0
+  }
+
+  const { modifiedCount } = await collection.updateMany(
+    {
+      organisationId: ledgerId.organisationId,
+      registrationId: ledgerId.registrationId,
+      accreditationId: ledgerId.accreditationId,
+      $or: keys.map((key) => ({ [key]: { $exists: false } }))
+    },
+    [
+      {
+        $set: Object.fromEntries(
+          Object.entries(given).map(([key, value]) => [
+            key,
+            {
+              $cond: [
+                { $eq: [{ $type: `$${key}` }, 'missing'] },
+                { $literal: value },
+                `$${key}`
+              ]
+            }
+          ])
+        )
+      }
+    ]
+  )
+  return modifiedCount
+}
+
 /**
  * Creates a MongoDB-backed summary-log row state repository.
  *
@@ -410,6 +498,8 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     findRowHistory: performFindRowHistory(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection)
+    findDistinctDataKeys: performFindDistinctDataKeys(collection),
+    findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),
+    assignNumbers: performAssignNumbers(collection)
   })
 }

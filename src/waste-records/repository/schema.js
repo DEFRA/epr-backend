@@ -29,6 +29,14 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
+ * The numbers a row state stores beside its ledger identity's ids. A
+ * registered-only row state's accreditation number is `null`, and an id with
+ * no number has none.
+ *
+ * @typedef {import('#domain/organisations/numbers.js').Numbers} RowStateNumbers
+ */
+
+/**
  * A single row from the 1.1 per-row classification list — the unit
  * `upsertSummaryLogRowStates` compares and stores. Carries no ledger-identity fields (supplied
  * separately) and no membership (assigned at write).
@@ -51,7 +59,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * a row entry's content + classification, and the membership of submissions
  * that produced this exact state.
  *
- * @typedef {WasteBalanceLedgerId & {
+ * @typedef {WasteBalanceLedgerId & RowStateNumbers & {
  *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
  *   rowId: string,
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
@@ -82,10 +90,17 @@ const classificationSchema = Joi.object({
   transactionAmount: Joi.number().required()
 })
 
+const numbersKeys = {
+  organisationNumber: Joi.string(),
+  registrationNumber: Joi.string(),
+  accreditationNumber: Joi.string().allow(null)
+}
+
 export const summaryLogRowStateInsertSchema = Joi.object({
   organisationId: Joi.string().required(),
   registrationId: Joi.string().required(),
   accreditationId: Joi.string().allow(null).required(),
+  ...numbersKeys,
   wasteRecordType: Joi.string()
     .valid(...Object.values(WASTE_RECORD_TYPE))
     .required(),
@@ -100,4 +115,10 @@ export const summaryLogRowStateReadSchema = summaryLogRowStateInsertSchema.keys(
   {
     id: Joi.string().required()
   }
+)
+
+export const rowStateNumbersSchema = Joi.object(numbersKeys)
+
+export const ROW_STATE_NUMBER_KEYS = /** @type {(keyof RowStateNumbers)[]} */ (
+  Object.keys(numbersKeys)
 )

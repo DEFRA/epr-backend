@@ -17,6 +17,7 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
@@ -143,6 +144,21 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
     summaryLog.registrationId
   )
   return registration?.accreditationId
+}
+
+/**
+ * The numbers the row states are stored with, read from the organisation
+ * record. An id without a number gives none.
+ *
+ * @returns {Promise<import('#domain/organisations/numbers.js').Numbers>}
+ */
+const resolveNumbers = async (
+  organisationsRepository,
+  { organisationId, registrationId },
+  accreditationId
+) => {
+  const organisation = await organisationsRepository.findById(organisationId)
+  return numbersFor(organisation, { registrationId, accreditationId }).numbers
 }
 
 const resolveAccreditation = async (
@@ -317,6 +333,7 @@ const countRecordChanges = async ({
  * @param {object} params
  * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
  * @param {string | undefined} params.accreditationId
+ * @param {import('#domain/organisations/numbers.js').Numbers} params.numbers
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
@@ -328,6 +345,7 @@ const countRecordChanges = async ({
 const commitStateAndBalance = async ({
   summaryLog,
   accreditationId,
+  numbers,
   accreditation,
   wasteRecords,
   overseasSites,
@@ -343,7 +361,8 @@ const commitStateAndBalance = async ({
     ledgerId: {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null
+      accreditationId: accreditationId ?? null,
+      ...numbers
     },
     overseasSites,
     summaryLogId: summaryLog.file.id
@@ -471,6 +490,11 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLog,
       accreditationId,
+      numbers: await resolveNumbers(
+        organisationsRepository,
+        summaryLog,
+        accreditationId ?? null
+      ),
       accreditation,
       wasteRecords,
       overseasSites,
