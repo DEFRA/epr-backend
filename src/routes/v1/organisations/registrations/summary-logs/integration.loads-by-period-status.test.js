@@ -26,7 +26,10 @@ import {
   EXPORTER_HEADERS,
   pollForValidation,
   pollWhileStatus,
-  setupWasteBalanceIntegrationEnvironment
+  setupWasteBalanceIntegrationEnvironment,
+  createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
+  tableOf
 } from './integration-test-helpers.js'
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
@@ -931,68 +934,15 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   // A registered-only operator has no accreditation, so it reports on a
   // quarterly cadence and its loads carry no waste-balance classifier.
-  const registeredOnlyMeta = {
-    REGISTRATION_NUMBER: {
-      value: 'REG-123',
-      location: { sheet: 'Cover', row: 1, column: 'B' }
-    },
-    PROCESSING_TYPE: {
-      value: 'REPROCESSOR_REGISTERED_ONLY',
-      location: { sheet: 'Cover', row: 2, column: 'B' }
-    },
-    MATERIAL: {
-      value: 'Paper_and_board',
-      location: { sheet: 'Cover', row: 3, column: 'B' }
-    },
-    TEMPLATE_VERSION: {
-      value: 2.1,
-      location: { sheet: 'Cover', row: 4, column: 'B' }
-    }
-  }
-
-  /**
-   * @param {string} sheet
-   * @param {Record<string, unknown>[]} rows
-   */
-  const tableOf = (sheet, rows) => ({
-    location: { sheet, row: TABLE_HEADER_ROW, column: 'A' },
-    headers: Object.keys(rows[0] ?? {}),
-    rows: rows.map((row, index) => ({
-      rowNumber: FIRST_DATA_ROW + index,
-      values: Object.values(row)
-    }))
-  })
-
-  /**
-   * @param {{ rowId: number, month: string }} load
-   * @param {{ monthHeader?: string, tonnageHeader?: string }} [headers]
-   */
-  const registeredOnlyReceivedRow = (
-    { rowId, month },
-    {
-      monthHeader = 'MONTH_RECEIVED_FOR_REPROCESSING',
-      tonnageHeader = 'TONNAGE_RECEIVED_FOR_RECYCLING'
-    } = {}
-  ) => ({
-    ROW_ID: rowId,
-    [monthHeader]: month,
-    NET_WEIGHT: 10.5,
-    HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
-    RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
-    [tonnageHeader]: 9.975,
-    SUPPLIER_NAME: 'Supplier Co',
-    SUPPLIER_ADDRESS: '1 High St',
-    SUPPLIER_POSTCODE: 'SW1A 1AA',
-    SUPPLIER_EMAIL: 'supplier@example.com',
-    SUPPLIER_PHONE_NUMBER: '01234567',
-    ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
-  })
+  const registeredOnlyMeta = createRegisteredOnlyMeta(
+    'REPROCESSOR_REGISTERED_ONLY'
+  )
 
   /** @param {{ rowId: number, month: string }[]} loads */
   const createRegisteredOnlyUploadData = (loads) => ({
     RECEIVED_LOADS_FOR_REPROCESSING: tableOf(
       'Received',
-      loads.map((load) => registeredOnlyReceivedRow(load))
+      loads.map((load) => createRegisteredOnlyReceivedRow(load))
     )
   })
 
@@ -1058,7 +1008,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       'file-registered-only-exporter',
       {
         RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          registeredOnlyReceivedRow(
+          createRegisteredOnlyReceivedRow(
             { rowId: 1001, month: '2025-01-01' },
             {
               monthHeader: 'MONTH_RECEIVED_FOR_EXPORT',
@@ -1083,13 +1033,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           }
         ])
       },
-      {
-        ...registeredOnlyMeta,
-        PROCESSING_TYPE: {
-          ...registeredOnlyMeta.PROCESSING_TYPE,
-          value: 'EXPORTER_REGISTERED_ONLY'
-        }
-      }
+      createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY')
     )
     const { loads, loadsByReportingPeriod } = await getCheckPage(
       env,

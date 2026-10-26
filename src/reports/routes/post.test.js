@@ -346,7 +346,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect((await storedQuarterlyReport(created))?.id).not.toBe(firstId)
   })
 
-  it('creates report for non-glass material registration', async () => {
+  it('creates an exporter report for a non-glass material registration', async () => {
     const created = await createServer({ wasteProcessingType: 'exporter' })
 
     const response = await created.post()

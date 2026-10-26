@@ -27,6 +27,9 @@ import {
   createStandardMeta,
   createTestInfrastructure,
   setupWasteBalanceIntegrationEnvironment,
+  createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
+  tableOf,
   REPROCESSED_LOADS_HEADERS,
   createReprocessedRowValues,
   servedTestRegistration,
@@ -913,15 +916,6 @@ describe('Advanced validation scenarios', () => {
   })
 
   describe('registered-only received loads with invalid fields', () => {
-    const supplierColumns = {
-      SUPPLIER_NAME: 'Supplier Co',
-      SUPPLIER_ADDRESS: '1 High St',
-      SUPPLIER_POSTCODE: 'SW1A 1AA',
-      SUPPLIER_EMAIL: 'supplier@example.com',
-      SUPPLIER_PHONE_NUMBER: '01234567',
-      ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
-    }
-
     it.each([
       {
         processingType: 'REPROCESSOR_REGISTERED_ONLY',
@@ -952,31 +946,21 @@ describe('Advanced validation scenarios', () => {
         })
         const summaryLogId = `summary-${processingType}-invalid`
         const fileId = `file-${processingType}-invalid`
-        const row = {
-          ROW_ID: 1001,
-          [monthHeader]: '30-06-2025',
-          NET_WEIGHT: -1,
-          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'invalid',
-          RECYCLABLE_PROPORTION_PERCENTAGE: 1.22,
-          [tonnageHeader]: -18.5,
-          ...supplierColumns
-        }
-        const { ACCREDITATION_NUMBER: _noAccreditation, ...accreditedMeta } =
-          createStandardMeta(processingType)
         env.fileDataMap[fileId] = {
-          meta: {
-            ...accreditedMeta,
-            TEMPLATE_VERSION: {
-              value: 2.1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
-            }
-          },
+          meta: createRegisteredOnlyMeta(processingType),
           data: {
-            [table]: {
-              location: { sheet: 'Received', row: 7, column: 'A' },
-              headers: Object.keys(row),
-              rows: [{ rowNumber: 8, values: Object.values(row) }]
-            }
+            [table]: tableOf('Received', [
+              {
+                ...createRegisteredOnlyReceivedRow(
+                  { rowId: 1001, month: '30-06-2025' },
+                  { monthHeader, tonnageHeader }
+                ),
+                NET_WEIGHT: -1,
+                HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'invalid',
+                RECYCLABLE_PROPORTION_PERCENTAGE: 1.22,
+                [tonnageHeader]: -18.5
+              }
+            ])
           }
         }
 

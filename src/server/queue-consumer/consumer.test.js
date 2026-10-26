@@ -1170,32 +1170,41 @@ describe('createCommandQueueConsumer', () => {
           )
         })
 
-        it('marks as submission_failed when a report was submitted after the log was created', async () => {
+        /** @param {string} createdAt */
+        const submitLogCreatedAt = async (createdAt) => {
           await summaryLogsRepository.insert(
             'log-123',
             summaryLogFactory.submitting({
               organisationId: DEFAULT_ORG_ID,
-              registrationId: DEFAULT_REG_ID
+              registrationId: DEFAULT_REG_ID,
+              createdAt,
+              meta: {}
             })
           )
           await createAndSubmitReport(reportsRepository)
 
-          const message = {
+          await handleMessage({
             MessageId: 'msg-123',
             Body: JSON.stringify({
               command: 'submit',
               summaryLogId: 'log-123',
               user: TEST_USER
             })
-          }
-
-          await handleMessage(message)
+          })
 
           const { summaryLog } = await waitForVersion(
             summaryLogsRepository,
             'log-123',
             2
           )
+          return summaryLog
+        }
+
+        it('marks as submission_failed when a report was submitted after the log was created', async () => {
+          const summaryLog = await submitLogCreatedAt(
+            '2024-01-01T00:00:00.000Z'
+          )
+
           expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
           expect(logger.error).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -1205,6 +1214,16 @@ describe('createCommandQueueConsumer', () => {
               })
             })
           )
+        })
+
+        it('submits when the only report was submitted before the log was created', async () => {
+          const anHourFromNow = new Date(Date.now() + 60 * 60 * 1000)
+
+          const summaryLog = await submitLogCreatedAt(
+            anHourFromNow.toISOString()
+          )
+
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
         })
       })
 

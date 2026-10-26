@@ -314,30 +314,44 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     'refuses a %s callback followed by a %s callback, naming the move from %s to %s',
     async (firstFileStatus, secondFileStatus, fromStatus, toStatus) => {
       const summaryLogId = randomUUID()
-      /** @param {string} fileStatus */
-      const payloadWithFileStatus = (fileStatus) => ({
-        ...createCompletePayload(),
-        form: {
-          summaryLogUpload: createFileDetails({
-            fileId: `file-${fileStatus}`,
-            fileStatus,
-            ...(fileStatus === 'pending' && {
-              s3Bucket: undefined,
-              s3Key: undefined
+      const withoutS3Location = { s3Bucket: undefined, s3Key: undefined }
+      /** @type {Record<string, object>} */
+      const callbackByFileStatus = {
+        complete: createCompletePayload('file-complete'),
+        pending: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-pending',
+              fileStatus: 'pending',
+              ...withoutS3Location
             })
-          })
+          }
+        },
+        rejected: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-rejected',
+              fileStatus: 'rejected',
+              ...withoutS3Location,
+              hasError: true,
+              errorMessage: 'The selected file contains a virus'
+            })
+          },
+          numberOfRejectedFiles: 1
         }
-      })
+      }
 
       const first = await server.inject({
         method: 'POST',
         url: uploadCompletedUrl(2026, summaryLogId),
-        payload: payloadWithFileStatus(firstFileStatus)
+        payload: callbackByFileStatus[firstFileStatus]
       })
       const second = await server.inject({
         method: 'POST',
         url: uploadCompletedUrl(2026, summaryLogId),
-        payload: payloadWithFileStatus(secondFileStatus)
+        payload: callbackByFileStatus[secondFileStatus]
       })
 
       expect(first.statusCode).toBe(StatusCodes.ACCEPTED)
