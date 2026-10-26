@@ -148,7 +148,9 @@ describe('MongoDB packaging recycling notes repository', () => {
     it('conflicts when a PRN changes between assigning its numbers and reading it back', async ({
       mongoClient
     }) => {
-      const database = mongoClient.db(DATABASE_NAME)
+      const database = /** @type {MongoClient} */ (mongoClient).db(
+        DATABASE_NAME
+      )
       const created = await (
         await createPackagingRecyclingNotesRepository(database, [])
       )(stubLogger()).create(buildAwaitingAuthorisationPrn())
