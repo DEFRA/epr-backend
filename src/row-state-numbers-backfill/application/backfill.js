@@ -26,12 +26,11 @@ import { auditRowStateNumbersBackfill } from './audit.js'
  * @typedef {ReasonedBackfillResult} RowStateBackfillResult
  */
 
-/** @type {Record<keyof RowStateNumbers, string>} */
-const NO_NUMBER = {
-  organisationNumber: 'no organisation number',
-  registrationNumber: 'no registration number',
-  accreditationNumber: 'no accreditation number'
-}
+/**
+ * @param {{ id: string }[]} records
+ * @param {string | null} id
+ */
+const holds = (records, id) => records.some((record) => record.id === id)
 
 /** @param {WasteBalanceLedgerId} ledgerId */
 const ledgerKey = ({ organisationId, registrationId, accreditationId }) =>
@@ -55,6 +54,16 @@ const lookUpNumbers = async (
       registrationId,
       accreditationId
     })
+    /** @type {Record<keyof RowStateNumbers, string>} */
+    const reasons = {
+      organisationNumber: 'no organisation number',
+      registrationNumber: holds(organisation.registrations, registrationId)
+        ? 'no registration number'
+        : 'registration not found',
+      accreditationNumber: holds(organisation.accreditations, accreditationId)
+        ? 'no accreditation number'
+        : 'accreditation not found'
+    }
     return {
       numbers: Object.fromEntries(
         lacking
@@ -63,7 +72,7 @@ const lookUpNumbers = async (
       ),
       unmapped: lacking
         .filter((key) => numbers[key] === undefined)
-        .map((key) => NO_NUMBER[key])
+        .map((key) => reasons[key])
     }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {

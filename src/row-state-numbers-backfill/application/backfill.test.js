@@ -25,6 +25,8 @@ const accreditationId = '6512a0c2f1e4b8a9d0c3e333'
 const unnumberedRegistrationId = '6512a0c2f1e4b8a9d0c3e444'
 const missingOrganisationId = '6512a0c2f1e4b8a9d0c3e999'
 const missingAccreditationId = '6512a0c2f1e4b8a9d0c3e888'
+const unnumberedAccreditationId = '6512a0c2f1e4b8a9d0c3e555'
+const missingRegistrationId = '6512a0c2f1e4b8a9d0c3e777'
 
 const numbers = {
   organisationNumber: '500123',
@@ -46,7 +48,13 @@ const organisation = buildOrganisation({
       registrationNumber: null
     })
   ],
-  accreditations: [accreditation({ id: accreditationId })]
+  accreditations: [
+    accreditation({ id: accreditationId }),
+    accreditation({
+      id: unnumberedAccreditationId,
+      accreditationNumber: null
+    })
+  ]
 })
 
 const accredited = { organisationId, registrationId, accreditationId }
@@ -189,20 +197,28 @@ describe('backfillRowStateNumbers', () => {
       const unnumbered = {
         organisationId,
         registrationId: unnumberedRegistrationId,
+        accreditationId: unnumberedAccreditationId
+      }
+      const notHeld = {
+        organisationId,
+        registrationId: missingRegistrationId,
         accreditationId: missingAccreditationId
       }
       await storeRowStates(organisationGone, 3)
       await storeRowStates(unnumbered, 2)
+      await storeRowStates(notHeld, 1)
       await storeRowStates(accredited, 1)
 
       expect(await run(isDryRun)).toEqual({
-        missing: 6,
-        mapped: 3,
-        unmapped: 5,
+        missing: 7,
+        mapped: 4,
+        unmapped: 6,
         unmappedReasons: {
           'organisation not found': [`${ledgerKey(organisationGone)} (3)`],
           'no registration number': [`${ledgerKey(unnumbered)} (2)`],
-          'no accreditation number': [`${ledgerKey(unnumbered)} (2)`]
+          'no accreditation number': [`${ledgerKey(unnumbered)} (2)`],
+          'registration not found': [`${ledgerKey(notHeld)} (1)`],
+          'accreditation not found': [`${ledgerKey(notHeld)} (1)`]
         },
         failed: 0,
         auditFailed: 0
