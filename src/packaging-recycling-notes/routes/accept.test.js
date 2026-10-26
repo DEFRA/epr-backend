@@ -255,7 +255,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     const payload = JSON.parse(response.payload)
     expect(payload.code).toBe('CONFLICT')
-    expect(payload.message).toEqual(expect.any(String))
+    expect(payload.message).toBe(
+      `No transition exists from ${currentStatus} to accepted`
+    )
     expect(Object.keys(payload)).toEqual(['code', 'message'])
   })
 
