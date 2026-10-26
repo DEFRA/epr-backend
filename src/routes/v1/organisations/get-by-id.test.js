@@ -222,6 +222,24 @@ describe('GET /v1/organisations/{id}', () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
+
+      it('returns 401 with wrong Basic Auth credentials', async () => {
+        const org = buildOrganisation()
+        await basicAuthRepository.insert(org)
+
+        const response = await basicAuthServer.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: {
+            Authorization: `Basic ${Buffer.from('invalid:invalid').toString('base64')}`
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+        expect(JSON.parse(response.payload).message).toBe(
+          'Missing authentication'
+        )
+      })
     })
   })
 })

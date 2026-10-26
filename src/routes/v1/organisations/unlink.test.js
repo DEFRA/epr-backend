@@ -141,6 +141,9 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Organisation is not linked so cannot be unlinked'
+      )
     })
 
     describe('when the request succeeds', () => {

@@ -41,7 +41,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     mockFindOneAndUpdate.mockClear()
   })
 
-  it('returns 200 and echoes back payload on valid request', async ({
+  it('returns 200 and stores the organisation on a valid request', async ({
     server
   }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
@@ -61,8 +61,17 @@ describe(`${url} route`, { timeout: 10000 }, () => {
 
     const orgId = 500122
     const orgName = 'ACME ltd'
+    const referenceNumber = '12345678901234567890abcd'
 
     expect(response.statusCode).toEqual(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual({
+      orgId,
+      orgName,
+      referenceNumber
+    })
+    expect(mockInsertOne).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ orgId, orgName })
+    )
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
@@ -72,7 +81,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       context: {
         orgId,
         orgName,
-        referenceNumber: expect.any(String)
+        referenceNumber
       }
     })
     expect(sendEmail).toHaveBeenCalledWith(
@@ -81,7 +90,7 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       {
         orgId,
         orgName,
-        referenceNumber: expect.any(String)
+        referenceNumber
       }
     )
     expect(sendEmail).toHaveBeenCalledWith(
@@ -90,12 +99,12 @@ describe(`${url} route`, { timeout: 10000 }, () => {
       {
         orgId,
         orgName,
-        referenceNumber: expect.any(String)
+        referenceNumber
       }
     )
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.any(String),
+        message: `Stored organisation data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -126,6 +135,19 @@ describe(`${url} route`, { timeout: 10000 }, () => {
     expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
+  })
+
+  it('returns 400 if payload is a JSON value that is not an object', async ({
+    server
+  }) => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: JSON.stringify('invalid-data')
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
+    expect(JSON.parse(response.payload).message).toBe('Invalid payload')
   })
 
   it('returns 422 if payload is missing email', async ({ server }) => {

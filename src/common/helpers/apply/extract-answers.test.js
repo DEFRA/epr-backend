@@ -120,6 +120,16 @@ describe('extractOrgId', () => {
   it('should return undefined if organisation id not found', () => {
     expect(extractOrgId([])).toBeUndefined()
   })
+
+  it('should return undefined if organisation id is not a number', () => {
+    const answers = /** @type {Answer[]} */ ([
+      {
+        shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
+        value: 'invalid value'
+      }
+    ])
+    expect(extractOrgId(answers)).toBeUndefined()
+  })
 })
 
 describe('extractOrgName', () => {
