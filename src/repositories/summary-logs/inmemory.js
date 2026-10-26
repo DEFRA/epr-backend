@@ -214,15 +214,6 @@ const uploads = (staleCache, matches) => {
   return found.map(({ _uploadedAt: _u, ...rest }) => rest)
 }
 
-const findAllByOrgReg =
-  (staleCache) => async (organisationId, registrationId) =>
-    uploads(
-      staleCache,
-      (summaryLog) =>
-        summaryLog.organisationId === organisationId &&
-        summaryLog.registrationId === registrationId
-    )
-
 /**
  * A summary log stored before its accreditation was recorded has no
  * accreditation number, and matches every accreditation.
@@ -236,16 +227,11 @@ const matchesAccreditation = (accreditationNumber) => (summaryLog) =>
   summaryLog.accreditationNumber === accreditationNumber
 
 /**
- * A summary log stored before its year was recorded matches every year.
- * `null` and `undefined` are the same year, as in MongoDB.
- *
  * @param {SummaryLogKey['year']} year
  * @returns {SummaryLogMatch}
  */
 const matchesYear = (year) => (summaryLog) =>
-  year === undefined ||
-  (summaryLog.year ?? null) === null ||
-  summaryLog.year === year
+  year === undefined || summaryLog.year === year
 
 /**
  * @param {SummaryLogKey} key
@@ -343,31 +329,19 @@ const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   return signDownload(doc, validatedId)
 }
 
+// A missing accreditation id indexes as null in MongoDB's lock index.
+const sameAccreditationId = (a, b) => (a ?? null) === (b ?? null)
+
 /**
  * Whether `candidate` collides with `subject` for the submitting-lock check:
- * same org/reg, already submitting, and the same year and accreditation. A
- * legacy document (no `year`) only collides with another legacy document,
- * matching today's org/reg-only behaviour until the backfill assigns every
- * document a year.
+ * same org/reg, already submitting, and the same year and accreditation.
  */
-const collidesOnSubmittingLock = (candidate, subject) => {
-  if (
-    candidate.organisationId !== subject.organisationId ||
-    candidate.registrationId !== subject.registrationId ||
-    candidate.status !== 'submitting'
-  ) {
-    return false
-  }
-
-  if (subject.year === undefined) {
-    return candidate.year === undefined
-  }
-
-  return (
-    candidate.year === subject.year &&
-    candidate.accreditationId === subject.accreditationId
-  )
-}
+const collidesOnSubmittingLock = (candidate, subject) =>
+  candidate.organisationId === subject.organisationId &&
+  candidate.registrationId === subject.registrationId &&
+  candidate.status === 'submitting' &&
+  candidate.year === subject.year &&
+  sameAccreditationId(candidate.accreditationId, subject.accreditationId)
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
@@ -438,7 +412,6 @@ export const createInMemorySummaryLogsRepository = () => {
     findById: findById(staleCache),
     findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
     assignNumbers: assignNumbers(storage, staleCache, logger),
-    findAllByOrgReg: findAllByOrgReg(staleCache),
     findLatestSubmitted: findLatestSubmitted(staleCache),
     findAll: findAll(staleCache),
     findAllSummaryLogStatsByRegistrationId:

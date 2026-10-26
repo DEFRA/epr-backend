@@ -29,6 +29,8 @@ const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
 const LEGACY_SUBMITTING_LOCK_INDEX_NAME = 'organisationId_1_registrationId_1'
 const RETIRED_YEAR_SCOPED_ID_INDEX_NAME =
   'organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
+const RETIRED_ID_INDEX_NAME =
+  'organisationId_1_registrationId_1_status_1_submittedAt_-1'
 const IGNORABLE_DROP_INDEX_ERRORS = new Set([
   'IndexNotFound',
   'NamespaceNotFound'
@@ -57,9 +59,7 @@ async function dropIndexIfPresent(collection, name) {
  */
 async function ensureSubmittingLockIndex(collection) {
   // Enforces at most one summary log in 'submitting' status per
-  // org/reg/year/accreditationId. A legacy document has no `year`, so it
-  // indexes as null and still collides with any other legacy document,
-  // matching today's org/reg-only behaviour until the backfill assigns one.
+  // org/reg/year/accreditationId.
   await collection.createIndex(
     { organisationId: 1, registrationId: 1, year: 1, accreditationId: 1 },
     {
@@ -100,15 +100,8 @@ async function ensureCollection(db) {
     submittedAt: -1
   })
 
-  // Serves findAllByOrgReg
-  await collection.createIndex({
-    organisationId: 1,
-    registrationId: 1,
-    status: 1,
-    submittedAt: -1
-  })
-
   await dropIndexIfPresent(collection, RETIRED_YEAR_SCOPED_ID_INDEX_NAME)
+  await dropIndexIfPresent(collection, RETIRED_ID_INDEX_NAME)
 
   return collection
 }
@@ -314,13 +307,9 @@ const uploads = async (db, filter) => {
   })
 }
 
-const findAllByOrgReg = (db) => async (organisationId, registrationId) =>
-  uploads(db, { organisationId, registrationId })
-
 /**
  * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation. One stored before
- * its year was recorded matches every year.
+ * accreditation number, and matches every accreditation.
  *
  * @param {SummaryLogKey} key
  * @returns {Filter<SummaryLogDocument>}
@@ -339,9 +328,7 @@ const keyFilter = (key) => {
     })
   }
   if (year !== undefined) {
-    clauses.push({
-      $or: [{ year }, { year: { $exists: false } }, { year: { $type: 'null' } }]
-    })
+    clauses.push({ year })
   }
   return {
     organisationNumber,
@@ -563,7 +550,6 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     findById: findById(db),
     findIdsWithoutNumbers: findIdsWithoutNumbers(db),
     assignNumbers: assignNumbers(db, logger),
-    findAllByOrgReg: findAllByOrgReg(db),
     findLatestSubmitted: findLatestSubmitted(db),
     findAll: findAll(db),
     findAllSummaryLogStatsByRegistrationId:

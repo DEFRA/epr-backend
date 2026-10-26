@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { summaryLogFactory } from './test-data.js'
+import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
 import {
   SUMMARY_LOG_STATUS,
   calculateExpiresAt
@@ -247,23 +247,38 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result2.success).toBe(false)
     })
 
-    it('blocks a second submission for legacy logs without a year', async () => {
+    it('blocks a registered-only submission while one stored before accreditations were recorded is submitting in the same year', async () => {
       const { organisationId, registrationId } = generateOrgReg()
-      const logId1 = `summary-${randomUUID()}`
-      const logId2 = `summary-${randomUUID()}`
-      const legacy = () => ({
-        ...summaryLogFactory.validated({ organisationId, registrationId }),
-        year: undefined
-      })
+      const unscopedId = `summary-${randomUUID()}`
+      const registeredOnlyId = `summary-${randomUUID()}`
 
-      await repository.insert(logId1, legacy())
-      await repository.insert(logId2, legacy())
+      await repository.insert(
+        unscopedId,
+        withoutAccreditationId(
+          summaryLogFactory.validated({
+            organisationId,
+            registrationId,
+            year: 2026
+          })
+        )
+      )
+      await repository.insert(
+        registeredOnlyId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: 2026,
+          accreditationId: null
+        })
+      )
 
-      const result1 = await repository.transitionToSubmittingExclusive(logId1)
-      const result2 = await repository.transitionToSubmittingExclusive(logId2)
+      const unscoped =
+        await repository.transitionToSubmittingExclusive(unscopedId)
+      const registeredOnly =
+        await repository.transitionToSubmittingExclusive(registeredOnlyId)
 
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(false)
+      expect(unscoped.success).toBe(true)
+      expect(registeredOnly.success).toBe(false)
     })
 
     it('increments version on successful transition', async () => {

@@ -9,15 +9,13 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  summaryLogFactory,
-  withoutYear
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import {
   REPROCESSOR_NUMBER,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -32,8 +30,8 @@ const organisation = buildOrganisation({
   registrations: [registration, otherRegistration]
 })
 
-const organisationId = organisation.id
-const registrationId = registration.id
+const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+const registrationNumber = registration.registrationNumber
 const registrations = `/organisations/${organisation.orgId}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 
@@ -79,27 +77,25 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       await summaryLogsRepository.insert(
         submittedId,
-        withoutYear(
-          summaryLogFactory.submitted({
-            organisationId,
-            registrationId,
-            submittedAt: '2026-02-01T10:00:00.000Z',
-            createdAt: '2026-02-01T09:55:00.000Z',
-            file: { name: 'january.xlsx' }
-          })
-        )
+        summaryLogFactory.submitted({
+          organisationNumber,
+          registrationNumber,
+          year: 2026,
+          submittedAt: '2026-02-01T10:00:00.000Z',
+          createdAt: '2026-02-01T09:55:00.000Z',
+          file: { name: 'january.xlsx' }
+        })
       )
 
       await summaryLogsRepository.insert(
         failedId,
-        withoutYear(
-          summaryLogFactory.validationFailed({
-            organisationId,
-            registrationId,
-            createdAt: '2026-02-02T11:00:00.000Z',
-            file: { name: 'february.xlsx' }
-          })
-        )
+        summaryLogFactory.validationFailed({
+          organisationNumber,
+          registrationNumber,
+          year: 2026,
+          createdAt: '2026-02-02T11:00:00.000Z',
+          file: { name: 'february.xlsx' }
+        })
       )
 
       const response = await list()
@@ -111,25 +107,26 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             summaryLogId: failedId,
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            year: 2026
           },
           {
             summaryLogId: submittedId,
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.SUBMITTED
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            year: 2026
           }
         ]
       })
     })
 
-    it('includes the year, but not the accreditation id', async () => {
+    it('does not include the accreditation id', async () => {
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          year: 2026,
+          organisationNumber,
+          registrationNumber,
           accreditationId: 'acc-1'
         })
       )
@@ -137,23 +134,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const response = await list()
 
       const [row] = JSON.parse(response.payload).summaryLogs
-      expect(row).toMatchObject({ year: 2026 })
       expect(row).not.toHaveProperty('accreditationId')
-    })
-
-    it('omits the year for a legacy log carrying none', async () => {
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        withoutYear(
-          summaryLogFactory.submitted({ organisationId, registrationId })
-        )
-      )
-
-      const response = await list()
-
-      expect(JSON.parse(response.payload).summaryLogs[0]).not.toHaveProperty(
-        'year'
-      )
     })
 
     it('excludes intermediate statuses from the list', async () => {
@@ -165,7 +146,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       ]) {
         await summaryLogsRepository.insert(
           new ObjectId().toString(),
-          build({ organisationId, registrationId })
+          build({ organisationNumber, registrationNumber })
         )
       }
 
@@ -173,8 +154,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await summaryLogsRepository.insert(
         visibleId,
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           submittedAt: '2026-03-01T10:00:00.000Z'
         })
       )
@@ -193,8 +174,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await summaryLogsRepository.insert(
         ownId,
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           submittedAt: '2026-04-01T10:00:00.000Z'
         })
       )
@@ -202,8 +183,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId: new ObjectId().toString(),
-          registrationId,
+          organisationNumber: toOrganisationNumber('999999'),
+          registrationNumber,
           submittedAt: '2026-04-02T10:00:00.000Z'
         })
       )
@@ -211,8 +192,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId: otherRegistration.id,
+          organisationNumber,
+          registrationNumber: otherRegistration.registrationNumber,
           submittedAt: '2026-04-03T10:00:00.000Z'
         })
       )
@@ -230,8 +211,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await summaryLogsRepository.insert(
         failedId,
         summaryLogFactory.invalid({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           createdAt: '2026-05-10T08:00:00.000Z'
         })
       )
@@ -255,8 +236,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
+    it('returns 404 for an unknown organisation', async () => {
+      const response = await list(
+        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
     it('returns 500 when repository throws', async () => {
-      vi.spyOn(summaryLogsRepository, 'findAllByOrgReg').mockRejectedValue(
+      vi.spyOn(summaryLogsRepository, 'findAll').mockRejectedValue(
         new Error('Simulated Database Failure')
       )
 

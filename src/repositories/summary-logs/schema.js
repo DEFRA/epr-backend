@@ -71,7 +71,7 @@ export const summaryLogInsertSchema = Joi.object({
   }),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
-  year: yearSchema().optional(),
+  year: yearSchema().required(),
   accreditationId: Joi.string().allow(null).optional(),
   ...numbersSchema,
   meta: metaSchema.optional(),
