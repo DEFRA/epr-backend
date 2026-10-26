@@ -74,10 +74,15 @@ const seed = async (database) => {
       { ...registeredOnly, rowId: 'row-3', contentHash: 'hash-3' },
       { ...organisationGone, rowId: 'row-4', contentHash: 'hash-4' },
       { ...organisationGone, rowId: 'row-5', contentHash: 'hash-5' }
-    ].map(({ contentHash, ...fields }) => ({
-      ...buildSummaryLogRowState(fields),
-      contentHash
-    }))
+    ].map(({ contentHash, ...fields }) => {
+      const {
+        organisationNumber: _organisationNumber,
+        registrationNumber: _registrationNumber,
+        accreditationNumber: _accreditationNumber,
+        ...storedWithoutNumbers
+      } = buildSummaryLogRowState(fields)
+      return { ...storedWithoutNumbers, contentHash }
+    })
   )
 
   const numbers = {

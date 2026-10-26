@@ -21,6 +21,7 @@ import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 /**
  * @param {string} id
@@ -204,11 +205,11 @@ const buildDeps = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: seed.organisationId ?? 'org-1',
         registrationId: seed.registrationId ?? 'reg-1',
         accreditationId: seed.accreditationId ?? null
-      },
+      }),
       seed.rows ?? [],
       seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID
     )

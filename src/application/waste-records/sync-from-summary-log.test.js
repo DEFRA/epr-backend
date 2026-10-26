@@ -189,6 +189,35 @@ describe('syncFromSummaryLog', () => {
     })
   })
 
+  it('stores no row state its organisation record gives no number for', async () => {
+    const fileId = 'file-numbers-missing'
+    const extractor = extractorFor(
+      fileId,
+      reprocessorInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+    organisationsRepository.findById.mockResolvedValue({
+      id: 'org-1',
+      orgId: 500001,
+      registrations: [{ id: 'reg-1', registrationNumber: null }],
+      accreditations: []
+    })
+
+    await expect(
+      makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+    ).rejects.toThrow(
+      'Cannot store row states without their numbers: registration reg-1 has no registration number'
+    )
+    expect(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        'org-1',
+        'reg-1',
+        fileId
+      )
+    ).toEqual([])
+  })
+
   it('passes through tables that have no schema', async () => {
     const fileId = 'file-no-schema'
     const extractor = extractorFor(fileId, {

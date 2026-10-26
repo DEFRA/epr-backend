@@ -9,9 +9,8 @@ import {
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowState } from '#waste-records/repository/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { backfillRowStateNumbers } from './backfill.js'
@@ -71,6 +70,8 @@ const ledgerKey = ({ organisationId, registrationId, accreditationId }) =>
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 describe('backfillRowStateNumbers', () => {
+  /** @type {*[]} */
+  let rowStateStorage
   /** @type {SummaryLogRowStatesRepository} */
   let summaryLogRowStatesRepository
   /** @type {SystemLogsRepository} */
@@ -82,8 +83,9 @@ describe('backfillRowStateNumbers', () => {
 
   beforeEach(() => {
     logger = createMockLogger()
+    rowStateStorage = []
     summaryLogRowStatesRepository =
-      createInMemorySummaryLogRowStatesRepository()()
+      createInMemorySummaryLogRowStatesRepository(rowStateStorage)()
     systemLogsRepository = createSystemLogsRepository()(logger)
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
@@ -103,20 +105,36 @@ describe('backfillRowStateNumbers', () => {
     )
 
   /**
-   * Row states as stored before the numbers were written beside the ids.
+   * Row states as stored before the numbers were written beside the ids,
+   * holding only the numbers given.
    *
    * @param {*} ledgerId
    * @param {number} rows
-   * @param {string} [summaryLogId]
+   * @param {{ summaryLogId?: string, held?: object }} [options]
    */
-  const storeRowStates = (ledgerId, rows, summaryLogId = 'log-1') =>
-    summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
-      Array.from({ length: rows }, (_, i) =>
-        buildSummaryLogRowStateEntry({ rowId: `row-${i}` })
-      ),
-      summaryLogId
-    )
+  const storeRowStates = (
+    ledgerId,
+    rows,
+    { summaryLogId = 'log-1', held = {} } = {}
+  ) => {
+    for (let i = 0; i < rows; i++) {
+      const {
+        organisationNumber: _organisationNumber,
+        registrationNumber: _registrationNumber,
+        accreditationNumber: _accreditationNumber,
+        ...storedWithoutNumbers
+      } = buildSummaryLogRowState({
+        ...ledgerId,
+        rowId: `row-${i}`,
+        summaryLogIds: [summaryLogId]
+      })
+      rowStateStorage.push({
+        id: `${summaryLogId}/${ledgerKey(ledgerId)}/row-${i}`,
+        ...storedWithoutNumbers,
+        ...held
+      })
+    }
+  }
 
   /** @param {*} ledgerId */
   const stored = (ledgerId, summaryLogId = 'log-1') =>
@@ -130,7 +148,7 @@ describe('backfillRowStateNumbers', () => {
     (await systemLogsRepository.find({ limit: 10 })).systemLogs
 
   it('adds the numbers to each ledger’s row states and audits each ledger as the system user', async () => {
-    await storeRowStates(accredited, 2)
+    storeRowStates(accredited, 2)
 
     expect(await run(false)).toEqual({
       missing: 2,
@@ -157,7 +175,7 @@ describe('backfillRowStateNumbers', () => {
   })
 
   it('gives a registered-only row state a null accreditation number', async () => {
-    await storeRowStates(registeredOnly, 1)
+    storeRowStates(registeredOnly, 1)
 
     await run(false)
 
@@ -167,7 +185,7 @@ describe('backfillRowStateNumbers', () => {
   })
 
   it('reports what it would add without writing or auditing on a dry run', async () => {
-    await storeRowStates(accredited, 2)
+    storeRowStates(accredited, 2)
 
     expect(await run(true)).toEqual({
       missing: 2,
@@ -205,10 +223,10 @@ describe('backfillRowStateNumbers', () => {
         registrationId: missingRegistrationId,
         accreditationId: missingAccreditationId
       }
-      await storeRowStates(organisationGone, 3)
-      await storeRowStates(unnumbered, 2)
-      await storeRowStates(notHeld, 1)
-      await storeRowStates(accredited, 1)
+      storeRowStates(organisationGone, 3)
+      storeRowStates(unnumbered, 2)
+      storeRowStates(notHeld, 1)
+      storeRowStates(accredited, 1)
 
       expect(await run(isDryRun)).toEqual({
         missing: 7,
@@ -232,16 +250,14 @@ describe('backfillRowStateNumbers', () => {
         registrationId: unnumberedRegistrationId,
         accreditationId: null
       }
-      await storeRowStates(unnumbered, 1)
-      await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-        {
-          ...unnumbered,
-          organisationNumber: toOrganisationNumber(numbers.organisationNumber),
+      storeRowStates(unnumbered, 1)
+      storeRowStates(unnumbered, 1, {
+        summaryLogId: 'log-2',
+        held: {
+          organisationNumber: numbers.organisationNumber,
           accreditationNumber: null
-        },
-        [buildSummaryLogRowStateEntry({ rowId: 'row-written-since' })],
-        'log-2'
-      )
+        }
+      })
 
       expect(await run(isDryRun)).toEqual({
         missing: 2,
@@ -262,7 +278,7 @@ describe('backfillRowStateNumbers', () => {
       registrationId: unnumberedRegistrationId,
       accreditationId: null
     }
-    await storeRowStates(unnumbered, 1)
+    storeRowStates(unnumbered, 1)
 
     await run(false)
 
@@ -280,7 +296,7 @@ describe('backfillRowStateNumbers', () => {
       registrationId: unnumberedRegistrationId,
       accreditationId: null
     }
-    await storeRowStates(unnumbered, 2)
+    storeRowStates(unnumbered, 2)
     await run(false)
 
     expect(await run(false)).toEqual({
@@ -302,8 +318,8 @@ describe('backfillRowStateNumbers', () => {
       registrationId,
       accreditationId: null
     }
-    await storeRowStates(accredited, 1)
-    await storeRowStates(organisationGone, 1)
+    storeRowStates(accredited, 1)
+    storeRowStates(organisationGone, 1)
     await run(false)
 
     expect(await run(false)).toEqual({
@@ -325,8 +341,8 @@ describe('backfillRowStateNumbers', () => {
       registrationId,
       accreditationId: null
     }
-    await storeRowStates(failing, 1)
-    await storeRowStates(accredited, 1)
+    storeRowStates(failing, 1)
+    storeRowStates(accredited, 1)
     const outage = new Error('connection lost')
     const findById = organisationsRepository.findById
     organisationsRepository.findById = (id) =>
@@ -348,7 +364,7 @@ describe('backfillRowStateNumbers', () => {
   })
 
   it('counts written but unaudited row states apart from failures', async () => {
-    await storeRowStates(accredited, 1)
+    storeRowStates(accredited, 1)
     const auditError = new Error('system logs down')
     systemLogsRepository.insert = () => Promise.reject(auditError)
 

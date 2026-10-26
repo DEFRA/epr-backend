@@ -2,7 +2,8 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 const NUMBERS = Object.freeze({
@@ -10,6 +11,12 @@ const NUMBERS = Object.freeze({
   registrationNumber: 'REG-1',
   accreditationNumber: 'ACC-1'
 })
+
+const ALL_NUMBERS = [
+  'organisationNumber',
+  'registrationNumber',
+  'accreditationNumber'
+]
 
 const REGISTERED_ONLY_LEDGER_ID = Object.freeze({
   ...DEFAULT_LEDGER_ID,
@@ -19,10 +26,36 @@ const REGISTERED_ONLY_LEDGER_ID = Object.freeze({
 export const testNumbersBehaviour = (it) => {
   describe('numbers', () => {
     let repository
+    /** @type {(keys: string[]) => Promise<unknown>} */
+    let removeStoredNumbers
 
-    beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
-      repository = summaryLogRowStatesRepository()
-    })
+    beforeEach(
+      (
+        /** @type {*} */ {
+          summaryLogRowStatesRepository,
+          removeStoredNumbers: remove
+        }
+      ) => {
+        repository = summaryLogRowStatesRepository()
+        removeStoredNumbers = remove
+      }
+    )
+
+    /**
+     * Row states as stored before the numbers were written beside the ids.
+     *
+     * @param {*} ledgerId
+     * @param {string[]} rowIds
+     * @param {string[]} [missing]
+     */
+    const storeWithout = async (ledgerId, rowIds, missing = ALL_NUMBERS) => {
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(ledgerId),
+        rowIds.map((rowId) => buildSummaryLogRowStateEntry({ rowId })),
+        'log-1'
+      )
+      await removeStoredNumbers(missing)
+    }
 
     it('stores the numbers it is given beside the ids', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
@@ -49,103 +82,92 @@ export const testNumbersBehaviour = (it) => {
       expect(state.accreditationNumber).toBeNull()
     })
 
-    it('stores no number it is not given', async () => {
-      const [state] = await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
-        [buildSummaryLogRowStateEntry()],
-        'log-1'
+    it('rejects a row state without the organisation and registration numbers', async () => {
+      await expect(
+        repository.upsertSummaryLogRowStates(
+          { ...DEFAULT_LEDGER_ID, accreditationNumber: 'ACC-1' },
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+      ).rejects.toThrow(
+        'Invalid row state data: "organisationNumber" is required; "registrationNumber" is required'
       )
+    })
 
-      expect(state).not.toHaveProperty('organisationNumber')
-      expect(state).not.toHaveProperty('registrationNumber')
-      expect(state).not.toHaveProperty('accreditationNumber')
+    it('rejects an accredited row state without an accreditation number', async () => {
+      await expect(
+        repository.upsertSummaryLogRowStates(
+          { ...withNumbers(DEFAULT_LEDGER_ID), accreditationNumber: null },
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+      ).rejects.toThrow(
+        'Invalid row state data: "accreditationNumber" must be a string'
+      )
+    })
+
+    it('rejects an accreditation number on a registered-only row state', async () => {
+      await expect(
+        repository.upsertSummaryLogRowStates(
+          {
+            ...withNumbers(REGISTERED_ONLY_LEDGER_ID),
+            accreditationNumber: 'ACC-1'
+          },
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+      ).rejects.toThrow(
+        'Invalid row state data: "accreditationNumber" must be [null]'
+      )
     })
 
     describe('findLedgerIdsWithoutNumbers', () => {
       it('counts the row states of each ledger lacking a number', async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [
-            buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
-            buildSummaryLogRowStateEntry({ rowId: 'row-2' })
-          ],
-          'log-1'
-        )
-        await repository.upsertSummaryLogRowStates(
-          REGISTERED_ONLY_LEDGER_ID,
+          withNumbers(REGISTERED_ONLY_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
           'log-2'
         )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1', 'row-2'])
 
         const found = await repository.findLedgerIdsWithoutNumbers()
 
         expect(found).toHaveLength(2)
         expect(found).toEqual(
           expect.arrayContaining([
-            {
-              ledgerId: DEFAULT_LEDGER_ID,
-              documents: 2,
-              lacking: [
-                'organisationNumber',
-                'registrationNumber',
-                'accreditationNumber'
-              ]
-            },
+            { ledgerId: DEFAULT_LEDGER_ID, documents: 2, lacking: ALL_NUMBERS },
             {
               ledgerId: REGISTERED_ONLY_LEDGER_ID,
               documents: 1,
-              lacking: [
-                'organisationNumber',
-                'registrationNumber',
-                'accreditationNumber'
-              ]
+              lacking: ALL_NUMBERS
             }
           ])
         )
       })
 
       it('counts only the row states lacking a number', async () => {
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1'])
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
-          'log-1'
-        )
-        await repository.upsertSummaryLogRowStates(
-          { ...DEFAULT_LEDGER_ID, ...NUMBERS },
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
           'log-2'
         )
 
         expect(await repository.findLedgerIdsWithoutNumbers()).toEqual([
-          {
-            ledgerId: DEFAULT_LEDGER_ID,
-            documents: 1,
-            lacking: [
-              'organisationNumber',
-              'registrationNumber',
-              'accreditationNumber'
-            ]
-          }
+          { ledgerId: DEFAULT_LEDGER_ID, documents: 1, lacking: ALL_NUMBERS }
         ])
       })
 
       it('names each number any of the ledger’s row states lacks', async () => {
-        await repository.upsertSummaryLogRowStates(
-          {
-            ...DEFAULT_LEDGER_ID,
-            organisationNumber: NUMBERS.organisationNumber
-          },
-          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
-          'log-1'
+        await storeWithout(
+          DEFAULT_LEDGER_ID,
+          ['row-1'],
+          ['registrationNumber', 'accreditationNumber']
         )
-        await repository.upsertSummaryLogRowStates(
-          {
-            ...DEFAULT_LEDGER_ID,
-            organisationNumber: NUMBERS.organisationNumber,
-            registrationNumber: NUMBERS.registrationNumber
-          },
-          [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
-          'log-2'
+        await storeWithout(
+          DEFAULT_LEDGER_ID,
+          ['row-2'],
+          ['accreditationNumber']
         )
 
         expect(await repository.findLedgerIdsWithoutNumbers()).toEqual([
@@ -159,12 +181,7 @@ export const testNumbersBehaviour = (it) => {
 
       it('takes a null accreditation number as held', async () => {
         await repository.upsertSummaryLogRowStates(
-          {
-            ...REGISTERED_ONLY_LEDGER_ID,
-            organisationNumber: NUMBERS.organisationNumber,
-            registrationNumber: NUMBERS.registrationNumber,
-            accreditationNumber: null
-          },
+          withNumbers(REGISTERED_ONLY_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
@@ -176,24 +193,12 @@ export const testNumbersBehaviour = (it) => {
     describe('countRowStatesLacking', () => {
       it('counts the ledger’s row states lacking one of the numbers given, as assignNumbers would change', async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
-          'log-1'
-        )
-        await repository.upsertSummaryLogRowStates(
-          {
-            ...DEFAULT_LEDGER_ID,
-            organisationNumber: NUMBERS.organisationNumber,
-            accreditationNumber: NUMBERS.accreditationNumber
-          },
-          [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
-          'log-1'
-        )
-        await repository.upsertSummaryLogRowStates(
-          REGISTERED_ONLY_LEDGER_ID,
+          withNumbers(REGISTERED_ONLY_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1'])
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-2'], ['registrationNumber'])
         const given = { organisationNumber: NUMBERS.organisationNumber }
 
         expect(
@@ -203,11 +208,7 @@ export const testNumbersBehaviour = (it) => {
       })
 
       it('counts nothing when given no numbers', async () => {
-        await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1'])
 
         expect(
           await repository.countRowStatesLacking(DEFAULT_LEDGER_ID, {})
@@ -217,14 +218,7 @@ export const testNumbersBehaviour = (it) => {
 
     describe('assignNumbers', () => {
       it('adds the numbers to every row state of the ledger, returning how many it changed', async () => {
-        await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [
-            buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
-            buildSummaryLogRowStateEntry({ rowId: 'row-2' })
-          ],
-          'log-1'
-        )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1', 'row-2'])
 
         expect(await repository.assignNumbers(DEFAULT_LEDGER_ID, NUMBERS)).toBe(
           2
@@ -243,11 +237,7 @@ export const testNumbersBehaviour = (it) => {
       })
 
       it('leaves the row states of another ledger alone', async () => {
-        await repository.upsertSummaryLogRowStates(
-          REGISTERED_ONLY_LEDGER_ID,
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
+        await storeWithout(REGISTERED_ONLY_LEDGER_ID, ['row-1'])
 
         expect(await repository.assignNumbers(DEFAULT_LEDGER_ID, NUMBERS)).toBe(
           0
@@ -256,21 +246,18 @@ export const testNumbersBehaviour = (it) => {
           {
             ledgerId: REGISTERED_ONLY_LEDGER_ID,
             documents: 1,
-            lacking: [
-              'organisationNumber',
-              'registrationNumber',
-              'accreditationNumber'
-            ]
+            lacking: ALL_NUMBERS
           }
         ])
       })
 
       it('keeps a number a row state already holds', async () => {
         await repository.upsertSummaryLogRowStates(
-          { ...DEFAULT_LEDGER_ID, organisationNumber: '500009' },
+          { ...withNumbers(DEFAULT_LEDGER_ID), organisationNumber: '500009' },
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
+        await removeStoredNumbers(['registrationNumber', 'accreditationNumber'])
 
         await repository.assignNumbers(DEFAULT_LEDGER_ID, NUMBERS)
 
@@ -287,11 +274,7 @@ export const testNumbersBehaviour = (it) => {
       })
 
       it('adds only the numbers it is given', async () => {
-        await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1'])
 
         await repository.assignNumbers(DEFAULT_LEDGER_ID, {
           organisationNumber: NUMBERS.organisationNumber
@@ -308,11 +291,7 @@ export const testNumbersBehaviour = (it) => {
       })
 
       it('changes nothing when given no numbers', async () => {
-        await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
+        await storeWithout(DEFAULT_LEDGER_ID, ['row-1'])
 
         expect(await repository.assignNumbers(DEFAULT_LEDGER_ID, {})).toBe(0)
       })
@@ -328,11 +307,7 @@ export const testNumbersBehaviour = (it) => {
       })
 
       it('adds a null accreditation number to a registered-only row state', async () => {
-        await repository.upsertSummaryLogRowStates(
-          REGISTERED_ONLY_LEDGER_ID,
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
+        await storeWithout(REGISTERED_ONLY_LEDGER_ID, ['row-1'])
 
         await repository.assignNumbers(REGISTERED_ONLY_LEDGER_ID, {
           organisationNumber: NUMBERS.organisationNumber,

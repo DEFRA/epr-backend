@@ -22,6 +22,7 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -140,11 +141,11 @@ const createServerWithRepos = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: seed.organisationId ?? 'org-1',
         registrationId: seed.registrationId ?? 'reg-1',
         accreditationId: seed.accreditationId ?? null
-      },
+      }),
       seed.rows ?? [],
       seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
     )

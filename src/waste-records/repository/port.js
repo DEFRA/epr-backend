@@ -37,7 +37,7 @@
 /**
  * A ledger identity with the numbers its row states are written with.
  *
- * @typedef {WasteBalanceLedgerId & RowStateNumbers} NumberedLedgerId
+ * @typedef {WasteBalanceLedgerId & import('./schema.js').RowStateNumbersOnInsert} NumberedLedgerId
  */
 
 /**

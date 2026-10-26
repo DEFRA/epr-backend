@@ -4,7 +4,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 export const testFindRowHistoryBehaviour = (it) => {
@@ -28,17 +29,17 @@ export const testFindRowHistoryBehaviour = (it) => {
 
     it('returns every committed state of a row in insertion order', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ data: { tonnage: 1 } })],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ data: { tonnage: 2 } })],
         'log-2'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ data: { tonnage: 3 } })],
         'log-3'
       )
@@ -54,7 +55,7 @@ export const testFindRowHistoryBehaviour = (it) => {
 
     it('isolates history to the requested row identity', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
           buildSummaryLogRowStateEntry({ rowId: 'row-2' })
@@ -74,7 +75,7 @@ export const testFindRowHistoryBehaviour = (it) => {
 
     it('isolates history by waste-record type for the same rowId', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
@@ -101,17 +102,17 @@ export const testFindRowHistoryBehaviour = (it) => {
       const stateB = buildSummaryLogRowStateEntry({ data: { tonnage: 20 } })
 
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [stateA],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [stateB],
         'log-2'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [stateA],
         'log-3'
       )
