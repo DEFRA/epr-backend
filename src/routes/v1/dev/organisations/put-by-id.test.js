@@ -3,10 +3,16 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach } from 'vitest'
 
@@ -169,5 +175,57 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         'approved'
       )
     })
+  })
+
+  it('suspends an approved accreditation without authentication', async () => {
+    const accreditationId = new ObjectId().toString()
+    const fixture = buildOrganisation({
+      registrations: [reprocessor({ accreditationId })],
+      accreditations: [
+        accreditation({ id: accreditationId, reprocessingType: 'input' })
+      ]
+    })
+    const server = await createTestServer({
+      config: { featureFlags: { devEndpoints: true } },
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(fixture)
+        ]),
+        systemLogsRepository: createSystemLogsRepository()
+      }
+    })
+    const getResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${fixture.id}`,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+    const org = JSON.parse(getResponse.payload)
+    const approved = org.accreditations[0]
+    expect(approved.status).toBe('approved')
+
+    const updateFragment = {
+      ...org,
+      accreditations: [
+        {
+          ...approved,
+          status: 'suspended',
+          statusHistory: [
+            ...approved.statusHistory,
+            { status: 'suspended', updatedAt: '2026-07-02' }
+          ]
+        }
+      ]
+    }
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/dev/organisations/${org.id}`,
+      payload: { version: Number(org.version), updateFragment }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).accreditations[0].status).toBe(
+      'suspended'
+    )
   })
 })

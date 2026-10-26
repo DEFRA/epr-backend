@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -22,6 +23,12 @@ import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -965,6 +972,155 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         })
         expect(events).toHaveLength(1)
         expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+      })
+    })
+
+    describe('through the lifecycle', () => {
+      /** @param {string} status */
+      const transitionTo = async (status) => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `${prns}/${prnId}/status`,
+          ...asOperator(),
+          payload: { status }
+        })
+        return {
+          statusCode: response.statusCode,
+          body: JSON.parse(response.payload)
+        }
+      }
+
+      it('refuses a draft to draft self-transition', async () => {
+        const { statusCode, body } = await transitionTo(PRN_STATUS.DRAFT)
+
+        expect(statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(body.message).toBe('No transition exists from draft to draft')
+      })
+
+      it('discards a draft, then refuses any further transition', async () => {
+        const discarded = await transitionTo(PRN_STATUS.DISCARDED)
+
+        expect(discarded.statusCode).toBe(StatusCodes.OK)
+        expect(discarded.body.status.current).toBe(PRN_STATUS.DISCARDED)
+
+        const toAuthorisation = await transitionTo(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+        expect(toAuthorisation.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(toAuthorisation.body.message).toBe(
+          'No transition exists from discarded to awaiting_authorisation'
+        )
+
+        const toDraft = await transitionTo(PRN_STATUS.DRAFT)
+        expect(toDraft.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(toDraft.body.message).toBe(
+          'No transition exists from discarded to draft'
+        )
+      })
+
+      it('deletes a PRN awaiting authorisation, then refuses to issue it', async () => {
+        const authorised = await transitionTo(PRN_STATUS.AWAITING_AUTHORISATION)
+        expect(authorised.statusCode).toBe(StatusCodes.OK)
+
+        const deleted = await transitionTo(PRN_STATUS.DELETED)
+        expect(deleted.statusCode).toBe(StatusCodes.OK)
+        expect(deleted.body.status.current).toBe(PRN_STATUS.DELETED)
+
+        const issued = await transitionTo(PRN_STATUS.AWAITING_ACCEPTANCE)
+        expect(issued.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(issued.body.message).toBe(
+          'No transition exists from deleted to awaiting_acceptance'
+        )
+      })
+
+      /** @param {string} status */
+      const expectOneTransitionAuditTo = (status) => {
+        expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+        const [{ event, context }] = mockCdpAuditing.mock.calls[0]
+        expect(event).toEqual({
+          category: 'waste-reporting',
+          subCategory: 'packaging-recycling-notes',
+          action: 'status-transition'
+        })
+        expect(Object.keys(context)).toEqual([
+          'organisationId',
+          'prnId',
+          'previous',
+          'next'
+        ])
+        expect(context.organisationId).toBe(organisationId)
+        expect(context.prnId).toBe(prnId)
+        expect(context.next.status.currentStatus).toBe(status)
+      }
+
+      it('audits authorising a draft', async () => {
+        const { statusCode } = await transitionTo(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        expect(statusCode).toBe(StatusCodes.OK)
+        expectOneTransitionAuditTo(PRN_STATUS.AWAITING_AUTHORISATION)
+      })
+
+      it('audits issuing an authorised PRN', async () => {
+        await transitionTo(PRN_STATUS.AWAITING_AUTHORISATION)
+        mockCdpAuditing.mockClear()
+
+        const { statusCode } = await transitionTo(
+          PRN_STATUS.AWAITING_ACCEPTANCE
+        )
+
+        expect(statusCode).toBe(StatusCodes.OK)
+        expectOneTransitionAuditTo(PRN_STATUS.AWAITING_ACCEPTANCE)
+      })
+
+      it('cancels a rejected PRN, keeping its rejection and recording no acceptance', async () => {
+        const rejected = {
+          at: new Date('2026-02-01T10:00:00.000Z'),
+          by: { id: 'producer-1', name: 'Producer Contact' }
+        }
+        packagingRecyclingNotesRepository =
+          createInMemoryPackagingRecyclingNotesRepository([
+            createMockPrn({
+              prnNumber: 'ER2600001',
+              status: {
+                currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+                currentStatusAt: rejected.at,
+                rejected,
+                history: [
+                  {
+                    status: PRN_STATUS.AWAITING_CANCELLATION,
+                    at: rejected.at,
+                    by: rejected.by
+                  }
+                ]
+              }
+            })
+          ])(createMockLogger())
+
+        const { statusCode } = await transitionTo(PRN_STATUS.CANCELLED)
+
+        expect(statusCode).toBe(StatusCodes.OK)
+        const stored = await packagingRecyclingNotesRepository.findById(prnId)
+        expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+        expect(stored?.status.rejected).toEqual(rejected)
+        expect(stored?.status.accepted).toBeUndefined()
+      })
+
+      it('authorises a draft while the accreditation is suspended', async () => {
+        organisationsRepository = organisationsRepositoryWith({
+          statusHistory: [
+            ...granted('approved'),
+            { status: 'suspended', updatedAt: '2026-08-01T09:00:00.000Z' }
+          ]
+        })
+
+        const { statusCode, body } = await transitionTo(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        expect(statusCode).toBe(StatusCodes.OK)
+        expect(body.status.current).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
       })
     })
   })

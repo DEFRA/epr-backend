@@ -524,6 +524,42 @@ describe('report routes by natural key', () => {
     }
   )
 
+  it('serves the PRN figures a PATCH stored on the next GET', async () => {
+    const [, accreditedStream] = streams
+    const period = 10
+    await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId: organisation.id,
+        registrationId: accreditedRegistration.id,
+        year: YEAR,
+        cadence: 'monthly',
+        period,
+        ...COMPLETE_REPORT,
+        prn: { issuedTonnage: 100, totalRevenue: 0, freeTonnage: 10 }
+      })
+    )
+    const inProgress = submission(accreditedStream.reports, period)
+
+    const patched = await server.inject({
+      method: 'PATCH',
+      url: inProgress,
+      payload: { prnRevenue: 3000, freeTonnage: 0 },
+      ...asOperator()
+    })
+    expect(patched.statusCode).toBe(StatusCodes.OK)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: inProgress,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const { prn } = JSON.parse(response.payload)
+    expect(prn.totalRevenue).toBe(3000)
+    expect(prn.freeTonnage).toBe(0)
+  })
+
   it('serves a registered-only report without prn', async () => {
     const [registeredOnly] = streams
 

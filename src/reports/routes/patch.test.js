@@ -25,6 +25,13 @@ const STREAMS = {
   accredited: { cadence: 'monthly', period: 7 }
 }
 
+const UNENTERED_RECYCLING_ACTIVITY = {
+  totalTonnageReceived: 200,
+  suppliers: [],
+  tonnageRecycled: null,
+  tonnageNotRecycled: null
+}
+
 const EXPORT_ACTIVITY = {
   overseasSites: [],
   unapprovedOverseasSites: [],
@@ -199,6 +206,38 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       expect(body.prn.freeTonnage).toBe(5)
     })
 
+    it('returns 200 when patching zero freeTonnage', async () => {
+      const { patchReport } = await accreditedWithPrn()
+
+      const { statusCode, body } = await patchReport({ freeTonnage: 0 })
+
+      expect(statusCode).toBe(StatusCodes.OK)
+      expect(body.prn.freeTonnage).toBe(0)
+    })
+
+    it('returns 200 when patching both PRN fields and both tonnages in one request', async () => {
+      const { patchReport } = await createServer({
+        accredited: true,
+        report: {
+          prn: { issuedTonnage: 100 },
+          recyclingActivity: UNENTERED_RECYCLING_ACTIVITY
+        }
+      })
+
+      const { statusCode, body } = await patchReport({
+        prnRevenue: 1576.12,
+        freeTonnage: 0,
+        tonnageRecycled: 100.5,
+        tonnageNotRecycled: 20
+      })
+
+      expect(statusCode).toBe(StatusCodes.OK)
+      expect(body.prn.totalRevenue).toBe(1576.12)
+      expect(body.prn.freeTonnage).toBe(0)
+      expect(body.recyclingActivity.tonnageRecycled).toBe(100.5)
+      expect(body.recyclingActivity.tonnageNotRecycled).toBe(20)
+    })
+
     it('preserves existing prn fields when patching only one field', async () => {
       const { patchReport } = await accreditedWithPrn()
 
@@ -236,9 +275,12 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     it('returns 422 when prnRevenue is negative', async () => {
       const { patchReport } = await accreditedWithPrn()
 
-      const { statusCode } = await patchReport({ prnRevenue: -1 })
+      const { statusCode, body } = await patchReport({ prnRevenue: -1 })
 
       expect(statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(body.message).toBe(
+        '"prnRevenue" must be greater than or equal to 0'
+      )
     })
 
     it('returns 422 when free-tonnage is not a whole number', async () => {
@@ -270,12 +312,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     const withRecyclingActivity = () =>
       createServer({
         report: {
-          recyclingActivity: {
-            totalTonnageReceived: 200,
-            suppliers: [],
-            tonnageRecycled: null,
-            tonnageNotRecycled: null
-          }
+          recyclingActivity: UNENTERED_RECYCLING_ACTIVITY
         }
       })
 
@@ -506,12 +543,28 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       expect(statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
+    it('returns 404 naming the period when no accredited report exists for it', async () => {
+      const { patchReport } = await createServer({
+        accredited: true,
+        report: { prn: { issuedTonnage: 100 } }
+      })
+
+      const { statusCode, body } = await patchReport(
+        { prnRevenue: 100 },
+        { period: 12 }
+      )
+
+      expect(statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(body.message).toBe('No report found for monthly period 12 of 2026')
+    })
+
     it('returns 422 when payload is empty', async () => {
       const { patchReport } = await createServer()
 
-      const { statusCode } = await patchReport({})
+      const { statusCode, body } = await patchReport({})
 
       expect(statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(body.message).toBe('"value" must have at least 1 key')
     })
 
     it('returns 422 when supporting information exceeds max length', async () => {
