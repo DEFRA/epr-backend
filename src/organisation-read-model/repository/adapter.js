@@ -321,10 +321,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     String(deriveAccreditationYear(accreditation)),
     {
       accreditationNumber,
-      prnIssuance: {
-        signatories: prnIssuance.signatories.map(toContact),
-        tonnageBand: prnIssuance.tonnageBand
-      },
+      prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
       status: { current: status, timeline }
     }
   ]

@@ -18,8 +18,7 @@ import {
   overseasSites,
   pendingOverseasSite,
   reprocessor,
-  reprocessorAt,
-  yoda
+  reprocessorAt
 } from './organisation-read-test-helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
@@ -110,7 +109,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             accreditations: {
               2026: {
                 accreditationNumber: ACCREDITATION_NUMBER,
-                prnIssuance: { signatories: [yoda], tonnageBand: 'over_10000' },
+                prnIssuance: { tonnageBand: 'over_10000' },
                 status: {
                   current: 'approved',
                   timeline: approvedTimeline('2026-07-01')
