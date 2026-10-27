@@ -19,6 +19,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
@@ -26,6 +27,13 @@ const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORG_ID = 'org-concurrency'
 const REG_ID = 'reg-concurrency'
 const ACC_ID = 'acc-concurrency'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const TONNAGE = 5
 const OPENING = 386.62
 
@@ -191,7 +199,9 @@ describe('PRN status concurrency against real MongoDB', () => {
     updatePrnStatus({
       prnRepository: repositoryFactory(createMockLogger()),
       ledgerRepository,
-      organisationsRepository: /** @type {*} */ ({}),
+      organisationsRepository: /** @type {*} */ ({
+        findById: async () => organisation
+      }),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: createMockLogger(),
       id: prnId,

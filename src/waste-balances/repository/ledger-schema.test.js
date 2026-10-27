@@ -115,6 +115,9 @@ describe('ledger event insert schema', () => {
     expect(missingFields).toContain('closingBalance')
     expect(missingFields).toContain('createdAt')
     expect(missingFields).toContain('createdBy')
+    expect(missingFields).toContain('organisationNumber')
+    expect(missingFields).toContain('registrationNumber')
+    expect(missingFields).toContain('accreditationNumber')
   })
 
   it('rejects mismatched kind/payload — prn-created with summaryLogId payload', () => {
@@ -162,6 +165,25 @@ describe('ledger event insert schema', () => {
   it('accepts accreditationId: null for registered-only ledgers', () => {
     const { error } = validate(buildLedgerEvent({ accreditationId: null }))
     expect(error).toBeUndefined()
+  })
+
+  it('rejects an accreditation number on a registered-only event', () => {
+    const { error } = validate(
+      buildLedgerEvent({
+        accreditationId: null,
+        accreditationNumber: 'ACC-acc-1'
+      })
+    )
+    expect(error?.details.map((d) => d.path[0])).toEqual([
+      'accreditationNumber'
+    ])
+  })
+
+  it('rejects a null accreditation number on an accredited event', () => {
+    const { error } = validate(buildLedgerEvent({ accreditationNumber: null }))
+    expect(error?.details.map((d) => d.path[0])).toEqual([
+      'accreditationNumber'
+    ])
   })
 
   it('rejects PRN kinds when accreditationId is null', () => {
@@ -256,6 +278,18 @@ describe('ledger event validation', () => {
     it('returns the stored event as written', () => {
       const event = buildLedgerEvent()
       expect(validateLedgerEventRead(event)).toEqual(event)
+    })
+
+    it('accepts an event stored without the numbers', () => {
+      const {
+        organisationNumber: _organisationNumber,
+        registrationNumber: _registrationNumber,
+        accreditationNumber: _accreditationNumber,
+        ...storedWithoutNumbers
+      } = buildLedgerEvent()
+      expect(validateLedgerEventRead(storedWithoutNumbers)).toEqual(
+        storedWithoutNumbers
+      )
     })
 
     it('keeps the document id the store gave the event', () => {

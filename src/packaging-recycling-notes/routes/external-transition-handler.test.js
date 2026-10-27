@@ -22,6 +22,7 @@ import {
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from './test-helpers.js'
 import { mapTransitionError } from './external-transition-handler.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
@@ -37,6 +38,18 @@ vi.mock('@defra/cdp-auditing', () => ({
 const REG_ID = 'reg-789'
 const ACC_ID = 'acc-456'
 const ORG_ID = 'org-123'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+// The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
+// repository requires, so the organisation is handed back as it stands.
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
+const organisationsRepository = () => ({
+  findById: async () => organisation
+})
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const baseAt = new Date('2026-01-15T10:00:00.000Z')
@@ -125,7 +138,7 @@ const startServer = async ({ currentStatus, events }) => {
           buildPrn(currentStatus)
         ]),
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({})
+      organisationsRepository
     }
   })
   return server

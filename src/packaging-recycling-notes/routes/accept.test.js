@@ -17,6 +17,7 @@ import {
   cognitoJwksUrl
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from './test-helpers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -31,6 +32,18 @@ const prnNumber = 'ER2600001'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 const organisationId = 'org-123'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+// The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
+// repository requires, so the organisation is handed back as it stands.
+const organisation = buildOrganisationHolding({
+  organisationId,
+  registrationId,
+  accreditationId
+})
+const organisationsRepository = () => ({
+  findById: async () => organisation
+})
 const externalApiClientId = randomUUID()
 const rpd = { id: externalApiClientId, name: 'RPD' }
 
@@ -82,7 +95,7 @@ const startServer = async (prn) => {
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({})
+      organisationsRepository
     }
   })
   return server

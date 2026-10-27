@@ -27,6 +27,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
+ * @param {import('../repository/ledger-schema.js').LedgerEventNumbersOnInsert} params.numbers
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
@@ -35,7 +36,8 @@ export const performUpdateViaLedger = async ({
   dependencies = {},
   user,
   overseasSites,
-  summaryLogId
+  summaryLogId,
+  numbers
 }) => {
   if (wasteRecords.length === 0) {
     return
@@ -64,7 +66,12 @@ export const performUpdateViaLedger = async ({
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(
-    { registrationId, accreditationId: accreditation.id, organisationId },
+    {
+      registrationId,
+      accreditationId: accreditation.id,
+      organisationId,
+      ...numbers
+    },
     { summaryLogId, creditTotal, decemberCreditTotal },
     {
       id: user.id,

@@ -18,6 +18,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
@@ -236,7 +237,14 @@ async function applyPrnTransition(ctx) {
       })
     : prn
 
-  const events = await append(outcome.balanceEvents)
+  const events = await append(
+    outcome.balanceEvents,
+    requiredNumbersFor(
+      await ctx.organisationsRepository.findById(ledgerId.organisationId),
+      ledgerId,
+      'ledger events'
+    )
+  )
 
   return {
     updatedPrn: await persistProjectedPrn(ctx, {

@@ -19,6 +19,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,
+  buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -160,27 +161,40 @@ const buildPrnLedgerEvent = ({
 })
 
 /**
- * An organisation carrying the accreditation under test, with `ORG_ID` and
- * `ACC_ID` pinned so the seeded PRN's links resolve. `withAccreditation: false`
- * removes the accreditation so issuance can't find it.
+ * An organisation carrying the numbered registration and accreditation under
+ * test, with `ORG_ID`, `REG_ID` and `ACC_ID` pinned by default so the seeded
+ * PRN's links resolve. `withAccreditation: false` removes the accreditation so
+ * issuance can't find it.
  *
  * @param {Object} [options]
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
+ * @param {string} [options.organisationId]
+ * @param {string} [options.registrationId]
  */
 const buildOrgWithAccreditation = ({
   accreditation = {},
-  withAccreditation = true
+  withAccreditation = true,
+  organisationId = ORG_ID,
+  registrationId = REG_ID
 } = {}) => ({
   // `status` is derived from `statusHistory` on read; the seeded value only
   // satisfies the constructor's Organisation type.
   status: ORGANISATION_STATUS.APPROVED,
   ...buildOrganisation({
-    id: ORG_ID,
+    id: organisationId,
+    registrations: [
+      buildRegistration({
+        id: registrationId,
+        registrationNumber: 'R26SR500000789PL',
+        accreditationId: ACC_ID
+      })
+    ],
     accreditations: withAccreditation
       ? [
           buildAccreditation({
             id: ACC_ID,
+            accreditationNumber: 'ACC-1',
             accreditationYear: 2026,
             submittedToRegulator: REGULATOR.EA,
             statusHistory: [
@@ -310,6 +324,61 @@ describe('updatePrnStatus', () => {
   })
 
   describe('the waste-balance write boundary', () => {
+    it('writes the event with the numbers its organisation record gives', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
+
+      const organisation =
+        await repositories.organisationsRepository.findById(ORG_ID)
+      expect(
+        await repositories.ledgerRepository.findLatestInLedger({
+          organisationId: ORG_ID,
+          registrationId: REG_ID,
+          accreditationId: ACC_ID
+        })
+      ).toMatchObject({
+        organisationNumber: String(organisation.orgId),
+        registrationNumber: 'R26SR500000789PL',
+        accreditationNumber: 'ACC-1'
+      })
+    })
+
+    it('appends nothing when its organisation record gives no number', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        accreditation: { accreditationNumber: null }
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow(
+        `Cannot store ledger events without their numbers: accreditation ${ACC_ID} has no accreditation number`
+      )
+
+      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
+        { amount: 1000, availableAmount: 1000 }
+      )
+    })
+
     // Tonnage is validated positive at the route and in the PRN schema, so a
     // PRN that reaches the write without one is corruption. The deciders test
     // sufficiency with `<`, which a non-positive amount passes, so the guard
@@ -747,7 +816,10 @@ describe('updatePrnStatus', () => {
         }
       ])()
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        buildOrgWithAccreditation()
+        buildOrgWithAccreditation({
+          organisationId: DEFAULT_ORG_ID,
+          registrationId: DEFAULT_REG_ID
+        })
       ])()
 
       await updatePrnStatus({
@@ -1800,16 +1872,17 @@ describe('updatePrnStatus', () => {
     }
 
     it('writes an explicit general pool on a non-December raise without reading the accreditation', async () => {
-      // No accreditation is seeded, so a general pool on the event can only have
-      // been resolved as the constant it is, never fetched.
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
         }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        withAccreditation: false
+        balance: { amount: 1000, availableAmount: 1000 }
       })
+      const findAccreditationById = vi.spyOn(
+        repositories.organisationsRepository,
+        'findAccreditationById'
+      )
 
       await callUpdate({
         ...repositories,
@@ -1821,6 +1894,7 @@ describe('updatePrnStatus', () => {
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
       expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
+      expect(findAccreditationById).not.toHaveBeenCalled()
     })
 
     it('mirrors an absent raise pool on a non-December issue rather than re-deriving it', async () => {
@@ -1863,8 +1937,9 @@ describe('updatePrnStatus', () => {
 
     it('reads the general pool back onto a non-December reversal event', async () => {
       // The delete reads the pool off the raise for every PRN, so a general
-      // raise's reversal states general explicitly rather than omitting it. No
-      // accreditation is seeded, so the pool can only have come from the raise.
+      // raise's reversal states general explicitly rather than omitting it. The
+      // accreditation is never read, so the pool can only have come from the
+      // raise.
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -1884,9 +1959,12 @@ describe('updatePrnStatus', () => {
             openingBalance: { amount: 1000, availableAmount: 1000 },
             closingBalance: { amount: 1000, availableAmount: 900 }
           })
-        ],
-        withAccreditation: false
+        ]
       })
+      const findAccreditationById = vi.spyOn(
+        repositories.organisationsRepository,
+        'findAccreditationById'
+      )
 
       await callUpdate({
         ...repositories,
@@ -1898,6 +1976,7 @@ describe('updatePrnStatus', () => {
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
       expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
       expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
+      expect(findAccreditationById).not.toHaveBeenCalled()
     })
   })
 

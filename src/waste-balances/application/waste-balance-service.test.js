@@ -17,12 +17,19 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 
-const ledgerId = {
+const ledgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
+})
+
+const numbers = {
+  organisationNumber: ledgerId.organisationNumber,
+  registrationNumber: ledgerId.registrationNumber,
+  accreditationNumber: ledgerId.accreditationNumber
 }
 
 const createdBy = {
@@ -70,6 +77,9 @@ describe('createWasteBalanceService', () => {
       expect(event.organisationId).toBe('org-1')
       expect(event.registrationId).toBe('reg-1')
       expect(event.accreditationId).toBe('acc-1')
+      expect(event.organisationNumber).toBe(ledgerId.organisationNumber)
+      expect(event.registrationNumber).toBe('REG-reg-1')
+      expect(event.accreditationNumber).toBe('ACC-acc-1')
       expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(event.payload).toEqual({ summaryLogId: 'log-A', creditTotal: 150 })
       expect(event.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
@@ -171,8 +181,9 @@ describe('createWasteBalanceService', () => {
      * @param {PrnPayload & PrnAcceptedPayload} payload
      */
     const runCommand = async (decide, payload) => {
+      const { organisationId, registrationId, accreditationId } = ledgerId
       const { balance, append } = await service.readBalanceForUpdate(
-        ledgerId,
+        { organisationId, registrationId, accreditationId },
         createdBy
       )
       const decision = decide(
@@ -181,7 +192,7 @@ describe('createWasteBalanceService', () => {
       )
       return {
         status: decision.status,
-        events: await append(committedEvents(decision))
+        events: await append(committedEvents(decision), numbers)
       }
     }
 
@@ -196,6 +207,7 @@ describe('createWasteBalanceService', () => {
       expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
       const [event] = result.events
       expect(event.number).toBe(2)
+      expect(event).toMatchObject(numbers)
       expect(event.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(event.payload).toEqual({ prnId: 'prn-1', amount: 100 })
       expect(event.closingBalance).toEqual({
@@ -346,7 +358,7 @@ describe('createWasteBalanceService', () => {
         ledgerId,
         createdBy
       )
-      await append(committedEvents(decideCreatePrn(balance, payload)))
+      await append(committedEvents(decideCreatePrn(balance, payload)), numbers)
 
       expect(balance.availableAmount).toBe(990)
       expect(await service.currentBalance(ledgerId)).toMatchObject({
@@ -377,9 +389,9 @@ describe('createWasteBalanceService', () => {
         createdBy
       )
       const events = committedEvents(decideCreatePrn(balance, payload))
-      await append(events)
+      await append(events, numbers)
 
-      await expect(append(events)).rejects.toMatchObject({
+      await expect(append(events, numbers)).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 }
       })
@@ -399,7 +411,7 @@ describe('createWasteBalanceService', () => {
       await runCommand(decideCreatePrn, { prnId: 'prn-2', amount: 10 })
 
       await expect(
-        append(committedEvents(decideCreatePrn(balance, payload)))
+        append(committedEvents(decideCreatePrn(balance, payload)), numbers)
       ).rejects.toBeInstanceOf(LedgerSlotConflictError)
     })
 
@@ -539,7 +551,7 @@ describe('createWasteBalanceService', () => {
         ledgerId,
         createdBy
       )
-      await append(committedEvents(decideCreatePrn(folded, payload)))
+      await append(committedEvents(decideCreatePrn(folded, payload)), numbers)
 
       const balance = await service.currentBalance(ledgerId)
 

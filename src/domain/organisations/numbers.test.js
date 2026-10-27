@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { numbersFor, toOrganisationNumber } from './numbers.js'
+import {
+  numbersFor,
+  requiredNumbersFor,
+  toOrganisationNumber
+} from './numbers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
@@ -122,4 +126,46 @@ describe('numbersFor', () => {
       })
     })
   }
+})
+
+describe('requiredNumbersFor', () => {
+  it('gives every number of an accreditation', () => {
+    expect(
+      requiredNumbersFor(
+        buildOrganisation(),
+        { registrationId: 'reg-1', accreditationId: 'acc-1' },
+        'ledger events'
+      )
+    ).toEqual({
+      organisationNumber: '500123',
+      registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: 'ACC500123'
+    })
+  })
+
+  it('gives a null accreditation number for a registered-only registration', () => {
+    expect(
+      requiredNumbersFor(
+        buildOrganisation(),
+        { registrationId: 'reg-1', accreditationId: null },
+        'ledger events'
+      )
+    ).toEqual({
+      organisationNumber: '500123',
+      registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: null
+    })
+  })
+
+  it('refuses, naming what it would store and why, when a number is missing', () => {
+    expect(() =>
+      requiredNumbersFor(
+        buildOrganisation(),
+        { registrationId: 'reg-1', accreditationId: 'acc-2' },
+        'ledger events'
+      )
+    ).toThrow(
+      'Cannot store ledger events without their numbers: accreditation acc-2 has no accreditation number'
+    )
+  })
 })

@@ -9,6 +9,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -23,6 +24,13 @@ const { getProjectedPrnByNumber, getProjectedPrnById } =
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const TONNAGE = 50
@@ -109,6 +117,7 @@ const buildSeededLedgerRepository = () =>
   ])()
 
 const buildOrganisationsRepository = (accreditation = {}) => ({
+  findById: async () => organisation,
   findAccreditationById: vi.fn().mockResolvedValue({
     status: 'approved',
     submittedToRegulator: REGULATOR.EA,

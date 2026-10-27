@@ -25,6 +25,8 @@ import {
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminPackagingRecyclingNotesCancelPath } from './admin-cancel.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -41,6 +43,15 @@ const prnId = '507f1f77bcf86cd799439011'
 const organisationId = '507f1f77bcf86cd799439012'
 const registrationId = '507f1f77bcf86cd799439013'
 const accreditationId = '507f1f77bcf86cd799439014'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisationsRepository = createInMemoryOrganisationsRepository([
+  buildOrganisationHolding({
+    organisationId,
+    registrationId,
+    accreditationId
+  })
+])
 
 const cancelUrl = `/v1/admin/packaging-recycling-notes/${prnId}/cancel`
 
@@ -139,7 +150,7 @@ const startServer = async (
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({}),
+      organisationsRepository,
       reportsRepository: reportsRepositoryFactory
     },
     config: { featureFlags: { prnAdminCancellation: cancellationEnabled } }
