@@ -1,6 +1,7 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
+/** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
@@ -15,10 +16,10 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * establishes both are there — an accreditation may carry neither, and the
  * range check has no sensible answer for half a window.
  *
- * @typedef {{
+ * @typedef {Brand<{
  *   validFrom: CalendarDate,
  *   validTo: CalendarDate
- * } & { readonly __brand: 'AccreditationWindow' }} AccreditationWindow
+ * }, 'AccreditationWindow'>} AccreditationWindow
  */
 
 /**

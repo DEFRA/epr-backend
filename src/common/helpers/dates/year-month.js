@@ -1,8 +1,10 @@
+/** @import { Brand } from '#common/helpers/brand.js' */
+
 /**
  * A `YYYY-MM` reporting month. Branded so that only `toYearMonth` produces
  * one, the same way `CalendarDate` is only ever minted by `calendarDate`.
  *
- * @typedef {string & { readonly __brand: 'YearMonth' }} YearMonth
+ * @typedef {Brand<string, 'YearMonth'>} YearMonth
  */
 
 export const YEAR_MONTH_LENGTH = 7
