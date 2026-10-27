@@ -48,15 +48,16 @@ const organisation = buildOrganisation({
 const accredited = { organisationId, registrationId, accreditationId }
 const registeredOnly = { organisationId, registrationId, accreditationId: null }
 
-/** @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId */
+/** @param {WasteBalanceLedgerId} ledgerId */
 const ledgerKey = ({ organisationId, registrationId, accreditationId }) =>
   `${organisationId}/${registrationId}/${accreditationId}`
 
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { LedgerEvent, WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 describe('backfillLedgerEventNumbers', () => {
-  /** @type {*[]} */
+  /** @type {LedgerEvent[]} */
   let ledgerStorage
   /** @type {WasteBalanceLedgerRepository} */
   let ledgerRepository
@@ -88,7 +89,7 @@ describe('backfillLedgerEventNumbers', () => {
   /**
    * Events as stored before the numbers were written beside the ids.
    *
-   * @param {*} ledgerId
+   * @param {WasteBalanceLedgerId} ledgerId
    * @param {number} count
    */
   const storeEvents = (ledgerId, count) => {
