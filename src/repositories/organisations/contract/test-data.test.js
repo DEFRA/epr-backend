@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { createOrganisationBuilders } from './test-data.js'
+import { buildRegistration, createOrganisationBuilders } from './test-data.js'
 import { getCurrentStatus } from '../status.js'
+import { partialMock } from '#test/type-helpers.js'
 
-const { buildOrganisation, buildReadOrganisation } =
-  createOrganisationBuilders()
+const {
+  buildOrganisation,
+  buildOrganisationWithRegistration,
+  buildReadOrganisation
+} = createOrganisationBuilders()
 
 describe('test-data', () => {
   describe('buildOrganisation', () => {
@@ -11,6 +15,16 @@ describe('test-data', () => {
       const org = buildOrganisation()
 
       expect(org).not.toHaveProperty('status')
+    })
+  })
+
+  describe('buildOrganisationWithRegistration', () => {
+    it('should not link an accreditation when no accreditation status is given', () => {
+      const registration = buildRegistration({ accreditationId: 'acc-1' })
+
+      const org = buildOrganisationWithRegistration(partialMock(registration))
+
+      expect(org.accreditations.map(({ id }) => id)).not.toContain('acc-1')
     })
   })
 
