@@ -5,11 +5,7 @@ import { transformValidationResponse } from './transform-validation-response.js'
 
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 
-/**
- * Logs stored before the stream was stamped on them have no stream to answer.
- *
- * @param {SummaryLog} summaryLog
- */
+/** @param {SummaryLog} summaryLog */
 const streamOf = ({ accreditationId, accreditationNumber }) => {
   if (accreditationId === null) {
     return { stream: { kind: 'registered-only', accreditationNumber: null } }
