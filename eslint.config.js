@@ -20,6 +20,38 @@ const OUTER_LAYERS = [
 const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
+/**
+ * Each brand is minted only where its value enters the service; everywhere
+ * else takes it already branded.
+ */
+const brandConstructors = [
+  {
+    name: 'toYear',
+    module: 'year.js',
+    mintedIn: ['src/common/validation/year-schema.js'],
+    message:
+      'A year arrives branded from a yearSchema-validated route param - type it there, or use currentUtcYear.'
+  }
+]
+
+/**
+ * @param {typeof brandConstructors} constructors
+ */
+const restrictedImports = (constructors) => [
+  'error',
+  {
+    patterns: constructors.map(({ name, module, message }) => ({
+      group: [`**/${module}`],
+      importNames: [name],
+      message
+    }))
+  }
+]
+
+const mintingFiles = [
+  ...new Set(brandConstructors.flatMap(({ mintedIn }) => mintedIn))
+]
+
 const ns = neostandard({
   env: ['node', 'vitest'],
   ignores: [...neostandard.resolveIgnoresFromGitignore()],
@@ -107,6 +139,25 @@ export default [
       ]
     }
   },
+  {
+    files: ['src/**/*.js'],
+    ignores: [
+      '**/*.test.js',
+      '**/*.contract.js',
+      '**/integration-test-helpers.js'
+    ],
+    rules: {
+      'no-restricted-imports': restrictedImports(brandConstructors)
+    }
+  },
+  ...mintingFiles.map((file) => ({
+    files: [file],
+    rules: {
+      'no-restricted-imports': restrictedImports(
+        brandConstructors.filter(({ mintedIn }) => !mintedIn.includes(file))
+      )
+    }
+  })),
   {
     rules: {
       curly: ['error', 'all'],

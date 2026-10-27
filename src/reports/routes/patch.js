@@ -153,8 +153,7 @@ export const reportsPatch = {
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
+    const { organisationId, registrationId, cadence, year } = params
     const period = Number(params.period)
     const submissionNumber = Number(params.submissionNumber)
 

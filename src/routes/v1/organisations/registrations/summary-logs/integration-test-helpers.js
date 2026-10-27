@@ -2,6 +2,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -464,7 +465,7 @@ export const createUploadPayload = (
 /** The natural keys every organisation these helpers build is served under. */
 export const TEST_ORGANISATION_NUMBER = 500999
 export const TEST_REGISTRATION_NUMBER = 'REG-123'
-const UPLOAD_YEAR = 2025
+const UPLOAD_YEAR = toYear(2025)
 
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
 export const accreditationUrl = `${registrationUrl}/accreditations/${UPLOAD_YEAR}`

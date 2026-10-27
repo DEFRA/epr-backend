@@ -47,9 +47,10 @@ import { createStatusesValidator } from './validation.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/view-route.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
- * @typedef {RegistrationParams & { year: number }} AccreditationParams
+ * @typedef {RegistrationParams & { year: Year }} AccreditationParams
  * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
  * @typedef {AccreditationParams & { prnId: string }} PrnParams
  *

@@ -30,8 +30,7 @@ export const reportsUnsubmit = {
    */
   handler: async (request, h) => {
     const { reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
+    const { organisationId, registrationId, cadence, year } = params
     const period = Number(params.period)
     const submissionNumber = Number(params.submissionNumber)
 

@@ -8,6 +8,7 @@ import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 /** @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js' */
@@ -31,7 +32,7 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: { organisationId: string, registrationId: string, year: number },
+   *   params: { organisationId: string, registrationId: string, year: Year },
    *   app: ResolvedRecords & {
    *     registration: Registration,
    *     summaryLogCallbackUrl: (summaryLogId: string) => string
