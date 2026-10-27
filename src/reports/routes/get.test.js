@@ -356,15 +356,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         expect(payload.reportingPeriods.map((p) => p.period)).toEqual([1])
       })
 
-      it('lists only this year when the accreditation began in a prior year', async () => {
-        const ctx = await buildAccreditedServer({ validFrom: '2025-01-01' })
+      it('builds no period before this year when the accreditation began in a prior year', async () => {
+        const ctx = await buildAccreditedServer({ validFrom: '2025-09-15' })
 
         expect(await periodsFor(ctx)).toEqual([1, 2, 3, 4, 5])
       })
 
-      it('lists only this year when a registered-only operator began in a prior year', async () => {
+      it('builds no period before this year when a registered-only operator began in a prior year', async () => {
         const ctx = await createServer({
-          validFrom: '2025-01-01',
+          validFrom: '2025-09-15',
           accreditationId: undefined
         })
 
