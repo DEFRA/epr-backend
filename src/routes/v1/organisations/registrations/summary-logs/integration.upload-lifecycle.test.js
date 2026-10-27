@@ -162,6 +162,7 @@ describe('Summary logs upload lifecycle', () => {
           processingType: 'REPROCESSOR_INPUT',
           material: 'Paper_and_board',
           accreditationNumber: 'ACC-123',
+          stream: { kind: 'accredited', accreditationNumber: 'ACC-123' },
           year: 2025
         })
       })

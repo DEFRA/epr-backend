@@ -80,7 +80,19 @@ export const summaryLogResponseSchema = Joi.object({
   material: Joi.string().optional(),
   accreditationNumber: Joi.string().optional(),
   year: Joi.number().integer().required(),
-  accreditationId: Joi.string().allow(null).optional()
+  accreditationId: Joi.string().allow(null).optional(),
+  stream: Joi.alternatives()
+    .try(
+      Joi.object({
+        kind: Joi.string().valid('accredited').required(),
+        accreditationNumber: Joi.string().required()
+      }),
+      Joi.object({
+        kind: Joi.string().valid('registered-only').required(),
+        accreditationNumber: Joi.valid(null).required()
+      })
+    )
+    .optional()
 })
 
 const statusOnlyResponseSchema = (status) =>

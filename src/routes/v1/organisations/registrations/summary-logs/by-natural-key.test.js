@@ -12,12 +12,16 @@ import {
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  withoutAccreditationId
+} from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { config } from '#root/config.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
@@ -216,6 +220,85 @@ describe('summary-log routes by natural key', () => {
       })
     }
   )
+
+  describe.each([
+    {
+      kind: 'registered-only',
+      accreditationId: null,
+      stream: { kind: 'registered-only', accreditationNumber: null }
+    },
+    {
+      kind: 'accredited',
+      accreditationId: accredited.id,
+      stream: { kind: 'accredited', accreditationNumber: ACCREDITATION_NUMBER }
+    }
+  ])('a $kind summary log', ({ accreditationId, stream }) => {
+    it('is read with the stream it was uploaded to, apart from its cover sheet', async () => {
+      const { summaryLogId } = await seed(
+        {
+          registrationId: accreditedRegistration.id,
+          accreditationId,
+          meta: {
+            PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT,
+            ACCREDITATION_NUMBER: 'COVER-SHEET-NUMBER'
+          }
+        },
+        summaryLogFactory.validated
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toMatchObject({
+        stream,
+        accreditationNumber: 'COVER-SHEET-NUMBER'
+      })
+    })
+  })
+
+  it.each([
+    ['holds no accreditation id', withoutAccreditationId],
+    [
+      'holds an accreditation id without its number',
+      /** @param {{ accreditationNumber?: unknown }} summaryLog */
+      ({ accreditationNumber: _n, ...rest }) => rest
+    ]
+  ])('reads a summary log that %s without a stream', async (_, unstamped) => {
+    const summaryLogId = randomUUID()
+    const { numbers } = numbersFor(partialMock(organisation), {
+      registrationId: accreditedRegistration.id,
+      accreditationId: accredited.id
+    })
+    await summaryLogsRepository.insert(
+      summaryLogId,
+      partialMock(
+        unstamped({
+          ...summaryLogFactory.validated({
+            organisationId: organisation.id,
+            registrationId: accreditedRegistration.id,
+            accreditationId: accredited.id,
+            year: YEAR,
+            meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
+          }),
+          ...numbers
+        })
+      )
+    )
+    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${summaryLogs}/${summaryLogId}`,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).not.toHaveProperty('stream')
+  })
 
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = randomUUID()

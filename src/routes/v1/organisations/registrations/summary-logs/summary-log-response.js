@@ -6,6 +6,21 @@ import { transformValidationResponse } from './transform-validation-response.js'
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 
 /**
+ * Logs stored before the stream was stamped on them have no stream to answer.
+ *
+ * @param {SummaryLog} summaryLog
+ */
+const streamOf = ({ accreditationId, accreditationNumber }) => {
+  if (accreditationId === null) {
+    return { stream: { kind: 'registered-only', accreditationNumber: null } }
+  }
+  if (accreditationId && accreditationNumber) {
+    return { stream: { kind: 'accredited', accreditationNumber } }
+  }
+  return {}
+}
+
+/**
  * The summary log document as the API answers it, per `summaryLogResponseSchema`.
  *
  * @param {SummaryLog} summaryLog
@@ -23,5 +38,6 @@ export const toSummaryLogResponse = (summaryLog) => ({
   ...(summaryLog.accreditationId !== undefined && {
     accreditationId: summaryLog.accreditationId
   }),
+  ...streamOf(summaryLog),
   ...extractResponseMetaFields(summaryLog.meta)
 })
