@@ -115,9 +115,6 @@ describe('ledger event insert schema', () => {
     expect(missingFields).toContain('closingBalance')
     expect(missingFields).toContain('createdAt')
     expect(missingFields).toContain('createdBy')
-    expect(missingFields).toContain('organisationNumber')
-    expect(missingFields).toContain('registrationNumber')
-    expect(missingFields).toContain('accreditationNumber')
   })
 
   it('rejects mismatched kind/payload — prn-created with summaryLogId payload', () => {
@@ -164,6 +161,17 @@ describe('ledger event insert schema', () => {
 
   it('accepts accreditationId: null for registered-only ledgers', () => {
     const { error } = validate(buildLedgerEvent({ accreditationId: null }))
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts an event written without the numbers', () => {
+    const {
+      organisationNumber: _organisationNumber,
+      registrationNumber: _registrationNumber,
+      accreditationNumber: _accreditationNumber,
+      ...withoutNumbers
+    } = buildLedgerEvent()
+    const { error } = validate(withoutNumbers)
     expect(error).toBeUndefined()
   })
 

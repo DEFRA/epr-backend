@@ -18,7 +18,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
@@ -228,12 +228,9 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  // Read before the note takes its number, so a ledger whose numbers cannot be
-  // stored leaves no number reserved on a note its event never announces.
-  const ledgerNumbers = requiredNumbersFor(
+  const { numbers: ledgerNumbers } = numbersFor(
     await ctx.organisationsRepository.findById(ledgerId.organisationId),
-    ledgerId,
-    'ledger events'
+    ledgerId
   )
 
   // The note takes its number before the event announcing it, so a read landing

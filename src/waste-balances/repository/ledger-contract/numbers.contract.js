@@ -85,15 +85,21 @@ export const testNumbersBehaviour = (it) => {
       ).toBeNull()
     })
 
-    it('rejects an event without the organisation and registration numbers', async () => {
+    it('stores an event without the numbers it is written without', async () => {
       const {
         organisationNumber: _organisationNumber,
         registrationNumber: _registrationNumber,
         ...withoutNumbers
       } = buildLedgerEvent()
 
-      await expect(repository.appendEvents([withoutNumbers])).rejects.toThrow(
-        'Invalid ledger event data: "organisationNumber" is required; "registrationNumber" is required'
+      await repository.appendEvents([withoutNumbers])
+
+      const event = await repository.findLatestInLedger(withoutNumbers)
+      expect(event).not.toHaveProperty('organisationNumber')
+      expect(event).not.toHaveProperty('registrationNumber')
+      expect(event).toHaveProperty(
+        'accreditationNumber',
+        withoutNumbers.accreditationNumber
       )
     })
 

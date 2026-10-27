@@ -137,15 +137,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The numbers an event is written with beside its ledger id's ids. A
+ * The numbers an event holds beside its ledger id's ids: those its organisation
+ * record gave when it was written, or that the backfill has added since. A
  * registered-only ledger's accreditation number is `null`.
- *
- * @typedef {RequiredNumbers} LedgerEventNumbersOnInsert
- */
-
-/**
- * The numbers a stored event holds. One stored before the numbers were written
- * beside the ids holds only those the backfill has added.
  *
  * @typedef {Numbers} LedgerEventNumbers
  */
@@ -153,11 +147,11 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 /**
  * A waste balance ledger's identity by both its ids and its numbers: the
  * registration or accreditation whose balance it records, as its ids name it
- * and as the organisation record numbers it. Ledger events and summary-log row
- * states are written with it. A registered-only ledger's accreditation id and
- * accreditation number are both `null`.
+ * and as the organisation record numbers it. Summary-log row states, and the
+ * ledger events a submission appends, are written with it. A registered-only
+ * ledger's accreditation id and accreditation number are both `null`.
  *
- * @typedef {WasteBalanceLedgerId & LedgerEventNumbersOnInsert} NumberedLedgerId
+ * @typedef {WasteBalanceLedgerId & RequiredNumbers} NumberedLedgerId
  */
 
 /**
@@ -185,7 +179,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  * `ledgerEventInsertSchema` — keep the two in sync; the schema is the runtime
  * gate, this typedef is the check-time gate.
  *
- * @typedef {LedgerEventFields & LedgerEventNumbersOnInsert} LedgerEventInsert
+ * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEventInsert
  */
 
 /**
@@ -272,12 +266,11 @@ const ledgerEventBaseSchema = Joi.object({
 })
 
 export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys({
-  organisationNumber: numbersKeys.organisationNumber.required(),
-  registrationNumber: numbersKeys.registrationNumber.required(),
+  ...numbersKeys,
   accreditationNumber: Joi.when('accreditationId', {
     is: null,
-    then: Joi.valid(null).required(),
-    otherwise: Joi.string().required()
+    then: Joi.valid(null),
+    otherwise: Joi.string()
   })
 })
 

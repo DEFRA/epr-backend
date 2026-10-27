@@ -362,7 +362,7 @@ describe('updatePrnStatus', () => {
       })
     })
 
-    it('appends nothing when its organisation record gives no number', async () => {
+    it('writes the event without a number its organisation record does not give', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -372,19 +372,22 @@ describe('updatePrnStatus', () => {
         accreditation: { accreditationNumber: null }
       })
 
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
-        })
-      ).rejects.toThrow(
-        `Cannot store ledger events without their numbers: accreditation ${ACC_ID} has no accreditation number`
-      )
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+      })
 
-      expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
-        { amount: 1000, availableAmount: 1000 }
-      )
+      const latest = await repositories.ledgerRepository.findLatestInLedger({
+        organisationId: ORG_ID,
+        registrationId: REG_ID,
+        accreditationId: ACC_ID
+      })
+      expect(latest).toMatchObject({
+        kind: LEDGER_EVENT_KIND.PRN_CREATED,
+        registrationNumber: 'R26SR500000789PL'
+      })
+      expect(latest).not.toHaveProperty('accreditationNumber')
     })
 
     // Tonnage is validated positive at the route and in the PRN schema, so a
@@ -672,7 +675,7 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow()
     })
 
-    it('reserves no PRN number when the organisation record gives no registration number', async () => {
+    it('issues the PRN when the organisation record gives no registration number', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           status: {
@@ -684,18 +687,24 @@ describe('updatePrnStatus', () => {
         registrationNumber: null
       })
 
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.SIGNATORY
-        })
-      ).rejects.toThrow(
-        `Cannot store ledger events without their numbers: registration ${REG_ID} has no registration number`
-      )
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
 
       const stored = await repositories.prnRepository.findById(PRN_ID)
-      expect(stored?.prnNumber).toBeUndefined()
+      expect(stored?.prnNumber).toBeDefined()
+      const latest = await repositories.ledgerRepository.findLatestInLedger({
+        organisationId: ORG_ID,
+        registrationId: REG_ID,
+        accreditationId: ACC_ID
+      })
+      expect(latest).toMatchObject({
+        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
+        accreditationNumber: 'ACC-1'
+      })
+      expect(latest).not.toHaveProperty('registrationNumber')
     })
   })
 

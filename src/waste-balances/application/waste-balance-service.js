@@ -34,7 +34,7 @@ import { validateAccreditationId } from '../repository/validation.js'
  *
  * @typedef {Object} BalanceForUpdate
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
- * @property {(events: import('../domain/commands.js').BalanceEvent[], numbers: import('../repository/ledger-schema.js').LedgerEventNumbersOnInsert) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
+ * @property {(events: import('../domain/commands.js').BalanceEvent[], numbers: import('../repository/ledger-schema.js').LedgerEventNumbers) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
  */
 
 /**
@@ -83,7 +83,7 @@ const createLedgerCommands = (ledgerRepository) => {
    * defaults to now for a live command; the historical backfill supplies the
    * original submission time so replayed history is dated when it happened.
    *
-   * @param {import('../repository/ledger-schema.js').NumberedLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId & import('../repository/ledger-schema.js').LedgerEventNumbers} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
@@ -223,7 +223,7 @@ export const createWasteBalanceService = (
      * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {string} options.summaryLogId
-     * @param {import('../repository/ledger-schema.js').LedgerEventNumbersOnInsert} options.numbers
+     * @param {import('#domain/organisations/numbers.js').RequiredNumbers} options.numbers
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
