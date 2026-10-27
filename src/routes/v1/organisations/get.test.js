@@ -284,12 +284,7 @@ describe('GET /v1/organisations', () => {
     it.each([
       ['orgId as the business orgId', () => `orgId=${HOLDER_ORG_ID}`],
       ['orgId as the document id', () => `orgId=${holder.id}`],
-      ['registrationId', () => `registrationId=${holder.registrations[0].id}`],
       ['registrationNumber', () => 'registrationNumber=REG001'],
-      [
-        'accreditationId',
-        () => `accreditationId=${holder.accreditations[0].id}`
-      ],
       ['accreditationNumber', () => 'accreditationNumber=ACC001']
     ])(
       'returns the paged envelope holding only the matching organisation for %s',
@@ -347,7 +342,7 @@ describe('GET /v1/organisations', () => {
 
     it('treats empty criteria as absent', async () => {
       const { body } = await get(
-        'orgId=&registrationId=&registrationNumber=&accreditationId=&accreditationNumber='
+        'orgId=&registrationNumber=&accreditationNumber='
       )
 
       expect(body.totalItems).toBe(2)
@@ -363,6 +358,8 @@ describe('GET /v1/organisations', () => {
       ['pageSize over max', '/v1/organisations?pageSize=201'],
       ['pageSize negative', '/v1/organisations?pageSize=-5'],
       ['unknown query param', '/v1/organisations?unknownParam=x'],
+      ['registrationId', '/v1/organisations?registrationId=reg-1'],
+      ['accreditationId', '/v1/organisations?accreditationId=acc-1'],
       [
         'search exceeds max length',
         `/v1/organisations?search=${'a'.repeat(201)}`
@@ -372,16 +369,8 @@ describe('GET /v1/organisations', () => {
         `/v1/organisations?orgId=${'1'.repeat(201)}`
       ],
       [
-        'registrationId exceeds max length',
-        `/v1/organisations?registrationId=${'a'.repeat(201)}`
-      ],
-      [
         'registrationNumber exceeds max length',
         `/v1/organisations?registrationNumber=${'a'.repeat(201)}`
-      ],
-      [
-        'accreditationId exceeds max length',
-        `/v1/organisations?accreditationId=${'a'.repeat(201)}`
       ],
       [
         'accreditationNumber exceeds max length',

@@ -24,18 +24,14 @@ const criterionSchema = () =>
 const CRITERIA_KEYS = [
   'search',
   'orgId',
-  'registrationId',
   'registrationNumber',
-  'accreditationId',
   'accreditationNumber'
 ]
 
 const querySchema = Joi.object({
   search: criterionSchema(),
   orgId: criterionSchema(),
-  registrationId: criterionSchema(),
   registrationNumber: criterionSchema(),
-  accreditationId: criterionSchema(),
   accreditationNumber: criterionSchema(),
   page: Joi.number().integer().min(1).optional(),
   pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional()
@@ -65,9 +61,7 @@ export const organisationsGetAll = {
    *   query: {
    *     search?: string,
    *     orgId?: string,
-   *     registrationId?: string,
    *     registrationNumber?: string,
-   *     accreditationId?: string,
    *     accreditationNumber?: string,
    *     page?: number,
    *     pageSize?: number
@@ -88,9 +82,7 @@ export const organisationsGetAll = {
     const result = await organisationsListView.find({
       search: query.search,
       orgId: query.orgId,
-      registrationId: query.registrationId,
       registrationNumber: query.registrationNumber,
-      accreditationId: query.accreditationId,
       accreditationNumber: query.accreditationNumber,
       page: query.page ?? DEFAULT_PAGE,
       pageSize: query.pageSize ?? DEFAULT_PAGE_SIZE

@@ -382,16 +382,12 @@ const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 export const normaliseCriteria = ({
   search,
   orgId,
-  registrationId,
   registrationNumber,
-  accreditationId,
   accreditationNumber
 }) => ({
   search: (search ?? '').trim(),
   orgId: (orgId ?? '').trim(),
-  registrationId: (registrationId ?? '').trim(),
   registrationNumber: (registrationNumber ?? '').trim(),
-  accreditationId: (accreditationId ?? '').trim(),
   accreditationNumber: (accreditationNumber ?? '').trim()
 })
 

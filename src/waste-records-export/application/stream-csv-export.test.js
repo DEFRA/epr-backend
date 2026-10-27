@@ -170,7 +170,7 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  *   seeds?: any[],
  *   summaryLogs?: Record<string, any[]>,
  *   sites?: OverseasSite[],
- *   organisationId?: string,
+ *   organisation?: any,
  *   registrationId?: string
  * }} [options]
  */
@@ -179,7 +179,7 @@ const buildDeps = async ({
   seeds = [],
   summaryLogs = {},
   sites = [],
-  organisationId,
+  organisation,
   registrationId
 } = {}) => {
   const ledgerEvents = seeds.map((seed) =>
@@ -216,8 +216,7 @@ const buildDeps = async ({
 
   return {
     organisationsRepository: {
-      findAll: async () => orgs,
-      findById: async (id) => orgs.find((org) => org.id === id)
+      findAll: async () => orgs
     },
     summaryLogRowStatesRepository,
     ledgerRepository,
@@ -228,7 +227,7 @@ const buildDeps = async ({
     overseasSitesRepository: {
       findAll: async () => sites
     },
-    organisationId,
+    organisation,
     registrationId
   }
 }
@@ -1134,7 +1133,7 @@ describe('streamCsvExport', () => {
     expect(out[1]).not.toContain('Test Org')
   })
 
-  it('fetches a single organisation by id and skips findAll when scoped by organisationId', async () => {
+  it('exports only the given organisation and skips findAll when scoped to one', async () => {
     const org = baseOrg({
       id: 'org-scoped',
       companyDetails: { name: 'Scoped Org' },
@@ -1143,7 +1142,7 @@ describe('streamCsvExport', () => {
     const deps = await buildDeps({
       orgs: [org],
       seeds: [{ organisationId: 'org-scoped', rows: [receivedRowState()] }],
-      organisationId: 'org-scoped'
+      organisation: org
     })
     const findAll = vi.fn().mockResolvedValue([])
     deps.organisationsRepository.findAll = findAll
@@ -1179,7 +1178,7 @@ describe('streamCsvExport', () => {
           rows: [receivedRowState({ rowId: '2001' })]
         }
       ],
-      organisationId: 'org-scoped',
+      organisation: org,
       registrationId: 'reg-2'
     })
 
@@ -1189,7 +1188,7 @@ describe('streamCsvExport', () => {
     expect(out[1].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('2001')
   })
 
-  it('includes a test organisation when it is explicitly requested by id', async () => {
+  it('includes a test organisation when the export is scoped to it', async () => {
     const testOrg = baseOrg({
       id: 'org-test',
       orgId: 999999,
@@ -1205,7 +1204,7 @@ describe('streamCsvExport', () => {
           rows: [receivedRowState()]
         }
       ],
-      organisationId: 'org-test'
+      organisation: testOrg
     })
 
     const out = await collect(streamCsvExport(deps))

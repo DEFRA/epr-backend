@@ -45,7 +45,6 @@ const registrationWasteRecordsExport = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId } = request.params
     const { organisation, registration } = request.app
 
     // No single submission stands behind this export, so it is stamped with
@@ -59,8 +58,7 @@ const registrationWasteRecordsExport = {
           summaryLogsRepository: request.summaryLogsRepository,
           overseasSitesRepository: request.overseasSitesRepository,
           organisation,
-          organisationId,
-          registrationId
+          registrationId: registration.id
         })
       )
       .type('text/csv; charset=utf-8')
