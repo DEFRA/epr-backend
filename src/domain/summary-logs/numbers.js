@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 
@@ -18,7 +19,7 @@
  * @property {RegistrationNumber} registrationNumber
  * @property {AccreditationNumber|null} [accreditationNumber] - `null` for registered-only;
  *   absent matches every accreditation
- * @property {number} [year] - Absent matches every year
+ * @property {Year} [year] - Absent matches every year
  */
 
 /**

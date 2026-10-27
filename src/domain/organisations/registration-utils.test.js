@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import {
   getReportableRegistrations,
@@ -389,7 +390,7 @@ describe('isRegistrationActiveInYear', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2025-06-01' }),
-        2025
+        toYear(2025)
       )
     ).toBe(true)
   })
@@ -398,7 +399,7 @@ describe('isRegistrationActiveInYear', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2025-06-01' }),
-        2030
+        toYear(2030)
       )
     ).toBe(true)
   })
@@ -407,7 +408,7 @@ describe('isRegistrationActiveInYear', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2026-01-01' }),
-        2025
+        toYear(2025)
       )
     ).toBe(false)
   })
@@ -418,7 +419,7 @@ describe('isRegistrationActiveInYear', () => {
       expect(
         isRegistrationActiveInYear(
           buildRegistration({ status, validFrom: '2025-01-01' }),
-          2025
+          toYear(2025)
         )
       ).toBe(false)
     }

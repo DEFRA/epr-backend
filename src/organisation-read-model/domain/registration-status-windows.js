@@ -8,6 +8,7 @@ import { HELD_ACCREDITATION_STATUSES } from './model.js'
 import { statusRanges } from './status-timeline.js'
 
 /** @import { CalendarDateRange } from '#common/helpers/dates/date-range.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Registration } from './model.js' */
 
 /**
@@ -42,7 +43,7 @@ const accreditedWindows = (registration, year, yearNumber) => {
  * `year`.
  *
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
  */
 export const registrationStatusWindows = (registration, year) => {

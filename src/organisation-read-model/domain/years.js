@@ -3,6 +3,7 @@ import { yearEndOrToday } from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
 import { approvedYears } from './status-timeline.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Organisation, Registration } from './model.js' */
 
 /**
@@ -23,7 +24,7 @@ export const organisationYears = (organisation, now) => {
 
 /**
  * @param {Registration['accreditations']} accreditations
- * @param {number} year
+ * @param {Year} year
  */
 const accreditationIn = (accreditations, year) =>
   Object.hasOwn(accreditations, year) ? { [year]: accreditations[year] } : {}
@@ -35,7 +36,7 @@ const accreditationIn = (accreditations, year) =>
  * year is current.
  *
  * @param {Organisation} organisation
- * @param {number} year
+ * @param {Year} year
  * @param {Date} now
  * @returns {Organisation}
  */

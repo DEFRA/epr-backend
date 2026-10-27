@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -329,7 +330,7 @@ export const testFindByNaturalKey = (it) => {
 
           const result = await repo.findLatestSubmitted({
             ...stored.key,
-            year: 2026,
+            year: toYear(2026),
             accreditationNumber: stored.current.accreditationNumber
           })
 
@@ -354,7 +355,7 @@ export const testFindByNaturalKey = (it) => {
 
           const result = await repo.findLatestSubmitted({
             ...stored.key,
-            year: 2026,
+            year: toYear(2026),
             accreditationNumber: null
           })
 
@@ -368,7 +369,7 @@ export const testFindByNaturalKey = (it) => {
 
           const result = await repo.findLatestSubmitted({
             ...stored.key,
-            year: 2026,
+            year: toYear(2026),
             accreditationNumber: stored.current.accreditationNumber
           })
 
