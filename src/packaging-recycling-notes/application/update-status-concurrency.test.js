@@ -155,7 +155,7 @@ const seedClosingBalance = (ledgerRepository, balanceSeed) =>
  * does not.
  *
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent} competingEvent
+ * @param {import('#waste-balances/repository/ledger-port.js').LedgerEventInsert} competingEvent
  * @returns {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository}
  */
 const withCompetingWriteDuringFold = (ledgerRepository, competingEvent) => {

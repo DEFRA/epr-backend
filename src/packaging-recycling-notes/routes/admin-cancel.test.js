@@ -46,11 +46,13 @@ const accreditationId = '507f1f77bcf86cd799439014'
 
 const { buildOrganisationHolding } = createOrganisationBuilders()
 const organisationsRepository = createInMemoryOrganisationsRepository([
-  buildOrganisationHolding({
-    organisationId,
-    registrationId,
-    accreditationId
-  })
+  partialMock(
+    buildOrganisationHolding({
+      organisationId,
+      registrationId,
+      accreditationId
+    })
+  )
 ])
 
 const cancelUrl = `/v1/admin/packaging-recycling-notes/${prnId}/cancel`
