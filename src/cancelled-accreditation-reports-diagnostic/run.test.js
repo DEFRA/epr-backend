@@ -22,9 +22,9 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Lock } from 'mongo-locks' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }

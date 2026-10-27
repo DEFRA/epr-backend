@@ -7,13 +7,8 @@ import {
 } from './published-months.js'
 import { wasteBalanceResponseSchema } from './waste-balance-response.schema.js'
 
-/** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 export const marketInsightsWasteBalancePath =
   '/v1/market-insights/{year}/{cadence}/{period}/waste-balance'
@@ -36,14 +31,14 @@ export const marketInsightsWasteBalanceGet = {
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number },
-   *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
-   *   organisationsRepository: OrganisationsRepository,
-   *   overseasSitesRepository: OverseasSitesRepository,
-   *   reportsRepository: ReportsRepository
+   *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+   *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+   *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
-   * @returns {Promise<HapiResponseObject>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const {

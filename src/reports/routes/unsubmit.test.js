@@ -19,7 +19,7 @@ import * as reportAudit from '#reports/application/audit.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { ReportStatusHistoryItem, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
@@ -155,9 +155,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const updated = await reportsRepository.findReportById(reportId)
 
-      const lastEntry = /** @type {ReportStatusHistoryItem} */ (
-        updated.status.history.at(-1)
-      )
+      const lastEntry =
+        /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
+          updated.status.history.at(-1)
+        )
       expect(lastEntry.status).toBe('ready_to_submit')
     })
 

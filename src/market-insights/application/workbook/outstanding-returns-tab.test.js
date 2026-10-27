@@ -28,12 +28,12 @@ const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
+/** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
-/** @import ExcelJS from 'exceljs' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

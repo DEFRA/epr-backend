@@ -33,10 +33,6 @@ import {
 } from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 
-/** @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js' */
-/** @import { Cadence } from '#reports/domain/cadence.js' */
-/** @import { Report } from '#reports/repository/port.js' */
-
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
@@ -151,7 +147,9 @@ const defaultParams = () => {
     },
     registration,
     year: toYear(2024),
-    cadence: /** @type {Cadence} */ ('monthly'),
+    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+      'monthly'
+    ),
     period: 1,
     submissionNumber: 1,
     overseasSitesRepository: createInMemoryOverseasSitesRepository()()
@@ -236,15 +234,16 @@ describe('report-service', () => {
           ).findLatestInLedgerByKind(lookupLedgerId, kind)
       })
 
-      const report = /** @type {AggregatedReportDetail} */ (
-        await fetchOrGenerateReportForPeriod({
-          reportsRepository,
-          ledgerRepository,
-          summaryLogRowStatesRepository,
-          packagingRecyclingNotesRepository,
-          ...params
-        })
-      )
+      const report =
+        /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
+          await fetchOrGenerateReportForPeriod({
+            reportsRepository,
+            ledgerRepository,
+            summaryLogRowStatesRepository,
+            packagingRecyclingNotesRepository,
+            ...params
+          })
+        )
 
       expect(report.source).toEqual({
         summaryLogId: 'sl-1',
@@ -305,7 +304,8 @@ describe('report-service', () => {
         ...params
       })
 
-      const storedReport = /** @type {Report} */ (report)
+      const storedReport =
+        /** @type {import('#reports/repository/port.js').Report} */ (report)
       expect(storedReport.id).toBeDefined()
       expect(storedReport.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
     })
@@ -372,7 +372,8 @@ describe('report-service', () => {
         submissionNumber: 1
       })
 
-      const storedReport = /** @type {Report} */ (report)
+      const storedReport =
+        /** @type {import('#reports/repository/port.js').Report} */ (report)
       expect(storedReport.id).toBe(report1.id)
     })
 

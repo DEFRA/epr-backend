@@ -10,7 +10,7 @@ import {
 
 /**
  * @import {ReportStatus} from './report-status.js'
- * @import { PeriodicReport, ReportPerPeriod, ReportSummary } from '#reports/repository/port.js'
+ * @import {ReportSummary} from '#reports/repository/port.js'
  */
 
 /**
@@ -29,8 +29,8 @@ const reportSummary = (status, id) =>
   })
 
 /**
- * @param {Partial<ReportPerPeriod>} [overrides]
- * @returns {ReportPerPeriod}
+ * @param {Partial<import('#reports/repository/port.js').ReportPerPeriod>} [overrides]
+ * @returns {import('#reports/repository/port.js').ReportPerPeriod}
  */
 const slot = (overrides = {}) => ({
   startDate: calendarDate('2026-01-01'),
@@ -55,8 +55,8 @@ const resubmittedSlot = () =>
 
 /**
  * @param {number} year
- * @param {PeriodicReport['reports']} reports
- * @returns {PeriodicReport}
+ * @param {import('#reports/repository/port.js').PeriodicReport['reports']} reports
+ * @returns {import('#reports/repository/port.js').PeriodicReport}
  */
 const periodicReport = (year, reports) => ({
   organisationId: 'org-1',

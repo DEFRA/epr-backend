@@ -19,10 +19,6 @@ import {
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
 
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { TestAPI } from 'vitest' */
-
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
@@ -46,8 +42,8 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     organisationsRepository: OrganisationsRepository,
- *     reportsRepository: ReportsRepository
+ *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
  * }} TestServerWithRealDb
  */
@@ -57,36 +53,37 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
  * adapters, over one in-memory Mongo that the test also seeds, so the
  * latest-submission collapse is exercised against the stored projection.
  */
-const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
-  mongoIt.extend({
-    server: [
-      async (/** @type {{ db: string }} */ { db }, use) => {
-        const client = await MongoClient.connect(db)
-        try {
-          const mongoDb = client.db(DATABASE_NAME)
-          const repositories = {
-            organisationsRepository: (
-              await createOrganisationsRepository(mongoDb)
-            )(),
-            reportsRepository: (await createReportsRepository(mongoDb))()
-          }
-          const server = await createTestServer({ db: mongoDb, repositories })
+const it =
+  /** @type {import('vitest').TestAPI<{ server: TestServerWithRealDb }>} */ (
+    mongoIt.extend({
+      server: [
+        async (/** @type {{ db: string }} */ { db }, use) => {
+          const client = await MongoClient.connect(db)
+          try {
+            const mongoDb = client.db(DATABASE_NAME)
+            const repositories = {
+              organisationsRepository: (
+                await createOrganisationsRepository(mongoDb)
+              )(),
+              reportsRepository: (await createReportsRepository(mongoDb))()
+            }
+            const server = await createTestServer({ db: mongoDb, repositories })
 
-          await use(
-            /** @type {TestServerWithRealDb} */ (
-              Object.assign(server, { repositories })
+            await use(
+              /** @type {TestServerWithRealDb} */ (
+                Object.assign(server, { repositories })
+              )
             )
-          )
 
-          await server.stop()
-        } finally {
-          await client.close()
-        }
-      },
-      { scope: 'file' }
-    ]
-  })
-)
+            await server.stop()
+          } finally {
+            await client.close()
+          }
+        },
+        { scope: 'file' }
+      ]
+    })
+  )
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 

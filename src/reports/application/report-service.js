@@ -17,12 +17,6 @@ import {
   summariseIncompleteData
 } from './report-mandatory/assert-report-data-complete.js'
 
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
-/** @import { Issue } from './report-mandatory/assert-report-data-complete.js' */
-
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
@@ -31,7 +25,7 @@ import {
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
- * @import { FindPeriodicReportsParams, PeriodicReport, Report, ReportNumbers, ReportsRepository, UserSummary } from '#reports/repository/port.js'
+ * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
@@ -41,12 +35,12 @@ import {
  *
  * @typedef {object} ReportsService
  * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
- * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
- * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
 
 /**
- * @param {ReportsRepository} reportsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @returns {ReportsService}
  */
 export const createReportsService = (reportsRepository) => ({
@@ -65,14 +59,14 @@ export const createReportsService = (reportsRepository) => ({
 
 /**
  * Looks up a stored report for a specific period and submission number.
- * @param {ReportsRepository} reportsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
  * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
- * @returns {Promise<Report | null>}
+ * @returns {Promise<import('#reports/repository/port.js').Report | null>}
  */
 export async function fetchReportBySubmissionNumber(
   reportsRepository,
@@ -152,9 +146,9 @@ function buildReportData(aggregated, registration) {
  * fetch-or-generate result. The completeness signal is a preview-only concern,
  * so the stored branch never carries it.
  *
- * @param {Report} storedReport
+ * @param {import('#reports/repository/port.js').Report} storedReport
  * @param {PeriodicReport[]} periodicReports
- * @returns {Report & { canRequestResubmission: boolean }}
+ * @returns {import('#reports/repository/port.js').Report & { canRequestResubmission: boolean }}
  */
 function buildStoredReportResult(storedReport, periodicReports) {
   return {
@@ -175,11 +169,11 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * report if one exists, otherwise computes one from waste records.
  *
  * @param {object} params
- * @param {ReportsRepository} params.reportsRepository
- * @param {WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
@@ -188,7 +182,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {boolean} [params.reportDataValidationEnabled]
- * @returns {Promise<(Report | AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: Issue[] } }>}
+ * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
@@ -296,8 +290,8 @@ function toSource(latestSubmission) {
  * aggregation so both see identical data.
  *
  * @param {object} params
- * @param {WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
@@ -332,7 +326,7 @@ async function readSubmissionRowStates({
  * completeness gate and this aggregation describe the same submission.
  * @param {object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {OperatorCategory} params.operatorCategory
  * @param {string} params.organisationId
  * @param {string} params.registrationId
@@ -340,9 +334,9 @@ async function readSubmissionRowStates({
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
- * @param {WasteRecordState[]} params.wasteRecordStates
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
  * @param {Awaited<ReturnType<typeof latestSubmittedSummaryLog>>} params.latestSubmission
- * @returns {Promise<AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
+ * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,
@@ -392,7 +386,7 @@ async function getAggregatedReportDetail({
  * permitted.
  *
  * @param {object} params
- * @param {ReportsRepository} params.reportsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Year} params.year
@@ -439,7 +433,7 @@ async function assertReportCreationAllowed({
  * the only guard needed here.
  *
  * @param {boolean | undefined} reportDataValidationEnabled
- * @param {WasteRecordState[]} wasteRecordStates
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
  * @param {string} reference
  * @returns {void}
  */
@@ -461,8 +455,8 @@ function assertReportDataCompleteIfEnabled(
  * report.
  *
  * @param {boolean | undefined} reportDataValidationEnabled
- * @param {WasteRecordState[]} wasteRecordStates
- * @returns {{ total: number, issues: Issue[] } | null}
+ * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
  */
 function summariseIncompleteDataIfEnabled(
   reportDataValidationEnabled,
@@ -479,22 +473,22 @@ function summariseIncompleteDataIfEnabled(
  * checks no report already exists, aggregates waste data, and persists.
  *
  * @param {object} params
- * @param {ReportsRepository} params.reportsRepository
- * @param {WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {ReportNumbers} params.numbers
+ * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @param {UserSummary} params.changedBy
+ * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
  * @param {boolean} [params.reportDataValidationEnabled]
- * @returns {Promise<Report>}
+ * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
   reportsRepository,

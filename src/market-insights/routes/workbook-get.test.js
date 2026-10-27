@@ -21,8 +21,8 @@ const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
-/** @import { TestServer } from '#test/create-test-server.js' */
 /** @import { ServerInjectResponse } from '@hapi/hapi' */
+/** @import { TestServer } from '#test/create-test-server.js' */
 
 /**
  * @param {ServerInjectResponse} response

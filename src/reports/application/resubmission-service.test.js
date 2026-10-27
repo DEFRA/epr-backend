@@ -16,8 +16,6 @@ import {
   requestOperatorResubmission
 } from './resubmission-service.js'
 
-/** @import { Cadence } from '#reports/domain/cadence.js' */
-
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
  */
@@ -64,7 +62,9 @@ const defaultParams = () => {
     registrationId: registration.id,
     registration,
     year: toYear(2024),
-    cadence: /** @type {Cadence} */ ('monthly'),
+    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+      'monthly'
+    ),
     period: 1,
     submissionNumber: 1
   }
@@ -119,7 +119,9 @@ describe('resubmission-service', () => {
   describe('canRequestResubmission', () => {
     const buildReport = (overrides = {}) => ({
       year: toYear(2024),
-      cadence: /** @type {Cadence} */ ('monthly'),
+      cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+        'monthly'
+      ),
       period: 1,
       submissionNumber: 1,
       status: REPORT_STATUS.SUBMITTED,
@@ -390,7 +392,9 @@ describe('resubmission-service', () => {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
         year: toYear(2024),
-        cadence: /** @type {Cadence} */ ('monthly'),
+        cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
+          'monthly'
+        ),
         period: 1,
         submissionNumber: 1,
         requestedBy: REQUESTED_BY

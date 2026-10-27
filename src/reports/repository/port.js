@@ -1,9 +1,11 @@
+/**
+ * @typedef {import('#reports/domain/report-status.js').ReportStatus} ReportStatus
+ */
+
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import { ReportStatus } from '#reports/domain/report-status.js' */
-/** @import { RESUBMISSION_INELIGIBLE_REASON } from '#reports/domain/resubmission.js' */
 
 /**
- * @typedef {typeof RESUBMISSION_INELIGIBLE_REASON[keyof typeof RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
+ * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
  */
 
 /**

@@ -42,8 +42,8 @@ import * as reportAudit from '#reports/application/audit.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),

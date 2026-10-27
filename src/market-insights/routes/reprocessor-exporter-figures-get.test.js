@@ -32,8 +32,6 @@ import {
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
 
-/** @import { TestServer } from '#test/create-test-server.js' */
-
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
@@ -284,7 +282,7 @@ const UK_ISSUED_TONNAGE = NATIONS.reduce(
 describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
   setupAuthContext()
 
-  /** @type {TestServer} */
+  /** @type {import('#test/create-test-server.js').TestServer} */
   let server
 
   beforeAll(async () => {

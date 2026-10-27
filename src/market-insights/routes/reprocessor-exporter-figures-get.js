@@ -9,11 +9,8 @@ import {
 } from './published-months.js'
 import { reprocessorExporterFiguresResponseSchema } from './reprocessor-exporter-figures-response.schema.js'
 
-/** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { ObjectSchema } from 'joi' */
 
 export const marketInsightsReprocessorExporterFiguresPath =
   '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
@@ -44,7 +41,7 @@ const nationPeriodParamsSchema = monthlyPeriodParamsSchema.keys({
  * @param {Object} route
  * @param {string} route.path
  * @param {string} route.action - the logging event action of the route
- * @param {ObjectSchema} route.paramsSchema
+ * @param {import('joi').ObjectSchema} route.paramsSchema
  */
 const reprocessorExporterFiguresRoute = ({ path, action, paramsSchema }) => ({
   method: 'GET',
@@ -64,11 +61,11 @@ const reprocessorExporterFiguresRoute = ({ path, action, paramsSchema }) => ({
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number, nation?: string },
-   *   organisationsRepository: OrganisationsRepository,
-   *   reportsRepository: ReportsRepository
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
-   * @returns {Promise<HapiResponseObject>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, logger, params } =

@@ -7,10 +7,8 @@ import {
 } from './published-months.js'
 import { outstandingReturnsResponseSchema } from './outstanding-returns-response.schema.js'
 
-/** @import { HapiRequest, HapiResponseObject, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 export const marketInsightsOutstandingReturnsPath =
   '/v1/market-insights/{year}/{cadence}/{period}/outstanding-returns'
@@ -33,11 +31,11 @@ export const marketInsightsOutstandingReturnsGet = {
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number },
-   *   organisationsRepository: OrganisationsRepository,
-   *   reportsRepository: ReportsRepository
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
-   * @returns {Promise<HapiResponseObject>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request

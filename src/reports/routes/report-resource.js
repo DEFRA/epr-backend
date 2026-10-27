@@ -15,8 +15,7 @@ import {
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Issue } from '#reports/application/report-mandatory/assert-report-data-complete.js'
- * @import { ReportStatus as StoredStatus } from '#reports/domain/report-status.js'
- * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatusObject, ReportSubmittedSlot, UserSummary, WasteSent } from '#reports/repository/port.js'
+ * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatus as StoredStatus, ReportStatusObject, ReportSubmittedSlot, UserSummary, WasteSent } from '#reports/repository/port.js'
  */
 
 /**

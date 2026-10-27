@@ -3,7 +3,7 @@ import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { PeriodicReport, ReportSummary } from '#reports/repository/port.js'
+ * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
@@ -14,7 +14,7 @@ import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
- * @returns {ReportSummary | null}
+ * @returns {import('#reports/repository/port.js').ReportSummary | null}
  */
 export function findSubmissionByNumber(
   periodicReports,

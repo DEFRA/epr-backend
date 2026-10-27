@@ -9,8 +9,6 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 
-/** @import { CreateReportParams, ReportsRepository, UserSummary } from '../port.js' */
-
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
 export const DEFAULT_REPORT_START_DATE = calendarDate('2024-01-01')
@@ -20,7 +18,7 @@ export const DEFAULT_REPORT_YEAR = toYear(2024)
 export const DEFAULT_REPORT_PERIOD = MONTHLY_PERIODS.January
 
 /**
- * @returns {UserSummary}
+ * @returns {import('../port.js').UserSummary}
  */
 const buildUserSummary = (overrides = {}) => ({
   id: overrides.id ?? randomUUID(),
@@ -29,8 +27,8 @@ const buildUserSummary = (overrides = {}) => ({
 })
 
 /**
- * @param {Partial<CreateReportParams>} [overrides]
- * @returns {CreateReportParams}
+ * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
+ * @returns {import('../port.js').CreateReportParams}
  */
 export const DEFAULT_CHANGED_BY = {
   id: 'user-1',
@@ -40,8 +38,8 @@ export const DEFAULT_CHANGED_BY = {
 
 /**
  * Creates a report and advances it to submitted via ready_to_submit.
- * @param {ReportsRepository} repository
- * @param {Partial<CreateReportParams>} [overrides]
+ * @param {import('../port.js').ReportsRepository} repository
+ * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
  * @returns {Promise<string>} the submitted report id
  */
 export const createAndSubmitReport = async (repository, overrides = {}) => {

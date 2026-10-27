@@ -34,12 +34,7 @@ import {
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
- *   FindPeriodicReportsForYearParams,
  *   FindPeriodicReportsParams,
- *   MarkActiveReportsStaleForPrnCancellationParams,
- *   MarkReportStaleResult,
- *   MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult,
- *   MarkSubmittedReportRequiringResubmissionByOperatorParams,
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
@@ -329,7 +324,7 @@ const findAllPeriodicReports = async (reports) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {FindPeriodicReportsForYearParams} params
+ * @param {import('./port.js').FindPeriodicReportsForYearParams} params
  * @returns {Promise<PeriodicReport[]>}
  */
 const findPeriodicReportsForYear = async (reports, params) => {
@@ -345,7 +340,7 @@ const findPeriodicReportsForYear = async (reports, params) => {
  * @param {string} registrationId
  * @param {string} summaryLogId
  * @param {string} uploadedAt
- * @returns {Promise<MarkReportStaleResult[]>}
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
 const markActiveReportsStaleForSummaryLog = async (
   reports,
@@ -451,8 +446,8 @@ const isActiveReportForPrnCancellationSlot = (report, criteria) =>
  * period — so this returns zero or one result.
  *
  * @param {Map<string, Object>} reports
- * @param {MarkActiveReportsStaleForPrnCancellationParams} params
- * @returns {Promise<MarkReportStaleResult[]>}
+ * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
 const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
   const {
@@ -593,8 +588,8 @@ const isReportAtSubmissionSlot = (report, key) =>
  * conditional write, returning `null` when nothing matched.
  *
  * @param {Map<string, Object>} reports
- * @param {MarkSubmittedReportRequiringResubmissionByOperatorParams} params
- * @returns {Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
+ * @param {import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {Promise<import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
  */
 const markSubmittedReportRequiringResubmissionByOperator = async (
   reports,

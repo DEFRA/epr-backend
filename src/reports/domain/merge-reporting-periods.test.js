@@ -8,13 +8,11 @@ import {
 } from './merge-reporting-periods.js'
 import { REPORT_STATUS } from './report-status.js'
 
-/** @import { MergedPeriod } from './merge-reporting-periods.js' */
-
 /**
  * Derives a merged period's submitted reports the same way the report-submissions
  * feed does, so these cases assert the projection the feed reads without the merge
  * stamping it onto every period.
- * @param {MergedPeriod} period
+ * @param {import('./merge-reporting-periods.js').MergedPeriod} period
  */
 const submittedReportsFor = (period) =>
   selectSubmittedReports({
@@ -27,8 +25,8 @@ const submittedReportsFor = (period) =>
  * complete ReportSummary: activity payloads are omitted). A submitted report
  * always carries a submission instant, so `submittedAt` defaults to a fixed
  * timestamp when the status is submitted; override any field a test cares about.
- * @param {Partial<ReportSummary>} [overrides]
- * @returns {ReportSummary}
+ * @param {Partial<import('../repository/port.js').ReportSummary>} [overrides]
+ * @returns {import('../repository/port.js').ReportSummary}
  */
 const reportSummary = (overrides = {}) => {
   const status = overrides.status ?? REPORT_STATUS.IN_PROGRESS
@@ -45,7 +43,7 @@ const reportSummary = (overrides = {}) => {
 }
 
 /**
- * @import { PeriodicReport, ReportSummary } from '../repository/port.js'
+ * @import { PeriodicReport } from '../repository/port.js'
  */
 
 /**

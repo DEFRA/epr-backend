@@ -17,14 +17,12 @@ import { recordOf } from '#common/helpers/record-of.js'
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
-/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
 /** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
-/** @import { PeriodicReport } from '#reports/repository/port.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -94,7 +92,7 @@ const owedPeriods = (served, years, accreditation) => {
  * @typedef {Object} OwedReport
  * @property {YearMonth} month
  * @property {Organisation} org
- * @property {Registration} registration
+ * @property {import('#domain/organisations/registration.js').Registration} registration
  * @property {Accreditation} accreditation
  * @property {boolean} submitted
  */
@@ -107,8 +105,8 @@ const owedPeriods = (served, years, accreditation) => {
  * one since cancelled yields the months before the one it was cancelled in.
  *
  * @param {Object} params
- * @param {Organisation[]} params.organisations
- * @param {PeriodicReport[]} params.periodicReports
+ * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
+ * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months served
  * @param {CoversRegistration} [params.covers] - narrows the walk to the registrations a caller publishes
  * @returns {Generator<OwedReport>}

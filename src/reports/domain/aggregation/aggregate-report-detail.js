@@ -11,8 +11,6 @@ import {
 } from './fields-by-operator-category.js'
 import { filterRecordsByDateField } from './filter-records-by-date.js'
 
-/** @import { WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js' */
-
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
@@ -29,7 +27,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * type doesn't demand fields (classification, row identity) the aggregation
  * never consumes.
  *
- * @typedef {Pick<WasteRecordState, 'wasteRecordType' | 'data'>} ReportableWasteRecordState
+ * @typedef {Pick<import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState, 'wasteRecordType' | 'data'>} ReportableWasteRecordState
  */
 
 /**

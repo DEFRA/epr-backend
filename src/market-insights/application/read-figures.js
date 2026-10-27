@@ -3,21 +3,14 @@ import { buildReprocessorExporterTable } from '#market-insights/application/repr
 import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 
-/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 /**
  * The five scopes the pages cover: the UK, drawn from every regulator, and one
  * per nation.
  *
- * @type {readonly { name: string, regulator?: RegulatorValue }[]}
+ * @type {readonly { name: string, regulator?: import('#domain/organisations/model.js').RegulatorValue }[]}
  */
 const SCOPES = Object.freeze([
   { name: 'uk' },
@@ -29,12 +22,12 @@ const SCOPES = Object.freeze([
 
 /**
  * @typedef {Object} ReadMarketInsightsFiguresParams
- * @property {WasteBalanceLedgerRepository} ledgerRepository
- * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
- * @property {OrganisationsRepository} organisationsRepository
- * @property {OverseasSitesRepository} overseasSitesRepository
- * @property {ReportsRepository} reportsRepository
- * @property {TypedLogger} logger
+ * @property {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @property {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
+ * @property {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {Year} year
  * @property {YearMonth[]} months - the reporting months to publish, in order
  * @property {Date} now - the one clock reading every figure is taken at

@@ -16,8 +16,8 @@ import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
-/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 /** @import { AppliedForMaterial, Organisation, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

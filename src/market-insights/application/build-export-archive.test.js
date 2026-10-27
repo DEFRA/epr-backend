@@ -10,8 +10,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildMarketInsightsExportArchive } from './build-export-archive.js'
 
-/** @import { Readable } from 'stream' */
-
 const NOW = new Date('2026-09-18T14:15:30.000Z')
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -20,7 +18,7 @@ const MATERIAL_COUNT = TONNAGE_MONITORING_MATERIALS.length
 /**
  * Drain the archive the way the route's response does.
  *
- * @param {Readable} archive
+ * @param {import('stream').Readable} archive
  * @returns {Promise<Buffer>}
  */
 const collect = async (archive) => {

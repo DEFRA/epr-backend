@@ -19,8 +19,6 @@ import {
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { config } from '#root/config.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
-
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
@@ -81,7 +79,7 @@ describe('generateReportSubmissions (integration)', () => {
       material: 'Glass-remelt',
       reportType: 'Monthly'
     }
-    /** @param {Organisation} org */
+    /** @param {import('#domain/organisations/model.js').Organisation} org */
     const rowFor = (org) => ({
       ...baseRow,
       registrationNumber: org.registrations[0].registrationNumber,

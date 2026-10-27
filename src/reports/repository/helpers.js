@@ -15,7 +15,6 @@ import { randomUUID } from 'node:crypto'
 
 /**
  * @import {
- *   CreateReportParams,
  *   ExportActivitySummary,
  *   PeriodicReport,
  *   PrnData,
@@ -249,10 +248,10 @@ export const transformToPeriodicReports = (reports) => {
   })
 }
 
-/** @type {Report} */
+/** @type {import('./port.js').Report} */
 /**
- * @param {CreateReportParams} validatedParams
- * @returns {Report}
+ * @param {import('./port.js').CreateReportParams} validatedParams
+ * @returns {import('./port.js').Report}
  */
 export const prepareCreateReportParams = (validatedParams) => {
   const { changedBy, ...reportCreateParams } = validatedParams
@@ -265,7 +264,7 @@ export const prepareCreateReportParams = (validatedParams) => {
   const now = new Date().toISOString()
   const reportId = randomUUID()
 
-  return /** @type {Report} */ ({
+  return /** @type {import('./port.js').Report} */ ({
     id: reportId,
     version: 1,
     schemaVersion: 1,

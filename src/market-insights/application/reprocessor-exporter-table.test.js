@@ -19,11 +19,6 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { noMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { buildReprocessorExporterTable } from './reprocessor-exporter-table.js'
 
-/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, RegulatorValue, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
-/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
-/** @import { ReprocessorExporterTable } from './reprocessor-exporter-table.js' */
-
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
@@ -49,13 +44,13 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *
  * @param {{
  *   orgId: number,
- *   material?: AppliedForMaterial,
- *   glassRecyclingProcess?: GlassRecyclingProcess[],
- *   wasteProcessingType?: WasteProcessingTypeValue,
- *   regulator?: RegulatorValue,
- *   accreditationRegulator?: RegulatorValue,
- *   registrationStatusHistory?: { status: RegistrationStatus, updatedAt: string }[]
- *   accreditationStatusHistory?: { status: AccreditationStatus, updatedAt: string }[]
+ *   material?: import('#domain/organisations/model.js').AppliedForMaterial,
+ *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
+ *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   accreditationRegulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
+ *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
  *   validFrom?: string
  * }} options
  */
@@ -133,7 +128,7 @@ const prn = (
  *
  * @param {ReturnType<typeof makeOperator>} operator
  * @param {number} period
- * @param {Partial<CreateReportParams>} figures
+ * @param {Partial<import('#reports/repository/port.js').CreateReportParams>} figures
  */
 const monthlyReport = (operator, period, figures = {}) => ({
   organisationId: operator.id,
@@ -152,8 +147,8 @@ const monthlyReport = (operator, period, figures = {}) => ({
  *   organisations: any[],
  *   reports?: ReturnType<typeof monthlyReport>[],
  *   inFlightResubmissions?: ReturnType<typeof monthlyReport>[],
- *   months?: YearMonth[],
- *   regulator?: RegulatorValue
+ *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue
  * }} options
  */
 const run = async ({
@@ -170,7 +165,7 @@ const run = async ({
   for (const report of inFlightResubmissions) {
     await seedInFlightResubmission(seededReports, report)
   }
-  /** @type {ReportsRepository} */
+  /** @type {import('#reports/repository/port.js').ReportsRepository} */
   const reportsRepository = {
     ...seededReports,
     findAllPeriodicReports: async () => {
@@ -224,7 +219,7 @@ const NO_EXPORTER_ACTIVITY = withNoOperators({
  * their operator counts. The table carries a zero cell for every other
  * combination, which these tests are not about.
  *
- * @param {ReprocessorExporterTable} table
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  */
 const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
@@ -257,7 +252,7 @@ const reported = (table) =>
  * One of the operator counts of every cell where it is not zero, keyed
  * `month material type`.
  *
- * @param {ReprocessorExporterTable} table
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  * @param {'operatorCount' | 'submittingOperatorCount'} [count]
  */
 const operatorCounts = (table, count = 'operatorCount') =>
@@ -275,7 +270,7 @@ const operatorCounts = (table, count = 'operatorCount') =>
   )
 
 /**
- * @param {ReprocessorExporterTable} table
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  */
 const submittingOperatorCounts = (table) =>
   operatorCounts(table, 'submittingOperatorCount')
@@ -284,7 +279,7 @@ const submittingOperatorCounts = (table) =>
  * The reports each month was owed and how many arrived, and the same for the
  * period.
  *
- * @param {ReprocessorExporterTable} table
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  */
 const coverage = (table) => ({
   byMonth: Object.fromEntries(
@@ -299,7 +294,7 @@ const coverage = (table) => ({
 /**
  * The PRN tonnage the January reprocessor table totals to.
  *
- * @param {ReprocessorExporterTable} table
+ * @param {import('./reprocessor-exporter-table.js').ReprocessorExporterTable} table
  */
 const januaryIssued = (table) =>
   table.data.months['2026-01'].totals[WASTE_PROCESSING_TYPE.REPROCESSOR]
@@ -1125,7 +1120,7 @@ describe('buildReprocessorExporterTable', () => {
   describe('the operators contributing to each figure', () => {
     /**
      * @param {number} orgId
-     * @param {AppliedForMaterial} [material]
+     * @param {import('#domain/organisations/model.js').AppliedForMaterial} [material]
      */
     const receivingOperator = (orgId, material) => {
       const operator = makeOperator({ orgId, material })

@@ -20,7 +20,6 @@ import {
   toReportResource
 } from './report-resource.js'
 
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
 /** @import { PreviewBody } from './report-resource.js' */
 
 const CHANGED_BY = {
@@ -61,7 +60,7 @@ const storedPeriod = {
 const newRepository = () => createInMemoryReportsRepository()()
 
 /**
- * @param {ReportsRepository} repository
+ * @param {import('#reports/repository/port.js').ReportsRepository} repository
  * @param {string} reportId
  * @param {boolean} [canRequestResubmission]
  */

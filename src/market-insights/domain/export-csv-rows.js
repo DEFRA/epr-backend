@@ -6,9 +6,9 @@ import {
 import { sanitiseFormulaInjection } from '#waste-records-export/domain/csv-columns.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
-/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { WasteBalanceTable } from '#market-insights/application/waste-balance-table.js' */
+/** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
+/** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
 /** @import { PublishedExtras, ExporterMeasures, ReprocessorMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js' */
 
 /** @typedef {(string | number)[]} CsvRow */

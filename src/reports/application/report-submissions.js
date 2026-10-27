@@ -1,3 +1,11 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
+/** @import { Cadence } from '#reports/domain/cadence.js' */
+/** @import { PeriodicReport, WasteSentSummary } from '#reports/repository/port.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -9,15 +17,6 @@ import { getReportableRegistrations } from '#domain/organisations/registration-u
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
 import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
 import { logger } from '#common/helpers/logging/logger.js'
-
-/** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation, RegulatorDisplay } from '#domain/organisations/model.js' */
-/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
-/** @import { Cadence } from '#reports/domain/cadence.js' */
-/** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
-/** @import { PeriodicReport, ReportSummary, ReportsRepository, WasteSentSummary } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /** @param {string} message */
 const logDrop = (message) => logger.warn({ message })
@@ -45,7 +44,7 @@ const logDrop = (message) => logger.warn({ message })
 
 /**
  * @typedef {Object} SubmissionBaseFields
- * @property {RegulatorDisplay} regulator
+ * @property {import('#domain/organisations/model.js').RegulatorDisplay} regulator
  * @property {string} organisationName
  * @property {string} submitterPhone
  * @property {string} approvedPersonsPhone
@@ -88,7 +87,7 @@ function sumSentOn(wasteSent) {
 }
 
 /**
- * @param {ReportSummary | null} report
+ * @param {import('#reports/repository/port.js').ReportSummary | null} report
  * @returns {TonnageFields}
  */
 function buildTonnageFields(report) {
@@ -141,7 +140,7 @@ function buildTonnageFields(report) {
  * @param {Cadence} cadence
  * @param {MergedPeriod} mergedPeriod
  * @param {string} accreditationNumber
- * @param {ReportSummary | null} report
+ * @param {import('#reports/repository/port.js').ReportSummary | null} report
  * @returns {ReportSubmissionsRow}
  */
 function buildRow(
@@ -273,8 +272,8 @@ function periodRows(
  * Generates a flat list of report submission rows across all approved/cancelled
  * registrations for all organisations.
  *
- * @param {OrganisationsRepository} organisationsRepository
- * @param {ReportsRepository} reportsRepository
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @returns {Promise<{ reportSubmissions: ReportSubmissionsRow[], generatedAt: string }>}
  */
 export async function generateReportSubmissions(
@@ -284,7 +283,7 @@ export async function generateReportSubmissions(
   const currentYear = currentUtcYear()
 
   const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
-  /** @type {Map<string, PeriodicReport[]>} */
+  /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */
   const reportsByRegistration = allPeriodicReports.reduce((map, pr) => {
     const key = `${pr.organisationId}::${pr.registrationId}`
     const existing = map.get(key) ?? []

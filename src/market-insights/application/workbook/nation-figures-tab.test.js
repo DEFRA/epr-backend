@@ -37,14 +37,14 @@ const { buildOrganisation } = organisationBuilders
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
+/** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
 /** @import { NationFiguresTabName } from './nation-figures-tab.js' */
-/** @import ExcelJS from 'exceljs' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

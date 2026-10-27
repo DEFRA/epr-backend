@@ -5,13 +5,11 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-/** @import { Mock } from 'vitest' */
-
 /**
- * @import { Report, ReportResubmissionRequired } from '#reports/repository/port.js'
+ * @import { Report } from '#reports/repository/port.js'
  */
+
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * Casts a deliberately-partial report fixture to the full {@link Report} type.
@@ -42,7 +40,7 @@ const mockInsert = vi.fn()
 let systemLogsRepository
 
 const createMockRequest = () =>
-  /** @type {HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ ({
+  /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ ({
     auth: {
       credentials: {
         id: 'user-1',
@@ -281,7 +279,9 @@ describe('auditReportDelete', () => {
 
 const systemActor = { id: 'system', email: 'system', scope: [], role: null }
 
-const buildSystemLogsRepository = (/** @type {Mock} */ insertMany) =>
+const buildSystemLogsRepository = (
+  /** @type {import('vitest').Mock} */ insertMany
+) =>
   /** @type {SystemLogsRepository} */ (
     /** @type {unknown} */ ({
       insert: mockInsert,
@@ -301,7 +301,7 @@ const prnCancelled = {
   prnId: 'prn-id-00000000-0000-0000-0000-000000000001'
 }
 
-/** @type {ReportResubmissionRequired} */
+/** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
 const resubmissionRequired = {
   closedPeriodRestated: {
     uploadedAt: '2025-06-01T12:00:00.000Z',

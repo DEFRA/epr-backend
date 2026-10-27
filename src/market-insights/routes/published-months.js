@@ -9,7 +9,6 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 
-/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
@@ -29,7 +28,7 @@ export const monthlyPeriodParamsSchema = periodRefSchema.keys({
  * @param {{ year: Year, period: number }} params
  * @param {Date} now
  * @param {string} action - the logging event action of the route asking
- * @returns {YearMonth[]} in order
+ * @returns {import('#common/helpers/dates/year-month.js').YearMonth[]} in order
  */
 export const publishedMonthsThrough = ({ year, period }, now, action) => {
   const ukMonthNow = toYearMonth(formatLocalDateTime(now, UK_TIME_ZONE))

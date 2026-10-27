@@ -33,15 +33,6 @@ import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 
-/** @import { WasteBalanceTable } from '#market-insights/application/waste-balance-table.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
-/** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-/** @import { TestAPI } from 'vitest' */
-
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
@@ -57,11 +48,11 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     ledgerRepository: WasteBalanceLedgerRepository,
- *     organisationsRepository: OrganisationsRepository,
- *     overseasSitesRepository: OverseasSitesRepository,
- *     summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
- *     reportsRepository: ReportsRepository
+ *     ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+ *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+ *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
+ *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
  * }} TestServerWithRealDb
  */
@@ -73,43 +64,44 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  * route that queries mongo directly; this route reads through five ports and
  * has to exercise all five adapters.
  */
-const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
-  mongoIt.extend({
-    server: [
-      async (/** @type {{ db: string }} */ { db }, use) => {
-        const client = await MongoClient.connect(db)
-        try {
-          const mongoDb = client.db(DATABASE_NAME)
-          const repositories = {
-            ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
-            organisationsRepository: (
-              await createOrganisationsRepository(mongoDb)
-            )(),
-            overseasSitesRepository: (
-              await createOverseasSitesRepository(mongoDb)
-            )(),
-            summaryLogRowStatesRepository: (
-              await createMongoSummaryLogRowStatesRepository(mongoDb)
-            )(),
-            reportsRepository: (await createReportsRepository(mongoDb))()
-          }
-          const server = await createTestServer({ db: mongoDb, repositories })
+const it =
+  /** @type {import('vitest').TestAPI<{ server: TestServerWithRealDb }>} */ (
+    mongoIt.extend({
+      server: [
+        async (/** @type {{ db: string }} */ { db }, use) => {
+          const client = await MongoClient.connect(db)
+          try {
+            const mongoDb = client.db(DATABASE_NAME)
+            const repositories = {
+              ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
+              organisationsRepository: (
+                await createOrganisationsRepository(mongoDb)
+              )(),
+              overseasSitesRepository: (
+                await createOverseasSitesRepository(mongoDb)
+              )(),
+              summaryLogRowStatesRepository: (
+                await createMongoSummaryLogRowStatesRepository(mongoDb)
+              )(),
+              reportsRepository: (await createReportsRepository(mongoDb))()
+            }
+            const server = await createTestServer({ db: mongoDb, repositories })
 
-          await use(
-            /** @type {TestServerWithRealDb} */ (
-              Object.assign(server, { repositories })
+            await use(
+              /** @type {TestServerWithRealDb} */ (
+                Object.assign(server, { repositories })
+              )
             )
-          )
 
-          await server.stop()
-        } finally {
-          await client.close()
-        }
-      },
-      { scope: 'file' }
-    ]
-  })
-)
+            await server.stop()
+          } finally {
+            await client.close()
+          }
+        },
+        { scope: 'file' }
+      ]
+    })
+  )
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 
@@ -120,7 +112,7 @@ const summaryLogId = 'sl-REG-001'
  * organisations fixture so the document the route reads back is one the write
  * schema accepts.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  */
 const insertAccreditedOperator = async (organisationsRepository) => {
   const accreditationId = new ObjectId().toString()
@@ -201,7 +193,7 @@ const sentOnRow = (rowId, tonnage) => ({
  * operator has submitted its January report and no other.
  *
  * @param {TestServerWithRealDb['repositories']} repositories
- * @param {SummaryLogRowStateEntry[]} rows
+ * @param {import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]} rows
  */
 const submit = async (repositories, rows) => {
   const ledgerId = await insertAccreditedOperator(
@@ -258,7 +250,7 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    /** @type {WasteBalanceTable} */
+    /** @type {import('#market-insights/application/waste-balance-table.js').WasteBalanceTable} */
     const payload = JSON.parse(response.payload)
 
     const { months, period } = payload.data

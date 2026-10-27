@@ -8,17 +8,16 @@ import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
 import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-/** @import { CompliancePeriod } from '#reports/domain/compliance-reporting-periods.js' */
-/** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
-/** @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-
 /** @param {string} message */
 const logDrop = (message) => logger.warn({ message })
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ */
+
+/**
+ * @typedef {import('#reports/domain/compliance-reporting-periods.js').CompliancePeriod} CompliancePeriod
  */
 
 /**
@@ -51,7 +50,7 @@ const logDrop = (message) => logger.warn({ message })
  * no entry, so resolves to null (never the in-flight draft in `report`, nor a
  * later correction).
  *
- * @param {MergedPeriod} mergedPeriod
+ * @param {import('#reports/domain/merge-reporting-periods.js').MergedPeriod} mergedPeriod
  * @returns {CalendarDate | null}
  */
 function originalSubmittedDate(mergedPeriod) {
@@ -65,8 +64,8 @@ function originalSubmittedDate(mergedPeriod) {
 /**
  * Groups all periodic reports by `${organisationId}::${registrationId}`.
  *
- * @param {PeriodicReport[]} allPeriodicReports
- * @returns {Map<string, PeriodicReport[]>}
+ * @param {import('#reports/repository/port.js').PeriodicReport[]} allPeriodicReports
+ * @returns {Map<string, import('#reports/repository/port.js').PeriodicReport[]>}
  */
 export function groupByRegistration(allPeriodicReports) {
   return allPeriodicReports.reduce((map, pr) => {
@@ -86,8 +85,8 @@ export function groupByRegistration(allPeriodicReports) {
  * registration the organisation read model does not serve has no entry, and
  * the reason is logged.
  *
- * @param {OrganisationsRepository} organisationsRepository
- * @param {ReportsRepository} reportsRepository
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {Date} [now]
  * @returns {Promise<ReportComplianceData>}
  */
@@ -133,7 +132,7 @@ export async function generateReportCompliance(
 /**
  * @param {{
  *   registration: NonNullable<ReturnType<typeof toReadModelRegistration>>,
- *   storedReports: PeriodicReport[],
+ *   storedReports: import('#reports/repository/port.js').PeriodicReport[],
  *   years: Year[],
  *   now: Date
  * }} params
