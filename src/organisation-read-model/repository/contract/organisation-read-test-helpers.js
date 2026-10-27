@@ -151,9 +151,3 @@ export const anakin = {
   fullName: 'Anakin Skywalker',
   phone: '823456789'
 }
-
-export const yoda = {
-  email: 'yoda@starwars.com',
-  fullName: 'Yoda',
-  phone: '1234567890'
-}
