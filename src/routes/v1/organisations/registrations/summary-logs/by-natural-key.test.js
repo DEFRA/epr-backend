@@ -225,7 +225,7 @@ describe('summary-log routes by natural key', () => {
     {
       kind: 'registered-only',
       accreditationId: null,
-      stream: { kind: 'registered-only', accreditationNumber: null }
+      stream: { kind: 'registeredOnly' }
     },
     {
       kind: 'accredited',
@@ -253,10 +253,9 @@ describe('summary-log routes by natural key', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload)).toMatchObject({
-        stream,
-        accreditationNumber: 'COVER-SHEET-NUMBER'
-      })
+      const body = JSON.parse(response.payload)
+      expect(body.stream).toEqual(stream)
+      expect(body.accreditationNumber).toBe('COVER-SHEET-NUMBER')
     })
   })
 

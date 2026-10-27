@@ -2,6 +2,7 @@ import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
+import { STREAM_KIND } from '#domain/summary-logs/stream-kind.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 const countSchema = Joi.number().integer().min(0).required()
@@ -84,12 +85,11 @@ export const summaryLogResponseSchema = Joi.object({
   stream: Joi.alternatives()
     .try(
       Joi.object({
-        kind: Joi.string().valid('accredited').required(),
+        kind: Joi.string().valid(STREAM_KIND.ACCREDITED).required(),
         accreditationNumber: Joi.string().required()
       }),
       Joi.object({
-        kind: Joi.string().valid('registered-only').required(),
-        accreditationNumber: Joi.valid(null).required()
+        kind: Joi.string().valid(STREAM_KIND.REGISTERED_ONLY).required()
       })
     )
     .optional()
