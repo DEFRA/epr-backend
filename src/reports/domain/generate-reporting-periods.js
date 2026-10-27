@@ -4,7 +4,6 @@ import { yearBounds } from '#common/helpers/dates/year.js'
 import { periodForDate } from './period-for-date.js'
 import { periodBounds } from './reporting-period.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
-import { filterPeriodsFromDate } from './filter-periods-from-date.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
@@ -91,26 +90,15 @@ export function generateAllPeriodsForYear(cadence, year) {
 
 /**
  * Generates reporting periods for a given year and cadence, filtered to periods
- * that have ended and, when `fromDate` is supplied, bounded to those not ending
- * before it (the accreditation `validFrom` front trim). Bounding lives here so
- * every caller — operator calendar, admin export, compliance — is consistent.
- * A `toDate` bound (registration/accreditation `validTo`) is a future extension.
+ * that have ended.
  *
  * @param {Cadence} cadence
  * @param {number} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
- * @param {string | null} [fromDate] - ISO `YYYY-MM-DD` lower bound; periods ending before it are dropped
  * @returns {GeneratedPeriod[]}
  */
-export function generateReportingPeriods(
-  cadence,
-  year,
-  now = new Date(),
-  fromDate = null
-) {
-  const ended = generateAllPeriodsForYear(cadence, year).filter((period) =>
+export function generateReportingPeriods(cadence, year, now = new Date()) {
+  return generateAllPeriodsForYear(cadence, year).filter((period) =>
     hasEnded(period, now)
   )
-
-  return fromDate ? filterPeriodsFromDate(ended, fromDate) : ended
 }
