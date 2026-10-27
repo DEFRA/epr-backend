@@ -44,7 +44,7 @@ export const createAccreditedOrganisationBuilder =
     })
   }
 
-/** What `buildAccreditedOrganisation` serves for its reprocessor. */
+/** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
   validFrom: '2026-02-01',
@@ -62,6 +62,7 @@ export const reprocessorResponse = {
   accreditations: {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
+      prns: { open: true },
       status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
     }
   }
@@ -70,6 +71,7 @@ export const reprocessorResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
 const exporterAccreditationResponse = {
   accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+  prns: { open: true },
   status: { current: 'approved', timeline: approvedTimeline('2026-07-01') },
   overseasSites: {
     '001': { status: 'approved', approvedOn: '2026-01-01' },

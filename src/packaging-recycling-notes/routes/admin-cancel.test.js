@@ -299,6 +299,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     const payload = JSON.parse(response.payload)
+    expect(payload.code).toBe('RELEVANT_YEAR_CLOSED')
     expect(payload.message).toMatch(/2026/)
     expect(payload.message).toMatch(/31 January 2027/)
 

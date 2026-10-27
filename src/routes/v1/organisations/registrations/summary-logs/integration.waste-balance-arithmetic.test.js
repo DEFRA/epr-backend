@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -43,12 +43,17 @@ describe('Waste balance arithmetic integration tests', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
+    vi.setSystemTime(new Date('2025-10-01T12:00:00.000Z'))
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const sharedMeta = createWasteBalanceMeta('EXPORTER')

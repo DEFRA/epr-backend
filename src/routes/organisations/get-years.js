@@ -5,5 +5,7 @@ import { viewRoute, yearsPath } from './view-route.js'
 export const organisationYearsGet = viewRoute(
   yearsPath,
   organisationYearsResponseSchema,
-  (organisation) => ({ years: organisationYears(organisation) })
+  (organisation) => ({
+    years: organisationYears(organisation, new Date())
+  })
 )
