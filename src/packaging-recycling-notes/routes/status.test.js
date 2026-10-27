@@ -165,6 +165,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     beforeEach(() => {
+      vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
       organisationsRepository = organisationsRepositoryWith()
       ledgerRepository = seedStream()
       packagingRecyclingNotesRepository =
@@ -183,6 +184,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     afterEach(() => {
+      vi.useRealTimers()
       vi.clearAllMocks()
     })
 
@@ -857,6 +859,39 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           )
         }
       )
+
+      it('should return 409 and leave the PRN unissued once the year has closed', async () => {
+        vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+        const awaitingAuthPrnId = '507f1f77bcf86cd799439055'
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn({
+            id: awaitingAuthPrnId,
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2027-01-15T00:00:00.000Z'),
+                  by: { id: 'user-123', name: 'Test User' }
+                }
+              ]
+            }
+          })
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `${prns}/${awaitingAuthPrnId}/status`,
+          ...asOperator(),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe('RELEVANT_YEAR_CLOSED')
+        expect(
+          packagingRecyclingNotesRepository.persistProjection
+        ).not.toHaveBeenCalled()
+      })
 
       it('returns 500 when the projection persist returns null', async () => {
         // Reset PRN to draft status for this test

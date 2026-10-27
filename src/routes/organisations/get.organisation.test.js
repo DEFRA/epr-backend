@@ -76,7 +76,12 @@ describe('GET /organisations/{organisationNumber}', () => {
 
   const { server, serve, serveStored, get } = useViewServer()
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('serves the organisation without the fields that are not served', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01') })
     const linked = buildLinkedDefraOrg('defra-org-1', 'Defra Org')
     const organisation = buildAccreditedOrganisation({
       linkedDefraOrganisation: linked
@@ -299,16 +304,71 @@ describe('GET /organisations/{organisationNumber}', () => {
     testRegulatorCanRead({ server, makeRequest: request })
   })
 
+  describe('relevant year', () => {
+    it.for([
+      {
+        description: 'open during the year',
+        validFrom: '2026-01-01',
+        now: '2026-10-01T00:00:00.000Z',
+        open: true
+      },
+      {
+        description: 'open on the last instant of 31 January after it',
+        validFrom: '2026-01-01',
+        now: '2027-01-31T23:59:59.999Z',
+        open: true
+      },
+      {
+        description: 'closed from 1 February after it',
+        validFrom: '2026-01-01',
+        now: '2027-02-01T00:00:00.000Z',
+        open: false
+      },
+      {
+        description: 'open to the same deadline when granted mid-year',
+        validFrom: '2026-05-01',
+        now: '2027-01-31T23:59:59.999Z',
+        open: true
+      },
+      {
+        description: 'closed at the same deadline when granted mid-year',
+        validFrom: '2026-05-01',
+        now: '2027-02-01T00:00:00.000Z',
+        open: false
+      }
+    ])(
+      'should serve the accreditation as $description',
+      async ({ validFrom, now, open }) => {
+        vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) })
+        const accredited = accreditation({ validFrom })
+        const organisation = buildOrganisation({
+          registrations: [reprocessor({ accreditationId: accredited.id })],
+          accreditations: [accredited]
+        })
+        await serve(organisation)
+
+        const response = await get(`/organisations/${organisation.orgId}`)
+
+        const registration = body(response).registrations[REPROCESSOR_NUMBER]
+        expect(registration.accreditations[2026].prns).toStrictEqual({ open })
+      }
+    )
+  })
+
   describe('with a year', () => {
     const urlFor = (organisation, year) =>
       `/organisations/${organisation.orgId}?year=${year}`
 
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
+    /** @param {typeof reprocessorResponse | typeof exporterResponse} registration */
+    const closed = (registration) => ({
+      ...registration,
+      accreditations: {
+        2026: { ...registration.accreditations[2026], prns: { open: false } }
+      }
     })
 
-    afterEach(() => {
-      vi.useRealTimers()
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
     })
 
     it('serves the registrations approved in the year with that year’s accreditations', async () => {
@@ -318,8 +378,8 @@ describe('GET /organisations/{organisationNumber}', () => {
       const response = await get(urlFor(organisation, 2026))
 
       expect(body(response).registrations).toEqual({
-        [REPROCESSOR_NUMBER]: reprocessorResponse,
-        [EXPORTER_NUMBER]: exporterResponse
+        [REPROCESSOR_NUMBER]: closed(reprocessorResponse),
+        [EXPORTER_NUMBER]: closed(exporterResponse)
       })
     })
 

@@ -166,6 +166,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   beforeEach(() => {
+    vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
     useAccreditation()
     ledgerRepository = seedStream()
   })
@@ -488,6 +489,26 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       const response = await createPrn()
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+  })
+
+  describe('relevant year', () => {
+    it('should create a PRN on the last instant of 31 January after the year', async () => {
+      vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('should return 409 and create no PRN once the year has closed', async () => {
+      vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe('RELEVANT_YEAR_CLOSED')
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
     })
   })
 

@@ -10,10 +10,10 @@ import { approvedYears } from './status-timeline.js'
  * newest first, up to and including the current year.
  *
  * @param {Organisation} organisation
- * @param {Date} [now]
+ * @param {Date} now
  * @returns {number[]}
  */
-export const organisationYears = (organisation, now = new Date()) => {
+export const organisationYears = (organisation, now) => {
   const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
     ({ status }) => approvedYears(status.timeline, today)
@@ -36,10 +36,10 @@ const accreditationIn = (accreditations, year) =>
  *
  * @param {Organisation} organisation
  * @param {number} year
- * @param {Date} [now]
+ * @param {Date} now
  * @returns {Organisation}
  */
-export const organisationInYear = (organisation, year, now = new Date()) => {
+export const organisationInYear = (organisation, year, now) => {
   const today = utcCalendarDate(now)
   const day = yearEndOrToday(year, today)
   const registrations = Object.entries(organisation.registrations)
