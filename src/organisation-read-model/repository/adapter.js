@@ -325,8 +325,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
         signatories: prnIssuance.signatories.map(toContact),
         tonnageBand: prnIssuance.tonnageBand
       },
-      status: { current: status, timeline },
-      submitterContactDetails: toContact(accreditation.submitterContactDetails)
+      status: { current: status, timeline }
     }
   ]
 }

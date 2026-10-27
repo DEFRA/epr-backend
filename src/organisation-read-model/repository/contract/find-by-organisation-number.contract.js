@@ -114,8 +114,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
                 status: {
                   current: 'approved',
                   timeline: approvedTimeline('2026-07-01')
-                },
-                submitterContactDetails: yoda
+                }
               }
             }
           }
