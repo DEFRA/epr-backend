@@ -24,6 +24,7 @@
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
+    "#ledger-event-numbers-backfill/*": "./src/ledger-event-numbers-backfill/*",
     "#prn-numbers-backfill/*": "./src/prn-numbers-backfill/*",
     "#report-numbers-backfill/*": "./src/report-numbers-backfill/*",
     "#reports/*": "./src/reports/*",

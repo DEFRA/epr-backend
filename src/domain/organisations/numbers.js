@@ -50,6 +50,17 @@ export const toAccreditationNumber = (value) =>
  */
 
 /**
+ * Every number stored beside a registration's ids and its accreditation's. A
+ * registered-only registration's accreditation number is `null`.
+ *
+ * @typedef {{
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditationNumber: AccreditationNumber | null
+ * }} RequiredNumbers
+ */
+
+/**
  * Reads the numbers for a registration, and optionally an accreditation, from
  * their organisation record. An organisation, registration or accreditation
  * without a number, or one the organisation no longer holds, gives no number,
@@ -112,4 +123,31 @@ export const numbersFor = (
   }
 
   return { numbers, unmapped }
+}
+
+/**
+ * Reads every number for a registration and its accreditation, or its null
+ * accreditation id, from their organisation record. Refuses where the record
+ * does not give them all, so nothing is stored without its numbers.
+ *
+ * @param {Organisation} organisation
+ * @param {{ registrationId: string, accreditationId: string | null }} ids
+ * @param {string} documents - what would be stored, for the error
+ * @returns {RequiredNumbers}
+ */
+export const requiredNumbersFor = (organisation, ids, documents) => {
+  const {
+    numbers: { organisationNumber, registrationNumber, accreditationNumber },
+    unmapped
+  } = numbersFor(organisation, ids)
+  if (
+    organisationNumber === undefined ||
+    registrationNumber === undefined ||
+    accreditationNumber === undefined
+  ) {
+    throw new Error(
+      `Cannot store ${documents} without their numbers: ${unmapped.join('; ')}`
+    )
+  }
+  return { organisationNumber, registrationNumber, accreditationNumber }
 }

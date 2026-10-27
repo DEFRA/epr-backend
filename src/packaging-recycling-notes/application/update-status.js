@@ -18,6 +18,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
@@ -227,6 +228,11 @@ async function applyPrnTransition(ctx) {
     }
   }
 
+  const { numbers: ledgerNumbers } = numbersFor(
+    await ctx.organisationsRepository.findById(ledgerId.organisationId),
+    ledgerId
+  )
+
   // The note takes its number before the event announcing it, so a read landing
   // between the two never sees an issuance with no number.
   const numbered = issuance
@@ -236,7 +242,7 @@ async function applyPrnTransition(ctx) {
       })
     : prn
 
-  const events = await append(outcome.balanceEvents)
+  const events = await append(outcome.balanceEvents, ledgerNumbers)
 
   return {
     updatedPrn: await persistProjectedPrn(ctx, {

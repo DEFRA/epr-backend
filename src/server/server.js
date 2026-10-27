@@ -52,6 +52,7 @@ import { runSummaryLogNumbersBackfill } from '#summary-log-numbers-backfill/run.
 import { runReportNumbersBackfill } from '#report-numbers-backfill/run.js'
 import { runPrnNumbersBackfill } from '#prn-numbers-backfill/run.js'
 import { runRowStateNumbersBackfill } from '#row-state-numbers-backfill/run.js'
+import { runLedgerEventNumbersBackfill } from '#ledger-event-numbers-backfill/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -234,6 +235,7 @@ async function createServer(options = {}) {
     void runSummaryLogNumbersBackfill(startedServer)
     void runReportNumbersBackfill(startedServer)
     void runRowStateNumbersBackfill(startedServer)
+    void runLedgerEventNumbersBackfill(startedServer)
   })
 
   return server

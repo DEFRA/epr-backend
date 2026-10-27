@@ -74,7 +74,7 @@ const organisationNumberOf = (organisationId) => {
  * The ledger identity with the numbers a submission stores beside its ids.
  *
  * @param {WasteBalanceLedgerId} ledgerId
- * @returns {import('./port.js').NumberedLedgerId}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId}
  */
 export const withNumbers = (ledgerId) => ({
   ...ledgerId,

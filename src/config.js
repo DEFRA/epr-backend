@@ -390,6 +390,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORT_NUMBERS_BACKFILL'
     },
+    ledgerEventNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto waste balance ledger events stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_LEDGER_EVENT_NUMBERS_BACKFILL'
+    },
     rowStateNumbersBackfill: {
       doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary-log row states stored without them, rather than only reporting them',
       format: Boolean,

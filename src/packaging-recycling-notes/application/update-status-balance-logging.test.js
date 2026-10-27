@@ -13,6 +13,7 @@ import {
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -41,6 +42,13 @@ const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const TONNAGE = 50
 const STARTING_TOTAL = 1000
 const POST_DEDUCTION_AVAILABLE = 950
@@ -79,6 +87,7 @@ const buildBalanceSeed = (overrides = {}) => ({
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
     /** @type {unknown} */ ({
+      findById: async () => organisation,
       findAccreditationById: vi.fn().mockResolvedValue({
         status: 'approved',
         submittedToRegulator: REGULATOR.EA

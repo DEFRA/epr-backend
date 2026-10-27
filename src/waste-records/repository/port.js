@@ -34,11 +34,7 @@
  * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
  */
 
-/**
- * A ledger identity with the numbers its row states are written with.
- *
- * @typedef {WasteBalanceLedgerId & import('./schema.js').RowStateNumbersOnInsert} NumberedLedgerId
- */
+/** @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * A ledger holding row states that lack a number: how many do, and which
