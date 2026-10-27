@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   ORGANISATION_STATUS,
@@ -414,6 +415,61 @@ describe('SummaryLogsValidator integration', () => {
           expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
         ])
       )
+    })
+
+    it('should fail validation with four fatal issues, two on PROCESSING_TYPE, when every Cover cell is null', async () => {
+      /** @param {number} row */
+      const nullCell = (row) => ({
+        value: null,
+        location: { sheet: 'Cover', row, column: 'B' }
+      })
+      const metadata = {
+        REGISTRATION_NUMBER: nullCell(1),
+        PROCESSING_TYPE: nullCell(2),
+        MATERIAL: nullCell(3),
+        TEMPLATE_VERSION: nullCell(4),
+        ACCREDITATION_NUMBER: nullCell(5)
+      }
+
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(
+        updated.summaryLog.validation.issues.map(
+          (
+            /** @type {{ severity: string, code: string, context: { location: { field: string } } }} */ {
+              severity,
+              code,
+              context
+            }
+          ) => ({ severity, code, field: context.location.field })
+        )
+      ).toEqual([
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'PROCESSING_TYPE_INVALID',
+          field: 'PROCESSING_TYPE'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'VALIDATION_FALLBACK_ERROR',
+          field: 'PROCESSING_TYPE'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'TEMPLATE_VERSION_INVALID',
+          field: 'TEMPLATE_VERSION'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'REGISTRATION_REQUIRED',
+          field: 'REGISTRATION_NUMBER'
+        }
+      ])
     })
   })
 

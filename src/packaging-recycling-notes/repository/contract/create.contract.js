@@ -1,4 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { buildPrn, buildDraftPrn } from './test-data.js'
 
 export const testCreateBehaviour = (it) => {
@@ -55,10 +59,14 @@ export const testCreateBehaviour = (it) => {
         const prnInput = buildPrn({
           organisation: {
             id: 'org-preserve-test',
+            organisationNumber: toOrganisationNumber('500123'),
             name: 'Preserve Org',
             tradingName: 'Preserve Trading'
           },
           registrationId: 'reg-preserve-test',
+          registration: {
+            registrationNumber: toRegistrationNumber('R25SR500010912PL')
+          },
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
@@ -85,10 +93,14 @@ export const testCreateBehaviour = (it) => {
 
         expect(found.organisation).toStrictEqual({
           id: 'org-preserve-test',
+          organisationNumber: '500123',
           name: 'Preserve Org',
           tradingName: 'Preserve Trading'
         })
         expect(found.registrationId).toBe('reg-preserve-test')
+        expect(found.registration).toStrictEqual({
+          registrationNumber: 'R25SR500010912PL'
+        })
         expect(found.accreditation).toStrictEqual({
           id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',
