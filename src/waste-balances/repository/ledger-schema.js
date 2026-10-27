@@ -118,9 +118,8 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  * The identity of an accreditation, or of a registration in its registered-only
  * phase (`accreditationId` null). An accreditation belongs to a registration,
  * which belongs to an organisation: all three ids are constitutive, and naming
- * one names those above it. Named for what it is: a registration or
- * accreditation identity, not a ledger-specific type. It is what we key a waste
- * balance ledger by.
+ * one names those above it. Reads key a waste balance ledger by these ids;
+ * `NumberedLedgerId` carries the numbers beside them.
  *
  * @typedef {Object} RegistrationOrAccreditationId
  * @property {string} organisationId
@@ -152,7 +151,11 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * A ledger id with the numbers its events are written with.
+ * A waste balance ledger's identity by both its ids and its numbers: the
+ * registration or accreditation whose balance it records, as its ids name it
+ * and as the organisation record numbers it. Ledger events and summary-log row
+ * states are written with it. A registered-only ledger's accreditation id and
+ * accreditation number are both `null`.
  *
  * @typedef {WasteBalanceLedgerId & LedgerEventNumbersOnInsert} NumberedLedgerId
  */
