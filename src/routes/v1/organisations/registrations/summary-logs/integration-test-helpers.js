@@ -8,6 +8,7 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
+import { MIN_TEMPLATE_VERSION as REGISTERED_ONLY_MIN_TEMPLATE_VERSION } from '#domain/summary-logs/table-schemas/reprocessor-registered-only/index.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -579,6 +580,57 @@ export const createWasteBalanceMeta = (processingType) => ({
     value: 'ACC-123',
     location: { sheet: 'Data', row: 5, column: 'B' }
   }
+})
+
+/** @param {string} processingType */
+export const createRegisteredOnlyMeta = (processingType) => {
+  const { ACCREDITATION_NUMBER: _registeredOnlyHasNone, ...meta } =
+    createStandardMeta(processingType)
+  return {
+    ...meta,
+    TEMPLATE_VERSION: {
+      value: REGISTERED_ONLY_MIN_TEMPLATE_VERSION,
+      location: { sheet: 'Cover', row: 4, column: 'B' }
+    }
+  }
+}
+
+/**
+ * @param {string} sheet
+ * @param {Record<string, unknown>[]} rows
+ */
+export const tableOf = (sheet, rows) => ({
+  location: { sheet, row: 7, column: 'A' },
+  headers: Object.keys(rows[0] ?? {}),
+  rows: rows.map((row, index) => ({
+    rowNumber: 8 + index,
+    values: Object.values(row)
+  }))
+})
+
+/**
+ * @param {{ rowId: number, month: string }} load
+ * @param {{ monthHeader?: string, tonnageHeader?: string }} [headers]
+ */
+export const createRegisteredOnlyReceivedRow = (
+  { rowId, month },
+  {
+    monthHeader = 'MONTH_RECEIVED_FOR_REPROCESSING',
+    tonnageHeader = 'TONNAGE_RECEIVED_FOR_RECYCLING'
+  } = {}
+) => ({
+  ROW_ID: rowId,
+  [monthHeader]: month,
+  NET_WEIGHT: 10.5,
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+  RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
+  [tonnageHeader]: 9.975,
+  SUPPLIER_NAME: 'Supplier Co',
+  SUPPLIER_ADDRESS: '1 High St',
+  SUPPLIER_POSTCODE: 'SW1A 1AA',
+  SUPPLIER_EMAIL: 'supplier@example.com',
+  SUPPLIER_PHONE_NUMBER: '01234567',
+  ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
 })
 
 export const createTestInfrastructure = async (

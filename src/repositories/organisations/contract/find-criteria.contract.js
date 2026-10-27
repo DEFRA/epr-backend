@@ -274,29 +274,9 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(namesOf(result)).toEqual(['Holder Ltd'])
       })
 
-      it('finds the organisation holding the registration id', async () => {
-        const result = await repository.find({
-          registrationId: holder.registrations[0].id,
-          page: 1,
-          pageSize: 50
-        })
-
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
-      })
-
       it('finds the organisation holding the registration number', async () => {
         const result = await repository.find({
           registrationNumber: 'REG001',
-          page: 1,
-          pageSize: 50
-        })
-
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
-      })
-
-      it('finds the organisation holding the accreditation id', async () => {
-        const result = await repository.find({
-          accreditationId: holder.accreditations[0].id,
           page: 1,
           pageSize: 50
         })
@@ -414,9 +394,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
         const result = await repository.find({
           search: '',
           orgId: '',
-          registrationId: '',
           registrationNumber: '',
-          accreditationId: '',
           accreditationNumber: '',
           page: 1,
           pageSize: 50
@@ -428,9 +406,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
       it('treats undefined criteria as absent', async () => {
         const result = await repository.find({
           orgId: undefined,
-          registrationId: undefined,
           registrationNumber: undefined,
-          accreditationId: undefined,
           accreditationNumber: undefined,
           page: 1,
           pageSize: 50

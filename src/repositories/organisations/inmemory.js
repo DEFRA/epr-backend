@@ -264,14 +264,8 @@ const buildOrgIdMatchers = (value) => {
  *   the organisation satisfies every criterion
  */
 const buildFindMatcher = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
+  const { search, orgId, registrationNumber, accreditationNumber } =
+    normaliseCriteria(criteria)
 
   /** @type {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} */
   const checks = []
@@ -283,20 +277,10 @@ const buildFindMatcher = (criteria) => {
     const matchers = buildOrgIdMatchers(orgId)
     checks.push((org) => matchers.some((matches) => matches(org)))
   }
-  if (registrationId !== '') {
-    checks.push((org) =>
-      org.registrations.some((reg) => reg.id === registrationId)
-    )
-  }
   if (registrationNumber !== '') {
     const matchesNumber = anchoredMatcher(registrationNumber)
     checks.push((org) =>
       org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
-    )
-  }
-  if (accreditationId !== '') {
-    checks.push((org) =>
-      org.accreditations.some((acc) => acc.id === accreditationId)
     )
   }
   if (accreditationNumber !== '') {

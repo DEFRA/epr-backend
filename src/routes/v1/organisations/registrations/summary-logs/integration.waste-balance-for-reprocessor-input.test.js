@@ -19,6 +19,8 @@ import {
   createWasteBalanceMeta,
   createReprocessorReceivedRowValues,
   createReprocessorSentOnRowValues,
+  createReprocessedRowValues,
+  REPROCESSED_LOADS_HEADERS,
   REPROCESSOR_RECEIVED_HEADERS,
   REPROCESSOR_SENT_ON_HEADERS
 } from './integration-test-helpers.js'
@@ -42,7 +44,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
     const sharedMeta = createWasteBalanceMeta('REPROCESSOR_INPUT')
 
-    const createUploadData = (receivedRows = [], sentOnRows = []) => ({
+    const createUploadData = (
+      receivedRows = [],
+      sentOnRows = [],
+      reprocessedRows = []
+    ) => ({
       RECEIVED_LOADS_FOR_REPROCESSING: {
         location: { sheet: 'Received', row: 7, column: 'A' },
         headers: REPROCESSOR_RECEIVED_HEADERS,
@@ -57,6 +63,14 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         rows: sentOnRows.map((row, index) => ({
           rowNumber: 8 + index,
           values: createReprocessorSentOnRowValues(row)
+        }))
+      },
+      REPROCESSED_LOADS: {
+        location: { sheet: 'Reprocessed', row: 7, column: 'A' },
+        headers: REPROCESSED_LOADS_HEADERS,
+        rows: reprocessedRows.map((row, index) => ({
+          rowNumber: 8 + index,
+          values: createReprocessedRowValues(row)
         }))
       }
     })
@@ -367,6 +381,50 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       // Only row 1002 should contribute
       expect(balance.amount).toBe(200)
+    })
+
+    it('counts a received row with no date as invalid and excluded, beside dated rows on every sheet', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
+
+      const uploadData = createUploadData(
+        [
+          { rowId: 1000, tonnageReceived: 100, dateReceived: null },
+          { rowId: 1001, tonnageReceived: 100 },
+          {
+            rowId: 1002,
+            tonnageReceived: 100,
+            ewcCode: null,
+            supplierName: null
+          }
+        ],
+        [{ rowId: 5000 }],
+        [{ rowId: 4000 }]
+      )
+
+      const response = await uploadAndValidate(
+        env,
+        'summary-missing-date',
+        'file-missing-date',
+        'waste-data-missing-date.xlsx',
+        uploadData
+      )
+
+      const { loads, loadsByReportingPeriod } = JSON.parse(response.payload)
+      expect(loads.added).toEqual({
+        valid: { count: 3, rowIds: ['1001', '4000', '5000'] },
+        invalid: { count: 2, rowIds: ['1000', '1002'] },
+        included: { count: 2, rowIds: ['1001', '5000'] },
+        excluded: { count: 2, rowIds: ['1000', '1002'] }
+      })
+      const { openPeriodLoads, closedPeriodLoads } = loadsByReportingPeriod
+      expect(openPeriodLoads.added.balanceAffecting.count).toBe(2)
+      expect(openPeriodLoads.added.nonBalanceAffecting.count).toBe(2)
+      expect(openPeriodLoads.adjusted.balanceAffecting.count).toBe(0)
+      expect(closedPeriodLoads.added.balanceAffecting.count).toBe(0)
+      expect(closedPeriodLoads.adjusted.balanceAffecting.count).toBe(0)
     })
 
     it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {

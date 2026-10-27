@@ -259,14 +259,8 @@ const buildOrgIdFilter = (value) => {
  * @returns {object} - a filter matching organisations satisfying every criterion
  */
 const buildFindFilter = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
+  const { search, orgId, registrationNumber, accreditationNumber } =
+    normaliseCriteria(criteria)
 
   const conditions = []
   if (search !== '') {
@@ -277,17 +271,11 @@ const buildFindFilter = (criteria) => {
   if (orgId !== '') {
     conditions.push(buildOrgIdFilter(orgId))
   }
-  if (registrationId !== '') {
-    conditions.push({ 'registrations.id': registrationId })
-  }
   if (registrationNumber !== '') {
     conditions.push({
       'registrations.registrationNumber':
         anchoredCaseInsensitive(registrationNumber)
     })
-  }
-  if (accreditationId !== '') {
-    conditions.push({ 'accreditations.id': accreditationId })
   }
   if (accreditationNumber !== '') {
     conditions.push({

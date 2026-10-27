@@ -303,35 +303,64 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('rejects a callback arriving after the log has moved on from validating', async () => {
-    const summaryLogId = randomUUID()
-
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: createCompletePayload('file-complete-1')
-    })
-
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: {
-        uploadStatus: 'ready',
-        metadata: { organisationId, registrationId },
-        form: {
-          summaryLogUpload: createFileDetails({
-            fileId: 'file-pending-1',
-            fileStatus: 'pending',
-            s3Bucket: undefined,
-            s3Key: undefined
-          })
+  it.each([
+    ['complete', 'rejected', 'validating', 'rejected'],
+    ['complete', 'pending', 'validating', 'preprocessing'],
+    ['rejected', 'complete', 'rejected', 'validating'],
+    ['rejected', 'pending', 'rejected', 'preprocessing'],
+    ['rejected', 'rejected', 'rejected', 'rejected'],
+    ['complete', 'complete', 'validating', 'validating']
+  ])(
+    'refuses a %s callback followed by a %s callback, naming the move from %s to %s',
+    async (firstFileStatus, secondFileStatus, fromStatus, toStatus) => {
+      const summaryLogId = randomUUID()
+      const withoutS3Location = { s3Bucket: undefined, s3Key: undefined }
+      /** @type {Record<string, object>} */
+      const callbackByFileStatus = {
+        complete: createCompletePayload('file-complete'),
+        pending: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-pending',
+              fileStatus: 'pending',
+              ...withoutS3Location
+            })
+          }
         },
-        numberOfRejectedFiles: 0
+        rejected: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-rejected',
+              fileStatus: 'rejected',
+              ...withoutS3Location,
+              hasError: true,
+              errorMessage: 'The selected file contains a virus'
+            })
+          },
+          numberOfRejectedFiles: 1
+        }
       }
-    })
 
-    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-  })
+      const first = await server.inject({
+        method: 'POST',
+        url: uploadCompletedUrl(2026, summaryLogId),
+        payload: callbackByFileStatus[firstFileStatus]
+      })
+      const second = await server.inject({
+        method: 'POST',
+        url: uploadCompletedUrl(2026, summaryLogId),
+        payload: callbackByFileStatus[secondFileStatus]
+      })
+
+      expect(first.statusCode).toBe(StatusCodes.ACCEPTED)
+      expect(second.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(second.payload).message).toBe(
+        `Cannot transition summary log from ${fromStatus} to ${toStatus}`
+      )
+    }
+  )
 
   describe('when the repository fails unexpectedly', () => {
     let failingServer
