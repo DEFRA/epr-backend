@@ -11,8 +11,11 @@ import {
 } from '#common/enums/event.js'
 import { randomUUID } from 'node:crypto'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * @import {
+ *   CreateReportParams,
  *   ExportActivitySummary,
  *   PeriodicReport,
  *   PrnData,
@@ -96,7 +99,7 @@ export const mapReport = (report) => {
  * report. Ties are not expected; if two shared a submissionNumber the tie-break
  * would fall to input order, which is not a meaningful ordering here.
  *
- * @template {{ year: number, cadence: string, period: number, submissionNumber: number }} T
+ * @template {{ year: Year, cadence: string, period: number, submissionNumber: number }} T
  * @param {T[]} reports
  * @returns {T[]}
  */
@@ -208,28 +211,24 @@ const buildPeriodSummary = (periodDocs) => {
  * @param {PeriodicReportFields[]} docs
  * @returns {PeriodicReport[]}
  */
-export const groupAsPeriodicReports = (
-  organisationId,
-  registrationId,
-  docs
-) => {
-  const byYear = Object.groupBy(docs, (doc) => doc.year)
-  return Object.entries(byYear).map(([year, yearDocs]) => ({
-    organisationId,
-    registrationId,
-    year: Number(year),
-    reports: groupTransform(
-      /** @type {PeriodicReportFields[]} */ (yearDocs),
-      (doc) => doc.cadence,
-      (cadenceDocs) =>
-        groupTransform(
-          cadenceDocs,
-          (doc) => String(doc.period),
-          buildPeriodSummary
-        )
-    )
-  }))
-}
+export const groupAsPeriodicReports = (organisationId, registrationId, docs) =>
+  Object.values(Object.groupBy(docs, (doc) => doc.year))
+    .filter((yearDocs) => yearDocs !== undefined)
+    .map((yearDocs) => ({
+      organisationId,
+      registrationId,
+      year: yearDocs[0].year,
+      reports: groupTransform(
+        yearDocs,
+        (doc) => doc.cadence,
+        (cadenceDocs) =>
+          groupTransform(
+            cadenceDocs,
+            (doc) => String(doc.period),
+            buildPeriodSummary
+          )
+      )
+    }))
 
 /**
  * Groups reports and transforms them into periodic reports.
@@ -250,10 +249,10 @@ export const transformToPeriodicReports = (reports) => {
   })
 }
 
-/** @type {import('./port.js').Report} */
+/** @type {Report} */
 /**
- * @param {import('./port.js').CreateReportParams} validatedParams
- * @returns {import('./port.js').Report}
+ * @param {CreateReportParams} validatedParams
+ * @returns {Report}
  */
 export const prepareCreateReportParams = (validatedParams) => {
   const { changedBy, ...reportCreateParams } = validatedParams
@@ -266,7 +265,7 @@ export const prepareCreateReportParams = (validatedParams) => {
   const now = new Date().toISOString()
   const reportId = randomUUID()
 
-  return /** @type {import('./port.js').Report} */ ({
+  return /** @type {Report} */ ({
     id: reportId,
     version: 1,
     schemaVersion: 1,

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import ExcelJS from 'exceljs'
 import { StatusCodes } from 'http-status-codes'
@@ -20,8 +21,8 @@ const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
-/** @import { ServerInjectResponse } from '@hapi/hapi' */
 /** @import { TestServer } from '#test/create-test-server.js' */
+/** @import { ServerInjectResponse } from '@hapi/hapi' */
 
 /**
  * @param {ServerInjectResponse} response
@@ -187,7 +188,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
       )
       await buildSubmittedReport(register.reportsRepository, {
         ...operator,
-        year: 2026,
+        year: toYear(2026),
         cadence: 'monthly',
         period: 1
       })

@@ -14,6 +14,7 @@ import { periodBounds } from '#reports/domain/reporting-period.js'
 import { config } from '#root/config.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Registration } from '#organisation-read-model/domain/model.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { CalendarDateRange } from '#organisation-read-model/domain/status-timeline.js'
@@ -66,7 +67,7 @@ const onePerPeriod = (periods) => {
  * made today.
  *
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[], wholePeriods: boolean }}
  */
 const reportingWindowsFor = (registration, year) => {
@@ -91,7 +92,7 @@ const reportingWindowsFor = (registration, year) => {
  * approved (its validFrom).
  *
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {(period: MergedPeriod) => boolean}
  */
 const servesAccreditedReport = (registration, year) => {
@@ -143,7 +144,7 @@ const mergedPeriods = (
  * @param {{
  *   registration: Registration,
  *   storedReports: PeriodicReport[],
- *   year: number,
+ *   year: Year,
  *   now?: Date
  * }} params
  * @returns {{
@@ -188,7 +189,7 @@ export const reportingPeriodsByKind = ({
  * @param {{
  *   registration: Registration,
  *   storedReports: PeriodicReport[],
- *   year: number,
+ *   year: Year,
  *   allSubmissions?: boolean,
  *   now?: Date
  * }} params

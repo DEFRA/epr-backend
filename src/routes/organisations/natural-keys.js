@@ -11,6 +11,7 @@ import {
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -136,7 +137,7 @@ export function registrationYears(registration) {
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {Accreditation[]}
  */
 export function accreditationsForYear(organisation, registration, year) {
@@ -168,7 +169,7 @@ export function readModelRegistration(organisation, registration) {
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {Accreditation}
  */
 export function findAccreditationForYear(organisation, registration, year) {

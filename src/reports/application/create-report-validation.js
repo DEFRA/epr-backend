@@ -7,6 +7,7 @@ import { findSubmissionByNumber } from './submission-lookup.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
@@ -83,7 +84,7 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  * same period already exists.
  *
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @returns {void}
@@ -127,7 +128,7 @@ export const assertNoExistingReport = (
  * the duplicate-period conflict.
  *
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -175,7 +176,7 @@ export const assertResubmissionAllowed = (
 /**
  * Validates that a period exists for the given cadence and has ended.
  * @param {Cadence} cadence
- * @param {number} year
+ * @param {Year} year
  * @param {number} period
  * @returns {{ startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate }}
  */

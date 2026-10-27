@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   describe,
@@ -30,6 +31,8 @@ import {
   marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
+
+/** @import { TestServer } from '#test/create-test-server.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -250,7 +253,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
  */
 const januaryPrns = (operator, issuedTonnage) => ({
   ...operator,
-  year: 2026,
+  year: toYear(2026),
   cadence: 'monthly',
   period: 1,
   prn: {
@@ -281,7 +284,7 @@ const UK_ISSUED_TONNAGE = NATIONS.reduce(
 describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
   setupAuthContext()
 
-  /** @type {import('#test/create-test-server.js').TestServer} */
+  /** @type {TestServer} */
   let server
 
   beforeAll(async () => {

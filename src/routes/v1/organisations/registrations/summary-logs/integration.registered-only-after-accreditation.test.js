@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -20,7 +21,7 @@ import {
   setupWasteBalanceIntegrationEnvironment
 } from './integration-test-helpers.js'
 
-const YEAR = 2025
+const YEAR = toYear(2025)
 const TABLE_HEADER_ROW = 7
 const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
 

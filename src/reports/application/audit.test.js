@@ -1,14 +1,17 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-/**
- * @import { Report } from '#reports/repository/port.js'
- */
+/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { Mock } from 'vitest' */
 
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/**
+ * @import { Report, ReportResubmissionRequired } from '#reports/repository/port.js'
+ */
 
 /**
  * Casts a deliberately-partial report fixture to the full {@link Report} type.
@@ -39,7 +42,7 @@ const mockInsert = vi.fn()
 let systemLogsRepository
 
 const createMockRequest = () =>
-  /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ ({
+  /** @type {HapiRequest & { systemLogsRepository: SystemLogsRepository }} */ ({
     auth: {
       credentials: {
         id: 'user-1',
@@ -76,7 +79,7 @@ describe('auditReportStatusTransition', () => {
   const params = {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    year: 2025,
+    year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
@@ -128,7 +131,7 @@ describe('auditReportStatusTransition', () => {
     const oversizedParams = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      year: 2025,
+      year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
       submissionNumber: 1,
@@ -159,7 +162,7 @@ describe('auditReportStatusTransition', () => {
         context: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
-          year: 2025,
+          year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
           submissionNumber: 1,
@@ -184,7 +187,7 @@ describe('auditReportDelete', () => {
   const params = {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    year: 2025,
+    year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
@@ -231,7 +234,7 @@ describe('auditReportDelete', () => {
     const oversizedParams = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
-      year: 2025,
+      year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
       submissionNumber: 1,
@@ -256,7 +259,7 @@ describe('auditReportDelete', () => {
         context: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
-          year: 2025,
+          year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
           submissionNumber: 1,
@@ -278,9 +281,7 @@ describe('auditReportDelete', () => {
 
 const systemActor = { id: 'system', email: 'system', scope: [], role: null }
 
-const buildSystemLogsRepository = (
-  /** @type {import('vitest').Mock} */ insertMany
-) =>
+const buildSystemLogsRepository = (/** @type {Mock} */ insertMany) =>
   /** @type {SystemLogsRepository} */ (
     /** @type {unknown} */ ({
       insert: mockInsert,
@@ -300,7 +301,7 @@ const prnCancelled = {
   prnId: 'prn-id-00000000-0000-0000-0000-000000000001'
 }
 
-/** @type {import('#reports/repository/port.js').ReportResubmissionRequired} */
+/** @type {ReportResubmissionRequired} */
 const resubmissionRequired = {
   closedPeriodRestated: {
     uploadedAt: '2025-06-01T12:00:00.000Z',
@@ -310,7 +311,7 @@ const resubmissionRequired = {
 
 const flaggedReport = {
   reportId: 'rep-1',
-  year: 2025,
+  year: toYear(2025),
   cadence: CADENCE.quarterly,
   period: 1,
   submissionNumber: 1
@@ -407,7 +408,7 @@ describe('auditReportCreate', () => {
   const params = {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    year: 2025,
+    year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 1,
@@ -450,7 +451,7 @@ describe('auditReportRequestResubmission', () => {
   const params = {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    year: 2025,
+    year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
     submissionNumber: 2,

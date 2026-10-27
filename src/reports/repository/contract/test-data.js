@@ -1,4 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
@@ -8,16 +9,18 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 
+/** @import { CreateReportParams, ReportsRepository, UserSummary } from '../port.js' */
+
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
 export const DEFAULT_REPORT_START_DATE = calendarDate('2024-01-01')
 export const DEFAULT_REPORT_END_DATE = calendarDate('2024-01-31')
 export const DEFAULT_REPORT_DUE_DATE = calendarDate('2024-02-15')
-export const DEFAULT_REPORT_YEAR = 2024
+export const DEFAULT_REPORT_YEAR = toYear(2024)
 export const DEFAULT_REPORT_PERIOD = MONTHLY_PERIODS.January
 
 /**
- * @returns {import('../port.js').UserSummary}
+ * @returns {UserSummary}
  */
 const buildUserSummary = (overrides = {}) => ({
   id: overrides.id ?? randomUUID(),
@@ -26,8 +29,8 @@ const buildUserSummary = (overrides = {}) => ({
 })
 
 /**
- * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
- * @returns {import('../port.js').CreateReportParams}
+ * @param {Partial<CreateReportParams>} [overrides]
+ * @returns {CreateReportParams}
  */
 export const DEFAULT_CHANGED_BY = {
   id: 'user-1',
@@ -37,8 +40,8 @@ export const DEFAULT_CHANGED_BY = {
 
 /**
  * Creates a report and advances it to submitted via ready_to_submit.
- * @param {import('../port.js').ReportsRepository} repository
- * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
+ * @param {ReportsRepository} repository
+ * @param {Partial<CreateReportParams>} [overrides]
  * @returns {Promise<string>} the submitted report id
  */
 export const createAndSubmitReport = async (repository, overrides = {}) => {

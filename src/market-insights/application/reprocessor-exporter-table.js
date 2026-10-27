@@ -34,33 +34,17 @@ import {
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
-/**
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
- * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
- * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
- * @typedef {import('#domain/organisations/model.js').RegulatorValue} RegulatorValue
- * @typedef {import('#domain/organisations/registration.js').Registration} Registration
- * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
- * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
- * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
- */
-
-/**
- * @template T
- * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').WithOperatorCounts<T>} WithOperatorCounts
- */
-
-/**
- * @typedef {import('#market-insights/application/accredited-months.js').CoversRegistration} CoversRegistration
- * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
- * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
- * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
- */
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { Material, Organisation, RegulatorValue, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { Registration, ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
+/** @import { ReportCount } from '#market-insights/application/monthly-reports.js' */
+/** @import { Contribution, OperatorsByFigure } from '#market-insights/application/operator-counts.js' */
+/** @import { Measures, PublishedFigures, PublishedTotal, WithOperatorCounts } from '#market-insights/domain/reprocessor-exporter-figures.js' */
+/** @import { PeriodicReport, ReportPerPeriod, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * A report the figures include, and the figures it put something into.
@@ -128,7 +112,7 @@ const registrationKey = ({ organisationId, registrationId }) =>
  * rather than date because two submissions can share a date and cannot share
  * a number. A period nothing has been submitted for counts for nothing.
  *
- * @param {import('#reports/repository/port.js').ReportPerPeriod} slot
+ * @param {ReportPerPeriod} slot
  */
 const latestSubmission = (slot) => selectSubmittedReports(slot).at(-1)
 
@@ -162,7 +146,7 @@ const foldIntoCell = (cells, registration, month, measures) => {
 }
 
 /**
- * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {TypedLogger} logger
  * @param {string} key
  */
 const warnAboutUnmatchedReport = (logger, key) => {
@@ -311,7 +295,7 @@ const publicationCovers =
  * @param {Organisation[]} params.organisations
  * @param {PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months to publish
- * @param {import('#common/hapi-types.js').TypedLogger} params.logger
+ * @param {TypedLogger} params.logger
  * @param {CoversRegistration} params.covers - which registrations the publication covers
  * @returns {{ cells: Map<string, Measures>, includedReports: IncludedReport[] }}
  */
@@ -406,8 +390,8 @@ const measuresByCell = ({
  * @param {Object} params
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {ReportsRepository} params.reportsRepository
- * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.year - the reporting year
+ * @param {TypedLogger} params.logger
+ * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {RegulatorValue} [params.regulator] - publish only the registrations submitted to this regulator; every regulator when absent
  * @param {Date} params.now - clock reading supplied by the caller

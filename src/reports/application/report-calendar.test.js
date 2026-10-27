@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
@@ -68,7 +69,13 @@ const calendar = ({
   allSubmissions,
   now = AFTER_YEAR_END
 }) =>
-  yearCalendar({ registration, storedReports, year: 2026, allSubmissions, now })
+  yearCalendar({
+    registration,
+    storedReports,
+    year: toYear(2026),
+    allSubmissions,
+    now
+  })
 
 /**
  * @param {{ period: number, startDate: string, endDate: string }[] | undefined} periods
@@ -428,7 +435,7 @@ describe('reportingPeriodsByKind', () => {
     reportingPeriodsByKind({
       registration,
       storedReports,
-      year: 2026,
+      year: toYear(2026),
       now: AFTER_YEAR_END
     })
 

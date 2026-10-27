@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   DEFAULT_ORG_ID,
@@ -19,6 +20,7 @@ import {
   toReportResource
 } from './report-resource.js'
 
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
 /** @import { PreviewBody } from './report-resource.js' */
 
 const CHANGED_BY = {
@@ -59,7 +61,7 @@ const storedPeriod = {
 const newRepository = () => createInMemoryReportsRepository()()
 
 /**
- * @param {import('#reports/repository/port.js').ReportsRepository} repository
+ * @param {ReportsRepository} repository
  * @param {string} reportId
  * @param {boolean} [canRequestResubmission]
  */
@@ -90,7 +92,7 @@ const createInProgress = async (overrides = {}) => {
 const preview = (overrides = {}) => ({
   operatorCategory: 'REPROCESSOR',
   cadence: 'quarterly',
-  year: 2026,
+  year: toYear(2026),
   period: 2,
   startDate: calendarDate('2026-04-01'),
   endDate: calendarDate('2026-06-30'),

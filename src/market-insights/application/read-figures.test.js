@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -22,7 +23,7 @@ const read = (overrides = {}) =>
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
-    year: 2026,
+    year: toYear(2026),
     months: ['2026-01', '2026-02'].map(toYearMonth),
     now: new Date('2026-09-18T14:15:30.000Z'),
     ...overrides

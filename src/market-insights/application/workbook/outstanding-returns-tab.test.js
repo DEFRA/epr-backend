@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
@@ -27,12 +28,12 @@ const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
-/** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
+/** @import ExcelJS from 'exceljs' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -94,7 +95,7 @@ const seedOperator = async (
   for (const period of submitted) {
     await buildSubmittedReport(reportsRepository, {
       ...operator,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period
     })
@@ -128,7 +129,7 @@ const render = async (months, register) => {
 const served = (months, register) =>
   buildOutstandingReturnsTable({
     ...register,
-    year: 2026,
+    year: toYear(2026),
     months,
     now: PUBLISHED_EXTRACTION
   })

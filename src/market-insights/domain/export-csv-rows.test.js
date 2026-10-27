@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   MATERIAL,
   TONNAGE_BAND,
@@ -27,6 +28,8 @@ import {
   WASTE_BALANCE_COLUMNS
 } from './export-csv-rows.js'
 
+/** @import { WasteBalanceFigures } from './waste-balance-figures.js' */
+
 const MATERIAL_COUNT = TONNAGE_MONITORING_MATERIALS.length
 const ACCREDITATION_TYPES = Object.values(WASTE_PROCESSING_TYPE)
 const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
@@ -36,7 +39,7 @@ const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
  * accreditation type present in every month, at zero but for the overrides.
  *
  * @param {string[]} months
- * @param {Record<string, Partial<import('./waste-balance-figures.js').WasteBalanceFigures>>} [overrides] - keyed `month::material::type`
+ * @param {Record<string, Partial<WasteBalanceFigures>>} [overrides] - keyed `month::material::type`
  */
 const wasteBalanceTable = (months, overrides = {}) => ({
   meta: { generatedAt: '2026-09-18T14:15:30.000Z' },
@@ -371,7 +374,7 @@ describe('market insights export CSV rows', () => {
   describe('manifest', () => {
     it('records the reporting period and the moment the figures were taken', () => {
       const cells = buildManifestRow({
-        year: 2026,
+        year: toYear(2026),
         cadence: 'monthly',
         period: 6,
         months: [

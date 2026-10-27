@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
 import { asStoredRowStates } from './as-stored-row-states-test-helpers.js'
 import wasteRecordsRegisteredOnlyJson from './test-data/reprocessor-registered-only.json' with { type: 'json' }
@@ -13,7 +14,7 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
     const result = aggregateReportDetail(wasteRecordsRegisteredOnly, {
       operatorCategory: 'REPROCESSOR_REGISTERED_ONLY',
       cadence: 'quarterly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: {
         lastUploadedAt: '2026-03-31T19:35:45.562Z',
@@ -112,7 +113,7 @@ describe('#aggregateReportDetail — REPROCESSOR accredited monthly January 2026
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'REPROCESSOR',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: {
         lastUploadedAt: '2026-03-31T19:37:45.709Z',

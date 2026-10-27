@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 
@@ -40,7 +41,7 @@ describe('#aggregateReportDetail', () => {
   const defaultArgs = {
     operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
     cadence: CADENCE.quarterly,
-    year: 2026,
+    year: toYear(2026),
     period: 1,
     source: DEFAULT_SOURCE
   }
@@ -378,7 +379,7 @@ describe('#aggregateReportDetail', () => {
     const exporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
       cadence: CADENCE.quarterly,
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: DEFAULT_SOURCE
     }
@@ -910,7 +911,7 @@ describe('#aggregateReportDetail', () => {
     const accreditedExporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER,
       cadence: CADENCE.monthly,
-      year: 2026,
+      year: toYear(2026),
       period: 2,
       source: DEFAULT_SOURCE
     }
@@ -1186,7 +1187,7 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
         cadence: CADENCE.monthly,
-        year: 2026,
+        year: toYear(2026),
         period: 1,
         source: DEFAULT_SOURCE
       })
@@ -1214,7 +1215,7 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.EXPORTER,
         cadence: CADENCE.monthly,
-        year: 2026,
+        year: toYear(2026),
         period: 2,
         source: DEFAULT_SOURCE
       })

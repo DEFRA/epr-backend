@@ -4,6 +4,7 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
 /**
  * @import { Brand } from '#common/helpers/brand.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from './cadence.js'
  */
 
@@ -25,7 +26,7 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
  * or with the cadence.
  *
  * @param {Cadence} cadence
- * @param {number} year
+ * @param {Year} year
  * @param {number} period - 1-indexed
  * @returns {ReportingPeriod}
  */

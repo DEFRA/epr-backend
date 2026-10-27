@@ -10,9 +10,12 @@ import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
+/** @import { ReportStatus } from '#reports/domain/report-status.js' */
+
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult, PeriodicReport, ReportResubmissionRequired, ReportsRepository, ResubmissionIneligibleReason, UserSummary } from '#reports/repository/port.js'
  */
 
 /**
@@ -23,10 +26,10 @@ import { findSubmissionByNumber } from './submission-lookup.js'
  * submission, not merely the latest *submitted* one, so an earlier submitted
  * report cannot be unsubmitted while a later resubmission draft is in progress.
  * The caller separately requires the target to be submitted.
- * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @param {ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -61,7 +64,7 @@ export async function isLatestSubmission(
  * so it can run against a `periodicReports` list already fetched once by the
  * caller instead of each check re-fetching it.
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -89,13 +92,13 @@ export function isLatestSubmissionOf(
  * Whether an operator may request resubmission on a submitted report
  * @param {PeriodicReport[]} periodicReports
  * @param {object} target
- * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
- * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {number} target.year
+ * @param {ReportStatus} target.status
+ * @param {ReportResubmissionRequired|null} [target.resubmissionRequired]
+ * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
- * @returns {import('#reports/repository/port.js').ResubmissionIneligibleReason}
+ * @returns {ResubmissionIneligibleReason}
  */
 export function resubmissionEligibility(periodicReports, target) {
   if (target.status !== REPORT_STATUS.SUBMITTED) {
@@ -124,9 +127,9 @@ export function resubmissionEligibility(periodicReports, target) {
  * report right now. Thin boolean wrapper over {@link resubmissionEligibility}.
  * @param {PeriodicReport[]} periodicReports
  * @param {object} target
- * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
- * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {number} target.year
+ * @param {ReportStatus} target.status
+ * @param {ReportResubmissionRequired|null} [target.resubmissionRequired]
+ * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
@@ -145,15 +148,15 @@ export function canRequestResubmission(periodicReports, target) {
  * lose a race after the check passed, in which case it's rejected too.
  *
  * @param {object} params
- * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
- * @param {import('#reports/repository/port.js').UserSummary} params.requestedBy
- * @returns {Promise<import('#reports/repository/port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult>}
+ * @param {UserSummary} params.requestedBy
+ * @returns {Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult>}
  */
 export async function requestOperatorResubmission({
   reportsRepository,

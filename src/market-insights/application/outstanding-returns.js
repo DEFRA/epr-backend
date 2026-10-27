@@ -7,7 +7,10 @@ import { recordOf } from '#common/helpers/record-of.js'
 import { owedMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {Record<TonnageBand, number>} OutstandingByBand
@@ -78,9 +81,9 @@ export const countOutstandingReturns = (params) => {
  * the register and that year's monthly reports as they stand.
  *
  * @param {Object} params
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
- * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {number} params.year - the reporting year the months fall in
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {Year} params.year - the reporting year the months fall in
  * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<OutstandingReturnsTable>}

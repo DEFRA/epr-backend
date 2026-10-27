@@ -25,36 +25,30 @@ import {
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
-/**
- * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
- * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
- * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
- * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
- * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
- * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
- * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
- * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
- * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationIndex} AccreditationIndex
- * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
- * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
- * @typedef {import('#domain/organisations/registration.js').Registration} Registration
- * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
- * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
- * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
- * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
- */
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Material, Organisation, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import { ReportCount } from '#market-insights/application/monthly-reports.js' */
+/** @import { Contribution, OperatorCounts, OperatorsByFigure } from '#market-insights/application/operator-counts.js' */
+/** @import { MonthlyContribution, PublishedWasteBalanceFigures, WasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
+/** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditationIndex } from '#waste-balances/application/accreditation-index.js' */
+/** @import { LatestSubmittedSummaryLogPerLedger, WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { SubmittedRowState, SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 /**
  * @typedef {Object} PublishedPartition
  * @property {string} summaryLogId - the partition's latest submission
  * @property {Organisation} org
- * @property {import('#domain/organisations/registration.js').Registration} registration
- * @property {import('#domain/organisations/accreditation.js').Accreditation} accreditation
- * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @property {Registration} registration
+ * @property {Accreditation} accreditation
+ * @property {OverseasSitesContext} overseasSites
  */
 
 /**
@@ -194,7 +188,7 @@ const periodFigures = (cells, months) =>
   )
 
 /**
- * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {TypedLogger} logger
  * @param {string} accreditationId
  */
 const warnAboutUnmatchedPartition = (logger, accreditationId) => {
@@ -211,8 +205,8 @@ const warnAboutUnmatchedPartition = (logger, accreditationId) => {
 /**
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
  * @param {AccreditationIndex} accreditations
- * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
- * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {Map<string, OverseasSite>} sitesById
+ * @param {TypedLogger} logger
  * @returns {Map<string, PublishedPartition>}
  */
 const resolvePublishedPartitions = (
@@ -323,7 +317,7 @@ const newUndatedTally = () => ({
 
 /**
  * @param {UndatedTally} undated
- * @param {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} contribution
+ * @param {MonthlyContribution} contribution
  */
 const recordUndated = (undated, { deducts, figures }) => {
   const side = deducts ? undated.deductions : undated.credits
@@ -376,7 +370,7 @@ const recordRow = (
 }
 
 /**
- * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {TypedLogger} logger
  * @param {UndatedTally} undated
  */
 const warnAboutUndatedRows = (logger, { credits, deductions }) => {
@@ -409,8 +403,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {ReportsRepository} params.reportsRepository
- * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.year - the reporting year
+ * @param {TypedLogger} params.logger
+ * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -17,19 +18,20 @@ import * as reportAudit from '#reports/application/audit.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { ReportStatusHistoryItem, ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 /**
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number
  * }} Period
@@ -153,10 +155,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const updated = await reportsRepository.findReportById(reportId)
 
-      const lastEntry =
-        /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
-          updated.status.history.at(-1)
-        )
+      const lastEntry = /** @type {ReportStatusHistoryItem} */ (
+        updated.status.history.at(-1)
+      )
       expect(lastEntry.status).toBe('ready_to_submit')
     })
 

@@ -7,6 +7,12 @@ import {
 import { marketInsightsDownloadDisposition } from './download-disposition.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 export const marketInsightsExportZipPath =
   '/v1/market-insights/{year}/{cadence}/{period}/export.zip'
@@ -31,12 +37,12 @@ export const marketInsightsExportZipGet = {
    * by one regulator at a time, who is waiting for it.
    *
    * @param {HapiRequest & {
-   *   params: { year: number, cadence: 'monthly', period: number },
-   *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
-   *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
-   *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
+   *   params: { year: Year, cadence: 'monthly', period: number },
+   *   ledgerRepository: WasteBalanceLedgerRepository,
+   *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
+   *   organisationsRepository: OrganisationsRepository,
+   *   overseasSitesRepository: OverseasSitesRepository,
+   *   reportsRepository: ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */

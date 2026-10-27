@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
@@ -36,14 +37,14 @@ const { buildOrganisation } = organisationBuilders
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
-/** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
 /** @import { NationFiguresTabName } from './nation-figures-tab.js' */
+/** @import ExcelJS from 'exceljs' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -146,7 +147,7 @@ const submitMonthlyReport = (
 ) =>
   buildSubmittedReport(reportsRepository, {
     ...operator,
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period,
     ...figures

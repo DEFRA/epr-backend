@@ -13,9 +13,14 @@ import { reportsCollection } from './mongodb-collection.js'
 
 /**
  * @import {
+ *   MarkActiveReportsStaleForPrnCancellationParams,
+ *   MarkReportStaleResult,
+ *   MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult,
+ *   MarkSubmittedReportRequiringResubmissionByOperatorParams,
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -38,7 +43,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   field: string,
  *   value: object
  * }} params
- * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
+ * @returns {Promise<Array<{ reportId: string, year: Year, cadence: string, period: number, submissionNumber: number }>>}
  */
 const flagReportsByIdempotencyKey = async (
   db,
@@ -101,7 +106,7 @@ const flagReportsByIdempotencyKey = async (
  * @param {string} registrationId
  * @param {string} summaryLogId
  * @param {string} uploadedAt
- * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ * @returns {Promise<MarkReportStaleResult[]>}
  */
 export const performMarkActiveReportsStaleForSummaryLog = async (
   db,
@@ -147,8 +152,8 @@ export const performMarkActiveReportsStaleForSummaryLog = async (
  * cancellation wins; the audit trail records every occurrence).
  *
  * @param {Db} db
- * @param {import('./port.js').MarkActiveReportsStaleForPrnCancellationParams} params
- * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ * @param {MarkActiveReportsStaleForPrnCancellationParams} params
+ * @returns {Promise<MarkReportStaleResult[]>}
  */
 export const performMarkActiveReportsStaleForPrnCancellation = async (
   db,
@@ -269,8 +274,8 @@ export const performMarkSubmittedReportsRequiringResubmission = async (
  * matched (the caller checks eligibility immediately before calling this).
  *
  * @param {Db} db
- * @param {import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorParams} params
- * @returns {Promise<import('./port.js').MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
+ * @param {MarkSubmittedReportRequiringResubmissionByOperatorParams} params
+ * @returns {Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>}
  */
 export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
   db,

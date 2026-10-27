@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
@@ -36,6 +37,10 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+/** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
+/** @import { LoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -123,10 +128,10 @@ const buildTestOrg = (organisationId, registrationId) => {
  * SUBMITTING summary log, and returns everything needed to invoke and assert.
  *
  * @param {object} options
- * @param {import('#reports/repository/port.js').ReportsRepository} options.reportsRepository
+ * @param {ReportsRepository} options.reportsRepository
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
- * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
- * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
+ * @param {ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
+ * @param {LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
  */
 const setupSubmit = async ({
@@ -301,14 +306,14 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 })
 
 describe('submitSummaryLog resubmission flag source', () => {
-  const january = { year: 2025, cadence: 'monthly', period: 1 }
-  const february = { year: 2025, cadence: 'monthly', period: 2 }
+  const january = { year: toYear(2025), cadence: 'monthly', period: 1 }
+  const february = { year: toYear(2025), cadence: 'monthly', period: 2 }
 
   /**
    * Submits a log over submitted January and February reports, through the
    * real summary-log-uploaded handler, and reports which ended up flagged.
    *
-   * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} loadsByReportingPeriod
+   * @param {LoadsByReportingPeriod} loadsByReportingPeriod
    */
   const submitOverJanuaryAndFebruaryReports = async (
     loadsByReportingPeriod

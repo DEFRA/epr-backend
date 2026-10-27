@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
@@ -21,9 +22,9 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Lock } from 'mongo-locks' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -110,7 +111,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     const reportId = await createAndSubmitReport(reportsRepository, {
       organisationId: organisation.id,
       registrationId: registration.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 3
     })

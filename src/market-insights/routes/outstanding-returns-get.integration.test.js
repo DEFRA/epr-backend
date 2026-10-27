@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
@@ -24,6 +25,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'
 
+/** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { TestAPI } from 'vitest' */
+
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
@@ -39,8 +45,8 @@ const januaryToFebruary2026 = marketInsightsOutstandingReturnsPath
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
+ *     organisationsRepository: OrganisationsRepository,
+ *     reportsRepository: ReportsRepository
  *   }
  * }} TestServerWithRealDb
  */
@@ -49,37 +55,36 @@ const januaryToFebruary2026 = marketInsightsOutstandingReturnsPath
  * A server whose two repositories this route reads through are the MongoDB
  * adapters, over one in-memory Mongo that the test also seeds.
  */
-const it =
-  /** @type {import('vitest').TestAPI<{ server: TestServerWithRealDb }>} */ (
-    mongoIt.extend({
-      server: [
-        async (/** @type {{ db: string }} */ { db }, use) => {
-          const client = await MongoClient.connect(db)
-          try {
-            const mongoDb = client.db(DATABASE_NAME)
-            const repositories = {
-              organisationsRepository: (
-                await createOrganisationsRepository(mongoDb)
-              )(),
-              reportsRepository: (await createReportsRepository(mongoDb))()
-            }
-            const server = await createTestServer({ db: mongoDb, repositories })
-
-            await use(
-              /** @type {TestServerWithRealDb} */ (
-                Object.assign(server, { repositories })
-              )
-            )
-
-            await server.stop()
-          } finally {
-            await client.close()
+const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
+  mongoIt.extend({
+    server: [
+      async (/** @type {{ db: string }} */ { db }, use) => {
+        const client = await MongoClient.connect(db)
+        try {
+          const mongoDb = client.db(DATABASE_NAME)
+          const repositories = {
+            organisationsRepository: (
+              await createOrganisationsRepository(mongoDb)
+            )(),
+            reportsRepository: (await createReportsRepository(mongoDb))()
           }
-        },
-        { scope: 'file' }
-      ]
-    })
-  )
+          const server = await createTestServer({ db: mongoDb, repositories })
+
+          await use(
+            /** @type {TestServerWithRealDb} */ (
+              Object.assign(server, { repositories })
+            )
+          )
+
+          await server.stop()
+        } finally {
+          await client.close()
+        }
+      },
+      { scope: 'file' }
+    ]
+  })
+)
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 
@@ -118,7 +123,7 @@ const seedOperatorOwingFebruary = async ({
   await buildSubmittedReport(reportsRepository, {
     organisationId: organisation.id,
     registrationId: registration.id,
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 1
   })
@@ -147,7 +152,7 @@ describe(`GET ${marketInsightsOutstandingReturnsPath} (integration)`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    /** @type {import('#market-insights/application/outstanding-returns.js').OutstandingReturnsTable} */
+    /** @type {OutstandingReturnsTable} */
     const payload = JSON.parse(response.payload)
 
     const { months } = payload.data

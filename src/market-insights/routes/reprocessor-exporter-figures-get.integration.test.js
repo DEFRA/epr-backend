@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
@@ -17,6 +18,10 @@ import {
   marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath
 } from './reprocessor-exporter-figures-get.js'
+
+/** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { TestAPI } from 'vitest' */
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -41,8 +46,8 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
+ *     organisationsRepository: OrganisationsRepository,
+ *     reportsRepository: ReportsRepository
  *   }
  * }} TestServerWithRealDb
  */
@@ -52,37 +57,36 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
  * adapters, over one in-memory Mongo that the test also seeds, so the
  * latest-submission collapse is exercised against the stored projection.
  */
-const it =
-  /** @type {import('vitest').TestAPI<{ server: TestServerWithRealDb }>} */ (
-    mongoIt.extend({
-      server: [
-        async (/** @type {{ db: string }} */ { db }, use) => {
-          const client = await MongoClient.connect(db)
-          try {
-            const mongoDb = client.db(DATABASE_NAME)
-            const repositories = {
-              organisationsRepository: (
-                await createOrganisationsRepository(mongoDb)
-              )(),
-              reportsRepository: (await createReportsRepository(mongoDb))()
-            }
-            const server = await createTestServer({ db: mongoDb, repositories })
-
-            await use(
-              /** @type {TestServerWithRealDb} */ (
-                Object.assign(server, { repositories })
-              )
-            )
-
-            await server.stop()
-          } finally {
-            await client.close()
+const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
+  mongoIt.extend({
+    server: [
+      async (/** @type {{ db: string }} */ { db }, use) => {
+        const client = await MongoClient.connect(db)
+        try {
+          const mongoDb = client.db(DATABASE_NAME)
+          const repositories = {
+            organisationsRepository: (
+              await createOrganisationsRepository(mongoDb)
+            )(),
+            reportsRepository: (await createReportsRepository(mongoDb))()
           }
-        },
-        { scope: 'file' }
-      ]
-    })
-  )
+          const server = await createTestServer({ db: mongoDb, repositories })
+
+          await use(
+            /** @type {TestServerWithRealDb} */ (
+              Object.assign(server, { repositories })
+            )
+          )
+
+          await server.stop()
+        } finally {
+          await client.close()
+        }
+      },
+      { scope: 'file' }
+    ]
+  })
+)
 
 const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 
@@ -96,7 +100,12 @@ const submitJanuaryTwice = async (repositories) => {
   const operator = await insertAccreditedOperator(
     repositories.organisationsRepository
   )
-  const january = { ...operator, year: 2026, cadence: 'monthly', period: 1 }
+  const january = {
+    ...operator,
+    year: toYear(2026),
+    cadence: 'monthly',
+    period: 1
+  }
 
   await buildSubmittedReport(repositories.reportsRepository, {
     ...january,
@@ -231,7 +240,7 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
     )
     await buildSubmittedReport(server.repositories.reportsRepository, {
       ...welsh,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {

@@ -7,6 +7,7 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from './cadence.js'
  */
 
@@ -24,7 +25,7 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
  *   period: number;
  *   report: null;
  *   startDate: CalendarDate;
- *   year: number;
+ *   year: Year;
  * }} GeneratedPeriod
  */
 
@@ -33,7 +34,7 @@ const DUE_DAY = 20
 /**
  * Due date is the 20th of the month following the period end.
  * @param {Cadence} cadence
- * @param {number} year
+ * @param {Year} year
  * @param {number} period
  * @returns {CalendarDate}
  */
@@ -80,7 +81,7 @@ export function generatePeriodsInRange(cadence, startDate, endDate) {
  * Generates all reporting periods for a given year and cadence.
  *
  * @param {Cadence} cadence
- * @param {number} year
+ * @param {Year} year
  * @returns {GeneratedPeriod[]}
  */
 export function generateAllPeriodsForYear(cadence, year) {
@@ -93,7 +94,7 @@ export function generateAllPeriodsForYear(cadence, year) {
  * that have ended.
  *
  * @param {Cadence} cadence
- * @param {number} year
+ * @param {Year} year
  * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
  * @returns {GeneratedPeriod[]}
  */

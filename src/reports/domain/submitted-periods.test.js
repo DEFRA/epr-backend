@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
@@ -9,7 +10,7 @@ import {
 
 /**
  * @import {ReportStatus} from './report-status.js'
- * @import {ReportSummary} from '#reports/repository/port.js'
+ * @import { PeriodicReport, ReportPerPeriod, ReportSummary } from '#reports/repository/port.js'
  */
 
 /**
@@ -28,8 +29,8 @@ const reportSummary = (status, id) =>
   })
 
 /**
- * @param {Partial<import('#reports/repository/port.js').ReportPerPeriod>} [overrides]
- * @returns {import('#reports/repository/port.js').ReportPerPeriod}
+ * @param {Partial<ReportPerPeriod>} [overrides]
+ * @returns {ReportPerPeriod}
  */
 const slot = (overrides = {}) => ({
   startDate: calendarDate('2026-01-01'),
@@ -54,13 +55,13 @@ const resubmittedSlot = () =>
 
 /**
  * @param {number} year
- * @param {import('#reports/repository/port.js').PeriodicReport['reports']} reports
- * @returns {import('#reports/repository/port.js').PeriodicReport}
+ * @param {PeriodicReport['reports']} reports
+ * @returns {PeriodicReport}
  */
 const periodicReport = (year, reports) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
-  year,
+  year: toYear(year),
   reports
 })
 

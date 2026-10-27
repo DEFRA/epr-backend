@@ -28,9 +28,13 @@ const brandConstructors = [
   {
     name: 'toYear',
     module: 'year.js',
-    mintedIn: ['src/common/validation/year-schema.js'],
+    mintedIn: [
+      'src/common/helpers/dates/year-month.js',
+      'src/common/validation/year-schema.js',
+      'src/reports/domain/period-for-date.js'
+    ],
     message:
-      'A year arrives branded from a yearSchema-validated route param - type it there, or use currentUtcYear.'
+      'A year arrives branded from a yearSchema-validated value - type it there, or use currentUtcYear.'
   }
 ]
 
@@ -144,7 +148,8 @@ export default [
     ignores: [
       '**/*.test.js',
       '**/*.contract.js',
-      '**/integration-test-helpers.js'
+      '**/contract/test-data.js',
+      '**/*test-helpers.js'
     ],
     rules: {
       'no-restricted-imports': restrictedImports(brandConstructors)

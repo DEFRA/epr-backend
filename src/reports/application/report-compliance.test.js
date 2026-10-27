@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -199,7 +200,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1
     })
@@ -235,7 +236,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'quarterly',
       period: 1
     })
@@ -353,7 +354,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 2
     })

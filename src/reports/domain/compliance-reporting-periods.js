@@ -1,9 +1,11 @@
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from './cadence.js'
 import { periodKey } from './period-key.js'
 import { generateReportingPeriods } from './generate-reporting-periods.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { GeneratedPeriod } from './generate-reporting-periods.js'
  */
 
@@ -11,7 +13,7 @@ import { generateReportingPeriods } from './generate-reporting-periods.js'
  * @typedef {{
  *   key: string;
  *   cadence: string;
- *   year: number;
+ *   year: Year;
  *   period: number;
  *   label: string;
  *   startDate: CalendarDate;
@@ -72,7 +74,7 @@ function isQuarterEnd(p) {
 }
 
 /**
- * @param {number} year
+ * @param {Year} year
  * @param {Date} now
  * @returns {Map<number, GeneratedPeriod>}
  */
@@ -94,7 +96,7 @@ function quarterlyByPeriod(year, now) {
  */
 export function generateComplianceReportingPeriods() {
   const now = new Date()
-  const year = now.getUTCFullYear()
+  const year = currentUtcYear(now)
   const quarterly = quarterlyByPeriod(year, now)
 
   const result = []
