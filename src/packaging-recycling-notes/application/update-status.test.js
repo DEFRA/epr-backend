@@ -171,12 +171,14 @@ const buildPrnLedgerEvent = ({
  * @param {boolean} [options.withAccreditation]
  * @param {string} [options.organisationId]
  * @param {string} [options.registrationId]
+ * @param {string | null} [options.registrationNumber]
  */
 const buildOrgWithAccreditation = ({
   accreditation = {},
   withAccreditation = true,
   organisationId = ORG_ID,
-  registrationId = REG_ID
+  registrationId = REG_ID,
+  registrationNumber = 'R26SR500000789PL'
 } = {}) => ({
   // `status` is derived from `statusHistory` on read; the seeded value only
   // satisfies the constructor's Organisation type.
@@ -186,7 +188,7 @@ const buildOrgWithAccreditation = ({
     registrations: [
       buildRegistration({
         id: registrationId,
-        registrationNumber: 'R26SR500000789PL',
+        registrationNumber,
         accreditationId: ACC_ID
       })
     ],
@@ -220,6 +222,7 @@ const buildOrgWithAccreditation = ({
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} [options.ledgerEvents] - raw ledger events to seed, taking precedence over `balance` (for a raised-then-cancelled sequence)
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
+ * @param {string | null} [options.registrationNumber]
  */
 const seedRepositories = ({
   prn,
@@ -227,7 +230,8 @@ const seedRepositories = ({
   balance,
   ledgerEvents,
   accreditation,
-  withAccreditation = true
+  withAccreditation = true,
+  registrationNumber
 } = {}) => {
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
     prns ?? (prn ? [prn] : [])
@@ -237,7 +241,11 @@ const seedRepositories = ({
   )()
   const wasteBalanceService = createWasteBalanceService(ledgerRepository)
   const organisationsRepository = createInMemoryOrganisationsRepository([
-    buildOrgWithAccreditation({ accreditation, withAccreditation })
+    buildOrgWithAccreditation({
+      accreditation,
+      withAccreditation,
+      registrationNumber
+    })
   ])()
   return {
     prnRepository,
@@ -662,6 +670,32 @@ describe('updatePrnStatus', () => {
           actor: PRN_ACTOR.SIGNATORY
         })
       ).rejects.toThrow()
+    })
+
+    it('reserves no PRN number when the organisation record gives no registration number', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        registrationNumber: null
+      })
+
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow(
+        `Cannot store ledger events without their numbers: registration ${REG_ID} has no registration number`
+      )
+
+      const stored = await repositories.prnRepository.findById(PRN_ID)
+      expect(stored?.prnNumber).toBeUndefined()
     })
   })
 

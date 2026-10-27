@@ -228,6 +228,14 @@ async function applyPrnTransition(ctx) {
     }
   }
 
+  // Read before the note takes its number, so a ledger whose numbers cannot be
+  // stored leaves no number reserved on a note its event never announces.
+  const ledgerNumbers = requiredNumbersFor(
+    await ctx.organisationsRepository.findById(ledgerId.organisationId),
+    ledgerId,
+    'ledger events'
+  )
+
   // The note takes its number before the event announcing it, so a read landing
   // between the two never sees an issuance with no number.
   const numbered = issuance
@@ -237,14 +245,7 @@ async function applyPrnTransition(ctx) {
       })
     : prn
 
-  const events = await append(
-    outcome.balanceEvents,
-    requiredNumbersFor(
-      await ctx.organisationsRepository.findById(ledgerId.organisationId),
-      ledgerId,
-      'ledger events'
-    )
-  )
+  const events = await append(outcome.balanceEvents, ledgerNumbers)
 
   return {
     updatedPrn: await persistProjectedPrn(ctx, {
