@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
@@ -7,15 +7,18 @@ const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
-const TEST_PRN_RANDOM_RANGE = 100000
 const TEST_PRN_NUMBER_LENGTH = 5
 
+let lastTestPrnSequence = 0
+
 /**
- * Generates a PRN number for test data.
+ * Generates a PRN number for test data, never the same one twice in a test
+ * file, so tests sharing a database cannot trip its unique PRN number index.
  * Uses TT prefix (Test/Test) to distinguish from real PRNs ([ENSW][RX]).
  */
-function generateTestPrnNumber() {
-  return `TT26${String(randomInt(TEST_PRN_RANDOM_RANGE)).padStart(TEST_PRN_NUMBER_LENGTH, '0')}`
+export function generateTestPrnNumber() {
+  lastTestPrnSequence += 1
+  return `TT26${String(lastTestPrnSequence).padStart(TEST_PRN_NUMBER_LENGTH, '0')}`
 }
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 const CANCELLED_HISTORY_STEPS = 5
