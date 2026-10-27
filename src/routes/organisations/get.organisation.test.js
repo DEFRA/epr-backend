@@ -350,7 +350,7 @@ describe('GET /organisations/{organisationNumber}', () => {
         const response = await get(`/organisations/${organisation.orgId}`)
 
         const registration = body(response).registrations[REPROCESSOR_NUMBER]
-        expect(registration.accreditations[2026].relevantYearOpen).toBe(open)
+        expect(registration.accreditations[2026].prns).toStrictEqual({ open })
       }
     )
   })
@@ -363,7 +363,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     const closed = (registration) => ({
       ...registration,
       accreditations: {
-        2026: { ...registration.accreditations[2026], relevantYearOpen: false }
+        2026: { ...registration.accreditations[2026], prns: { open: false } }
       }
     })
 

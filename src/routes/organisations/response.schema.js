@@ -89,11 +89,13 @@ const statusSchema = (statuses) =>
 
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
-  relevantYearOpen: Joi.boolean()
-    .required()
-    .description(
-      'Whether PRNs and PERNs can still be raised and issued for the year: until the end of 31 January after it.'
-    ),
+  prns: Joi.object({
+    open: Joi.boolean()
+      .required()
+      .description(
+        'Whether PRNs and PERNs can still be raised and issued for the year: until the end of 31 January after it.'
+      )
+  }).required(),
   status: statusSchema(ACCREDITATION_STATUSES)
 }
 

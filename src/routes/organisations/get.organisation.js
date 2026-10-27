@@ -6,7 +6,7 @@ import { organisationPath, viewRoute } from './view-route.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @typedef {{ year?: number }} OrganisationQuery */
-/** @typedef {{ relevantYearOpen: boolean }} RelevantYearOpen */
+/** @typedef {{ prns: { open: boolean } }} PrnYearState */
 
 const organisationQuery = { year: yearSchema() }
 
@@ -17,19 +17,20 @@ const organisationQuery = { year: yearSchema() }
 const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
- * Each accreditation, keyed by its year, with whether that year is still open.
+ * Each accreditation, keyed by its year, with whether PRNs and PERNs are still
+ * open for that year.
  * @template {object} A
  * @param {Record<string, A>} accreditations
  * @param {Date} now
- * @returns {Record<string, A & RelevantYearOpen>}
+ * @returns {Record<string, A & PrnYearState>}
  */
-const withRelevantYearOpen = (accreditations, now) =>
+const withPrnYearState = (accreditations, now) =>
   Object.fromEntries(
     Object.entries(accreditations).map(([year, accreditation]) => [
       year,
       {
         ...accreditation,
-        relevantYearOpen: isRelevantYearOpen(Number(year), now)
+        prns: { open: isRelevantYearOpen(Number(year), now) }
       }
     ])
   )
@@ -44,7 +45,7 @@ const registrationsAt = (registrations, now) =>
       number,
       {
         ...registration,
-        accreditations: withRelevantYearOpen(registration.accreditations, now)
+        accreditations: withPrnYearState(registration.accreditations, now)
       }
     ])
   )
