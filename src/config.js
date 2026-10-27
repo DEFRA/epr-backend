@@ -390,6 +390,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORT_NUMBERS_BACKFILL'
     },
+    rowStateNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary-log row states stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_ROW_STATE_NUMBERS_BACKFILL'
+    },
     summaryLogNumbersBackfill: {
       doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary logs stored without them, rather than only reporting them',
       format: Boolean,

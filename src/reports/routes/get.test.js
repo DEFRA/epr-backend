@@ -292,6 +292,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         }
       ) => {
         const registration = servedRegistration({
+          validFrom,
           accreditationId: new ObjectId().toString()
         })
         const org = buildOrganisationWithRegistration(registration, status)
@@ -353,6 +354,21 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         // Q1 is the only ended quarter at Jun 10; unaffected by the trim.
         expect(payload.cadence).toBe('quarterly')
         expect(payload.reportingPeriods.map((p) => p.period)).toEqual([1])
+      })
+
+      it('builds no period before this year when the accreditation began in a prior year', async () => {
+        const ctx = await buildAccreditedServer({ validFrom: '2025-09-15' })
+
+        expect(await periodsFor(ctx)).toEqual([1, 2, 3, 4, 5])
+      })
+
+      it('builds no period before this year when a registered-only operator began in a prior year', async () => {
+        const ctx = await createServer({
+          validFrom: '2025-09-15',
+          accreditationId: undefined
+        })
+
+        expect(await periodsFor(ctx)).toEqual([1])
       })
     })
 

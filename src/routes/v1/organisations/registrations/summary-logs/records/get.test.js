@@ -22,6 +22,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -117,11 +118,11 @@ const createServer = async ({
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    {
+    withNumbers({
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
       accreditationId
-    },
+    }),
     rows,
     FILE_ID
   )
@@ -313,11 +314,11 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
     organisation.accreditations[0].status = 'cancelled'
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: ORGANISATION_ID,
         registrationId: 'reg-other',
         accreditationId: null
-      },
+      }),
       [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],
       'file-other'
     )

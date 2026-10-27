@@ -2,7 +2,8 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 const OTHER_ORGANISATION = { ...DEFAULT_LEDGER_ID, organisationId: 'org-2' }
@@ -29,7 +30,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
 
     it('returns each row as a waste record state, carrying nothing of how it is stored', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'log-1'
       )
@@ -50,7 +51,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
 
     it('returns every row of the summary log', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
           buildSummaryLogRowStateEntry({ rowId: 'row-2' }),
@@ -73,7 +74,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
 
     it('returns only the rows the summary log committed', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
           buildSummaryLogRowStateEntry({ rowId: 'row-2' })
@@ -81,7 +82,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-1',
@@ -109,7 +110,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
     ])('the same summary log under a different %s', (_, otherLedgerId) => {
       beforeEach(async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [
             buildSummaryLogRowStateEntry({
               rowId: 'row-1',
@@ -119,7 +120,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          otherLedgerId,
+          withNumbers(otherLedgerId),
           [
             buildSummaryLogRowStateEntry({
               rowId: 'row-1',

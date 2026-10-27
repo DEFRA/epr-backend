@@ -1,6 +1,14 @@
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
+
+/** @import { WasteBalanceLedgerId } from './schema.js' */
 
 /**
  * Build a summary-log row state document (insert shape — no `id`).
@@ -8,9 +16,12 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @param {object} [overrides]
  */
 export const buildSummaryLogRowState = (overrides = {}) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1',
+  ...withNumbers({
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    accreditationId: 'acc-1',
+    ...overrides
+  }),
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   rowId: 'row-1',
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -46,4 +57,31 @@ export const DEFAULT_LEDGER_ID = Object.freeze({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
+})
+
+/** @type {Map<string, number>} */
+const organisationNumbers = new Map()
+
+/** @param {string} organisationId */
+const organisationNumberOf = (organisationId) => {
+  if (!organisationNumbers.has(organisationId)) {
+    organisationNumbers.set(organisationId, generateOrgId())
+  }
+  return toOrganisationNumber(String(organisationNumbers.get(organisationId)))
+}
+
+/**
+ * The ledger identity with the numbers a submission stores beside its ids.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @returns {import('./port.js').NumberedLedgerId}
+ */
+export const withNumbers = (ledgerId) => ({
+  ...ledgerId,
+  organisationNumber: organisationNumberOf(ledgerId.organisationId),
+  registrationNumber: toRegistrationNumber(`REG-${ledgerId.registrationId}`),
+  accreditationNumber:
+    ledgerId.accreditationId === null
+      ? null
+      : toAccreditationNumber(`ACC-${ledgerId.accreditationId}`)
 })

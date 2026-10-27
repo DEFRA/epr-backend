@@ -7,6 +7,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -96,7 +97,7 @@ describe('writeSummaryLogRowStates', () => {
         buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
       ],
       accreditation: null,
-      ledgerId: registeredOnlyLedgerId,
+      ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -122,7 +123,7 @@ describe('writeSummaryLogRowStates', () => {
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       accreditation: null,
-      ledgerId: registeredOnlyLedgerId,
+      ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -140,7 +141,7 @@ describe('writeSummaryLogRowStates', () => {
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       accreditation: null,
-      ledgerId: registeredOnlyLedgerId,
+      ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -162,7 +163,7 @@ describe('writeSummaryLogRowStates', () => {
         buildReceivedRecord({ rowId: '3', tonnage: 1.005 })
       ],
       accreditation: null,
-      ledgerId: registeredOnlyLedgerId,
+      ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -191,7 +192,7 @@ describe('writeSummaryLogRowStates', () => {
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
-      ledgerId: accreditedLedgerId,
+      ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -219,7 +220,7 @@ describe('writeSummaryLogRowStates', () => {
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
-      ledgerId: accreditedLedgerId,
+      ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: 'log-A'
     })
@@ -245,7 +246,7 @@ describe('writeSummaryLogRowStates', () => {
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         accreditation: null,
-        ledgerId: registeredOnlyLedgerId,
+        ledgerId: withNumbers(registeredOnlyLedgerId),
         overseasSites,
         summaryLogId: 'log-A'
       })

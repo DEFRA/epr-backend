@@ -27,6 +27,7 @@
     "#prn-numbers-backfill/*": "./src/prn-numbers-backfill/*",
     "#report-numbers-backfill/*": "./src/report-numbers-backfill/*",
     "#reports/*": "./src/reports/*",
+    "#row-state-numbers-backfill/*": "./src/row-state-numbers-backfill/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",

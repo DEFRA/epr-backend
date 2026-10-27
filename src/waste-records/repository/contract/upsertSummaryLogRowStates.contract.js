@@ -5,7 +5,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 const excludedClassification = {
@@ -24,7 +25,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
     it('inserts a new state document for a previously unseen row', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )
@@ -43,7 +44,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
     it('returns an empty list when the submission has no rows', async () => {
       expect(
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [],
           'log-1'
         )
@@ -52,7 +53,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
     it('returns one state document per entry, in input order', async () => {
       const states = await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-a' }),
           buildSummaryLogRowStateEntry({ rowId: 'row-b' }),
@@ -66,11 +67,11 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
     it('stores a registered-only state with a null accreditationId', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
-        {
+        withNumbers({
           organisationId: 'org-1',
           registrationId: 'reg-1',
           accreditationId: null
-        },
+        }),
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )
@@ -83,12 +84,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         const [first] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         const [second] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-2'
         )
@@ -107,12 +108,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
       it('inserts a new document when only the row data changes', async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry({ data: { tonnage: 10 } })],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry({ data: { tonnage: 20 } })],
           'log-2'
         )
@@ -132,7 +133,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
       it('inserts a new document when only the processingType changes', async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [
             buildSummaryLogRowStateEntry({
               processingType: 'REPROCESSOR_INPUT'
@@ -141,7 +142,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [
             buildSummaryLogRowStateEntry({
               processingType: 'REPROCESSOR_OUTPUT'
@@ -162,12 +163,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
       it('inserts a new document when only the classification changes', async () => {
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [
             buildSummaryLogRowStateEntry({
               classification: excludedClassification
@@ -191,17 +192,17 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const stateB = buildSummaryLogRowStateEntry({ data: { tonnage: 20 } })
 
         const [a1] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [stateA],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [stateB],
           'log-2'
         )
         const [a3] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [stateA],
           'log-3'
         )
@@ -222,7 +223,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
@@ -232,7 +233,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           accreditationId: 'acc-1'
         }
         await repository.upsertSummaryLogRowStates(
-          otherLedgerId,
+          withNumbers(otherLedgerId),
           [entry],
           'log-2'
         )
@@ -255,12 +256,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [
             buildSummaryLogRowStateEntry({
               wasteRecordType: WASTE_RECORD_TYPE.PROCESSED
@@ -283,12 +284,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         const [state] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
@@ -310,17 +311,17 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-2'
         )
         const [state] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-3'
         )
@@ -336,12 +337,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         })
 
         const [first] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-2'
         )
@@ -360,12 +361,12 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         const entry = buildSummaryLogRowStateEntry()
 
         const [first] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-1'
         )
         await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [entry],
           'log-2'
         )
@@ -375,7 +376,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
       it('does not let a mutated caller copy bleed back into storage', async () => {
         const [returned] = await repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )

@@ -9,7 +9,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -85,7 +88,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
+      withNumbers(ledgerId),
       rows,
       SUMMARY_LOG_ID
     )
