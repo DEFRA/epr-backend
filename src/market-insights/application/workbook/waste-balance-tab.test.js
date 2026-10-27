@@ -24,6 +24,7 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -145,7 +146,7 @@ const seedOperator = async (
   const summaryLogId = `log-${operator.registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    ledgerId,
+    withNumbers(ledgerId),
     rows,
     summaryLogId
   )

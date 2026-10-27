@@ -85,6 +85,12 @@ describe('syncFromSummaryLog', () => {
       commitSummaryLogSubmittedEvent: vi.fn()
     }
     organisationsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: 'org-1',
+        orgId: 500001,
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-1' }],
+        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
+      }),
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
       findAccreditationById: vi.fn().mockResolvedValue({
         id: 'acc-default',
@@ -133,6 +139,83 @@ describe('syncFromSummaryLog', () => {
         (state) => state.wasteRecordType === WASTE_RECORD_TYPE.RECEIVED
       )
     ).toBe(true)
+  })
+
+  it('stores the organisation, registration and accreditation numbers on each row state', async () => {
+    const fileId = 'file-numbers'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+
+    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+
+    const [rowState] =
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        'org-1',
+        'reg-1',
+        fileId
+      )
+    expect(rowState).toMatchObject({
+      organisationNumber: '500001',
+      registrationNumber: 'REG-1',
+      accreditationNumber: 'ACC-1'
+    })
+  })
+
+  it('stores no accreditation number on a registered-only row state', async () => {
+    const fileId = 'file-numbers-reg-only'
+    const extractor = extractorFor(
+      fileId,
+      reprocessorInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+
+    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+
+    const [rowState] =
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        'org-1',
+        'reg-1',
+        fileId
+      )
+    expect(rowState).toMatchObject({
+      organisationNumber: '500001',
+      registrationNumber: 'REG-1',
+      accreditationNumber: null
+    })
+  })
+
+  it('stores no row state its organisation record gives no number for', async () => {
+    const fileId = 'file-numbers-missing'
+    const extractor = extractorFor(
+      fileId,
+      reprocessorInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+    organisationsRepository.findById.mockResolvedValue({
+      id: 'org-1',
+      orgId: 500001,
+      registrations: [{ id: 'reg-1', registrationNumber: null }],
+      accreditations: []
+    })
+
+    await expect(
+      makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+    ).rejects.toThrow(
+      'Cannot store row states without their numbers: registration reg-1 has no registration number'
+    )
+    expect(
+      await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        'org-1',
+        'reg-1',
+        fileId
+      )
+    ).toEqual([])
   })
 
   it('passes through tables that have no schema', async () => {

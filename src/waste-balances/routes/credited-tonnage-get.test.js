@@ -8,7 +8,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import {
   buildRegistration,
   createOrganisationBuilders
@@ -104,7 +107,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
+      withNumbers(ledgerId),
       [
         buildSummaryLogRowStateEntry({
           rowId: 'row-1',

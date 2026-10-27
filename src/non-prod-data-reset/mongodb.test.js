@@ -20,7 +20,10 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 
 import { config } from '#root/config.js'
@@ -222,7 +225,7 @@ const seedDownstreamForOrganisation = async (
   )
 
   await repositories.summaryLogRowStates.upsertSummaryLogRowStates(
-    { organisationId, registrationId, accreditationId },
+    withNumbers({ organisationId, registrationId, accreditationId }),
     [buildSummaryLogRowStateEntry()],
     `summary-log-${randomUUID()}`
   )

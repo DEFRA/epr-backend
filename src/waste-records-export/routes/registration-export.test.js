@@ -13,6 +13,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -90,11 +91,11 @@ const createServer = async ({
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    {
+    withNumbers({
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
       accreditationId: null
-    },
+    }),
     [receivedRowState()],
     FILE_ID
   )

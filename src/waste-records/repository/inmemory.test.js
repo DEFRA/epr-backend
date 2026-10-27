@@ -6,8 +6,25 @@ import { DEFAULT_LEDGER_ID } from './test-data.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  summaryLogRowStatesRepository: async ({}, use) => {
-    await use(createInMemorySummaryLogRowStatesRepository())
+  rowStateStorage: async ({}, use) => {
+    await use([])
+  },
+
+  summaryLogRowStatesRepository: async (
+    /** @type {*} */ { rowStateStorage },
+    use
+  ) => {
+    await use(createInMemorySummaryLogRowStatesRepository(rowStateStorage))
+  },
+
+  removeStoredNumbers: async (/** @type {*} */ { rowStateStorage }, use) => {
+    await use(async (/** @type {string[]} */ keys) => {
+      for (const doc of rowStateStorage) {
+        for (const key of keys) {
+          delete doc[key]
+        }
+      }
+    })
   }
 })
 

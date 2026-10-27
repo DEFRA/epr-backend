@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
-import { validateSummaryLogRowStateInsert } from './validation.js'
+import {
+  validateRowStateNumbers,
+  validateSummaryLogRowStateInsert
+} from './validation.js'
+import { ROW_STATE_NUMBER_KEYS } from './schema.js'
 
 /**
  * In-memory implementation of the summary-log row state repository.
@@ -25,6 +29,18 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
  * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ */
+
+/**
+ * @typedef {import('./port.js').NumberedLedgerId} NumberedLedgerId
+ */
+
+/**
+ * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
+ */
+
+/**
+ * @typedef {import('./port.js').LedgerLackingNumbers} LedgerLackingNumbers
  */
 
 /**
@@ -166,16 +182,14 @@ const toWasteRecordState = ({
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {NumberedLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {string} summaryLogId
  * @returns {SummaryLogRowState}
  */
 const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
   const candidate = validateSummaryLogRowStateInsert({
-    organisationId: ledgerId.organisationId,
-    registrationId: ledgerId.registrationId,
-    accreditationId: ledgerId.accreditationId,
+    ...ledgerId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     processingType: entry.processingType,
@@ -199,12 +213,88 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
 }
 
 /**
+ * @param {SummaryLogRowState} doc
+ */
+const numbersLackedBy = (doc) =>
+  ROW_STATE_NUMBER_KEYS.filter((key) => doc[key] === undefined)
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ */
+const ledgerIdsWithoutNumbers = (storage) => {
+  /** @type {Map<string, LedgerLackingNumbers>} */
+  const byLedger = new Map()
+  for (const doc of storage) {
+    const lacked = numbersLackedBy(doc)
+    if (lacked.length === 0) {
+      continue
+    }
+    const { organisationId, registrationId, accreditationId } = doc
+    const key = JSON.stringify([
+      organisationId,
+      registrationId,
+      accreditationId
+    ])
+    const found = byLedger.get(key) ?? {
+      ledgerId: { organisationId, registrationId, accreditationId },
+      documents: 0,
+      lacking: []
+    }
+    found.documents += 1
+    found.lacking = ROW_STATE_NUMBER_KEYS.filter(
+      (number) => found.lacking.includes(number) || lacked.includes(number)
+    )
+    byLedger.set(key, found)
+  }
+  return [...byLedger.values()]
+}
+
+/**
+ * @param {SummaryLogRowState} doc
+ * @param {RowStateNumbers} numbers
+ */
+const givenNumbersLackedBy = (doc, numbers) =>
+  ROW_STATE_NUMBER_KEYS.filter(
+    (key) => numbers[key] !== undefined && doc[key] === undefined
+  )
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RowStateNumbers} numbers
+ */
+const rowStatesLacking = (storage, ledgerId, numbers) =>
+  storage.filter(
+    (doc) =>
+      matchesLedgerIdentity(doc, ledgerId) &&
+      givenNumbersLackedBy(doc, numbers).length > 0
+  )
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RowStateNumbers} numbers
+ */
+const assignNumbersTo = (storage, ledgerId, numbers) => {
+  const lacking = rowStatesLacking(storage, ledgerId, numbers)
+  for (const doc of lacking) {
+    Object.assign(
+      doc,
+      Object.fromEntries(
+        givenNumbersLackedBy(doc, numbers).map((key) => [key, numbers[key]])
+      )
+    )
+  }
+  return lacking.length
+}
+
+/**
  * @param {SummaryLogRowState[]} storage
  * @returns {import('./port.js').SummaryLogRowStatesRepository}
  */
 const repositoryOver = (storage) => ({
   /**
-   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {NumberedLedgerId} ledgerId
    * @param {SummaryLogRowStateEntry[]} summaryLogRowStates
    * @param {string} summaryLogId
    */
@@ -259,7 +349,24 @@ const repositoryOver = (storage) => ({
     yield* submittedRowStatesForSummaryLogs(storage, summaryLogIds)
   },
 
-  findDistinctDataKeys: async () => distinctDataKeys(storage)
+  findDistinctDataKeys: async () => distinctDataKeys(storage),
+
+  findLedgerIdsWithoutNumbers: async () => ledgerIdsWithoutNumbers(storage),
+
+  /**
+   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {RowStateNumbers} numbers
+   */
+  countRowStatesLacking: async (ledgerId, numbers) =>
+    rowStatesLacking(storage, ledgerId, validateRowStateNumbers(numbers))
+      .length,
+
+  /**
+   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {RowStateNumbers} numbers
+   */
+  assignNumbers: async (ledgerId, numbers) =>
+    assignNumbersTo(storage, ledgerId, validateRowStateNumbers(numbers))
 })
 
 /**

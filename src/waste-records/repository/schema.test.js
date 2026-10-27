@@ -125,6 +125,9 @@ describe('row state insert schema', () => {
     expect(missing).toContain('classification')
     expect(missing).toContain('summaryLogIds')
     expect(missing).toContain('processingType')
+    expect(missing).toContain('organisationNumber')
+    expect(missing).toContain('registrationNumber')
+    expect(missing).toContain('accreditationNumber')
   })
 })
 
@@ -148,6 +151,20 @@ describe('row state validation', () => {
       const doc = { id: 'state-1', ...buildSummaryLogRowState() }
       const result = validateSummaryLogRowStateRead(doc)
       expect(result.id).toBe('state-1')
+    })
+
+    it('accepts a row state stored without the numbers', () => {
+      const {
+        organisationNumber: _organisationNumber,
+        registrationNumber: _registrationNumber,
+        accreditationNumber: _accreditationNumber,
+        ...storedWithoutNumbers
+      } = buildSummaryLogRowState()
+      const result = validateSummaryLogRowStateRead({
+        id: 'state-1',
+        ...storedWithoutNumbers
+      })
+      expect(result).not.toHaveProperty('organisationNumber')
     })
 
     it('throws Boom.badImplementation for invalid input', () => {

@@ -30,6 +30,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -206,7 +207,7 @@ const submit = async (repositories, rows) => {
     period: 1
   })
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    ledgerId,
+    withNumbers(ledgerId),
     rows,
     summaryLogId
   )
