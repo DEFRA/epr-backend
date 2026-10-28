@@ -1,10 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  overseasSites
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { overseasSites } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -13,8 +9,6 @@ import { asOperator, asRegulator, asSupport } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
   body,
   createAccreditedOrganisationBuilder
 } from './organisation-view-test-helpers.js'
@@ -58,36 +52,24 @@ describe('GET /organisations', () => {
   const get = (url, auth = asRegulator()) =>
     server.inject({ method: 'GET', url, ...auth })
 
-  it('serves a page of organisations by their numbers, with their registration and accreditation numbers and no database id', async () => {
+  it('serves each organisation on the page as GET /organisations/{organisationNumber} serves it', async () => {
     const response = await get('/organisations?search=acme')
+    const single = await get(`/organisations/${acme.orgId}`)
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({
-      items: [
-        {
-          name: 'Acme Recycling',
-          organisationNumber: String(acme.orgId),
-          registrations: {
-            [REPROCESSOR_NUMBER]: {
-              accreditations: {
-                2026: { accreditationNumber: ACCREDITATION_NUMBER }
-              }
-            },
-            [EXPORTER_NUMBER]: {
-              accreditations: {
-                2026: { accreditationNumber: EXPORTER_ACCREDITATION_NUMBER }
-              }
-            }
-          },
-          status: { current: 'created' },
-          submittedToRegulator: { code: 'ea' }
-        }
-      ],
+      items: [body(single)],
       page: 1,
       pageSize: 50,
       totalItems: 1,
       totalPages: 1
     })
+  })
+
+  it('serves no database id', async () => {
+    const response = await get('/organisations?search=acme')
+
+    expect(JSON.stringify(body(response))).not.toContain(acme.id)
   })
 
   it('finds an organisation by its number', async () => {

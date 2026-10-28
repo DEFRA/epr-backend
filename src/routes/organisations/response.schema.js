@@ -180,29 +180,8 @@ export const organisationViewSchema = Joi.object({
   submittedToRegulator: regulatorSchema
 })
 
-const organisationListItemSchema = Joi.object({
-  name: Joi.string().required(),
-  organisationNumber: Joi.string().required(),
-  registrations: Joi.object()
-    .pattern(
-      Joi.string(),
-      Joi.object({
-        accreditations: keyedByYear(
-          Joi.object({ accreditationNumber: Joi.string().required() })
-        )
-      })
-    )
-    .required(),
-  status: Joi.object({
-    current: Joi.string()
-      .valid(...ORGANISATION_STATUSES)
-      .required()
-  }).required(),
-  submittedToRegulator: regulatorSchema
-})
-
 export const organisationListResponseSchema = Joi.object({
-  items: Joi.array().items(organisationListItemSchema).required(),
+  items: Joi.array().items(organisationViewSchema).required(),
   page: Joi.number().required(),
   pageSize: Joi.number().required(),
   totalItems: Joi.number().required(),
