@@ -12,7 +12,7 @@ import { approvedYears } from './status-timeline.js'
  *
  * @param {Organisation} organisation
  * @param {Date} now
- * @returns {number[]}
+ * @returns {Year[]}
  */
 export const organisationYears = (organisation, now) => {
   const today = utcCalendarDate(now)
