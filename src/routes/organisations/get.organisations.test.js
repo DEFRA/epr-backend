@@ -114,10 +114,17 @@ describe('GET /organisations', () => {
     ])
   })
 
-  it('rejects an organisation number that is not one', async () => {
+  it('finds nothing for an organisation number that is not one, such as a database id', async () => {
     const response = await get(`/organisations?organisationNumber=${acme.id}`)
 
-    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(body(response)).toEqual({
+      items: [],
+      page: 1,
+      pageSize: 50,
+      totalItems: 0,
+      totalPages: 0
+    })
   })
 
   it('serves admin users', async () => {

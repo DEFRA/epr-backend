@@ -26,11 +26,7 @@ const criterion = () =>
 
 const querySchema = Joi.object({
   search: criterion(),
-  organisationNumber: Joi.string()
-    .trim()
-    .allow('')
-    .pattern(ORGANISATION_NUMBER_PATTERN)
-    .optional(),
+  organisationNumber: criterion(),
   registrationNumber: criterion(),
   accreditationNumber: criterion(),
   page: Joi.number().integer().min(1).default(1),
@@ -59,10 +55,21 @@ export const organisationListGet = {
    */
   handler: async ({ organisationReadRepository, query }, h) => {
     const { organisationNumber, ...criteria } = query
-    const page = await organisationReadRepository.find({
-      ...criteria,
-      orgId: organisationNumber
-    })
+    // A mistyped number finds nothing rather than failing the search
+    const page =
+      organisationNumber &&
+      !ORGANISATION_NUMBER_PATTERN.test(organisationNumber)
+        ? {
+            items: [],
+            page: query.page,
+            pageSize: query.pageSize,
+            totalItems: 0,
+            totalPages: 0
+          }
+        : await organisationReadRepository.find({
+            ...criteria,
+            orgId: organisationNumber
+          })
     return h.response(page).code(StatusCodes.OK)
   }
 }
