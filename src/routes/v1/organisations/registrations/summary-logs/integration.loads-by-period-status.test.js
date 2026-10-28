@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { ObjectId } from 'mongodb'
@@ -145,7 +146,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
       startDate: calendarDate('2025-01-01'),
@@ -157,7 +158,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.February,
       startDate: calendarDate('2025-02-01'),
@@ -961,7 +962,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     await createAndSubmitReport(env.reportsRepository, {
       organisationId,
       registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,
       startDate: calendarDate('2025-01-01'),

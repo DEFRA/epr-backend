@@ -1,9 +1,10 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { isDateInRange } from '#root/reports/domain/aggregation/filter-records-by-date.js'
 
 describe('#isDateInRange', () => {
-  const q1 = periodBounds(CADENCE.quarterly, 2025, 1)
+  const q1 = periodBounds(CADENCE.quarterly, toYear(2025), 1)
 
   describe('invalid dates', () => {
     it.each([

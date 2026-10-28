@@ -8,6 +8,7 @@ import {
 import { outstandingReturnsResponseSchema } from './outstanding-returns-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 export const marketInsightsOutstandingReturnsPath =
   '/v1/market-insights/{year}/{cadence}/{period}/outstanding-returns'
@@ -29,7 +30,7 @@ export const marketInsightsOutstandingReturnsGet = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { year: number, cadence: 'monthly', period: number },
+   *   params: { year: Year, cadence: 'monthly', period: number },
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request

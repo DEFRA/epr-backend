@@ -28,6 +28,8 @@ import {
   validateUpdateReportStatus
 } from './validation.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * @import {
  *   CreateReportParams,
@@ -50,7 +52,7 @@ import {
  * @param {object} criteria - The unique identifiers for the report criteria.
  * @param {string} criteria.organisationId - The ID of the organization.
  * @param {string} criteria.registrationId - The ID of the registration.
- * @param {number} criteria.year - The reporting year.
+ * @param {Year} criteria.year - The reporting year.
  * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
  * @param {number} criteria.period - The specific period index.
  * @param {number} [criteria.submissionNumber] - Optional submission number; when provided narrows the match to that slot.
@@ -403,7 +405,7 @@ const markActiveReportsStaleForSummaryLog = async (
  * status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} slot
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} slot
  * @returns {boolean}
  */
 const isReportInPeriodSlot = (report, slot) =>
@@ -429,7 +431,7 @@ const isUnflaggedForPrnCancellation = (report) =>
  * slot and not yet flagged stale for a PRN cancellation.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} criteria
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} criteria
  * @returns {boolean}
  */
 const isActiveReportForPrnCancellationSlot = (report, criteria) =>
@@ -573,7 +575,7 @@ const markSubmittedReportsRequiringResubmission = async (
  * natural key, irrespective of status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, submissionNumber: number }} key
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number, submissionNumber: number }} key
  * @returns {boolean}
  */
 const isReportAtSubmissionSlot = (report, key) =>

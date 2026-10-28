@@ -18,6 +18,7 @@ import {
 } from './report-mandatory/assert-report-data-complete.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -61,7 +62,7 @@ export const createReportsService = (reportsRepository) => ({
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -176,7 +177,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
@@ -330,7 +331,7 @@ async function readSubmissionRowStates({
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
@@ -388,7 +389,7 @@ async function getAggregatedReportDetail({
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
@@ -481,7 +482,7 @@ function summariseIncompleteDataIfEnabled(
  * @param {string} params.registrationId
  * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber

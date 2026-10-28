@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -341,7 +342,7 @@ const approvalReverted = ({ organisation }) => ({
 const monthlyReport = ({ ledgerId }, period) => ({
   organisationId: ledgerId.organisationId,
   registrationId: ledgerId.registrationId,
-  year: 2026,
+  year: toYear(2026),
   cadence: 'monthly',
   period
 })

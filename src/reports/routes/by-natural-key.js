@@ -32,6 +32,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
 import { submissionNumberSchema } from './shared.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -201,7 +202,7 @@ const mapCommand = async (request, h) =>
  * An accredited report covers only periods from the accreditation's start: a
  * period ending before it is not found.
  *
- * @param {ResolvedRequest & { params: { cadence: Cadence, period: number } }} request
+ * @param {ResolvedRequest & { params: { cadence: Cadence, period: number, year: Year } }} request
  */
 const assertPeriodWithinAccreditation = async (request) => {
   const { organisationId, accreditationId, year, cadence, period } =
@@ -211,11 +212,7 @@ const assertPeriodWithinAccreditation = async (request) => {
       organisationId,
       /** @type {string} */ (accreditationId)
     )
-  const { endDate } = periodBounds(
-    cadence,
-    /** @type {number} */ (year),
-    period
-  )
+  const { endDate } = periodBounds(cadence, year, period)
 
   // The read model only serves an accreditation with a validFrom.
   if (

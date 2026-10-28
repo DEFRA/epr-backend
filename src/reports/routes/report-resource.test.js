@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   DEFAULT_ORG_ID,
@@ -90,7 +91,7 @@ const createInProgress = async (overrides = {}) => {
 const preview = (overrides = {}) => ({
   operatorCategory: 'REPROCESSOR',
   cadence: 'quarterly',
-  year: 2026,
+  year: toYear(2026),
   period: 2,
   startDate: calendarDate('2026-04-01'),
   endDate: calendarDate('2026-06-30'),

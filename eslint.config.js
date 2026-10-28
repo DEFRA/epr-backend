@@ -109,7 +109,15 @@ export default [
   },
   {
     files: ['src/**/*.js'],
-    ignores: ['**/*.test.js', '**/*.contract.js', '**/*test-helpers.js'],
+    ignores: [
+      '**/*.test.js',
+      '**/*.contract.js',
+      '**/contract/test-data.js',
+      '**/*test-helpers.js',
+      // These read a year out of a date or string, so mint it.
+      'src/common/helpers/dates/year-month.js',
+      'src/reports/domain/period-for-date.js'
+    ],
     rules: {
       'no-restricted-imports': [
         'error',

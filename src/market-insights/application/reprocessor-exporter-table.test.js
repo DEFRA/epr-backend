@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -132,7 +133,7 @@ const prn = (
 const monthlyReport = (operator, period, figures = {}) => ({
   organisationId: operator.id,
   registrationId: operator.registrations[0].id,
-  year: 2026,
+  year: toYear(2026),
   cadence: 'monthly',
   period,
   ...figures
@@ -181,7 +182,7 @@ const run = async ({
     )(),
     reportsRepository,
     logger: partialMock(logger),
-    year: 2026,
+    year: toYear(2026),
     months,
     regulator,
     now: NOW

@@ -1,6 +1,7 @@
 import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
@@ -9,7 +10,7 @@ import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
  * Finds the submission summary for a specific submission number within periodic
  * reports, checking both the current slot and previous submissions.
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -40,7 +41,7 @@ export function findSubmissionByNumber(
  * Finds the report ID for a specific submission number within periodic reports,
  * checking both the current slot and previous submissions.
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber

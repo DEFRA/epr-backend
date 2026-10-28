@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { transform } from './public-register-transformer.js'
@@ -595,7 +596,7 @@ describe('transform', () => {
     const period = {
       key: '2026:monthly:1',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       label: 'Jan Report',
       startDate: calendarDate('2026-01-01'),

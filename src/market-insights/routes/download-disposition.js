@@ -1,11 +1,13 @@
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * Names a market insights download for the period it holds and the second it
  * was taken, with a label after the period where the download needs telling
  * apart from the usual one.
  *
- * @param {{ year: number, cadence: string, period: number }} params
+ * @param {{ year: Year, cadence: string, period: number }} params
  * @param {Date} now
  * @param {string} extension
  * @param {string} [label]

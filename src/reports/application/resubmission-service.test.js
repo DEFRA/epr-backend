@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
@@ -60,7 +61,7 @@ const defaultParams = () => {
     organisationId,
     registrationId: registration.id,
     registration,
-    year: 2024,
+    year: toYear(2024),
     cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
       'monthly'
     ),
@@ -78,7 +79,7 @@ describe('resubmission-service', () => {
 
     const slotWith = (current, previousSubmissions = []) => [
       {
-        year: 2024,
+        year: toYear(2024),
         reports: { monthly: { 1: { current, previousSubmissions } } }
       }
     ]
@@ -88,7 +89,7 @@ describe('resubmission-service', () => {
         stubRepository([]),
         'org-1',
         'reg-1',
-        2024,
+        toYear(2024),
         'monthly',
         1,
         1
@@ -105,7 +106,7 @@ describe('resubmission-service', () => {
         stubRepository(slotWith(draft, [submitted])),
         'org-1',
         'reg-1',
-        2024,
+        toYear(2024),
         'monthly',
         1,
         1
@@ -117,7 +118,7 @@ describe('resubmission-service', () => {
 
   describe('canRequestResubmission', () => {
     const buildReport = (overrides = {}) => ({
-      year: 2024,
+      year: toYear(2024),
       cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
         'monthly'
       ),
@@ -132,7 +133,7 @@ describe('resubmission-service', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2024,
+        year: toYear(2024),
         reports: {
           monthly: {
             1: {
@@ -241,7 +242,7 @@ describe('resubmission-service', () => {
       const { id: reportId } = await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        year: 2024,
+        year: toYear(2024),
         cadence: 'monthly',
         period: 1,
         submissionNumber: 1,
@@ -286,7 +287,7 @@ describe('resubmission-service', () => {
         reportsRepository,
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        year: 2024,
+        year: toYear(2024),
         cadence: 'monthly',
         period: 1,
         submissionNumber: 1,
@@ -295,7 +296,7 @@ describe('resubmission-service', () => {
 
       expect(result).toMatchObject({
         reportId,
-        year: 2024,
+        year: toYear(2024),
         cadence: 'monthly',
         period: 1,
         submissionNumber: 1,
@@ -314,7 +315,7 @@ describe('resubmission-service', () => {
           reportsRepository,
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          year: 2024,
+          year: toYear(2024),
           cadence: 'monthly',
           period: 1,
           submissionNumber: 1,
@@ -338,7 +339,7 @@ describe('resubmission-service', () => {
           reportsRepository,
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          year: 2024,
+          year: toYear(2024),
           cadence: 'monthly',
           period: 1,
           submissionNumber: 1,
@@ -368,7 +369,7 @@ describe('resubmission-service', () => {
           reportsRepository,
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          year: 2024,
+          year: toYear(2024),
           cadence: 'monthly',
           period: 1,
           submissionNumber: 1,
@@ -390,7 +391,7 @@ describe('resubmission-service', () => {
         reportsRepository,
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        year: 2024,
+        year: toYear(2024),
         cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
           'monthly'
         ),

@@ -8,6 +8,7 @@ import {
 import { marketInsightsDownloadDisposition } from './download-disposition.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 export const marketInsightsWorkbookPath =
   '/v1/market-insights/{year}/{cadence}/{period}/workbook.xlsx'
@@ -43,7 +44,7 @@ export const marketInsightsWorkbookGet = {
    * regulators to compare against.
    *
    * @param {HapiRequest & {
-   *   params: { year: number, cadence: 'monthly', period: number },
+   *   params: { year: Year, cadence: 'monthly', period: number },
    *   query: { unredacted: boolean },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,

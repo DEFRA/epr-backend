@@ -1,4 +1,7 @@
+import { toYear } from './year.js'
+
 /** @import { Brand } from '#common/helpers/brand.js' */
+/** @import { Year } from './year.js' */
 
 /**
  * A `YYYY-MM` reporting month. Branded so that only `toYearMonth` produces
@@ -80,9 +83,10 @@ const YEAR_LENGTH = 4
  * The calendar year a reporting month falls in.
  *
  * @param {YearMonth} yearMonth
- * @returns {number}
+ * @returns {Year}
  */
-export const yearOf = (yearMonth) => Number(yearMonth.slice(0, YEAR_LENGTH))
+export const yearOf = (yearMonth) =>
+  toYear(Number(yearMonth.slice(0, YEAR_LENGTH)))
 
 /**
  * The `YYYY-12` month key of the year an ISO date string falls in: the December

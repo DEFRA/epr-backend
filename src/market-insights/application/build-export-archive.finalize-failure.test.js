@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { Readable } from 'node:stream'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -32,7 +33,7 @@ const run = () =>
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 1,
     months: [toYearMonth('2026-01')],

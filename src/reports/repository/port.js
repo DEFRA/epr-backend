@@ -127,7 +127,7 @@
  *
  * @typedef {Object} MarkReportStaleResult
  * @property {string} reportId
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  * @property {number} submissionNumber
@@ -139,7 +139,7 @@
  * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {string} prnId
@@ -163,7 +163,7 @@
  * Contains the fields needed to audit the resubmission-required transition.
  * @typedef {{
  *   reportId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -180,7 +180,7 @@
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -194,7 +194,7 @@
  * {@link MarkSubmittedReportRequiringResubmissionResult}.
  * @typedef {{
  *   reportId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -213,7 +213,7 @@
  * @property {OrganisationNumber} [organisationNumber]
  * @property {RegistrationNumber} [registrationNumber]
  * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD)
@@ -302,7 +302,7 @@
  * @typedef {Object} ReportPerPeriodKey
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  */
@@ -315,7 +315,7 @@
  * @typedef {Object} PeriodicReport
  * @property {string} organisationId
  * @property {string} registrationId
- * @property {number} year
+ * @property {Year} year
  * @property {{ monthly?: PeriodicReportSlots, quarterly?: PeriodicReportSlots }} reports
  */
 
@@ -326,7 +326,7 @@
  * @property {OrganisationNumber} [organisationNumber]
  * @property {RegistrationNumber} [registrationNumber]
  * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
@@ -375,7 +375,7 @@
  * @typedef {Object} DeleteReportParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {number} [submissionNumber]
@@ -390,7 +390,7 @@
 
 /**
  * @typedef {Object} FindPeriodicReportsForYearParams
- * @property {number} year - the reporting year
+ * @property {Year} year - the reporting year
  */
 
 /**
@@ -445,6 +445,7 @@
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */

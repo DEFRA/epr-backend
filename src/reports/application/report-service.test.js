@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
@@ -145,7 +146,7 @@ const defaultParams = () => {
       registrationNumber: toRegistrationNumber('R25SR500010912PL')
     },
     registration,
-    year: 2024,
+    year: toYear(2024),
     cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
       'monthly'
     ),
@@ -266,7 +267,7 @@ describe('report-service', () => {
       await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        year: 2024,
+        year: toYear(2024),
         cadence: 'monthly',
         period: 1,
         submissionNumber: 1,
@@ -320,7 +321,7 @@ describe('report-service', () => {
       const baseReport = {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        year: 2024,
+        year: toYear(2024),
         cadence: 'monthly',
         period: 1,
         startDate: calendarDate('2024-01-01'),
@@ -495,7 +496,7 @@ describe('report-service', () => {
         await reportsRepository.createReport({
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          year: 2024,
+          year: toYear(2024),
           cadence: 'monthly',
           period: 1,
           submissionNumber: 1,
@@ -539,7 +540,7 @@ describe('report-service', () => {
     const baseReportFields = (params, changedBy) => ({
       organisationId: params.organisationId,
       registrationId: params.registrationId,
-      year: 2024,
+      year: toYear(2024),
       cadence: 'monthly',
       period: 1,
       startDate: calendarDate('2024-01-01'),
@@ -578,7 +579,7 @@ describe('report-service', () => {
         reportsRepository,
         params.organisationId,
         params.registrationId,
-        2024,
+        toYear(2024),
         'monthly',
         1,
         99
@@ -646,7 +647,7 @@ describe('report-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
-      params.year = 2099
+      params.year = toYear(2099)
       const { ledgerRepository, summaryLogRowStatesRepository } =
         await seedState(params, [])
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }

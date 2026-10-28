@@ -5,6 +5,7 @@ import {
 } from '#domain/organisations/model.js'
 import { sanitiseFormulaInjection } from '#waste-records-export/domain/csv-columns.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { WasteBalanceTable } from '#market-insights/application/waste-balance-table.js' */
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
@@ -206,7 +207,7 @@ export const buildReportCoverageRows = (scope, { data }) =>
  * moment too, but a filename gets renamed and a file inside does not.
  *
  * @param {Object} params
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {string} params.cadence
  * @param {number} params.period
  * @param {string[]} params.months - the reporting months the export covers, in order

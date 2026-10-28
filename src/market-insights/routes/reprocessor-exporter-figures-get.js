@@ -10,6 +10,7 @@ import {
 import { reprocessorExporterFiguresResponseSchema } from './reprocessor-exporter-figures-response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 export const marketInsightsReprocessorExporterFiguresPath =
   '/v1/market-insights/{year}/{cadence}/{period}/reprocessor-exporter-figures'
@@ -59,7 +60,7 @@ const reprocessorExporterFiguresRoute = ({ path, action, paramsSchema }) => ({
   },
   /**
    * @param {HapiRequest & {
-   *   params: { year: number, cadence: 'monthly', period: number, nation?: string },
+   *   params: { year: Year, cadence: 'monthly', period: number, nation?: string },
    *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   MATERIAL,
   TONNAGE_BAND,
@@ -371,7 +372,7 @@ describe('market insights export CSV rows', () => {
   describe('manifest', () => {
     it('records the reporting period and the moment the figures were taken', () => {
       const cells = buildManifestRow({
-        year: 2026,
+        year: toYear(2026),
         cadence: 'monthly',
         period: 6,
         months: [

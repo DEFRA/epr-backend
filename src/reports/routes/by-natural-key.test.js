@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -46,7 +47,7 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const accredited = accreditation()
 const registeredOnlyRegistration = reprocessor({
@@ -686,7 +687,10 @@ describe('report routes by natural key', () => {
   })
 
   describe('year calendar', () => {
-    const calendar = (/** @type {string} */ number, year = YEAR) => ({
+    const calendar = (
+      /** @type {string} */ number,
+      /** @type {number} */ year = YEAR
+    ) => ({
       method: /** @type {const} */ ('GET'),
       url: `${registrations}/${number}/reports/${year}/calendar`,
       ...asServiceMaintainer()
