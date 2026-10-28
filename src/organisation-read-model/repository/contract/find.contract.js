@@ -66,6 +66,23 @@ export const testFindBehaviour = (it) => {
       ])
     })
 
+    it('finds an organisation by its organisation number', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const wanted = named('Beta Recycling')
+      const repository = await organisationReadRepositoryWith({
+        organisations: [named('Acme Recycling'), wanted]
+      })
+
+      const { items } = await repository.find({
+        organisationNumber: String(wanted.orgId),
+        page: 1,
+        pageSize: 10
+      })
+
+      expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+    })
+
     it('serves each organisation as the read model does, with only numbered registrations and their accreditations by year', async ({
       organisationReadRepositoryWith
     }) => {
