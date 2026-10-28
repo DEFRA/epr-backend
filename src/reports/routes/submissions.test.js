@@ -1,3 +1,4 @@
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -72,7 +73,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository()
     const organisationsRepository = organisationsRepositoryFactory()
-    const year = new Date().getUTCFullYear()
+    const year = currentUtcYear()
     const org = await buildApprovedOrg(organisationsRepository, undefined, {
       VALID_FROM: `${year}-01-01`,
       VALID_TO: `${year}-12-31`

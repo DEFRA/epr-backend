@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
@@ -96,7 +97,12 @@ const submitJanuaryTwice = async (repositories) => {
   const operator = await insertAccreditedOperator(
     repositories.organisationsRepository
   )
-  const january = { ...operator, year: 2026, cadence: 'monthly', period: 1 }
+  const january = {
+    ...operator,
+    year: toYear(2026),
+    cadence: 'monthly',
+    period: 1
+  }
 
   await buildSubmittedReport(repositories.reportsRepository, {
     ...january,
@@ -231,7 +237,7 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
     )
     await buildSubmittedReport(server.repositories.reportsRepository, {
       ...welsh,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {

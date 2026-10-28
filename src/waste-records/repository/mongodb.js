@@ -23,7 +23,7 @@ import { createHash } from 'node:crypto'
  */
 
 /**
- * @typedef {import('./port.js').NumberedLedgerId} NumberedLedgerId
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
  */
 
 /**

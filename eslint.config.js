@@ -108,6 +108,33 @@ export default [
     }
   },
   {
+    files: ['src/**/*.js'],
+    ignores: [
+      '**/*.test.js',
+      '**/*.contract.js',
+      '**/contract/test-data.js',
+      '**/*test-helpers.js',
+      // These read a year out of a date or string, so mint it.
+      'src/common/helpers/dates/year-month.js',
+      'src/reports/domain/period-for-date.js'
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dates/year.js'],
+              importNames: ['toYear'],
+              message:
+                'Type a yearSchema-validated param as Year, or use currentUtcYear.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     rules: {
       curly: ['error', 'all'],
       eqeqeq: ['error', 'always'],

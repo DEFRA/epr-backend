@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { assertPresent } from '#test/type-helpers.js'
@@ -54,7 +55,7 @@ const asPeriodicReports = (reports) => /** @type {PeriodicReport[]} */ (reports)
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
     {
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       startDate: calendarDate('2026-01-01'),
       endDate: calendarDate('2026-01-31'),
@@ -62,7 +63,7 @@ describe('mergeReportingPeriods', () => {
       report: null
     },
     {
-      year: 2026,
+      year: toYear(2026),
       period: 2,
       startDate: calendarDate('2026-02-01'),
       endDate: calendarDate('2026-02-28'),
@@ -84,7 +85,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -114,7 +115,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -148,7 +149,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -180,7 +181,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -233,7 +234,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -283,7 +284,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -323,7 +324,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             1: {
@@ -357,7 +358,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             3: {
@@ -390,7 +391,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           monthly: {
             3: {
@@ -424,7 +425,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2026,
+        year: toYear(2026),
         reports: {
           quarterly: {
             1: {
@@ -454,7 +455,7 @@ describe('mergeReportingPeriods', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        year: 2025,
+        year: toYear(2025),
         reports: {
           monthly: {
             12: {

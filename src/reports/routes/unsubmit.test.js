@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -17,19 +18,20 @@ import * as reportAudit from '#reports/application/audit.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 /**
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number
  * }} Period

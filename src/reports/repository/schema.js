@@ -1,6 +1,7 @@
 import { toDecimal } from '#common/helpers/decimal-utils.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { tonnage, wholeTonnage } from '#common/validation/tonnage-schema.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -10,13 +11,7 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import Joi from 'joi'
 
-const START_YEAR = 2024
-const MAX_YEAR = 2100
-const YEAR_SCHEMA = Joi.number()
-  .integer()
-  .min(START_YEAR)
-  .max(MAX_YEAR)
-  .required()
+const YEAR_SCHEMA = yearSchema().required()
 const MONGO_ID_LENGTH = 24
 const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
 

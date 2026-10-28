@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
@@ -6,6 +7,7 @@
 /** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
@@ -222,7 +224,7 @@ async function buildSubmissionRows(
  * @param {ReportableRegistration} registration
  * @param {ReadModelRegistration} readModel
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {{ storedOnly: boolean }} options
  * @returns {ReportSubmissionsRow[]}
  */
@@ -278,7 +280,7 @@ export async function generateReportSubmissions(
   organisationsRepository,
   reportsRepository
 ) {
-  const currentYear = new Date().getUTCFullYear()
+  const currentYear = currentUtcYear()
 
   const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
   /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */

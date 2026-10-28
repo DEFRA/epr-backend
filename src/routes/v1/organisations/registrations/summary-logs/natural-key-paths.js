@@ -1,8 +1,10 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * @typedef {{
  *   organisationNumber: string,
  *   registrationNumber: string,
- *   year: number,
+ *   year: Year,
  *   accredited: boolean,
  *   summaryLogId: string
  * }} UploadCompletedPathArgs

@@ -32,7 +32,9 @@ import {
   summaryLogContentPayloadSchema
 } from './post.schema.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
@@ -115,7 +117,7 @@ const naming = (error, summaryLogId) => {
 
 /**
  * @typedef {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
- *   params: { organisationId: string, registrationId: string, year: number },
+ *   params: { organisationId: string, registrationId: string, year: Year },
  *   systemLogsRepository: SystemLogsRepository
  * }} SubmitRequest
  */
@@ -218,7 +220,7 @@ export const devSummaryLogsSubmitPath =
  * summary log declares its own template, independent of the route's params.
  *
  * @param {SummaryLogContentPayload} payload
- * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @param {Registration} registration
  * @returns {ReturnType<typeof templateForRegistration>}
  */
 const templateFor = (payload, registration) =>
@@ -234,7 +236,7 @@ const templateFor = (payload, registration) =>
   })
 
 /**
- * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @param {Registration} registration
  * @returns {string | null}
  */
 const accreditationIdFor = (registration) => {
@@ -260,7 +262,7 @@ export const devSummaryLogsSubmit = {
   },
   /**
    * @param {SubmitRequest} request
-   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { summaryLogsRepository, organisationsRepository, payload, logger } =

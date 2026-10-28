@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { describeUnmappedLedgers } from '#common/helpers/numbers-backfill-by-ledger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
@@ -9,20 +10,6 @@ import { config } from '../config.js'
 /** @import { StartedServer } from '#common/hapi-types.js' */
 
 const LOCK_NAME = 'row-state-numbers-backfill'
-
-/**
- * Every ledger under each reason, with its row state count. There are far
- * fewer ledgers than row states, so none is left out.
- *
- * @param {Record<string, string[]>} unmappedReasons
- */
-const describeUnmapped = (unmappedReasons) =>
-  Object.entries(unmappedReasons)
-    .map(
-      ([reason, ledgers]) =>
-        `${reason}: ${ledgers.length} (${ledgers.join(', ')})`
-    )
-    .join('; ')
 
 /** @param {StartedServer} server */
 const runBackfill = async (server) => {
@@ -47,7 +34,7 @@ const runBackfill = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Row state numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failedLedgers=${failed} auditFailedLedgers=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}"`
+    message: `Row state numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failedLedgers=${failed} auditFailedLedgers=${auditFailed} unmappedReasons="${describeUnmappedLedgers(unmappedReasons)}"`
   })
 }
 

@@ -1,3 +1,4 @@
+/** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
@@ -5,9 +6,9 @@
  * accreditation. Each is branded so that a database id, or another kind of
  * number, cannot be passed where one is expected.
  *
- * @typedef {string & { readonly __brand: 'OrganisationNumber' }} OrganisationNumber
- * @typedef {string & { readonly __brand: 'RegistrationNumber' }} RegistrationNumber
- * @typedef {string & { readonly __brand: 'AccreditationNumber' }} AccreditationNumber
+ * @typedef {Brand<string, 'OrganisationNumber'>} OrganisationNumber
+ * @typedef {Brand<string, 'RegistrationNumber'>} RegistrationNumber
+ * @typedef {Brand<string, 'AccreditationNumber'>} AccreditationNumber
  */
 
 export const ORGANISATION_NUMBER_PATTERN = /^[1-9]\d*$/
@@ -47,6 +48,17 @@ export const toAccreditationNumber = (value) =>
  *   registrationNumber?: RegistrationNumber,
  *   accreditationNumber?: AccreditationNumber | null
  * }} Numbers
+ */
+
+/**
+ * Every number stored beside a registration's ids and its accreditation's. A
+ * registered-only registration's accreditation number is `null`.
+ *
+ * @typedef {{
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditationNumber: AccreditationNumber | null
+ * }} RequiredNumbers
  */
 
 /**
@@ -112,4 +124,31 @@ export const numbersFor = (
   }
 
   return { numbers, unmapped }
+}
+
+/**
+ * Reads every number for a registration and its accreditation, or its null
+ * accreditation id, from their organisation record. Refuses where the record
+ * does not give them all, so nothing is stored without its numbers.
+ *
+ * @param {Organisation} organisation
+ * @param {{ registrationId: string, accreditationId: string | null }} ids
+ * @param {string} documents - what would be stored, for the error
+ * @returns {RequiredNumbers}
+ */
+export const requiredNumbersFor = (organisation, ids, documents) => {
+  const {
+    numbers: { organisationNumber, registrationNumber, accreditationNumber },
+    unmapped
+  } = numbersFor(organisation, ids)
+  if (
+    organisationNumber === undefined ||
+    registrationNumber === undefined ||
+    accreditationNumber === undefined
+  ) {
+    throw new Error(
+      `Cannot store ${documents} without their numbers: ${unmapped.join('; ')}`
+    )
+  }
+  return { organisationNumber, registrationNumber, accreditationNumber }
 }

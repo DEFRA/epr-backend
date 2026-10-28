@@ -1,4 +1,4 @@
-import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { filterPeriodsFromDate } from '#reports/domain/filter-periods-from-date.js'
@@ -17,6 +17,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
@@ -64,7 +65,7 @@ const isCancelledByEndOf = (month, history) =>
  * calendar, so no clock is consulted here.
  *
  * @param {Set<YearMonth>} served
- * @param {number[]} years
+ * @param {Year[]} years
  * @param {Accreditation} accreditation
  */
 const owedPeriods = (served, years, accreditation) => {
@@ -117,7 +118,7 @@ export function* owedMonthlyReports({
   covers = () => true
 }) {
   const served = new Set(months)
-  const years = [...new Set(months.map((month) => Number(month.slice(0, 4))))]
+  const years = [...new Set(months.map(yearOf))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
   for (const { org, registration, accreditation } of grantedRegistrations(

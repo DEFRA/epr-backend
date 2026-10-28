@@ -30,10 +30,14 @@ export const reportsUnsubmit = {
    */
   handler: async (request, h) => {
     const { reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
-    const period = Number(params.period)
-    const submissionNumber = Number(params.submissionNumber)
+    const {
+      organisationId,
+      registrationId,
+      cadence,
+      year,
+      period,
+      submissionNumber
+    } = params
 
     const report = await fetchReportBySubmissionNumber(
       reportsRepository,

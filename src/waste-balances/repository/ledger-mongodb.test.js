@@ -33,6 +33,18 @@ const it = mongoIt.extend({
       .deleteMany({})
     const factory = await createMongoLedgerRepository(database)
     await use(factory)
+  },
+
+  removeStoredNumbers: async (/** @type {*} */ { mongoClient }, use) => {
+    await use((/** @type {string[]} */ keys) =>
+      mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+        .updateMany(
+          {},
+          { $unset: Object.fromEntries(keys.map((key) => [key, ''])) }
+        )
+    )
   }
 })
 

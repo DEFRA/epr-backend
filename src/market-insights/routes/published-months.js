@@ -9,6 +9,8 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * Every market insights route is keyed by a monthly reporting period. Only
  * monthly is accepted, until a quarterly publication exists.
@@ -23,7 +25,7 @@ export const monthlyPeriodParamsSchema = periodRefSchema.keys({
  * of the aggregate. Ended is judged on the UK calendar, not UTC, because the
  * page asking for the month just gone reads a UK clock.
  *
- * @param {{ year: number, period: number }} params
+ * @param {{ year: Year, period: number }} params
  * @param {Date} now
  * @param {string} action - the logging event action of the route asking
  * @returns {import('#common/helpers/dates/year-month.js').YearMonth[]} in order

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import path from 'node:path'
 import ExcelJS from 'exceljs'
 import { assertPresent } from '#test/type-helpers.js'
@@ -48,7 +49,7 @@ export const readParamsFor = (months) => ({
   overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
   reportsRepository: createInMemoryReportsRepository()(),
   logger: createMockLogger(),
-  year: 2026,
+  year: toYear(2026),
   months,
   now: PUBLISHED_EXTRACTION
 })

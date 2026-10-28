@@ -310,9 +310,39 @@ export const createOrganisationBuilders = () => {
   ) =>
     buildOrganisation(registrationOverrides(registration, accreditationStatus))
 
+  /**
+   * Builds an organisation holding a numbered registration, and a numbered
+   * accreditation of it, under the given ids, so a document stored with those
+   * ids can be given their numbers.
+   *
+   * @param {{ organisationId: string, registrationId: string, accreditationId: string }} ids
+   */
+  const buildOrganisationHolding = ({
+    organisationId,
+    registrationId,
+    accreditationId
+  }) =>
+    buildOrganisation({
+      id: organisationId,
+      registrations: [
+        buildRegistration({
+          id: registrationId,
+          registrationNumber: toRegistrationNumber(`REG-${registrationId}`),
+          accreditationId
+        })
+      ],
+      accreditations: [
+        buildAccreditation({
+          id: accreditationId,
+          accreditationNumber: toAccreditationNumber(`ACC-${accreditationId}`)
+        })
+      ]
+    })
+
   return {
     nextOrgId,
     buildOrganisation,
+    buildOrganisationHolding,
     buildOrgWithName,
     buildOrgWithCriteria,
     buildReadOrganisation,

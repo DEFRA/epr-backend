@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -46,7 +47,7 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const accredited = accreditation()
 const registeredOnlyRegistration = reprocessor({
@@ -685,19 +686,11 @@ describe('report routes by natural key', () => {
     )
   })
 
-  it("serves a registration's reporting calendar", async () => {
-    const response = await server.inject({
-      method: 'GET',
-      url: `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/calendar`,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).cadence).toBe('quarterly')
-  })
-
   describe('year calendar', () => {
-    const calendar = (/** @type {string} */ number, year = YEAR) => ({
+    const calendar = (
+      /** @type {string} */ number,
+      /** @type {number} */ year = YEAR
+    ) => ({
       method: /** @type {const} */ ('GET'),
       url: `${registrations}/${number}/reports/${year}/calendar`,
       ...asServiceMaintainer()
@@ -834,10 +827,6 @@ describe('report routes by natural key', () => {
     [
       'a registration with no accreditation',
       `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/reports/monthly/1/submissions/1`
-    ],
-    [
-      'the calendar of an unknown registration',
-      `${registrations}/R26XX0000000000PL/reports/calendar`
     ],
     [
       'the year calendar of an unknown registration',

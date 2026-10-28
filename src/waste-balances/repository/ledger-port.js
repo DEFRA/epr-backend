@@ -101,6 +101,17 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
+ * A ledger holding events that lack a number: how many do, and which numbers
+ * any of them lacks.
+ *
+ * @typedef {{
+ *   ledgerId: WasteBalanceLedgerId,
+ *   documents: number,
+ *   lacking: (keyof import('./ledger-schema.js').LedgerEventNumbers)[]
+ * }} LedgerLackingNumbers
+ */
+
+/**
  * One ledger partition's latest submitted summary log: its ledger id and the
  * `summaryLogId` carried by the highest-numbered `summary log submitted`
  * event in that partition.
@@ -115,8 +126,9 @@ export class LedgerSequenceError extends Error {
  * and every adapter filters on all three of its ids. A ledger read that names a
  * registration or accreditation under the wrong organisation matches nothing —
  * it does not fall back to the ledger that registration happens to live in. The
- * one exception is `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
- * reporting query that scans partitions rather than naming one.
+ * exceptions are `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
+ * reporting query, and `findLedgerIdsWithoutNumbers`, the numbers backfill's
+ * sweep, which scan partitions rather than naming one.
  *
  * @typedef {Object} WasteBalanceLedgerRepository
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
@@ -157,6 +169,19 @@ export class LedgerSequenceError extends Error {
  *   surviving prefix folds consistently; what is lost is decision-atomicity
  *   across the batch. A command that emits more than one event must therefore
  *   tolerate a re-applied prefix on replay (idempotent or independent events).
+ * @property {() => Promise<LedgerLackingNumbers[]>} findLedgerIdsWithoutNumbers
+ *   Each ledger holding events that lack the organisation, registration or
+ *   accreditation number, with how many do and which numbers they lack, in
+ *   the order organisation, registration, accreditation. A registered-only
+ *   event's null accreditation number is held.
+ * @property {(ledgerId: WasteBalanceLedgerId, numbers: import('./ledger-schema.js').LedgerEventNumbers) => Promise<number>} countEventsLacking
+ *   How many of the ledger's events lack one of the numbers given: the events
+ *   `assignNumbers` would change.
+ * @property {(ledgerId: WasteBalanceLedgerId, numbers: import('./ledger-schema.js').LedgerEventNumbers) => Promise<number>} assignNumbers
+ *   Adds to each of the ledger's events the numbers it lacks, keeping any it
+ *   already holds, and returns how many events it changed. The one write to a
+ *   stored event: it adds the identity the ids already name, and changes
+ *   nothing a fold reads.
  */
 
 /**

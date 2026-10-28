@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -147,23 +148,27 @@ describe('findAccreditationForYear', () => {
     const { accredited, organisation, registration } =
       await accreditedRegistration()
 
-    expect(findAccreditationForYear(organisation, registration, 2026).id).toBe(
-      accredited.id
-    )
+    expect(
+      findAccreditationForYear(organisation, registration, toYear(2026)).id
+    ).toBe(accredited.id)
   })
 
   it.each([
-    ['another year', {}, 2027],
+    ['another year', {}, toYear(2027)],
     [
       'an accreditation with no number',
       { accreditationNumber: undefined },
-      2026
+      toYear(2026)
     ],
-    ['an accreditation with no start date', { validFrom: undefined }, 2026],
+    [
+      'an accreditation with no start date',
+      { validFrom: undefined },
+      toYear(2026)
+    ],
     [
       'an accreditation the read model does not serve',
       { statusHistory: granted('rejected') },
-      2026
+      toYear(2026)
     ]
   ])('rejects %s', async (_, overrides, year) => {
     const { organisation, registration } =

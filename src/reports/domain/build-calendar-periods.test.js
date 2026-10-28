@@ -1,6 +1,9 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { buildCalendarPeriods } from './build-calendar-periods.js'
+
+/** @import { MergedPeriod } from './merge-reporting-periods.js' */
 
 const submittedReport = (overrides = {}) => ({
   id: 'report-1',
@@ -13,7 +16,7 @@ const submittedReport = (overrides = {}) => ({
 })
 
 const period = (report, overrides = {}) => ({
-  year: 2026,
+  year: toYear(2026),
   period: 1,
   startDate: calendarDate('2026-01-01'),
   endDate: calendarDate('2026-01-31'),
@@ -48,6 +51,39 @@ describe('buildCalendarPeriods', () => {
       periodStatus: 'requires_resubmission',
       report: null,
       dueDate: flagged.dueDate
+    })
+  })
+
+  it('carries the in-flight resubmission draft on the requires_resubmission item', () => {
+    const flagged = submittedReport({
+      resubmissionRequired: {
+        closedPeriodRestated: {
+          uploadedAt: '2026-05-01T12:00:00.000Z',
+          summaryLogId: 'sl-2'
+        }
+      }
+    })
+    const draft = submittedReport({
+      id: 'report-2',
+      status: 'in_progress',
+      submissionNumber: 2,
+      submittedAt: null,
+      submittedBy: null
+    })
+
+    const result = buildCalendarPeriods([
+      /** @type {MergedPeriod} */ (
+        /** @type {unknown} */ ({
+          ...period(draft),
+          previousSubmissions: [flagged]
+        })
+      )
+    ])
+
+    expect(result[1]).toMatchObject({
+      submissionNumber: 2,
+      periodStatus: 'requires_resubmission',
+      report: draft
     })
   })
 

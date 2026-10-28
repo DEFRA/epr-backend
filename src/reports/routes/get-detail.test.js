@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
@@ -32,7 +33,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2026-03-31T09:00:00.000Z')
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 /**
  * Seeds the summary-log row states and the waste balance ledger so the report

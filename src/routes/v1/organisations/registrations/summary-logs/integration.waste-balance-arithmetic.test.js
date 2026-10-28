@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -30,6 +30,7 @@ import {
   createExporterRowValues,
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.
@@ -43,12 +44,17 @@ describe('Waste balance arithmetic integration tests', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
+    vi.setSystemTime(new Date('2025-10-01T12:00:00.000Z'))
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const sharedMeta = createWasteBalanceMeta('EXPORTER')
@@ -136,6 +142,17 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   /**
+   * The numbers the stream's events are written with, from the organisation
+   * record, as a real writer reads them.
+   */
+  const ledgerNumbers = async (env) =>
+    requiredNumbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      env,
+      'ledger events'
+    )
+
+  /**
    * Debit the total balance straight on the stream, standing in for a competing
    * writer issuing a PRN these tests do not otherwise model. A real issuance
    * rules on the PRN's own status first; there is no such PRN here, so the
@@ -155,7 +172,7 @@ describe('Waste balance arithmetic integration tests', () => {
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events)
+    return append(decision.events, await ledgerNumbers(env))
   }
 
   /**
@@ -178,7 +195,7 @@ describe('Waste balance arithmetic integration tests', () => {
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events)
+    return append(decision.events, await ledgerNumbers(env))
   }
 
   const createPrn = async (env, tonnage) => {

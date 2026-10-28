@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
 import { vi } from 'vitest'
@@ -50,13 +51,13 @@ const SUBMIT_MAX_POLL_ATTEMPTS = 10
 // The accredited org reports monthly, so a January-dated received load closes
 // against the January monthly period.
 const JANUARY_2025 = {
-  year: 2025,
+  year: toYear(2025),
   cadence: /** @type {const} */ ('monthly'),
   period: MONTHLY_PERIODS.January
 }
 
 const FEBRUARY_2025 = {
-  year: 2025,
+  year: toYear(2025),
   cadence: 'monthly',
   period: MONTHLY_PERIODS.February
 }
@@ -65,7 +66,7 @@ const FEBRUARY_DATE = '2025-02-15T00:00:00.000Z'
 // A registered-only operator has no accreditation, so it reports quarterly; a
 // January-dated export closes against Q1.
 const Q1_2025 = {
-  year: 2025,
+  year: toYear(2025),
   cadence: 'quarterly',
   period: QUARTERLY_PERIODS.Q1
 }

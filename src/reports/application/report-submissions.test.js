@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -52,7 +53,7 @@ describe('generateReportSubmissions (integration)', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org1.id,
       registrationId: org1Reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {
@@ -202,14 +203,14 @@ describe('generateReportSubmissions (integration)', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'monthly',
       period: 1
     })
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'quarterly',
       period: 1
     })
@@ -262,7 +263,7 @@ describe('generateReportSubmissions (integration)', () => {
     await seedInFlightResubmission(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {
@@ -311,7 +312,7 @@ describe('generateReportSubmissions (integration)', () => {
     await buildUnsubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {
@@ -352,7 +353,7 @@ describe('generateReportSubmissions (integration)', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       prn: {
@@ -370,7 +371,7 @@ describe('generateReportSubmissions (integration)', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1,
       submissionNumber: 2,

@@ -389,7 +389,12 @@ describe('syncFromSummaryLog', () => {
           statusHistory: []
         },
         overseasSites: {},
-        summaryLogId: fileId
+        summaryLogId: fileId,
+        numbers: {
+          organisationNumber: '500001',
+          registrationNumber: 'REG-1',
+          accreditationNumber: 'ACC-1'
+        }
       }
     )
   })
@@ -437,7 +442,10 @@ describe('syncFromSummaryLog', () => {
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
-        accreditationId: null
+        accreditationId: null,
+        organisationNumber: '500001',
+        registrationNumber: 'REG-1',
+        accreditationNumber: null
       },
       { summaryLogId: fileId, creditTotal: 0 },
       expect.objectContaining({ id: TEST_USER.id, email: TEST_USER.email })

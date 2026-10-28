@@ -10,7 +10,7 @@ import { validateAccreditationId } from '../repository/validation.js'
  * event(s).
  *
  * @typedef {(
- *   ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId,
+ *   ledgerId: import('../repository/ledger-schema.js').NumberedLedgerId,
  *   submission: import('../repository/ledger-schema.js').SummaryLogSubmittedPayload,
  *   createdBy: import('../repository/ledger-schema.js').LedgerUserSummary,
  *   createdAt?: Date
@@ -29,9 +29,12 @@ import { validateAccreditationId } from '../repository/validation.js'
  * the fault is ours and retrying cannot fix it. Naming it as our bug is what
  * the guard is for. ADR-0036's detection over absorption, one layer up.
  *
+ * The events are written with the ledger's numbers, which the caller supplies
+ * at the commit because nothing is decided against them.
+ *
  * @typedef {Object} BalanceForUpdate
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
- * @property {(events: import('../domain/commands.js').BalanceEvent[]) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
+ * @property {(events: import('../domain/commands.js').BalanceEvent[], numbers: import('../repository/ledger-schema.js').LedgerEventNumbers) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
  */
 
 /**
@@ -76,11 +79,11 @@ const createLedgerCommands = (ledgerRepository) => {
 
   /**
    * Append the decided balance events to the ledger as one batch, stamping
-   * each with the ledger identity, its slot, and provenance. `createdAt`
+   * each with the ledger identity and its numbers, its slot, and provenance. `createdAt`
    * defaults to now for a live command; the historical backfill supplies the
    * original submission time so replayed history is dated when it happened.
    *
-   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId & import('../repository/ledger-schema.js').LedgerEventNumbers} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
@@ -137,14 +140,14 @@ const createLedgerCommands = (ledgerRepository) => {
 
     return {
       balance: state ? state.balance : null,
-      append: async (events) => {
+      append: async (events, numbers) => {
         if (appendAttempted) {
           throw Boom.badImplementation(
             'A balance read for update commits once; committing twice off one read is a caller error, not the slot conflict a competing writer produces'
           )
         }
         appendAttempted = true
-        return append(ledgerId, head, events, createdBy)
+        return append({ ...ledgerId, ...numbers }, head, events, createdBy)
       }
     }
   }
@@ -220,11 +223,12 @@ export const createWasteBalanceService = (
      * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {string} options.summaryLogId
+     * @param {import('#domain/organisations/numbers.js').RequiredNumbers} options.numbers
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId }
+      { user, accreditation, overseasSites, summaryLogId, numbers }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -240,7 +244,8 @@ export const createWasteBalanceService = (
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId
+        summaryLogId,
+        numbers
       })
     },
 

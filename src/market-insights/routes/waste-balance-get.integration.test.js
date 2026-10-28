@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
@@ -202,7 +203,7 @@ const submit = async (repositories, rows) => {
   await buildSubmittedReport(repositories.reportsRepository, {
     organisationId: ledgerId.organisationId,
     registrationId: ledgerId.registrationId,
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 1
   })

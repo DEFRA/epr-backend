@@ -1,11 +1,12 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { buildAllSubmissionPeriods } from './build-all-submission-periods.js'
 
 /**
  * Only the two cases the endpoint path cannot reach live here. Everything else
- * this builder does is exercised through the real submit flow in
- * `reports/routes/get.test.js` (the `?expand=submissions` view). These two
+ * this builder does is exercised through the year calendar's
+ * `?expand=submissions` view in `reports/routes/by-natural-key.test.js`. These two
  * cannot be: `mergeReportingPeriods` always populates `previousSubmissions`, and
  * the submission-number invariant means the submit flow never produces a
  * non-submitted previous submission.
@@ -22,7 +23,7 @@ const submittedReport = (overrides = {}) => ({
 })
 
 const period = (report, overrides = {}) => ({
-  year: 2026,
+  year: toYear(2026),
   period: 1,
   startDate: calendarDate('2026-01-01'),
   endDate: calendarDate('2026-01-31'),

@@ -21,6 +21,7 @@ import { summaryLogsYearCreate } from './year-post.js'
 
 /**
  * @import { ResponseObject } from '@hapi/hapi'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  */
 
@@ -44,7 +45,7 @@ const uploadAddresses = [
 
 /**
  * @param {boolean} accredited
- * @returns {(request: ResolvedRequest) => void}
+ * @returns {(request: ResolvedRequest & { params: { year: Year } }) => void}
  */
 const callbackToNaturalKeys = (accredited) => (request) => {
   const { organisationNumber, registrationNumber, year } = request.params
@@ -56,7 +57,7 @@ const callbackToNaturalKeys = (accredited) => (request) => {
     `${config.get('appBaseUrl')}${uploadCompletedPath({
       organisationNumber,
       registrationNumber,
-      year: /** @type {number} */ (year),
+      year,
       accredited,
       summaryLogId: id
     })}`

@@ -12,6 +12,7 @@ import {
 } from '#reports/repository/schema.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Issue } from '#reports/application/report-mandatory/assert-report-data-complete.js'
  * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatus as StoredStatus, ReportStatusObject, ReportSubmittedSlot, UserSummary, WasteSent } from '#reports/repository/port.js'
@@ -34,7 +35,7 @@ import {
  *   & Partial<Pick<RecyclingActivity, 'tonnageRecycled' | 'tonnageNotRecycled'>>} ServedRecyclingActivity
  *
  * @typedef {{
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,

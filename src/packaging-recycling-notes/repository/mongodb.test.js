@@ -3,7 +3,10 @@ import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAwaitingAuthorisationPrn } from './contract/test-data.js'
+import {
+  buildAwaitingAuthorisationPrn,
+  generateTestPrnNumber
+} from './contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -757,7 +760,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
         updatedBy: { id: 'user-issuer', name: 'Issuer User' },
         updatedAt: new Date(),
-        prnNumber: `TT2699999`
+        prnNumber: generateTestPrnNumber()
       })
 
       expect(updated?.version).toBe(2)

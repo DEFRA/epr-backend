@@ -16,10 +16,19 @@
  * @typedef {import('./ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  */
 
+/**
+ * @typedef {import('./ledger-port.js').LedgerLackingNumbers} LedgerLackingNumbers
+ */
+
+/**
+ * @typedef {import('./ledger-schema.js').LedgerEventNumbers} LedgerEventNumbers
+ */
+
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
-import { LEDGER_EVENT_KIND } from './ledger-schema.js'
+import { LEDGER_EVENT_KIND, LEDGER_EVENT_NUMBER_KEYS } from './ledger-schema.js'
 import {
   validateLedgerEventInsert,
+  validateLedgerEventNumbers,
   validateLedgerEventRead
 } from './ledger-validation.js'
 
@@ -292,6 +301,110 @@ const performAppendEvents = (collection) => async (events) => {
   }
 }
 
+const LACKING_A_NUMBER = {
+  $or: LEDGER_EVENT_NUMBER_KEYS.map((key) => ({ [key]: { $exists: false } }))
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {() => Promise<LedgerLackingNumbers[]>}
+ */
+const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
+  const groups = await collection
+    .aggregate([
+      { $match: LACKING_A_NUMBER },
+      {
+        $group: {
+          _id: {
+            organisationId: '$organisationId',
+            registrationId: '$registrationId',
+            accreditationId: '$accreditationId'
+          },
+          documents: { $sum: 1 },
+          ...Object.fromEntries(
+            LEDGER_EVENT_NUMBER_KEYS.map((key) => [
+              key,
+              { $max: { $eq: [{ $type: `$${key}` }, 'missing'] } }
+            ])
+          )
+        }
+      }
+    ])
+    .toArray()
+  return groups.map((group) => ({
+    ledgerId: /** @type {WasteBalanceLedgerId} */ (group._id),
+    documents: group.documents,
+    lacking: LEDGER_EVENT_NUMBER_KEYS.filter((key) => group[key])
+  }))
+}
+
+/**
+ * @param {LedgerEventNumbers} numbers
+ * @returns {LedgerEventNumbers}
+ */
+const numbersHeldBy = (numbers) =>
+  Object.fromEntries(
+    LEDGER_EVENT_NUMBER_KEYS.filter((key) => numbers[key] !== undefined).map(
+      (key) => [key, numbers[key]]
+    )
+  )
+
+/**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {LedgerEventNumbers} given
+ */
+const lackingGivenNumbersFilter = (ledgerId, given) => ({
+  ...ledgerFilter(ledgerId),
+  $or: Object.keys(given).map((key) => ({ [key]: { $exists: false } }))
+})
+
+/**
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: LedgerEventNumbers) => Promise<number>}
+ */
+const performCountEventsLacking = (collection) => async (ledgerId, numbers) => {
+  const given = numbersHeldBy(validateLedgerEventNumbers(numbers))
+  if (Object.keys(given).length === 0) {
+    return 0
+  }
+  return collection.countDocuments(lackingGivenNumbersFilter(ledgerId, given))
+}
+
+/**
+ * One update over every event of the ledger, each number set only where the
+ * event lacks it.
+ *
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: LedgerEventNumbers) => Promise<number>}
+ */
+const performAssignNumbers = (collection) => async (ledgerId, numbers) => {
+  const given = numbersHeldBy(validateLedgerEventNumbers(numbers))
+  if (Object.keys(given).length === 0) {
+    return 0
+  }
+
+  const { modifiedCount } = await collection.updateMany(
+    lackingGivenNumbersFilter(ledgerId, given),
+    [
+      {
+        $set: Object.fromEntries(
+          Object.entries(given).map(([key, value]) => [
+            key,
+            {
+              $cond: [
+                { $eq: [{ $type: `$${key}` }, 'missing'] },
+                { $literal: value },
+                `$${key}`
+              ]
+            }
+          ])
+        )
+      }
+    ]
+  )
+  return modifiedCount
+}
+
 /**
  * Creates a MongoDB-backed ledger repository.
  *
@@ -309,6 +422,9 @@ export const createMongoLedgerRepository = async (db) => {
     findLatestSubmittedSummaryLogPerLedger:
       performFindLatestSubmittedSummaryLogPerLedger(collection),
     deleteAllInLedger: performDeleteInLedger(collection),
-    appendEvents: performAppendEvents(collection)
+    appendEvents: performAppendEvents(collection),
+    findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),
+    countEventsLacking: performCountEventsLacking(collection),
+    assignNumbers: performAssignNumbers(collection)
   })
 }

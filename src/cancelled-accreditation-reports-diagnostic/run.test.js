@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
@@ -110,7 +111,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     const reportId = await createAndSubmitReport(reportsRepository, {
       organisationId: organisation.id,
       registrationId: registration.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 3
     })

@@ -16,6 +16,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -38,7 +39,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   field: string,
  *   value: object
  * }} params
- * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
+ * @returns {Promise<Array<{ reportId: string, year: Year, cadence: string, period: number, submissionNumber: number }>>}
  */
 const flagReportsByIdempotencyKey = async (
   db,

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
@@ -301,8 +302,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 })
 
 describe('submitSummaryLog resubmission flag source', () => {
-  const january = { year: 2025, cadence: 'monthly', period: 1 }
-  const february = { year: 2025, cadence: 'monthly', period: 2 }
+  const january = { year: toYear(2025), cadence: 'monthly', period: 1 }
+  const february = { year: toYear(2025), cadence: 'monthly', period: 2 }
 
   /**
    * Submits a log over submitted January and February reports, through the

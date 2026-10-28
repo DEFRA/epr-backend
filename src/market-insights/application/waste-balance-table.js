@@ -25,6 +25,8 @@ import {
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
@@ -410,7 +412,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.year - the reporting year
+ * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<WasteBalanceTable>}

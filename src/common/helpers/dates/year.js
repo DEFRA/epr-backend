@@ -1,6 +1,20 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
 
+/** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
+
+/**
+ * A calendar year such as 2027. Branded so a year cannot be confused with the
+ * other numbers a route handles, such as a period or a submission number.
+ *
+ * @typedef {Brand<number, 'Year'>} Year
+ */
+
+/**
+ * @param {number} value
+ * @returns {Year}
+ */
+export const toYear = (value) => /** @type {Year} */ (value)
 
 const DECEMBER = 11
 const LAST_DAY_OF_DECEMBER = 31
@@ -9,10 +23,10 @@ const LAST_DAY_OF_DECEMBER = 31
  * The current calendar year, read in UTC to match how every other
  * year-scoped boundary in this module is derived.
  * @param {Date} [now]
- * @returns {number}
+ * @returns {Year}
  */
 export function currentUtcYear(now = new Date()) {
-  return now.getUTCFullYear()
+  return toYear(now.getUTCFullYear())
 }
 
 /**

@@ -13,6 +13,7 @@ const logDrop = (message) => logger.warn({ message })
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  */
 
 /**
@@ -132,7 +133,7 @@ export async function generateReportCompliance(
  * @param {{
  *   registration: NonNullable<ReturnType<typeof toReadModelRegistration>>,
  *   storedReports: import('#reports/repository/port.js').PeriodicReport[],
- *   years: number[],
+ *   years: Year[],
  *   now: Date
  * }} params
  * @returns {Map<string, string | null>}

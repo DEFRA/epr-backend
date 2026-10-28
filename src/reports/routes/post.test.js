@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
@@ -49,7 +50,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 const QUARTER = 1
 // The accreditation from the read-model fixtures starts in July.
 const MONTH = 7
@@ -381,7 +382,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   it('returns 400 with structured periodNotEnded when the period has not yet ended', async () => {
     const { post } = await createServer(registeredOnlyReprocessor)
 
-    const response = await post({ year: 2099 })
+    const response = await post({ year: toYear(2099) })
 
     expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     expect(JSON.parse(response.payload)).toEqual({
@@ -474,7 +475,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('period not ended attaches PERIOD_NOT_ENDED code and flat event.reason', async () => {
       const { server, post } = await createServer(registeredOnlyReprocessor)
 
-      await post({ year: 2099 })
+      await post({ year: toYear(2099) })
 
       expect(server.loggerMocks.warn).toHaveBeenCalledWith({
         message: 'Cannot create report for period 1 — period has not yet ended',

@@ -34,6 +34,8 @@ import {
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
@@ -407,7 +409,7 @@ const measuresByCell = ({
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
- * @param {number} params.year - the reporting year
+ * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {RegulatorValue} [params.regulator] - publish only the registrations submitted to this regulator; every regulator when absent
  * @param {Date} params.now - clock reading supplied by the caller

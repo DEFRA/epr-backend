@@ -8,6 +8,7 @@ import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { partialMock } from '#test/type-helpers.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -64,6 +65,10 @@ const ledgerId = {
   registrationId: 'reg-1',
   accreditationId
 }
+
+const { organisationNumber, registrationNumber, accreditationNumber } =
+  withNumbers(ledgerId)
+const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
 /** @type {Accreditation} */
 const accreditation = partialMock({
@@ -122,6 +127,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -130,6 +136,7 @@ describe('performUpdateViaLedger', () => {
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(1)
+      expect(latest).toMatchObject(numbers)
       expect(latest.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(latest.payload).toEqual({
         summaryLogId: 'log-A',
@@ -151,6 +158,7 @@ describe('performUpdateViaLedger', () => {
         ],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -165,6 +173,7 @@ describe('performUpdateViaLedger', () => {
         ],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -195,6 +204,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -220,6 +230,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -241,6 +252,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: [],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -262,6 +274,7 @@ describe('performUpdateViaLedger', () => {
         ],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -300,6 +313,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent: auditlessSubmit,
+        numbers,
         dependencies: {},
         user,
         overseasSites,
@@ -332,6 +346,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -349,6 +364,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
@@ -368,6 +384,7 @@ describe('performUpdateViaLedger', () => {
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
+        numbers,
         dependencies: { systemLogsRepository },
         user: {
           id: 'user-2',
@@ -394,6 +411,7 @@ describe('performUpdateViaLedger', () => {
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
           commitSummaryLogSubmittedEvent,
+          numbers,
           dependencies: { systemLogsRepository },
           user,
           overseasSites,

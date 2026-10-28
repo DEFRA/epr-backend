@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import {
@@ -63,7 +64,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
     const reportKey = {
       organisationId: organisation.id,
       registrationId: registration.id,
-      year: 2026
+      year: toYear(2026)
     }
     await createAndSubmitReport(reportsRepository, {
       ...reportKey,
@@ -98,7 +99,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'monthly',
-            year: 2026,
+            year: toYear(2026),
             period: 1,
             submissionNumber: 1,
             status: 'submitted',
@@ -107,7 +108,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'monthly',
-            year: 2026,
+            year: toYear(2026),
             period: 1,
             submissionNumber: 2,
             status: 'submitted',
@@ -116,7 +117,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'quarterly',
-            year: 2026,
+            year: toYear(2026),
             period: 3,
             submissionNumber: 1,
             status: 'in_progress',

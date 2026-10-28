@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
@@ -34,7 +35,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'EXPORTER',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       orsDetailsMap,
       source: {
@@ -140,7 +141,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'EXPORTER',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 2,
       source: {
         lastUploadedAt: '2026-04-02T11:31:06.440Z',
@@ -210,7 +211,7 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
     const result = aggregateReportDetail(wasteRecordsRegisteredOnly, {
       operatorCategory: 'EXPORTER_REGISTERED_ONLY',
       cadence: 'quarterly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       orsDetailsMap,
       source: {

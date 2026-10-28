@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+/** @import { Numbers, RequiredNumbers } from '#domain/organisations/numbers.js' */
+
 export const LEDGER_EVENT_KIND = Object.freeze({
   SUMMARY_LOG_SUBMITTED: 'summary-log-submitted',
   PRN_CREATED: 'prn-created',
@@ -116,9 +118,8 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  * The identity of an accreditation, or of a registration in its registered-only
  * phase (`accreditationId` null). An accreditation belongs to a registration,
  * which belongs to an organisation: all three ids are constitutive, and naming
- * one names those above it. Named for what it is: a registration or
- * accreditation identity, not a ledger-specific type. It is what we key a waste
- * balance ledger by.
+ * one names those above it. Reads key a waste balance ledger by these ids;
+ * `NumberedLedgerId` carries the numbers beside them.
  *
  * @typedef {Object} RegistrationOrAccreditationId
  * @property {string} organisationId
@@ -136,6 +137,24 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
+ * The numbers an event holds beside its ledger id's ids: those its organisation
+ * record gave when it was written, or that the backfill has added since. A
+ * registered-only ledger's accreditation number is `null`.
+ *
+ * @typedef {Numbers} LedgerEventNumbers
+ */
+
+/**
+ * A waste balance ledger's identity by both its ids and its numbers: the
+ * registration or accreditation whose balance it records, as its ids name it
+ * and as the organisation record numbers it. Summary-log row states, and the
+ * ledger events a submission appends, are written with it. A registered-only
+ * ledger's accreditation id and accreditation number are both `null`.
+ *
+ * @typedef {WasteBalanceLedgerId & RequiredNumbers} NumberedLedgerId
+ */
+
+/**
  * A position within a waste balance ledger: the ledger id plus a sequence
  * number. The head a decision reads at, the slot it commits to (`number + 1`),
  * and the coordinate a slot-conflict or sequence error reports on a clash.
@@ -144,11 +163,6 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * Shape accepted by `WasteBalanceLedgerRepository.appendEvents`: the content of
- * an event at a `LedgerPosition`. Mirrors `ledgerEventInsertSchema` — keep the
- * two in sync; the schema is the runtime gate, this typedef is the check-time
- * gate.
- *
  * @typedef {LedgerPosition & {
  *   kind: LedgerEventKind,
  *   payload: SummaryLogSubmittedPayload | PrnPayload | PrnAcceptedPayload,
@@ -156,14 +170,24 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  *   closingBalance: LedgerBalanceSnapshot,
  *   createdAt: Date,
  *   createdBy: LedgerUserSummary
- * }} LedgerEventInsert
+ * }} LedgerEventFields
+ */
+
+/**
+ * Shape accepted by `WasteBalanceLedgerRepository.appendEvents`: the content of
+ * an event at a `LedgerPosition`, with its ledger's numbers. Mirrors
+ * `ledgerEventInsertSchema` — keep the two in sync; the schema is the runtime
+ * gate, this typedef is the check-time gate.
+ *
+ * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEventInsert
  */
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written.
+ * written, which for an event stored before the numbers is the numbers the
+ * backfill has added.
  *
- * @typedef {LedgerEventInsert} LedgerEvent
+ * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -195,7 +219,13 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
   obligationYear: Joi.number().integer()
 })
 
-export const ledgerEventInsertSchema = Joi.object({
+const numbersKeys = {
+  organisationNumber: Joi.string(),
+  registrationNumber: Joi.string(),
+  accreditationNumber: Joi.string().allow(null)
+}
+
+const ledgerEventBaseSchema = Joi.object({
   registrationId: Joi.string().required(),
   accreditationId: Joi.string().allow(null).required(),
   organisationId: Joi.string().required(),
@@ -234,3 +264,19 @@ export const ledgerEventInsertSchema = Joi.object({
   }
   return value
 })
+
+export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys({
+  ...numbersKeys,
+  accreditationNumber: Joi.when('accreditationId', {
+    is: null,
+    then: Joi.valid(null),
+    otherwise: Joi.string()
+  })
+})
+
+export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(numbersKeys)
+
+export const ledgerEventNumbersSchema = Joi.object(numbersKeys)
+
+export const LEDGER_EVENT_NUMBER_KEYS =
+  /** @type {(keyof LedgerEventNumbers)[]} */ (Object.keys(numbersKeys))

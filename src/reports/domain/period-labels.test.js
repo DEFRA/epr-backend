@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import { formatPeriodLabel } from './period-labels.js'
 
@@ -17,11 +18,11 @@ describe('formatPeriodLabel', () => {
       [11, 'Nov 2026'],
       [12, 'Dec 2026']
     ])('period %i → %s', (period, expected) => {
-      expect(formatPeriodLabel('monthly', period, 2026)).toBe(expected)
+      expect(formatPeriodLabel('monthly', period, toYear(2026))).toBe(expected)
     })
 
     it('includes the correct year', () => {
-      expect(formatPeriodLabel('monthly', 6, 2025)).toBe('Jun 2025')
+      expect(formatPeriodLabel('monthly', 6, toYear(2025))).toBe('Jun 2025')
     })
   })
 
@@ -32,11 +33,13 @@ describe('formatPeriodLabel', () => {
       [3, 'Q3 2026'],
       [4, 'Q4 2026']
     ])('period %i → %s', (period, expected) => {
-      expect(formatPeriodLabel('quarterly', period, 2026)).toBe(expected)
+      expect(formatPeriodLabel('quarterly', period, toYear(2026))).toBe(
+        expected
+      )
     })
 
     it('includes the correct year', () => {
-      expect(formatPeriodLabel('quarterly', 2, 2025)).toBe('Q2 2025')
+      expect(formatPeriodLabel('quarterly', 2, toYear(2025))).toBe('Q2 2025')
     })
   })
 })

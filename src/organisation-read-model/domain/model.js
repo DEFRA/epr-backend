@@ -67,9 +67,8 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *
  * @typedef {{
  *   accreditationNumber: AccreditationNumber
- *   prnIssuance: { signatories: Contact[], tonnageBand: string }
+ *   prnIssuance: { tonnageBand: string }
  *   status: Status<'approved' | 'suspended' | 'cancelled'>
- *   submitterContactDetails: Contact
  * }} AccreditationCommon
  *
  * @typedef {AccreditationCommon} ReprocessorAccreditation
