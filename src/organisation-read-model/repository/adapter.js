@@ -45,28 +45,51 @@ export const createOrganisationReadRepository = ({
   organisationsRepository,
   overseasSitesRepository,
   logger
-}) => ({
-  findByOrganisationNumber: async (organisationNumber) => {
-    const stored =
-      await organisationsRepository.findByOrganisationNumber(organisationNumber)
-    if (!stored) {
-      return null
-    }
-
-    const siteIds = stored.registrations.flatMap((registration) =>
-      Object.values(registration.overseasSites ?? {}).map(
-        ({ overseasSiteId }) => overseasSiteId
+}) => {
+  /**
+   * @param {StoredOrganisation[]} stored
+   * @returns {Promise<Organisation[]>}
+   */
+  const toOrganisations = async (stored) => {
+    const siteIds = stored.flatMap(({ registrations }) =>
+      registrations.flatMap((registration) =>
+        Object.values(registration.overseasSites ?? {}).map(
+          ({ overseasSiteId }) => overseasSiteId
+        )
       )
     )
     const sites = await overseasSitesRepository.findByIds(siteIds)
 
-    return toOrganisation(stored, {
+    /** @type {Context} */
+    const context = {
       onDrop: (message) => logger.warn({ message }),
       overseasSitesById: new Map(sites.map((site) => [site.id, site])),
       today: new Date().toISOString().slice(0, 10)
-    })
+    }
+    return stored
+      .map((organisation) => toOrganisation(organisation, context))
+      .filter((organisation) => organisation !== null)
   }
-})
+
+  return {
+    findByOrganisationNumber: async (organisationNumber) => {
+      const stored =
+        await organisationsRepository.findByOrganisationNumber(
+          organisationNumber
+        )
+      if (!stored) {
+        return null
+      }
+      const [organisation] = await toOrganisations([stored])
+      return organisation ?? null
+    },
+
+    find: async (params) => {
+      const { items, ...page } = await organisationsRepository.find(params)
+      return { ...page, items: await toOrganisations(items) }
+    }
+  }
+}
 
 /**
  * @param {StoredOrganisation} stored

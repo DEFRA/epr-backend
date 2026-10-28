@@ -173,6 +173,35 @@ export const organisationViewSchema = Joi.object({
   submittedToRegulator: regulatorSchema
 })
 
+const organisationListItemSchema = Joi.object({
+  name: Joi.string().required(),
+  organisationNumber: Joi.string().required(),
+  registrations: Joi.object()
+    .pattern(
+      Joi.string(),
+      Joi.object({
+        accreditations: keyedByYear(
+          Joi.object({ accreditationNumber: Joi.string().required() })
+        )
+      })
+    )
+    .required(),
+  status: Joi.object({
+    current: Joi.string()
+      .valid(...ORGANISATION_STATUSES)
+      .required()
+  }).required(),
+  submittedToRegulator: regulatorSchema
+})
+
+export const organisationListResponseSchema = Joi.object({
+  items: Joi.array().items(organisationListItemSchema).required(),
+  page: Joi.number().required(),
+  pageSize: Joi.number().required(),
+  totalItems: Joi.number().required(),
+  totalPages: Joi.number().required()
+})
+
 const servedYear = yearSchema().custom((year, helpers) =>
   isFutureYear(year) ? helpers.error('any.invalid') : year
 )
