@@ -1,6 +1,19 @@
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { FindParams } from '#repositories/organisations/port.js' */
+
+/**
+ * Every criterion that carries a value narrows the results, and an empty
+ * string counts as absent.
+ *
+ * @typedef {{
+ *   search?: string
+ *   organisationNumber?: string
+ *   registrationNumber?: string
+ *   accreditationNumber?: string
+ *   page: number
+ *   pageSize: number
+ * }} FindParams
+ */
 
 /**
  * @typedef {{

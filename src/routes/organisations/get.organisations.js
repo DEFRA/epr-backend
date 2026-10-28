@@ -59,7 +59,7 @@ export const organisationListGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async ({ organisationReadRepository, query }, h) => {
-    const { organisationNumber, ...criteria } = query
+    const { organisationNumber } = query
     // A mistyped number finds nothing rather than failing the search
     const page =
       organisationNumber &&
@@ -71,10 +71,7 @@ export const organisationListGet = {
             totalItems: 0,
             totalPages: 0
           }
-        : await organisationReadRepository.find({
-            ...criteria,
-            orgId: organisationNumber
-          })
+        : await organisationReadRepository.find(query)
     return h.response(page).code(StatusCodes.OK)
   }
 }
