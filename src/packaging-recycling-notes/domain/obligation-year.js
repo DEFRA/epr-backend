@@ -34,15 +34,17 @@ export const selectObligationYearForAcceptance = (
   }
 
   const { accreditationYear } = prn.accreditation
-  const followingYear = nextYear(accreditationYear)
-  if (providedObligationYear === accreditationYear) {
-    return accreditationYear
-  }
-  if (providedObligationYear === followingYear) {
-    return followingYear
-  }
-  throw new InvalidObligationYearError(
+  const allowedObligationYear = [
     accreditationYear,
-    providedObligationYear
-  )
+    nextYear(accreditationYear)
+  ].find((year) => year === providedObligationYear)
+
+  if (!allowedObligationYear) {
+    throw new InvalidObligationYearError(
+      accreditationYear,
+      providedObligationYear
+    )
+  }
+
+  return allowedObligationYear
 }

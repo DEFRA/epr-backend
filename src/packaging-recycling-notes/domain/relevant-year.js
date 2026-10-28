@@ -1,3 +1,5 @@
+import { nextYear } from '#common/helpers/dates/year.js'
+
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
@@ -23,7 +25,7 @@ export class RelevantYearWindowExpiredError extends Error {
    * @param {Year} relevantYear
    */
   constructor(relevantYear) {
-    const deadlineYear = relevantYear + 1
+    const deadlineYear = nextYear(relevantYear)
     super(
       `The deadline for a ${relevantYear} relevant year was 31 January ${deadlineYear}.`
     )
@@ -54,7 +56,7 @@ function endOfRelevantYear(relevantYear) {
   }
   return new Date(
     Date.UTC(
-      relevantYear + 1,
+      nextYear(relevantYear),
       JANUARY,
       LAST_DAY_OF_JANUARY,
       END_OF_DAY_HOURS,
