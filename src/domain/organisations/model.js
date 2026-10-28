@@ -35,6 +35,11 @@ export const ACCREDITATION_STATUS = Object.freeze({
  * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
  */
 
+export const LEDGER_ACCREDITATION_KIND = Object.freeze({
+  ACCREDITED: 'accredited',
+  REGISTERED_ONLY: 'registeredOnly'
+})
+
 /** @type {ReadonlySet<AccreditationStatus>} */
 export const ACTIVE_ACCREDITATION_STATUSES = new Set([
   ACCREDITATION_STATUS.APPROVED,
