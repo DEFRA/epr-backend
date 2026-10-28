@@ -56,10 +56,14 @@ export const reportsStatus = {
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
-    const period = Number(params.period)
-    const submissionNumber = Number(params.submissionNumber)
+    const {
+      organisationId,
+      registrationId,
+      cadence,
+      year,
+      period,
+      submissionNumber
+    } = params
     const { status, version, submissionDeclaredBy } = request.payload
 
     const [registration, report] = await Promise.all([

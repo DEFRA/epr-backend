@@ -5,7 +5,8 @@ import { organisationViewSchema } from './response.schema.js'
 import { organisationPath, viewRoute } from './view-route.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @typedef {{ year?: number }} OrganisationQuery */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @typedef {{ year?: Year }} OrganisationQuery */
 /** @typedef {{ prns: { open: boolean } }} PrnYearState */
 
 const organisationQuery = { year: yearSchema() }

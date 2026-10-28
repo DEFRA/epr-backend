@@ -9,6 +9,7 @@ import {
 /**
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
@@ -21,7 +22,7 @@ import {
  * }} NaturalKeyRoute
  *
  * @typedef {RegistrationParams & {
- *   year?: number,
+ *   year?: Year,
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null
@@ -100,7 +101,7 @@ export const atNaturalKeys = (
       })
     },
     /**
-     * @param {HapiRequest & { params: RegistrationParams & { year?: number } }} request
+     * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
      * @param {HapiResponseToolkit} h
      */
     handler: async (request, h) => {
@@ -119,7 +120,7 @@ export const atNaturalKeys = (
               ? findAccreditationForYear(
                   organisation,
                   registration,
-                  /** @type {number} */ (request.params.year)
+                  /** @type {Year} */ (request.params.year)
                 ).id
               : null
           }

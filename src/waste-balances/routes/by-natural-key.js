@@ -24,6 +24,7 @@ import { wasteBalanceSchema } from './response.schema.js'
 
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
@@ -73,11 +74,11 @@ const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest & { app: Required<ResolvedRecords> }} request
+   * @param {LedgerRequest & { app: Required<ResolvedRecords>, params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const year = /** @type {number} */ (request.params.year)
+    const { year } = request.params
     if (!registrationYears(request.app.registration).includes(year)) {
       throw Boom.notFound('Year not found')
     }
@@ -142,7 +143,7 @@ const organisationWasteBalancesGet = {
     }
   },
   /**
-   * @param {ResolvedRequest & { params: { year: number }, app: ResolvedRecords }} request
+   * @param {ResolvedRequest & { params: { year: Year }, app: ResolvedRecords }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {

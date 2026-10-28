@@ -7,6 +7,7 @@ export const calendarQuerySchema = Joi.object({
 export const submissionNumberSchema = Joi.number().integer().min(1).required()
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -14,7 +15,7 @@ export const submissionNumberSchema = Joi.number().integer().min(1).required()
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: Cadence,
  *   period: number,
  *   accreditationId?: string | null

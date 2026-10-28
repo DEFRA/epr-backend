@@ -108,6 +108,25 @@ export default [
     }
   },
   {
+    files: ['src/**/*.js'],
+    ignores: ['**/*.test.js', '**/*.contract.js', '**/*test-helpers.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dates/year.js'],
+              importNames: ['toYear'],
+              message:
+                'Type a yearSchema-validated param as Year, or use currentUtcYear.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     rules: {
       curly: ['error', 'all'],
       eqeqeq: ['error', 'always'],

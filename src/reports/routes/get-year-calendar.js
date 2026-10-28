@@ -9,6 +9,7 @@ import { calendarQuerySchema } from './shared.js'
 
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
@@ -22,12 +23,12 @@ export const reportsYearCalendar = {
     response: { schema: reportsYearCalendarResponseSchema }
   },
   /**
-   * @param {Omit<ResolvedRequest, 'app'> & { app: Required<ResolvedRecords>, reportsRepository: ReportsRepository }} request
+   * @param {Omit<ResolvedRequest, 'app'> & { app: Required<ResolvedRecords>, params: { year: Year }, reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { organisation, registration } = request.app
-    const year = /** @type {number} */ (request.params.year)
+    const { year } = request.params
 
     const storedReports = await request.reportsRepository.findPeriodicReports({
       organisationId: organisation.id,

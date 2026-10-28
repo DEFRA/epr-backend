@@ -2,6 +2,7 @@ import { formatDateISO } from '#common/helpers/date-formatter.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
 
 /**
+ * @import { Brand } from '#common/helpers/brand.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from './cadence.js'
  */
@@ -12,10 +13,10 @@ import { MONTHS_PER_PERIOD } from './cadence.js'
  * formed, is not a reporting period. That rules out a pair which is bare and
  * correctly ordered but does not match the cadence it is used with.
  *
- * @typedef {{
+ * @typedef {Brand<{
  *   startDate: CalendarDate,
  *   endDate: CalendarDate
- * } & { readonly __brand: 'ReportingPeriod' }} ReportingPeriod
+ * }, 'ReportingPeriod'>} ReportingPeriod
  */
 
 /**

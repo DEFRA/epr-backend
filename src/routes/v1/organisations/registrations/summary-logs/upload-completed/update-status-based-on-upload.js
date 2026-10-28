@@ -17,6 +17,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -26,7 +27,7 @@ import { numbersFor } from '#domain/organisations/numbers.js'
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   accreditationId: string | null
  * }} UploadLocation
  */

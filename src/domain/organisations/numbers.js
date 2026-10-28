@@ -1,3 +1,4 @@
+/** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
@@ -5,9 +6,9 @@
  * accreditation. Each is branded so that a database id, or another kind of
  * number, cannot be passed where one is expected.
  *
- * @typedef {string & { readonly __brand: 'OrganisationNumber' }} OrganisationNumber
- * @typedef {string & { readonly __brand: 'RegistrationNumber' }} RegistrationNumber
- * @typedef {string & { readonly __brand: 'AccreditationNumber' }} AccreditationNumber
+ * @typedef {Brand<string, 'OrganisationNumber'>} OrganisationNumber
+ * @typedef {Brand<string, 'RegistrationNumber'>} RegistrationNumber
+ * @typedef {Brand<string, 'AccreditationNumber'>} AccreditationNumber
  */
 
 export const ORGANISATION_NUMBER_PATTERN = /^[1-9]\d*$/

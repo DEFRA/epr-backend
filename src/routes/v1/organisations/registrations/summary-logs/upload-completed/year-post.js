@@ -13,6 +13,7 @@ import {
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -38,7 +39,7 @@ export const summaryLogsUploadCompletedYear = {
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, year: number, summaryLogId: string, accreditationId: string | null },
+   *   params: { organisationId: string, registrationId: string, year: Year, summaryLogId: string, accreditationId: string | null },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
