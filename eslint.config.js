@@ -20,42 +20,6 @@ const OUTER_LAYERS = [
 const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
-/**
- * Each brand is minted only where its value enters the service; everywhere
- * else takes it already branded.
- */
-const brandConstructors = [
-  {
-    name: 'toYear',
-    module: 'year.js',
-    mintedIn: [
-      'src/common/helpers/dates/year-month.js',
-      'src/common/validation/year-schema.js',
-      'src/reports/domain/period-for-date.js'
-    ],
-    message:
-      'A year arrives branded from a yearSchema-validated value - type it there, or use currentUtcYear.'
-  }
-]
-
-/**
- * @param {typeof brandConstructors} constructors
- */
-const restrictedImports = (constructors) => [
-  'error',
-  {
-    patterns: constructors.map(({ name, module, message }) => ({
-      group: [`**/${module}`],
-      importNames: [name],
-      message
-    }))
-  }
-]
-
-const mintingFiles = [
-  ...new Set(brandConstructors.flatMap(({ mintedIn }) => mintedIn))
-]
-
 const ns = neostandard({
   env: ['node', 'vitest'],
   ignores: [...neostandard.resolveIgnoresFromGitignore()],
@@ -149,20 +113,27 @@ export default [
       '**/*.test.js',
       '**/*.contract.js',
       '**/contract/test-data.js',
-      '**/*test-helpers.js'
+      '**/*test-helpers.js',
+      // These read a year out of a date or string, so mint it.
+      'src/common/helpers/dates/year-month.js',
+      'src/reports/domain/period-for-date.js'
     ],
     rules: {
-      'no-restricted-imports': restrictedImports(brandConstructors)
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dates/year.js'],
+              importNames: ['toYear'],
+              message:
+                'Type a yearSchema-validated param as Year, or use currentUtcYear.'
+            }
+          ]
+        }
+      ]
     }
   },
-  ...mintingFiles.map((file) => ({
-    files: [file],
-    rules: {
-      'no-restricted-imports': restrictedImports(
-        brandConstructors.filter(({ mintedIn }) => !mintedIn.includes(file))
-      )
-    }
-  })),
   {
     rules: {
       curly: ['error', 'all'],
