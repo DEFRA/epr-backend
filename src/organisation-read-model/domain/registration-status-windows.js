@@ -8,29 +8,30 @@ import { HELD_ACCREDITATION_STATUSES } from './model.js'
 import { statusRanges } from './status-timeline.js'
 
 /** @import { CalendarDateRange } from '#common/helpers/dates/date-range.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Registration } from './model.js' */
 
 /**
  * @param {Registration} registration
- * @param {CalendarDateRange} year
+ * @param {CalendarDateRange} bounds
  * @returns {CalendarDateRange[]}
  */
-const registeredWindows = (registration, year) =>
+const registeredWindows = (registration, bounds) =>
   restrictDateRanges(
-    statusRanges(registration.status.timeline, year.to).approved ?? [],
-    year
+    statusRanges(registration.status.timeline, bounds.to).approved ?? [],
+    bounds
   )
 
 /**
  * @param {Registration} registration
- * @param {CalendarDateRange} year
- * @param {number} yearNumber
+ * @param {CalendarDateRange} bounds
+ * @param {Year} year
  * @returns {CalendarDateRange[]}
  */
-const accreditedWindows = (registration, year, yearNumber) => {
+const accreditedWindows = (registration, bounds, year) => {
   const ranges = statusRanges(
-    registration.accreditations[yearNumber]?.status.timeline ?? [],
-    year.to
+    registration.accreditations[year]?.status.timeline ?? [],
+    bounds.to
   )
   return joinDateRanges(
     [...HELD_ACCREDITATION_STATUSES].flatMap((status) => ranges[status] ?? [])
@@ -42,7 +43,7 @@ const accreditedWindows = (registration, year, yearNumber) => {
  * `year`.
  *
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
  */
 export const registrationStatusWindows = (registration, year) => {

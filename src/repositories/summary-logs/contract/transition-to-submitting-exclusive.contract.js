@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
@@ -164,7 +165,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: null
         })
       )
@@ -173,7 +174,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: 'acc-1'
         })
       )
@@ -195,7 +196,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: 'acc-1'
         })
       )
@@ -204,7 +205,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2027,
+          year: toYear(2027),
           accreditationId: 'acc-1'
         })
       )
@@ -226,7 +227,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: null
         })
       )
@@ -235,7 +236,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: null
         })
       )
@@ -258,7 +259,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
           summaryLogFactory.validated({
             organisationId,
             registrationId,
-            year: 2026
+            year: toYear(2026)
           })
         )
       )
@@ -267,7 +268,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: null
         })
       )

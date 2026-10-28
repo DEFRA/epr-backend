@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
@@ -65,7 +66,7 @@
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,
  *   registrationId?: string,
- *   year: number,
+ *   year: Year,
  *   accreditationId?: string | null,
  *   organisationNumber?: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,

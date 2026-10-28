@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
 /** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
@@ -100,7 +101,7 @@
 /**
  * A reprocessor's declared input/output tonnages for a single year.
  * @typedef {{
- *  year: number;
+ *  year: Year;
  *  input: YearlyMetricsInput;
  *  rawMaterialInputs: RawMaterialInput[];
  *  output: YearlyMetricsOutput;
