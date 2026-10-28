@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { checkSummaryLogUploadEligibility } from './upload-eligibility.js'
 
@@ -22,7 +23,7 @@ describe('checkSummaryLogUploadEligibility', () => {
   it('refuses a future year', () => {
     const result = checkSummaryLogUploadEligibility({
       registration: buildRegistration(),
-      year: 2027,
+      year: toYear(2027),
       now: NOW
     })
     expect(result).toEqual({ eligible: false, reason: expect.any(String) })
@@ -32,7 +33,7 @@ describe('checkSummaryLogUploadEligibility', () => {
     const registration = buildRegistration({ validFrom: '2027-01-01' })
     const result = checkSummaryLogUploadEligibility({
       registration,
-      year: 2026,
+      year: toYear(2026),
       now: NOW
     })
     expect(result).toEqual({ eligible: false, reason: expect.any(String) })
@@ -41,7 +42,7 @@ describe('checkSummaryLogUploadEligibility', () => {
   it('is allowed for a year the registration is active in, regardless of accreditation', () => {
     const result = checkSummaryLogUploadEligibility({
       registration: buildRegistration(),
-      year: 2026,
+      year: toYear(2026),
       now: NOW
     })
     expect(result).toEqual({ eligible: true })

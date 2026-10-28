@@ -3,6 +3,7 @@ import { yearEndOrToday } from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
 import { approvedYears } from './status-timeline.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Organisation, Registration, Status } from './model.js' */
 
 /**
@@ -11,7 +12,7 @@ import { approvedYears } from './status-timeline.js'
  *
  * @param {Organisation} organisation
  * @param {Date} now
- * @returns {number[]}
+ * @returns {Year[]}
  */
 export const organisationYears = (organisation, now) => {
   const today = utcCalendarDate(now)
@@ -37,7 +38,7 @@ const statusAt = (status, day) => ({
 
 /**
  * @param {Registration['accreditations']} accreditations
- * @param {number} year
+ * @param {Year} year
  * @param {string} day - ISO 8601 date
  */
 const accreditationIn = (accreditations, year, day) => {
@@ -57,7 +58,7 @@ const accreditationIn = (accreditations, year, day) => {
  * the year is current.
  *
  * @param {Organisation} organisation
- * @param {number} year
+ * @param {Year} year
  * @param {Date} now
  * @returns {Organisation}
  */

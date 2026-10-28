@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { partialMock } from '#test/type-helpers.js'
 import { organisationInYear, organisationYears } from './years.js'
 
@@ -122,7 +123,11 @@ describe('organisationInYear', () => {
       })
     })
 
-    const { registrations } = organisationInYear(organisation, 2026, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
 
     expect(registrations.R1.accreditations).toStrictEqual({
       2026: accreditation('A26')
@@ -134,7 +139,11 @@ describe('organisationInYear', () => {
       R1: approvedFrom('2025-02-01', { 2027: accreditation('A27') })
     })
 
-    const { registrations } = organisationInYear(organisation, 2026, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
 
     expect(registrations.R1.accreditations).toStrictEqual({})
   })
@@ -153,7 +162,11 @@ describe('organisationInYear', () => {
       }
     })
 
-    const { registrations } = organisationInYear(organisation, 2026, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
 
     expect(registrations).toStrictEqual({})
   })
@@ -163,7 +176,11 @@ describe('organisationInYear', () => {
       R1: approvedFrom('2027-01-10')
     })
 
-    const { registrations } = organisationInYear(organisation, 2026, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
 
     expect(registrations).toStrictEqual({})
   })
@@ -182,7 +199,11 @@ describe('organisationInYear', () => {
       }
     })
 
-    const { registrations } = organisationInYear(organisation, 2026, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
 
     expect(registrations.R1.status.current).toBe('cancelled')
   })
@@ -213,7 +234,7 @@ describe('organisationInYear', () => {
       }
     )
 
-    const result = organisationInYear(organisation, 2025, NOW)
+    const result = organisationInYear(organisation, toYear(2025), NOW)
 
     expect([
       result.status.current,
@@ -236,7 +257,7 @@ describe('organisationInYear', () => {
       }
     )
 
-    const { status } = organisationInYear(organisation, 2027, NOW)
+    const { status } = organisationInYear(organisation, toYear(2027), NOW)
 
     expect(status.current).toBe('active')
   })
@@ -256,7 +277,7 @@ describe('organisationInYear', () => {
       }
     )
 
-    const { status } = organisationInYear(organisation, 2025, NOW)
+    const { status } = organisationInYear(organisation, toYear(2025), NOW)
 
     expect(status.current).toBe('active')
   })
@@ -272,7 +293,7 @@ describe('organisationInYear', () => {
       }
     )
 
-    const { status } = organisationInYear(organisation, 2025, NOW)
+    const { status } = organisationInYear(organisation, toYear(2025), NOW)
 
     expect(status.current).toBe('active')
   })
@@ -322,7 +343,11 @@ describe('organisationInYear', () => {
       })
     })
 
-    const { registrations } = organisationInYear(organisation, year, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(year),
+      NOW
+    )
 
     expect(registrations.R1.accreditations[year].status).toStrictEqual({
       current: expected,
@@ -339,7 +364,11 @@ describe('organisationInYear', () => {
       })
     })
 
-    const { registrations } = organisationInYear(organisation, 2025, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2025),
+      NOW
+    )
 
     expect(registrations.R1.accreditations[2025].status.current).toBe(
       'approved'
@@ -351,7 +380,11 @@ describe('organisationInYear', () => {
       R1: approvedFrom('2025-02-01')
     })
 
-    const { registrations } = organisationInYear(organisation, 2028, NOW)
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2028),
+      NOW
+    )
 
     expect(registrations).toStrictEqual({})
   })
@@ -359,7 +392,7 @@ describe('organisationInYear', () => {
   it('leaves the other organisation fields unchanged', () => {
     const organisation = organisationWith({ R1: approvedFrom('2025-02-01') })
 
-    const { name } = organisationInYear(organisation, 2026, NOW)
+    const { name } = organisationInYear(organisation, toYear(2026), NOW)
 
     expect(name).toBe('ACME ltd')
   })

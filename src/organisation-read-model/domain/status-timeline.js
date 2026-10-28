@@ -1,7 +1,9 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { dayBefore } from '#common/helpers/dates/calendar-day.js'
+import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusTimeline } from './model.js' */
 
 /** @typedef {import('#common/helpers/dates/date-range.js').CalendarDateRange} CalendarDateRange */
@@ -13,22 +15,10 @@ import { dayBefore } from '#common/helpers/dates/calendar-day.js'
  */
 
 /**
- * @param {CalendarDate} date
- * @returns {number}
- */
-const yearOf = (date) => new Date(date).getUTCFullYear()
-
-/**
  * @param {CalendarDateRange} range
- * @returns {number[]}
+ * @returns {Year[]}
  */
-const yearsIn = ({ from, to }) => {
-  const years = []
-  for (let year = yearOf(from); year <= yearOf(to); year++) {
-    years.push(year)
-  }
-  return years
-}
+const yearsIn = ({ from, to }) => yearsFromTo(utcYearOf(from), utcYearOf(to))
 
 /**
  * @param {DailyTimeline} daily
@@ -93,7 +83,7 @@ export const statusRanges = (timeline, today) => {
  *
  * @param {StatusTimeline} timeline
  * @param {CalendarDate} today
- * @returns {number[]}
+ * @returns {Year[]}
  */
 export const approvedYears = (timeline, today) => {
   const approvedRanges = statusRanges(timeline, today).approved ?? []

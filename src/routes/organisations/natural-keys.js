@@ -123,7 +123,7 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
  * The years the registration was approved in, up to this year.
  *
  * @param {Registration} registration
- * @returns {number[]}
+ * @returns {Year[]}
  */
 export function registrationYears(registration) {
   return approvedYears(

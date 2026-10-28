@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { summaryLogKeyOf } from './numbers.js'
@@ -21,7 +22,7 @@ describe('summaryLogKeyOf', () => {
     expect(
       summaryLogKeyOf(
         summaryLog({
-          year: 2026,
+          year: toYear(2026),
           accreditationId: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC500123')
         })
@@ -38,7 +39,7 @@ describe('summaryLogKeyOf', () => {
     expect(
       summaryLogKeyOf(
         summaryLog({
-          year: 2026,
+          year: toYear(2026),
           accreditationId: null,
           accreditationNumber: null
         })

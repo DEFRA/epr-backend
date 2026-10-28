@@ -128,7 +128,7 @@ const naming = (error, summaryLogId) => {
  *
  * @param {SubmitRequest} request
  * @param {string} summaryLogId
- * @param {number} year
+ * @param {Year} year
  * @param {string | null} accreditationId
  */
 const insertValidatingLog = async (

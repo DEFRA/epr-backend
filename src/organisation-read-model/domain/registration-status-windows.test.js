@@ -1,5 +1,7 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Registration, StatusTimeline } from './model.js' */
 
 /**
@@ -19,13 +21,13 @@ const REGISTERED_LAST_YEAR = [approvedOn('2025-06-02')]
 
 /**
  * @param {{
- *   year?: number,
+ *   year?: Year,
  *   registration?: StatusTimeline,
  *   accreditations?: Record<number, StatusTimeline>
  * }} params
  */
 const windows = ({
-  year = 2026,
+  year = toYear(2026),
   registration = REGISTERED_LAST_YEAR,
   accreditations = {}
 }) =>
@@ -64,14 +66,14 @@ describe('registrationStatusWindows', () => {
     })
 
     it('is registered-only from approval when registered mid-year', () => {
-      expect(windows({ year: 2025 })).toEqual({
+      expect(windows({ year: toYear(2025) })).toEqual({
         registeredOnly: [range('2025-06-02', '2025-12-31')],
         accredited: []
       })
     })
 
     it('has no reporting obligations in a year before registration', () => {
-      expect(windows({ year: 2024 })).toEqual({
+      expect(windows({ year: toYear(2024) })).toEqual({
         registeredOnly: [],
         accredited: []
       })
@@ -167,7 +169,7 @@ describe('registrationStatusWindows', () => {
     it('is accredited only from registration when accredited before registering', () => {
       expect(
         windows({
-          year: 2025,
+          year: toYear(2025),
           accreditations: { 2025: [approvedOn('2025-03-01')] }
         })
       ).toEqual({
