@@ -87,9 +87,12 @@ describe('organisationYears', () => {
 })
 
 describe('organisationInYear', () => {
-  const accreditation = (accreditationNumber, status = 'approved') => ({
+  const accreditation = (
     accreditationNumber,
-    status
+    timeline = [{ status: 'approved', at: '2025-02-01T00:00:00.000Z' }]
+  ) => ({
+    accreditationNumber,
+    status: { current: timeline.at(-1)?.status, timeline }
   })
 
   const organisationWith = (registrations, overrides = {}) =>
@@ -272,6 +275,75 @@ describe('organisationInYear', () => {
     const { status } = organisationInYear(organisation, 2025, NOW)
 
     expect(status.current).toBe('active')
+  })
+
+  it.for([
+    {
+      description: 'cancelled after the year as approved',
+      year: 2025,
+      timeline: [
+        { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+        { status: 'cancelled', at: '2026-10-23T00:00:00.000Z' }
+      ],
+      expected: 'approved'
+    },
+    {
+      description: 'suspended after the year as approved',
+      year: 2025,
+      timeline: [
+        { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+        { status: 'suspended', at: '2026-01-15T00:00:00.000Z' }
+      ],
+      expected: 'approved'
+    },
+    {
+      description: 'suspended during the year as suspended',
+      year: 2025,
+      timeline: [
+        { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+        { status: 'suspended', at: '2025-11-01T00:00:00.000Z' },
+        { status: 'cancelled', at: '2026-02-01T00:00:00.000Z' }
+      ],
+      expected: 'suspended'
+    },
+    {
+      description: 'suspended this year as suspended',
+      year: 2027,
+      timeline: [
+        { status: 'approved', at: '2027-01-10T00:00:00.000Z' },
+        { status: 'suspended', at: '2027-02-01T00:00:00.000Z' }
+      ],
+      expected: 'suspended'
+    }
+  ])('serves an accreditation $description', ({ year, timeline, expected }) => {
+    const organisation = organisationWith({
+      R1: approvedFrom('2025-01-01T00:00:00.000Z', {
+        [year]: accreditation('A1', timeline)
+      })
+    })
+
+    const { registrations } = organisationInYear(organisation, year, NOW)
+
+    expect(registrations.R1.accreditations[year].status).toStrictEqual({
+      current: expected,
+      timeline
+    })
+  })
+
+  it('keeps the current accreditation status when its timeline starts later', () => {
+    const organisation = organisationWith({
+      R1: approvedFrom('2025-01-01T00:00:00.000Z', {
+        2025: accreditation('A1', [
+          { status: 'approved', at: '2026-02-01T00:00:00.000Z' }
+        ])
+      })
+    })
+
+    const { registrations } = organisationInYear(organisation, 2025, NOW)
+
+    expect(registrations.R1.accreditations[2025].status.current).toBe(
+      'approved'
+    )
   })
 
   it('serves no registrations for a year that has not started', () => {
