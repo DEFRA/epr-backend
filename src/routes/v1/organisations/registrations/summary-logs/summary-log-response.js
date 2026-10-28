@@ -1,7 +1,7 @@
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
-import { STREAM_KIND } from '#domain/summary-logs/stream-kind.js'
+import { STREAM_KIND } from '#domain/organisations/model.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */

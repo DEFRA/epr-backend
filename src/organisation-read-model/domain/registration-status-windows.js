@@ -1,4 +1,5 @@
 import { yearBounds } from '#common/helpers/dates/year.js'
+import { STREAM_KIND } from '#domain/organisations/model.js'
 import {
   joinDateRanges,
   restrictDateRanges,
@@ -54,7 +55,7 @@ export const registrationStatusWindows = (registration, year) => {
   )
 
   return {
-    registeredOnly: subtractDateRanges(registered, accredited),
-    accredited
+    [STREAM_KIND.REGISTERED_ONLY]: subtractDateRanges(registered, accredited),
+    [STREAM_KIND.ACCREDITED]: accredited
   }
 }

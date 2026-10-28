@@ -2,7 +2,7 @@ import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
-import { STREAM_KIND } from '#domain/summary-logs/stream-kind.js'
+import { STREAM_KIND } from '#domain/organisations/model.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 const countSchema = Joi.number().integer().min(0).required()
