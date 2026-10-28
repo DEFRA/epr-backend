@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_NUMBER_PATTERN } from '#domain/organisations/numbers.js'
+import { organisationFor } from './get.organisation.js'
 import { organisationListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -72,6 +73,10 @@ export const organisationListGet = {
             totalPages: 0
           }
         : await organisationReadRepository.find(query)
-    return h.response(page).code(StatusCodes.OK)
+    // Each item is served as GET /organisations/{organisationNumber} serves it
+    const items = page.items.map((organisation) =>
+      organisationFor(organisation, {})
+    )
+    return h.response({ ...page, items }).code(StatusCodes.OK)
   }
 }
