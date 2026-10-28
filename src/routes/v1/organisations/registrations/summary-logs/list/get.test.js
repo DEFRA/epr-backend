@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -80,7 +81,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.submitted({
           organisationNumber,
           registrationNumber,
-          year: 2026,
+          year: toYear(2026),
           submittedAt: '2026-02-01T10:00:00.000Z',
           createdAt: '2026-02-01T09:55:00.000Z',
           file: { name: 'january.xlsx' }
@@ -92,7 +93,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.validationFailed({
           organisationNumber,
           registrationNumber,
-          year: 2026,
+          year: toYear(2026),
           createdAt: '2026-02-02T11:00:00.000Z',
           file: { name: 'february.xlsx' }
         })

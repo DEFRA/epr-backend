@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import {
@@ -66,7 +67,7 @@ export const testInsertBehaviour = (it) => {
           summaryLogFactory.validating({
             organisationId: 'org-456',
             registrationId: 'reg-789',
-            year: 2026,
+            year: toYear(2026),
             accreditationId: 'acc-123',
             organisationNumber: '500123',
             registrationNumber: 'R25SR500010912PL',
