@@ -1,7 +1,5 @@
 import Joi from 'joi'
 
-import { toYear } from '#common/helpers/dates/year.js'
-
 /** @import { NumberSchema } from 'joi' */
 
 /**
@@ -16,9 +14,10 @@ export const MIN_YEAR = 2024
 export const MAX_YEAR = 2100
 
 /**
- * A calendar year as a route param or payload field, branded as a `Year`.
- * Callers add `.required()` as the field needs.
+ * A calendar year as a route param or payload field. Callers add
+ * `.required()` as the field needs. Joi cannot brand a value for tsc, so a
+ * handler types a param validated with this as `Year`.
  * @returns {NumberSchema}
  */
 export const yearSchema = () =>
-  Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).custom(toYear)
+  Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR)
