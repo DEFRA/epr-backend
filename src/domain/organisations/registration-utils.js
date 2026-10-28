@@ -7,6 +7,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration, Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
@@ -78,7 +79,7 @@ export function isRegistrationAccredited({ accreditation }) {
 /**
  * Whether the registration is approved and active during a specific year
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {boolean}
  */
 export function isRegistrationActiveInYear(registration, year) {

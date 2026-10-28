@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import {
@@ -284,7 +285,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: 'acc-1',
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })

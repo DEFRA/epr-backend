@@ -127,7 +127,7 @@ export default [
               group: ['**/dates/year.js'],
               importNames: ['toYear'],
               message:
-                'Type a yearSchema-validated param as Year, or use currentUtcYear.'
+                'Type a yearSchema-validated param as Year, or read one from a date with utcYearOf or currentUtcYear.'
             }
           ]
         }

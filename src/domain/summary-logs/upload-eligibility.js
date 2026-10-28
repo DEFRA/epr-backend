@@ -1,6 +1,7 @@
 import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 /**
@@ -14,7 +15,7 @@ import { isRegistrationActiveInYear } from '#domain/organisations/registration-u
  *
  * @param {{
  *   registration: Registration,
- *   year: number,
+ *   year: Year,
  *   now?: Date
  * }} args
  * @returns {UploadEligibilityResult}
