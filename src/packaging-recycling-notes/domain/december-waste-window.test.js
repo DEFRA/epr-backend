@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -51,7 +52,11 @@ describe('isWithinDecemberWasteWindow', () => {
     ['mid-year', '2026-06-15T12:00:00.000Z', false]
   ])('%s -> %s', (_label, isoNow, expected) => {
     expect(
-      isWithinDecemberWasteWindow(2026, new Date(isoNow), DEFAULT_CONFIG)
+      isWithinDecemberWasteWindow(
+        toYear(2026),
+        new Date(isoNow),
+        DEFAULT_CONFIG
+      )
     ).toBe(expected)
   })
 
@@ -61,7 +66,7 @@ describe('isWithinDecemberWasteWindow', () => {
     // 2026-05-31T23:00:00Z is 2026-06-01T00:00 UK (BST, UTC+1) - inside.
     expect(
       isWithinDecemberWasteWindow(
-        2026,
+        toYear(2026),
         new Date('2026-05-31T23:00:00.000Z'),
         widened
       )
@@ -70,7 +75,7 @@ describe('isWithinDecemberWasteWindow', () => {
     // 2026-05-31T22:59:00Z is 2026-05-31T23:59 UK - outside, one minute short.
     expect(
       isWithinDecemberWasteWindow(
-        2026,
+        toYear(2026),
         new Date('2026-05-31T22:59:00.000Z'),
         widened
       )
@@ -82,14 +87,14 @@ describe('isWithinDecemberWasteWindow', () => {
 
     expect(
       isWithinDecemberWasteWindow(
-        2026,
+        toYear(2026),
         new Date('2027-01-31T23:59:00.000Z'),
         widened
       )
     ).toBe(true)
     expect(
       isWithinDecemberWasteWindow(
-        2026,
+        toYear(2026),
         new Date('2027-02-01T00:00:00.000Z'),
         widened
       )

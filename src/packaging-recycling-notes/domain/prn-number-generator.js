@@ -2,6 +2,8 @@ import { randomInt } from 'node:crypto'
 
 import { REGULATOR } from '#domain/organisations/model.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * PRN number format: XXNNnnnnn
  * - Position 1: Agency code [E, N, S, W]
@@ -32,7 +34,7 @@ const RANDOM_SUFFIX_PADDING = 5
  * @param {Object} params
  * @param {string} params.regulator - The regulator (ea, sepa, nrw, niea)
  * @param {boolean} params.isExport - True for exporter, false for reprocessor
- * @param {number} params.accreditationYear - The accreditation year (e.g. 2026)
+ * @param {Year} params.accreditationYear - The accreditation year (e.g. 2026)
  * @param {string} [params.suffix] - Optional single character suffix (A-Z) for collision avoidance
  * @returns {string} PRN number in format XXNNnnnnn or XXNNnnnnnX (e.g. ER2612345 or ER2612345A)
  * @throws {Error} If regulator is unknown

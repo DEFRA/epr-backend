@@ -1,3 +1,5 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * "Relevant year" is the Producer Responsibility Obligations (Packaging and
  * Packaging Waste) Regulations 2024's term for the annual period a PRN/PERN,
@@ -18,7 +20,7 @@
  */
 export class RelevantYearWindowExpiredError extends Error {
   /**
-   * @param {number} relevantYear
+   * @param {Year} relevantYear
    */
   constructor(relevantYear) {
     const deadlineYear = relevantYear + 1
@@ -41,7 +43,7 @@ const END_OF_DAY_MILLISECONDS = 999
  * The last instant (UTC) of 31 January in the year immediately following
  * `relevantYear` — inclusive.
  *
- * @param {number} relevantYear
+ * @param {Year} relevantYear
  * @returns {Date}
  */
 function endOfRelevantYear(relevantYear) {
@@ -67,7 +69,7 @@ function endOfRelevantYear(relevantYear) {
  * Whether `now` falls on or before the end of `relevantYear` (31 January of
  * the following year, inclusive).
  *
- * @param {number} relevantYear
+ * @param {Year} relevantYear
  * @param {Date} now
  * @returns {boolean}
  */
@@ -80,7 +82,7 @@ export function isBeforeEndOfRelevantYear(relevantYear, now) {
  * when it is still open. Reads the window through the predicate above so the
  * deadline is stated once.
  *
- * @param {number} relevantYear
+ * @param {Year} relevantYear
  * @param {Date} now
  * @returns {RelevantYearWindowExpiredError | undefined}
  */

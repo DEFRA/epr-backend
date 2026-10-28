@@ -7,6 +7,7 @@ import {
   relevantYearWindowRefusal
 } from './relevant-year.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { PrnStatus } from './model.js' */
 
 /**
@@ -61,7 +62,7 @@ const closesWithTheYear = (fromStatus, newStatus) =>
  * `undefined` when the write is allowed.
  *
  * @param {{
- *   accreditationYear: number,
+ *   accreditationYear: Year,
  *   fromStatus?: PrnStatus,
  *   newStatus: PrnStatus,
  *   now: Date
@@ -79,7 +80,7 @@ export const closedYearRefusal = ({
 
 /**
  * Whether notes can still be raised and issued for the year.
- * @param {number} accreditationYear
+ * @param {Year} accreditationYear
  * @param {Date} now
  */
 export const isRelevantYearOpen = (accreditationYear, now) =>
@@ -88,7 +89,7 @@ export const isRelevantYearOpen = (accreditationYear, now) =>
 /**
  * Whether an admin could cancel a note in this status right now.
  * @param {PrnStatus} status
- * @param {number} accreditationYear
+ * @param {Year} accreditationYear
  * @param {Date} now
  */
 export const isRegulatorCancellable = (status, accreditationYear, now) =>

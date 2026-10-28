@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   currentUtcYear,
   isFutureYear,
+  nextYear,
   toYear,
   utcYearOf,
   yearBounds,
@@ -15,6 +16,12 @@ describe('utcYearOf', () => {
     ['an ISO string', '2025-12-31']
   ])('reads the year of %s in UTC', (_, date) => {
     expect(utcYearOf(date)).toBe(2025)
+  })
+})
+
+describe('nextYear', () => {
+  it('gives the year after', () => {
+    expect(nextYear(toYear(2026))).toBe(2027)
   })
 })
 

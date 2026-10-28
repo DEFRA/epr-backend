@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import { mapToExternalPrn } from './external-prn-mapper.js'
@@ -36,7 +37,7 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   accreditation: {
     id: 'acc-789',
     accreditationNumber: 'A26ER1075628626-PL',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: 'plastic',
     submittedToRegulator: 'ea'
   },
@@ -69,7 +70,7 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   updatedAt: issuedDate,
   updatedBy: issuer,
   ...overrides,
-  obligationYear: overrides.obligationYear ?? 2026
+  obligationYear: overrides.obligationYear ?? toYear(2026)
 })
 
 describe('mapToExternalPrn', () => {
@@ -99,13 +100,13 @@ describe('mapToExternalPrn', () => {
       accreditation: {
         id: 'acc-789',
         accreditationNumber: 'A26ER1075628626-PL',
-        accreditationYear: 2026,
+        accreditationYear: toYear(2026),
         material: 'plastic',
         submittedToRegulator: 'ea'
       },
       isDecemberWaste: true,
       isExport: false,
-      obligationYear: 2026,
+      obligationYear: toYear(2026),
       tonnageValue: 126,
       issuerNotes: 'T2E Reference 9201234'
     })
@@ -288,7 +289,7 @@ describe('mapToExternalPrn', () => {
       accreditation: {
         id: 'acc-789',
         accreditationNumber: 'A26ER1075628626-GL',
-        accreditationYear: 2026,
+        accreditationYear: toYear(2026),
         material: 'glass',
         submittedToRegulator: 'ea',
         glassRecyclingProcess: 'glass_re_melt'
@@ -313,7 +314,7 @@ describe('mapToExternalPrn', () => {
       accreditation: {
         id: 'acc-789',
         accreditationNumber: 'A26ER1075628626-PL',
-        accreditationYear: 2026,
+        accreditationYear: toYear(2026),
         material: 'plastic',
         submittedToRegulator: 'ea',
         siteAddress

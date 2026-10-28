@@ -1,5 +1,6 @@
 import Joi from 'joi'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Numbers, RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 export const LEDGER_EVENT_KIND = Object.freeze({
@@ -111,7 +112,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  * belongs in the event so a PRN projection can be recovered after an
  * event-first write succeeds but its projection persistence fails.
  *
- * @typedef {PrnPayload & { obligationYear?: number }} PrnAcceptedPayload
+ * @typedef {PrnPayload & { obligationYear?: Year }} PrnAcceptedPayload
  */
 
 /**

@@ -80,7 +80,7 @@ import { createStatusesValidator } from './validation.js'
  *       registrationNumber: string,
  *       accreditation: {
  *         accreditationNumber: string,
- *         accreditationYear: number,
+ *         accreditationYear: Year,
  *         wasteProcessingType: WasteProcessingTypeValue,
  *         material: Material,
  *         submittedToRegulator: { code: RegulatorValue },
@@ -91,7 +91,7 @@ import { createStatusesValidator } from './validation.js'
  *   tonnage: number,
  *   processToBeUsed: string | null,
  *   isDecemberWaste: boolean,
- *   obligationYear: number,
+ *   obligationYear: Year,
  *   notes?: string,
  *   createdAt: string,
  *   issued?: PrnOperation,
