@@ -7,6 +7,7 @@ import { organisationListResponseSchema } from './response.schema.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
+const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 200
 const MAX_SEARCH_LENGTH = 200
 
@@ -30,7 +31,11 @@ const querySchema = Joi.object({
   registrationNumber: criterion(),
   accreditationNumber: criterion(),
   page: Joi.number().integer().min(1).default(1),
-  pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).default(50)
+  pageSize: Joi.number()
+    .integer()
+    .min(1)
+    .max(MAX_PAGE_SIZE)
+    .default(DEFAULT_PAGE_SIZE)
 })
 
 export const organisationListGet = {
