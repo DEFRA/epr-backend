@@ -35,7 +35,7 @@ export const ACCREDITATION_STATUS = Object.freeze({
  * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
  */
 
-export const STREAM_KIND = Object.freeze({
+export const LEDGER_ACCREDITATION_KIND = Object.freeze({
   ACCREDITED: 'accredited',
   REGISTERED_ONLY: 'registeredOnly'
 })

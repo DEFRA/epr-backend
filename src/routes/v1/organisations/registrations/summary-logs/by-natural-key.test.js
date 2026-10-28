@@ -225,15 +225,18 @@ describe('summary-log routes by natural key', () => {
     {
       kind: 'registered-only',
       accreditationId: null,
-      stream: { kind: 'registeredOnly' }
+      ledgerAccreditation: { kind: 'registeredOnly' }
     },
     {
       kind: 'accredited',
       accreditationId: accredited.id,
-      stream: { kind: 'accredited', accreditationNumber: ACCREDITATION_NUMBER }
+      ledgerAccreditation: {
+        kind: 'accredited',
+        accreditationNumber: ACCREDITATION_NUMBER
+      }
     }
-  ])('a $kind summary log', ({ accreditationId, stream }) => {
-    it('is read with the stream it was uploaded to, apart from its cover sheet', async () => {
+  ])('a $kind summary log', ({ accreditationId, ledgerAccreditation }) => {
+    it('is read with the ledger accreditation it was uploaded to, apart from its cover sheet', async () => {
       const { summaryLogId } = await seed(
         {
           registrationId: accreditedRegistration.id,
@@ -254,7 +257,7 @@ describe('summary-log routes by natural key', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
-      expect(body.stream).toEqual(stream)
+      expect(body.ledgerAccreditation).toEqual(ledgerAccreditation)
       expect(body.accreditationNumber).toBe('COVER-SHEET-NUMBER')
     })
   })
@@ -266,38 +269,43 @@ describe('summary-log routes by natural key', () => {
       /** @param {{ accreditationNumber?: unknown }} summaryLog */
       ({ accreditationNumber: _n, ...rest }) => rest
     ]
-  ])('reads a summary log that %s without a stream', async (_, unstamped) => {
-    const summaryLogId = randomUUID()
-    const { numbers } = numbersFor(partialMock(organisation), {
-      registrationId: accreditedRegistration.id,
-      accreditationId: accredited.id
-    })
-    await summaryLogsRepository.insert(
-      summaryLogId,
-      partialMock(
-        unstamped({
-          ...summaryLogFactory.validated({
-            organisationId: organisation.id,
-            registrationId: accreditedRegistration.id,
-            accreditationId: accredited.id,
-            year: YEAR,
-            meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
-          }),
-          ...numbers
-        })
+  ])(
+    'reads a summary log that %s without a ledger accreditation',
+    async (_, unstamped) => {
+      const summaryLogId = randomUUID()
+      const { numbers } = numbersFor(partialMock(organisation), {
+        registrationId: accreditedRegistration.id,
+        accreditationId: accredited.id
+      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        partialMock(
+          unstamped({
+            ...summaryLogFactory.validated({
+              organisationId: organisation.id,
+              registrationId: accreditedRegistration.id,
+              accreditationId: accredited.id,
+              year: YEAR,
+              meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
+            }),
+            ...numbers
+          })
+        )
       )
-    )
-    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+      await waitForVersion(summaryLogsRepository, summaryLogId, 1)
 
-    const response = await server.inject({
-      method: 'GET',
-      url: `${summaryLogs}/${summaryLogId}`,
-      ...asOperator()
-    })
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).not.toHaveProperty('stream')
-  })
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).not.toHaveProperty(
+        'ledgerAccreditation'
+      )
+    }
+  )
 
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = randomUUID()
