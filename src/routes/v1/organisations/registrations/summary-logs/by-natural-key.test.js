@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -42,7 +43,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const accredited = accreditation()
 const registeredOnlyRegistration = reprocessor({
@@ -356,7 +357,7 @@ describe('summary-log routes by natural key', () => {
       })
 
     it('is read under its registration, whatever its year', async () => {
-      const summaryLogId = await seedOwn({ year: YEAR - 1 })
+      const summaryLogId = await seedOwn({ year: toYear(YEAR - 1) })
 
       const response = await server.inject({
         method: 'GET',
