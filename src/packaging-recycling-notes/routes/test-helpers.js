@@ -1,12 +1,13 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 /** @import { JsonWebKey } from 'node:crypto' */
+/** @import { AccreditationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
 import { toYear } from '#common/helpers/dates/year.js'
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 const ACCREDITATION_YEAR = 2026
 const PRN_YEAR = toYear(ACCREDITATION_YEAR)
@@ -85,7 +86,11 @@ export const generateExternalApiTokenWithoutClientId = () => {
   return Jwt.token.generate(claims, jwtSecret, generateTokenOptions)
 }
 
-export const createMockIssuedPrn = (overrides = {}) => ({
+/**
+ * @param {Partial<Omit<PackagingRecyclingNote, 'accreditation'>> & { accreditation?: Partial<AccreditationSnapshot> }} [overrides]
+ * @returns {PackagingRecyclingNote}
+ */
+export const createMockIssuedPrn = ({ accreditation, ...overrides } = {}) => ({
   id: prnId,
   schemaVersion: 2,
   version: 1,
@@ -95,13 +100,11 @@ export const createMockIssuedPrn = (overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: 'reg-456',
-  accreditation: {
+  accreditation: buildAccreditation({
     id: 'acc-789',
     accreditationNumber: 'ACC-2026-001',
-    accreditationYear: PRN_YEAR,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
+    ...accreditation
+  }),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',
