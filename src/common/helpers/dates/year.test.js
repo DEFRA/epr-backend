@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   currentUtcYear,
   isFutureYear,
@@ -10,10 +10,22 @@ import {
 } from './year.js'
 
 describe('utcYearOf', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it.each([
     ['a date', new Date('2025-12-31T23:30:00.000Z')],
     ['an ISO string', '2025-12-31']
   ])('reads the year of %s in UTC', (_, date) => {
+    expect(utcYearOf(date)).toBe(2025)
+  })
+
+  it('reads the year in UTC where the local year has already turned', () => {
+    vi.stubEnv('TZ', 'Pacific/Kiritimati')
+    const date = new Date('2025-12-31T12:00:00.000Z')
+
+    expect(date.getFullYear()).toBe(2026)
     expect(utcYearOf(date)).toBe(2025)
   })
 })
