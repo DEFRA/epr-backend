@@ -1,4 +1,3 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 
 import {
@@ -15,6 +14,7 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
+  buildAccreditation,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -76,14 +76,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: toYear(2026),
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA,
-    siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-  },
+  accreditation: buildAccreditation({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 

@@ -23,7 +23,10 @@ import {
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildAwaitingAcceptancePrn
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -639,15 +642,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ...buildAwaitingAcceptancePrn({
             organisation: { id: organisationId, name: 'Test Organisation' },
             registrationId,
-            accreditation: {
+            accreditation: buildAccreditation({
               id: accreditationId,
-              accreditationNumber: 'ACC-TEST-001',
               accreditationYear: YEAR,
               material: 'glass',
-              glassRecyclingProcess: 'glass_re_melt',
-              submittedToRegulator: 'ea',
-              siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-            },
+              glassRecyclingProcess: 'glass_re_melt'
+            }),
             tonnage: 250,
             status: {
               currentStatus: 'awaiting_acceptance',

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import {
@@ -14,6 +15,7 @@ import {
   POOL
 } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { buildAccreditation as buildPrnAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -63,17 +65,14 @@ const buildPrn = (overrides = {}) => ({
   version: 1,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: {
+  accreditation: buildPrnAccreditation({
     id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA
-  },
+    accreditationNumber: 'ACC-1'
+  }),
   tonnage: 100,
   isExport: false,
   isDecemberWaste: false,
-  obligationYear: 2026,
+  obligationYear: toYear(2026),
   status: {
     currentStatus: PRN_STATUS.DRAFT,
     currentStatusAt: EVENT_AT,
@@ -197,7 +196,6 @@ const buildOrgWithAccreditation = ({
           buildAccreditation({
             id: ACC_ID,
             accreditationNumber: 'ACC-1',
-            accreditationYear: 2026,
             submittedToRegulator: REGULATOR.EA,
             statusHistory: [
               { status: 'created', updatedAt: '2024-01-01' },
