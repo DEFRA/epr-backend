@@ -293,7 +293,7 @@ const toPrnResource = (
       ...(registrationType && { registrationType })
     },
     issuer: {
-      organisationNumber: String(organisationNumber),
+      organisationNumber,
       name: prn.organisation.name,
       ...(prn.organisation.tradingName && {
         tradingName: prn.organisation.tradingName
