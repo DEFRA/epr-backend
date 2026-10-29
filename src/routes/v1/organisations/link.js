@@ -10,8 +10,6 @@ import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-
 const linkedOrganisationSchema = Joi.object({
   status: Joi.string()
     .valid(...ORGANISATION_STATUSES)
@@ -109,12 +107,14 @@ export const organisationsLink = {
     })
     await organisationLinkingMetrics.organisationLinked()
 
-    const updatedOrganisation = /** @type {Organisation} */ (
+    const updatedOrganisation =
       await organisationReadRepository.findByOrganisationNumber(
         organisationNumber,
         currentVersion + 1
       )
-    )
+    if (!updatedOrganisation) {
+      throw Boom.notFound('Organisation not found')
+    }
 
     return h
       .response({

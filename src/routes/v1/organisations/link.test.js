@@ -528,6 +528,67 @@ describe('POST /organisations/{organisationNumber}/link', () => {
           expect(mockOrganisationLinkedMetric).toHaveBeenCalledTimes(1)
         })
       })
+
+      describe('when the linked organisation cannot be read back', () => {
+        /** @type {import('#test/create-test-server.js').TestServer} */
+        let unreadableServer
+        /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+        let unreadableOrganisationsRepository
+
+        beforeAll(async () => {
+          const organisationsRepositoryFactory =
+            createInMemoryOrganisationsRepository([])
+          unreadableOrganisationsRepository = organisationsRepositoryFactory()
+
+          /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+          const organisationReadRepository = {
+            findByOrganisationNumber: async () => null,
+            find: async () => ({
+              items: [],
+              page: 1,
+              pageSize: 0,
+              totalItems: 0,
+              totalPages: 0
+            })
+          }
+
+          unreadableServer = await createTestServer({
+            repositories: {
+              organisationsRepository: organisationsRepositoryFactory,
+              organisationReadRepository,
+              systemLogsRepository: createSystemLogsRepository()
+            }
+          })
+        })
+
+        it('returns 404 and still links the organisation', async () => {
+          const userEmail = 'unreadable@email.com'
+          const org = await buildApprovedOrg(
+            unreadableOrganisationsRepository,
+            submitterContactDetails(userEmail)
+          )
+
+          const response = await unreadableServer.inject({
+            method: 'POST',
+            url: `/organisations/${org.orgId}/link`,
+            headers: {
+              Authorization: `Bearer ${defraIdJwtTokenWith({ email: userEmail })}`
+            }
+          })
+
+          expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+          expect(JSON.parse(response.payload)).toMatchObject({
+            message: 'Organisation not found'
+          })
+
+          const linked = await waitForVersion(
+            unreadableOrganisationsRepository,
+            org.id,
+            org.version + 1
+          )
+          expect(linked.status).toBe(ORGANISATION_STATUS.ACTIVE)
+        })
+      })
     })
   })
 })
