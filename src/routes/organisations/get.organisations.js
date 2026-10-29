@@ -6,7 +6,6 @@ import { organisationFor } from './get.organisation.js'
 import { organisationListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 const DEFAULT_PAGE_SIZE = 50
 const MAX_PAGE_SIZE = 200
@@ -54,7 +53,6 @@ export const organisationListGet = {
   },
   /**
    * @param {HapiRequest & {
-   *   organisationReadRepository: OrganisationReadRepository,
    *   query: OrganisationListQuery
    * }} request
    * @param {HapiResponseToolkit} h

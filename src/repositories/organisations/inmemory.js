@@ -424,14 +424,29 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
 }
 
 const performFindByOrganisationNumber =
-  (staleCache) => async (organisationNumber) => {
-    const found = staleCache.find(
-      (o) => o.orgId === storedOrgId(organisationNumber)
-    )
-    if (!found) {
-      return null
+  (staleCache) => async (organisationNumber, minimumVersion) => {
+    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+      const found = staleCache.find(
+        (o) => o.orgId === storedOrgId(organisationNumber)
+      )
+      const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
+
+      if (found) {
+        if (minimumVersion === undefined || found.version >= minimumVersion) {
+          return mapDocumentWithCurrentStatuses(structuredClone(found))
+        }
+      } else if (minimumVersion === undefined || isLastRetry) {
+        return null
+      }
+
+      if (!isLastRetry) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+        )
+      }
     }
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
+
+    throw Boom.internal('Consistency timeout waiting for minimum version')
   }
 
 const performReplaceRegistrationOverseasSites =
