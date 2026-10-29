@@ -1,6 +1,7 @@
 import { testDroppedRecordsBehaviour } from './contract/dropped-records.contract.js'
-import { testFindBehaviour } from './contract/find.contract.js'
+import { testFindAllBehaviour } from './contract/find-all.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
+import { testFindBehaviour } from './contract/find.contract.js'
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
@@ -28,6 +29,7 @@ export const testOrganisationReadRepositoryContract = (it) => {
   describe('organisation read repository contract', () => {
     testFindByOrganisationNumberBehaviour(it)
     testFindBehaviour(it)
+    testFindAllBehaviour(it)
     testStatusTimelineBehaviour(it)
     testDroppedRecordsBehaviour(it)
   })
