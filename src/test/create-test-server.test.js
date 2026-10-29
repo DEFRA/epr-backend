@@ -38,12 +38,12 @@ describe('createTestServer', () => {
       // Server should work - routes can access default repos
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations',
+        url: '/organisations',
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(200)
-      expect(JSON.parse(response.payload)).toEqual([])
+      expect(JSON.parse(response.payload).items).toEqual([])
     })
   })
 
@@ -69,7 +69,7 @@ describe('createTestServer', () => {
     })
 
     it('supports mock repositories for behaviour verification', async () => {
-      const mockOrg = { id: 'some-id', name: 'Mock Org' }
+      const mockOrg = { id: '6507f1f77bcf86cd79943901', name: 'Mock Org' }
       const mockOrganisationsRepository = {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
@@ -80,14 +80,14 @@ describe('createTestServer', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/some-id',
+        url: `/v1/organisations/${mockOrg.id}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(200)
       expect(JSON.parse(response.payload)).toEqual(mockOrg)
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
-        'some-id'
+        mockOrg.id
       )
     })
   })
@@ -124,7 +124,7 @@ describe('createTestServer', () => {
 
       await server.inject({
         method: 'GET',
-        url: '/v1/organisations',
+        url: '/organisations',
         headers: { Authorization: `Bearer ${validToken}` }
       })
 

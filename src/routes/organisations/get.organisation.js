@@ -56,7 +56,7 @@ const registrationsAt = (registrations, now) =>
  * @param {Organisation} organisation
  * @param {OrganisationQuery} query
  */
-const organisationFor = (organisation, { year }) => {
+export const organisationFor = (organisation, { year }) => {
   const now = new Date()
   const inYear =
     year === undefined
