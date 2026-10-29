@@ -244,16 +244,8 @@ const anchoredCaseInsensitive = (value) => ({
  * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
  */
 const buildOrgIdFilter = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const branches = []
-  if (businessOrgId !== null) {
-    branches.push({ orgId: businessOrgId })
-  }
-  if (documentId !== null) {
-    branches.push({ _id: ObjectId.createFromHexString(documentId) })
-  }
-
-  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
+  const orgId = parseOrgIdCriterion(value)
+  return orgId === null ? UNSATISFIABLE_FILTER : { orgId }
 }
 
 /**
