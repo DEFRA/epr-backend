@@ -1,5 +1,6 @@
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   accreditationsForRegistration,
   resolveMaterial
@@ -10,7 +11,6 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -90,7 +90,10 @@ export const createOrganisationReadRepository = ({
         orgId: organisationNumber
       })
       return { ...page, items: await toOrganisations(items) }
-    }
+    },
+
+    findAll: async () =>
+      toOrganisations(await organisationsRepository.findAll())
   }
 }
 
