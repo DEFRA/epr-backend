@@ -1,6 +1,7 @@
 import { testAccreditationLinkValidation } from './contract/accreditation-link.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
+import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testFindAllLinkedBehaviour } from './contract/find-all-linked.contract.js'
 import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-defra-org-id.contract.js'
@@ -45,6 +46,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testReplaceUsersBehaviour(it)
   testFindBehaviour(it)
   testFindByIdsBehaviour(it)
+  testFindByOrganisationNumberBehaviour(it)
   testFindAllIdsBehaviour(it)
   testFindAllLinkedBehaviour(it)
   testFindByLinkedDefraOrgIdBehaviour(it)

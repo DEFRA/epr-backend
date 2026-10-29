@@ -71,6 +71,7 @@
  *  locker: LockManager,
  *  logger: TypedLogger,
  *  organisationsRepository: OrganisationsRepository,
+ *  organisationReadRepository: OrganisationReadRepository,
  *  systemLogsRepository: SystemLogsRepository,
  *  ledgerRepository: WasteBalanceLedgerRepository,
  *  wasteBalanceService: WasteBalanceService,

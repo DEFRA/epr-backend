@@ -29,7 +29,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
@@ -325,9 +325,9 @@ export const prepareForReplace = (existing, updates) => {
  * is already active (unlinked and being re-linked) gets no new entry.
  *
  * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
- * @param {LinkedDefraOrganisation} linkedDefraOrganisation
+ * @param {StoredLinkedDefraOrganisation} linkedDefraOrganisation
  * @returns {{
- *   linkedDefraOrganisation: LinkedDefraOrganisation,
+ *   linkedDefraOrganisation: StoredLinkedDefraOrganisation,
  *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
  * }}
  */

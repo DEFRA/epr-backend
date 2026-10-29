@@ -45,6 +45,42 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       ).toBeNull()
     })
 
+    it('returns the organisation once the stored version reaches minimumVersion', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = { ...buildOrganisation(), version: 3 }
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await repository.findByOrganisationNumber(
+        toOrganisationNumber(String(stored.orgId)),
+        3
+      )
+
+      expect(organisation?.organisationNumber).toBe(String(stored.orgId))
+    })
+
+    it('throws timeout error when minimumVersion never arrives', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      await expect(
+        repository.findByOrganisationNumber(
+          toOrganisationNumber(String(stored.orgId)),
+          999
+        )
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        message: 'Consistency timeout waiting for minimum version'
+      })
+    })
+
     it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({
       organisationReadRepositoryWith
     }) => {
