@@ -1,3 +1,4 @@
+import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
@@ -45,13 +46,7 @@ const buildPrn = (overrides = {}) => ({
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: toYear(2026),
-    material: 'plastic',
-    submittedToRegulator: 'ea'
-  },
+  accreditation: buildAccreditation({ id: ACC_ID }),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,

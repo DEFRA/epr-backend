@@ -1,10 +1,10 @@
+import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -132,13 +132,7 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   prnNumber,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: {
-    id: accreditationId,
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: toYear(2026),
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
+  accreditation: buildAccreditation({ id: accreditationId }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,

@@ -27,10 +27,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.ACCEPTED
       },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: futureYear
-      }
+      accreditation: { accreditationYear: futureYear }
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(true)
@@ -42,10 +39,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.ACCEPTED
       },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: toYear(2000)
-      }
+      accreditation: { accreditationYear: toYear(2000) }
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)
@@ -58,10 +52,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.CANCELLED
       },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: futureYear
-      }
+      accreditation: { accreditationYear: futureYear }
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)

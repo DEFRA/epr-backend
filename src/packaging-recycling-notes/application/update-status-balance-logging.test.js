@@ -1,4 +1,3 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 
 import {
@@ -9,6 +8,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
+  buildAccreditation,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
   buildDraftPrn
@@ -62,14 +62,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: toYear(2026),
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA,
-    siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-  },
+  accreditation: buildAccreditation({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 

@@ -98,7 +98,7 @@ const issuedNote = createMockIssuedPrn({
   prnNumber: 'ER26000123',
   organisation: { id: organisation.id, name: 'A reprocessor' },
   registrationId: accreditedRegistration.id,
-  accreditation: { ...createMockIssuedPrn().accreditation, id: accredited.id }
+  accreditation: { id: accredited.id }
 })
 
 /** @param {{ payload: string }} response */
