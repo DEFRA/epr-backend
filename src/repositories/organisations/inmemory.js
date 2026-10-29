@@ -234,26 +234,6 @@ const anchoredMatcher = (value) => {
 }
 
 /**
- * @param {string} value
- * @returns {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} - one
- *   predicate per parseable interpretation; empty when the value parses as
- *   neither, so nothing matches
- */
-const buildOrgIdMatchers = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const matchers = []
-  if (businessOrgId !== null) {
-    matchers.push((org) => org.orgId === businessOrgId)
-  }
-  if (documentId !== null) {
-    // The in-memory store keeps _id as the plain id string, unlike MongoDB
-    matchers.push((org) => org._id === documentId)
-  }
-
-  return matchers
-}
-
-/**
  * The in-memory equivalent of the MongoDB adapter's find filter, applied to
  * raw stored documents — so `_id` rather than `id`. The shared criteria
  * semantics live in helpers.js and the find contract tests hold the two
@@ -274,8 +254,8 @@ const buildFindMatcher = (criteria) => {
     checks.push((org) => pattern.test(org.companyDetails.name))
   }
   if (orgId !== '') {
-    const matchers = buildOrgIdMatchers(orgId)
-    checks.push((org) => matchers.some((matches) => matches(org)))
+    const wantedOrgId = parseOrgIdCriterion(orgId)
+    checks.push((org) => org.orgId === wantedOrgId)
   }
   if (registrationNumber !== '') {
     const matchesNumber = anchoredMatcher(registrationNumber)
