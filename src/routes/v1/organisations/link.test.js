@@ -561,7 +561,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
           })
         })
 
-        it('returns 404 and still links the organisation', async () => {
+        it('returns 500 and still links the organisation', async () => {
           const userEmail = 'unreadable@email.com'
           const org = await buildApprovedOrg(
             unreadableOrganisationsRepository,
@@ -576,10 +576,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
             }
           })
 
-          expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-          expect(JSON.parse(response.payload)).toMatchObject({
-            message: 'Organisation not found'
-          })
+          expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
 
           const linked = await waitForVersion(
             unreadableOrganisationsRepository,

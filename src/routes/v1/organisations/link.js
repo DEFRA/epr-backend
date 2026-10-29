@@ -113,7 +113,7 @@ export const organisationsLink = {
         currentVersion + 1
       )
     if (!updatedOrganisation) {
-      throw Boom.notFound('Organisation not found')
+      throw Boom.internal('Linked organisation could not be read back')
     }
 
     return h
