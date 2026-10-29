@@ -1,4 +1,5 @@
 import { testDroppedRecordsBehaviour } from './contract/dropped-records.contract.js'
+import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
@@ -26,6 +27,7 @@ import { testStatusTimelineBehaviour } from './contract/status-timeline.contract
 export const testOrganisationReadRepositoryContract = (it) => {
   describe('organisation read repository contract', () => {
     testFindByOrganisationNumberBehaviour(it)
+    testFindBehaviour(it)
     testStatusTimelineBehaviour(it)
     testDroppedRecordsBehaviour(it)
   })
