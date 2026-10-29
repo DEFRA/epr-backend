@@ -373,7 +373,6 @@ export const escapeRegex = (string) =>
  */
 
 const INTEGER_PATTERN = /^\d+$/
-const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
 /**
  * @param {SearchCriteria} criteria
@@ -392,16 +391,11 @@ export const normaliseCriteria = ({
 })
 
 /**
- * The interpretations an orgId criterion parses into. Both can apply at once —
- * a 24-digit decimal string is a valid business orgId and a valid document id.
- *
  * @param {string} value
- * @returns {{ businessOrgId: number | null, documentId: string | null }}
+ * @returns {number | null} - the stored orgId, or null when the value is not a number
  */
-export const parseOrgIdCriterion = (value) => ({
-  businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
-  documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
-})
+export const parseOrgIdCriterion = (value) =>
+  INTEGER_PATTERN.test(value) ? Number(value) : null
 
 /**
  * The orgId an organisation is stored under.
