@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { yearSchema } from '#common/validation/year-schema.js'
 import { findRegistrationByNumber } from '#routes/organisations/natural-keys.js'
 import {
   registrationParams,
@@ -17,6 +18,7 @@ import { summaryLogsListResponseSchema } from './response.schema.js'
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/view-route.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 const LIST_FAILURE = 'Failure listing summary logs'
 
@@ -28,7 +30,10 @@ export const summaryLogsList = {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
-    validate: { params: Joi.object(registrationParams) },
+    validate: {
+      params: Joi.object(registrationParams),
+      query: Joi.object({ year: yearSchema().optional() })
+    },
     response: {
       schema: summaryLogsListResponseSchema
     }
@@ -36,15 +41,22 @@ export const summaryLogsList = {
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
+   *   query: { year?: Year },
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationsRepository, summaryLogsRepository, params, logger } =
-      request
+    const {
+      organisationsRepository,
+      summaryLogsRepository,
+      params,
+      query,
+      logger
+    } = request
     const { organisationNumber, registrationNumber } = params
+    const { year } = query
 
     await findRegistrationByNumber(
       organisationsRepository,
@@ -55,7 +67,8 @@ export const summaryLogsList = {
     try {
       const summaryLogs = await summaryLogsRepository.findAll({
         organisationNumber,
-        registrationNumber
+        registrationNumber,
+        ...(year !== undefined && { year })
       })
 
       const summaryLogList = summaryLogs.map(({ id, summaryLog }) => ({
@@ -63,7 +76,8 @@ export const summaryLogsList = {
         filename: summaryLog.file.name,
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
         status: summaryLog.status,
-        year: summaryLog.year
+        year: summaryLog.year,
+        accreditationNumber: summaryLog.accreditationNumber ?? null
       }))
 
       logger.info({
