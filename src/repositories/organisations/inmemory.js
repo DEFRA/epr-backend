@@ -435,8 +435,11 @@ const performFindByOrganisationNumber =
         if (minimumVersion === undefined || found.version >= minimumVersion) {
           return mapDocumentWithCurrentStatuses(structuredClone(found))
         }
+        // Document exists but version too low - will retry
       } else if (minimumVersion === undefined || isLastRetry) {
         return null
+      } else {
+        // Document not found but have retries left - will retry
       }
 
       if (!isLastRetry) {
