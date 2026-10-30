@@ -1,6 +1,10 @@
+import { nextYear } from '#common/helpers/dates/year.js'
+
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 export class InvalidObligationYearError extends Error {
   /**
-   * @param {number} accreditationYear
+   * @param {Year} accreditationYear
    * @param {number} obligationYear
    */
   constructor(accreditationYear, obligationYear) {
@@ -17,9 +21,9 @@ export class InvalidObligationYearError extends Error {
  * December PRNs may be accepted against their accreditation year or its
  * successor only.
  *
- * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: number } }} prn
+ * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: Year } }} prn
  * @param {number} [providedObligationYear]
- * @returns {number | undefined}
+ * @returns {Year | undefined}
  */
 export const selectObligationYearForAcceptance = (
   prn,
@@ -30,15 +34,17 @@ export const selectObligationYearForAcceptance = (
   }
 
   const { accreditationYear } = prn.accreditation
-  if (
-    providedObligationYear !== accreditationYear &&
-    providedObligationYear !== accreditationYear + 1
-  ) {
+  const allowedObligationYear = [
+    accreditationYear,
+    nextYear(accreditationYear)
+  ].find((year) => year === providedObligationYear)
+
+  if (!allowedObligationYear) {
     throw new InvalidObligationYearError(
       accreditationYear,
       providedObligationYear
     )
   }
 
-  return providedObligationYear
+  return allowedObligationYear
 }

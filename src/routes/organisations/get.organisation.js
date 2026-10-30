@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { organisationInYear } from '#organisation-read-model/domain/years.js'
 import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
@@ -31,7 +32,7 @@ const withPrnYearState = (accreditations, now) =>
       year,
       {
         ...accreditation,
-        prns: { open: isRelevantYearOpen(Number(year), now) }
+        prns: { open: isRelevantYearOpen(toYear(Number(year)), now) }
       }
     ])
   )

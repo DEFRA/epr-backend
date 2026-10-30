@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import {
   toOrganisationNumber,
@@ -37,7 +38,7 @@ export const testCreateBehaviour = (it) => {
           accreditation: {
             id: 'acc-glass',
             accreditationNumber: 'ACC-G1',
-            accreditationYear: 2026,
+            accreditationYear: toYear(2026),
             material: 'glass',
             submittedToRegulator: 'ea',
             glassRecyclingProcess: 'glass_re_melt',
@@ -70,11 +71,11 @@ export const testCreateBehaviour = (it) => {
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
-            accreditationYear: 2026,
+            accreditationYear: toYear(2026),
             material: 'paper',
             submittedToRegulator: 'nrw'
           },
-          obligationYear: 2027,
+          obligationYear: toYear(2027),
           issuedToOrganisation: {
             id: 'recipient-preserve-test',
             name: 'Recipient Org',
@@ -104,7 +105,7 @@ export const testCreateBehaviour = (it) => {
         expect(found.accreditation).toStrictEqual({
           id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'paper',
           submittedToRegulator: 'nrw'
         })

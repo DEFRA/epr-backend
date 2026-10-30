@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
 import {
@@ -61,11 +62,11 @@ const buildPrn = (overrides = {}) => ({
   accreditation: {
     id: ACC_ID,
     accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: 'plastic',
     submittedToRegulator: REGULATOR.EA
   },
-  obligationYear: 2026,
+  obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: TONNAGE,
   isExport: false,
@@ -239,7 +240,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       providedPrn: storedPrn,
       newStatus: PRN_STATUS.ACCEPTED,
       actor: PRN_ACTOR.PRODUCER,
-      obligationYear: 2027
+      obligationYear: toYear(2027)
     })
 
     const latest = await ledgerRepository.findLatestInLedger({
@@ -254,7 +255,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     expect(latest?.payload).toEqual({
       prnId: PRN_ID,
       amount: TONNAGE,
-      obligationYear: 2027
+      obligationYear: toYear(2027)
     })
     expect(reread?.obligationYear).toBe(2027)
   })
@@ -561,7 +562,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         providedPrn: storedPrn,
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.PRODUCER,
-        obligationYear: 2027
+        obligationYear: toYear(2027)
       })
     ).rejects.toThrow('doc write failed')
 
@@ -573,7 +574,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
 
     expect(recovered).toEqual(
       expect.objectContaining({
-        obligationYear: 2027,
+        obligationYear: toYear(2027),
         lastAppliedEventNumber: APPENDED_WATERMARK,
         status: expect.objectContaining({ currentStatus: PRN_STATUS.ACCEPTED })
       })

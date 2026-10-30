@@ -1,11 +1,15 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 /** @import { JsonWebKey } from 'node:crypto' */
 
+import { toYear } from '#common/helpers/dates/year.js'
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
 import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+
+const ACCREDITATION_YEAR = 2026
+const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */
 // @ts-expect-error @types/node is missing generateKeyPairSync overloads for jwk format
@@ -94,11 +98,11 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   accreditation: {
     id: 'acc-789',
     accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
+    accreditationYear: PRN_YEAR,
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
-  obligationYear: 2026,
+  obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'

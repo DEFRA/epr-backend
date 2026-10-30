@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -47,7 +48,7 @@ const buildPrn = (overrides = {}) => ({
   accreditation: {
     id: ACC_ID,
     accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: 'plastic',
     submittedToRegulator: 'ea'
   },
@@ -66,7 +67,7 @@ const buildPrn = (overrides = {}) => ({
     history: []
   },
   ...overrides,
-  obligationYear: overrides.obligationYear ?? 2026
+  obligationYear: overrides.obligationYear ?? toYear(2026)
 })
 
 /**

@@ -2,6 +2,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
@@ -192,7 +193,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  * @typedef {{
  *   id: string;
  *   accreditationNumber: string;
- *   accreditationYear: number;
+ *   accreditationYear: Year;
  *   material: import('#domain/organisations/model.js').AppliedForMaterial;
  *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
@@ -249,7 +250,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   registrationId: string;
  *   registration?: { registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
- *   obligationYear: number;
+ *   obligationYear: Year;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
  *   isExport: boolean;
