@@ -154,10 +154,10 @@ const createServer = async ({
     organisationId: org.id,
     registrationId: registration.id,
     reportsRepository: reportsRepositoryFactory(),
-    quarterly: (period = 1) =>
-      `${registrationPath}/reports/${YEAR}/quarterly/${period}/submissions/1`,
-    monthly: (period = 2) =>
-      `${registrationPath}/accreditations/${YEAR}/reports/monthly/${period}/submissions/1`
+    quarterly: (period = 1, { year = YEAR, submissionNumber = 1 } = {}) =>
+      `${registrationPath}/reports/${year}/quarterly/${period}/submissions/${submissionNumber}`,
+    monthly: (period = 2, { year = YEAR, submissionNumber = 1 } = {}) =>
+      `${registrationPath}/accreditations/${year}/reports/monthly/${period}/submissions/${submissionNumber}`
   }
 }
 
@@ -789,7 +789,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const { response } = await read(
         server,
-        quarterly(1).replace(`/reports/${YEAR}/`, '/reports/2025/')
+        quarterly(1, { year: toYear(2025) })
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -802,7 +802,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const { response } = await read(
         server,
-        quarterly(1).replace(`/reports/${YEAR}/`, '/reports/2099/')
+        quarterly(1, { year: toYear(2099) })
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -871,7 +871,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const { response } = await read(
         context.server,
-        context.quarterly(1).replace('/submissions/1', '/submissions/2')
+        context.quarterly(1, { submissionNumber: 2 })
       )
 
       expect(response.statusCode).toBe(StatusCodes.OK)
