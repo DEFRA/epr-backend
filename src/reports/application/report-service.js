@@ -12,7 +12,10 @@ import {
   getValidatedPeriodInfo
 } from './create-report-validation.js'
 import { canRequestResubmission } from './resubmission-service.js'
-import { findReportIdBySubmissionNumber } from './submission-lookup.js'
+import {
+  findReportIdBySubmissionNumber,
+  hasStoredSubmission
+} from './submission-lookup.js'
 import {
   assertReportDataComplete,
   summariseIncompleteData
@@ -224,7 +227,9 @@ export async function fetchOrGenerateReportForPeriod({
     return buildStoredReportResult(storedReport, periodicReports)
   }
 
-  assertPeriodRequired(requiredPeriods, year, cadence, period)
+  if (!hasStoredSubmission(periodicReports, year, cadence, period)) {
+    assertPeriodRequired(requiredPeriods, year, cadence, period)
+  }
 
   const operatorCategory = getOperatorCategory(registration)
 
@@ -381,7 +386,8 @@ async function getAggregatedReportDetail({
 
 /**
  * Asserts a report can be created for the period. Loads the registration's
- * periodic reports and rejects a duplicate submission before a disallowed
+ * periodic reports, rejects a period with nothing stored that the registration
+ * does not owe, then rejects a duplicate submission before a disallowed
  * resubmission: existence is the more fundamental precondition, so a duplicate
  * is reported as such regardless of whether a fresh create would have been
  * permitted.
@@ -394,6 +400,7 @@ async function getAggregatedReportDetail({
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods
  * @returns {Promise<void>}
  */
 async function assertReportCreationAllowed({
@@ -403,13 +410,17 @@ async function assertReportCreationAllowed({
   year,
   cadence,
   period,
-  submissionNumber
+  submissionNumber,
+  requiredPeriods
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
     registrationId
   })
 
+  if (!hasStoredSubmission(periodicReports, year, cadence, period)) {
+    assertPeriodRequired(requiredPeriods, year, cadence, period)
+  }
   assertNoExistingReport(
     periodicReports,
     year,
@@ -516,8 +527,6 @@ export async function createReportForPeriod({
     period
   )
 
-  assertPeriodRequired(requiredPeriods, year, cadence, period)
-
   await assertReportCreationAllowed({
     reportsRepository,
     organisationId,
@@ -525,7 +534,8 @@ export async function createReportForPeriod({
     year,
     cadence,
     period,
-    submissionNumber
+    submissionNumber,
+    requiredPeriods
   })
 
   const operatorCategory = getOperatorCategory(registration)

@@ -863,6 +863,20 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
+    it('previews the next submission of a period the registration no longer owes', async () => {
+      const context = await createServer({
+        registration: reprocessor({ validFrom: '2026-04-01' })
+      })
+      await submitReport(context)
+
+      const { response } = await read(
+        context.server,
+        context.quarterly(1).replace('/submissions/1', '/submissions/2')
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
     it('returns stored report with full data sections', async () => {
       const context = await createServer(registeredOnlyReprocessor())
       const recyclingActivity = {
