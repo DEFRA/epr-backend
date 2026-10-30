@@ -12,10 +12,7 @@ import {
   getValidatedPeriodInfo
 } from './create-report-validation.js'
 import { canRequestResubmission } from './resubmission-service.js'
-import {
-  findReportIdBySubmissionNumber,
-  hasStoredSubmission
-} from './submission-lookup.js'
+import { findReportIdBySubmissionNumber } from './submission-lookup.js'
 import {
   assertReportDataComplete,
   summariseIncompleteData
@@ -227,9 +224,7 @@ export async function fetchOrGenerateReportForPeriod({
     return buildStoredReportResult(storedReport, periodicReports)
   }
 
-  if (!hasStoredSubmission(periodicReports, year, cadence, period)) {
-    assertPeriodRequired(requiredPeriods, year, cadence, period)
-  }
+  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
 
   const operatorCategory = getOperatorCategory(registration)
 
@@ -418,9 +413,7 @@ async function assertReportCreationAllowed({
     registrationId
   })
 
-  if (!hasStoredSubmission(periodicReports, year, cadence, period)) {
-    assertPeriodRequired(requiredPeriods, year, cadence, period)
-  }
+  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
   assertNoExistingReport(
     periodicReports,
     year,
