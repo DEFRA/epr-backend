@@ -9,6 +9,7 @@ import {
 import { prnTonnageResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const prnTonnagePath = '/v1/prn-tonnage'
@@ -27,14 +28,15 @@ export const getPrnTonnage = {
   },
   /**
    * @param {HapiRequest & {
-   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   organisationReadRepository: OrganisationReadRepository,
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository,
       logger
     } = request
@@ -42,7 +44,7 @@ export const getPrnTonnage = {
     try {
       const result = await aggregatePrnTonnage(
         packagingRecyclingNotesRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
 

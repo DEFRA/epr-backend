@@ -7,7 +7,7 @@ import {
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
-import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
+import { PRN_VERSION_CONFLICT, PrnNumberConflictError } from './port.js'
 import {
   validatePrnInsert,
   validatePrnNumbers,
@@ -320,9 +320,16 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$organisation.id',
-            registrationId: '$registrationId',
-            accreditationId: '$accreditation.id',
+            id: {
+              organisationId: '$organisation.id',
+              registrationId: '$registrationId',
+              accreditationId: '$accreditation.id'
+            },
+            naturalKeyId: {
+              orgId: '$organisation.organisationNumber',
+              registrationNumber: '$registration.registrationNumber',
+              accreditationNumber: '$accreditation.accreditationNumber'
+            },
             status: '$status.currentStatus'
           },
           tonnage: { $sum: '$tonnage' }
@@ -331,9 +338,8 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$_id.organisationId',
-            registrationId: '$_id.registrationId',
-            accreditationId: '$_id.accreditationId'
+            id: '$_id.id',
+            naturalKeyId: '$_id.naturalKeyId'
           },
           tonnageByStatus: { $push: { k: '$_id.status', v: '$tonnage' } }
         }
@@ -341,7 +347,8 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $project: {
           _id: 0,
-          id: '$_id',
+          id: '$_id.id',
+          naturalKeyId: '$_id.naturalKeyId',
           tonnageByStatus: { $arrayToObject: '$tonnageByStatus' }
         }
       }

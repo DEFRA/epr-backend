@@ -4,12 +4,12 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import { indexAccreditations, indexReadModelAccreditations } from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
 
@@ -245,22 +245,22 @@ const buildReportRow = async (
  * Test organisations' PRNs are reported like any other.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
 export const aggregatePrnTonnage = async (
   prnRepository,
-  organisationsRepository,
+  organisationReadRepository,
   ledgerRepository
 ) => {
   const [accreditationTonnages, organisations] = await Promise.all([
     prnRepository.sumTonnageByAccreditation({
       excludeStatuses: EXCLUDED_STATUSES
     }),
-    organisationsRepository.findAll()
+    organisationReadRepository.findAll()
   ])
 
-  const { index } = indexAccreditations(organisations, {
+  const { index } = indexReadModelAccreditations(organisations, {
     includeTestOrganisations: true
   })
 

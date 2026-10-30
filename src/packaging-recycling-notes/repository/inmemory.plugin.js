@@ -7,7 +7,7 @@ import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
+import { PRN_VERSION_CONFLICT, PrnNumberConflictError } from './port.js'
 import { validatePrnInsert, validatePrnNumbers } from './validation.js'
 import {
   isWatermarkRegression,
@@ -48,6 +48,9 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
  * @returns {(prn: Omit<PackagingRecyclingNote, 'id'>) => Promise<PackagingRecyclingNote>}
  */
 const performCreate = (storage) => async (prn) => {
+  // FIXME remove
+  console.log('prn :>> ', prn)
+
   const validated = validatePrnInsert(prn)
   const id = new ObjectId().toHexString()
   const prnWithId = { ...validated, id }

@@ -1,3 +1,5 @@
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+
 /**
  * Error thrown when a PRN number already exists in the database.
  * Callers can catch this to retry with a different PRN number.
@@ -26,6 +28,20 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * phase has no accreditation to name.
  *
  * @typedef {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & { accreditationId: string }} AccreditationId
+ *
+ */
+
+/**
+ * TODO move into some common module
+ *
+ * @typedef {{
+ *  orgId: OrganisationNumber,
+ *  registrationNumber: RegistrationNumber,
+ * }} RegistrationNaturalKeyId
+ *
+ * @typedef {RegistrationNaturalKeyId & {
+ *  accreditationNumber: AccreditationNumber
+ * }} AccreditationNaturalKeyId
  */
 
 /**
@@ -87,7 +103,8 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * status none of the accreditation's PRNs is in is absent, not zero.
  *
  * @typedef {Object} AccreditationTonnage
- * @property {AccreditationId} id
+ * @property {AccreditationId} id // FIXME: to remove in favour of the natural keys
+ * @property {AccreditationNaturalKeyId} naturalKeyId
  * @property {Partial<Record<import('#packaging-recycling-notes/domain/model.js').PrnStatus, number>>} tonnageByStatus
  */
 

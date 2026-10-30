@@ -1,7 +1,10 @@
-import { randomUUID } from 'node:crypto'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { randomUUID } from 'node:crypto'
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { AccreditationNaturalKeyId } from '../port.js' */
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
@@ -57,12 +60,22 @@ export const buildAccreditationId = (overrides = {}) => ({
 })
 
 /**
+ * @returns AccreditationNaturalKeyId
+ */
+export const buildAccreditationNaturalKeyId = () => ({
+  orgId: String(createOrganisationBuilders().nextOrgId()),
+  registrationNumber: `REG-${Date.now()}`,
+  accreditationNumber: `ACC-${Date.now()}`
+})
+
+/**
  * Places a PRN under an accreditation, so that the ids the PRN carries agree
  * with the accreditation identity a reader names it by.
  *
  * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId} accreditationId
  * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} [overrides]
  */
+
 export const underAccreditation = (accreditationId, overrides = {}) => ({
   organisation: {
     id: accreditationId.organisationId,
@@ -71,6 +84,31 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
   registrationId: accreditationId.registrationId,
   accreditation: buildAccreditation({
     id: /** @type {string} */ (accreditationId.accreditationId)
+  }),
+  ...overrides
+})
+
+/**
+ * @param {AccreditationNaturalKeyId} accreditationNaturalKeyId
+ * @param {object} overrides
+ * @returns
+ */
+export const underAccreditationNaturalKey = (
+  accreditationNaturalKeyId,
+  overrides = {}
+) => ({
+  organisation: {
+    id: `org-${randomUUID()}`,
+    name: 'Test Organisation',
+    organisationNumber: toOrganisationNumber(
+      String(createOrganisationBuilders().nextOrgId())
+    )
+  },
+  registration: {
+    registrationNumber: accreditationNaturalKeyId.registrationNumber
+  },
+  accreditation: buildAccreditation({
+    accreditationNumber: accreditationNaturalKeyId.accreditationNumber
   }),
   ...overrides
 })

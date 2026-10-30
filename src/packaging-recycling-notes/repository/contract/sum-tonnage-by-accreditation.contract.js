@@ -2,14 +2,16 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildAccreditationId,
+  buildAccreditationNaturalKeyId,
   buildAwaitingAcceptancePrn,
   buildCancelledPrn,
   buildDeletedPrn,
   buildDraftPrn,
-  underAccreditation
+  underAccreditation,
+  underAccreditationNaturalKey
 } from './test-data.js'
 
-/** @import { AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+/** @import { AccreditationNaturalKeyId, AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
 /** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
 
 const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
@@ -19,14 +21,18 @@ const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
  * reads back only the accreditations it created.
  *
  * @param {AccreditationTonnage[]} totals
- * @param {RegistrationOrAccreditationId} id
+ * @param {RegistrationOrAccreditationId | AccreditationNaturalKeyId} id
  */
 const totalFor = (totals, id) =>
   totals.find(
     (total) =>
-      total.id.organisationId === id.organisationId &&
-      total.id.registrationId === id.registrationId &&
-      total.id.accreditationId === id.accreditationId
+      // FIXME sort this type out!
+      (total.id.organisationId === id.organisationId &&
+        total.id.registrationId === id.registrationId &&
+        total.id.accreditationId === id.accreditationId) ||
+      (total.naturalKeyId?.orgId === id.orgId &&
+        total.naturalKeyId?.registrationNumber === id.registrationNumber &&
+        total.naturalKeyId?.accreditationNumber === id.accreditationNumber)
   )
 
 export const testSumTonnageByAccreditationBehaviour = (it) => {
@@ -42,29 +48,40 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       }
     )
 
-    it('totals an accreditation’s tonnage by current status', async () => {
-      const accreditation = buildAccreditationId()
-      await repository.create(
-        buildDraftPrn(underAccreditation(accreditation, { tonnage: 10 }))
-      )
+    it("totals an accreditation's tonnage by current status", async () => {
+      const accreditation = buildAccreditationNaturalKeyId()
+      console.log('accreditation :>> ', accreditation)
+
+      const newLocal = underAccreditationNaturalKey(accreditation, {
+        tonnage: 10
+      })
+      console.log('newLocal :>> ', newLocal)
+      await repository.create(buildDraftPrn(newLocal))
       await repository.create(
         buildAwaitingAcceptancePrn(
-          underAccreditation(accreditation, { tonnage: 20 })
+          underAccreditationNaturalKey(accreditation, { tonnage: 20 })
         )
       )
       await repository.create(
         buildAwaitingAcceptancePrn(
-          underAccreditation(accreditation, { tonnage: 30 })
+          underAccreditationNaturalKey(accreditation, { tonnage: 30 })
         )
       )
       await repository.create(
-        buildCancelledPrn(underAccreditation(accreditation, { tonnage: 40 }))
+        buildCancelledPrn(
+          underAccreditationNaturalKey(accreditation, { tonnage: 40 })
+        )
       )
 
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
 
       expect(totalFor(totals, accreditation)).toStrictEqual({
-        id: accreditation,
+        // id: accreditation,
+        naturalKeyId: {
+          accreditationNumber: accreditation.accreditationNumber,
+          orgId: accreditation.orgId,
+          registrationNumber: accreditation.registrationNumber
+        },
         tonnageByStatus: {
           [PRN_STATUS.DRAFT]: 10,
           [PRN_STATUS.AWAITING_ACCEPTANCE]: 50,

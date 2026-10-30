@@ -2,6 +2,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @import {Organisation as OrganisationReadModel} from '#organisation-read-model/domain/models.js'
  */
 
 /**
@@ -59,6 +60,51 @@ export const indexAccreditations = (
     const accreditationById = new Map(
       organisation.accreditations.map((accreditation) => [
         accreditation.id,
+        accreditation
+      ])
+    )
+    for (const registration of organisation.registrations) {
+      const accreditation = registration.accreditationId
+        ? accreditationById.get(registration.accreditationId)
+        : undefined
+      if (accreditation) {
+        index.set(accreditation.id, {
+          organisation,
+          registration,
+          accreditation
+        })
+      }
+    }
+  }
+  return { index, testOrgAccreditationIds }
+}
+
+/**
+ * @param {OrganisationReadModel[]} organisations
+ * @param {{ includeTestOrganisations?: boolean }} [options]
+ * @returns {AccreditationIndex}
+ */
+export const indexReadModelAccreditations = (
+  organisations,
+  { includeTestOrganisations = false } = {}
+) => {
+  /** @type {Map<string, AccreditationContext>} */
+  const index = new Map()
+  /** @type {Set<string>} */
+  const testOrgAccreditationIds = new Set()
+  for (const organisation of organisations) {
+    if (
+      !includeTestOrganisations &&
+      TEST_ORGANISATION_IDS.has(organisation.orgId)
+    ) {
+      for (const accreditation of organisation.accreditations) {
+        testOrgAccreditationIds.add(accreditation.id)
+      }
+      continue
+    }
+    const accreditationById = new Map(
+      organisation.registration.accreditations.map((accreditation) => [
+        accreditation.number,
         accreditation
       ])
     )
