@@ -538,8 +538,6 @@ export async function createReportForPeriod({
     requiredPeriods
   })
 
-  const operatorCategory = getOperatorCategory(registration)
-
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
       ledgerRepository,
@@ -559,7 +557,7 @@ export async function createReportForPeriod({
   const aggregatedReportData = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    operatorCategory,
+    operatorCategory: getOperatorCategory(registration),
     organisationId,
     registrationId,
     registration,
