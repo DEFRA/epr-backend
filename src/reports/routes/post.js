@@ -7,13 +7,13 @@ import {
 } from '#common/enums/index.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
-import { assertCadence } from '#reports/application/assert-cadence.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
+  requiredPeriodsFor,
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
@@ -103,8 +103,6 @@ export const reportsPost = {
         params
       )
 
-      assertCadence(cadence, registration)
-
       const createdReport = await createReportForPeriod({
         reportsRepository,
         ledgerRepository,
@@ -119,6 +117,7 @@ export const reportsPost = {
         cadence,
         period,
         submissionNumber,
+        requiredPeriods: requiredPeriodsFor(app, params),
         changedBy: extractChangedBy(request.auth.credentials),
         reportDataValidationEnabled: request.config.get(
           'featureFlags.reportDataValidation'

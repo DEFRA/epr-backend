@@ -1,3 +1,4 @@
+import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
@@ -290,6 +291,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       cadence,
       period,
       submissionNumber,
+      requiredPeriods: generateAllPeriodsForYear(cadence, year),
       changedBy: CHANGED_BY
     })
   }

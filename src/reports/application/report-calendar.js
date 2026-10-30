@@ -106,6 +106,27 @@ const servesAccreditedReport = (registration, year) => {
 }
 
 /**
+ * The ended periods the reporting windows require a report for.
+ *
+ * @param {Cadence} cadence
+ * @param {CalendarDateRange[]} reportingWindows
+ * @param {{ now: Date, wholePeriods: boolean }} options
+ * @returns {GeneratedPeriod[]}
+ */
+const endedPeriodsIn = (cadence, reportingWindows, { now, wholePeriods }) =>
+  onePerPeriod(
+    reportingWindows.flatMap(({ from, to }) =>
+      generatePeriodsInRange(cadence, from, to)
+    )
+  )
+    .map((period) =>
+      wholePeriods
+        ? { ...period, ...periodBounds(cadence, period.year, period.period) }
+        : period
+    )
+    .filter((period) => hasEnded(period, now))
+
+/**
  * @param {Cadence} cadence
  * @param {CalendarDateRange[]} reportingWindows
  * @param {PeriodicReport[]} storedReports
@@ -118,17 +139,10 @@ const mergedPeriods = (
   storedReports,
   { now, wholePeriods, served }
 ) => {
-  const periods = onePerPeriod(
-    reportingWindows.flatMap(({ from, to }) =>
-      generatePeriodsInRange(cadence, from, to)
-    )
-  )
-    .map((period) =>
-      wholePeriods
-        ? { ...period, ...periodBounds(cadence, period.year, period.period) }
-        : period
-    )
-    .filter((period) => hasEnded(period, now))
+  const periods = endedPeriodsIn(cadence, reportingWindows, {
+    now,
+    wholePeriods
+  })
   const listed = new Set(periods.map(({ period }) => period))
   return mergeReportingPeriods(periods, storedReports, cadence).filter(
     (period) => listed.has(period.period) || served(period)
@@ -179,6 +193,37 @@ export const reportingPeriodsByKind = ({
     ),
     accreditationNumber: accreditation?.accreditationNumber
   }
+}
+
+/**
+ * The ended periods of the cadence's kind the registration owes a report for in
+ * the year: those touching a day it held that status. Unlike the calendar, it
+ * keeps both kinds' windows with mid-year status transition off, so a
+ * registered-only quarter before a mid-year accreditation stays reportable; the
+ * flag decides only whether a period ends with its window or as a whole period,
+ * as the calendar does.
+ *
+ * @param {{
+ *   registration: Registration,
+ *   year: Year,
+ *   cadence: Cadence,
+ *   now?: Date
+ * }} params
+ * @returns {GeneratedPeriod[]}
+ */
+export const requiredReportingPeriods = ({
+  registration,
+  year,
+  cadence,
+  now = new Date()
+}) => {
+  const windows = registrationStatusWindows(registration, year)
+  const reportingWindows =
+    cadence === CADENCE.monthly ? windows.accredited : windows.registeredOnly
+  return endedPeriodsIn(cadence, reportingWindows, {
+    now,
+    wholePeriods: !config.get('featureFlags.midYearStatusTransition')
+  })
 }
 
 /**

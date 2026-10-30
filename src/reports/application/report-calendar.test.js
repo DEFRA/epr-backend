@@ -2,7 +2,11 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
-import { reportingPeriodsByKind, yearCalendar } from './report-calendar.js'
+import {
+  requiredReportingPeriods,
+  reportingPeriodsByKind,
+  yearCalendar
+} from './report-calendar.js'
 
 /**
  * @import { Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
@@ -524,6 +528,149 @@ describe('reportingPeriodsByKind', () => {
         )
 
         expect(result.registeredOnly.map(({ period }) => period)).toEqual([1])
+      })
+    }
+  )
+})
+
+describe('requiredReportingPeriods', () => {
+  /**
+   * @param {Parameters<typeof requiredReportingPeriods>[0] & { period: number }} params
+   */
+  const owes = ({ period, ...params }) =>
+    requiredReportingPeriods(params).some(
+      (required) => required.period === period
+    )
+
+  /**
+   * @param {Registration} registration
+   * @param {{ year?: number, cadence: 'quarterly' | 'monthly', period: number }} params
+   */
+  const required = (registration, { year = 2026, cadence, period }) =>
+    owes({
+      registration,
+      year: toYear(year),
+      cadence,
+      period,
+      now: AFTER_YEAR_END
+    })
+
+  describe.each([true, false])(
+    'with mid-year status transition %s',
+    (enabled) => {
+      withMidYearStatusTransition(enabled)
+
+      it('lists the ended registered-only quarters of the year', () => {
+        expect(
+          requiredReportingPeriods({
+            registration: registeredSinceLastYear(),
+            year: toYear(2026),
+            cadence: 'quarterly',
+            now: AFTER_YEAR_END
+          }).map(({ period }) => period)
+        ).toEqual([1, 2, 3, 4])
+      })
+
+      it('owes a registered-only quarter the registration was approved in', () => {
+        expect(
+          required(registeredSinceLastYear(), {
+            cadence: 'quarterly',
+            period: 1
+          })
+        ).toBe(true)
+      })
+
+      it('owes no registered-only quarter of a year before the registration was approved', () => {
+        expect(
+          required(registeredSinceLastYear(), {
+            year: 2024,
+            cadence: 'quarterly',
+            period: 4
+          })
+        ).toBe(false)
+      })
+
+      it('owes no registered-only quarter that ended before the registration was approved', () => {
+        expect(
+          required(registeredSinceLastYear(), {
+            year: 2025,
+            cadence: 'quarterly',
+            period: 1
+          })
+        ).toBe(false)
+      })
+
+      it('owes the registered-only quarter the registration was approved part way through', () => {
+        expect(
+          required(registeredSinceLastYear(), {
+            year: 2025,
+            cadence: 'quarterly',
+            period: 2
+          })
+        ).toBe(true)
+      })
+
+      it('owes no period that has not ended', () => {
+        expect(
+          owes({
+            registration: registeredSinceLastYear(),
+            year: toYear(2026),
+            cadence: 'quarterly',
+            period: 4,
+            now: new Date('2026-11-01T00:00:00Z')
+          })
+        ).toBe(false)
+      })
+
+      describe('for a registration accredited in July', () => {
+        const accreditedInJuly = () =>
+          registeredSinceLastYear([approvedOn('2026-07-01')])
+
+        it('owes the registered-only quarters before the accreditation', () => {
+          expect(
+            required(accreditedInJuly(), { cadence: 'quarterly', period: 2 })
+          ).toBe(true)
+        })
+
+        it('owes no registered-only quarter after the accreditation', () => {
+          expect(
+            required(accreditedInJuly(), { cadence: 'quarterly', period: 4 })
+          ).toBe(false)
+        })
+
+        it('owes accredited months from the accreditation', () => {
+          expect(
+            required(accreditedInJuly(), { cadence: 'monthly', period: 7 })
+          ).toBe(true)
+        })
+
+        it('owes no accredited month before the accreditation', () => {
+          expect(
+            required(accreditedInJuly(), { cadence: 'monthly', period: 6 })
+          ).toBe(false)
+        })
+      })
+    }
+  )
+
+  describe.each([
+    { enabled: true, owed: true },
+    { enabled: false, owed: false }
+  ])(
+    'for the registered-only part of a quarter accredited part way through, with mid-year status transition $enabled',
+    ({ enabled, owed }) => {
+      withMidYearStatusTransition(enabled)
+
+      it(`is ${owed ? '' : 'not '}owed once that part ends, before the quarter does`, () => {
+        expect(
+          owes({
+            registration: registeredSinceLastYear([approvedOn('2026-07-11')]),
+            year: toYear(2026),
+            cadence: 'quarterly',
+            period: 3,
+            now: new Date('2026-07-20T00:00:00Z')
+          })
+        ).toBe(owed)
       })
     }
   )
