@@ -4,7 +4,7 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { indexAccreditations, indexReadModelAccreditations } from '#waste-balances/application/accreditation-index.js'
+import { indexReadModelAccreditations } from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */

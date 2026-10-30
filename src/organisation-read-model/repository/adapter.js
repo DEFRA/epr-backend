@@ -11,6 +11,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { organisation } from '#root/routes/v1/apply/organisation.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -66,6 +67,7 @@ export const createOrganisationReadRepository = ({
       overseasSitesById: new Map(sites.map((site) => [site.id, site])),
       today: new Date().toISOString().slice(0, 10)
     }
+    console.log('org>>>', stored)
     return stored
       .map((organisation) => toOrganisation(organisation, context))
       .filter((organisation) => organisation !== null)

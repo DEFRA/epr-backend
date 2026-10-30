@@ -1,6 +1,9 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { randomUUID } from 'node:crypto'
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
@@ -59,14 +62,18 @@ export const buildAccreditationId = (overrides = {}) => ({
   ...overrides
 })
 
+let sequence = 0
 /**
  * @returns AccreditationNaturalKeyId
  */
-export const buildAccreditationNaturalKeyId = () => ({
-  orgId: String(createOrganisationBuilders().nextOrgId()),
-  registrationNumber: `REG-${Date.now()}`,
-  accreditationNumber: `ACC-${Date.now()}`
-})
+export const buildAccreditationNaturalKeyId = () => {
+  sequence += 1
+  return {
+    orgId: toOrganisationNumber(String(500000 + sequence)),
+    registrationNumber: toRegistrationNumber(`REG-${sequence}`),
+    accreditationNumber: toAccreditationNumber(`ACC-${sequence}`)
+  }
+}
 
 /**
  * Places a PRN under an accreditation, so that the ids the PRN carries agree
@@ -100,9 +107,7 @@ export const underAccreditationNaturalKey = (
   organisation: {
     id: `org-${randomUUID()}`,
     name: 'Test Organisation',
-    organisationNumber: toOrganisationNumber(
-      String(createOrganisationBuilders().nextOrgId())
-    )
+    organisationNumber: toOrganisationNumber(accreditationNaturalKeyId.orgId)
   },
   registration: {
     registrationNumber: accreditationNaturalKeyId.registrationNumber

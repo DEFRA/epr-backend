@@ -48,9 +48,6 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
  * @returns {(prn: Omit<PackagingRecyclingNote, 'id'>) => Promise<PackagingRecyclingNote>}
  */
 const performCreate = (storage) => async (prn) => {
-  // FIXME remove
-  console.log('prn :>> ', prn)
-
   const validated = validatePrnInsert(prn)
   const id = new ObjectId().toHexString()
   const prnWithId = { ...validated, id }
@@ -125,13 +122,13 @@ const performSumTonnageByAccreditation =
       if (excludeStatuses.includes(status)) {
         continue
       }
-      const id = {
-        organisationId: prn.organisation.id,
-        registrationId: prn.registrationId,
-        accreditationId: prn.accreditation.id
+      const naturalKeyId = {
+        orgId: prn.organisation.organisationNumber,
+        registrationNumber: prn.registration?.registrationNumber,
+        accreditationNumber: prn.accreditation.accreditationNumber
       }
-      const key = JSON.stringify(id)
-      const total = totals.get(key) ?? { id, tonnageByStatus: {} }
+      const key = JSON.stringify(naturalKeyId)
+      const total = totals.get(key) ?? { naturalKeyId, tonnageByStatus: {} }
       total.tonnageByStatus[status] =
         (total.tonnageByStatus[status] ?? 0) + prn.tonnage
       totals.set(key, total)

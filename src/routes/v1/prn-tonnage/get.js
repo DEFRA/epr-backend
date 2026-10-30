@@ -58,6 +58,7 @@ export const getPrnTonnage = {
 
       return h.response(result).code(StatusCodes.OK)
     } catch (error) {
+      console.log(error)
       logger.error({
         err: error,
         message: `Failure on ${prnTonnagePath}`,

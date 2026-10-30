@@ -1,18 +1,17 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildAccreditationId,
   buildAccreditationNaturalKeyId,
   buildAwaitingAcceptancePrn,
   buildCancelledPrn,
   buildDeletedPrn,
   buildDraftPrn,
-  underAccreditation,
   underAccreditationNaturalKey
 } from './test-data.js'
+import { randomUuid } from 'testcontainers'
 
+/** @import { TestAPI } from 'vitest' */
 /** @import { AccreditationNaturalKeyId, AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
-/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
 
 const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
 
@@ -21,20 +20,17 @@ const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
  * reads back only the accreditations it created.
  *
  * @param {AccreditationTonnage[]} totals
- * @param {RegistrationOrAccreditationId | AccreditationNaturalKeyId} id
+ * @param { AccreditationNaturalKeyId} id
  */
 const totalFor = (totals, id) =>
   totals.find(
     (total) =>
-      // FIXME sort this type out!
-      (total.id.organisationId === id.organisationId &&
-        total.id.registrationId === id.registrationId &&
-        total.id.accreditationId === id.accreditationId) ||
-      (total.naturalKeyId?.orgId === id.orgId &&
-        total.naturalKeyId?.registrationNumber === id.registrationNumber &&
-        total.naturalKeyId?.accreditationNumber === id.accreditationNumber)
+      total.naturalKeyId?.orgId === id.orgId &&
+      total.naturalKeyId?.registrationNumber === id.registrationNumber &&
+      total.naturalKeyId?.accreditationNumber === id.accreditationNumber
   )
 
+/** @param {TestAPI<{ prnRepository: PrnRepository }>} it */
 export const testSumTonnageByAccreditationBehaviour = (it) => {
   describe('sumTonnageByAccreditation', () => {
     /** @type {PrnRepository} */
@@ -50,12 +46,10 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
 
     it("totals an accreditation's tonnage by current status", async () => {
       const accreditation = buildAccreditationNaturalKeyId()
-      console.log('accreditation :>> ', accreditation)
 
       const newLocal = underAccreditationNaturalKey(accreditation, {
         tonnage: 10
       })
-      console.log('newLocal :>> ', newLocal)
       await repository.create(buildDraftPrn(newLocal))
       await repository.create(
         buildAwaitingAcceptancePrn(
@@ -91,12 +85,16 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('leaves out PRNs in an excluded status', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationNaturalKeyId()
       await repository.create(
-        buildDraftPrn(underAccreditation(accreditation, { tonnage: 10 }))
+        buildDraftPrn(
+          underAccreditationNaturalKey(accreditation, { tonnage: 10 })
+        )
       )
       await repository.create(
-        buildDeletedPrn(underAccreditation(accreditation, { tonnage: 99 }))
+        buildDeletedPrn(
+          underAccreditationNaturalKey(accreditation, { tonnage: 99 })
+        )
       )
 
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
@@ -107,9 +105,11 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('omits an accreditation whose PRNs are all excluded', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationNaturalKeyId()
       await repository.create(
-        buildDeletedPrn(underAccreditation(accreditation, { tonnage: 99 }))
+        buildDeletedPrn(
+          underAccreditationNaturalKey(accreditation, { tonnage: 99 })
+        )
       )
 
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
@@ -118,17 +118,17 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('keeps accreditations apart', async () => {
-      const first = buildAccreditationId()
-      const second = buildAccreditationId()
+      const first = buildAccreditationNaturalKeyId()
+      const second = buildAccreditationNaturalKeyId()
+
       await repository.create(
-        buildDraftPrn(underAccreditation(first, { tonnage: 10 }))
+        buildDraftPrn(underAccreditationNaturalKey(first, { tonnage: 10 }))
       )
       await repository.create(
-        buildDraftPrn(underAccreditation(second, { tonnage: 20 }))
+        buildDraftPrn(underAccreditationNaturalKey(second, { tonnage: 20 }))
       )
 
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
-
       expect(totalFor(totals, first)?.tonnageByStatus).toStrictEqual({
         [PRN_STATUS.DRAFT]: 10
       })
@@ -138,12 +138,13 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('keys on ids, not on the names a PRN snapshots', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationNaturalKeyId()
       await repository.create(
         buildDraftPrn(
-          underAccreditation(accreditation, {
+          underAccreditationNaturalKey(accreditation, {
             organisation: {
-              id: accreditation.organisationId,
+              id: randomUuid(),
+              organisationNumber: accreditation.orgId,
               name: 'Name when raised'
             },
             tonnage: 10
@@ -152,9 +153,10 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       )
       await repository.create(
         buildDraftPrn(
-          underAccreditation(accreditation, {
+          underAccreditationNaturalKey(accreditation, {
             organisation: {
-              id: accreditation.organisationId,
+              id: randomUuid(),
+              organisationNumber: accreditation.orgId,
               name: 'Name after a rename'
             },
             tonnage: 20

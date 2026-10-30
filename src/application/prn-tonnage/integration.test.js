@@ -21,6 +21,10 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -60,7 +64,14 @@ const withStatus = (currentStatus) => ({
 const prnWithStatus = (currentStatus, tonnage) =>
   buildPrn({
     registrationId,
-    organisation: { id: organisationId, name: 'Acme Reprocessing' },
+    registration: {
+      registrationNumber: toRegistrationNumber('REG-1')
+    },
+    organisation: {
+      id: organisationId,
+      organisationNumber: toOrganisationNumber(String(orgId)),
+      name: 'Acme Reprocessing'
+    },
     accreditation: buildAccreditation({
       id: accId,
       accreditationNumber: 'ACC-1',
