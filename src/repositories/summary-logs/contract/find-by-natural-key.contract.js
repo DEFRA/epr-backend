@@ -479,6 +479,19 @@ export const testFindByNaturalKey = (it) => {
         expect(result.map(({ id }) => id)).toEqual([ownId])
       })
 
+      it('finds only the year the key names', async () => {
+        const targetId = await insert(
+          summaryLogFactory.submitted({ ...registeredOnly, year: toYear(2026) })
+        )
+        await insert(
+          summaryLogFactory.submitted({ ...registeredOnly, year: toYear(2027) })
+        )
+
+        const result = await repo.findAll({ ...stored.key, year: toYear(2026) })
+
+        expect(result.map(({ id }) => id)).toEqual([targetId])
+      })
+
       it('finds only the accreditation the key names', async () => {
         await insert(summaryLogFactory.submitted(accredited(stored.previous)))
         const currentId = await insert(
