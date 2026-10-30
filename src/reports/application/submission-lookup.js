@@ -64,3 +64,16 @@ export function findReportIdBySubmissionNumber(
     )?.id ?? null
   )
 }
+
+/**
+ * Whether any submission is stored for the period.
+ * @param {PeriodicReport[]} periodicReports
+ * @param {Year} year
+ * @param {Cadence} cadence
+ * @param {number} period
+ * @returns {boolean}
+ */
+export function hasStoredSubmission(periodicReports, year, cadence, period) {
+  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
+  return Boolean(slot?.current) || (slot?.previousSubmissions?.length ?? 0) > 0
+}

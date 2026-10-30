@@ -755,7 +755,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(JSON.parse(response.payload).submissionNumber).toBe(2)
     })
 
-    it('returns 404 for submission 2 of a flagged period the registration no longer owes', async () => {
+    it('creates submission 2 of a flagged period the registration no longer owes', async () => {
       const { organisationId, registrationId, reportsRepositoryFactory, post } =
         await createServer({
           wasteProcessingType: 'exporter',
@@ -771,7 +771,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await post({ submissionNumber: 2 })
 
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {
