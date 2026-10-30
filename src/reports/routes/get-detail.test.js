@@ -92,7 +92,10 @@ const registeredOnlyExporter = () => ({ registration: exporter() })
 const accreditedReprocessor = () => {
   const accredited = accreditation({ validFrom: '2026-01-01' })
   return {
-    registration: reprocessor({ accreditationId: accredited.id }),
+    registration: reprocessor({
+      accreditationId: accredited.id,
+      validFrom: '2026-01-01'
+    }),
     accreditations: [accredited]
   }
 }
@@ -100,7 +103,10 @@ const accreditedReprocessor = () => {
 const accreditedExporter = () => {
   const accredited = exporterAccreditation({ validFrom: '2026-01-01' })
   return {
-    registration: exporter({ accreditationId: accredited.id }),
+    registration: exporter({
+      accreditationId: accredited.id,
+      validFrom: '2026-01-01'
+    }),
     accreditations: [accredited]
   }
 }
@@ -148,10 +154,10 @@ const createServer = async ({
     organisationId: org.id,
     registrationId: registration.id,
     reportsRepository: reportsRepositoryFactory(),
-    quarterly: (period = 1) =>
-      `${registrationPath}/reports/${YEAR}/quarterly/${period}/submissions/1`,
-    monthly: (period = 2) =>
-      `${registrationPath}/accreditations/${YEAR}/reports/monthly/${period}/submissions/1`
+    quarterly: (period = 1, { year = YEAR, submissionNumber = 1 } = {}) =>
+      `${registrationPath}/reports/${year}/quarterly/${period}/submissions/${submissionNumber}`,
+    monthly: (period = 2, { year = YEAR, submissionNumber = 1 } = {}) =>
+      `${registrationPath}/accreditations/${year}/reports/monthly/${period}/submissions/${submissionNumber}`
   }
 }
 
@@ -765,6 +771,44 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     })
   })
 
+  describe('a period the registration does not owe', () => {
+    it('returns 404 for a quarter that ended before the registration was approved', async () => {
+      const { server, quarterly } = await createServer({
+        registration: reprocessor({ validFrom: '2026-04-01' })
+      })
+
+      const { response } = await read(server, quarterly(1))
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a year the registration was not approved in', async () => {
+      const { server, quarterly } = await createServer(
+        registeredOnlyReprocessor()
+      )
+
+      const { response } = await read(
+        server,
+        quarterly(1, { year: toYear(2025) })
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a quarter that has not ended', async () => {
+      const { server, quarterly } = await createServer(
+        registeredOnlyReprocessor()
+      )
+
+      const { response } = await read(
+        server,
+        quarterly(1, { year: toYear(2099) })
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
   describe('stored report retrieval', () => {
     /**
      * @param {Awaited<ReturnType<typeof createServer>>} context
@@ -807,6 +851,31 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         dueDate: calendarDate('2026-04-20'),
         ...overrides
       })
+
+    it('returns a stored report for a period the registration no longer owes', async () => {
+      const context = await createServer({
+        registration: reprocessor({ validFrom: '2026-04-01' })
+      })
+      await storeReport(context)
+
+      const { response } = await read(context.server, context.quarterly(1))
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('previews the next submission of a period the registration no longer owes', async () => {
+      const context = await createServer({
+        registration: reprocessor({ validFrom: '2026-04-01' })
+      })
+      await submitReport(context)
+
+      const { response } = await read(
+        context.server,
+        context.quarterly(1, { submissionNumber: 2 })
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
 
     it('returns stored report with full data sections', async () => {
       const context = await createServer(registeredOnlyReprocessor())

@@ -1,3 +1,4 @@
+import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -152,6 +153,7 @@ const defaultParams = () => {
     ),
     period: 1,
     submissionNumber: 1,
+    requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2024)),
     overseasSitesRepository: createInMemoryOverseasSitesRepository()()
   }
 }
@@ -256,7 +258,28 @@ describe('report-service', () => {
       ).toEqual(['First Supplier'])
     })
 
-    it('returns stored report when one exists', async () => {
+    it('throws 404 period_not_required when no report is stored and the period is not owed', async () => {
+      const params = defaultParams()
+      const { ledgerRepository, summaryLogRowStatesRepository } =
+        await seedState(params, [])
+
+      await expect(
+        fetchOrGenerateReportForPeriod({
+          reportsRepository: createInMemoryReportsRepository()(),
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository: createPrnRepo(),
+          ...params,
+          requiredPeriods: []
+        })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 },
+        code: 'period_not_required'
+      })
+    })
+
+    it('returns stored report when one exists, owed or not', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
@@ -301,7 +324,8 @@ describe('report-service', () => {
         ledgerRepository,
         summaryLogRowStatesRepository,
         packagingRecyclingNotesRepository,
-        ...params
+        ...params,
+        requiredPeriods: []
       })
 
       const storedReport =
@@ -641,6 +665,35 @@ describe('report-service', () => {
           changedBy
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+    })
+
+    it('throws 404 period_not_required for a period not owed, storing nothing', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const params = defaultParams()
+      const { ledgerRepository, summaryLogRowStatesRepository } =
+        await seedState(params, [buildReceivedEntry()])
+
+      await expect(
+        createReportForPeriod({
+          reportsRepository,
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository: createPrnRepo(),
+          ...params,
+          requiredPeriods: [],
+          changedBy: { id: 'user-1', name: 'Alice', position: 'Officer' }
+        })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 },
+        code: 'period_not_required'
+      })
+      expect(
+        await reportsRepository.findPeriodicReports({
+          organisationId: params.organisationId,
+          registrationId: params.registrationId
+        })
+      ).toStrictEqual([])
     })
 
     it('throws badRequest for period that has not yet ended', async () => {
