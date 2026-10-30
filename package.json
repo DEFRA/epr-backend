@@ -41,7 +41,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": "^24.22.1"
+    "node": "^24.22.2"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
