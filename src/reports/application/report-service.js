@@ -5,6 +5,7 @@ import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-su
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
   assertResubmissionAllowed,
@@ -24,6 +25,7 @@ import {
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
@@ -181,6 +183,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
  * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
@@ -197,6 +200,7 @@ export async function fetchOrGenerateReportForPeriod({
   cadence,
   period,
   submissionNumber,
+  requiredPeriods,
   reportDataValidationEnabled
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
@@ -219,6 +223,8 @@ export async function fetchOrGenerateReportForPeriod({
   if (storedReport) {
     return buildStoredReportResult(storedReport, periodicReports)
   }
+
+  assertPeriodRequired(requiredPeriods, year, cadence, period)
 
   const operatorCategory = getOperatorCategory(registration)
 
@@ -246,14 +252,9 @@ export async function fetchOrGenerateReportForPeriod({
     latestSubmission
   })
 
-  // Attached on every generate-branch preview (any period without a stored
-  // report) regardless of period status: a not-yet-ended period resolves to a
-  // null period status yet still generates. The frontend controller redirects
-  // to the validation-error screen unconditionally on this signal, with no
-  // period-status check. What keeps a not-yet-ended period off that screen is
-  // the reports list upstream, which only offers a link into the generate
-  // branch for Due/Over Due (or requires-resubmission) periods, never a future
-  // one (PAE-1420).
+  // Attached on every generate-branch preview. The frontend controller
+  // redirects to the validation-error screen unconditionally on this signal;
+  // a not-yet-ended period never gets here, as it is not a required period.
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
     reportDataValidationEnabled,
     wasteRecordStates
@@ -486,6 +487,7 @@ function summariseIncompleteDataIfEnabled(
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
  * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
@@ -504,6 +506,7 @@ export async function createReportForPeriod({
   cadence,
   period,
   submissionNumber,
+  requiredPeriods,
   changedBy,
   reportDataValidationEnabled
 }) {
@@ -512,6 +515,8 @@ export async function createReportForPeriod({
     year,
     period
   )
+
+  assertPeriodRequired(requiredPeriods, year, cadence, period)
 
   await assertReportCreationAllowed({
     reportsRepository,
