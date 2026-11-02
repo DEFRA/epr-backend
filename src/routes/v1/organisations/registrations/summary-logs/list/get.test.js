@@ -16,7 +16,10 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -109,14 +112,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
             status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-            year: 2026
+            year: 2026,
+            accreditationNumber: null
           },
           {
             summaryLogId: submittedId,
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
             status: SUMMARY_LOG_STATUS.SUBMITTED,
-            year: 2026
+            year: 2026,
+            accreditationNumber: null
           }
         ]
       })
@@ -136,6 +141,46 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const [row] = JSON.parse(response.payload).summaryLogs
       expect(row).not.toHaveProperty('accreditationId')
+    })
+
+    it('includes the accreditation number for an accredited log', async () => {
+      await summaryLogsRepository.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationNumber,
+          registrationNumber,
+          accreditationId: 'acc-1',
+          accreditationNumber: toAccreditationNumber('A26ER5001180001PL')
+        })
+      )
+
+      const response = await list()
+
+      const [row] = JSON.parse(response.payload).summaryLogs
+      expect(row.accreditationNumber).toBe('A26ER5001180001PL')
+    })
+
+    it('returns only the logs for the year asked for', async () => {
+      const ids = {}
+      for (const year of [2025, 2026]) {
+        ids[year] = new ObjectId().toString()
+        await summaryLogsRepository.insert(
+          ids[year],
+          summaryLogFactory.submitted({
+            organisationNumber,
+            registrationNumber,
+            year: toYear(year)
+          })
+        )
+      }
+
+      const response = await list(`${url}?year=2025`)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { summaryLogs } = JSON.parse(response.payload)
+      expect(summaryLogs.map(({ summaryLogId }) => summaryLogId)).toEqual([
+        ids[2025]
+      ])
     })
 
     it('excludes intermediate statuses from the list', async () => {
@@ -244,6 +289,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
+
+    it.each(['abc', '2026.5', '1999'])(
+      'returns 422 for the year %s',
+      async (year) => {
+        const response = await list(`${url}?year=${year}`)
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
 
     it('returns 500 when repository throws', async () => {
       vi.spyOn(summaryLogsRepository, 'findAll').mockRejectedValue(

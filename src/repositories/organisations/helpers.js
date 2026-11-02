@@ -29,7 +29,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
@@ -325,9 +325,9 @@ export const prepareForReplace = (existing, updates) => {
  * is already active (unlinked and being re-linked) gets no new entry.
  *
  * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
- * @param {LinkedDefraOrganisation} linkedDefraOrganisation
+ * @param {StoredLinkedDefraOrganisation} linkedDefraOrganisation
  * @returns {{
- *   linkedDefraOrganisation: LinkedDefraOrganisation,
+ *   linkedDefraOrganisation: StoredLinkedDefraOrganisation,
  *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
  * }}
  */
@@ -373,7 +373,6 @@ export const escapeRegex = (string) =>
  */
 
 const INTEGER_PATTERN = /^\d+$/
-const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
 /**
  * @param {SearchCriteria} criteria
@@ -392,16 +391,11 @@ export const normaliseCriteria = ({
 })
 
 /**
- * The interpretations an orgId criterion parses into. Both can apply at once —
- * a 24-digit decimal string is a valid business orgId and a valid document id.
- *
  * @param {string} value
- * @returns {{ businessOrgId: number | null, documentId: string | null }}
+ * @returns {number | null} - the stored orgId, or null when the value is not a number
  */
-export const parseOrgIdCriterion = (value) => ({
-  businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
-  documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
-})
+export const parseOrgIdCriterion = (value) =>
+  INTEGER_PATTERN.test(value) ? Number(value) : null
 
 /**
  * The orgId an organisation is stored under.

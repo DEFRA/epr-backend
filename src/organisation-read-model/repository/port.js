@@ -27,7 +27,7 @@
 
 /**
  * @typedef {Object} OrganisationReadRepository
- * @property {(organisationNumber: OrganisationNumber) => Promise<Organisation | null>} findByOrganisationNumber
+ * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<Organisation | null>} findByOrganisationNumber - With `minimumVersion`, waits for that version of the stored organisation to be readable, and throws 500 if it never is
  * @property {(params: FindParams) => Promise<OrganisationPage>} find - Organisations matching every criterion, sorted by name, a page at a time
  */
 

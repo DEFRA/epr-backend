@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { badRequest, classifierTail, conflict, internal } from './cdp-boom.js'
+import {
+  badRequest,
+  classifierTail,
+  conflict,
+  internal,
+  notFound
+} from './cdp-boom.js'
 
 describe('cdp-boom', () => {
   describe('classifierTail', () => {
@@ -26,8 +32,9 @@ describe('cdp-boom', () => {
 
   describe('factories', () => {
     it.each(
-      /** @type {Array<{ name: 'badRequest' | 'conflict' | 'internal', factory: typeof badRequest, status: number }>} */ ([
+      /** @type {Array<{ name: 'badRequest' | 'notFound' | 'conflict' | 'internal', factory: typeof badRequest, status: number }>} */ ([
         { name: 'badRequest', factory: badRequest, status: 400 },
+        { name: 'notFound', factory: notFound, status: 404 },
         { name: 'conflict', factory: conflict, status: 409 },
         { name: 'internal', factory: internal, status: 500 }
       ])

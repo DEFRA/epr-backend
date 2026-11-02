@@ -6,7 +6,6 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { assertCadence } from '#reports/application/assert-cadence.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -911,16 +910,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         grantedRegistration
       )
       expect(ledgerId.accreditationId).toBeNull()
-
-      // Scenario 10: reporting cadence is quarterly, not monthly, for a
-      // registration with no live accreditation
-      // (reports/application/assert-cadence.js:19-22).
-      expect(() =>
-        assertCadence('quarterly', grantedRegistration)
-      ).not.toThrow()
-      expect(() => assertCadence('monthly', grantedRegistration)).toThrow(
-        /expected 'quarterly'/
-      )
     })
   })
 

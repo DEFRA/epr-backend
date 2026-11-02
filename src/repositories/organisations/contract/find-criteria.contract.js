@@ -264,14 +264,15 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(result.totalItems).toBe(1)
       })
 
-      it('finds the organisation whose document id is the orgId criterion', async () => {
+      it("finds nothing for an organisation's document id", async () => {
         const result = await repository.find({
           orgId: holder.id,
           page: 1,
           pageSize: 50
         })
 
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
+        expect(result.items).toEqual([])
+        expect(result.totalItems).toBe(0)
       })
 
       it('finds the organisation holding the registration number', async () => {
@@ -335,7 +336,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(mismatched.items).toEqual([])
       })
 
-      it('returns no results for an orgId that is neither a number nor a document id', async () => {
+      it('returns no results for an orgId that is not a number', async () => {
         const result = await repository.find({
           orgId: 'not-an-id',
           page: 1,

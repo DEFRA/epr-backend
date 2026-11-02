@@ -27,7 +27,8 @@ import {
   performUnlinkDefraOrganisation
 } from './mongodb.targeted-updates.js'
 
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 /** @import { WriteOperation } from './helpers.js' */
 
@@ -157,26 +158,47 @@ const performReplace = (db) => async (id, version, updates) => {
 }
 
 /**
- * @returns {(
- *   | { shouldReturn: true, result: ReturnType<typeof mapDocumentWithCurrentStatuses> }
- *   | { shouldReturn: false }
- * )}
+ * Reads the one organisation `filter` matches, retrying until its version is
+ * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
+ * null when no organisation matches, and throws 500 when the version never
+ * arrives.
+ *
+ * @param {Db} db
+ * @param {number} maxRetries
+ * @param {number} retryDelayMs
+ * @param {Filter<Document>} filter
+ * @param {number} [minimumVersion]
+ * @returns {Promise<Organisation | null>}
  */
-const handleFoundDocument = (doc, minimumVersion) => {
-  const mapped = mapDocumentWithCurrentStatuses(doc)
+const findOneAtMinimumVersion = async (
+  db,
+  maxRetries,
+  retryDelayMs,
+  filter,
+  minimumVersion
+) => {
+  for (let i = 0; i < maxRetries; i++) {
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
-  // No version expectation - return immediately
-  if (minimumVersion === undefined) {
-    return { shouldReturn: true, result: mapped }
+    const isLastRetry = i === maxRetries - 1
+
+    if (doc) {
+      if (minimumVersion === undefined || doc.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(doc)
+      }
+      // Document exists but version too low - will retry
+    } else if (minimumVersion === undefined || isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+    }
   }
 
-  // Version matches - return
-  if (mapped.version >= minimumVersion) {
-    return { shouldReturn: true, result: mapped }
-  }
-
-  // Version doesn't match yet - retry
-  return { shouldReturn: false }
+  throw Boom.internal('Consistency timeout waiting for minimum version')
 }
 
 const performFindById =
@@ -187,33 +209,17 @@ const performFindById =
     }
     const validatedId = validateId(id)
 
-    for (let i = 0; i < maxRetries; i++) {
-      const doc = await db
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
-      const isLastRetry = i === maxRetries - 1
-
-      if (doc) {
-        const outcome = handleFoundDocument(doc, minimumVersion)
-        if (outcome.shouldReturn) {
-          return outcome.result
-        }
-        // Document exists but version too low - will retry
-      } else if (minimumVersion === undefined || isLastRetry) {
-        throw Boom.notFound(`Organisation with id ${id} not found`)
-      } else {
-        // Document not found but have retries left - will retry
-      }
-
-      // Wait before next retry
-      if (!isLastRetry) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
-      }
+    const found = await findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { _id: ObjectId.createFromHexString(validatedId) },
+      minimumVersion
+    )
+    if (!found) {
+      throw Boom.notFound(`Organisation with id ${id} not found`)
     }
-
-    // Exhausted retries waiting for minimum version
-    throw Boom.internal('Consistency timeout waiting for minimum version')
+    return found
   }
 
 const performFindAll = (db) => async () => {
@@ -238,16 +244,8 @@ const anchoredCaseInsensitive = (value) => ({
  * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
  */
 const buildOrgIdFilter = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const branches = []
-  if (businessOrgId !== null) {
-    branches.push({ orgId: businessOrgId })
-  }
-  if (documentId !== null) {
-    branches.push({ _id: ObjectId.createFromHexString(documentId) })
-  }
-
-  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
+  const orgId = parseOrgIdCriterion(value)
+  return orgId === null ? UNSATISFIABLE_FILTER : { orgId }
 }
 
 /**
@@ -464,17 +462,15 @@ const findAllIds = (db) => async () => {
   )
 }
 
-const performFindByOrganisationNumber = (db) => async (organisationNumber) => {
-  const doc = await db
-    .collection(COLLECTION_NAME)
-    .findOne({ orgId: storedOrgId(organisationNumber) })
-
-  if (!doc) {
-    return null
-  }
-
-  return mapDocumentWithCurrentStatuses(doc)
-}
+const performFindByOrganisationNumber =
+  (db, maxRetries, retryDelayMs) => (organisationNumber, minimumVersion) =>
+    findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { orgId: storedOrgId(organisationNumber) },
+      minimumVersion
+    )
 
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
@@ -571,7 +567,11 @@ export const createOrganisationsRepository = async (
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
-      findByOrganisationNumber: performFindByOrganisationNumber(db),
+      findByOrganisationNumber: performFindByOrganisationNumber(
+        db,
+        maxRetries,
+        retryDelayMs
+      ),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }
