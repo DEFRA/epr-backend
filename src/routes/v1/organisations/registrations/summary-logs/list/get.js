@@ -32,7 +32,7 @@ export const summaryLogsList = {
     tags: ['api', 'admin'],
     validate: {
       params: Joi.object(registrationParams),
-      query: Joi.object({ year: yearSchema().optional() })
+      query: Joi.object({ year: yearSchema().required() })
     },
     response: {
       schema: summaryLogsListResponseSchema
@@ -41,7 +41,7 @@ export const summaryLogsList = {
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
-   *   query: { year?: Year },
+   *   query: { year: Year },
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
@@ -68,7 +68,7 @@ export const summaryLogsList = {
       const summaryLogs = await summaryLogsRepository.findAll({
         organisationNumber,
         registrationNumber,
-        ...(year !== undefined && { year })
+        year
       })
 
       const summaryLogList = summaryLogs.map(({ id, summaryLog }) => ({
