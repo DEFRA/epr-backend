@@ -13,7 +13,7 @@ import {
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { OrganisationParams, RegistrationParams } from './view-route.js'
+ * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
  *
  * @typedef {{
  *   method: string,
