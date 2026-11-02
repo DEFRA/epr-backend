@@ -67,6 +67,13 @@ const organisation = buildOrganisation({
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
 
+const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
+const otherOrganisation = buildOrganisation({
+  registrations: [
+    reprocessor({ registrationNumber: OTHER_ORGANISATION_REGISTRATION_NUMBER })
+  ]
+})
+
 const streams = [
   {
     stream: 'registered-only',
@@ -150,7 +157,8 @@ describe('report routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
+          partialMock(organisation),
+          partialMock(otherOrganisation)
         ]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -808,6 +816,28 @@ describe('report routes by natural key', () => {
       const response = await server.inject(calendar(REPROCESSOR_NUMBER, 1999))
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 404 for a registration that belongs to another organisation', async () => {
+      const underItsOwner = await server.inject({
+        ...calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER),
+        url: `/organisations/${otherOrganisation.orgId}/registrations/${OTHER_ORGANISATION_REGISTRATION_NUMBER}/reports/${YEAR}/calendar`
+      })
+      const underAnother = await server.inject(
+        calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER)
+      )
+      const registrationDoesNotExist = await server.inject(
+        calendar('made-up-reg-number')
+      )
+
+      expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
+      expect(underAnother.statusCode).toBe(StatusCodes.NOT_FOUND)
+
+      expect(JSON.parse(underAnother.payload).message).toBe(
+        'Registration not found'
+      )
+
+      expect(registrationDoesNotExist.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 

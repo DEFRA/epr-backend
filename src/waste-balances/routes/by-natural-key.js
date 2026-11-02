@@ -3,7 +3,9 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
@@ -12,7 +14,6 @@ import {
   organisationPath,
   registrationParams,
   registrationPath,
-  registrationYears,
   servedRegistrations
 } from '#routes/organisations/natural-keys.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
@@ -23,6 +24,7 @@ import { wasteBalanceSchema } from './response.schema.js'
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
@@ -72,12 +74,30 @@ const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest & { app: Required<ResolvedRecords>, params: { year: Year } }} request
+   * @param {LedgerRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { year } = request.params
-    if (!registrationYears(request.app.registration).includes(year)) {
+    const { organisationNumber, registrationNumber, year } = request.params
+
+    /**
+     * Route only reached when
+     * - {organisationNumber} exists
+     * - {registrationNumber} exists and belongs to {organisationNumber}
+     * else atNaturalKeys wrapper generates 404 response
+     */
+    const organisation = /** @type {Organisation} */ (
+      await request.organisationReadRepository.findByOrganisationNumber(
+        organisationNumber
+      )
+    )
+    const { status } = organisation.registrations[registrationNumber]
+
+    if (
+      !approvedYears(status.timeline, utcCalendarDate(new Date())).includes(
+        year
+      )
+    ) {
       throw Boom.notFound('Year not found')
     }
     const events = await readLedgerEvents(request)

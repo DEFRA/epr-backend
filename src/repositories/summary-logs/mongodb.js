@@ -7,6 +7,7 @@ import {
   SUMMARY_LOG_FAILURE_STATUS,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
+import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
@@ -164,6 +165,23 @@ const WITHOUT_NUMBERS = {
     {
       accreditationId: { $exists: true },
       accreditationNumber: { $exists: false }
+    }
+  ]
+}
+
+/** @param {string} field */
+const isPresent = (field) => ({ $ne: [{ $type: field }, 'missing'] })
+
+/** The aggregation form of `holdsNumbers`. */
+const HOLDS_NUMBERS = {
+  $and: [
+    isPresent('$organisationNumber'),
+    isPresent('$registrationNumber'),
+    {
+      $or: [
+        { $not: [isPresent('$accreditationId')] },
+        isPresent('$accreditationNumber')
+      ]
     }
   ]
 }
@@ -429,7 +447,12 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   const submitting = { ...submitted, version: { $add: ['$version', 1] } }
   const whenValidated = {
     $cond: [
-      { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
+      {
+        $and: [
+          { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
+          HOLDS_NUMBERS
+        ]
+      },
       { $mergeObjects: ['$$ROOT', submitting] },
       '$$ROOT'
     ]
@@ -465,6 +488,10 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 
   const { _id, version, ...summaryLog } = before
+  if (!holdsNumbers(summaryLog)) {
+    throw new Error(`Summary log ${validatedId} is missing one of its numbers`)
+  }
+
   return {
     success: true,
     summaryLog: normaliseStoredSummaryLog({ ...summaryLog, ...submitted }),

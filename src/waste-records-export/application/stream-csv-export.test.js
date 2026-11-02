@@ -17,6 +17,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
@@ -172,7 +173,7 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  *   summaryLogs?: Record<string, any[]>,
  *   sites?: OverseasSite[],
  *   organisation?: any,
- *   registrationId?: string
+ *   registrationNumber?: RegistrationNumber
  * }} [options]
  */
 const buildDeps = async ({
@@ -181,7 +182,7 @@ const buildDeps = async ({
   summaryLogs = {},
   sites = [],
   organisation,
-  registrationId
+  registrationNumber
 } = {}) => {
   const ledgerEvents = seeds.map((seed) =>
     buildLedgerEvent({
@@ -229,7 +230,7 @@ const buildDeps = async ({
       findAll: async () => sites
     },
     organisation,
-    registrationId
+    registrationNumber
   }
 }
 
@@ -1155,12 +1156,12 @@ describe('streamCsvExport', () => {
     expect(out[1]).toContain('Scoped Org')
   })
 
-  it('exports only the requested registration when scoped by registrationId', async () => {
+  it('exports only the requested registration when scoped by registrationNumber', async () => {
     const org = baseOrg({
       id: 'org-scoped',
       registrations: [
-        baseRegistration({ id: 'reg-1' }),
-        baseRegistration({ id: 'reg-2' })
+        baseRegistration({ id: 'reg-1', registrationNumber: 'R26-1' }),
+        baseRegistration({ id: 'reg-2', registrationNumber: 'R26-2' })
       ]
     })
     const deps = await buildDeps({
@@ -1180,7 +1181,7 @@ describe('streamCsvExport', () => {
         }
       ],
       organisation: org,
-      registrationId: 'reg-2'
+      registrationNumber: /** @type {RegistrationNumber} */ ('R26-2')
     })
 
     const out = await collect(streamCsvExport(deps))
