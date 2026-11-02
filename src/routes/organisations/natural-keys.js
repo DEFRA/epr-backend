@@ -7,13 +7,10 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
-import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import {
   servesOrganisation,
   toAccreditationEntry,
-  toRegistrationEntry,
-  toStatusTimeline
+  toRegistrationEntry
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
@@ -142,19 +139,6 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
       toRegistrationEntry(candidate, organisation, lookupContext()) !== null
   )
   return served.length === 1 ? served[0] : null
-}
-
-/**
- * The years the registration was approved in, up to this year.
- *
- * @param {Registration} registration
- * @returns {Year[]}
- */
-export function registrationYears(registration) {
-  return approvedYears(
-    toStatusTimeline(registration.statusHistory, registration.validFrom),
-    utcCalendarDate(new Date())
-  )
 }
 
 /**
