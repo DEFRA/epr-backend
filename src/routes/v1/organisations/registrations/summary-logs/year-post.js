@@ -9,9 +9,9 @@ import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
 /**
  * @typedef {{redirectUrl: string}} SummaryLogsYearCreatePayload
@@ -32,23 +32,37 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: { organisationId: string, registrationId: string, year: Year },
-   *   app: ResolvedRecords & {
-   *     registration: Registration,
-   *     summaryLogCallbackUrl: (summaryLogId: string) => string
-   *   },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
+   *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const { uploadsRepository, params, payload, logger } = request
-    const { organisationId, registrationId, year } = params
+    const {
+      organisationId,
+      organisationNumber,
+      registrationId,
+      registrationNumber,
+      year
+    } = params
     const { redirectUrl } = payload
-    const { registration } = request.app
+
+    /**
+     * Route only reached when
+     * - {organisationNumber} exists
+     * - {registrationNumber} exists and belongs to {organisationNumber}
+     * else atNaturalKeys wrapper generates 404 response
+     */
+    const organisation = /** @type {Organisation} */ (
+      await request.organisationReadRepository.findByOrganisationNumber(
+        organisationNumber
+      )
+    )
 
     const eligibility = checkSummaryLogUploadEligibility({
-      registration,
+      registration: organisation.registrations[registrationNumber],
       year
     })
 
