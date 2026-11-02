@@ -7,6 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { summaryLogSubmitResponseSchema } from '../response.schema.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -20,6 +21,25 @@ import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.j
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 const FAILURE_MESSAGE = 'Failure submitting summary log'
+
+/**
+ * Supersession reads the registration's summary logs by this one's numbers, so
+ * a log missing one is refused while it is still validated rather than left
+ * stranded in submitting. Any other status is left for the transition to
+ * refuse.
+ *
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {string} summaryLogId
+ */
+const refuseWithoutNumbers = async (summaryLogsRepository, summaryLogId) => {
+  const existing = await summaryLogsRepository.findById(summaryLogId)
+  if (
+    existing?.summaryLog.status === SUMMARY_LOG_STATUS.VALIDATED &&
+    !holdsNumbers(existing.summaryLog)
+  ) {
+    throw new Error(`Summary log ${summaryLogId} is missing one of its numbers`)
+  }
+}
 
 export const summaryLogsSubmit = {
   method: 'POST',
@@ -45,6 +65,8 @@ export const summaryLogsSubmit = {
     const { summaryLogId, organisationId, registrationId } = params
 
     try {
+      await refuseWithoutNumbers(summaryLogsRepository, summaryLogId)
+
       // Atomically transition to submitting - fails if another submission in progress
       const result =
         await summaryLogsRepository.transitionToSubmittingExclusive(
