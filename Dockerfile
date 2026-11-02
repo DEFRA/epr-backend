@@ -1,4 +1,4 @@
-ARG PARENT_VERSION=3.2.4-node24.22.1
+ARG PARENT_VERSION=3.2.4-node26.12.1
 ARG PORT=3000
 ARG PORT_DEBUG=9229
 
@@ -35,5 +35,8 @@ RUN npm ci --ignore-scripts --omit=dev
 ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
+
+# swagger-ui-dist probes localStorage on load; under Node 26 that writes an ExperimentalWarning to stderr, which CDP logs as an error
+ENV NODE_OPTIONS=--no-webstorage
 
 CMD [ "node", "src" ]

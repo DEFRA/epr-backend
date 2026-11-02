@@ -41,6 +41,16 @@ export const badRequest = (message, code, enrichment) =>
   enrich(Boom.badRequest(message), code, enrichment)
 
 /**
+ * Builds a 404 Boom enriched with CDP-indexed `code` and `event` fields.
+ *
+ * @param {string} message
+ * @param {string} code
+ * @param {CdpBoomEnrichment} enrichment
+ */
+export const notFound = (message, code, enrichment) =>
+  enrich(Boom.notFound(message), code, enrichment)
+
+/**
  * Builds a 409 Boom enriched with CDP-indexed `code` and `event` fields.
  *
  * @param {string} message

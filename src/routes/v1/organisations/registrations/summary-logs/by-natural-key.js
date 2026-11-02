@@ -7,7 +7,7 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { summaryLogDocument } from './document/get.js'
 import { summaryLogFile, summaryLogFileByFileId } from './file/get.js'
 import { summaryLogsGet } from './get.js'

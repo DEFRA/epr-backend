@@ -3,7 +3,6 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { assertPresent } from '#test/type-helpers.js'
 import { describe, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @import { Db } from 'mongodb'
@@ -95,31 +94,6 @@ const buildOrganisation = (overrides = {}) => {
 }
 
 describe('Organisations repository - ORS operations', () => {
-  describe('findByOrganisationNumber', () => {
-    it('finds an organisation by its business orgId', async ({
-      repository,
-      database
-    }) => {
-      const org = buildOrganisation({ orgId: 500042 })
-      await database.collection(COLLECTION_NAME).insertOne(org)
-
-      const found = await repository.findByOrganisationNumber(
-        toOrganisationNumber('500042')
-      )
-      assertPresent(found)
-
-      expect(found.orgId).toBe(500042)
-      expect(found.id).toBe(org._id.toHexString())
-    })
-
-    it('returns null when orgId does not exist', async ({ repository }) => {
-      const found = await repository.findByOrganisationNumber(
-        toOrganisationNumber('999999')
-      )
-      expect(found).toBeNull()
-    })
-  })
-
   describe('replaceRegistrationOverseasSites', () => {
     it('sets entries on the overseas sites map', async ({
       repository,

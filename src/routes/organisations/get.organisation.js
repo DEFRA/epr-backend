@@ -1,10 +1,16 @@
+import Boom from '@hapi/boom'
+import Joi from 'joi'
+import { StatusCodes } from 'http-status-codes'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { organisationInYear } from '#organisation-read-model/domain/years.js'
 import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
+import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
-import { organisationPath, viewRoute } from './view-route.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
@@ -56,7 +62,7 @@ const registrationsAt = (registrations, now) =>
  * @param {Organisation} organisation
  * @param {OrganisationQuery} query
  */
-const organisationFor = (organisation, { year }) => {
+export const organisationFor = (organisation, { year }) => {
   const now = new Date()
   const inYear =
     year === undefined
@@ -69,9 +75,41 @@ const organisationFor = (organisation, { year }) => {
   }
 }
 
-export const organisationViewGet = viewRoute(
-  organisationPath,
-  organisationViewSchema,
-  organisationFor,
-  organisationQuery
-)
+export const organisationViewGet = {
+  method: 'GET',
+  path: organisationPath,
+  options: {
+    auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
+    tags: ['api'],
+    validate: {
+      params: Joi.object(organisationParams),
+      query: Joi.object(organisationQuery)
+    },
+    response: {
+      schema: organisationViewSchema,
+      modify: true,
+      options: { stripUnknown: true }
+    }
+  },
+  /**
+   *
+   * @param {HapiRequest & {
+   *   query: OrganisationQuery,
+   *   params: { organisationNumber: OrganisationNumber }
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const organisation =
+      await request.organisationReadRepository.findByOrganisationNumber(
+        request.params.organisationNumber
+      )
+    if (!organisation) {
+      throw Boom.notFound('Organisation not found')
+    }
+
+    return h
+      .response(organisationFor(organisation, request.query))
+      .code(StatusCodes.OK)
+  }
+}

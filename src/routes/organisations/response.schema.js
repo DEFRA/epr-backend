@@ -180,6 +180,14 @@ export const organisationViewSchema = Joi.object({
   submittedToRegulator: regulatorSchema
 })
 
+export const organisationListResponseSchema = Joi.object({
+  items: Joi.array().items(organisationViewSchema).required(),
+  page: Joi.number().required(),
+  pageSize: Joi.number().required(),
+  totalItems: Joi.number().required(),
+  totalPages: Joi.number().required()
+})
+
 const servedYear = yearSchema().custom((year, helpers) =>
   isFutureYear(year) ? helpers.error('any.invalid') : year
 )

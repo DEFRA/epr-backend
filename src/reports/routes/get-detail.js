@@ -1,7 +1,11 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
+import {
+  findRegistrationForReport,
+  requiredPeriodsFor,
+  withRegistrationDetails
+} from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -16,6 +20,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
  */
 
 /**
@@ -62,7 +67,8 @@ export const reportsGetDetail = {
     }
   },
   /**
-   * @param {HapiRequest & {
+   * @param {Omit<HapiRequest, 'app'> & {
+   *   app: ResolvedRecords,
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -81,7 +87,8 @@ export const reportsGetDetail = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      params
+      params,
+      app
     } = request
     const {
       organisationId,
@@ -110,6 +117,7 @@ export const reportsGetDetail = {
       cadence,
       period,
       submissionNumber,
+      requiredPeriods: requiredPeriodsFor(app, params),
       reportDataValidationEnabled: request.config.get(
         'featureFlags.reportDataValidation'
       )

@@ -5,12 +5,12 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { atNaturalKeys } from './at-natural-keys.js'
+import { organisationParams, registrationParams } from './natural-keys.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { organisationParams, registrationParams } from './view-route.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

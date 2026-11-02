@@ -59,6 +59,25 @@ describe('GET /v1/organisations/{id}', () => {
       expect(result.orgId).toBe(org1.orgId)
     })
 
+    it('returns the organisation found by its organisation number', async () => {
+      const org1 = buildOrganisation()
+      const org2 = buildOrganisation()
+
+      await organisationsRepository.insert(org1)
+      await organisationsRepository.insert(org2)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${org2.orgId}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).id).toBe(org2.id)
+    })
+
     it('includes Cache-Control header in successful response', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)
@@ -116,6 +135,18 @@ describe('GET /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a key that is neither a database id nor an organisation number', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations/not-a-key',
         headers: {
           Authorization: `Bearer ${validToken}`
         }

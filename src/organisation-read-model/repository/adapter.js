@@ -14,7 +14,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Address, LinkedDefraOrganisation as StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -45,28 +45,54 @@ export const createOrganisationReadRepository = ({
   organisationsRepository,
   overseasSitesRepository,
   logger
-}) => ({
-  findByOrganisationNumber: async (organisationNumber) => {
-    const stored =
-      await organisationsRepository.findByOrganisationNumber(organisationNumber)
-    if (!stored) {
-      return null
-    }
-
-    const siteIds = stored.registrations.flatMap((registration) =>
-      Object.values(registration.overseasSites ?? {}).map(
-        ({ overseasSiteId }) => overseasSiteId
+}) => {
+  /**
+   * @param {StoredOrganisation[]} stored
+   * @returns {Promise<Organisation[]>}
+   */
+  const toOrganisations = async (stored) => {
+    const siteIds = stored.flatMap(({ registrations }) =>
+      registrations.flatMap((registration) =>
+        Object.values(registration.overseasSites ?? {}).map(
+          ({ overseasSiteId }) => overseasSiteId
+        )
       )
     )
     const sites = await overseasSitesRepository.findByIds(siteIds)
 
-    return toOrganisation(stored, {
+    /** @type {Context} */
+    const context = {
       onDrop: (message) => logger.warn({ message }),
       overseasSitesById: new Map(sites.map((site) => [site.id, site])),
       today: new Date().toISOString().slice(0, 10)
-    })
+    }
+    return stored
+      .map((organisation) => toOrganisation(organisation, context))
+      .filter((organisation) => organisation !== null)
   }
-})
+
+  return {
+    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
+      const stored = await organisationsRepository.findByOrganisationNumber(
+        organisationNumber,
+        minimumVersion
+      )
+      if (!stored) {
+        return null
+      }
+      const [organisation] = await toOrganisations([stored])
+      return organisation ?? null
+    },
+
+    find: async ({ organisationNumber, ...params }) => {
+      const { items, ...page } = await organisationsRepository.find({
+        ...params,
+        orgId: organisationNumber
+      })
+      return { ...page, items: await toOrganisations(items) }
+    }
+  }
+}
 
 /**
  * @param {StoredOrganisation} stored
@@ -135,7 +161,7 @@ function toOrganisation(stored, context) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-export function toLinkedDefraOrganisation(linked) {
+function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),
