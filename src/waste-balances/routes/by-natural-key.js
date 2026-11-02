@@ -6,17 +6,15 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
-  accreditationsForYear,
-  registrationYears,
-  servedRegistrations
-} from '#routes/organisations/natural-keys.js'
-import {
   accreditationPath,
+  accreditationsForYear,
   organisationParams,
   organisationPath,
   registrationParams,
-  registrationPath
-} from '#routes/organisations/view-route.js'
+  registrationPath,
+  registrationYears,
+  servedRegistrations
+} from '#routes/organisations/natural-keys.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import { toBalanceBody } from './balance-body.js'

@@ -15,6 +15,7 @@ import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
@@ -36,7 +37,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
  * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  * @property {Organisation} [organisation] - When set, export only this organisation.
- * @property {string} [registrationId] - When set (with organisation), export only this registration.
+ * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -279,7 +280,7 @@ export async function* streamCsvExport(deps) {
     summaryLogsRepository,
     overseasSitesRepository,
     organisation,
-    registrationId
+    registrationNumber
   } = deps
 
   const [allSites, observedKeys, latestSubmittedEntries] = await Promise.all([
@@ -299,7 +300,10 @@ export async function* streamCsvExport(deps) {
     : await findExportableOrgs(organisationsRepository)
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])]
-      .filter((reg) => !registrationId || reg.id === registrationId)
+      .filter(
+        (reg) =>
+          !registrationNumber || reg.registrationNumber === registrationNumber
+      )
       .sort(sortById)
     for (const registration of registrations) {
       yield* streamRegistrationRows({
