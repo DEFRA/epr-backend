@@ -167,13 +167,15 @@ export const UNIQUE_NUMBER_FIELDS = [
 
 /** @typedef {'inserting' | 'updating'} WriteOperation */
 
+/** @typedef {{ label: string, number: string }} HeldNumber */
+
 /**
  * @param {{
  *   operation: WriteOperation,
  *   id: string,
  *   conflictFields: string,
  *   reason: string,
- *   heldNumber?: { label: string, number: string }
+ *   heldNumber?: HeldNumber
  * }} params
  */
 export const duplicateKeyConflict = ({

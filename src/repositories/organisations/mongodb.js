@@ -30,7 +30,7 @@ import {
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
-/** @import { WriteOperation } from './helpers.js' */
+/** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -110,7 +110,7 @@ const performInsert = (db) => async (organisation) => {
 
 /**
  * @param {{ keyValue?: Record<string, unknown> }} error
- * @returns {{ label: string, number: string } | undefined}
+ * @returns {HeldNumber | undefined}
  */
 const heldNumberOf = ({ keyValue }) => {
   for (const { items, field, label } of UNIQUE_NUMBER_FIELDS) {

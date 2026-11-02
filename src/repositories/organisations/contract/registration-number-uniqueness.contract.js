@@ -58,6 +58,7 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
       expect(result.registrations[1].registrationNumber).toBeNull()
     })
 
+    /** @param {string} number */
     const refusalHeldElsewhere = (number) => ({
       isBoom: true,
       output: {

@@ -58,6 +58,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       expect(result.accreditations[1].accreditationNumber).toBeNull()
     })
 
+    /** @param {string} number */
     const refusalHeldElsewhere = (number) => ({
       isBoom: true,
       output: {
