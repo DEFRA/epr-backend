@@ -58,22 +58,22 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
       expect(result.registrations[1].registrationNumber).toBeNull()
     })
 
-    const refusalHeldElsewhere = {
+    const refusalHeldElsewhere = (number) => ({
       isBoom: true,
       output: {
         statusCode: 409,
         payload: {
-          message: expect.stringContaining('registrations.registrationNumber')
+          message: `Registration number ${number} is already held by another organisation`
         }
       }
-    }
+    })
 
     it('refuses to insert an organisation whose registration number another organisation holds', async () => {
       await repository.insert(organisationWithNumbers('REG100001'))
 
       await expect(
         repository.insert(organisationWithNumbers('REG100001'))
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100001'))
     })
 
     it('refuses to insert a number another organisation holds in another spelling', async () => {
@@ -81,7 +81,7 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
 
       await expect(
         repository.insert(organisationWithNumbers(' reg100008 '))
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100008'))
     })
 
     it('refuses to give a registration a number another organisation holds', async () => {
@@ -103,7 +103,7 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
             ]
           })
         )
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100002'))
     })
 
     it('refuses an organisation holding the same registration number twice', async () => {

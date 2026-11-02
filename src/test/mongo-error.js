@@ -3,11 +3,12 @@
  * @property {number | string} [code]
  * @property {string} [codeName]
  * @property {Record<string, number>} [keyPattern]
+ * @property {Record<string, unknown>} [keyValue]
  */
 
 /**
  * Builds an `Error` carrying the MongoDB driver error fields the repositories
- * read (`code`, `codeName`, `keyPattern`). The driver attaches these at
+ * read (`code`, `codeName`, `keyPattern`, `keyValue`). The driver attaches these at
  * runtime, so tests fake them here without weakening the repository types.
  *
  * @param {string} message

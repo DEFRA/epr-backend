@@ -58,22 +58,22 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       expect(result.accreditations[1].accreditationNumber).toBeNull()
     })
 
-    const refusalHeldElsewhere = {
+    const refusalHeldElsewhere = (number) => ({
       isBoom: true,
       output: {
         statusCode: 409,
         payload: {
-          message: expect.stringContaining('accreditations.accreditationNumber')
+          message: `Accreditation number ${number} is already held by another organisation`
         }
       }
-    }
+    })
 
     it('refuses to insert an organisation whose accreditation number another organisation holds', async () => {
       await repository.insert(organisationWithNumbers('ACC100001'))
 
       await expect(
         repository.insert(organisationWithNumbers('ACC100001'))
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100001'))
     })
 
     it('refuses to insert a number another organisation holds in another spelling', async () => {
@@ -81,7 +81,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
 
       await expect(
         repository.insert(organisationWithNumbers(' acc100008 '))
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100008'))
     })
 
     it('refuses to give an accreditation a number another organisation holds', async () => {
@@ -103,7 +103,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
             ]
           })
         )
-      ).rejects.toMatchObject(refusalHeldElsewhere)
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100002'))
     })
 
     it('refuses an organisation holding the same accreditation number twice', async () => {

@@ -109,7 +109,21 @@ const performInsert = (db) => async (organisation) => {
 }
 
 /**
- * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
+ * @param {{ keyValue?: Record<string, unknown> }} error
+ * @returns {{ label: string, number: string } | undefined}
+ */
+const heldNumberOf = ({ keyValue }) => {
+  for (const { items, field, label } of UNIQUE_NUMBER_FIELDS) {
+    const number = keyValue?.[`${items}.${field}`]
+    if (typeof number === 'string') {
+      return { label, number }
+    }
+  }
+  return undefined
+}
+
+/**
+ * @param {Error & { code: number, keyPattern?: Record<string, number>, keyValue?: Record<string, unknown> }} error
  * @param {string} id
  * @param {WriteOperation} operation
  * @returns {never}
@@ -123,7 +137,8 @@ const throwCuratedDuplicateKeyBoom = (error, id, operation) => {
     operation,
     id,
     conflictFields,
-    reason: `fields=${conflictFields} ${classifierTail(error)}`
+    reason: `fields=${conflictFields} ${classifierTail(error)}`,
+    heldNumber: heldNumberOf(error)
   })
 }
 
