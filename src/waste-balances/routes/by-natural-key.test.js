@@ -81,20 +81,6 @@ const sharedNumberOrganisation = buildOrganisation({
   ]
 })
 
-const OTHER_ORGANISATION_NUMBER = 'R26ER5001180098PL'
-const otherOrganisation = buildOrganisation({
-  registrations: [
-    reprocessor({
-      registrationNumber: OTHER_ORGANISATION_NUMBER,
-      validFrom: '2024-02-01',
-      statusHistory: [
-        { status: 'created', updatedAt: '2024-01-01T09:00:00.000Z' },
-        { status: 'approved', updatedAt: '2024-02-01T09:00:00.000Z' }
-      ]
-    })
-  ]
-})
-
 const registrations = `/organisations/${organisation.orgId}/registrations`
 const registeredOnlyLedger = (year) =>
   `${registrations}/${REGISTERED_ONLY_NUMBER}/ledger/${year}`
@@ -138,8 +124,7 @@ describe('ledger and waste balance routes by natural key', () => {
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(organisation),
-          partialMock(sharedNumberOrganisation),
-          partialMock(otherOrganisation)
+          partialMock(sharedNumberOrganisation)
         ]),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([issuedNote], [])
@@ -217,11 +202,9 @@ describe('ledger and waste balance routes by natural key', () => {
     })
 
     it('returns 404 for a registration that belongs to another organisation', async () => {
-      const underItsOwner = await get(
-        `/organisations/${otherOrganisation.orgId}/registrations/${OTHER_ORGANISATION_NUMBER}/ledger/2026`
-      )
+      const underItsOwner = await get(registeredOnlyLedger(2026))
       const underAnother = await get(
-        `${registrations}/${OTHER_ORGANISATION_NUMBER}/ledger/2026`
+        `/organisations/${sharedNumberOrganisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
