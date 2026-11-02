@@ -5,11 +5,10 @@ import {
 } from '#common/enums/index.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 const downloadAuth = {
   auth: {
@@ -22,21 +21,14 @@ const downloadAuth = {
  * @param {(repository: SummaryLogsRepository, id: string, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
  * @param {(params: Record<string, string>) => string} idOf
  * @returns {(request: HapiRequest & {
- *   params: Record<string, string>,
- *   app: { registration: Registration },
- *   summaryLogsRepository: SummaryLogsRepository,
- *   systemLogsRepository: SystemLogsRepository
- * }, h: Object) => Promise<Object>}
+ *   params: Record<string, string> & RegistrationParams,
+ *   summaryLogsRepository: SummaryLogsRepository
+ * }, h: HapiResponseToolkit) => Promise<HapiResponseObject>}
  */
 const serveFile = (sign, idOf) => async (request, h) => {
   const { summaryLogsRepository, logger } = request
-  const { organisationId, registrationId } = request.params
+  const { organisationId, registrationId, registrationNumber } = request.params
   const id = idOf(request.params)
-
-  // The path named the registration by its number, so it has one.
-  const registrationNumber = /** @type {RegistrationNumber} */ (
-    request.app.registration.registrationNumber
-  )
 
   const { url } = await sign(summaryLogsRepository, id, registrationNumber)
 

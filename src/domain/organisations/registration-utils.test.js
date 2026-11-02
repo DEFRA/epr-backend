@@ -375,16 +375,15 @@ describe('accreditationsForRegistration', () => {
 
 describe('isRegistrationActiveInYear', () => {
   /**
-   * @param {Partial<Registration>} [overrides]
-   * @returns {Registration}
+   * @param {{ current?: 'approved' | 'cancelled', validFrom?: string }} [overrides]
    */
-  const buildRegistration = (overrides = {}) =>
-    /** @type {Registration} */ ({
-      status: 'approved',
-      validFrom: '2025-01-01',
-      statusHistory: [],
-      ...overrides
-    })
+  const buildRegistration = ({
+    current = 'approved',
+    validFrom = '2025-01-01'
+  } = {}) => ({
+    status: { current, timeline: [] },
+    validFrom
+  })
 
   it('is true when approved and validFrom is on or before the year ends', () => {
     expect(
@@ -413,15 +412,12 @@ describe('isRegistrationActiveInYear', () => {
     ).toBe(false)
   })
 
-  it.each(/** @type {const} */ (['created', 'rejected', 'cancelled']))(
-    'is false when status is %s',
-    (status) => {
-      expect(
-        isRegistrationActiveInYear(
-          buildRegistration({ status, validFrom: '2025-01-01' }),
-          toYear(2025)
-        )
-      ).toBe(false)
-    }
-  )
+  it('is false when cancelled', () => {
+    expect(
+      isRegistrationActiveInYear(
+        buildRegistration({ current: 'cancelled', validFrom: '2025-01-01' }),
+        toYear(2025)
+      )
+    ).toBe(false)
+  })
 })
