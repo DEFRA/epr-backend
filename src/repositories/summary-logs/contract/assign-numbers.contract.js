@@ -152,7 +152,16 @@ export const testAssignNumbers = (it) => {
     for (const [description, invalid] of [
       ['no numbers', {}],
       ['an unknown field', { status: 'submitted' }],
-      ['a non-string number', { organisationNumber: 500123 }]
+      ['a non-string number', { organisationNumber: 500123 }],
+      ['an undefined number', { organisationNumber: undefined }],
+      [
+        'an undefined number beside a real one',
+        {
+          organisationNumber: undefined,
+          registrationNumber: numbers.registrationNumber
+        }
+      ],
+      ['an undefined accreditation number', { accreditationNumber: undefined }]
     ]) {
       it(`rejects ${description}`, async () => {
         const id = await insertLog(summaryLogFactory.validating())
