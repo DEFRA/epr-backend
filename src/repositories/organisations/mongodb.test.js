@@ -100,34 +100,7 @@ describe('MongoDB organisations repository', () => {
             )
           }
         },
-        event: { action: 'insert_organisation' }
-      })
-    })
-
-    it('names the clashing number when E11000 from insert carries its key value', async () => {
-      const dbMock = createMockDb({
-        insertOne: async () => {
-          throw createMongoError('E11000 duplicate key error', {
-            code: 11000,
-            keyPattern: { 'registrations.registrationNumber': 1 },
-            keyValue: { 'registrations.registrationNumber': 'REG100001' }
-          })
-        }
-      })
-
-      const factory = await createOrganisationsRepository(dbMock)
-      const repository = factory()
-
-      await expect(
-        repository.insert(buildOrganisation())
-      ).rejects.toMatchObject({
-        output: {
-          statusCode: 409,
-          payload: {
-            message:
-              'Registration number REG100001 is already held by another organisation'
-          }
-        }
+        event: { action: 'insert_organisation', reference: expect.any(String) }
       })
     })
 

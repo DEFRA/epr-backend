@@ -196,6 +196,7 @@ export const duplicateKeyConflict = ({
           operation === 'inserting'
             ? 'insert_organisation'
             : 'update_organisation',
+        reference: id,
         reason
       }
     }
