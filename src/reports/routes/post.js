@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -13,7 +14,6 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
-  requiredPeriodsFor,
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
@@ -21,6 +21,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
+ * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -84,13 +85,16 @@ export const reportsPost = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
+      organisationReadRepository,
       params,
       app,
       logger
     } = request
     const {
       organisationId,
+      organisationNumber,
       registrationId,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -101,6 +105,18 @@ export const reportsPost = {
       const registration = await findRegistrationForReport(
         organisationsRepository,
         params
+      )
+
+      /**
+       * Route only reached when
+       * - {organisationNumber} exists
+       * - {registrationNumber} exists and belongs to {organisationNumber}
+       * else atNaturalKeys wrapper generates 404 response
+       */
+      const organisation = /** @type {Organisation} */ (
+        await organisationReadRepository.findByOrganisationNumber(
+          organisationNumber
+        )
       )
 
       const createdReport = await createReportForPeriod({
@@ -117,7 +133,11 @@ export const reportsPost = {
         cadence,
         period,
         submissionNumber,
-        requiredPeriods: requiredPeriodsFor(app, params),
+        requiredPeriods: requiredReportingPeriods({
+          registration: organisation.registrations[registrationNumber],
+          year,
+          cadence
+        }),
         changedBy: extractChangedBy(request.auth.credentials),
         reportDataValidationEnabled: request.config.get(
           'featureFlags.reportDataValidation'

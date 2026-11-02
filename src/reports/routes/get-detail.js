@@ -1,11 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import {
-  findRegistrationForReport,
-  requiredPeriodsFor,
-  withRegistrationDetails
-} from './shared.js'
+import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -13,6 +10,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -20,7 +18,6 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
- * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
  */
 
 /**
@@ -67,8 +64,7 @@ export const reportsGetDetail = {
     }
   },
   /**
-   * @param {Omit<HapiRequest, 'app'> & {
-   *   app: ResolvedRecords,
+   * @param {HapiRequest & {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -87,12 +83,14 @@ export const reportsGetDetail = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      params,
-      app
+      organisationReadRepository,
+      params
     } = request
     const {
       organisationId,
+      organisationNumber,
       registrationId,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -102,6 +100,18 @@ export const reportsGetDetail = {
     const registration = await findRegistrationForReport(
       organisationsRepository,
       params
+    )
+
+    /**
+     * Route only reached when
+     * - {organisationNumber} exists
+     * - {registrationNumber} exists and belongs to {organisationNumber}
+     * else atNaturalKeys wrapper generates 404 response
+     */
+    const organisation = /** @type {Organisation} */ (
+      await organisationReadRepository.findByOrganisationNumber(
+        organisationNumber
+      )
     )
 
     const report = await fetchOrGenerateReportForPeriod({
@@ -117,7 +127,11 @@ export const reportsGetDetail = {
       cadence,
       period,
       submissionNumber,
-      requiredPeriods: requiredPeriodsFor(app, params),
+      requiredPeriods: requiredReportingPeriods({
+        registration: organisation.registrations[registrationNumber],
+        year,
+        cadence
+      }),
       reportDataValidationEnabled: request.config.get(
         'featureFlags.reportDataValidation'
       )
