@@ -360,6 +360,12 @@ const transitionToSubmittingExclusive =
       )
     }
 
+    if (!holdsNumbers(existing.summaryLog)) {
+      throw new Error(
+        `Summary log ${validatedId} is missing one of its numbers`
+      )
+    }
+
     // Pre-check: is another log for the same org/reg/year/accreditationId
     // already submitting? Read from storage (strong consistency) - in
     // single-threaded JS, true race conditions can't occur like they can in
