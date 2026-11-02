@@ -3,7 +3,7 @@ import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   registrationParams,
   registrationPath
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 

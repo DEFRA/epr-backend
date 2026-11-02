@@ -1,5 +1,11 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
@@ -18,7 +24,26 @@ import {
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ *
+ * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
+ *
+ * @typedef {OrganisationParams & { registrationNumber: RegistrationNumber }} RegistrationParams
  */
+
+export const organisationPath = '/organisations/{organisationNumber}'
+export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
+export const accreditationPath = `${registrationPath}/accreditations/{year}`
+
+export const organisationParams = {
+  organisationNumber: Joi.string()
+    .pattern(ORGANISATION_NUMBER_PATTERN)
+    .custom(toOrganisationNumber)
+    .required()
+}
+export const registrationParams = {
+  ...organisationParams,
+  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
+}
 
 /**
  * Finding a record needs only its key. Overseas sites and the reasons a record
