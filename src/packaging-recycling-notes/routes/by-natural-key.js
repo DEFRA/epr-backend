@@ -20,7 +20,7 @@ import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 import {
@@ -46,7 +46,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { RegistrationParams } from '#routes/organisations/view-route.js'
+ * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
