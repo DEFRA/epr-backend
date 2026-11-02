@@ -102,7 +102,7 @@ export const reportsPost = {
     } = params
 
     try {
-      const registration = await findRegistrationForReport(
+      const storedRegistration = await findRegistrationForReport(
         organisationsRepository,
         params
       )
@@ -118,6 +118,7 @@ export const reportsPost = {
           organisationNumber
         )
       )
+      const registration = organisation.registrations[registrationNumber]
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -128,13 +129,13 @@ export const reportsPost = {
         organisationId,
         registrationId,
         numbers: numbersFor(app.organisation, params).numbers,
-        registration,
+        registration: storedRegistration,
         year,
         cadence,
         period,
         submissionNumber,
         requiredPeriods: requiredReportingPeriods({
-          registration: organisation.registrations[registrationNumber],
+          registration,
           year,
           cadence
         }),

@@ -97,7 +97,7 @@ export const reportsGetDetail = {
       submissionNumber
     } = params
 
-    const registration = await findRegistrationForReport(
+    const storedRegistration = await findRegistrationForReport(
       organisationsRepository,
       params
     )
@@ -113,6 +113,7 @@ export const reportsGetDetail = {
         organisationNumber
       )
     )
+    const registration = organisation.registrations[registrationNumber]
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
@@ -122,13 +123,13 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
-      registration,
+      registration: storedRegistration,
       year,
       cadence,
       period,
       submissionNumber,
       requiredPeriods: requiredReportingPeriods({
-        registration: organisation.registrations[registrationNumber],
+        registration,
         year,
         cadence
       }),
