@@ -36,4 +36,5 @@ ARG PORT
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-CMD [ "node", "src" ]
+# swagger-ui-dist probes localStorage on load; under Node 26 that writes an ExperimentalWarning to stderr, which CDP logs as an error
+CMD [ "node", "--no-experimental-webstorage", "src" ]
