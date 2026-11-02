@@ -1,4 +1,4 @@
-import { toYear } from '#common/helpers/dates/year.js'
+import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -38,6 +38,8 @@ const organisationNumber = toOrganisationNumber(String(organisation.orgId))
 const registrationNumber = registration.registrationNumber
 const registrations = `/organisations/${organisation.orgId}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
+const year = currentUtcYear()
+const urlForYear = `${url}?year=${year}`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs', () => {
   setupAuthContext()
@@ -64,7 +66,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     await server.stop()
   })
 
-  const list = (path = url) =>
+  const list = (path = urlForYear) =>
     server.inject({ method: 'GET', url: path, ...asServiceMaintainer() })
 
   describe('successful requests', () => {
@@ -84,7 +86,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.submitted({
           organisationNumber,
           registrationNumber,
-          year: toYear(2026),
+          year,
           submittedAt: '2026-02-01T10:00:00.000Z',
           createdAt: '2026-02-01T09:55:00.000Z',
           file: { name: 'january.xlsx' }
@@ -96,7 +98,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.validationFailed({
           organisationNumber,
           registrationNumber,
-          year: toYear(2026),
+          year,
           createdAt: '2026-02-02T11:00:00.000Z',
           file: { name: 'february.xlsx' }
         })
@@ -112,7 +114,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
             status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-            year: 2026,
+            year,
             accreditationNumber: null
           },
           {
@@ -120,7 +122,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
             status: SUMMARY_LOG_STATUS.SUBMITTED,
-            year: 2026,
+            year,
             accreditationNumber: null
           }
         ]
@@ -162,14 +164,14 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     it('returns only the logs for the year asked for', async () => {
       const ids = {}
-      for (const year of [2025, 2026]) {
-        ids[year] = new ObjectId().toString()
+      for (const logYear of [2025, 2026]) {
+        ids[logYear] = new ObjectId().toString()
         await summaryLogsRepository.insert(
-          ids[year],
+          ids[logYear],
           summaryLogFactory.submitted({
             organisationNumber,
             registrationNumber,
-            year: toYear(year)
+            year: toYear(logYear)
           })
         )
       }
@@ -276,7 +278,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   describe('error scenarios', () => {
     it('returns 404 for a registration the organisation does not hold', async () => {
       const response = await list(
-        `${registrations}/R26ER9999999999PL/summary-logs`
+        `${registrations}/R26ER9999999999PL/summary-logs?year=${year}`
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -284,16 +286,22 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     it('returns 404 for an unknown organisation', async () => {
       const response = await list(
-        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs?year=${year}`
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
+    it('returns 422 when the year is missing', async () => {
+      const response = await list(url)
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
     it.each(['abc', '2026.5', '1999'])(
       'returns 422 for the year %s',
-      async (year) => {
-        const response = await list(`${url}?year=${year}`)
+      async (invalidYear) => {
+        const response = await list(`${url}?year=${invalidYear}`)
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       }
@@ -312,7 +320,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   describe('authentication', () => {
     it('returns 401 when not authenticated', async () => {
-      const response = await server.inject({ method: 'GET', url })
+      const response = await server.inject({
+        method: 'GET',
+        url: urlForYear
+      })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
@@ -320,7 +331,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns 403 when user is not a service maintainer', async () => {
       const response = await server.inject({
         method: 'GET',
-        url,
+        url: urlForYear,
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 
