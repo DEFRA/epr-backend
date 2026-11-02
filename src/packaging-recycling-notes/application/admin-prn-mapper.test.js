@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import { mapToAdminPrn } from './admin-prn-mapper.js'
@@ -20,7 +21,7 @@ describe('mapToAdminPrn', () => {
   })
 
   it('marks an accepted PRN within its cancellation window as regulator-cancellable', () => {
-    const futureYear = new Date().getUTCFullYear() + 5
+    const futureYear = toYear(new Date().getUTCFullYear() + 5)
     const prn = createMockIssuedPrn({
       status: {
         ...createMockIssuedPrn().status,
@@ -43,7 +44,7 @@ describe('mapToAdminPrn', () => {
       },
       accreditation: {
         ...createMockIssuedPrn().accreditation,
-        accreditationYear: 2000
+        accreditationYear: toYear(2000)
       }
     })
 
@@ -51,7 +52,7 @@ describe('mapToAdminPrn', () => {
   })
 
   it('marks a cancelled PRN as not regulator-cancellable regardless of year', () => {
-    const futureYear = new Date().getUTCFullYear() + 5
+    const futureYear = toYear(new Date().getUTCFullYear() + 5)
     const prn = createMockIssuedPrn({
       status: {
         ...createMockIssuedPrn().status,

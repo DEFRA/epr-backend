@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -109,7 +110,7 @@ const startServer = async (prn) => {
  */
 const buildPrn = (
   currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE,
-  { isDecemberWaste = false, obligationYear = 2026 } = {}
+  { isDecemberWaste = false, obligationYear = toYear(2026) } = {}
 ) => ({
   id: prnId,
   schemaVersion: 2,
@@ -120,7 +121,7 @@ const buildPrn = (
   accreditation: {
     id: accreditationId,
     accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },

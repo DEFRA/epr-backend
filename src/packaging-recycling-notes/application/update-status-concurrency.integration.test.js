@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
@@ -184,7 +185,7 @@ describe('PRN status concurrency against real MongoDB', () => {
         accreditation: {
           id: ACC_ID,
           accreditationNumber: 'ACC-1',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
           siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }

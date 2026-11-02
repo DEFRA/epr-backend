@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
@@ -110,11 +111,11 @@ const createMockPrn = (overrides = {}) => ({
   accreditation: {
     id: accreditationId,
     accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
-  obligationYear: 2026,
+  obligationYear: toYear(2026),
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'

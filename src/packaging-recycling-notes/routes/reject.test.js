@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { ObjectId } from 'mongodb'
@@ -134,11 +135,11 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   accreditation: {
     id: accreditationId,
     accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
+    accreditationYear: toYear(2026),
     material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
   },
-  obligationYear: 2026,
+  obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,
