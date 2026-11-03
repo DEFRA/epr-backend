@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -22,7 +23,7 @@ const CSV_EXTENSION = 'csv'
  * but committed no rows.
  *
  * @param {KeyedSummaryLogWithId[]} summaryLogs
- * @param {string} fileId
+ * @param {SummaryLogFileId} fileId
  * @returns {KeyedSummaryLog | undefined}
  */
 const submittedSummaryLogForFile = (summaryLogs, fileId) =>
@@ -47,7 +48,7 @@ export const summaryLogRecordsCsv = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: ResolvedParams & { fileId: string },
+   *   params: ResolvedParams & { fileId: SummaryLogFileId },
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,

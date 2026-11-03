@@ -75,7 +75,7 @@
  *   different ledger identity matches nothing. The storage id, the
  *   `summaryLogIds` membership and the ledger identity the caller supplied stay
  *   behind the port.
- * @property {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
+ * @property {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the
  *   summary log document's id. Spans every ledger partition of the
@@ -83,7 +83,7 @@
  *   back off the rows.
  * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
- * @property {(summaryLogIds: string[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
+ * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of
  *   `summaryLogIds`, at most once however many of them it holds.
  * @property {() => Promise<string[]>} findDistinctDataKeys

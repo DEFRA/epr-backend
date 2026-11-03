@@ -14,6 +14,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { backfillRowStateNumbers } from './backfill.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -141,7 +142,7 @@ describe('backfillRowStateNumbers', () => {
     summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
       ledgerId.organisationId,
       ledgerId.registrationId,
-      summaryLogId
+      toSummaryLogFileId(summaryLogId)
     )
 
   const systemLogs = async () =>

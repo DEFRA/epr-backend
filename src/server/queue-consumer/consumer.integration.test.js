@@ -19,6 +19,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -166,7 +167,7 @@ describe('SQS command queue consumer integration', () => {
         // Send a validate command through the real producer so the envelope
         // (command + payload + context) matches the production message shape.
         const summaryLogId = `validate-test-${Date.now()}`
-        await executor.summaryLogsWorker.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
 
         const consumer = await createConsumer(sqsClient)
 
@@ -202,7 +203,10 @@ describe('SQS command queue consumer integration', () => {
         const request = {
           auth: { credentials: { ...user, issuer: 'test-issuer' } }
         }
-        await executor.summaryLogsWorker.submit(summaryLogId, request)
+        await executor.summaryLogsWorker.submit(
+          toSummaryLogId(summaryLogId),
+          request
+        )
 
         const consumer = await createConsumer(sqsClient)
 
@@ -247,7 +251,7 @@ describe('SQS command queue consumer integration', () => {
         const executor = await createExecutor(sqsClient)
 
         const summaryLogId = `delete-on-success-${Date.now()}`
-        await executor.summaryLogsWorker.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
 
         const consumer = await createConsumer(sqsClient)
 
@@ -436,7 +440,7 @@ describe('SQS command queue consumer integration', () => {
         const executor = await createExecutor(sqsClient)
 
         const summaryLogId = `permanent-test-${Date.now()}`
-        await executor.summaryLogsWorker.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
 
         const consumer = await createConsumer(sqsClient)
 
@@ -496,7 +500,7 @@ describe('SQS command queue consumer integration', () => {
           summaryLogId,
           summaryLogFactory.validating()
         )
-        await executor.summaryLogsWorker.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
 
         const consumer = await createConsumer(sqsClient)
 
