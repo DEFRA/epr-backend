@@ -1297,57 +1297,6 @@ export const testReplaceBehaviour = (it) => {
           )
         ).rejects.toThrow('"registrations[0].registrationNumber" is required')
       })
-
-      it('rejects an update that would take the number off an accreditation that has been accredited', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-        const approved = await approve(organisation)
-
-        const { accreditationNumber: _accreditationNumber, ...accreditation } =
-          approved.accreditations[0]
-
-        await expect(
-          repository.replace(
-            organisation.id,
-            approved.version,
-            prepareOrgUpdate(approved, {
-              accreditations: [
-                { ...accreditation, status: ACCREDITATION_STATUS.CREATED }
-              ]
-            })
-          )
-        ).rejects.toThrow('cannot lose their accreditation number')
-      })
-
-      it('rejects an update that would take the number off an accreditation that was never approved', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        await repository.replace(
-          organisation.id,
-          1,
-          prepareOrgUpdate(organisation, {
-            accreditations: [
-              {
-                ...organisation.accreditations[0],
-                accreditationNumber: 'ACC999'
-              }
-            ]
-          })
-        )
-        const numbered = await repository.findById(organisation.id, 2)
-
-        const { accreditationNumber: _accreditationNumber, ...accreditation } =
-          numbered.accreditations[0]
-
-        await expect(
-          repository.replace(
-            organisation.id,
-            numbered.version,
-            prepareOrgUpdate(numbered, { accreditations: [accreditation] })
-          )
-        ).rejects.toThrow('cannot lose their accreditation number')
-      })
     })
 
     describe('non-updatable fields validation', () => {

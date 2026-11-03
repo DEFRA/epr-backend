@@ -14,7 +14,6 @@ import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,
   validateAccreditationLinkUniqueness,
-  validateAccreditationNumbersRetained,
   validateApprovals
 } from './schema/helpers.js'
 import {
@@ -244,7 +243,6 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
-  validateAccreditationNumbersRetained(accreditations, existing.accreditations)
   return { registrations, accreditations }
 }
 
