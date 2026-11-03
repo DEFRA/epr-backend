@@ -253,10 +253,10 @@ describe('backfillReportNumbers', () => {
         unmappedReasons: {
           'organisation not found': [organisationGone],
           'no registration number': [unnumbered],
-          'registration not held by the organisation': [registrationGone],
+          'registration not found': [registrationGone],
           'report names no summary log': [noSummaryLog],
           'no accreditation number': [unnumberedAccreditation],
-          'accreditation not held by the organisation': [accreditationGone]
+          'accreditation not found': [accreditationGone]
         },
         failed: 0,
         auditFailed: 0
@@ -376,6 +376,18 @@ describe('backfillReportNumbers', () => {
     expect(await stored(id)).toMatchObject({
       organisationNumber: numbers.organisationNumber,
       accreditationNumber: null
+    })
+    expect(await stored(id)).not.toHaveProperty('registrationNumber')
+  })
+
+  it('gives the accreditation number to a monthly report whose registration the organisation no longer holds', async () => {
+    const id = await createReport({ registrationId: missingRegistrationId })
+
+    await run(false)
+
+    expect(await stored(id)).toMatchObject({
+      organisationNumber: numbers.organisationNumber,
+      accreditationNumber: numbers.accreditationNumber
     })
     expect(await stored(id)).not.toHaveProperty('registrationNumber')
   })

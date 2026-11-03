@@ -73,7 +73,7 @@ const accreditationCause = (organisation, accreditation) => {
     ({ id }) => id === accreditation.accreditationId
   )
     ? 'no accreditation number'
-    : 'accreditation not held by the organisation'
+    : 'accreditation not found'
 }
 
 /**
@@ -91,7 +91,7 @@ const causes = (organisation, { registrationId }, accreditation) => ({
     ({ id }) => id === registrationId
   )
     ? 'no registration number'
-    : 'registration not held by the organisation',
+    : 'registration not found',
   accreditationNumber: accreditationCause(organisation, accreditation)
 })
 
