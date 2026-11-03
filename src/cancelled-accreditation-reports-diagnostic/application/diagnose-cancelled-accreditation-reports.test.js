@@ -190,6 +190,31 @@ describe('diagnoseCancelledAccreditationReports', () => {
     ])
   })
 
+  it('reads the latest cancellation even when it is recorded before an earlier one', async () => {
+    const accreditation = cancelledAccreditation({
+      statusHistory: [
+        {
+          status: 'cancelled',
+          updatedAt: new Date('2026-07-20T12:00:00.000Z')
+        },
+        {
+          status: 'cancelled',
+          updatedAt: new Date('2026-03-01T09:00:00.000Z')
+        }
+      ]
+    })
+    const organisation = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+
+    const { rows } = await diagnose([organisation])
+
+    expect(rows.map((row) => row.cancelledAt)).toStrictEqual([
+      '2026-07-20T12:00:00.000Z'
+    ])
+  })
+
   it('reports no cancellation date when the history does not record one', async () => {
     const accreditation = cancelledAccreditation({
       statusHistory: [
