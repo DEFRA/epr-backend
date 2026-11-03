@@ -41,7 +41,6 @@ const { plugins: _n, ...nodeRecommendedModule } =
   nodePlugin.configs['flat/recommended-module']
 
 export default [
-  // neostandard's own `ignores` option only covers neostandard's configs
   globalIgnores(resolveIgnoresFromGitignore()),
   ...ns,
   nodeRecommendedModule,
