@@ -129,7 +129,11 @@ const buildSubmittedReport = ({
 
 const classificationContext = /** @type {ClassificationContext} */ (
   /** @type {unknown} */ ({
-    accreditation: { status: 'approved', validFrom: '2025-01-01' },
+    accreditation: {
+      status: 'approved',
+      validFrom: '2025-01-01',
+      statusHistory: []
+    },
     overseasSites: Symbol('ORS_DISABLED')
   })
 )

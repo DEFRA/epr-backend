@@ -32,8 +32,8 @@ describe('resolveOverseasSites', () => {
     )
 
     expect(result).toEqual({
-      '001': { validFrom },
-      '099': { validFrom: new Date('2024-06-01') }
+      '001': { approvedFrom: validFrom },
+      '099': { approvedFrom: new Date('2024-06-01') }
     })
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
       'org-1',
@@ -148,7 +148,7 @@ describe('resolveOverseasSites', () => {
       'reg-1'
     )
 
-    expect(result).toEqual({ '002': { validFrom } })
+    expect(result).toEqual({ '002': { approvedFrom: validFrom } })
   })
 
   it('sets validFrom to null when overseas site has no validFrom', async () => {
@@ -173,7 +173,7 @@ describe('resolveOverseasSites', () => {
     )
 
     expect(result).toEqual({
-      '001': { validFrom: null }
+      '001': { approvedFrom: null }
     })
   })
 })

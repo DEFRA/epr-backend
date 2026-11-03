@@ -3,11 +3,12 @@ import {
   ORS_VALIDATION_DISABLED
 } from './shared/classification-reason.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
+/** @import {OverseasSitesContext as ClassificationOverseasSites} from '#waste-balances/domain/classification-context.js' */
 
 /**
  * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
- * @typedef {Record<string, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ * @typedef {ClassificationOverseasSites} OverseasSitesContext
  */
 
 /**
@@ -47,7 +48,7 @@ import {
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
+ * @param {{ accreditation: AccreditedPeriod | null, overseasSites: OverseasSitesContext }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
  * @returns {WasteBalanceClassificationResult}
  */
 

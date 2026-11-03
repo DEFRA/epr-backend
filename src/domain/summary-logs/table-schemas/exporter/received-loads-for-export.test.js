@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_EXPORT } from './received-loads-for-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -679,14 +680,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = /** @type {Accreditation} */ ({
-      validFrom: '2024-01-01',
-      validTo: '2024-12-31',
-      statusHistory: [
-        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-      ]
-    })
+    const accreditation = toAccreditedPeriod(
+      /** @type {Accreditation} */ ({
+        validFrom: '2024-01-01',
+        validTo: '2024-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+        ]
+      })
+    )
 
     const completeRow = {
       ROW_ID: 1000,
@@ -952,12 +955,12 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
             description:
               'ORS is approved and validFrom is before DATE_OF_EXPORT',
             overseasSites: {
-              '001': { validFrom: new Date('2024-01-01') }
+              '001': { approvedFrom: new Date('2024-01-01') }
             }
           },
           {
             description: 'ORS validFrom equals DATE_OF_EXPORT',
-            overseasSites: { '001': { validFrom: new Date('2024-06-15') } }
+            overseasSites: { '001': { approvedFrom: new Date('2024-06-15') } }
           },
           {
             description: 'ORS validation is disabled',
@@ -976,7 +979,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            '001': { validFrom: null }
+            '001': { approvedFrom: null }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
@@ -989,7 +992,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            '001': { validFrom: new Date('2024-07-01') }
+            '001': { approvedFrom: new Date('2024-07-01') }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
@@ -1008,7 +1011,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            '002': { validFrom: new Date('2024-01-01') }
+            '002': { approvedFrom: new Date('2024-01-01') }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
@@ -1041,12 +1044,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ ({
-            validFrom: '2024-01-01',
-            validTo: '2024-12-31',
-            statusHistory:
-              /** @type {{ status: string, updatedAt: string }[]} */ ([])
-          }),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ ({
+              validFrom: '2024-01-01',
+              validTo: '2024-12-31',
+              statusHistory:
+                /** @type {{ status: string, updatedAt: string }[]} */ ([])
+            })
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1066,7 +1071,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ (suspendedAccreditation)
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1087,7 +1094,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ (reapprovedAccreditation)
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1110,7 +1119,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ (suspendedAccreditation)
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1136,7 +1147,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ (suspendedAccreditation)
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1162,7 +1175,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
+          accreditation: toAccreditedPeriod(
+            /** @type {Accreditation} */ (reapprovedAccreditation)
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1202,7 +1217,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(row, {
           accreditation,
           overseasSites: {
-            '001': { validFrom: null }
+            '001': { approvedFrom: null }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)

@@ -421,7 +421,9 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        overseasSites: { '001': { validFrom } }
+        overseasSites: {
+          '001': expect.objectContaining({ approvedFrom: validFrom })
+        }
       })
     )
   })

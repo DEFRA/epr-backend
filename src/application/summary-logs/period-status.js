@@ -11,6 +11,7 @@ import {
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
 import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
@@ -205,7 +206,11 @@ const classifyRowForWasteBalance = (schema, data, context) => {
     }
   }
 
-  const result = classify(data, context)
+  const result = classify(data, {
+    // legacy adapter until Task 7
+    accreditation: toAccreditedPeriod(context.accreditation),
+    overseasSites: context.overseasSites
+  })
   const transactionAmount =
     result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
   // Every result carries a reasons array (empty for an included row), so the

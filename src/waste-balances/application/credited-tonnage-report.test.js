@@ -623,12 +623,14 @@ describe('buildCreditedTonnageReport', () => {
           id: 'acc-a',
           accreditationNumber: 'ACC-A',
           status: 'approved',
+          statusHistory: [],
           ...commonFields
         },
         {
           id: 'acc-b',
           accreditationNumber: 'ACC-B',
           status: 'approved',
+          statusHistory: [],
           ...commonFields
         }
       ]

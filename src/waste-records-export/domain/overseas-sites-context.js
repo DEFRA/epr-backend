@@ -2,15 +2,15 @@
 
 /**
  * @typedef {Object} OverseasSiteContextEntry
- * @property {Date | null} validFrom - Approval date used by classifyForWasteBalance.
- * @property {string} siteName - Approved site name (for OSR_NAME_REVISED).
+ * @property {Date | null} approvedFrom - Approval date used by classifyForWasteBalance.
+ * @property {string} name - Approved site name (for OSR_NAME_REVISED).
  * @property {string} country - Destination country (for OSR_COUNTRY_REVISED).
  */
 
 /**
  * Builds an ORS context map for a single registration from a pre-loaded
  * sites-by-id Map. The returned object is keyed by the 3-digit OSR key
- * (as stored on the registration) and contains the validFrom date used
+ * (as stored on the registration) and contains the approvedFrom date used
  * by classifyForWasteBalance, along with the approved site name and
  * destination country used to populate the derived OSR_NAME_REVISED /
  * OSR_COUNTRY_REVISED export columns.
@@ -36,8 +36,8 @@ export const buildOverseasSitesContext = (registration, sitesById) => {
     const site = sitesById.get(overseasSiteId)
     if (site) {
       context[osrKey] = {
-        validFrom: site.validFrom ?? null,
-        siteName: site.name,
+        approvedFrom: site.validFrom ?? null,
+        name: site.name,
         country: site.country
       }
     }

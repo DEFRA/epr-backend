@@ -11,7 +11,7 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 
 const accreditation =
   /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
-    /** @type {unknown} */ ({ id: 'acc-1' })
+    /** @type {unknown} */ ({ id: 'acc-1', statusHistory: [] })
   )
 const overseasSites = /** @type {*} */ (new Map())
 

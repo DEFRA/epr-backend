@@ -74,7 +74,8 @@ const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 const accreditation = partialMock({
   id: accreditationId,
   validFrom: '2023-01-01',
-  validTo: '2030-12-31'
+  validTo: '2030-12-31',
+  statusHistory: []
 })
 
 const overseasSites = /** @type {*} */ (new Map())

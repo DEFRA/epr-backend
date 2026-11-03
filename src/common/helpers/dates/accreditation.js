@@ -7,6 +7,8 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
+/** @import {StatusTimeline} from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{ updatedAt: number, status: AccreditationStatus }} StatusHistoryDateTime
@@ -50,22 +52,21 @@ export function accreditationWindow({ validFrom, validTo }) {
 /**
  * Checks if all dates are accredited
  * @param { (Date|string)[] } dates - The date to check
- * @param { Accreditation | null | undefined } accreditation
+ * @param { AccreditedPeriod | null | undefined } accreditation
  * @returns { boolean } True if accredited at date
  */
 export function isAccreditedAtDates(dates, accreditation) {
   if (!accreditation) {
     return true
   }
-  const window = accreditationWindow(accreditation)
+  const { window, timeline } = accreditation
   if (window === null) {
     return false
   }
-  const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, window) &&
-      !isSuspendedOrCancelledAtDate(date, sortedHistory)
+      !isSuspendedOrCancelledAtDate(date, timeline)
   )
 }
 
@@ -80,6 +81,22 @@ export function getStatusHistoryDateTimes(statusHistory) {
     status: s.status
   }))
   return statusDates.sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
+/**
+ * A status timeline as descending date-times, the shape `statusHeldAt` reads.
+ * The sort is stable, so entries sharing an instant keep their recorded order.
+ *
+ * @param {StatusTimeline} timeline
+ * @returns {StatusHistoryDateTime[]}
+ */
+function timelineDateTimes(timeline) {
+  return timeline
+    .map(({ status, at }) => ({
+      updatedAt: new Date(at).getTime(),
+      status: /** @type {AccreditationStatus} */ (status)
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 /**
@@ -115,6 +132,17 @@ export function statusHeldAt(date, statusHistory) {
 }
 
 /**
+ * `statusHeldAt` over a status timeline rather than legacy history entries.
+ *
+ * @param {string|Date} date
+ * @param {StatusTimeline} timeline
+ * @returns {AccreditationStatus | undefined}
+ */
+export function statusHeldAtOnTimeline(date, timeline) {
+  return statusHeldAt(date, timelineDateTimes(timeline))
+}
+
+/**
  * Whether the accreditation's history excludes a date from its validity
  * window. Suspension is temporary and cancellation is terminal, but both take
  * effect from their status-history `updatedAt`, so a date before the change is
@@ -122,11 +150,11 @@ export function statusHeldAt(date, statusHistory) {
  * altered by these transitions.
  *
  * @param {string|Date} date - The date to check
- * @param {StatusHistoryDateTime[]} statusHistory - Accreditation status history in descending date order
+ * @param {StatusTimeline} timeline - Accreditation status timeline
  * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
-export function isSuspendedOrCancelledAtDate(date, statusHistory) {
-  const status = statusHeldAt(date, statusHistory)
+export function isSuspendedOrCancelledAtDate(date, timeline) {
+  const status = statusHeldAtOnTimeline(date, timeline)
   return (
     status === ACCREDITATION_STATUS.SUSPENDED ||
     status === ACCREDITATION_STATUS.CANCELLED

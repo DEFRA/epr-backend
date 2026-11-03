@@ -1,5 +1,6 @@
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { toAccreditedPeriod } from './classification-context.js'
 
 /**
  * @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -49,7 +50,7 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
  * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {import('#waste-balances/domain/classification-context.js').OverseasSitesContext} overseasSites
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (
@@ -69,7 +70,8 @@ export const classifyRecordForWasteBalance = (
   }
 
   const result = schema.classifyForWasteBalance(record.data, {
-    accreditation,
+    // legacy adapter until Task 7
+    accreditation: toAccreditedPeriod(accreditation),
     overseasSites
   })
   return {

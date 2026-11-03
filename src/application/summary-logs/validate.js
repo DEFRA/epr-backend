@@ -35,6 +35,7 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -226,7 +227,8 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration.accreditation,
+      // legacy adapter until Task 7
+      accreditation: toAccreditedPeriod(registration.accreditation),
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
