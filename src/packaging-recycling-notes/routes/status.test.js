@@ -109,7 +109,10 @@ const createMockPrn = (overrides = {}) => ({
   schemaVersion: 2,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: buildAccreditation({ id: accreditationId }),
+  accreditation: buildAccreditation({
+    id: accreditationId,
+    submittedToRegulator: REGULATOR.EA
+  }),
   obligationYear: toYear(2026),
   issuedToOrganisation: {
     id: 'producer-org-789',

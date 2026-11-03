@@ -118,7 +118,10 @@ const buildPrn = (
   prnNumber,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: buildAccreditation({ id: accreditationId }),
+  accreditation: buildAccreditation({
+    id: accreditationId,
+    accreditationYear: toYear(2026)
+  }),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,
