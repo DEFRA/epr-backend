@@ -235,27 +235,11 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
   }
 }
 
-/** @param {any} filter */
-const findOneVersion = async (db, filter) => {
-  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-  if (!doc) {
-    return null
-  }
-  const { _id, version, ...summaryLog } = doc
-  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
-}
-
-const findById = (db) => async (id) =>
-  findOneVersion(db, { _id: validateId(id) })
-
-const findByFileId = (db) => async (fileId) =>
-  findOneVersion(db, { 'file.id': validateId(fileId) })
-
 /**
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { SummaryLogWithId } from './port.js'
+ * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  *
  * @typedef {SummaryLog & { _id: string, version: number }} SummaryLogDocument
  */
@@ -266,6 +250,28 @@ const findByFileId = (db) => async (fileId) =>
  */
 const summaryLogs = (db) =>
   /** @type {Collection<SummaryLogDocument>} */ (db.collection(COLLECTION_NAME))
+
+/**
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogVersion | null>}
+ */
+const findOneVersion = async (db, filter) => {
+  const doc = await summaryLogs(db).findOne(filter)
+  if (!doc) {
+    return null
+  }
+  const { _id, version, ...summaryLog } = doc
+  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
+}
+
+/** @param {Db} db */
+const findById = (db) => async (/** @type {string} */ id) =>
+  findOneVersion(db, { _id: validateId(id) })
+
+/** @param {Db} db */
+const findByFileId = (db) => async (/** @type {string} */ fileId) =>
+  findOneVersion(db, { 'file.id': validateId(fileId) })
 
 /**
  * @param {Db} db

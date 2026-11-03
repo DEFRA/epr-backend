@@ -127,23 +127,30 @@ const assignNumbers =
     scheduleStaleCacheSync(storage, staleCache)
   }
 
+/**
+ * @param {SummaryLogVersion | undefined} doc
+ * @returns {SummaryLogVersion | null}
+ */
 const toVersion = (doc) =>
   doc
     ? { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
     : null
 
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {string} fileId
+ */
+const holdingFile = (staleCache, fileId) =>
+  [...staleCache.values()].find((held) => held?.summaryLog?.file?.id === fileId)
+
 // Read from staleCache to simulate reading from replica
-const findById = (staleCache) => async (id) =>
+/** @param {SummaryLogStore} staleCache */
+const findById = (staleCache) => async (/** @type {string} */ id) =>
   toVersion(staleCache.get(validateId(id)))
 
-const findByFileId = (staleCache) => async (fileId) => {
-  const validatedId = validateId(fileId)
-  return toVersion(
-    [...staleCache.values()].find(
-      (held) => held?.summaryLog?.file?.id === validatedId
-    )
-  )
-}
+/** @param {SummaryLogStore} staleCache */
+const findByFileId = (staleCache) => async (/** @type {string} */ fileId) =>
+  toVersion(holdingFile(staleCache, validateId(fileId)))
 
 /**
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
@@ -330,11 +337,8 @@ const getDownloadUrl = (staleCache) => async (summaryLogId) => {
 
 const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   const validatedId = validateId(fileId)
-  const doc = [...staleCache.values()].find(
-    (held) => held?.summaryLog?.file?.id === validatedId
-  )
 
-  return signDownload(doc, validatedId)
+  return signDownload(holdingFile(staleCache, validatedId), validatedId)
 }
 
 // A missing accreditation id indexes as null in MongoDB's lock index.
