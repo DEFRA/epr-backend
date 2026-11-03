@@ -127,15 +127,30 @@ const assignNumbers =
     scheduleStaleCacheSync(storage, staleCache)
   }
 
-const findById = (staleCache) => async (id) => {
-  const validatedId = validateId(id)
-  // Read from staleCache to simulate reading from replica
-  const doc = staleCache.get(validatedId)
-  if (!doc) {
-    return null
-  }
-  return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
-}
+/**
+ * @param {SummaryLogVersion | undefined} doc
+ * @returns {SummaryLogVersion | null}
+ */
+const toVersion = (doc) =>
+  doc
+    ? { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
+    : null
+
+/**
+ * @param {SummaryLogStore} staleCache
+ * @param {string} fileId
+ */
+const holdingFile = (staleCache, fileId) =>
+  [...staleCache.values()].find((held) => held?.summaryLog?.file?.id === fileId)
+
+// Read from staleCache to simulate reading from replica
+/** @param {SummaryLogStore} staleCache */
+const findById = (staleCache) => async (/** @type {string} */ id) =>
+  toVersion(staleCache.get(validateId(id)))
+
+/** @param {SummaryLogStore} staleCache */
+const findByFileId = (staleCache) => async (/** @type {string} */ fileId) =>
+  toVersion(holdingFile(staleCache, validateId(fileId)))
 
 /**
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
@@ -322,11 +337,8 @@ const getDownloadUrl = (staleCache) => async (summaryLogId) => {
 
 const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   const validatedId = validateId(fileId)
-  const doc = [...staleCache.values()].find(
-    (held) => held?.summaryLog?.file?.id === validatedId
-  )
 
-  return signDownload(doc, validatedId)
+  return signDownload(holdingFile(staleCache, validatedId), validatedId)
 }
 
 // A missing accreditation id indexes as null in MongoDB's lock index.
@@ -416,6 +428,7 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
+    findByFileId: findByFileId(staleCache),
     findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
     assignNumbers: assignNumbers(storage, staleCache, logger),
     findLatestSubmitted: findLatestSubmitted(staleCache),

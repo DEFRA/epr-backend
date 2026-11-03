@@ -30,7 +30,10 @@ export const testFindBehaviour = (it) => {
 
         await repository.insert(
           id,
-          summaryLogFactory.validating({ file: { id: fileId } })
+          summaryLogFactory.validating({
+            organisationId: 'org-holding-file',
+            file: { id: fileId }
+          })
         )
 
         const result = await repository.findById(id)
@@ -64,6 +67,47 @@ export const testFindBehaviour = (it) => {
         const result = await repository.findById(idA)
 
         expect(result.summaryLog.organisationId).toBe('org-1')
+      })
+    })
+
+    describe('findByFileId', () => {
+      it('returns null when no log holds the file', async () => {
+        const result = await repository.findByFileId(
+          `contract-nonexistent-file-${randomUUID()}`
+        )
+
+        expect(result).toBeNull()
+      })
+
+      it('retrieves the log holding the file, not a log with that id', async () => {
+        const id = `contract-summary-${randomUUID()}`
+        const fileId = `contract-file-${randomUUID()}`
+
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({
+            organisationId: 'org-holding-file',
+            file: { id: fileId }
+          })
+        )
+        await repository.insert(
+          fileId,
+          summaryLogFactory.validating({ organisationId: 'org-other' })
+        )
+
+        const result = await repository.findByFileId(fileId)
+
+        expect(result.version).toBe(1)
+        expect(result.summaryLog.file.id).toBe(fileId)
+        expect(result.summaryLog.organisationId).toBe('org-holding-file')
+      })
+
+      it('rejects null file id', async () => {
+        await expect(repository.findByFileId(null)).rejects.toThrow(/id/)
+      })
+
+      it('rejects empty string file id', async () => {
+        await expect(repository.findByFileId('')).rejects.toThrow(/id/)
       })
     })
 

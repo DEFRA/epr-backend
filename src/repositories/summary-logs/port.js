@@ -63,6 +63,7 @@
  * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
+ * @property {(fileId: string) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
  * @property {() => Promise<string[]>} findIdsWithoutNumbers - ids of summary logs lacking a number beside one of their ids
  * @property {(id: string, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one

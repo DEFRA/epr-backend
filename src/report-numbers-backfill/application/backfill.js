@@ -63,7 +63,8 @@ const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
   if (!source?.summaryLogId) {
     return { unrecorded: NO_SUMMARY_LOG }
   }
-  const found = await summaryLogsRepository.findById(source.summaryLogId)
+  const fileIdTheLedgerRecords = source.summaryLogId
+  const found = await summaryLogsRepository.findByFileId(fileIdTheLedgerRecords)
   if (!found) {
     return { unrecorded: 'summary log not found' }
   }
