@@ -4,8 +4,16 @@ import { testReportsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  reportsRepository: async ({}, use) => {
-    await use(createInMemoryReportsRepository())
+  reports: async ({}, use) => {
+    await use(new Map())
+  },
+  reportsRepository: async (/** @type {*} */ { reports }, use) => {
+    await use(createInMemoryReportsRepository(reports))
+  },
+  storeAccreditationNumber: async (/** @type {*} */ { reports }, use) => {
+    await use(async (reportId, accreditationNumber) => {
+      reports.set(reportId, { ...reports.get(reportId), accreditationNumber })
+    })
   }
 })
 

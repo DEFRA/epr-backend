@@ -4,21 +4,25 @@ import { buildCreateReportParams } from './test-data.js'
 
 const numbers = {
   organisationNumber: '500123',
-  registrationNumber: 'R25SR500010912PL',
-  accreditationNumber: 'A26ER5000000001PA'
+  registrationNumber: 'R25SR500010912PL'
 }
+const accreditationNumber = 'A26ER5000000001PA'
 
 export const testAssignNumbersBehaviour = (it) => {
   describe('assignNumbers', () => {
     let repository
+    /** @type {(reportId: string, accreditationNumber: string | null) => Promise<void>} */
+    let storeAccreditationNumber
 
     beforeEach(
       async (
-        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
-          reportsRepository
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory, storeAccreditationNumber: typeof storeAccreditationNumber }} */ {
+          reportsRepository,
+          storeAccreditationNumber: store
         }
       ) => {
         repository = reportsRepository()
+        storeAccreditationNumber = store
       }
     )
 
@@ -28,8 +32,7 @@ export const testAssignNumbersBehaviour = (it) => {
     describe('findIdsWithoutNumbers', () => {
       it('lists a report without an organisation number', async () => {
         const id = await createReport({
-          registrationNumber: numbers.registrationNumber,
-          accreditationNumber: numbers.accreditationNumber
+          registrationNumber: numbers.registrationNumber
         })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([id])
@@ -37,17 +40,7 @@ export const testAssignNumbersBehaviour = (it) => {
 
       it('lists a report without a registration number', async () => {
         const id = await createReport({
-          organisationNumber: numbers.organisationNumber,
-          accreditationNumber: numbers.accreditationNumber
-        })
-
-        expect(await repository.findIdsWithoutNumbers()).toEqual([id])
-      })
-
-      it('lists a report without an accreditation number', async () => {
-        const id = await createReport({
-          organisationNumber: numbers.organisationNumber,
-          registrationNumber: numbers.registrationNumber
+          organisationNumber: numbers.organisationNumber
         })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([id])
@@ -55,12 +48,6 @@ export const testAssignNumbersBehaviour = (it) => {
 
       it('does not list a report holding every number', async () => {
         await createReport(numbers)
-
-        expect(await repository.findIdsWithoutNumbers()).toEqual([])
-      })
-
-      it('does not list a registered-only report, whose accreditation number is null', async () => {
-        await createReport({ ...numbers, accreditationNumber: null })
 
         expect(await repository.findIdsWithoutNumbers()).toEqual([])
       })
@@ -107,26 +94,6 @@ export const testAssignNumbersBehaviour = (it) => {
       expect(await repository.findReportById(id)).toEqual(before)
     })
 
-    it('sets a null accreditation number on a registered-only report', async () => {
-      const id = await createReport()
-
-      await repository.assignNumbers(id, { accreditationNumber: null })
-
-      expect(await repository.findReportById(id)).toMatchObject({
-        accreditationNumber: null
-      })
-    })
-
-    it('conflicts rather than overwrite a null accreditation number', async () => {
-      const id = await createReport({ accreditationNumber: null })
-
-      await expect(
-        repository.assignNumbers(id, {
-          accreditationNumber: numbers.accreditationNumber
-        })
-      ).rejects.toMatchObject({ output: { statusCode: 409 } })
-    })
-
     it('throws not found for an unknown id', async () => {
       await expect(
         repository.assignNumbers(randomUUID(), numbers)
@@ -135,6 +102,7 @@ export const testAssignNumbersBehaviour = (it) => {
 
     for (const [description, invalid] of [
       ['no numbers', {}],
+      ['an accreditation number', { accreditationNumber }],
       ['an unknown field', { year: 2026 }],
       ['a non-string number', { organisationNumber: 500123 }],
       ['an undefined number', { organisationNumber: undefined }],
@@ -154,5 +122,48 @@ export const testAssignNumbersBehaviour = (it) => {
         ).rejects.toMatchObject({ output: { statusCode: 400 } })
       })
     }
+
+    describe('removing an accreditation number', () => {
+      it('lists only the reports stored with an accreditation number, null included', async () => {
+        const accredited = await createReport()
+        const registeredOnly = await createReport({ period: 2 })
+        await createReport({ period: 3 })
+        await storeAccreditationNumber(accredited, accreditationNumber)
+        await storeAccreditationNumber(registeredOnly, null)
+
+        expect(
+          (await repository.findIdsWithAccreditationNumber()).toSorted()
+        ).toEqual([accredited, registeredOnly].toSorted())
+      })
+
+      for (const [description, held] of [
+        ['an accreditation number', accreditationNumber],
+        ['a null accreditation number', null]
+      ]) {
+        it(`removes ${description}, returning it and leaving the rest of the report alone`, async () => {
+          const id = await createReport(numbers)
+          const before = await repository.findReportById(id)
+          await storeAccreditationNumber(id, held)
+
+          expect(await repository.removeAccreditationNumber(id)).toEqual({
+            accreditationNumber: held
+          })
+          expect(await repository.findReportById(id)).toEqual(before)
+          expect(await repository.findIdsWithAccreditationNumber()).toEqual([])
+        })
+      }
+
+      it('returns null for a report holding no accreditation number', async () => {
+        const id = await createReport()
+
+        expect(await repository.removeAccreditationNumber(id)).toBeNull()
+      })
+
+      it('returns null for an unknown id', async () => {
+        expect(
+          await repository.removeAccreditationNumber(randomUUID())
+        ).toBeNull()
+      })
+    })
   })
 }

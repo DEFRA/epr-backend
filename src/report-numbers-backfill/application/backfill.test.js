@@ -4,22 +4,22 @@ import { randomUUID } from 'node:crypto'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
-import { backfillReportNumbers } from './backfill.js'
+import {
+  backfillReportNumbers,
+  removeReportAccreditationNumbers
+} from './backfill.js'
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -28,20 +28,16 @@ const { buildOrganisation } = createOrganisationBuilders()
 const organisationId = '6512a0c2f1e4b8a9d0c3e111'
 const registrationId = '6512a0c2f1e4b8a9d0c3e222'
 const accreditationId = '6512a0c2f1e4b8a9d0c3e333'
-const relinkedAccreditationId = '6512a0c2f1e4b8a9d0c3e555'
-const unnumberedAccreditationId = '6512a0c2f1e4b8a9d0c3e666'
-const missingAccreditationId = '6512a0c2f1e4b8a9d0c3e777'
 const unnumberedRegistrationId = '6512a0c2f1e4b8a9d0c3e444'
 const missingOrganisationId = '6512a0c2f1e4b8a9d0c3e999'
 const missingRegistrationId = '6512a0c2f1e4b8a9d0c3e888'
+const missingAccreditationId = '6512a0c2f1e4b8a9d0c3e777'
 
-// The accreditation from the read-model fixtures covers 2026.
 const YEAR = 2026
 
 const numbers = {
   organisationNumber: '500123',
-  registrationNumber: 'R25SR500010912PL',
-  accreditationNumber: ACCREDITATION_NUMBER
+  registrationNumber: 'R25SR500010912PL'
 }
 
 const organisation = buildOrganisation({
@@ -58,75 +54,45 @@ const organisation = buildOrganisation({
       registrationNumber: null
     })
   ],
-  accreditations: [
-    accreditation({ id: accreditationId }),
-    accreditation({ id: unnumberedAccreditationId, accreditationNumber: null })
-  ]
+  accreditations: [accreditation({ id: accreditationId })]
 })
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { ReportsRepository } from '#reports/repository/port.js' */
-/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { Report, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
-describe('backfillReportNumbers', () => {
+describe('report numbers backfill', () => {
+  /** @type {Map<string, Report & { accreditationNumber?: string | null }>} */
+  let reports
   /** @type {ReportsRepository} */
   let reportsRepository
   /** @type {SystemLogsRepository} */
   let systemLogsRepository
   /** @type {OrganisationsRepository} */
   let organisationsRepository
-  /** @type {SummaryLogsRepository} */
-  let summaryLogsRepository
   /** @type {TypedLogger} */
   let logger
 
-  /**
-   * @param {string} summaryLogId
-   * @param {string | null} submittedForAccreditationId
-   */
-  const submitSummaryLog = (summaryLogId, submittedForAccreditationId) =>
-    summaryLogsRepository.insert(
-      summaryLogId,
-      summaryLogFactory.submitted({
-        organisationId,
-        registrationId,
-        year: YEAR,
-        accreditationId: submittedForAccreditationId
-      })
-    )
-
-  /** @param {object} changes */
-  const changeOrganisation = (changes) => {
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      partialMock({ ...organisation, ...changes })
-    ])()
-  }
-
-  beforeEach(async () => {
+  beforeEach(() => {
     logger = createMockLogger()
-    reportsRepository = createInMemoryReportsRepository()()
+    reports = new Map()
+    reportsRepository = createInMemoryReportsRepository(reports)()
     systemLogsRepository = createSystemLogsRepository()(logger)
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
     ])()
-    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
-    await submitSummaryLog('sl-1', accreditationId)
+  })
+
+  const repositories = () => ({
+    reportsRepository,
+    systemLogsRepository,
+    organisationsRepository,
+    logger
   })
 
   /** @param {boolean} isDryRun */
-  const run = (isDryRun) =>
-    backfillReportNumbers(
-      {
-        reportsRepository,
-        systemLogsRepository,
-        organisationsRepository,
-        summaryLogsRepository,
-        logger
-      },
-      { isDryRun }
-    )
+  const run = (isDryRun) => backfillReportNumbers(repositories(), { isDryRun })
 
   const createReport = async (overrides = {}) =>
     (
@@ -176,27 +142,33 @@ describe('backfillReportNumbers', () => {
           reportId: partlyNumbered,
           organisationId,
           registrationId,
-          next: {
-            registrationNumber: numbers.registrationNumber,
-            accreditationNumber: numbers.accreditationNumber
-          }
+          next: { registrationNumber: numbers.registrationNumber }
         }
       })
     )
   })
 
-  it('gives a quarterly report a null accreditation number', async () => {
-    const id = await createReport({
-      cadence: CADENCE.quarterly,
-      period: 1
-    })
+  it('maps a report whatever accreditation its registration links to, and gives it no accreditation number', async () => {
+    organisationsRepository = createInMemoryOrganisationsRepository([
+      partialMock(
+        buildOrganisation({
+          id: organisationId,
+          orgId: 500123,
+          registrations: [
+            reprocessor({
+              id: registrationId,
+              registrationNumber: numbers.registrationNumber,
+              accreditationId: missingAccreditationId
+            })
+          ]
+        })
+      )
+    ])()
+    const id = await createReport()
 
-    await run(false)
-
-    expect(await stored(id)).toMatchObject({
-      ...numbers,
-      accreditationNumber: null
-    })
+    expect((await run(false)).unmapped).toBe(0)
+    expect(await stored(id)).toMatchObject(numbers)
+    expect(await stored(id)).not.toHaveProperty('accreditationNumber')
   })
 
   it('reports what it would add without writing or auditing on a dry run', async () => {
@@ -219,9 +191,7 @@ describe('backfillReportNumbers', () => {
     ['a backfill', false],
     ['a dry run', true]
   ])('on %s', (_, isDryRun) => {
-    it('returns each report it cannot map under the reason that applies, logging none of them', async () => {
-      await submitSummaryLog('sl-unnumbered', unnumberedAccreditationId)
-      await submitSummaryLog('sl-gone', missingAccreditationId)
+    it('returns each report it cannot map under every reason that applies, logging none of them', async () => {
       const organisationGone = await createReport({
         organisationId: missingOrganisationId
       })
@@ -233,135 +203,21 @@ describe('backfillReportNumbers', () => {
       const registrationGone = await createReport({
         registrationId: missingRegistrationId
       })
-      const noSummaryLog = await createReport({
-        period: MONTHLY_PERIODS.February,
-        source: { summaryLogId: null, lastUploadedAt: null }
-      })
-      const unnumberedAccreditation = await createReport({
-        period: MONTHLY_PERIODS.March,
-        source: { summaryLogId: 'sl-unnumbered', lastUploadedAt: null }
-      })
-      const accreditationGone = await createReport({
-        period: MONTHLY_PERIODS.April,
-        source: { summaryLogId: 'sl-gone', lastUploadedAt: null }
-      })
 
       expect(await run(isDryRun)).toEqual({
-        missing: 6,
-        mapped: 5,
-        unmapped: 6,
+        missing: 3,
+        mapped: 2,
+        unmapped: 3,
         unmappedReasons: {
           'organisation not found': [organisationGone],
           'no registration number': [unnumbered],
-          'registration not found': [registrationGone],
-          'report names no summary log': [noSummaryLog],
-          'no accreditation number': [unnumberedAccreditation],
-          'accreditation not found': [accreditationGone]
+          'registration not found': [registrationGone]
         },
         failed: 0,
         auditFailed: 0
       })
       expect(logger.info).not.toHaveBeenCalled()
     })
-  })
-
-  describe('gives a monthly report the number of the accreditation its summary log was submitted for', () => {
-    it('keeps the earlier accreditation after its registration is re-linked to another in the same year', async () => {
-      changeOrganisation({
-        registrations: [
-          reprocessor({
-            id: registrationId,
-            registrationNumber: numbers.registrationNumber,
-            accreditationId: relinkedAccreditationId
-          })
-        ],
-        accreditations: [
-          accreditation({ id: accreditationId }),
-          accreditation({
-            id: relinkedAccreditationId,
-            accreditationNumber: toAccreditationNumber('A26ER5009999999PL')
-          })
-        ]
-      })
-      const id = await createReport()
-
-      await run(false)
-
-      expect(await stored(id)).toMatchObject(numbers)
-    })
-
-    it('maps a report after its registration is re-linked to an accreditation for a later year', async () => {
-      changeOrganisation({
-        registrations: [
-          reprocessor({
-            id: registrationId,
-            registrationNumber: numbers.registrationNumber,
-            accreditationId: relinkedAccreditationId
-          })
-        ],
-        accreditations: [
-          accreditation({ id: accreditationId }),
-          accreditation({
-            id: relinkedAccreditationId,
-            accreditationNumber: toAccreditationNumber('A27ER5009999999PL'),
-            validFrom: '2027-01-01',
-            validTo: '2027-12-31'
-          })
-        ]
-      })
-      const id = await createReport()
-
-      expect((await run(false)).unmapped).toBe(0)
-      expect(await stored(id)).toMatchObject(numbers)
-    })
-
-    it.each([
-      [
-        'set back to created',
-        {
-          statusHistory: [
-            { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' }
-          ]
-        }
-      ],
-      ['without a validFrom', { validFrom: undefined }]
-    ])(
-      'maps a report whose accreditation is now %s but still holds its number',
-      async (_, changes) => {
-        changeOrganisation({
-          accreditations: [accreditation({ id: accreditationId, ...changes })]
-        })
-        const id = await createReport()
-
-        expect((await run(false)).unmapped).toBe(0)
-        expect(await stored(id)).toMatchObject(numbers)
-      }
-    )
-
-    it.each([
-      [
-        'report names no summary log',
-        { summaryLogId: null, lastUploadedAt: null }
-      ],
-      [
-        'summary log not found',
-        { summaryLogId: 'sl-deleted', lastUploadedAt: null }
-      ],
-      [
-        'summary log names no accreditation',
-        { summaryLogId: 'sl-registered-only', lastUploadedAt: null }
-      ]
-    ])(
-      'leaves a monthly report without an accreditation number as "%s"',
-      async (reason, source) => {
-        await submitSummaryLog('sl-registered-only', null)
-        const id = await createReport({ source })
-
-        expect((await run(false)).unmappedReasons).toEqual({
-          [reason]: [id]
-        })
-      }
-    )
   })
 
   it('still adds the numbers it can find to a report it cannot fully map', async () => {
@@ -374,33 +230,18 @@ describe('backfillReportNumbers', () => {
     await run(false)
 
     expect(await stored(id)).toMatchObject({
-      organisationNumber: numbers.organisationNumber,
-      accreditationNumber: null
-    })
-    expect(await stored(id)).not.toHaveProperty('registrationNumber')
-  })
-
-  it('gives the accreditation number to a monthly report whose registration the organisation no longer holds', async () => {
-    const id = await createReport({ registrationId: missingRegistrationId })
-
-    await run(false)
-
-    expect(await stored(id)).toMatchObject({
-      organisationNumber: numbers.organisationNumber,
-      accreditationNumber: numbers.accreditationNumber
+      organisationNumber: numbers.organisationNumber
     })
     expect(await stored(id)).not.toHaveProperty('registrationNumber')
   })
 
   it('does not report a number the report already holds as unmapped', async () => {
-    const id = await createReport({ registrationId: unnumberedRegistrationId })
-    await reportsRepository.assignNumbers(id, {
-      accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+    await createReport({
+      registrationId: unnumberedRegistrationId,
+      registrationNumber: numbers.registrationNumber
     })
 
-    expect((await run(false)).unmappedReasons).toEqual({
-      'no registration number': [id]
-    })
+    expect((await run(false)).unmapped).toBe(0)
   })
 
   it('leaves only the unmapped reports for the next run', async () => {
@@ -480,10 +321,10 @@ describe('backfillReportNumbers', () => {
     expect(await stored(written)).toMatchObject(numbers)
   })
 
-  it('counts an organisation whose accreditations cannot be read as a failure, not as unmapped', async () => {
+  it('counts an organisation whose registrations cannot be read as a failure, not as unmapped', async () => {
     await createReport()
     organisationsRepository.findById = async () =>
-      partialMock({ ...organisation, accreditations: undefined })
+      partialMock({ ...organisation, registrations: undefined })
 
     expect(await run(false)).toEqual({
       missing: 1,
@@ -512,6 +353,130 @@ describe('backfillReportNumbers', () => {
     expect(logger.error).toHaveBeenCalledWith({
       err: auditError,
       message: `Numbers written but audit failed for report ${id}: ${JSON.stringify(numbers)}`
+    })
+  })
+
+  describe('removing accreditation numbers', () => {
+    /**
+     * @param {string} id
+     * @param {string | null} accreditationNumber
+     */
+    const storeAccreditationNumber = (id, accreditationNumber) => {
+      reports.set(id, {
+        .../** @type {Report} */ (reports.get(id)),
+        accreditationNumber
+      })
+    }
+
+    /** @param {boolean} isDryRun */
+    const remove = (isDryRun) =>
+      removeReportAccreditationNumbers(repositories(), { isDryRun })
+
+    it('removes each accreditation number, null included, and audits each as the system user', async () => {
+      const monthly = await createReport({ period: MONTHLY_PERIODS.January })
+      const quarterly = await createReport({
+        cadence: CADENCE.quarterly,
+        period: 1
+      })
+      storeAccreditationNumber(monthly, ACCREDITATION_NUMBER)
+      storeAccreditationNumber(quarterly, null)
+
+      expect(await remove(false)).toEqual({
+        held: 2,
+        removed: 2,
+        failed: 0,
+        auditFailed: 0
+      })
+
+      expect(await stored(monthly)).not.toHaveProperty('accreditationNumber')
+      expect(await stored(quarterly)).not.toHaveProperty('accreditationNumber')
+      const logs = await systemLogs()
+      expect(logs).toHaveLength(2)
+      expect(logs).toContainEqual(
+        expect.objectContaining({
+          createdBy: expect.objectContaining({ id: 'system' }),
+          event: expect.objectContaining({
+            action: 'numbers-backfill-migration'
+          }),
+          context: {
+            reportId: monthly,
+            organisationId,
+            registrationId,
+            previous: { accreditationNumber: ACCREDITATION_NUMBER }
+          }
+        })
+      )
+    })
+
+    it('reports what it would remove without writing or auditing on a dry run', async () => {
+      const id = await createReport()
+      storeAccreditationNumber(id, ACCREDITATION_NUMBER)
+
+      expect(await remove(true)).toEqual({
+        held: 1,
+        removed: 1,
+        failed: 0,
+        auditFailed: 0
+      })
+
+      expect(await stored(id)).toHaveProperty(
+        'accreditationNumber',
+        ACCREDITATION_NUMBER
+      )
+      expect(await systemLogs()).toEqual([])
+    })
+
+    it.each([
+      ['has gone', async () => randomUUID()],
+      ['no longer holds an accreditation number', () => createReport()]
+    ])('skips a report that %s since it was listed', async (_, listed) => {
+      const id = await listed()
+      reportsRepository.findIdsWithAccreditationNumber = async () => [id]
+
+      expect(await remove(false)).toEqual({
+        held: 1,
+        removed: 0,
+        failed: 0,
+        auditFailed: 0
+      })
+      expect(await systemLogs()).toEqual([])
+    })
+
+    it('counts a failed report read as a failure', async () => {
+      const id = await createReport()
+      storeAccreditationNumber(id, ACCREDITATION_NUMBER)
+      const outage = new Error('connection lost')
+      reportsRepository.findReportById = () => Promise.reject(outage)
+
+      expect(await remove(false)).toEqual({
+        held: 1,
+        removed: 0,
+        failed: 1,
+        auditFailed: 0
+      })
+      expect(logger.error).toHaveBeenCalledWith({
+        err: outage,
+        message: `Failed to backfill numbers for report ${id}`
+      })
+    })
+
+    it('counts a removed but unaudited report apart from failures', async () => {
+      const id = await createReport()
+      storeAccreditationNumber(id, ACCREDITATION_NUMBER)
+      const auditError = new Error('system logs down')
+      systemLogsRepository.insert = () => Promise.reject(auditError)
+
+      expect(await remove(false)).toEqual({
+        held: 1,
+        removed: 1,
+        failed: 0,
+        auditFailed: 1
+      })
+      expect(await stored(id)).not.toHaveProperty('accreditationNumber')
+      expect(logger.error).toHaveBeenCalledWith({
+        err: auditError,
+        message: `Accreditation number removed but audit failed for report ${id}: ${JSON.stringify({ accreditationNumber: ACCREDITATION_NUMBER })}`
+      })
     })
   })
 })

@@ -212,7 +212,6 @@
  * @property {string} registrationId
  * @property {OrganisationNumber} [organisationNumber]
  * @property {RegistrationNumber} [registrationNumber]
- * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
  * @property {Year} year
  * @property {string} cadence
  * @property {number} period
@@ -325,7 +324,6 @@
  * @property {string} registrationId - MongoDB ObjectId hex string
  * @property {OrganisationNumber} [organisationNumber]
  * @property {RegistrationNumber} [registrationNumber]
- * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
  * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
@@ -348,9 +346,8 @@
  */
 
 /**
- * The numbers a report stores beside its organisation, registration and
- * accreditation ids.
- * @typedef {Pick<Report, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} ReportNumbers
+ * The numbers a report stores beside its organisation and registration ids.
+ * @typedef {Pick<Report, 'organisationNumber' | 'registrationNumber'>} ReportNumbers
  */
 
 /**
@@ -431,12 +428,17 @@
  *   read from the denormalised `status.submitted` slot. Used to detect a period
  *   closing during the summary log validate-to-submit window.
  * @property {() => Promise<string[]>} findIdsWithoutNumbers
- *   The ids of reports lacking the organisation, registration or accreditation
- *   number. A registered-only report's null accreditation number is held.
+ *   The ids of reports lacking the organisation or registration number.
  * @property {(reportId: string, numbers: ReportNumbers) => Promise<void>} assignNumbers
  *   Adds numbers to a report stored without them, refusing to overwrite a
  *   number it already holds. Leaves the version alone, so a user editing the
  *   report can still save it.
+ * @property {() => Promise<string[]>} findIdsWithAccreditationNumber
+ *   The ids of reports stored with an accreditation number, which a report no
+ *   longer carries.
+ * @property {(reportId: string) => Promise<{ accreditationNumber: AccreditationNumber | null } | null>} removeAccreditationNumber
+ *   Removes a report's accreditation number, returning the number removed, or
+ *   null when no report holds one under that id. Leaves the version alone.
  */
 
 /**

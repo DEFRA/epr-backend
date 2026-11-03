@@ -129,7 +129,7 @@ export const reportsPost = {
         overseasSitesRepository,
         organisationId,
         registrationId,
-        numbers: numbersFor(app.organisation, params).numbers,
+        numbers: numbersFor(app.organisation, { registrationId }).numbers,
         registration: storedRegistration,
         year,
         cadence,

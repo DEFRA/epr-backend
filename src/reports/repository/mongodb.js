@@ -19,7 +19,10 @@ import {
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
-import { reportsCollection } from './mongodb-collection.js'
+import {
+  reportsCollection,
+  storedReportsCollection
+} from './mongodb-collection.js'
 import {
   performMarkActiveReportsStaleForSummaryLog,
   performMarkActiveReportsStaleForPrnCancellation,
@@ -40,6 +43,7 @@ import {
  *   UpdateReportStatusParams
  * } from './port.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -266,8 +270,7 @@ const performFindIdsWithoutNumbers = async (db) => {
       {
         $or: [
           { organisationNumber: { $exists: false } },
-          { registrationNumber: { $exists: false } },
-          { accreditationNumber: { $exists: false } }
+          { registrationNumber: { $exists: false } }
         ]
       },
       { projection: { _id: 0, id: 1 } }
@@ -307,6 +310,41 @@ const performAssignNumbers = async (db, reportId, numbers) => {
   }
   const held = keys.filter((key) => existing[key] !== undefined)
   throw Boom.conflict(`Report ${validatedId} already holds ${held.join(', ')}`)
+}
+
+/**
+ * @param {Db} db
+ * @returns {Promise<string[]>}
+ */
+const performFindIdsWithAccreditationNumber = async (db) => {
+  const docs = await storedReportsCollection(db)
+    .find(
+      { accreditationNumber: { $exists: true } },
+      { projection: { _id: 0, id: 1 } }
+    )
+    .toArray()
+  return docs.map(({ id }) => id)
+}
+
+/**
+ * @param {Db} db
+ * @param {string} reportId
+ * @returns {Promise<{ accreditationNumber: AccreditationNumber | null } | null>}
+ */
+const performRemoveAccreditationNumber = async (db, reportId) => {
+  const validatedId = validateFindReportById(reportId)
+  const before = await storedReportsCollection(db).findOneAndUpdate(
+    { id: validatedId, accreditationNumber: { $exists: true } },
+    { $unset: { accreditationNumber: '' } },
+    { returnDocument: 'before', projection: { _id: 0, accreditationNumber: 1 } }
+  )
+  return (
+    before && {
+      accreditationNumber: /** @type {AccreditationNumber | null} */ (
+        before.accreditationNumber
+      )
+    }
+  )
 }
 
 /**
@@ -522,6 +560,10 @@ export const createReportsRepository = async (db) => {
       performHasReportSubmittedSince(db, organisationId, registrationId, since),
     findIdsWithoutNumbers: () => performFindIdsWithoutNumbers(db),
     assignNumbers: (reportId, numbers) =>
-      performAssignNumbers(db, reportId, numbers)
+      performAssignNumbers(db, reportId, numbers),
+    findIdsWithAccreditationNumber: () =>
+      performFindIdsWithAccreditationNumber(db),
+    removeAccreditationNumber: (reportId) =>
+      performRemoveAccreditationNumber(db, reportId)
   })
 }

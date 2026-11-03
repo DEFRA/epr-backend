@@ -3,17 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { logger } from '#common/helpers/logging/logger.js'
 import { config } from '../config.js'
 
-import { backfillReportNumbers } from './application/backfill.js'
+import {
+  backfillReportNumbers,
+  removeReportAccreditationNumbers
+} from './application/backfill.js'
 import { runReportNumbersBackfill } from './run.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-}))
-vi.mock('#common/helpers/s3/s3-client.js', () => ({
-  createS3Client: vi.fn()
-}))
-vi.mock('#repositories/summary-logs/mongodb.js', () => ({
-  createSummaryLogsRepository: vi.fn(async () => () => ({}))
 }))
 vi.mock('#reports/repository/mongodb.js', () => ({
   createReportsRepository: vi.fn(async () => () => ({}))
@@ -25,7 +22,8 @@ vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn(async () => () => ({}))
 }))
 vi.mock('./application/backfill.js', () => ({
-  backfillReportNumbers: vi.fn()
+  backfillReportNumbers: vi.fn(),
+  removeReportAccreditationNumbers: vi.fn()
 }))
 vi.mock('../config.js', () => ({ config: { get: vi.fn() } }))
 
@@ -48,9 +46,15 @@ describe('runReportNumbersBackfill', () => {
       unmapped: 13,
       unmappedReasons: {
         'organisation not found': reportIds(1, 12),
-        'no accreditation number': reportIds(13, 13)
+        'registration not found': reportIds(13, 13)
       },
       failed: 0,
+      auditFailed: 0
+    })
+    vi.mocked(removeReportAccreditationNumbers).mockResolvedValue({
+      held: 4,
+      removed: 3,
+      failed: 1,
       auditFailed: 0
     })
   })
@@ -66,9 +70,13 @@ describe('runReportNumbersBackfill', () => {
     expect(backfillReportNumbers).toHaveBeenCalledWith(expect.anything(), {
       isDryRun: true
     })
+    expect(removeReportAccreditationNumbers).toHaveBeenCalledWith(
+      expect.anything(),
+      { isDryRun: true }
+    )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (report-1, report-2, report-3, report-4, report-5, report-6, report-7, report-8, report-9, report-10); no accreditation number: 1 (report-13)"'
+        'Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (report-1, report-2, report-3, report-4, report-5, report-6, report-7, report-8, report-9, report-10); registration not found: 1 (report-13)" accreditationNumbers="held=4 removed=3 failed=1 auditFailed=0"'
     })
     expect(lock.free).toHaveBeenCalled()
   })
@@ -81,6 +89,10 @@ describe('runReportNumbersBackfill', () => {
     expect(backfillReportNumbers).toHaveBeenCalledWith(expect.anything(), {
       isDryRun: false
     })
+    expect(removeReportAccreditationNumbers).toHaveBeenCalledWith(
+      expect.anything(),
+      { isDryRun: false }
+    )
     expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining('(backfill)')
     })

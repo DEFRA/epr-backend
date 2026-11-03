@@ -155,8 +155,7 @@ export const reportDataFieldsSchema = {
 
 const numbersSchema = {
   organisationNumber: Joi.string().optional(),
-  registrationNumber: Joi.string().optional(),
-  accreditationNumber: Joi.string().allow(null).optional()
+  registrationNumber: Joi.string().optional()
 }
 
 export const createReportSchema = Joi.object({

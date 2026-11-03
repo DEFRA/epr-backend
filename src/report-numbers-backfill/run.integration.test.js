@@ -6,8 +6,6 @@ import { describe, expect, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION } from '#repositories/summary-logs/mongodb.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { partialMock } from '#test/type-helpers.js'
 import { config } from '../config.js'
@@ -28,17 +26,17 @@ vi.mock('../config.js', async (importOriginal) => {
   }
 })
 
-/** @import { Collection, Db } from 'mongodb' */
-/** @import { SummaryLogDocument } from '#repositories/summary-logs/mongodb.js' */
+/** @import { Db } from 'mongodb' */
 
 const DATABASE_NAME = 'epr-backend'
 const missingOrganisationId = new ObjectId().toString()
 const reportIds = {
   firstQuarter: randomUUID(),
   secondQuarter: randomUUID(),
-  january: randomUUID(),
-  organisationGone: randomUUID()
+  organisationGone: randomUUID(),
+  accreditationNumbered: randomUUID()
 }
+const ACCREDITATION_NUMBER = 'A26ER5000000001PA'
 
 const it = mongoIt.extend({
   mongoClient: async (/** @type {*} */ { db }, use) => {
@@ -78,66 +76,49 @@ const storedReport = (id, organisationId, registrationId, period) => ({
   }
 })
 
-/**
- * @param {Db} database
- * @returns {Collection<SummaryLogDocument>}
- */
-const summaryLogs = (database) =>
-  /** @type {Collection<SummaryLogDocument>} */ (
-    database.collection(SUMMARY_LOGS_COLLECTION)
-  )
-
 /** @param {Db} database */
 const seed = async (database) => {
   const collection = database.collection('reports')
   await collection.deleteMany({})
   await database.collection('system-logs').deleteMany({})
   await database.collection('epr-organisations').deleteMany({})
-  await summaryLogs(database).deleteMany({})
 
   const organisation = await buildApprovedOrg(
     (await createOrganisationsRepository(database))()
   )
   const [registration] = organisation.registrations
-  const [accreditation] = organisation.accreditations
-
-  await summaryLogs(database).insertOne({
-    _id: 'january-source',
-    version: 1,
-    ...summaryLogFactory.submitted({
-      organisationId: organisation.id,
-      registrationId: registration.id,
-      year: 2026,
-      accreditationId: accreditation.id
-    })
-  })
 
   await collection.insertMany([
     storedReport(reportIds.firstQuarter, organisation.id, registration.id, 1),
     storedReport(reportIds.secondQuarter, organisation.id, registration.id, 2),
-    {
-      ...storedReport(reportIds.january, organisation.id, registration.id, 1),
-      cadence: 'monthly',
-      endDate: '2026-01-31',
-      dueDate: '2026-02-20',
-      source: { summaryLogId: 'january-source', lastUploadedAt: null }
-    },
     storedReport(
       reportIds.organisationGone,
       missingOrganisationId,
       registration.id,
       1
-    )
+    ),
+    {
+      ...storedReport(
+        reportIds.accreditationNumbered,
+        organisation.id,
+        registration.id,
+        1
+      ),
+      cadence: 'monthly',
+      endDate: '2026-01-31',
+      dueDate: '2026-02-20',
+      organisationNumber: String(organisation.orgId),
+      registrationNumber: registration.registrationNumber,
+      accreditationNumber: ACCREDITATION_NUMBER
+    }
   ])
 
   return {
     collection,
     numbers: {
       organisationNumber: String(organisation.orgId),
-      registrationNumber: registration.registrationNumber,
-      accreditationNumber: null
-    },
-    accreditationNumber: accreditation.accreditationNumber
+      registrationNumber: registration.registrationNumber
+    }
   }
 }
 
@@ -158,7 +139,7 @@ const enableBackfill = (/** @type {boolean} */ enabled) =>
 const unmappedReasons = `unmappedReasons="organisation not found: 1 (${reportIds.organisationGone})"`
 
 describe('runReportNumbersBackfill (mongo)', () => {
-  it('dry run writes and audits nothing, and reports what it cannot map', async (/** @type {*} */ {
+  it('dry run writes and audits nothing, and reports what it cannot map and what it would remove', async (/** @type {*} */ {
     database
   }) => {
     const { collection } = await seed(database)
@@ -168,17 +149,20 @@ describe('runReportNumbersBackfill (mongo)', () => {
 
     expect(
       await collection.countDocuments({ organisationNumber: { $exists: true } })
-    ).toBe(0)
+    ).toBe(1)
+    expect(
+      await collection.findOne({ id: reportIds.accreditationNumbered })
+    ).toHaveProperty('accreditationNumber', ACCREDITATION_NUMBER)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Report numbers backfill (dry-run): missing=4 mapped=3 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
+      message: `Report numbers backfill (dry-run): missing=3 mapped=2 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} accreditationNumbers="held=1 removed=1 failed=0 auditFailed=0"`
     })
   })
 
-  it('adds the numbers, leaves the version alone, audits each change and is idempotent', async (/** @type {*} */ {
+  it('adds the numbers, removes the accreditation number, leaves the version alone, audits each change and is idempotent', async (/** @type {*} */ {
     database
   }) => {
-    const { collection, numbers, accreditationNumber } = await seed(database)
+    const { collection, numbers } = await seed(database)
     enableBackfill(true)
     const server = serverFor(database)
 
@@ -191,13 +175,14 @@ describe('runReportNumbersBackfill (mongo)', () => {
         version: 3
       })
     }
-    expect(await collection.findOne({ id: reportIds.january })).toMatchObject({
-      ...numbers,
-      accreditationNumber
-    })
     expect(
       await collection.findOne({ id: reportIds.organisationGone })
     ).not.toHaveProperty('organisationNumber')
+    const accreditationNumbered = await collection.findOne({
+      id: reportIds.accreditationNumbered
+    })
+    expect(accreditationNumbered).toMatchObject({ ...numbers, version: 3 })
+    expect(accreditationNumbered).not.toHaveProperty('accreditationNumber')
 
     const logs = await database.collection('system-logs').find().toArray()
     expect(logs.map(({ context }) => context)).toEqual(
@@ -209,6 +194,10 @@ describe('runReportNumbersBackfill (mongo)', () => {
         expect.objectContaining({
           reportId: reportIds.secondQuarter,
           next: numbers
+        }),
+        expect.objectContaining({
+          reportId: reportIds.accreditationNumbered,
+          previous: { accreditationNumber: ACCREDITATION_NUMBER }
         })
       ])
     )
@@ -217,7 +206,7 @@ describe('runReportNumbersBackfill (mongo)', () => {
     expect(logs[0].event.action).toBe('numbers-backfill-migration')
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
+      message: `Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} accreditationNumbers="held=0 removed=0 failed=0 auditFailed=0"`
     })
   })
 })

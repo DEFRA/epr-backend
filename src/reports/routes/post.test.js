@@ -190,7 +190,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId: registration.id,
       organisationNumber: String(org.orgId),
       registrationNumber: registration.registrationNumber,
-      accreditationNumber: accreditationRecord?.accreditationNumber,
       reportsRepositoryFactory,
       url,
       /** @param {{ year?: number, period?: number, submissionNumber?: number }} [submission] */
@@ -269,21 +268,22 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
   })
 
-  it('stores the organisation and registration numbers beside their ids, and a null accreditation number', async () => {
+  it('stores the organisation and registration numbers beside their ids, and no accreditation number', async () => {
     const created = await createServer(registeredOnlyReprocessor)
 
     await created.post()
 
-    expect(await storedQuarterlyReport(created)).toMatchObject({
+    const stored = await storedQuarterlyReport(created)
+    expect(stored).toMatchObject({
       organisationId: created.organisationId,
       organisationNumber: created.organisationNumber,
       registrationId: created.registrationId,
-      registrationNumber: created.registrationNumber,
-      accreditationNumber: null
+      registrationNumber: created.registrationNumber
     })
+    expect(stored).not.toHaveProperty('accreditationNumber')
   })
 
-  it('stores the accreditation number on a report made through the accreditation', async () => {
+  it('stores no accreditation number on a report made through the accreditation', async () => {
     const created = await createServer(registeredOnlyReprocessor, {
       accredited: true
     })
@@ -300,8 +300,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         MONTH,
         1
       )
-    ).toMatchObject({ accreditationNumber: created.accreditationNumber })
-    expect(created.accreditationNumber).toBeDefined()
+    ).not.toHaveProperty('accreditationNumber')
   })
 
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
