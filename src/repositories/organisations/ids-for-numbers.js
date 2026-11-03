@@ -1,6 +1,5 @@
 /**
- * @import { RequiredNumbers } from '#domain/organisations/numbers.js'
- * @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js'
+ * @import { AccreditationNumber, RequiredNumbers } from '#domain/organisations/numbers.js'
  * @import { OrganisationsRepository } from './port.js'
  */
 
@@ -11,8 +10,8 @@
  * not found.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {RequiredNumbers} numbers
- * @returns {Promise<RegistrationOrAccreditationId | null>}
+ * @param {RequiredNumbers & { accreditationNumber: AccreditationNumber }} numbers
+ * @returns {Promise<{ organisationId: string, registrationId: string, accreditationId: string } | null>}
  */
 export const idsForNumbers = async (
   organisationsRepository,
@@ -20,23 +19,21 @@ export const idsForNumbers = async (
 ) => {
   const organisation =
     await organisationsRepository.findByOrganisationNumber(organisationNumber)
-  const registration = organisation?.registrations.find(
-    (candidate) => candidate.registrationNumber === registrationNumber
-  )
-  if (!organisation || !registration) {
+  if (!organisation) {
     return null
   }
 
-  const ids = {
-    organisationId: organisation.id,
-    registrationId: registration.id
-  }
-  if (accreditationNumber === null) {
-    return { ...ids, accreditationId: null }
-  }
-
+  const registration = organisation.registrations.find(
+    (candidate) => candidate.registrationNumber === registrationNumber
+  )
   const accreditation = organisation.accreditations.find(
     (candidate) => candidate.accreditationNumber === accreditationNumber
   )
-  return accreditation ? { ...ids, accreditationId: accreditation.id } : null
+  return registration && accreditation
+    ? {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      }
+    : null
 }

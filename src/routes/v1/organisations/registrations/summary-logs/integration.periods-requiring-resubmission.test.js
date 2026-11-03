@@ -19,8 +19,7 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -283,11 +282,10 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers: /** @type {RequiredNumbers} */ (
-        numbersFor(
-          await env.organisationsRepository.findById(env.organisationId),
-          { registrationId: env.registrationId, accreditationId: null }
-        ).numbers
+      numbers: requiredNumbersFor(
+        await env.organisationsRepository.findById(env.organisationId),
+        { registrationId: env.registrationId, accreditationId: null },
+        'the report'
       ),
       registration,
       year,

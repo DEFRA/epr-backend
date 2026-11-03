@@ -3,7 +3,7 @@ import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
 import {
-  buildAccreditationId,
+  buildAccreditationKeys,
   buildPrn,
   underAccreditation
 } from '../repository/contract/test-data.js'
@@ -19,7 +19,7 @@ const PERIOD_END = '2025-12-31'
 const IN_PERIOD = new Date('2025-06-15T12:00:00Z')
 const ACTOR = { id: 'u', name: 'U' }
 
-const ACCREDITATION = buildAccreditationId()
+const ACCREDITATION = buildAccreditationKeys()
 
 const defaultParams = {
   organisationNumber: ACCREDITATION.organisationNumber,

@@ -71,20 +71,6 @@ describe('idsForNumbers', () => {
     })
   })
 
-  it('gives a null accreditation id for a registered-only registration', async () => {
-    const ids = await idsForNumbers(repository, {
-      organisationNumber: organisationNumber(),
-      registrationNumber: REGISTRATION_NUMBER,
-      accreditationNumber: null
-    })
-
-    expect(ids).toStrictEqual({
-      organisationId: organisation.id,
-      registrationId,
-      accreditationId: null
-    })
-  })
-
   it('gives null for an organisation number no organisation holds', async () => {
     const ids = await idsForNumbers(repository, {
       organisationNumber: toOrganisationNumber('999999'),

@@ -65,7 +65,7 @@ export const buildAccreditationSnapshot = (overrides = {}) => ({
  * @param {Partial<AccreditationKeys>} [overrides]
  * @returns {AccreditationKeys}
  */
-export const buildAccreditationId = (overrides = {}) => {
+export const buildAccreditationKeys = (overrides = {}) => {
   const unique = randomInt(100_000_000, 1_000_000_000)
   return {
     organisationId: new ObjectId().toHexString(),

@@ -1,7 +1,7 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildAccreditationId,
+  buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
   buildCancelledPrn,
   buildDeletedPrn,
@@ -43,7 +43,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     )
 
     it('totals an accreditation’s tonnage by current status', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationKeys()
       await repository.create(
         buildDraftPrn(underAccreditation(accreditation, { tonnage: 10 }))
       )
@@ -78,7 +78,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('leaves out PRNs in an excluded status', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationKeys()
       await repository.create(
         buildDraftPrn(underAccreditation(accreditation, { tonnage: 10 }))
       )
@@ -94,7 +94,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('omits an accreditation whose PRNs are all excluded', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationKeys()
       await repository.create(
         buildDeletedPrn(underAccreditation(accreditation, { tonnage: 99 }))
       )
@@ -105,8 +105,8 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('keeps accreditations apart', async () => {
-      const first = buildAccreditationId()
-      const second = buildAccreditationId()
+      const first = buildAccreditationKeys()
+      const second = buildAccreditationKeys()
       await repository.create(
         buildDraftPrn(underAccreditation(first, { tonnage: 10 }))
       )
@@ -125,7 +125,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
     })
 
     it('keys on ids, not on the names a PRN snapshots', async () => {
-      const accreditation = buildAccreditationId()
+      const accreditation = buildAccreditationKeys()
       await repository.create(
         buildDraftPrn(
           underAccreditation(accreditation, {
