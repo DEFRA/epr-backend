@@ -52,10 +52,7 @@ describe('validateOrganisation', () => {
           id: 'acc-unnumbered',
           material: 'glass',
           accreditationNumber: null,
-          statusHistory: [
-            { status: 'created', updatedAt: '2026-01-01' },
-            { status: 'approved', updatedAt: '2026-02-01' }
-          ]
+          status: 'approved'
         }
       ]
     )

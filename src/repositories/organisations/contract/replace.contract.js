@@ -1298,55 +1298,70 @@ export const testReplaceBehaviour = (it) => {
         ).rejects.toThrow('"registrations[0].registrationNumber" is required')
       })
 
-      it('rejects an update that would take the number off an accreditation that has been accredited', async () => {
+      it('accepts an update that takes the number off an accreditation moved back to created', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
         const approved = await approve(organisation)
 
-        const { accreditationNumber: _accreditationNumber, ...accreditation } =
-          approved.accreditations[0]
-
-        await expect(
-          repository.replace(
-            organisation.id,
-            approved.version,
-            prepareOrgUpdate(approved, {
-              accreditations: [
-                { ...accreditation, status: ACCREDITATION_STATUS.CREATED }
-              ]
-            })
-          )
-        ).rejects.toThrow('cannot lose their accreditation number')
-      })
-
-      it('rejects an update that would take the number off an accreditation that was never approved', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
         await repository.replace(
           organisation.id,
-          1,
-          prepareOrgUpdate(organisation, {
+          approved.version,
+          prepareOrgUpdate(approved, {
             accreditations: [
               {
-                ...organisation.accreditations[0],
-                accreditationNumber: 'ACC999'
+                ...approved.accreditations[0],
+                status: ACCREDITATION_STATUS.CREATED,
+                accreditationNumber: null
               }
             ]
           })
         )
-        const numbered = await repository.findById(organisation.id, 2)
 
-        const { accreditationNumber: _accreditationNumber, ...accreditation } =
-          numbered.accreditations[0]
+        const saved = await repository.findById(organisation.id, 3)
+        expect(saved.accreditations[0]).toMatchObject({
+          status: ACCREDITATION_STATUS.CREATED,
+          accreditationNumber: null
+        })
+      })
 
-        await expect(
-          repository.replace(
-            organisation.id,
-            numbered.version,
-            prepareOrgUpdate(numbered, { accreditations: [accreditation] })
-          )
-        ).rejects.toThrow('cannot lose their accreditation number')
+      it('accepts an update that takes the number off a cancelled accreditation', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        const approved = await approve(organisation)
+
+        await repository.replace(
+          organisation.id,
+          approved.version,
+          prepareOrgUpdate(approved, {
+            accreditations: [
+              {
+                ...approved.accreditations[0],
+                status: ACCREDITATION_STATUS.SUSPENDED
+              }
+            ]
+          })
+        )
+        const suspended = await repository.findById(organisation.id, 3)
+
+        await repository.replace(
+          organisation.id,
+          suspended.version,
+          prepareOrgUpdate(suspended, {
+            accreditations: [
+              {
+                ...suspended.accreditations[0],
+                status: ACCREDITATION_STATUS.CANCELLED,
+                accreditationNumber: null
+              }
+            ]
+          })
+        )
+
+        const saved = await repository.findById(organisation.id, 4)
+        expect(saved.accreditations[0]).toMatchObject({
+          status: ACCREDITATION_STATUS.CANCELLED,
+          accreditationNumber: null
+        })
       })
     })
 

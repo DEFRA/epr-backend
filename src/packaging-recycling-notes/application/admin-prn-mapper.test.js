@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 
 import { mapToAdminPrn } from './admin-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 
 describe('mapToAdminPrn', () => {
@@ -20,50 +21,36 @@ describe('mapToAdminPrn', () => {
     expect(mapped.organisationName).toBe(prn.organisation.name)
   })
 
-  it('marks an accepted PRN within its cancellation window as regulator-cancellable', () => {
-    const futureYear = toYear(new Date().getUTCFullYear() + 5)
-    const prn = createMockIssuedPrn({
-      status: {
-        ...createMockIssuedPrn().status,
-        currentStatus: PRN_STATUS.ACCEPTED
-      },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: futureYear
-      }
+  const futureYear = toYear(new Date().getUTCFullYear() + 5)
+
+  it.for([
+    {
+      description:
+        'marks an accepted PRN within its cancellation window as regulator-cancellable',
+      currentStatus: PRN_STATUS.ACCEPTED,
+      accreditationYear: futureYear,
+      cancellable: true
+    },
+    {
+      description:
+        'marks a PRN past its cancellation window as not regulator-cancellable',
+      currentStatus: PRN_STATUS.ACCEPTED,
+      accreditationYear: toYear(2000),
+      cancellable: false
+    },
+    {
+      description:
+        'marks a cancelled PRN as not regulator-cancellable regardless of year',
+      currentStatus: PRN_STATUS.CANCELLED,
+      accreditationYear: futureYear,
+      cancellable: false
+    }
+  ])('$description', ({ currentStatus, accreditationYear, cancellable }) => {
+    const issued = createMockIssuedPrn({
+      accreditation: buildAccreditationSnapshot({ accreditationYear })
     })
+    const prn = { ...issued, status: { ...issued.status, currentStatus } }
 
-    expect(mapToAdminPrn(prn).regulatorCancellable).toBe(true)
-  })
-
-  it('marks a PRN past its cancellation window as not regulator-cancellable', () => {
-    const prn = createMockIssuedPrn({
-      status: {
-        ...createMockIssuedPrn().status,
-        currentStatus: PRN_STATUS.ACCEPTED
-      },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: toYear(2000)
-      }
-    })
-
-    expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)
-  })
-
-  it('marks a cancelled PRN as not regulator-cancellable regardless of year', () => {
-    const futureYear = toYear(new Date().getUTCFullYear() + 5)
-    const prn = createMockIssuedPrn({
-      status: {
-        ...createMockIssuedPrn().status,
-        currentStatus: PRN_STATUS.CANCELLED
-      },
-      accreditation: {
-        ...createMockIssuedPrn().accreditation,
-        accreditationYear: futureYear
-      }
-    })
-
-    expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)
+    expect(mapToAdminPrn(prn).regulatorCancellable).toBe(cancellable)
   })
 })

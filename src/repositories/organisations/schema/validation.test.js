@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   validateAccreditation,
+  validateOrganisationUpdate,
   validateRegistration,
   validateStatusHistory
 } from './validation.js'
@@ -10,14 +11,18 @@ import {
   MATERIAL,
   REGISTRATION_STATUS,
   REGULATOR,
+  REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
   buildAccreditation,
   buildRegistration,
-  createOrganisationBuilders
+  createOrganisationBuilders,
+  prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
 import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
+
+/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -614,6 +619,47 @@ describe('validateAccreditation', () => {
         /Invalid accreditation data.*incomeBusinessPlan.*must contain 7 items/
       )
     })
+  })
+})
+
+describe('validateOrganisationUpdate', () => {
+  describe('an accreditation without a number', () => {
+    /** @param {AccreditationStatus} status */
+    const updateWithUnnumberedAccreditation = (status) => {
+      const organisation = buildOrganisation()
+
+      return prepareOrgUpdate(organisation, {
+        accreditations: [
+          {
+            ...organisation.accreditations[0],
+            status,
+            accreditationNumber: null,
+            validFrom: '2026-01-01',
+            validTo: '2026-12-31',
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+        ]
+      })
+    }
+
+    it.each([
+      ACCREDITATION_STATUS.CREATED,
+      ACCREDITATION_STATUS.REJECTED,
+      ACCREDITATION_STATUS.CANCELLED
+    ])('is accepted when %s', (status) => {
+      expect(() =>
+        validateOrganisationUpdate(updateWithUnnumberedAccreditation(status))
+      ).not.toThrow()
+    })
+
+    it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
+      'is refused when %s',
+      (status) => {
+        expect(() =>
+          validateOrganisationUpdate(updateWithUnnumberedAccreditation(status))
+        ).toThrow(/accreditations\[0\]\.accreditationNumber" is required/)
+      }
+    )
   })
 })
 
