@@ -30,7 +30,10 @@ export const testFindBehaviour = (it) => {
 
         await repository.insert(
           id,
-          summaryLogFactory.validating({ file: { id: fileId } })
+          summaryLogFactory.validating({
+            organisationId: 'org-holding-file',
+            file: { id: fileId }
+          })
         )
 
         const result = await repository.findById(id)
@@ -82,7 +85,10 @@ export const testFindBehaviour = (it) => {
 
         await repository.insert(
           id,
-          summaryLogFactory.validating({ file: { id: fileId } })
+          summaryLogFactory.validating({
+            organisationId: 'org-holding-file',
+            file: { id: fileId }
+          })
         )
         await repository.insert(
           fileId,
@@ -93,7 +99,11 @@ export const testFindBehaviour = (it) => {
 
         expect(result.version).toBe(1)
         expect(result.summaryLog.file.id).toBe(fileId)
-        expect(result.summaryLog.organisationId).not.toBe('org-other')
+        expect(result.summaryLog.organisationId).toBe('org-holding-file')
+      })
+
+      it('rejects null file id', async () => {
+        await expect(repository.findByFileId(null)).rejects.toThrow(/id/)
       })
 
       it('rejects empty string file id', async () => {

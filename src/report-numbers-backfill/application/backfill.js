@@ -50,8 +50,7 @@ const COUNTED_BY_MATCHING_ACCREDITATIONS = new Set([
 /**
  * A monthly report is built from the ledger of its source summary log, so its
  * accreditation is the one that summary log was submitted for, whatever the
- * registration links to now. A quarterly report has none. The report's source
- * names the summary log by the file id the ledger records, not by its own id.
+ * registration links to now. A quarterly report has none.
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {Report} report
@@ -64,7 +63,8 @@ const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
   if (!source?.summaryLogId) {
     return { unrecorded: NO_SUMMARY_LOG }
   }
-  const found = await summaryLogsRepository.findByFileId(source.summaryLogId)
+  const fileIdTheLedgerRecords = source.summaryLogId
+  const found = await summaryLogsRepository.findByFileId(fileIdTheLedgerRecords)
   if (!found) {
     return { unrecorded: 'summary log not found' }
   }
