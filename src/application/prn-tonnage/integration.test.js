@@ -14,7 +14,7 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
-  buildAccreditation
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -61,7 +61,7 @@ const prnWithStatus = (currentStatus, tonnage) =>
   buildPrn({
     registrationId,
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
-    accreditation: buildAccreditation({
+    accreditation: buildAccreditationSnapshot({
       id: accId,
       accreditationNumber: 'ACC-1',
       material: MATERIAL.PLASTIC
@@ -305,7 +305,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ...prnWithStatus(PRN_STATUS.ACCEPTED, 40),
       registrationId: `reg-${accreditationId}`,
       organisation: { id, name: 'as raised' },
-      accreditation: buildAccreditation({ id: accreditationId })
+      accreditation: buildAccreditationSnapshot({ id: accreditationId })
     })
 
     await db.collection(ORGANISATIONS_COLLECTION).insertMany([
