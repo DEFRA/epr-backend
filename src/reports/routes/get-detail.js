@@ -1,11 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import {
-  findRegistrationForReport,
-  requiredPeriodsFor,
-  withRegistrationDetails
-} from './shared.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -20,7 +18,6 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
- * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
  */
 
 /**
@@ -67,8 +64,7 @@ export const reportsGetDetail = {
     }
   },
   /**
-   * @param {Omit<HapiRequest, 'app'> & {
-   *   app: ResolvedRecords,
+   * @param {HapiRequest & {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -87,8 +83,7 @@ export const reportsGetDetail = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      params,
-      app
+      params
     } = request
     const {
       organisationId,
@@ -99,10 +94,13 @@ export const reportsGetDetail = {
       submissionNumber
     } = params
 
-    const registration = await findRegistrationForReport(
+    const storedRegistration = await findRegistrationForReport(
       organisationsRepository,
       params
     )
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
@@ -112,12 +110,16 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
-      registration,
+      registration: storedRegistration,
       year,
       cadence,
       period,
       submissionNumber,
-      requiredPeriods: requiredPeriodsFor(app, params),
+      requiredPeriods: requiredReportingPeriods({
+        registration,
+        year,
+        cadence
+      }),
       reportDataValidationEnabled: request.config.get(
         'featureFlags.reportDataValidation'
       )
