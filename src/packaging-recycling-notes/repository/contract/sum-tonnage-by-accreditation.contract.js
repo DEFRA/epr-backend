@@ -1,4 +1,9 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildAccreditationId,
@@ -11,6 +16,8 @@ import {
 
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
 /** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
+
+const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-2026-001')
 
 const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
 
@@ -65,6 +72,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
 
       expect(totalFor(totals, accreditation)).toStrictEqual({
         id: accreditation,
+        numbers: { accreditationNumber: ACCREDITATION_NUMBER },
         tonnageByStatus: {
           [PRN_STATUS.DRAFT]: 10,
           [PRN_STATUS.AWAITING_ACCEPTANCE]: 50,
@@ -117,6 +125,46 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       })
       expect(totalFor(totals, second)?.tonnageByStatus).toStrictEqual({
         [PRN_STATUS.DRAFT]: 20
+      })
+    })
+
+    it('returns the numbers its PRNs carry', async () => {
+      const accreditation = buildAccreditationId()
+      const organisationNumber = toOrganisationNumber('500123')
+      const registrationNumber = toRegistrationNumber('R26ER5001230001PL')
+      await repository.create(
+        buildDraftPrn({
+          ...underAccreditation(accreditation, { tonnage: 10 }),
+          organisation: {
+            id: accreditation.organisationId,
+            name: 'Test Organisation',
+            organisationNumber
+          },
+          registration: { registrationNumber }
+        })
+      )
+      await repository.create(
+        buildDraftPrn({
+          ...underAccreditation(accreditation, { tonnage: 20 }),
+          organisation: {
+            id: accreditation.organisationId,
+            name: 'Test Organisation',
+            organisationNumber
+          },
+          registration: { registrationNumber }
+        })
+      )
+
+      const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
+
+      expect(totalFor(totals, accreditation)).toStrictEqual({
+        id: accreditation,
+        numbers: {
+          organisationNumber,
+          registrationNumber,
+          accreditationNumber: ACCREDITATION_NUMBER
+        },
+        tonnageByStatus: { [PRN_STATUS.DRAFT]: 30 }
       })
     })
 

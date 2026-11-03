@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { registerDependency } from '#plugins/register-dependency.js'
@@ -127,8 +128,21 @@ const performSumTonnageByAccreditation =
         registrationId: prn.registrationId,
         accreditationId: prn.accreditation.id
       }
-      const key = JSON.stringify(id)
-      const total = totals.get(key) ?? { id, tonnageByStatus: {} }
+      const numbers = {
+        organisationNumber: prn.organisation.organisationNumber,
+        registrationNumber: prn.registration?.registrationNumber,
+        accreditationNumber: toAccreditationNumber(
+          prn.accreditation.accreditationNumber
+        )
+      }
+      const key = JSON.stringify({ id, numbers })
+      const total = totals.get(key) ?? {
+        id,
+        numbers: Object.fromEntries(
+          Object.entries(numbers).filter(([, number]) => number !== undefined)
+        ),
+        tonnageByStatus: {}
+      }
       total.tonnageByStatus[status] =
         (total.tonnageByStatus[status] ?? 0) + prn.tonnage
       totals.set(key, total)

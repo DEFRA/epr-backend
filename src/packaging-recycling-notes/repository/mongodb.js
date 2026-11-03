@@ -323,6 +323,9 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
             organisationId: '$organisation.id',
             registrationId: '$registrationId',
             accreditationId: '$accreditation.id',
+            organisationNumber: '$organisation.organisationNumber',
+            registrationNumber: '$registration.registrationNumber',
+            accreditationNumber: '$accreditation.accreditationNumber',
             status: '$status.currentStatus'
           },
           tonnage: { $sum: '$tonnage' }
@@ -333,7 +336,10 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
           _id: {
             organisationId: '$_id.organisationId',
             registrationId: '$_id.registrationId',
-            accreditationId: '$_id.accreditationId'
+            accreditationId: '$_id.accreditationId',
+            organisationNumber: '$_id.organisationNumber',
+            registrationNumber: '$_id.registrationNumber',
+            accreditationNumber: '$_id.accreditationNumber'
           },
           tonnageByStatus: { $push: { k: '$_id.status', v: '$tonnage' } }
         }
@@ -341,14 +347,30 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $project: {
           _id: 0,
-          id: '$_id',
+          id: {
+            organisationId: '$_id.organisationId',
+            registrationId: '$_id.registrationId',
+            accreditationId: '$_id.accreditationId'
+          },
+          numbers: {
+            organisationNumber: '$_id.organisationNumber',
+            registrationNumber: '$_id.registrationNumber',
+            accreditationNumber: '$_id.accreditationNumber'
+          },
           tonnageByStatus: { $arrayToObject: '$tonnageByStatus' }
         }
       }
     ])
     .toArray()
 
-  return /** @type {AccreditationTonnage[]} */ (totals)
+  return totals.map(({ id, numbers, tonnageByStatus }) => ({
+    id,
+    // Grouping turns a number a PRN lacks into null, which is absent here
+    numbers: Object.fromEntries(
+      Object.entries(numbers).filter(([, number]) => number !== null)
+    ),
+    tonnageByStatus
+  }))
 }
 
 /**

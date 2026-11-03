@@ -9,11 +9,19 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
 import {
-  MATERIAL,
-  TONNAGE_BAND,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  exporter,
+  exporterAccreditation
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   buildAwaitingAcceptancePrn,
   buildAccreditationSnapshot
@@ -34,49 +42,54 @@ const orgId = 100987
 const accId = 'acc-integ'
 const registrationId = 'reg-integ'
 
-const approvedStatusHistory = [
-  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
-]
-
 const ledgerId = {
   organisationId,
   registrationId,
   accreditationId: accId
 }
 
-/** @param {string | null} accreditationNumber */
-const storedOrganisation = (accreditationNumber) => ({
-  _id: new ObjectId(organisationId),
-  orgId,
-  companyDetails: { name: 'Acme Reprocessing' },
-  statusHistory: approvedStatusHistory,
-  accreditations: [
-    {
-      id: accId,
-      accreditationNumber,
-      material: MATERIAL.PLASTIC,
-      prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
-      statusHistory: approvedStatusHistory
-    }
-  ],
-  registrations: [
-    {
-      id: registrationId,
-      registrationNumber: 'REG-INTEG',
-      accreditationId: accId,
-      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-      statusHistory: approvedStatusHistory
-    }
-  ]
-})
+const { buildOrganisation } = createOrganisationBuilders()
+
+const storedOrganisation = () => {
+  const { id, ...rest } = buildOrganisation({
+    id: organisationId,
+    orgId,
+    companyDetails: { name: 'Acme Reprocessing' },
+    registrations: [
+      exporter({
+        id: registrationId,
+        material: MATERIAL.PLASTIC,
+        accreditationId: accId,
+        registrationNumber: EXPORTER_NUMBER,
+        overseasSites: {}
+      })
+    ],
+    accreditations: [
+      exporterAccreditation({
+        id: accId,
+        material: MATERIAL.PLASTIC,
+        accreditationNumber: toAccreditationNumber(
+          EXPORTER_ACCREDITATION_NUMBER
+        ),
+        prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 }
+      })
+    ]
+  })
+  return { _id: new ObjectId(id), ...rest }
+}
 
 const awaitingAcceptancePrn = () =>
   buildAwaitingAcceptancePrn({
     registrationId,
-    organisation: { id: organisationId, name: 'Acme Reprocessing' },
+    organisation: {
+      id: organisationId,
+      name: 'Acme Reprocessing',
+      organisationNumber: toOrganisationNumber(String(orgId))
+    },
+    registration: { registrationNumber: toRegistrationNumber(EXPORTER_NUMBER) },
     accreditation: buildAccreditationSnapshot({
       id: accId,
-      accreditationNumber: 'ACC-INTEG',
+      accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
       material: MATERIAL.PLASTIC
     }),
     tonnage: 100
@@ -97,7 +110,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
     await server.db
       .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(storedOrganisation('ACC-INTEG'))
+      .insertOne(storedOrganisation())
     await server.db
       .collection(PRNS_COLLECTION)
       .insertOne(awaitingAcceptancePrn())
@@ -120,9 +133,9 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
       {
         organisationName: 'Acme Reprocessing',
         orgId: String(orgId),
-        registrationNumber: 'REG-INTEG',
+        registrationNumber: EXPORTER_NUMBER,
         registrationType: REGISTRATION_TYPE.EXPORTER,
-        accreditationNumber: 'ACC-INTEG',
+        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
         material: MATERIAL.PLASTIC,
         tonnageBand: TONNAGE_BAND.UP_TO_5000,
         wasteBalance: 750,
@@ -141,27 +154,5 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
-  })
-
-  it('serves a blank accreditation number for an accreditation that no longer has one', async ({
-    server
-  }) => {
-    await server.db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(storedOrganisation(null))
-    await server.db
-      .collection(PRNS_COLLECTION)
-      .insertOne(awaitingAcceptancePrn())
-
-    const response = await server.inject({
-      method: 'GET',
-      url: prnTonnagePath,
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).rows).toMatchObject([
-      { accreditationNumber: '' }
-    ])
   })
 })
