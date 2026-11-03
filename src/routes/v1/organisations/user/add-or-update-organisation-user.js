@@ -7,8 +7,6 @@ import partition from 'lodash.partition'
 /** @import {DefraIdTokenPayload} from '#auth/types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 
-/** @typedef {Pick<Organisation, 'organisationNumber' | 'version' | 'users'>} OrganisationUsers */
-
 export const ORGANISATION_USER_RESULTS = Object.freeze(
   /** @type {const} */ ({
     NO_CHANGE: 'no-change',
@@ -43,13 +41,12 @@ const withChangedDetails = (
     !stringEquals(user.fullName, getDisplayName({ firstName, lastName })))
 
 /**
- * @param {OrganisationUsers} organisation
+ * @param {Organisation} organisation
  * @param {DefraIdTokenPayload} token
  * @returns {{ user: CollatedUser|null, otherUsers: CollatedUser[] }}
  */
 const extractUserAndOthers = (organisation, { email, contactId }) => {
   const [matchingUsers, otherUsers] = partition(
-    // The read model copies the stored users, whose roles are user roles.
     /** @type {CollatedUser[]} */ (organisation.users),
     /**
      * @param {CollatedUser} user
@@ -68,7 +65,7 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
  * Adds a user to an organisation if they are not there
  * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
- * @param {OrganisationUsers} organisation - The organisation, as the read model shows it
+ * @param {Organisation} organisation
  * @returns {Promise<OrganisationUserResult>} - Result indicating if a user was added, updated, or no change
  */
 export const addOrUpdateOrganisationUser = async (
