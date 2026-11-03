@@ -27,7 +27,8 @@ export const ORGANISATION_USER_RESULTS = Object.freeze(
  * }} OrganisationUserResult
  */
 
-export const getDisplayName = ({ firstName, lastName }) =>
+/** @param {Pick<DefraIdTokenPayload, 'firstName' | 'lastName'>} name */
+const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
 
 /** @param {CollatedUser | null} user */
