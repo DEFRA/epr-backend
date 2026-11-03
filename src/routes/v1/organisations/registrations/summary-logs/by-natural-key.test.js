@@ -32,6 +32,7 @@ import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -147,7 +148,7 @@ describe('summary-log routes by natural key', () => {
       ...overrides
     })
     await summaryLogsRepository.insert(
-      summaryLogId,
+      toSummaryLogId(summaryLogId),
       partialMock({
         ...build({ organisationId: organisation.id, year: YEAR, ...overrides }),
         ...numbers
@@ -155,7 +156,11 @@ describe('summary-log routes by natural key', () => {
     )
     return {
       summaryLogId,
-      ...(await waitForVersion(summaryLogsRepository, summaryLogId, 1))
+      ...(await waitForVersion(
+        summaryLogsRepository,
+        toSummaryLogId(summaryLogId),
+        1
+      ))
     }
   }
 
@@ -209,7 +214,7 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
         const stored = await waitForVersion(
           summaryLogsRepository,
-          summaryLogId,
+          toSummaryLogId(summaryLogId),
           1
         )
         expect(stored.summaryLog).toMatchObject({
@@ -279,7 +284,7 @@ describe('summary-log routes by natural key', () => {
         accreditationId: accredited.id
       })
       await summaryLogsRepository.insert(
-        summaryLogId,
+        toSummaryLogId(summaryLogId),
         partialMock(
           unstamped({
             ...summaryLogFactory.validated({
@@ -293,7 +298,11 @@ describe('summary-log routes by natural key', () => {
           })
         )
       )
-      await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+      await waitForVersion(
+        summaryLogsRepository,
+        toSummaryLogId(summaryLogId),
+        1
+      )
 
       const response = await server.inject({
         method: 'GET',
@@ -318,7 +327,11 @@ describe('summary-log routes by natural key', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
-    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      toSummaryLogId(summaryLogId),
+      1
+    )
     expect(stored.summaryLog).toMatchObject({
       registrationId: accreditedRegistration.id,
       accreditationId: null
@@ -341,7 +354,11 @@ describe('summary-log routes by natural key', () => {
       payload: uploadCompleted
     })
 
-    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      toSummaryLogId(summaryLogId),
+      1
+    )
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBe(
       NO_PRIOR_SUBMISSION
     )

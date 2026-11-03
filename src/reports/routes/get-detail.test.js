@@ -28,6 +28,7 @@ import {
   exporterAccreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -66,7 +67,7 @@ const seedRepositories = async (org, registration, wasteRecords) => {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       withNumbers(ledgerId),
       entries,
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     ledgerEvents.push(
       buildLedgerEvent({
@@ -947,7 +948,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await context.reportsRepository.markActiveReportsStaleForSummaryLog(
         context.organisationId,
         context.registrationId,
-        'sl-new',
+        toSummaryLogFileId('sl-new'),
         uploadedAt
       )
 
@@ -999,7 +1000,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await context.reportsRepository.markActiveReportsStaleForSummaryLog(
         context.organisationId,
         context.registrationId,
-        'sl-new',
+        toSummaryLogFileId('sl-new'),
         uploadedAt
       )
 

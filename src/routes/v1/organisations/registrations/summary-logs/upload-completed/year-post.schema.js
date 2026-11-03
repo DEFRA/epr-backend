@@ -2,9 +2,11 @@ import Joi from 'joi'
 
 import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+
 /**
  * @typedef {Object} SummaryLogUpload
- * @property {string} fileId
+ * @property {SummaryLogFileId} fileId
  * @property {string} filename
  * @property {string} fileStatus
  * @property {string} [s3Bucket]

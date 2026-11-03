@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
@@ -74,7 +75,7 @@ const matchesCommittedState = (doc, candidate) =>
 /**
  * @param {SummaryLogRowState[]} storage
  * @param {WasteBalanceLedgerId} ledgerId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState[]}
  */
 const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
@@ -184,7 +185,7 @@ const toWasteRecordState = ({
  * @param {SummaryLogRowState[]} storage
  * @param {NumberedLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState}
  */
 const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
@@ -296,7 +297,7 @@ const repositoryOver = (storage) => ({
   /**
    * @param {NumberedLedgerId} ledgerId
    * @param {SummaryLogRowStateEntry[]} summaryLogRowStates
-   * @param {string} summaryLogId
+   * @param {SummaryLogFileId} summaryLogId
    */
   upsertSummaryLogRowStates: async (
     ledgerId,
@@ -309,7 +310,7 @@ const repositoryOver = (storage) => ({
 
   /**
    * @param {WasteBalanceLedgerId} ledgerId
-   * @param {string} summaryLogId
+   * @param {SummaryLogFileId} summaryLogId
    */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>
     rowStatesForSummaryLog(storage, ledgerId, summaryLogId).map(

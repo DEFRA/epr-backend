@@ -33,6 +33,7 @@ import {
 import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
 import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -106,7 +107,7 @@ const buildOpeningBalanceEvent = ({
   number: 1,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: {
-    summaryLogId: 'seed-summary-log',
+    summaryLogId: toSummaryLogFileId('seed-summary-log'),
     creditTotal: amount,
     ...(decemberAmount !== undefined && { decemberCreditTotal: decemberAmount })
   },
@@ -849,7 +850,10 @@ describe('updatePrnStatus', () => {
           organisationId: DEFAULT_ORG_ID,
           number: 1,
           kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-          payload: { summaryLogId: 'seed-summary-log', creditTotal: 440 },
+          payload: {
+            summaryLogId: toSummaryLogFileId('seed-summary-log'),
+            creditTotal: 440
+          },
           openingBalance: { amount: 0, availableAmount: 0 },
           closingBalance: { amount: 440, availableAmount: 940 },
           createdAt: issuedAt,

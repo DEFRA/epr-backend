@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 import {
@@ -78,7 +79,7 @@ const buildSummaryLogData = (
  *
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {SummaryLog} summaryLog
- * @returns {Promise<string | undefined>}
+ * @returns {Promise<SummaryLog['validatedAgainstSummaryLogId']>}
  */
 const validatedAgainstSummaryLogIdFor = async (
   summaryLogsRepository,
@@ -97,7 +98,7 @@ const validatedAgainstSummaryLogIdFor = async (
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {OrganisationsRepository} organisationsRepository
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {UploadLocation} location
  */
@@ -135,7 +136,7 @@ const insertNewSummaryLog = async (
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {OrganisationsRepository} organisationsRepository
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
  * @param {UploadLocation} location

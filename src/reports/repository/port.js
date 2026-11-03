@@ -3,6 +3,7 @@
  */
 
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 
 /**
  * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
@@ -83,11 +84,11 @@
 
 /**
  * Provenance of a report: the summary log it was last (re)built from.
- * @typedef {{ summaryLogId: string | null, lastUploadedAt: string | null }} ReportSource
+ * @typedef {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string | null }} ReportSource
  */
 
 /**
- * @typedef {{ uploadedAt: string, summaryLogId: string }} StaleSummaryLogChanged
+ * @typedef {{ uploadedAt: string, summaryLogId: SummaryLogFileId }} StaleSummaryLogChanged
  */
 
 /**
@@ -105,7 +106,7 @@
  */
 
 /**
- * @typedef {{ uploadedAt: string, summaryLogId: string }} ResubmissionClosedPeriodRestated
+ * @typedef {{ uploadedAt: string, summaryLogId: SummaryLogFileId }} ResubmissionClosedPeriodRestated
  */
 
 /**
@@ -151,7 +152,7 @@
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   summaryLogId: string,
+ *   summaryLogId: SummaryLogFileId,
  *   uploadedAt: string,
  *   periods: PeriodRef[]
  * }} MarkSubmittedReportsRequiringResubmissionParams
@@ -405,7 +406,7 @@
  *   The periodic reports of every org/registration for one reporting year, shaped
  *   as findAllPeriodicReports shapes them.
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
+ * @property {(organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.

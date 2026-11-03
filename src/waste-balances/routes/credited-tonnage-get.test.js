@@ -19,6 +19,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { creditedTonnageGetPath } from './credited-tonnage-get.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisationWithRegistration } = createOrganisationBuilders()
 
@@ -137,7 +138,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
           }
         })
       ],
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
 
     const ledgerRepository = createInMemoryLedgerRepository([

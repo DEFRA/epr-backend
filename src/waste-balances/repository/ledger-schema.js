@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Joi from 'joi'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -91,7 +92,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  * `creditTotal`, absent on a submission that credits no December tonnage and on
  * pre-feature events. Readers coalesce a missing value to 0.
  *
- * @typedef {{ summaryLogId: string, creditTotal: number, decemberCreditTotal?: number }} SummaryLogSubmittedPayload
+ * @typedef {{ summaryLogId: SummaryLogFileId, creditTotal: number, decemberCreditTotal?: number }} SummaryLogSubmittedPayload
  */
 
 /**

@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 
 /**
@@ -22,7 +23,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
  * @param {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
- * @param {string} params.summaryLogId
+ * @param {SummaryLogFileId} params.summaryLogId
  * @returns {Promise<void>}
  */
 export const writeSummaryLogRowStates = async ({

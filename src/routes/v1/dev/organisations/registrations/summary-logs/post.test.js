@@ -19,6 +19,7 @@ import {
 } from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
 
 import { devSummaryLogsSubmitPath } from './post.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const ACCREDITED_YEAR = 2025
 
@@ -272,7 +273,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers with a conflict when another submission for the registration is in progress', async () => {
     const env = await createEnvironment()
     await env.summaryLogsRepository.insert(
-      'another-submission',
+      toSummaryLogId('another-submission'),
       summaryLogFactory.submitting({
         organisationId: env.organisationId,
         registrationId: env.registrationId,
@@ -341,7 +342,9 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   const storedAfterReplication = async (env, summaryLogId) => {
     assert(summaryLogId)
     await new Promise((resolve) => setImmediate(resolve))
-    const stored = await env.summaryLogsRepository.findById(summaryLogId)
+    const stored = await env.summaryLogsRepository.findById(
+      toSummaryLogId(summaryLogId)
+    )
     return stored?.summaryLog
   }
 
@@ -356,14 +359,17 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
         await env.organisationsRepository.findById(env.organisationId),
         ids
       )
-      await env.summaryLogsRepository.insert('landed-meanwhile', {
-        ...summaryLogFactory.submitted({
-          organisationId: env.organisationId,
-          year: ACCREDITED_YEAR,
-          ...ids
-        }),
-        ...numbers
-      })
+      await env.summaryLogsRepository.insert(
+        toSummaryLogId('landed-meanwhile'),
+        {
+          ...summaryLogFactory.submitted({
+            organisationId: env.organisationId,
+            year: ACCREDITED_YEAR,
+            ...ids
+          }),
+          ...numbers
+        }
+      )
     })
 
     const response = await submit(

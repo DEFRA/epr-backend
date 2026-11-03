@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
@@ -100,7 +101,7 @@ const flagReportsByIdempotencyKey = async (
  * @param {Db} db
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */

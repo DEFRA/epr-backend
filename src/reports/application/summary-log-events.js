@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
@@ -20,7 +21,7 @@ import {
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   summaryLogId: string,
+ *   summaryLogId: SummaryLogFileId,
  *   periodsRequiringResubmission?: PeriodRef[]
  * }} SummaryLogUploadedParams
  *

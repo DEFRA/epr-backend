@@ -2,6 +2,7 @@ import { validateDataBusiness } from './data-business.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { ValidatedWasteRecord } from '#application/waste-records/transform-from-summary-log.js' */
 /** @import { PreviousSubmission, WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js' */
@@ -61,7 +62,7 @@ describe('validateDataBusiness', () => {
    */
   const createPreviousSubmission = (wasteRecordStates) => ({
     summaryLog: {
-      summaryLogId: 'previous-summary-log-id',
+      summaryLogId: toSummaryLogFileId('previous-summary-log-id'),
       submittedAt: new Date('2024-01-15T10:00:00.000Z')
     },
     wasteRecordStates

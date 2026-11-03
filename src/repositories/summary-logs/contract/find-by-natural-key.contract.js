@@ -9,6 +9,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -83,7 +84,7 @@ export const testFindByNaturalKey = (it) => {
      */
     const insert = async (summaryLog, registration = stored) => {
       const id = new ObjectId().toString()
-      await repo.insert(id, {
+      await repo.insert(toSummaryLogId(id), {
         ...registration.ids,
         ...registration.key,
         ...summaryLog

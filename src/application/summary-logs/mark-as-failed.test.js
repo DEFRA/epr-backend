@@ -7,6 +7,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockSummaryLogsRepository } from '#test/mock-repositories.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -31,7 +32,11 @@ describe('markAsSubmissionFailed', () => {
       update: vi.fn().mockRejectedValue(new Error('db error'))
     })
 
-    await markAsSubmissionFailed(summaryLogId, repository, logger)
+    await markAsSubmissionFailed(
+      toSummaryLogId(summaryLogId),
+      repository,
+      logger
+    )
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -58,7 +63,11 @@ describe('markAsValidationFailed', () => {
       update: vi.fn().mockResolvedValue(undefined)
     })
 
-    await markAsValidationFailed(summaryLogId, repository, logger)
+    await markAsValidationFailed(
+      toSummaryLogId(summaryLogId),
+      repository,
+      logger
+    )
 
     expect(mockRecordStatusTransition).toHaveBeenCalledWith({
       status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,

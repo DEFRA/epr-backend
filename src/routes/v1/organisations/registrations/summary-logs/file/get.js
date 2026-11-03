@@ -4,6 +4,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -18,14 +19,15 @@ const downloadAuth = {
 }
 
 /**
- * @param {(repository: SummaryLogsRepository, id: string, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
- * @param {(params: Record<string, string>) => string} idOf
+ * @template {string} Id
+ * @param {(params: Record<string, string>) => Id} idOf
+ * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
  * @returns {(request: HapiRequest & {
  *   params: Record<string, string> & RegistrationParams,
  *   summaryLogsRepository: SummaryLogsRepository
  * }, h: HapiResponseToolkit) => Promise<HapiResponseObject>}
  */
-const serveFile = (sign, idOf) => async (request, h) => {
+const serveFile = (idOf, sign) => async (request, h) => {
   const { summaryLogsRepository, logger } = request
   const { organisationId, registrationId, registrationNumber } = request.params
   const id = idOf(request.params)
@@ -54,9 +56,9 @@ export const summaryLogFile = {
   method: 'GET',
   options: downloadAuth,
   handler: serveFile(
+    (params) => toSummaryLogId(params.summaryLogId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrl(id, registrationNumber),
-    (params) => params.summaryLogId
+      repository.getDownloadUrl(id, registrationNumber)
   )
 }
 
@@ -68,8 +70,8 @@ export const summaryLogFileByFileId = {
   method: 'GET',
   options: downloadAuth,
   handler: serveFile(
+    (params) => toSummaryLogFileId(params.fileId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrlByFileId(id, registrationNumber),
-    (params) => params.fileId
+      repository.getDownloadUrlByFileId(id, registrationNumber)
   )
 }

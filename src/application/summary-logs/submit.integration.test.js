@@ -37,6 +37,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -155,14 +156,14 @@ const setupSubmit = async ({
     ...(createdAt && { createdAt })
   })
   const summaryLogId = `submit-${organisationId}`
-  await summaryLogsRepository.insert(summaryLogId, summaryLog)
+  await summaryLogsRepository.insert(toSummaryLogId(summaryLogId), summaryLog)
 
   // Validation writes this artefact via update, not insert, so seed it the same way.
   if (loadsByReportingPeriod) {
-    await summaryLogsRepository.update(summaryLogId, 1, {
+    await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
       loadsByReportingPeriod
     })
-    await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+    await waitForVersion(summaryLogsRepository, toSummaryLogId(summaryLogId), 2)
   }
 
   const summaryLogExtractor = createInMemorySummaryLogExtractor({
@@ -218,14 +219,14 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       registrationId
     })
 
-    await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
-      PermanentError
-    )
+    await expect(
+      submitSummaryLog(toSummaryLogId(summaryLogId), deps)
+    ).rejects.toBeInstanceOf(PermanentError)
 
     // The guard throws before any write, so the log is untouched at version 1.
     const { summaryLog, version } = await waitForVersion(
       summaryLogsRepository,
-      summaryLogId,
+      toSummaryLogId(summaryLogId),
       1
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
@@ -248,7 +249,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       buildCreateReportParams({ organisationId, registrationId })
     )
 
-    await submitSummaryLog(summaryLogId, deps)
+    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
 
     const rowStates = await summaryLogRowStatesForRegistration({
       organisationId,
@@ -264,7 +265,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
-      summaryLogId,
+      toSummaryLogId(summaryLogId),
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
@@ -290,11 +291,11 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       registrationId
     })
 
-    await submitSummaryLog(summaryLogId, deps)
+    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
-      summaryLogId,
+      toSummaryLogId(summaryLogId),
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
@@ -333,7 +334,7 @@ describe('submitSummaryLog resubmission flag source', () => {
     const januaryReportId = await submitReportFor(january)
     const februaryReportId = await submitReportFor(february)
 
-    await submitSummaryLog(summaryLogId, {
+    await submitSummaryLog(toSummaryLogId(summaryLogId), {
       ...deps,
       onSummaryLogUploaded: createOnSummaryLogUploaded({
         reportsRepository,
@@ -374,6 +375,38 @@ describe('submitSummaryLog resubmission flag source', () => {
   })
 })
 
+describe('submitSummaryLog stale flagging', () => {
+  it('leaves alone an active report already built from the summary log being submitted', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const { deps, summaryLogId, summaryLog, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        createdAt: '2099-01-01T00:00:00.000Z'
+      })
+    const { id: reportId } = await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId,
+        registrationId,
+        source: {
+          summaryLogId: summaryLog.file.id,
+          lastUploadedAt: '2099-01-01T00:00:00.000Z'
+        }
+      })
+    )
+
+    await submitSummaryLog(toSummaryLogId(summaryLogId), {
+      ...deps,
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+      })
+    })
+
+    const report = await reportsRepository.findReportById(reportId)
+    expect(report.stale).toBeUndefined()
+  })
+})
+
 describe('submitSummaryLog December waste metric', () => {
   it('counts rows that fall in the accreditation-year December', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
@@ -404,7 +437,7 @@ describe('submitSummaryLog December waste metric', () => {
       data: decemberData
     })
 
-    await submitSummaryLog(summaryLogId, deps)
+    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
 
     expect(mockRecordDecemberWasteRows).toHaveBeenCalledWith(
       { processingType: 'REPROCESSOR_INPUT' },
@@ -432,7 +465,7 @@ describe('submitSummaryLog row-state numbers', () => {
         accreditationId
       })
 
-      await submitSummaryLog(summaryLogId, deps)
+      await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
 
       const rowStates =
         await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(

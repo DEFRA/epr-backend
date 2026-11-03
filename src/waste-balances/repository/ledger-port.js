@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /**
  * Storage-level port for the waste balance event ledger.
  *
@@ -118,7 +119,7 @@ export class LedgerSequenceError extends Error {
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
  * @property {WasteBalanceLedgerId} ledgerId
- * @property {string} summaryLogId
+ * @property {SummaryLogFileId} summaryLogId
  */
 
 /**

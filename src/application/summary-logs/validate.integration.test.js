@@ -21,6 +21,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -173,7 +174,7 @@ describe('SummaryLogsValidator integration', () => {
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    await validateSummaryLog(summaryLogId).catch((err) => err)
+    await validateSummaryLog(toSummaryLogId(summaryLogId)).catch((err) => err)
 
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 

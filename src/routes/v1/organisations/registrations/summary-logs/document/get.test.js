@@ -18,6 +18,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -123,15 +124,19 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns the whole stored document, without its database ids, including fields the operator view strips', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        summaryLogId,
+        toSummaryLogId(summaryLogId),
         summaryLogFactory.submitted({ organisationId, registrationId, meta })
       )
       // loadsByReportingPeriod is added by update at validation time, not at
       // insert, so seed it the same way it reaches a real document.
-      await summaryLogsRepository.update(summaryLogId, 1, {
+      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
         loadsByReportingPeriod
       })
-      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+      await waitForVersion(
+        summaryLogsRepository,
+        toSummaryLogId(summaryLogId),
+        2
+      )
 
       const response = await makeRequest(server)
 

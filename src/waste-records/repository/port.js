@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /**
  * Storage-level port for summary-log row states (ADR-0037 Stage 1).
  *
@@ -59,7 +60,7 @@
 
 /**
  * @typedef {Object} SummaryLogRowStatesRepository
- * @property {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
+ * @property {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
  *   coerced `data` and `classification` equal the incoming entry. If one
  *   exists, `$addToSet` `summaryLogId` onto its membership; otherwise insert a
@@ -67,7 +68,7 @@
  *   stores the numbers `ledgerId` carries. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
  *   Returns the resulting state document for each entry, in input order.
- * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
  *   Return the waste record states `ledgerId` holds at the summary log
  *   `summaryLogId`. A row state belongs to the ledger that wrote it, so the
  *   summary log alone does not identify one: the same `summaryLogId` under a

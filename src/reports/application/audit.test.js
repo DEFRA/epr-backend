@@ -4,6 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -293,7 +294,7 @@ const buildSystemLogsRepository = (
 
 const summaryLogChanged = {
   uploadedAt: '2025-06-01T12:00:00.000Z',
-  summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+  summaryLogId: toSummaryLogFileId('sl-id-00000000-0000-0000-0000-000000000001')
 }
 
 const prnCancelled = {
@@ -305,7 +306,9 @@ const prnCancelled = {
 const resubmissionRequired = {
   closedPeriodRestated: {
     uploadedAt: '2025-06-01T12:00:00.000Z',
-    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
+    summaryLogId: toSummaryLogFileId(
+      'sl-id-00000000-0000-0000-0000-000000000001'
+    )
   }
 }
 

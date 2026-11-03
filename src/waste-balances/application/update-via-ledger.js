@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
@@ -26,7 +27,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
- * @param {string} params.summaryLogId
+ * @param {SummaryLogFileId} params.summaryLogId
  * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
  */
 export const performUpdateViaLedger = async ({

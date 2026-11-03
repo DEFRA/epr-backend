@@ -5,8 +5,9 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
-export const generateFileId = () => `file-${randomUUID()}`
+export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 
 export const buildFile = (overrides = {}) => ({
   id: generateFileId(),
