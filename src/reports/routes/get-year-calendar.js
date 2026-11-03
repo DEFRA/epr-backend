@@ -3,13 +3,13 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { yearCalendar } from '#reports/application/report-calendar.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { reportsYearCalendarResponseSchema } from './response.schema.js'
 import { calendarQuerySchema } from './shared.js'
 
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
@@ -27,25 +27,10 @@ export const reportsYearCalendar = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const {
-      organisationId,
-      organisationNumber,
-      registrationId,
-      registrationNumber,
-      year
-    } = request.params
+    const { organisationId, registrationId, year } = request.params
 
-    /**
-     * Route only reached when
-     * - {organisationNumber} exists
-     * - {registrationNumber} exists and belongs to {organisationNumber}
-     * else atNaturalKeys wrapper generates 404 response
-     */
-    const organisation = /** @type {Organisation} */ (
-      await request.organisationReadRepository.findByOrganisationNumber(
-        organisationNumber
-      )
-    )
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const storedReports = await request.reportsRepository.findPeriodicReports({
       organisationId,
@@ -53,7 +38,7 @@ export const reportsYearCalendar = {
     })
 
     const calendar = yearCalendar({
-      registration: organisation.registrations[registrationNumber],
+      registration,
       storedReports,
       year,
       allSubmissions:

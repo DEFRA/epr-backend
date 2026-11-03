@@ -1,8 +1,5 @@
 import Joi from 'joi'
 
-import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
-import { readModelRegistration } from '#routes/organisations/natural-keys.js'
-
 export const calendarQuerySchema = Joi.object({
   expand: Joi.string().valid('submissions')
 })
@@ -12,12 +9,12 @@ export const submissionNumberSchema = Joi.number().integer().min(1).required()
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
- * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
+ * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  *
- * @typedef {{
+ * @typedef {RegistrationParams & {
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
@@ -28,27 +25,6 @@ export const submissionNumberSchema = Joi.number().integer().min(1).required()
  *
  * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
  */
-
-/**
- * The ended periods of the cadence the registration the natural keys resolved
- * to owes a report for in the year.
- *
- * @param {ResolvedRecords} records
- * @param {PeriodPathParams} params
- * @returns {GeneratedPeriod[]}
- */
-export const requiredPeriodsFor = (
-  { organisation, registration },
-  { year, cadence }
-) =>
-  requiredReportingPeriods({
-    registration: readModelRegistration(
-      organisation,
-      /** @type {Registration} */ (registration)
-    ),
-    year,
-    cadence
-  })
 
 /**
  * The registration a report is for. A registered-only natural-key route
@@ -78,7 +54,7 @@ export async function findRegistrationForReport(
 /**
  * Wraps a report (stored or computed) with registration details.
  * @param {object} report
- * @param {Registration} registration
+ * @param {ReadModelRegistration} registration
  * @returns {object}
  */
 export function withRegistrationDetails(report, registration) {
@@ -86,7 +62,7 @@ export function withRegistrationDetails(report, registration) {
     ...report,
     details: {
       material: registration.material,
-      site: registration.site
+      site: 'site' in registration ? registration.site : undefined
     }
   }
 }

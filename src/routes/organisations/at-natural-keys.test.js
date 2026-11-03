@@ -133,7 +133,7 @@ describe('atNaturalKeys', () => {
     })
   })
 
-  it('puts the records it resolved on the request', async () => {
+  it('puts the organisation it resolved on the request', async () => {
     const served = atNaturalKeys(route, '/served', registrationParams)
     const request = requestFor({
       organisationNumber: String(organisation.orgId),
@@ -143,10 +143,7 @@ describe('atNaturalKeys', () => {
     await served.handler(request, h)
 
     expect(request.app).toEqual({
-      organisation: expect.objectContaining({ id: organisation.id }),
-      registration: expect.objectContaining({
-        id: registeredOnlyRegistration.id
-      })
+      organisation: expect.objectContaining({ id: organisation.id })
     })
   })
 
