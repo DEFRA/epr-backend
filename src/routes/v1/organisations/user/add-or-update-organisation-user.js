@@ -7,6 +7,8 @@ import partition from 'lodash.partition'
 /** @import {DefraIdTokenPayload} from '#auth/types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 
+/** @typedef {Pick<Organisation, 'organisationNumber' | 'version' | 'users'>} OrganisationUsers */
+
 export const ORGANISATION_USER_RESULTS = Object.freeze(
   /** @type {const} */ ({
     NO_CHANGE: 'no-change',
@@ -41,7 +43,7 @@ const withChangedDetails = (
     !stringEquals(user.fullName, getDisplayName({ firstName, lastName })))
 
 /**
- * @param {Organisation} organisation
+ * @param {OrganisationUsers} organisation
  * @param {DefraIdTokenPayload} token
  * @returns {{ user: CollatedUser|null, otherUsers: CollatedUser[] }}
  */
@@ -63,9 +65,9 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
 
 /**
  * Adds a user to an organisation if they are not there
- * @param {HapiRequest} request - The Hapi request object
+ * @param {HapiRequest} request
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
- * @param {Organisation} organisation
+ * @param {OrganisationUsers} organisation
  * @returns {Promise<OrganisationUserResult>} - Result indicating if a user was added, updated, or no change
  */
 export const addOrUpdateOrganisationUser = async (
