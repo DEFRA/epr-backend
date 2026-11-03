@@ -137,6 +137,7 @@ export const updateStatusHistoryForItems = (
  * @typedef {{
  *   items: 'registrations' | 'accreditations',
  *   field: 'registrationNumber' | 'accreditationNumber',
+ *   label: string,
  *   numbersOf: (organisation: NumberHolder) => Array<string | null | undefined>
  * }} UniqueNumberField
  */
@@ -151,12 +152,14 @@ export const UNIQUE_NUMBER_FIELDS = [
   {
     items: 'registrations',
     field: 'registrationNumber',
+    label: 'Registration',
     numbersOf: ({ registrations }) =>
       registrations.map(({ registrationNumber }) => registrationNumber)
   },
   {
     items: 'accreditations',
     field: 'accreditationNumber',
+    label: 'Accreditation',
     numbersOf: ({ accreditations }) =>
       accreditations.map(({ accreditationNumber }) => accreditationNumber)
   }
@@ -164,22 +167,28 @@ export const UNIQUE_NUMBER_FIELDS = [
 
 /** @typedef {'inserting' | 'updating'} WriteOperation */
 
+/** @typedef {{ label: string, number: string }} HeldNumber */
+
 /**
  * @param {{
  *   operation: WriteOperation,
  *   id: string,
  *   conflictFields: string,
- *   reason: string
+ *   reason: string,
+ *   heldNumber?: HeldNumber
  * }} params
  */
 export const duplicateKeyConflict = ({
   operation,
   id,
   conflictFields,
-  reason
+  reason,
+  heldNumber
 }) =>
   conflict(
-    `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
+    heldNumber
+      ? `${heldNumber.label} number ${heldNumber.number} is already held by another organisation`
+      : `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
     errorCodes.organisationDuplicateKey,
     {
       event: {
@@ -187,6 +196,7 @@ export const duplicateKeyConflict = ({
           operation === 'inserting'
             ? 'insert_organisation'
             : 'update_organisation',
+        reference: id,
         reason
       }
     }
