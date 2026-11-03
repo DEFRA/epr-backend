@@ -235,23 +235,11 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
   }
 }
 
-const findById = (db) => async (id) => {
-  const validatedId = validateId(id)
-  /** @type {any} */
-  const findByIdFilter = { _id: validatedId }
-  const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
-  if (!doc) {
-    return null
-  }
-  const { _id, version, ...summaryLog } = doc
-  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
-}
-
 /**
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { SummaryLogWithId } from './port.js'
+ * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  *
  * @typedef {SummaryLog & { _id: string, version: number }} SummaryLogDocument
  */
@@ -262,6 +250,28 @@ const findById = (db) => async (id) => {
  */
 const summaryLogs = (db) =>
   /** @type {Collection<SummaryLogDocument>} */ (db.collection(COLLECTION_NAME))
+
+/**
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogVersion | null>}
+ */
+const findOneVersion = async (db, filter) => {
+  const doc = await summaryLogs(db).findOne(filter)
+  if (!doc) {
+    return null
+  }
+  const { _id, version, ...summaryLog } = doc
+  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
+}
+
+/** @param {Db} db */
+const findById = (db) => async (/** @type {string} */ id) =>
+  findOneVersion(db, { _id: validateId(id) })
+
+/** @param {Db} db */
+const findByFileId = (db) => async (/** @type {string} */ fileId) =>
+  findOneVersion(db, { 'file.id': validateId(fileId) })
 
 /**
  * @param {Db} db
@@ -575,6 +585,7 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
+    findByFileId: findByFileId(db),
     findIdsWithoutNumbers: findIdsWithoutNumbers(db),
     assignNumbers: assignNumbers(db, logger),
     findLatestSubmitted: findLatestSubmitted(db),
