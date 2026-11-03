@@ -27,9 +27,10 @@ import {
   performUnlinkDefraOrganisation
 } from './mongodb.targeted-updates.js'
 
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
-/** @import { WriteOperation } from './helpers.js' */
+/** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -108,7 +109,21 @@ const performInsert = (db) => async (organisation) => {
 }
 
 /**
- * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
+ * @param {{ keyValue?: Record<string, unknown> }} error
+ * @returns {HeldNumber | undefined}
+ */
+const heldNumberOf = ({ keyValue }) => {
+  for (const { items, field, label } of UNIQUE_NUMBER_FIELDS) {
+    const number = keyValue?.[`${items}.${field}`]
+    if (typeof number === 'string') {
+      return { label, number }
+    }
+  }
+  return undefined
+}
+
+/**
+ * @param {Error & { code: number, keyPattern?: Record<string, number>, keyValue?: Record<string, unknown> }} error
  * @param {string} id
  * @param {WriteOperation} operation
  * @returns {never}
@@ -122,7 +137,8 @@ const throwCuratedDuplicateKeyBoom = (error, id, operation) => {
     operation,
     id,
     conflictFields,
-    reason: `fields=${conflictFields} ${classifierTail(error)}`
+    reason: `fields=${conflictFields} ${classifierTail(error)}`,
+    heldNumber: heldNumberOf(error)
   })
 }
 
@@ -157,26 +173,47 @@ const performReplace = (db) => async (id, version, updates) => {
 }
 
 /**
- * @returns {(
- *   | { shouldReturn: true, result: ReturnType<typeof mapDocumentWithCurrentStatuses> }
- *   | { shouldReturn: false }
- * )}
+ * Reads the one organisation `filter` matches, retrying until its version is
+ * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
+ * null when no organisation matches, and throws 500 when the version never
+ * arrives.
+ *
+ * @param {Db} db
+ * @param {number} maxRetries
+ * @param {number} retryDelayMs
+ * @param {Filter<Document>} filter
+ * @param {number} [minimumVersion]
+ * @returns {Promise<Organisation | null>}
  */
-const handleFoundDocument = (doc, minimumVersion) => {
-  const mapped = mapDocumentWithCurrentStatuses(doc)
+const findOneAtMinimumVersion = async (
+  db,
+  maxRetries,
+  retryDelayMs,
+  filter,
+  minimumVersion
+) => {
+  for (let i = 0; i < maxRetries; i++) {
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
-  // No version expectation - return immediately
-  if (minimumVersion === undefined) {
-    return { shouldReturn: true, result: mapped }
+    const isLastRetry = i === maxRetries - 1
+
+    if (doc) {
+      if (minimumVersion === undefined || doc.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(doc)
+      }
+      // Document exists but version too low - will retry
+    } else if (minimumVersion === undefined || isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+    }
   }
 
-  // Version matches - return
-  if (mapped.version >= minimumVersion) {
-    return { shouldReturn: true, result: mapped }
-  }
-
-  // Version doesn't match yet - retry
-  return { shouldReturn: false }
+  throw Boom.internal('Consistency timeout waiting for minimum version')
 }
 
 const performFindById =
@@ -187,33 +224,17 @@ const performFindById =
     }
     const validatedId = validateId(id)
 
-    for (let i = 0; i < maxRetries; i++) {
-      const doc = await db
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
-      const isLastRetry = i === maxRetries - 1
-
-      if (doc) {
-        const outcome = handleFoundDocument(doc, minimumVersion)
-        if (outcome.shouldReturn) {
-          return outcome.result
-        }
-        // Document exists but version too low - will retry
-      } else if (minimumVersion === undefined || isLastRetry) {
-        throw Boom.notFound(`Organisation with id ${id} not found`)
-      } else {
-        // Document not found but have retries left - will retry
-      }
-
-      // Wait before next retry
-      if (!isLastRetry) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
-      }
+    const found = await findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { _id: ObjectId.createFromHexString(validatedId) },
+      minimumVersion
+    )
+    if (!found) {
+      throw Boom.notFound(`Organisation with id ${id} not found`)
     }
-
-    // Exhausted retries waiting for minimum version
-    throw Boom.internal('Consistency timeout waiting for minimum version')
+    return found
   }
 
 const performFindAll = (db) => async () => {
@@ -456,17 +477,15 @@ const findAllIds = (db) => async () => {
   )
 }
 
-const performFindByOrganisationNumber = (db) => async (organisationNumber) => {
-  const doc = await db
-    .collection(COLLECTION_NAME)
-    .findOne({ orgId: storedOrgId(organisationNumber) })
-
-  if (!doc) {
-    return null
-  }
-
-  return mapDocumentWithCurrentStatuses(doc)
-}
+const performFindByOrganisationNumber =
+  (db, maxRetries, retryDelayMs) => (organisationNumber, minimumVersion) =>
+    findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { orgId: storedOrgId(organisationNumber) },
+      minimumVersion
+    )
 
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
@@ -563,7 +582,11 @@ export const createOrganisationsRepository = async (
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
-      findByOrganisationNumber: performFindByOrganisationNumber(db),
+      findByOrganisationNumber: performFindByOrganisationNumber(
+        db,
+        maxRetries,
+        retryDelayMs
+      ),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }

@@ -19,6 +19,7 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 import {
@@ -98,7 +99,7 @@ const issuedNote = createMockIssuedPrn({
   prnNumber: 'ER26000123',
   organisation: { id: organisation.id, name: 'A reprocessor' },
   registrationId: accreditedRegistration.id,
-  accreditation: { ...createMockIssuedPrn().accreditation, id: accredited.id }
+  accreditation: buildAccreditationSnapshot({ id: accredited.id })
 })
 
 /** @param {{ payload: string }} response */
@@ -199,6 +200,17 @@ describe('ledger and waste balance routes by natural key', () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a registration that belongs to another organisation', async () => {
+      const underItsOwner = await get(registeredOnlyLedger(2026))
+      const underAnother = await get(
+        `/organisations/${sharedNumberOrganisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
+      )
+
+      expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
+      expect(underAnother.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(body(underAnother).message).toBe('Registration not found')
     })
 
     it('returns 404 for an unknown organisation number', async () => {

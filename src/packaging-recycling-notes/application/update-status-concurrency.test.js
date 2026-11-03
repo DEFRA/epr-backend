@@ -14,6 +14,7 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
+  buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -75,14 +76,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA,
-    siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-  },
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 

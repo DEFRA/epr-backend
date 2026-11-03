@@ -4,14 +4,14 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
 /**
  * @typedef {{redirectUrl: string}} SummaryLogsYearCreatePayload
@@ -32,11 +32,8 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: { organisationId: string, registrationId: string, year: Year },
-   *   app: ResolvedRecords & {
-   *     registration: Registration,
-   *     summaryLogCallbackUrl: (summaryLogId: string) => string
-   *   },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
+   *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -45,7 +42,9 @@ export const summaryLogsYearCreate = {
     const { uploadsRepository, params, payload, logger } = request
     const { organisationId, registrationId, year } = params
     const { redirectUrl } = payload
-    const { registration } = request.app
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const eligibility = checkSummaryLogUploadEligibility({
       registration,

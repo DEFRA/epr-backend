@@ -6,11 +6,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
-import { assertCadence } from '#reports/application/assert-cadence.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
@@ -32,6 +33,20 @@ import { reportResponseFailAction } from './response-fail-action.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
+
+/**
+ * @param {TypedLogger} logger
+ * @param {string} reportId
+ */
+const logReportCreated = (logger, reportId) => {
+  logger.info({
+    message: `Report created: id=${reportId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+    }
+  })
+}
 
 /**
  * @param {TypedLogger} logger
@@ -98,12 +113,13 @@ export const reportsPost = {
     } = params
 
     try {
-      const registration = await findRegistrationForReport(
+      const storedRegistration = await findRegistrationForReport(
         organisationsRepository,
         params
       )
 
-      assertCadence(cadence, registration)
+      const { registration } =
+        await findOrganisationAndRegistrationReadModels(request)
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -114,11 +130,16 @@ export const reportsPost = {
         organisationId,
         registrationId,
         numbers: numbersFor(app.organisation, params).numbers,
-        registration,
+        registration: storedRegistration,
         year,
         cadence,
         period,
         submissionNumber,
+        requiredPeriods: requiredReportingPeriods({
+          registration,
+          year,
+          cadence
+        }),
         changedBy: extractChangedBy(request.auth.credentials),
         reportDataValidationEnabled: request.config.get(
           'featureFlags.reportDataValidation'
@@ -136,13 +157,7 @@ export const reportsPost = {
         createdAt: createdReport.status.created.at
       })
 
-      logger.info({
-        message: `Report created: id=${createdReport.id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        }
-      })
+      logReportCreated(logger, createdReport.id)
 
       return h
         .response(withRegistrationDetails(createdReport, registration))

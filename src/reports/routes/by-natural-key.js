@@ -12,7 +12,7 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { reportsDelete } from './delete.js'
 import { reportsYearCalendar } from './get-year-calendar.js'
 import { reportsGetDetail } from './get-detail.js'

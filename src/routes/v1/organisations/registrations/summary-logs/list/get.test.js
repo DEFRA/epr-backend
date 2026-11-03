@@ -1,4 +1,4 @@
-import { toYear } from '#common/helpers/dates/year.js'
+import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -16,7 +16,10 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -35,6 +38,8 @@ const organisationNumber = toOrganisationNumber(String(organisation.orgId))
 const registrationNumber = registration.registrationNumber
 const registrations = `/organisations/${organisation.orgId}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
+const year = currentUtcYear()
+const urlForYear = `${url}?year=${year}`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs', () => {
   setupAuthContext()
@@ -61,7 +66,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     await server.stop()
   })
 
-  const list = (path = url) =>
+  const list = (path = urlForYear) =>
     server.inject({ method: 'GET', url: path, ...asServiceMaintainer() })
 
   describe('successful requests', () => {
@@ -81,7 +86,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.submitted({
           organisationNumber,
           registrationNumber,
-          year: toYear(2026),
+          year,
           submittedAt: '2026-02-01T10:00:00.000Z',
           createdAt: '2026-02-01T09:55:00.000Z',
           file: { name: 'january.xlsx' }
@@ -93,7 +98,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         summaryLogFactory.validationFailed({
           organisationNumber,
           registrationNumber,
-          year: toYear(2026),
+          year,
           createdAt: '2026-02-02T11:00:00.000Z',
           file: { name: 'february.xlsx' }
         })
@@ -109,14 +114,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
             status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-            year: 2026
+            year,
+            accreditationNumber: null
           },
           {
             summaryLogId: submittedId,
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
             status: SUMMARY_LOG_STATUS.SUBMITTED,
-            year: 2026
+            year,
+            accreditationNumber: null
           }
         ]
       })
@@ -136,6 +143,46 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const [row] = JSON.parse(response.payload).summaryLogs
       expect(row).not.toHaveProperty('accreditationId')
+    })
+
+    it('includes the accreditation number for an accredited log', async () => {
+      await summaryLogsRepository.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationNumber,
+          registrationNumber,
+          accreditationId: 'acc-1',
+          accreditationNumber: toAccreditationNumber('A26ER5001180001PL')
+        })
+      )
+
+      const response = await list()
+
+      const [row] = JSON.parse(response.payload).summaryLogs
+      expect(row.accreditationNumber).toBe('A26ER5001180001PL')
+    })
+
+    it('returns only the logs for the year asked for', async () => {
+      const ids = {}
+      for (const logYear of [2025, 2026]) {
+        ids[logYear] = new ObjectId().toString()
+        await summaryLogsRepository.insert(
+          ids[logYear],
+          summaryLogFactory.submitted({
+            organisationNumber,
+            registrationNumber,
+            year: toYear(logYear)
+          })
+        )
+      }
+
+      const response = await list(`${url}?year=2025`)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { summaryLogs } = JSON.parse(response.payload)
+      expect(summaryLogs.map(({ summaryLogId }) => summaryLogId)).toEqual([
+        ids[2025]
+      ])
     })
 
     it('excludes intermediate statuses from the list', async () => {
@@ -231,7 +278,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   describe('error scenarios', () => {
     it('returns 404 for a registration the organisation does not hold', async () => {
       const response = await list(
-        `${registrations}/R26ER9999999999PL/summary-logs`
+        `${registrations}/R26ER9999999999PL/summary-logs?year=${year}`
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -239,11 +286,26 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     it('returns 404 for an unknown organisation', async () => {
       const response = await list(
-        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs?year=${year}`
       )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
+
+    it('returns 422 when the year is missing', async () => {
+      const response = await list(url)
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it.each(['abc', '2026.5', '1999'])(
+      'returns 422 for the year %s',
+      async (invalidYear) => {
+        const response = await list(`${url}?year=${invalidYear}`)
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
 
     it('returns 500 when repository throws', async () => {
       vi.spyOn(summaryLogsRepository, 'findAll').mockRejectedValue(
@@ -258,7 +320,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   describe('authentication', () => {
     it('returns 401 when not authenticated', async () => {
-      const response = await server.inject({ method: 'GET', url })
+      const response = await server.inject({
+        method: 'GET',
+        url: urlForYear
+      })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
@@ -266,7 +331,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns 403 when user is not a service maintainer', async () => {
       const response = await server.inject({
         method: 'GET',
-        url,
+        url: urlForYear,
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 

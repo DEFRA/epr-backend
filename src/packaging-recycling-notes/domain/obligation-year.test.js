@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -7,7 +8,7 @@ import {
 
 const buildPrn = ({ isDecemberWaste }) => ({
   isDecemberWaste,
-  accreditation: { accreditationYear: 2026 }
+  accreditation: { accreditationYear: toYear(2026) }
 })
 
 describe('selectObligationYearForAcceptance', () => {

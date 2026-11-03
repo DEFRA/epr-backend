@@ -1,24 +1,47 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
-import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import {
   servesOrganisation,
   toAccreditationEntry,
-  toRegistrationEntry,
-  toStatusTimeline
+  toRegistrationEntry
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
+ * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ *
+ * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
+ *
+ * @typedef {OrganisationParams & { registrationNumber: RegistrationNumber }} RegistrationParams
  */
+
+export const organisationPath = '/organisations/{organisationNumber}'
+export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
+export const accreditationPath = `${registrationPath}/accreditations/{year}`
+
+export const organisationParams = {
+  organisationNumber: Joi.string()
+    .pattern(ORGANISATION_NUMBER_PATTERN)
+    .custom(toOrganisationNumber)
+    .required()
+}
+export const registrationParams = {
+  ...organisationParams,
+  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
+}
 
 /**
  * Finding a record needs only its key. Overseas sites and the reasons a record
@@ -85,6 +108,33 @@ export async function findRegistrationByNumber(
 }
 
 /**
+ * The organisation and registration the natural keys name, as the read model
+ * shows them. Not found when the organisation does not hold the registration.
+ *
+ * @param {HapiRequest & { params: RegistrationParams }} request
+ * @returns {Promise<{ organisation: ReadModelOrganisation, registration: ReadModelRegistration }>}
+ */
+export async function findOrganisationAndRegistrationReadModels({
+  organisationReadRepository,
+  params: { organisationNumber, registrationNumber }
+}) {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
+    throw Boom.notFound('Organisation not found')
+  }
+
+  const registration = organisation.registrations[registrationNumber]
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
+
+  return { organisation, registration }
+}
+
+/**
  * The registrations the organisation read model serves.
  *
  * @param {Organisation} organisation
@@ -120,19 +170,6 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
 }
 
 /**
- * The years the registration was approved in, up to this year.
- *
- * @param {Registration} registration
- * @returns {Year[]}
- */
-export function registrationYears(registration) {
-  return approvedYears(
-    toStatusTimeline(registration.statusHistory, registration.validFrom),
-    utcCalendarDate(new Date())
-  )
-}
-
-/**
  * A registration's accreditations for a year, by the read model's rules.
  *
  * @param {Organisation} organisation
@@ -145,22 +182,6 @@ export function accreditationsForYear(organisation, registration, year) {
     (candidate) =>
       toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
   )
-}
-
-/**
- * The registration as the read model shows it, with its accreditations by
- * year. Only a registration the read model serves reaches a route, so the
- * conversion always succeeds.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- * @returns {ReadModelRegistration}
- */
-export function readModelRegistration(organisation, registration) {
-  const [, served] = /** @type {[string, ReadModelRegistration]} */ (
-    toRegistrationEntry(registration, organisation, lookupContext())
-  )
-  return served
 }
 
 /**

@@ -15,7 +15,7 @@ import { organisation } from '#root/routes/v1/apply/organisation.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Address, LinkedDefraOrganisation as StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -74,11 +74,11 @@ export const createOrganisationReadRepository = ({
   }
 
   return {
-    findByOrganisationNumber: async (organisationNumber) => {
-      const stored =
-        await organisationsRepository.findByOrganisationNumber(
-          organisationNumber
-        )
+    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
+      const stored = await organisationsRepository.findByOrganisationNumber(
+        organisationNumber,
+        minimumVersion
+      )
       if (!stored) {
         return null
       }
@@ -166,7 +166,7 @@ function toOrganisation(stored, context) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-export function toLinkedDefraOrganisation(linked) {
+function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),

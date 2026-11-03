@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { unnumberedAccreditationRule } from './unnumbered-accreditation.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import {
   SEVERITY,
   TARGET_TYPE
@@ -7,20 +8,25 @@ import {
 
 /** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 
+/**
+ * The fields the rule reads. The number is `unknown` so a test can store a
+ * malformed one.
+ *
+ * @typedef {{ id: string, status: AccreditationStatus, accreditationNumber?: unknown }} StoredAccreditation
+ */
+
+/** @param {StoredAccreditation[]} accreditations */
 const organisation = (accreditations) =>
   /** @type {Organisation} */ (
     /** @type {unknown} */ ({ id: 'org-1', accreditations })
   )
 
-/** @param {AccreditationStatus[]} statuses */
-const historyOf = (...statuses) =>
-  statuses.map((status) => ({ status, updatedAt: '2026-01-01' }))
-
+/** @param {string} accreditationId */
 const issueFor = (accreditationId) => ({
   code: 'UNNUMBERED_ACCREDITATION',
   severity: SEVERITY.ERROR,
   target: { type: TARGET_TYPE.ACCREDITATION, id: accreditationId },
-  message: `Accreditation ${accreditationId} has been accredited but carries no valid accreditation number`
+  message: `Accreditation ${accreditationId} is approved or suspended but carries no valid accreditation number`
 })
 
 describe('unnumberedAccreditationRule', () => {
@@ -34,35 +40,7 @@ describe('unnumberedAccreditationRule', () => {
       {
         id: 'acc-1',
         accreditationNumber: null,
-        statusHistory: historyOf('created', 'approved')
-      }
-    ])
-
-    expect(unnumberedAccreditationRule.evaluate(org)).toEqual([
-      issueFor('acc-1')
-    ])
-  })
-
-  it('flags an accreditation demoted out of approval that lost its number', () => {
-    const org = organisation([
-      {
-        id: 'acc-1',
-        accreditationNumber: null,
-        statusHistory: historyOf('created', 'approved', 'created')
-      }
-    ])
-
-    expect(unnumberedAccreditationRule.evaluate(org)).toEqual([
-      issueFor('acc-1')
-    ])
-  })
-
-  it('flags an accreditation cancelled after approval that lost its number', () => {
-    const org = organisation([
-      {
-        id: 'acc-1',
-        accreditationNumber: null,
-        statusHistory: historyOf('created', 'approved', 'cancelled')
+        status: ACCREDITATION_STATUS.APPROVED
       }
     ])
 
@@ -73,7 +51,7 @@ describe('unnumberedAccreditationRule', () => {
 
   it('flags a suspended accreditation whose number is absent', () => {
     const org = organisation([
-      { id: 'acc-1', statusHistory: historyOf('approved', 'suspended') }
+      { id: 'acc-1', status: ACCREDITATION_STATUS.SUSPENDED }
     ])
 
     expect(unnumberedAccreditationRule.evaluate(org)).toEqual([
@@ -81,12 +59,12 @@ describe('unnumberedAccreditationRule', () => {
     ])
   })
 
-  it('flags an accredited accreditation whose number is blank', () => {
+  it('flags an approved accreditation whose number is blank', () => {
     const org = organisation([
       {
         id: 'acc-1',
         accreditationNumber: '   ',
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.APPROVED
       }
     ])
 
@@ -95,12 +73,12 @@ describe('unnumberedAccreditationRule', () => {
     ])
   })
 
-  it('flags an accredited accreditation whose number is numeric', () => {
+  it('flags an approved accreditation whose number is numeric', () => {
     const org = organisation([
       {
         id: 'acc-1',
         accreditationNumber: 12345,
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.APPROVED
       }
     ])
 
@@ -109,50 +87,24 @@ describe('unnumberedAccreditationRule', () => {
     ])
   })
 
-  it('flags an accredited accreditation that no registration references', () => {
+  it.each([
+    ACCREDITATION_STATUS.CREATED,
+    ACCREDITATION_STATUS.REJECTED,
+    ACCREDITATION_STATUS.CANCELLED
+  ])('does not flag a %s accreditation without a number', (status) => {
     const org = organisation([
-      {
-        id: 'acc-orphaned',
-        accreditationNumber: null,
-        statusHistory: historyOf('created', 'approved', 'created')
-      }
-    ])
-
-    expect(unnumberedAccreditationRule.evaluate(org)).toEqual([
-      issueFor('acc-orphaned')
-    ])
-  })
-
-  it('does not flag an accreditation that has never been accredited', () => {
-    const org = organisation([
-      {
-        id: 'acc-1',
-        accreditationNumber: null,
-        statusHistory: historyOf('created')
-      }
+      { id: 'acc-1', accreditationNumber: null, status }
     ])
 
     expect(unnumberedAccreditationRule.evaluate(org)).toEqual([])
   })
 
-  it('does not flag an accreditation rejected without ever being accredited', () => {
-    const org = organisation([
-      {
-        id: 'acc-1',
-        accreditationNumber: null,
-        statusHistory: historyOf('created', 'rejected')
-      }
-    ])
-
-    expect(unnumberedAccreditationRule.evaluate(org)).toEqual([])
-  })
-
-  it('does not flag an accredited accreditation that carries a number', () => {
+  it('does not flag an approved accreditation that carries a number', () => {
     const org = organisation([
       {
         id: 'acc-1',
         accreditationNumber: 'EA-1234',
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.APPROVED
       }
     ])
 
@@ -164,17 +116,17 @@ describe('unnumberedAccreditationRule', () => {
       {
         id: 'acc-1',
         accreditationNumber: null,
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.APPROVED
       },
       {
         id: 'acc-numbered',
         accreditationNumber: 'EA-1234',
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.APPROVED
       },
       {
         id: 'acc-2',
         accreditationNumber: null,
-        statusHistory: historyOf('approved')
+        status: ACCREDITATION_STATUS.SUSPENDED
       }
     ])
 

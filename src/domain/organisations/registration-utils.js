@@ -9,8 +9,9 @@ import { yearBounds } from '#common/helpers/dates/year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { ReportableRegistration, Registration } from '#domain/organisations/registration.js' */
+/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
 /** @type {Set<RegistrationStatus>} */
 const REPORTABLE_STATUSES = new Set([
@@ -78,12 +79,12 @@ export function isRegistrationAccredited({ accreditation }) {
 
 /**
  * Whether the registration is approved and active during a specific year
- * @param {Registration} registration
+ * @param {Pick<ReadModelRegistration, 'status' | 'validFrom'>} registration
  * @param {Year} year
  * @returns {boolean}
  */
 export function isRegistrationActiveInYear(registration, year) {
-  if (registration.status !== REGISTRATION_STATUS.APPROVED) {
+  if (registration.status.current !== REGISTRATION_STATUS.APPROVED) {
     return false
   }
   return toCalendarDate(registration.validFrom) <= yearBounds(year).end

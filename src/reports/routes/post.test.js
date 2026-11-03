@@ -23,7 +23,10 @@ import {
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAccreditationSnapshot,
+  buildAwaitingAcceptancePrn
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -398,7 +401,37 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
   })
 
-  it('returns 400 with structured cadence when the accreditation for the year is no longer live', async () => {
+  it('returns 404 for a year the registration was not approved in, and stores nothing', async () => {
+    const created = await createServer(registeredOnlyReprocessor)
+
+    const response = await created.post({ year: toYear(2025) })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(
+      await fetchReportBySubmissionNumber(
+        created.reportsRepositoryFactory(),
+        created.organisationId,
+        created.registrationId,
+        toYear(2025),
+        'quarterly',
+        QUARTER,
+        1
+      )
+    ).toBeNull()
+  })
+
+  it('returns 404 for a quarter that ended before the registration was approved', async () => {
+    const { post } = await createServer({
+      ...registeredOnlyReprocessor,
+      validFrom: '2026-04-01'
+    })
+
+    const response = await post({ period: 1 })
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  it('returns 404 for a month of an accreditation that was never approved', async () => {
     const { post } = await createServer(registeredOnlyReprocessor, {
       accredited: true,
       accreditationOverrides: cancelledAccreditation
@@ -406,47 +439,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const response = await post()
 
-    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-    expect(JSON.parse(response.payload)).toEqual({
-      statusCode: StatusCodes.BAD_REQUEST,
-      error: 'Bad Request',
-      message:
-        "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-      cadence: { actual: 'monthly', expected: 'quarterly' }
-    })
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   describe('indexed warn log shape per helper', () => {
-    it('cadence mismatch attaches CADENCE_MISMATCH code and cadence event.reason', async () => {
-      const { server, post } = await createServer(registeredOnlyReprocessor, {
-        accredited: true,
-        accreditationOverrides: cancelledAccreditation
-      })
-
-      await post()
-
-      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-        message:
-          "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-        error: {
-          code: 'cadence_mismatch',
-          id: expect.any(String),
-          message:
-            "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-          stack_trace: expect.any(String),
-          type: 'Bad Request'
-        },
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.HTTP,
-          action: 'create_report',
-          kind: 'event',
-          outcome: 'failure',
-          reason: 'actual=monthly expected=quarterly'
-        },
-        http: { response: { status_code: StatusCodes.BAD_REQUEST } }
-      })
-    })
-
     it('invalid period attaches INVALID_PERIOD code and flat event.reason', async () => {
       const { server, post } = await createServer(registeredOnlyReprocessor)
 
@@ -639,15 +635,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ...buildAwaitingAcceptancePrn({
             organisation: { id: organisationId, name: 'Test Organisation' },
             registrationId,
-            accreditation: {
+            accreditation: buildAccreditationSnapshot({
               id: accreditationId,
-              accreditationNumber: 'ACC-TEST-001',
               accreditationYear: YEAR,
               material: 'glass',
-              glassRecyclingProcess: 'glass_re_melt',
-              submittedToRegulator: 'ea',
-              siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-            },
+              glassRecyclingProcess: 'glass_re_melt'
+            }),
             tonnage: 250,
             status: {
               currentStatus: 'awaiting_acceptance',
@@ -760,6 +753,25 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
       expect(JSON.parse(response.payload).submissionNumber).toBe(2)
+    })
+
+    it('creates submission 2 of a flagged period the registration no longer owes', async () => {
+      const { organisationId, registrationId, reportsRepositoryFactory, post } =
+        await createServer({
+          wasteProcessingType: 'exporter',
+          validFrom: '2026-04-01'
+        })
+      const repo = reportsRepositoryFactory()
+
+      const { id } = await repo.createReport(
+        buildSubmission(organisationId, registrationId, 1)
+      )
+      await submitReport(repo, id)
+      await flagPeriod(repo, organisationId, registrationId)
+
+      const response = await post({ submissionNumber: 2 })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {

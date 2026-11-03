@@ -65,9 +65,9 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
 const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
   const others = storage.filter((org) => org._id !== id)
 
-  for (const { items, field, numbersOf } of UNIQUE_NUMBER_FIELDS) {
+  for (const { items, field, label, numbersOf } of UNIQUE_NUMBER_FIELDS) {
     const heldElsewhere = new Set(others.flatMap(numbersOf))
-    const repeated = numbersOf(organisation).some(
+    const repeated = numbersOf(organisation).find(
       (number) => typeof number === 'string' && heldElsewhere.has(number)
     )
 
@@ -76,7 +76,8 @@ const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
         operation,
         id,
         conflictFields: `${items}.${field}`,
-        reason: `fields=${items}.${field}`
+        reason: `fields=${items}.${field}`,
+        heldNumber: { label, number: repeated }
       })
     }
   }
@@ -169,54 +170,63 @@ const performReplace =
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
-const performFindById = (staleCache) => (id) => {
+/**
+ * Reads the one organisation `predicate` matches, retrying until its version
+ * is at least `minimumVersion`. Without `minimumVersion` it reads once.
+ * Resolves null when no organisation matches, and throws 500 when the version
+ * never arrives.
+ *
+ * @param {Object[]} staleCache
+ * @param {(org: Object) => boolean} predicate
+ * @param {number} [minimumVersion]
+ */
+const findOneAtMinimumVersion = async (
+  staleCache,
+  predicate,
+  minimumVersion
+) => {
+  for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+    const found = staleCache.find(predicate)
+    const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
+
+    if (found) {
+      if (minimumVersion === undefined || found.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(structuredClone(found))
+      }
+      // Document exists but version too low - will retry
+    } else if (minimumVersion === undefined || isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+      )
+    }
+  }
+
+  throw Boom.internal('Consistency timeout waiting for minimum version')
+}
+
+const performFindById = (staleCache) => async (id, minimumVersion) => {
   try {
     validateId(id)
   } catch {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  const found = staleCache.find((o) => o._id === id)
+  const found = await findOneAtMinimumVersion(
+    staleCache,
+    (o) => o._id === id,
+    minimumVersion
+  )
   if (!found) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
-
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
+  return found
 }
-
-const performFindByIdWithRetry =
-  (findByIdFromCache) => async (id, minimumVersion) => {
-    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-      try {
-        const result = findByIdFromCache(id)
-
-        // No version expectation - return immediately (may be stale)
-        if (minimumVersion === undefined) {
-          return result
-        }
-
-        // Version matches - consistency achieved
-        if (result.version >= minimumVersion) {
-          return result
-        }
-      } catch (error) {
-        // Document not found - retry in case it's propagating
-        if (i === MAX_CONSISTENCY_RETRIES - 1) {
-          throw error
-        }
-      }
-
-      // Wait before retry
-      if (i < MAX_CONSISTENCY_RETRIES - 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-        )
-      }
-    }
-
-    // Timeout - throw error
-    throw Boom.internal('Consistency timeout waiting for minimum version')
-  }
 
 const performFindAll = (staleCache) => async () => {
   return structuredClone(staleCache).map((org) =>
@@ -404,15 +414,12 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
 }
 
 const performFindByOrganisationNumber =
-  (staleCache) => async (organisationNumber) => {
-    const found = staleCache.find(
-      (o) => o.orgId === storedOrgId(organisationNumber)
+  (staleCache) => (organisationNumber, minimumVersion) =>
+    findOneAtMinimumVersion(
+      staleCache,
+      (o) => o.orgId === storedOrgId(organisationNumber),
+      minimumVersion
     )
-    if (!found) {
-      return null
-    }
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
-  }
 
 const performReplaceRegistrationOverseasSites =
   (storage, staleCache, pendingSyncRef) =>
@@ -527,10 +534,8 @@ export const createInMemoryOrganisationsRepository = (
   const syncStaleCache = () =>
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
 
-  const findByIdFromCache = performFindById(staleCache)
-
   return () => {
-    const findById = performFindByIdWithRetry(findByIdFromCache)
+    const findById = performFindById(staleCache)
     const insertFn = performInsert(storage, staleCache)
     const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
 

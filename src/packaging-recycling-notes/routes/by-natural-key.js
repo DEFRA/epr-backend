@@ -20,7 +20,7 @@ import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 import {
@@ -46,7 +46,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { RegistrationParams } from '#routes/organisations/view-route.js'
+ * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
@@ -80,7 +80,7 @@ import { createStatusesValidator } from './validation.js'
  *       registrationNumber: string,
  *       accreditation: {
  *         accreditationNumber: string,
- *         accreditationYear: number,
+ *         accreditationYear: Year,
  *         wasteProcessingType: WasteProcessingTypeValue,
  *         material: Material,
  *         submittedToRegulator: { code: RegulatorValue },
@@ -91,7 +91,7 @@ import { createStatusesValidator } from './validation.js'
  *   tonnage: number,
  *   processToBeUsed: string | null,
  *   isDecemberWaste: boolean,
- *   obligationYear: number,
+ *   obligationYear: Year,
  *   notes?: string,
  *   createdAt: string,
  *   issued?: PrnOperation,
@@ -247,6 +247,17 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
 }
 
 /**
+ * @param {BusinessOperation} operation
+ * @returns {PrnOperation}
+ */
+const toPrnOperation = ({ at, by }) => ({
+  at: new Date(at).toISOString(),
+  ...(by.name && {
+    by: { name: by.name, ...(by.position && { position: by.position }) }
+  })
+})
+
+/**
  * A PRN as the accreditation serves it. Its number is a field, present once
  * the PRN is issued, and a client finds a PRN by it through the collection.
  *
@@ -259,17 +270,6 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
  * @param {Date} now
  * @returns {PrnResource}
  */
-/**
- * @param {BusinessOperation} operation
- * @returns {PrnOperation}
- */
-const toPrnOperation = ({ at, by }) => ({
-  at: new Date(at).toISOString(),
-  ...(by.name && {
-    by: { name: by.name, ...(by.position && { position: by.position }) }
-  })
-})
-
 const toPrnResource = (
   prn,
   { organisationNumber, registrationNumber },

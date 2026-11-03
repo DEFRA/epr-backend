@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
@@ -92,10 +94,13 @@ export const reportsGetDetail = {
       submissionNumber
     } = params
 
-    const registration = await findRegistrationForReport(
+    const storedRegistration = await findRegistrationForReport(
       organisationsRepository,
       params
     )
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
@@ -105,11 +110,16 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
-      registration,
+      registration: storedRegistration,
       year,
       cadence,
       period,
       submissionNumber,
+      requiredPeriods: requiredReportingPeriods({
+        registration,
+        year,
+        cadence
+      }),
       reportDataValidationEnabled: request.config.get(
         'featureFlags.reportDataValidation'
       )

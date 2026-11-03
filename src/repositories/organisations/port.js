@@ -1,5 +1,5 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {CollatedUser, LinkedDefraOrganisation, Organisation} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, StoredLinkedDefraOrganisation, Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
@@ -64,7 +64,7 @@
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
- * @property {(organisationNumber: OrganisationNumber, version: number, linkedDefraOrganisation: LinkedDefraOrganisation) => Promise<void>} linkDefraOrganisation - Link the organisation to a Defra organisation and make it active. Throws 409 when the stored version is not `version`
+ * @property {(organisationNumber: OrganisationNumber, version: number, linkedDefraOrganisation: StoredLinkedDefraOrganisation) => Promise<void>} linkDefraOrganisation - Link the organisation to a Defra organisation and make it active. Throws 409 when the stored version is not `version`
  * @property {(organisationNumber: OrganisationNumber, version: number) => Promise<void>} unlinkDefraOrganisation - Remove the organisation's link to a Defra organisation, leaving its status as it is. Throws 409 when the stored version is not `version`
  * @property {(organisationNumber: OrganisationNumber, version: number, users: CollatedUser[]) => Promise<void>} replaceUsers - Replace the organisation's users with `users`, which must be the full list. Throws 409 when the stored version is not `version`
  * @property {() => Promise<Organisation[]>} findAll
@@ -79,7 +79,7 @@
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
- * @property {(organisationNumber: OrganisationNumber) => Promise<Organisation|null>} findByOrganisationNumber - Find the organisation with this number
+ * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<Organisation|null>} findByOrganisationNumber - Find the organisation with this number. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
  */
 

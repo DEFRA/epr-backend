@@ -4,7 +4,6 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
-import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/adapter.js'
 import { linkedDefraOrganisationViewSchema } from '#routes/organisations/response.schema.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
@@ -44,7 +43,7 @@ export const organisationsLink = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationsRepository, organisationReadRepository } = request
     const { organisation } = request.app
     const {
       decoded: { payload: tokenPayload }
@@ -94,8 +93,10 @@ export const organisationsLink = {
 
     const { id, orgId, version: currentVersion } = organisation
 
+    const organisationNumber = toOrganisationNumber(String(orgId))
+
     await organisationsRepository.linkDefraOrganisation(
-      toOrganisationNumber(String(orgId)),
+      organisationNumber,
       currentVersion,
       linkedDefraOrg
     )
@@ -106,15 +107,19 @@ export const organisationsLink = {
     })
     await organisationLinkingMetrics.organisationLinked()
 
-    const updatedOrganisation = await organisationsRepository.findById(
-      id,
-      currentVersion + 1
-    )
+    const updatedOrganisation =
+      await organisationReadRepository.findByOrganisationNumber(
+        organisationNumber,
+        currentVersion + 1
+      )
+    if (!updatedOrganisation) {
+      throw Boom.internal('Linked organisation could not be read back')
+    }
 
     return h
       .response({
-        status: updatedOrganisation.status,
-        linkedDefraOrganisation: toLinkedDefraOrganisation(linkedDefraOrg)
+        status: updatedOrganisation.status.current,
+        linkedDefraOrganisation: updatedOrganisation.linkedDefraOrganisation
       })
       .code(StatusCodes.OK)
   }

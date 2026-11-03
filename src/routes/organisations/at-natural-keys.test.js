@@ -5,12 +5,12 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { atNaturalKeys } from './at-natural-keys.js'
+import { organisationParams, registrationParams } from './natural-keys.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { organisationParams, registrationParams } from './view-route.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -133,7 +133,7 @@ describe('atNaturalKeys', () => {
     })
   })
 
-  it('puts the records it resolved on the request', async () => {
+  it('puts the organisation it resolved on the request', async () => {
     const served = atNaturalKeys(route, '/served', registrationParams)
     const request = requestFor({
       organisationNumber: String(organisation.orgId),
@@ -143,10 +143,7 @@ describe('atNaturalKeys', () => {
     await served.handler(request, h)
 
     expect(request.app).toEqual({
-      organisation: expect.objectContaining({ id: organisation.id }),
-      registration: expect.objectContaining({
-        id: registeredOnlyRegistration.id
-      })
+      organisation: expect.objectContaining({ id: organisation.id })
     })
   })
 

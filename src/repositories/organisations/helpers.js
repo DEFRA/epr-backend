@@ -14,7 +14,6 @@ import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,
   validateAccreditationLinkUniqueness,
-  validateAccreditationNumbersRetained,
   validateApprovals
 } from './schema/helpers.js'
 import {
@@ -29,7 +28,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { LinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
@@ -137,6 +136,7 @@ export const updateStatusHistoryForItems = (
  * @typedef {{
  *   items: 'registrations' | 'accreditations',
  *   field: 'registrationNumber' | 'accreditationNumber',
+ *   label: string,
  *   numbersOf: (organisation: NumberHolder) => Array<string | null | undefined>
  * }} UniqueNumberField
  */
@@ -151,12 +151,14 @@ export const UNIQUE_NUMBER_FIELDS = [
   {
     items: 'registrations',
     field: 'registrationNumber',
+    label: 'Registration',
     numbersOf: ({ registrations }) =>
       registrations.map(({ registrationNumber }) => registrationNumber)
   },
   {
     items: 'accreditations',
     field: 'accreditationNumber',
+    label: 'Accreditation',
     numbersOf: ({ accreditations }) =>
       accreditations.map(({ accreditationNumber }) => accreditationNumber)
   }
@@ -164,22 +166,28 @@ export const UNIQUE_NUMBER_FIELDS = [
 
 /** @typedef {'inserting' | 'updating'} WriteOperation */
 
+/** @typedef {{ label: string, number: string }} HeldNumber */
+
 /**
  * @param {{
  *   operation: WriteOperation,
  *   id: string,
  *   conflictFields: string,
- *   reason: string
+ *   reason: string,
+ *   heldNumber?: HeldNumber
  * }} params
  */
 export const duplicateKeyConflict = ({
   operation,
   id,
   conflictFields,
-  reason
+  reason,
+  heldNumber
 }) =>
   conflict(
-    `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
+    heldNumber
+      ? `${heldNumber.label} number ${heldNumber.number} is already held by another organisation`
+      : `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
     errorCodes.organisationDuplicateKey,
     {
       event: {
@@ -187,6 +195,7 @@ export const duplicateKeyConflict = ({
           operation === 'inserting'
             ? 'insert_organisation'
             : 'update_organisation',
+        reference: id,
         reason
       }
     }
@@ -244,7 +253,6 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
-  validateAccreditationNumbersRetained(accreditations, existing.accreditations)
   return { registrations, accreditations }
 }
 
@@ -325,9 +333,9 @@ export const prepareForReplace = (existing, updates) => {
  * is already active (unlinked and being re-linked) gets no new entry.
  *
  * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
- * @param {LinkedDefraOrganisation} linkedDefraOrganisation
+ * @param {StoredLinkedDefraOrganisation} linkedDefraOrganisation
  * @returns {{
- *   linkedDefraOrganisation: LinkedDefraOrganisation,
+ *   linkedDefraOrganisation: StoredLinkedDefraOrganisation,
  *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
  * }}
  */

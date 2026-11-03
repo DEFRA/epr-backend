@@ -13,6 +13,7 @@ import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
 import { closedYearRefusal } from './closed-year.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import {PrnStatus, PrnActor} from './model.js'
  * @import {LedgerBalanceSnapshot, LedgerEventKind, PrnAcceptedPayload} from '#waste-balances/repository/ledger-schema.js'
  * @import {BalanceEvent, PrnCommandRejection, PrnDecision} from '#waste-balances/domain/commands.js'
@@ -179,7 +180,7 @@ export class PrnLedgerRejectionError extends Error {
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
  * @param {Accreditation} [params.accreditation]
- * @param {number} params.accreditationYear
+ * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @returns {Error | undefined}
  */
@@ -214,7 +215,7 @@ const ruleTransition = ({
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
  * @param {Accreditation} [params.accreditation] - required only for issuance
- * @param {number} params.accreditationYear
+ * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @param {LedgerBalanceSnapshot | null} params.balance - `null` for a ledger with no events
  * @param {PrnAcceptedPayload} params.payload

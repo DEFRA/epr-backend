@@ -11,12 +11,11 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { partialMock } from '#test/type-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
 
 const it = base.extend({
   organisationsRepository: async (
@@ -51,37 +50,6 @@ describe('In-memory organisations repository', () => {
           message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
         })
       )
-    })
-  })
-
-  describe('findByOrganisationNumber', () => {
-    /** @type {OrganisationsRepository} */
-    let repository
-
-    beforeEach(() => {
-      const factory = createInMemoryOrganisationsRepository([])
-      repository = factory()
-    })
-
-    it('returns organisation matching the business orgId', async () => {
-      const organisation = buildOrganisation()
-      await repository.insert(organisation)
-
-      const found = await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(organisation.orgId))
-      )
-
-      expect(found).toMatchObject({
-        id: organisation.id,
-        orgId: organisation.orgId
-      })
-    })
-
-    it('returns null when no organisation matches', async () => {
-      const found = await repository.findByOrganisationNumber(
-        toOrganisationNumber('999999')
-      )
-      expect(found).toBeNull()
     })
   })
 
