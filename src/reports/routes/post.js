@@ -131,10 +131,6 @@ export const reportsPost = {
             ).accreditationNumber
           : null
 
-      const reportDataValidationEnabled = request.config.get(
-        'featureFlags.reportDataValidation'
-      )
-
       const createdReport = await createReportForPeriod({
         reportsRepository,
         ledgerRepository,
@@ -159,7 +155,9 @@ export const reportsPost = {
           cadence
         }),
         changedBy: extractChangedBy(request.auth.credentials),
-        reportDataValidationEnabled
+        reportDataValidationEnabled: request.config.get(
+          'featureFlags.reportDataValidation'
+        )
       })
 
       await auditReportCreate(request, {
