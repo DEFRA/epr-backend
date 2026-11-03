@@ -2,9 +2,7 @@ import { buildCreditedTonnageReport } from './credited-tonnage-report.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
-  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
@@ -13,7 +11,7 @@ import {
 
 /**
  * @import {TypedLogger} from '#common/hapi-types.js'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  */
@@ -26,84 +24,100 @@ const TEST_ORG_ID = 999999
 const NOW = new Date('2026-03-15T12:00:00.000Z')
 
 // The window every fixture accreditation is valid across, unless a test names
-// its own — wide enough to cover the whole report range.
+// its own (from its approval to 31 December of its year) — wide enough to
+// cover the whole report range.
 const ACCREDITED_FROM = '2026-01-01'
-const ACCREDITED_TO = '2026-12-31'
-
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
-]
+const ACCREDITED_YEAR = '2026'
 
 /**
+ * A read-model organisation holding one registration with one accreditation,
+ * plus the ledger entry (ids and numbers) that names it. The accreditation's
+ * window starts at `validFrom` (its approval entry) and ends on 31 December of
+ * the year it is keyed by.
+ *
  * @param {{
  *   orgId: number,
  *   material?: string,
- *   glassRecyclingProcess?: string[],
  *   wasteProcessingType?: string,
  *   reprocessingType?: string,
- *   accreditationNumber?: string | null,
  *   status?: string,
- *   statusHistory?: { status: string, updatedAt: string }[],
  *   validFrom?: string,
- *   validTo?: string
- * }} options - pass `accreditationNumber: null` to omit it entirely
+ *   year?: string,
+ *   overseasSites?: { registered: Record<string, any>, accredited: Record<string, any> }
+ * }} options
  */
 const makeAccreditation = ({
   orgId,
   material = MATERIAL.PLASTIC,
-  glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = REPROCESSING_TYPE.INPUT,
-  accreditationNumber,
   status = 'approved',
-  statusHistory = approvedHistory,
   validFrom = ACCREDITED_FROM,
-  validTo = ACCREDITED_TO
+  year = ACCREDITED_YEAR,
+  overseasSites
 }) => {
-  const id = `org-uuid-${orgId}`
-  const registrationId = `reg-${orgId}`
+  const organisationNumber = String(orgId)
+  const registrationNumber = `REG-${orgId}`
+  const accreditationNumber = `ACC-${orgId}`
   const accreditationId = `acc-${orgId}`
+  const isExporter = wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
   const registration = {
-    id: registrationId,
-    accreditationId,
-    material,
-    glassRecyclingProcess,
-    wasteProcessingType,
-    reprocessingType
-  }
-  const accreditation = {
-    id: accreditationId,
-    status,
-    statusHistory,
-    validFrom,
-    validTo,
     material,
     wasteProcessingType,
-    reprocessingType,
-    ...(accreditationNumber !== null && {
-      accreditationNumber: accreditationNumber ?? `ACC-${orgId}`
-    })
+    ...(isExporter
+      ? { overseasSites: overseasSites?.registered ?? {} }
+      : { reprocessingType }),
+    accreditations: {
+      [year]: {
+        accreditationNumber,
+        status: {
+          current: status,
+          timeline: [
+            { status: 'created', at: '2025-11-01T00:00:00.000Z' },
+            {
+              status: 'approved',
+              at: new Date(validFrom).toISOString()
+            }
+          ]
+        },
+        ...(isExporter && {
+          overseasSites: overseasSites?.accredited ?? {}
+        })
+      }
+    }
   }
   const organisation = {
-    id,
-    orgId,
-    registrations: [registration],
-    accreditations: [accreditation]
+    organisationNumber,
+    registrations: { [registrationNumber]: registration }
   }
   return {
     organisation,
     accreditationId,
-    ledgerEntry: {
-      ledgerId: {
-        organisationId: id,
-        registrationId,
-        accreditationId
-      },
-      summaryLogId: `log-${orgId}`
-    }
+    ledgerEntry: ledgerEntryFor({
+      orgId,
+      registrationNumber,
+      accreditationNumber,
+      accreditationId
+    })
   }
 }
+
+const ledgerEntryFor = ({
+  orgId,
+  registrationNumber,
+  accreditationNumber,
+  accreditationId
+}) => ({
+  ledgerId: {
+    organisationId: `org-uuid-${orgId}`,
+    registrationId: `reg-${orgId}`,
+    accreditationId,
+    organisationNumber: String(orgId),
+    registrationNumber,
+    accreditationNumber
+  },
+  summaryLogId: `log-${orgId}`
+})
 
 // The classification each fixture row carries from its submission. Every test
 // stamps the opposite of the answer the live context gives, so a report that
@@ -192,20 +206,23 @@ const exportedRow = (
 })
 
 /**
- * An overseas reprocessing site. Omit `validFrom` for a site that is registered
- * but not yet approved.
+ * An exporter's overseas site 099: registered with its name and country, and
+ * accredited as approved on `approvedOn`, or still pending when omitted.
  *
- * @param {{ id: string, validFrom?: Date }} options
- * @returns {import('#overseas-sites/repository/port.js').OverseasSite}
+ * @param {{ approvedOn?: string }} [options]
  */
-const overseasSite = ({ id, validFrom }) => ({
-  id,
-  name: `Site ${id}`,
-  address: { line1: '1 Dock Road', townOrCity: 'Rotterdam' },
-  country: 'Netherlands',
-  createdAt: new Date('2025-01-01T00:00:00.000Z'),
-  updatedAt: new Date('2025-01-01T00:00:00.000Z'),
-  ...(validFrom && { validFrom })
+const overseasSite = ({ approvedOn } = {}) => ({
+  registered: {
+    '099': {
+      name: 'Site 099',
+      address: { country: 'Netherlands', townOrCity: 'Rotterdam' }
+    }
+  },
+  accredited: {
+    '099': approvedOn
+      ? { status: 'approved', approvedOn }
+      : { status: 'pending' }
+  }
 })
 
 /**
@@ -213,7 +230,6 @@ const overseasSite = ({ id, validFrom }) => ({
  *   organisations: any[],
  *   entries: any[],
  *   rowStatesByAccreditationId?: Record<string, any[]>,
- *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
  *   now?: Date
  * }} options
  */
@@ -221,7 +237,6 @@ const run = ({
   organisations,
   entries,
   rowStatesByAccreditationId = {},
-  overseasSites = [],
   now = NOW
 }) => {
   const logger = { info: vi.fn(), warn: vi.fn() }
@@ -233,9 +248,7 @@ const run = ({
       /** @type {{ accreditationId: string }} */ ledgerId
     ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
   }
-  const organisationsRepository = { findAll: async () => organisations }
-  const overseasSitesRepository =
-    createInMemoryOverseasSitesRepository(overseasSites)()
+  const organisationReadRepository = { findAll: async () => organisations }
 
   return {
     logger,
@@ -247,10 +260,9 @@ const run = ({
         /** @type {SummaryLogRowStatesRepository} */ (
           /** @type {unknown} */ (summaryLogRowStatesRepository)
         ),
-      organisationsRepository: /** @type {OrganisationsRepository} */ (
-        /** @type {unknown} */ (organisationsRepository)
+      organisationReadRepository: /** @type {OrganisationReadRepository} */ (
+        /** @type {unknown} */ (organisationReadRepository)
       ),
-      overseasSitesRepository,
       logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger)),
       now
     })
@@ -323,16 +335,14 @@ describe('buildCreditedTonnageReport', () => {
     })
   })
 
-  it('splits glass into re-melt and other via the registration glassRecyclingProcess', async () => {
+  it('reports glass as re-melt and other, as the read model records it', async () => {
     const reMelt = makeAccreditation({
       orgId: 500001,
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+      material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
     })
     const other = makeAccreditation({
       orgId: 500002,
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER
     })
 
     const { report } = run({
@@ -373,17 +383,15 @@ describe('buildCreditedTonnageReport', () => {
 
   it('ignores a registered-only registration (no accreditation) without warning', async () => {
     const registeredOnly = {
-      id: 'org-uuid-500007',
-      orgId: 500007,
-      registrations: [
-        {
-          id: 'reg-500007',
+      organisationNumber: '500007',
+      registrations: {
+        'REG-500007': {
           material: MATERIAL.PLASTIC,
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          reprocessingType: REPROCESSING_TYPE.INPUT
+          reprocessingType: REPROCESSING_TYPE.INPUT,
+          accreditations: {}
         }
-      ],
-      accreditations: []
+      }
     }
 
     const { report, logger } = run({
@@ -395,33 +403,18 @@ describe('buildCreditedTonnageReport', () => {
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it('warns once for a ledger entry whose accreditation is missing from its organisation', async () => {
-    const orphanOrg = {
-      id: 'org-uuid-500008',
-      orgId: 500008,
-      registrations: [
-        {
-          id: 'reg-500008',
-          accreditationId: 'acc-dangling',
-          material: MATERIAL.PLASTIC,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          reprocessingType: REPROCESSING_TYPE.INPUT
-        }
-      ],
-      accreditations: []
-    }
+  it('warns once for a ledger entry whose accreditation numbers match nothing in the read model', async () => {
+    const { organisation } = makeAccreditation({ orgId: 500008 })
 
     const { report, logger } = run({
-      organisations: [orphanOrg],
+      organisations: [organisation],
       entries: [
-        {
-          ledgerId: {
-            organisationId: 'org-uuid-500008',
-            registrationId: 'reg-500008',
-            accreditationId: 'acc-dangling'
-          },
-          summaryLogId: 'log-dangling'
-        }
+        ledgerEntryFor({
+          orgId: 500008,
+          registrationNumber: 'REG-500008',
+          accreditationNumber: 'ACC-DANGLING',
+          accreditationId: 'acc-dangling'
+        })
       ]
     })
 
@@ -429,31 +422,23 @@ describe('buildCreditedTonnageReport', () => {
     expect(logger.warn).toHaveBeenCalledTimes(1)
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: expect.objectContaining({ reference: 'acc-dangling' })
+        event: expect.objectContaining({ reference: 'ACC-DANGLING' })
       })
     )
   })
 
-  it('emits an empty accreditationNumber when the accreditation has none', async () => {
-    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
-      orgId: 500001,
-      status: 'cancelled',
-      accreditationNumber: null
+  // Accepted behaviour change: the read model drops an accreditation it cannot
+  // serve (so it is absent from findAll); the entry is unmatched and warned.
+  it('warns for a ledger entry whose accreditation the read model dropped', async () => {
+    const { ledgerEntry } = makeAccreditation({ orgId: 500009 })
+
+    const { report, logger } = run({
+      organisations: [],
+      entries: [ledgerEntry]
     })
 
-    const { report } = run({
-      organisations: [organisation],
-      entries: [ledgerEntry],
-      rowStatesByAccreditationId: {
-        [accreditationId]: [receivedRow('2026-02-10', 10)]
-      }
-    })
-
-    expect(
-      (await report).data.every(
-        (r) => r.accreditation.accreditationNumber === ''
-      )
-    ).toBe(true)
+    expect((await report).data).toEqual([])
+    expect(logger.warn).toHaveBeenCalledTimes(1)
   })
 
   it('uses the Europe/London calendar month for the upper bound', async () => {
@@ -611,51 +596,44 @@ describe('buildCreditedTonnageReport', () => {
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       reprocessingType: REPROCESSING_TYPE.INPUT
     }
+    const accreditationFor = (accreditationNumber) => ({
+      accreditationNumber,
+      status: {
+        current: 'approved',
+        timeline: [
+          { status: 'created', at: '2025-11-01T00:00:00.000Z' },
+          { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+        ]
+      }
+    })
     const twoAccreditationOrg = {
-      id: 'org-uuid-500005',
-      orgId: 500005,
-      registrations: [
-        { id: 'reg-a', accreditationId: 'acc-a', ...commonFields },
-        { id: 'reg-b', accreditationId: 'acc-b', ...commonFields }
-      ],
-      accreditations: [
-        {
-          id: 'acc-a',
-          accreditationNumber: 'ACC-A',
-          status: 'approved',
-          statusHistory: [],
-          ...commonFields
+      organisationNumber: '500005',
+      registrations: {
+        'REG-A': {
+          ...commonFields,
+          accreditations: { 2026: accreditationFor('ACC-A') }
         },
-        {
-          id: 'acc-b',
-          accreditationNumber: 'ACC-B',
-          status: 'approved',
-          statusHistory: [],
-          ...commonFields
+        'REG-B': {
+          ...commonFields,
+          accreditations: { 2026: accreditationFor('ACC-B') }
         }
-      ]
+      }
     }
+    const entryFor = (suffix, accreditationId) => ({
+      ledgerId: {
+        organisationId: 'org-uuid-500005',
+        registrationId: `reg-${suffix}`,
+        accreditationId,
+        organisationNumber: '500005',
+        registrationNumber: `REG-${suffix.toUpperCase()}`,
+        accreditationNumber: `ACC-${suffix.toUpperCase()}`
+      },
+      summaryLogId: `log-${suffix}`
+    })
 
     const { report } = run({
       organisations: [twoAccreditationOrg],
-      entries: [
-        {
-          ledgerId: {
-            organisationId: 'org-uuid-500005',
-            registrationId: 'reg-a',
-            accreditationId: 'acc-a'
-          },
-          summaryLogId: 'log-a'
-        },
-        {
-          ledgerId: {
-            organisationId: 'org-uuid-500005',
-            registrationId: 'reg-b',
-            accreditationId: 'acc-b'
-          },
-          summaryLogId: 'log-b'
-        }
-      ],
+      entries: [entryFor('a', 'acc-a'), entryFor('b', 'acc-b')],
       rowStatesByAccreditationId: {
         'acc-a': [receivedRow('2026-03-10', 10)],
         'acc-b': [receivedRow('2026-02-10', 20)]
@@ -815,24 +793,41 @@ describe('buildCreditedTonnageReport', () => {
     const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
       orgId: 500001,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-      reprocessingType: undefined
+      overseasSites: overseasSite({ approvedOn: '2026-01-01' })
     })
-    organisation.registrations[0].overseasSites = {
-      '099': { overseasSiteId: 'site-1' }
-    }
 
     const { report } = run({
       organisations: [organisation],
       entries: [ledgerEntry],
       rowStatesByAccreditationId: {
         [accreditationId]: [exportedRow('2026-02-10', 60)]
-      },
-      overseasSites: [
-        overseasSite({
-          id: 'site-1',
-          validFrom: new Date('2026-01-01T00:00:00.000Z')
-        })
-      ]
+      }
+    })
+
+    expect(
+      (await report).data.find((row) => row.month === '2026-02')?.tonnage
+    ).toEqual({
+      totalCredited: 60,
+      eligibleForWasteBalance: 60,
+      sentOnDeductions: 0
+    })
+  })
+
+  // Accepted behaviour change: an approval date is the start of its day, so an
+  // export dated (DATE_OF_EXPORT 2026-01-20) on the approval day is approved (the legacy report withheld it).
+  it('credits an exported row dated on its overseas site approval day', async () => {
+    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
+      orgId: 500001,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      overseasSites: overseasSite({ approvedOn: '2026-01-20' })
+    })
+
+    const { report } = run({
+      organisations: [organisation],
+      entries: [ledgerEntry],
+      rowStatesByAccreditationId: {
+        [accreditationId]: [exportedRow('2026-02-10', 60)]
+      }
     })
 
     expect(
@@ -848,19 +843,15 @@ describe('buildCreditedTonnageReport', () => {
     const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
       orgId: 500001,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-      reprocessingType: undefined
+      overseasSites: overseasSite()
     })
-    organisation.registrations[0].overseasSites = {
-      '099': { overseasSiteId: 'site-1' }
-    }
 
     const { report } = run({
       organisations: [organisation],
       entries: [ledgerEntry],
       rowStatesByAccreditationId: {
         [accreditationId]: [exportedRow('2026-02-10', 60, stampedIncluded(60))]
-      },
-      overseasSites: [overseasSite({ id: 'site-1' })]
+      }
     })
 
     expect(
@@ -880,7 +871,10 @@ describe('buildCreditedTonnageReport', () => {
       ledgerId: {
         organisationId: 'org-registered-only',
         registrationId: 'reg-registered-only',
-        accreditationId: null
+        accreditationId: null,
+        organisationNumber: '500099',
+        registrationNumber: 'REG-500099',
+        accreditationNumber: null
       },
       summaryLogId: 'log-registered-only'
     }

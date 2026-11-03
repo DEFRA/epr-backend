@@ -2,10 +2,14 @@ import chunk from 'lodash.chunk'
 
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
-import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
-import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import {
+  readModelAccreditedPeriod,
+  readModelOverseasSitesContext
+} from '#waste-balances/domain/classification-context.js'
+import {
+  accreditationKey,
+  indexReadModelAccreditations
+} from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
@@ -13,11 +17,8 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
- * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
- * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
@@ -43,7 +44,7 @@ const READ_CONCURRENCY = 10
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
  * @property {{ id: string, reference: string }} organisation - internal id and external reference
- * @property {{ id: string, accreditationNumber: string, processingType: string, material: Material }} accreditation
+ * @property {{ id: string, accreditationNumber: string, processingType: string, material: string }} accreditation
  * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 
@@ -94,8 +95,7 @@ const compareRows = (a, b) =>
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {OrganisationReadRepository} params.organisationReadRepository
  * @param {TypedLogger} params.logger
  * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
  * @returns {Promise<CreditedTonnageReport>}
@@ -116,8 +116,7 @@ const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
-  overseasSitesRepository,
+  organisationReadRepository,
   logger,
   now
 }) => {
@@ -126,13 +125,10 @@ export const buildCreditedTonnageReport = async ({
     toMonth: /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
   }
 
-  const [entries, organisations, allSites] = await Promise.all([
+  const [entries, organisations] = await Promise.all([
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll(),
-    overseasSitesRepository.findAll()
+    organisationReadRepository.findAll()
   ])
-
-  const sitesById = new Map(allSites.map((site) => [site.id, site]))
 
   // Credits only exist for accredited partitions; registered-only entries
   // (accreditationId null) carry zero-delta submissions and never appear in
@@ -141,7 +137,8 @@ export const buildCreditedTonnageReport = async ({
     (entry) => entry.ledgerId.accreditationId !== null
   )
 
-  const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
+  const { index, testOrgAccreditationNumbers } =
+    indexReadModelAccreditations(organisations)
 
   /** @type {CreditedTonnageRow[]} */
   const rows = []
@@ -151,25 +148,30 @@ export const buildCreditedTonnageReport = async ({
    * @returns {Promise<CreditedTonnageRow[]>}
    */
   const rowsForEntry = async ({ ledgerId, summaryLogId }) => {
-    // creditedEntries holds accredited partitions only, so `accreditationId`
-    // is non-null here despite the ledger id's wider type.
+    // creditedEntries holds accredited partitions only, so the accreditation
+    // id and number are non-null here despite the ledger id's wider type.
     const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
-    const context = index.get(accreditationId)
+    const accreditationNumber = /** @type {AccreditationNumber} */ (
+      ledgerId.accreditationNumber
+    )
+    const context = index.get(
+      accreditationKey({ ...ledgerId, accreditationNumber })
+    )
     if (!context) {
-      if (!testOrgAccreditationIds.has(accreditationId)) {
+      if (!testOrgAccreditationNumbers.has(accreditationNumber)) {
         logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationId}`,
+          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: 'credited_tonnage_ledger_entry_unmatched',
-            reference: accreditationId
+            reference: accreditationNumber
           }
         })
       }
       return []
     }
 
-    const { organisation, registration, accreditation } = context
+    const { organisation, registration, accreditation, year } = context
 
     const rowStates = reclassifyWasteRecordStates(
       await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
@@ -177,18 +179,22 @@ export const buildCreditedTonnageReport = async ({
         summaryLogId
       ),
       {
-        accreditation: toAccreditedPeriod(accreditation),
-        overseasSites: buildOverseasSitesContext(registration, sitesById)
+        accreditation: readModelAccreditedPeriod(accreditation, year),
+        overseasSites: readModelOverseasSitesContext(
+          registration,
+          accreditation
+        )
       }
     )
 
     const { months, skippedRows } = creditedTonnageByMonth(
       rowStates,
       {
-        wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
-          registration.wasteProcessingType
-        ),
-        reprocessingType: registration.reprocessingType
+        wasteProcessingType: registration.wasteProcessingType,
+        reprocessingType:
+          'reprocessingType' in registration
+            ? registration.reprocessingType
+            : undefined
       },
       monthRange
     )
@@ -202,30 +208,28 @@ export const buildCreditedTonnageReport = async ({
     if (skippedTotal > 0) {
       logger.info({
         message:
-          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
+          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditationId}: ` +
           `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
           `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
           `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: 'credited_tonnage_rows_skipped',
-          reference: accreditation.id
+          reference: accreditationId
         }
       })
     }
 
-    const material = resolveMaterial(registration)
-    const reference = String(organisation.orgId)
-    const accreditationNumber = accreditation.accreditationNumber ?? ''
+    const reference = organisation.organisationNumber
 
     return months.map((month) => ({
       month: month.month,
-      organisation: { id: organisation.id, reference },
+      organisation: { id: ledgerId.organisationId, reference },
       accreditation: {
-        id: accreditation.id,
-        accreditationNumber,
+        id: accreditationId,
+        accreditationNumber: accreditation.accreditationNumber,
         processingType: registration.wasteProcessingType,
-        material
+        material: registration.material
       },
       tonnage: {
         totalCredited: month.totalCredited,

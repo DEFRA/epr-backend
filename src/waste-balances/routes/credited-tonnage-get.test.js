@@ -8,10 +8,12 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   buildRegistration,
   createOrganisationBuilders
@@ -96,18 +98,29 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
 
     const linkedRegistration = org.registrations[0]
     const linkedAccreditation = org.accreditations[0]
+    linkedRegistration.registrationNumber = toRegistrationNumber('REG-500123')
+    linkedRegistration.validFrom = '2026-01-01'
+    linkedRegistration.statusHistory = [
+      { status: 'created', updatedAt: '2025-12-01' },
+      { status: 'approved', updatedAt: '2026-01-01' }
+    ]
+    linkedAccreditation.accreditationNumber =
+      toAccreditationNumber('ACC-500123')
     linkedAccreditation.validFrom = '2026-01-01'
     linkedAccreditation.validTo = '2026-12-31'
     const ledgerId = {
       organisationId: org.id,
       registrationId: linkedRegistration.id,
-      accreditationId: linkedAccreditation.id
+      accreditationId: linkedAccreditation.id,
+      organisationNumber: toOrganisationNumber('500123'),
+      registrationNumber: linkedRegistration.registrationNumber,
+      accreditationNumber: linkedAccreditation.accreditationNumber
     }
 
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       [
         buildSummaryLogRowStateEntry({
           rowId: 'row-1',
@@ -143,9 +156,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          organisationId: org.id,
-          registrationId: linkedRegistration.id,
-          accreditationId: linkedAccreditation.id,
+          ...ledgerId,
           number: 1,
           payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
         })
@@ -176,6 +187,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       organisation: { id: org.id, reference: '500123' },
       accreditation: {
         id: linkedAccreditation.id,
+        accreditationNumber: 'ACC-500123',
         processingType: 'reprocessor',
         material: 'plastic'
       },
