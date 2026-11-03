@@ -135,6 +135,30 @@ export const testAssignNumbersBehaviour = (it) => {
       })
     })
 
+    it('refuses a null accreditation number on an accredited report, leaving it unnumbered', async () => {
+      const id = await createReportWithoutAccreditationNumber()
+
+      await expect(
+        repository.assignNumbers(id, { accreditationNumber: null })
+      ).rejects.toMatchObject({ output: { statusCode: 400 } })
+      expect(await repository.findReportById(id)).not.toHaveProperty(
+        'accreditationNumber'
+      )
+    })
+
+    it('refuses an accreditation number on a registered-only report, leaving it unnumbered', async () => {
+      const id = await createReportWithoutAccreditationNumber(registeredOnly)
+
+      await expect(
+        repository.assignNumbers(id, {
+          accreditationNumber: numbers.accreditationNumber
+        })
+      ).rejects.toMatchObject({ output: { statusCode: 400 } })
+      expect(await repository.findReportById(id)).not.toHaveProperty(
+        'accreditationNumber'
+      )
+    })
+
     it('conflicts rather than overwrite a null accreditation number', async () => {
       const id = await createReport(registeredOnly)
 

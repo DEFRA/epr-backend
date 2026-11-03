@@ -1,6 +1,8 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
+import { CADENCE } from '#reports/domain/cadence.js'
 import {
+  accreditationNumberForCadenceSchema,
   createReportSchema,
   updateReportSchema,
   updateReportStatusSchema,
@@ -17,6 +19,7 @@ import {
 
 /**
  * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, ReportNumbers } from './port.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
@@ -34,6 +37,37 @@ export const validateReportNumbers = (numbers) => {
 
   return value
 }
+
+/**
+ * @param {string} cadence - of the report the numbers are for
+ * @param {ReportNumbers} numbers
+ */
+export const validateAccreditationNumberForCadence = (cadence, numbers) => {
+  if (!('accreditationNumber' in numbers)) {
+    return
+  }
+  const { error } = accreditationNumberForCadenceSchema.validate({
+    cadence,
+    accreditationNumber: numbers.accreditationNumber
+  })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+}
+
+/**
+ * @param {AccreditationNumber | null | undefined} accreditationNumber
+ * @returns {string[]} the cadences whose reports may hold it
+ */
+export const cadencesAccepting = (accreditationNumber) =>
+  Object.values(CADENCE).filter(
+    (cadence) =>
+      !accreditationNumberForCadenceSchema.validate({
+        cadence,
+        accreditationNumber
+      }).error
+  )
 
 /**
  * @param {import('./port.js').CreateReportParams} params
