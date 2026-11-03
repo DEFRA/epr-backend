@@ -1,5 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { backfillReportNumbers } from '#report-numbers-backfill/application/backfill.js'
@@ -10,6 +12,8 @@ import { config } from '../config.js'
 
 const LOCK_NAME = 'report-numbers-backfill'
 const UNMAPPED_SAMPLE_SIZE = 10
+// Required by the repository factory; the backfill never generates download URLs.
+const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
 
 /**
  * Each reason with its count and the first few report ids, so one line says
@@ -39,6 +43,16 @@ const runBackfill = async (server) => {
         organisationsRepository: (
           await createOrganisationsRepository(server.db)
         )(),
+        summaryLogsRepository: (
+          await createSummaryLogsRepository(server.db, {
+            s3Client: createS3Client({
+              region: config.get('awsRegion'),
+              endpoint: config.get('s3Endpoint'),
+              forcePathStyle: config.get('isDevelopment')
+            }),
+            preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
+          })
+        )(logger),
         logger
       },
       { isDryRun }

@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -26,6 +28,9 @@ const { buildOrganisation } = createOrganisationBuilders()
 const organisationId = '6512a0c2f1e4b8a9d0c3e111'
 const registrationId = '6512a0c2f1e4b8a9d0c3e222'
 const accreditationId = '6512a0c2f1e4b8a9d0c3e333'
+const relinkedAccreditationId = '6512a0c2f1e4b8a9d0c3e555'
+const unnumberedAccreditationId = '6512a0c2f1e4b8a9d0c3e666'
+const missingAccreditationId = '6512a0c2f1e4b8a9d0c3e777'
 const unnumberedRegistrationId = '6512a0c2f1e4b8a9d0c3e444'
 const missingOrganisationId = '6512a0c2f1e4b8a9d0c3e999'
 const missingRegistrationId = '6512a0c2f1e4b8a9d0c3e888'
@@ -53,12 +58,16 @@ const organisation = buildOrganisation({
       registrationNumber: null
     })
   ],
-  accreditations: [accreditation({ id: accreditationId })]
+  accreditations: [
+    accreditation({ id: accreditationId }),
+    accreditation({ id: unnumberedAccreditationId, accreditationNumber: null })
+  ]
 })
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 describe('backfillReportNumbers', () => {
@@ -68,16 +77,42 @@ describe('backfillReportNumbers', () => {
   let systemLogsRepository
   /** @type {OrganisationsRepository} */
   let organisationsRepository
+  /** @type {SummaryLogsRepository} */
+  let summaryLogsRepository
   /** @type {TypedLogger} */
   let logger
 
-  beforeEach(() => {
+  /**
+   * @param {string} summaryLogId
+   * @param {string | null} submittedForAccreditationId
+   */
+  const submitSummaryLog = (summaryLogId, submittedForAccreditationId) =>
+    summaryLogsRepository.insert(
+      summaryLogId,
+      summaryLogFactory.submitted({
+        organisationId,
+        registrationId,
+        year: YEAR,
+        accreditationId: submittedForAccreditationId
+      })
+    )
+
+  /** @param {object} changes */
+  const changeOrganisation = (changes) => {
+    organisationsRepository = createInMemoryOrganisationsRepository([
+      partialMock({ ...organisation, ...changes })
+    ])()
+  }
+
+  beforeEach(async () => {
     logger = createMockLogger()
     reportsRepository = createInMemoryReportsRepository()()
     systemLogsRepository = createSystemLogsRepository()(logger)
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
     ])()
+    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+    await submitSummaryLog('sl-1', accreditationId)
   })
 
   /** @param {boolean} isDryRun */
@@ -87,6 +122,7 @@ describe('backfillReportNumbers', () => {
         reportsRepository,
         systemLogsRepository,
         organisationsRepository,
+        summaryLogsRepository,
         logger
       },
       { isDryRun }
@@ -183,7 +219,9 @@ describe('backfillReportNumbers', () => {
     ['a backfill', false],
     ['a dry run', true]
   ])('on %s', (_, isDryRun) => {
-    it('returns each report it cannot map under every reason that applies, logging none of them', async () => {
+    it('returns each report it cannot map under the reason that applies, logging none of them', async () => {
+      await submitSummaryLog('sl-unnumbered', unnumberedAccreditationId)
+      await submitSummaryLog('sl-gone', missingAccreditationId)
       const organisationGone = await createReport({
         organisationId: missingOrganisationId
       })
@@ -195,22 +233,135 @@ describe('backfillReportNumbers', () => {
       const registrationGone = await createReport({
         registrationId: missingRegistrationId
       })
-      const unaccredited = await createReport({ year: YEAR - 1 })
+      const noSummaryLog = await createReport({
+        period: MONTHLY_PERIODS.February,
+        source: { summaryLogId: null, lastUploadedAt: null }
+      })
+      const unnumberedAccreditation = await createReport({
+        period: MONTHLY_PERIODS.March,
+        source: { summaryLogId: 'sl-unnumbered', lastUploadedAt: null }
+      })
+      const accreditationGone = await createReport({
+        period: MONTHLY_PERIODS.April,
+        source: { summaryLogId: 'sl-gone', lastUploadedAt: null }
+      })
 
       expect(await run(isDryRun)).toEqual({
-        missing: 4,
-        mapped: 3,
-        unmapped: 4,
+        missing: 6,
+        mapped: 5,
+        unmapped: 6,
         unmappedReasons: {
           'organisation not found': [organisationGone],
-          'no registration number': [unnumbered, registrationGone],
-          'no accreditation number': [registrationGone, unaccredited]
+          'no registration number': [unnumbered],
+          'registration not held by the organisation': [registrationGone],
+          'report names no summary log': [noSummaryLog],
+          'no accreditation number': [unnumberedAccreditation],
+          'accreditation not held by the organisation': [accreditationGone]
         },
         failed: 0,
         auditFailed: 0
       })
       expect(logger.info).not.toHaveBeenCalled()
     })
+  })
+
+  describe('gives a monthly report the number of the accreditation its summary log was submitted for', () => {
+    it('keeps the earlier accreditation after its registration is re-linked to another in the same year', async () => {
+      changeOrganisation({
+        registrations: [
+          reprocessor({
+            id: registrationId,
+            registrationNumber: numbers.registrationNumber,
+            accreditationId: relinkedAccreditationId
+          })
+        ],
+        accreditations: [
+          accreditation({ id: accreditationId }),
+          accreditation({
+            id: relinkedAccreditationId,
+            accreditationNumber: toAccreditationNumber('A26ER5009999999PL')
+          })
+        ]
+      })
+      const id = await createReport()
+
+      await run(false)
+
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it('maps a report after its registration is re-linked to an accreditation for a later year', async () => {
+      changeOrganisation({
+        registrations: [
+          reprocessor({
+            id: registrationId,
+            registrationNumber: numbers.registrationNumber,
+            accreditationId: relinkedAccreditationId
+          })
+        ],
+        accreditations: [
+          accreditation({ id: accreditationId }),
+          accreditation({
+            id: relinkedAccreditationId,
+            accreditationNumber: toAccreditationNumber('A27ER5009999999PL'),
+            validFrom: '2027-01-01',
+            validTo: '2027-12-31'
+          })
+        ]
+      })
+      const id = await createReport()
+
+      expect((await run(false)).unmapped).toBe(0)
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it.each([
+      [
+        'set back to created',
+        {
+          statusHistory: [
+            { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' }
+          ]
+        }
+      ],
+      ['without a validFrom', { validFrom: undefined }]
+    ])(
+      'maps a report whose accreditation is now %s but still holds its number',
+      async (_, changes) => {
+        changeOrganisation({
+          accreditations: [accreditation({ id: accreditationId, ...changes })]
+        })
+        const id = await createReport()
+
+        expect((await run(false)).unmapped).toBe(0)
+        expect(await stored(id)).toMatchObject(numbers)
+      }
+    )
+
+    it.each([
+      [
+        'report names no summary log',
+        { summaryLogId: null, lastUploadedAt: null }
+      ],
+      [
+        'summary log not found',
+        { summaryLogId: 'sl-deleted', lastUploadedAt: null }
+      ],
+      [
+        'summary log names no accreditation',
+        { summaryLogId: 'sl-registered-only', lastUploadedAt: null }
+      ]
+    ])(
+      'leaves a monthly report without an accreditation number as "%s"',
+      async (reason, source) => {
+        await submitSummaryLog('sl-registered-only', null)
+        const id = await createReport({ source })
+
+        expect((await run(false)).unmappedReasons).toEqual({
+          [reason]: [id]
+        })
+      }
+    )
   })
 
   it('still adds the numbers it can find to a report it cannot fully map', async () => {

@@ -4,7 +4,6 @@ import { StatusCodes } from 'http-status-codes'
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import { findAccreditationForYear } from '#routes/organisations/natural-keys.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -12,6 +11,7 @@ import { auditReportNumbersBackfill } from './audit.js'
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 /**
@@ -19,62 +19,107 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @property {ReportsRepository} reportsRepository
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
+ * @property {SummaryLogsRepository} summaryLogsRepository
  */
 
-/** @type {[keyof ReportNumbers, string][]} */
-const NO_NUMBER = [
-  ['organisationNumber', 'no organisation number'],
-  ['registrationNumber', 'no registration number'],
-  ['accreditationNumber', 'no accreditation number']
+/** @type {(keyof ReportNumbers)[]} */
+const NUMBER_KEYS = [
+  'organisationNumber',
+  'registrationNumber',
+  'accreditationNumber'
 ]
 
 /**
- * The accreditation a report was made under, found as the accredited report
- * routes find it: a monthly report's is its registration's accreditation for
- * the report's year, and a quarterly report has none. Undefined where no
- * single accreditation can be found.
+ * The accreditation a report was made under, or why the report records none.
  *
- * @param {Organisation} organisation
- * @param {Report} report
- * @returns {string | null | undefined}
+ * @typedef {{ accreditationId: string | null } | { unrecorded: string }} ReportAccreditation
  */
-const accreditationIdOf = (organisation, { registrationId, cadence, year }) => {
+
+/**
+ * A monthly report is built from the ledger of its source summary log, so its
+ * accreditation is the one that summary log was submitted for, whatever the
+ * registration links to now. A quarterly report has none.
+ *
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {Report} report
+ * @returns {Promise<ReportAccreditation>}
+ */
+const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
   if (cadence === CADENCE.quarterly) {
-    return null
+    return { accreditationId: null }
   }
-  const registration = organisation.registrations.find(
-    ({ id }) => id === registrationId
-  )
-  if (!registration) {
-    return undefined
+  if (!source?.summaryLogId) {
+    return { unrecorded: 'report names no summary log' }
   }
-  try {
-    return findAccreditationForYear(organisation, registration, year).id
-  } catch (error) {
-    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
-      return undefined
-    }
-    throw error
+  const found = await summaryLogsRepository.findById(source.summaryLogId)
+  if (!found) {
+    return { unrecorded: 'summary log not found' }
   }
+  const { accreditationId } = found.summaryLog
+  return accreditationId
+    ? { accreditationId }
+    : { unrecorded: 'summary log names no accreditation' }
 }
 
 /**
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {Organisation} organisation
+ * @param {ReportAccreditation} accreditation
+ */
+const accreditationCause = (organisation, accreditation) => {
+  if ('unrecorded' in accreditation) {
+    return accreditation.unrecorded
+  }
+  return organisation.accreditations.some(
+    ({ id }) => id === accreditation.accreditationId
+  )
+    ? 'no accreditation number'
+    : 'accreditation not held by the organisation'
+}
+
+/**
+ * Why each number cannot be read, worded the same for every report so that
+ * reports group by cause.
+ *
+ * @param {Organisation} organisation
+ * @param {Report} report
+ * @param {ReportAccreditation} accreditation
+ * @returns {Record<keyof ReportNumbers, string>}
+ */
+const causes = (organisation, { registrationId }, accreditation) => ({
+  organisationNumber: 'no organisation number',
+  registrationNumber: organisation.registrations.some(
+    ({ id }) => id === registrationId
+  )
+    ? 'no registration number'
+    : 'registration not held by the organisation',
+  accreditationNumber: accreditationCause(organisation, accreditation)
+})
+
+/**
+ * @param {Repositories} repositories
  * @param {Report} report
  * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[] }>}
  */
-const lookUpNumbers = async (organisationsRepository, report) => {
+const lookUpNumbers = async (
+  { organisationsRepository, summaryLogsRepository },
+  report
+) => {
   try {
     const organisation = await organisationsRepository.findById(
       report.organisationId
     )
+    const accreditation = await accreditationOf(summaryLogsRepository, report)
     const { numbers } = numbersFor(organisation, {
       registrationId: report.registrationId,
-      accreditationId: accreditationIdOf(organisation, report)
+      accreditationId:
+        'unrecorded' in accreditation
+          ? undefined
+          : accreditation.accreditationId
     })
-    const unmapped = NO_NUMBER.filter(
-      ([key]) => numbers[key] === undefined && report[key] === undefined
-    ).map(([, reason]) => reason)
+    const cause = causes(organisation, report, accreditation)
+    const unmapped = NUMBER_KEYS.filter(
+      (key) => numbers[key] === undefined && report[key] === undefined
+    ).map((key) => cause[key])
     return { numbers, unmapped }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
@@ -121,22 +166,15 @@ const numbersLacking = (numbers, report) =>
  * @param {TypedLogger} logger
  * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
  */
-const backfillOne = async (
-  { reportsRepository, systemLogsRepository, organisationsRepository },
-  id,
-  isDryRun,
-  logger
-) => {
+const backfillOne = async (repositories, id, isDryRun, logger) => {
+  const { reportsRepository, systemLogsRepository } = repositories
   const report = await findReport(reportsRepository, id)
   if (!report) {
     return null
   }
 
   const { organisationId, registrationId } = report
-  const { numbers, unmapped } = await lookUpNumbers(
-    organisationsRepository,
-    report
-  )
+  const { numbers, unmapped } = await lookUpNumbers(repositories, report)
 
   const lacking = numbersLacking(numbers, report)
   const outcome = {
@@ -170,7 +208,8 @@ const backfillOne = async (
 
 /**
  * Adds to each report the organisation, registration and accreditation numbers
- * it lacks, read from its organisation record.
+ * it lacks, read from its organisation record for the accreditation the report
+ * was made under.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
