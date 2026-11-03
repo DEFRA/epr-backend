@@ -293,7 +293,7 @@ describe('report-service', () => {
       await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        ...params.numbers,
+        accreditationNumber: params.numbers.accreditationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -349,7 +349,7 @@ describe('report-service', () => {
       const baseReport = {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        ...params.numbers,
+        accreditationNumber: params.numbers.accreditationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -528,7 +528,7 @@ describe('report-service', () => {
         await reportsRepository.createReport({
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          ...params.numbers,
+          accreditationNumber: params.numbers.accreditationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -576,7 +576,7 @@ describe('report-service', () => {
     const baseReportFields = (params, changedBy) => ({
       organisationId: params.organisationId,
       registrationId: params.registrationId,
-      ...params.numbers,
+      accreditationNumber: params.numbers.accreditationNumber,
       year: toYear(2024),
       cadence: 'monthly',
       period: 1,
