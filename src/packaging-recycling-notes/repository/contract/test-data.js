@@ -2,8 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
-const ACCREDITATION_YEAR = 2026
-const PRN_YEAR = toYear(ACCREDITATION_YEAR)
+export const PRN_YEAR = toYear(2026)
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -35,7 +34,7 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  */
 export const buildAccreditation = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
-  accreditationNumber: `ACC-${Date.now()}`,
+  accreditationNumber: 'ACC-2026-001',
   accreditationYear: PRN_YEAR,
   material: 'plastic',
   submittedToRegulator: 'ea',

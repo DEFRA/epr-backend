@@ -2,15 +2,14 @@
 /** @import { JsonWebKey } from 'node:crypto' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
-import { toYear } from '#common/helpers/dates/year.js'
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
-
-const ACCREDITATION_YEAR = 2026
-const PRN_YEAR = toYear(ACCREDITATION_YEAR)
+import {
+  PRN_YEAR,
+  buildAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */
 // @ts-expect-error @types/node is missing generateKeyPairSync overloads for jwk format
@@ -100,10 +99,7 @@ export const createMockIssuedPrn = (overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: 'reg-456',
-  accreditation: buildAccreditation({
-    id: 'acc-789',
-    accreditationNumber: 'ACC-2026-001'
-  }),
+  accreditation: buildAccreditation({ id: 'acc-789' }),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',
