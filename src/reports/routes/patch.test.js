@@ -74,7 +74,9 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       ? STREAMS.accredited
       : STREAMS.registeredOnly
 
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
+    const storedReports = new Map()
+    const reportsRepositoryFactory =
+      createInMemoryReportsRepository(storedReports)
     const reportsRepository = reportsRepositoryFactory()
 
     const createdReport = await reportsRepository.createReport(
@@ -107,6 +109,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       organisationId: org.id,
       registrationId: registration.id,
       reportId: createdReport.id,
+      storedReports,
       reportsRepository,
       /**
        * @param {object} payload
@@ -152,6 +155,21 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
 
       const before = await reportsRepository.findReportById(reportId)
       expect(before.supportingInformation).toBeUndefined()
+
+      const { statusCode, body } = await patchReport({
+        supportingInformation: 'Supply chain disruption'
+      })
+
+      expect(statusCode).toBe(StatusCodes.OK)
+      expect(body.supportingInformation).toBe('Supply chain disruption')
+    })
+
+    it('updates a report still stored with an accreditation number', async () => {
+      const { storedReports, reportId, patchReport } = await createServer()
+      storedReports.set(reportId, {
+        ...storedReports.get(reportId),
+        accreditationNumber: 'A26ER5000000001PA'
+      })
 
       const { statusCode, body } = await patchReport({
         supportingInformation: 'Supply chain disruption'

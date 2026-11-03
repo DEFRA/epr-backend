@@ -1,4 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { randomUUID } from 'node:crypto'
 import { buildCreateReportParams } from './test-data.js'
 
@@ -152,6 +156,33 @@ export const testAssignNumbersBehaviour = (it) => {
           expect(await repository.findIdsWithAccreditationNumber()).toEqual([])
         })
       }
+
+      it('updates a report still stored with an accreditation number, which stays for removal', async () => {
+        const id = await createReport(numbers)
+        await storeAccreditationNumber(id, accreditationNumber)
+
+        await repository.updateReport({
+          reportId: id,
+          version: 1,
+          fields: { supportingInformation: 'Supply chain disruption' }
+        })
+        await repository.updateReportStatus({
+          reportId: id,
+          version: 2,
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          slot: REPORT_STATUS_SLOT.READY,
+          changedBy: { id: 'user-1', name: 'Test User', position: 'tester' }
+        })
+
+        expect(await repository.findReportById(id)).toMatchObject({
+          version: 3,
+          supportingInformation: 'Supply chain disruption',
+          status: { currentStatus: REPORT_STATUS.READY_TO_SUBMIT }
+        })
+        expect(await repository.removeAccreditationNumber(id)).toEqual({
+          accreditationNumber
+        })
+      })
 
       it('returns null for a report holding no accreditation number', async () => {
         const id = await createReport()
