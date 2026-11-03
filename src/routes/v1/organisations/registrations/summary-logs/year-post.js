@@ -4,13 +4,13 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
 /**
@@ -40,29 +40,14 @@ export const summaryLogsYearCreate = {
    */
   handler: async (request, h) => {
     const { uploadsRepository, params, payload, logger } = request
-    const {
-      organisationId,
-      organisationNumber,
-      registrationId,
-      registrationNumber,
-      year
-    } = params
+    const { organisationId, registrationId, year } = params
     const { redirectUrl } = payload
 
-    /**
-     * Route only reached when
-     * - {organisationNumber} exists
-     * - {registrationNumber} exists and belongs to {organisationNumber}
-     * else atNaturalKeys wrapper generates 404 response
-     */
-    const organisation = /** @type {Organisation} */ (
-      await request.organisationReadRepository.findByOrganisationNumber(
-        organisationNumber
-      )
-    )
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const eligibility = checkSummaryLogUploadEligibility({
-      registration: organisation.registrations[registrationNumber],
+      registration,
       year
     })
 
