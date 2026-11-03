@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { validateImmutableFields } from './helpers.js'
+import {
+  validateAccreditationNumbersRetained,
+  validateImmutableFields
+} from './helpers.js'
 import { invalidArg } from '#test/type-helpers.js'
 
 describe('validateImmutableFields', () => {
@@ -128,5 +131,27 @@ describe('validateImmutableFields', () => {
 
     expect(validator(value, helpers)).toEqual(value)
     expect(helpers.error).not.toHaveBeenCalled()
+  })
+})
+
+describe('validateAccreditationNumbersRetained', () => {
+  it('accepts a number that differs from a stored legacy number only in case or spacing', () => {
+    expect(() =>
+      validateAccreditationNumbersRetained(
+        [{ id: 'a1', accreditationNumber: 'ACC100021' }],
+        [{ id: 'a1', accreditationNumber: ' acc100021 ' }]
+      )
+    ).not.toThrow()
+  })
+
+  it('refuses a different number, naming both', () => {
+    expect(() =>
+      validateAccreditationNumbersRetained(
+        [{ id: 'a1', accreditationNumber: 'ACC100022' }],
+        [{ id: 'a1', accreditationNumber: 'acc100021' }]
+      )
+    ).toThrow(
+      'Accreditation a1 cannot change its number from acc100021 to ACC100022'
+    )
   })
 })
