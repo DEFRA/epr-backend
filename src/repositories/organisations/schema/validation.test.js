@@ -22,6 +22,8 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
 
+/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 describe('validateStatusHistory', () => {
@@ -622,6 +624,7 @@ describe('validateAccreditation', () => {
 
 describe('validateOrganisationUpdate', () => {
   describe('an accreditation without a number', () => {
+    /** @param {AccreditationStatus} status */
     const updateWithUnnumberedAccreditation = (status) => {
       const organisation = buildOrganisation()
 
