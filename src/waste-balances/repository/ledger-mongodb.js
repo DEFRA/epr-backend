@@ -25,7 +25,11 @@
  */
 
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
-import { LEDGER_EVENT_KIND, LEDGER_EVENT_NUMBER_KEYS } from './ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  LEDGER_EVENT_NUMBER_KEYS,
+  toNumberedLedgerId
+} from './ledger-schema.js'
 import {
   validateLedgerEventInsert,
   validateLedgerEventNumbers,
@@ -201,7 +205,7 @@ const performFindAllInLedger = (collection) => async (ledgerId) => {
 
 /**
  * One entry per ledger partition with a submitted summary log, carrying the
- * latest submission's `summaryLogId`. Sorting descending before the group lets
+ * latest submission's `summaryLogId` and numbers. Sorting descending before the group lets
  * `$first` name the highest-numbered submission per partition.
  *
  * @param {Collection} collection
@@ -224,14 +228,45 @@ const performFindLatestSubmittedSummaryLogPerLedger =
               registrationId: '$registrationId',
               accreditationId: '$accreditationId'
             },
-            summaryLogId: { $first: '$payload.summaryLogId' }
+            summaryLogId: { $first: '$payload.summaryLogId' },
+            organisationNumber: { $first: '$organisationNumber' },
+            registrationNumber: { $first: '$registrationNumber' },
+            accreditationNumber: { $first: '$accreditationNumber' }
           }
         },
-        { $project: { _id: 0, ledgerId: '$_id', summaryLogId: 1 } }
+        {
+          $project: {
+            _id: 0,
+            ledgerId: '$_id',
+            summaryLogId: 1,
+            organisationNumber: 1,
+            registrationNumber: 1,
+            accreditationNumber: 1
+          }
+        }
       ])
       .toArray()
 
-    return /** @type {LatestSubmittedSummaryLogPerLedger[]} */ (results)
+    // `$first` reads a number the event lacks as null, so a null number is
+    // absent, except a registered-only partition's null accreditation number.
+    return results.map(
+      ({
+        ledgerId,
+        summaryLogId,
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber
+      }) => ({
+        ledgerId: toNumberedLedgerId(ledgerId, {
+          organisationNumber: organisationNumber ?? undefined,
+          registrationNumber: registrationNumber ?? undefined,
+          accreditationNumber:
+            accreditationNumber ??
+            (ledgerId.accreditationId === null ? null : undefined)
+        }),
+        summaryLogId
+      })
+    )
   }
 
 /**

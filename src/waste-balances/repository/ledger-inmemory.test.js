@@ -70,7 +70,12 @@ describe('waste-balances ledger repository - in-memory implementation', () => {
 
       const result = await repository.findLatestSubmittedSummaryLogPerLedger()
 
-      expect(result).toEqual([{ ledgerId: partition, summaryLogId: 'log-2' }])
+      expect(result).toEqual([
+        {
+          ledgerId: expect.objectContaining(partition),
+          summaryLogId: 'log-2'
+        }
+      ])
     })
   })
 })

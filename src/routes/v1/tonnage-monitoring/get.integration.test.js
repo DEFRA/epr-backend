@@ -9,6 +9,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -61,9 +62,11 @@ const seedExporterRow = (db, tonnage, dateOfExport) =>
 /** @param {Db} db */
 const seedSubmittedSummaryLog = (db) =>
   db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId: null,
+    ...withNumbers({
+      organisationId: orgId,
+      registrationId: regId,
+      accreditationId: null
+    }),
     number: 1,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     payload: { summaryLogId, creditTotal: 0 }

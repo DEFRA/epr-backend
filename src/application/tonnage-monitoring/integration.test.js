@@ -8,6 +8,7 @@ import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS
 } from '#domain/organisations/model.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME,
@@ -145,9 +146,7 @@ const submittedSummaryLogEvent = ({
   summaryLogId,
   number
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
+  ...withNumbers({ organisationId, registrationId, accreditationId }),
   number,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: { summaryLogId, creditTotal: 0 }

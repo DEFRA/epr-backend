@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { requireStoredNumbers } from '#domain/organisations/numbers.js'
+
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Numbers, RequiredNumbers } from '#domain/organisations/numbers.js' */
 
@@ -154,6 +156,28 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  *
  * @typedef {WasteBalanceLedgerId & RequiredNumbers} NumberedLedgerId
  */
+
+/**
+ * Names a ledger with the numbers stored beside its ids, for a use that needs
+ * them all. Stored numbers stay optional, so this throws, naming the ledger and
+ * the missing numbers, where one is absent.
+ *
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {Numbers} numbers
+ * @returns {NumberedLedgerId}
+ */
+export const toNumberedLedgerId = (
+  { organisationId, registrationId, accreditationId },
+  numbers
+) => ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  ...requireStoredNumbers(
+    numbers,
+    `ledger ${organisationId}/${registrationId}/${accreditationId}`
+  )
+})
 
 /**
  * A position within a waste balance ledger: the ledger id plus a sequence

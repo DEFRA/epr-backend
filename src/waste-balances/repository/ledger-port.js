@@ -112,12 +112,14 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
- * One ledger partition's latest submitted summary log: its ledger id and the
- * `summaryLogId` carried by the highest-numbered `summary log submitted`
- * event in that partition.
+ * One ledger partition's latest submitted summary log: its ledger id, with the
+ * numbers stored on that event (`accreditationNumber` is `null` for a
+ * registered-only partition), and the `summaryLogId` carried by the
+ * highest-numbered `summary log submitted` event in that partition. Throws if
+ * that event lacks a number.
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
- * @property {WasteBalanceLedgerId} ledgerId
+ * @property {import('./ledger-schema.js').NumberedLedgerId} ledgerId
  * @property {string} summaryLogId
  */
 
