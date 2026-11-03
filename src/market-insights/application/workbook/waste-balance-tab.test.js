@@ -24,7 +24,11 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -43,7 +47,7 @@ const FIRST_FIGURE_COLUMN = 3
 
 /**
  * @typedef {Pick<ReadMarketInsightsFiguresParams,
- *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'overseasSitesRepository' | 'reportsRepository'
+ *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'organisationReadRepository' | 'reportsRepository'
  * >} Register
  */
 
@@ -53,14 +57,14 @@ const emptyRegister = () => {
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     reportsRepository
   } = readParamsFor([])
   return {
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     reportsRepository
   }
 }
@@ -135,18 +139,32 @@ const seedOperator = async (
     regulator,
     { material, validFrom }
   )
-  const { registrations } = await organisationsRepository.findById(
-    operator.organisationId
-  )
-  const accreditationId = registrations.find(
+  const { orgId, registrations, accreditations } =
+    await organisationsRepository.findById(operator.organisationId)
+  const registration = registrations.find(
     ({ id }) => id === operator.registrationId
-  )?.accreditationId
+  )
+  assertPresent(registration)
+  const { accreditationId } = registration
   assertPresent(accreditationId)
-  const ledgerId = { ...operator, accreditationId }
+  const accreditation = accreditations.find(({ id }) => id === accreditationId)
+  assertPresent(accreditation)
+  // The numbers the stored register holds, which the read model keys by.
+  const ledgerId = {
+    ...operator,
+    accreditationId,
+    organisationNumber: toOrganisationNumber(String(orgId)),
+    registrationNumber: toRegistrationNumber(
+      /** @type {string} */ (registration.registrationNumber)
+    ),
+    accreditationNumber: toAccreditationNumber(
+      /** @type {string} */ (accreditation.accreditationNumber)
+    )
+  }
   const summaryLogId = `log-${operator.registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(ledgerId),
+    ledgerId,
     rows,
     summaryLogId
   )

@@ -5,6 +5,12 @@
  */
 
 /**
+ * Anything that names the operator behind it, which is all the counts need.
+ *
+ * @typedef {{ org: { id: string } }} OperatorContribution
+ */
+
+/**
  * How many separate operators were accredited for a figure's material in its
  * month, and how many of them it includes data from.
  *
@@ -24,7 +30,7 @@
  * contribution belongs to. An operator counts once however many sites it
  * reports from.
  *
- * @template {Contribution} C
+ * @template {OperatorContribution} C
  * @param {Iterable<C>} contributions
  * @param {(contribution: C) => string[]} keysOf
  * @returns {Map<string, Set<string>>}
@@ -46,9 +52,10 @@ export const operatorsByKey = (contributions, keysOf) => {
 /**
  * The operators behind every figure.
  *
- * @param {Iterable<Contribution>} accredited - the months each registration was accredited for its material
- * @param {Contribution[]} included - what the figures include
- * @param {(contribution: Contribution) => string[]} keysOf - the figures each contribution belongs to
+ * @template {OperatorContribution} C
+ * @param {Iterable<C>} accredited - the months each registration was accredited for its material
+ * @param {C[]} included - what the figures include
+ * @param {(contribution: C) => string[]} keysOf - the figures each contribution belongs to
  * @returns {OperatorsByFigure}
  */
 export const operatorsByFigure = (accredited, included, keysOf) => ({

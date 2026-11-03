@@ -5,7 +5,6 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildMarketInsightsExportArchive } from './build-export-archive.js'
@@ -63,7 +62,7 @@ const run = async (months = JANUARY_TO_MARCH_2026, overrides = {}) =>
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     organisationsRepository: createInMemoryOrganisationsRepository([])(),
-    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+    organisationReadRepository: { findAll: async () => [] },
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
     year: toYear(2026),

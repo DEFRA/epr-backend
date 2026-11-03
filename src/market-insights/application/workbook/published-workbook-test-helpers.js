@@ -6,9 +6,10 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { NO_FIGURE } from '#market-insights/domain/published-workbook-text.js'
 import { frameOf } from './cells.js'
@@ -41,18 +42,27 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
  * @param {YearMonth[]} months
  * @returns {ReadMarketInsightsFiguresParams}
  */
-export const readParamsFor = (months) => ({
-  ledgerRepository: createInMemoryLedgerRepository()(),
-  summaryLogRowStatesRepository:
-    createInMemorySummaryLogRowStatesRepository()(),
-  organisationsRepository: createInMemoryOrganisationsRepository([])(),
-  overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-  reportsRepository: createInMemoryReportsRepository()(),
-  logger: createMockLogger(),
-  year: toYear(2026),
-  months,
-  now: PUBLISHED_EXTRACTION
-})
+export const readParamsFor = (months) => {
+  const organisationsRepository = createInMemoryOrganisationsRepository([])()
+  const logger = createMockLogger()
+  return {
+    ledgerRepository: createInMemoryLedgerRepository()(),
+    summaryLogRowStatesRepository:
+      createInMemorySummaryLogRowStatesRepository()(),
+    organisationsRepository,
+    // The read model over the same register, as the service serves it.
+    organisationReadRepository: createOrganisationReadRepository({
+      organisationsRepository,
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+      logger
+    }),
+    reportsRepository: createInMemoryReportsRepository()(),
+    logger,
+    year: toYear(2026),
+    months,
+    now: PUBLISHED_EXTRACTION
+  }
+}
 
 /**
  * What a tab that carries figures is given for a period.

@@ -25,7 +25,7 @@ const SCOPES = Object.freeze([
  * @property {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @property {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @property {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
  * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {Year} year
@@ -102,7 +102,7 @@ export const readMarketInsightsFigures = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
   organisationsRepository,
-  overseasSitesRepository,
+  organisationReadRepository,
   reportsRepository,
   logger,
   year,
@@ -120,7 +120,7 @@ export const readMarketInsightsFigures = async ({
       ...common,
       ledgerRepository,
       summaryLogRowStatesRepository,
-      overseasSitesRepository
+      organisationReadRepository
     }),
     Promise.all(
       SCOPES.map(async ({ name, regulator }) => ({

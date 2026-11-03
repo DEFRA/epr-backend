@@ -31,7 +31,13 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -50,7 +56,7 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  *   repositories: {
  *     ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *     overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+ *     organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
  *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
  *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
@@ -72,14 +78,19 @@ const it =
           const client = await MongoClient.connect(db)
           try {
             const mongoDb = client.db(DATABASE_NAME)
+            const organisationsRepository = (
+              await createOrganisationsRepository(mongoDb)
+            )()
             const repositories = {
               ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
-              organisationsRepository: (
-                await createOrganisationsRepository(mongoDb)
-              )(),
-              overseasSitesRepository: (
-                await createOverseasSitesRepository(mongoDb)
-              )(),
+              organisationsRepository,
+              organisationReadRepository: createOrganisationReadRepository({
+                organisationsRepository,
+                overseasSitesRepository: (
+                  await createOverseasSitesRepository(mongoDb)
+                )(),
+                logger: createMockLogger()
+              }),
               summaryLogRowStatesRepository: (
                 await createMongoSummaryLogRowStatesRepository(mongoDb)
               )(),
@@ -188,6 +199,32 @@ const sentOnRow = (rowId, tonnage) => ({
 })
 
 /**
+ * The ledger identity of an inserted operator, with the numbers the stored
+ * register holds, which the organisation read model keys by.
+ *
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {{ organisationId: string, registrationId: string, accreditationId: string }} ids
+ */
+const numberedLedgerId = async (organisationsRepository, ids) => {
+  const { orgId, registrations, accreditations } =
+    await organisationsRepository.findById(ids.organisationId)
+  const registration = registrations.find(({ id }) => id === ids.registrationId)
+  const accreditation = accreditations.find(
+    ({ id }) => id === ids.accreditationId
+  )
+  return {
+    ...ids,
+    organisationNumber: toOrganisationNumber(String(orgId)),
+    registrationNumber: toRegistrationNumber(
+      /** @type {string} */ (registration?.registrationNumber)
+    ),
+    accreditationNumber: toAccreditationNumber(
+      /** @type {string} */ (accreditation?.accreditationNumber)
+    )
+  }
+}
+
+/**
  * Seed one submission through the write side of the same adapters the route
  * reads back through, so no test builds a stored document by hand. The
  * operator has submitted its January report and no other.
@@ -196,19 +233,23 @@ const sentOnRow = (rowId, tonnage) => ({
  * @param {import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]} rows
  */
 const submit = async (repositories, rows) => {
-  const ledgerId = await insertAccreditedOperator(
+  const operator = await insertAccreditedOperator(
     repositories.organisationsRepository
+  )
+  const ledgerId = await numberedLedgerId(
+    repositories.organisationsRepository,
+    operator
   )
 
   await buildSubmittedReport(repositories.reportsRepository, {
-    organisationId: ledgerId.organisationId,
-    registrationId: ledgerId.registrationId,
+    organisationId: operator.organisationId,
+    registrationId: operator.registrationId,
     year: toYear(2026),
     cadence: 'monthly',
     period: 1
   })
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(ledgerId),
+    ledgerId,
     rows,
     summaryLogId
   )

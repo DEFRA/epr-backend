@@ -3,7 +3,6 @@ import { Readable } from 'node:stream'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 
@@ -30,7 +29,7 @@ const run = () =>
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     organisationsRepository: createInMemoryOrganisationsRepository([])(),
-    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+    organisationReadRepository: { findAll: async () => [] },
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
     year: toYear(2026),
