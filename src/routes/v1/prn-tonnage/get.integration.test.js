@@ -44,6 +44,44 @@ const ledgerId = {
   accreditationId: accId
 }
 
+/** @param {string | null} accreditationNumber */
+const storedOrganisation = (accreditationNumber) => ({
+  _id: new ObjectId(organisationId),
+  orgId,
+  companyDetails: { name: 'Acme Reprocessing' },
+  statusHistory: approvedStatusHistory,
+  accreditations: [
+    {
+      id: accId,
+      accreditationNumber,
+      material: MATERIAL.PLASTIC,
+      prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
+      statusHistory: approvedStatusHistory
+    }
+  ],
+  registrations: [
+    {
+      id: registrationId,
+      registrationNumber: 'REG-INTEG',
+      accreditationId: accId,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      statusHistory: approvedStatusHistory
+    }
+  ]
+})
+
+const awaitingAcceptancePrn = () =>
+  buildAwaitingAcceptancePrn({
+    registrationId,
+    organisation: { id: organisationId, name: 'Acme Reprocessing' },
+    accreditation: buildAccreditationSnapshot({
+      id: accId,
+      accreditationNumber: 'ACC-INTEG',
+      material: MATERIAL.PLASTIC
+    }),
+    tonnage: 100
+  })
+
 describe(`GET ${prnTonnagePath} (integration)`, () => {
   setupAuthContext()
 
@@ -57,42 +95,12 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
   )
 
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
-    await server.db.collection(ORGANISATIONS_COLLECTION).insertOne({
-      _id: new ObjectId(organisationId),
-      orgId,
-      companyDetails: { name: 'Acme Reprocessing' },
-      statusHistory: approvedStatusHistory,
-      accreditations: [
-        {
-          id: accId,
-          accreditationNumber: 'ACC-INTEG',
-          material: MATERIAL.PLASTIC,
-          prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
-          statusHistory: approvedStatusHistory
-        }
-      ],
-      registrations: [
-        {
-          id: registrationId,
-          registrationNumber: 'REG-INTEG',
-          accreditationId: accId,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          statusHistory: approvedStatusHistory
-        }
-      ]
-    })
-    await server.db.collection(PRNS_COLLECTION).insertOne(
-      buildAwaitingAcceptancePrn({
-        registrationId,
-        organisation: { id: organisationId, name: 'Acme Reprocessing' },
-        accreditation: buildAccreditationSnapshot({
-          id: accId,
-          accreditationNumber: 'ACC-INTEG',
-          material: MATERIAL.PLASTIC
-        }),
-        tonnage: 100
-      })
-    )
+    await server.db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(storedOrganisation('ACC-INTEG'))
+    await server.db
+      .collection(PRNS_COLLECTION)
+      .insertOne(awaitingAcceptancePrn())
     const ledgerRepository = (await createMongoLedgerRepository(server.db))()
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
@@ -133,5 +141,27 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
+  })
+
+  it('serves a blank accreditation number for an accreditation that no longer has one', async ({
+    server
+  }) => {
+    await server.db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(storedOrganisation(null))
+    await server.db
+      .collection(PRNS_COLLECTION)
+      .insertOne(awaitingAcceptancePrn())
+
+    const response = await server.inject({
+      method: 'GET',
+      url: prnTonnagePath,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).rows).toMatchObject([
+      { accreditationNumber: '' }
+    ])
   })
 })
