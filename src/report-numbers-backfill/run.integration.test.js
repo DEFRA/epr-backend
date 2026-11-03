@@ -102,13 +102,14 @@ const seed = async (database) => {
   const [accreditation] = organisation.accreditations
 
   await summaryLogs(database).insertOne({
-    _id: 'january-source',
+    _id: 'january-source-document',
     version: 1,
     ...summaryLogFactory.submitted({
       organisationId: organisation.id,
       registrationId: registration.id,
       year: 2026,
-      accreditationId: accreditation.id
+      accreditationId: accreditation.id,
+      file: { id: 'january-source' }
     })
   })
 

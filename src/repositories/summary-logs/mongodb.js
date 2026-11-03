@@ -235,17 +235,21 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
   }
 }
 
-const findById = (db) => async (id) => {
-  const validatedId = validateId(id)
-  /** @type {any} */
-  const findByIdFilter = { _id: validatedId }
-  const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
+/** @param {any} filter */
+const findOneVersion = async (db, filter) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
   if (!doc) {
     return null
   }
   const { _id, version, ...summaryLog } = doc
   return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
 }
+
+const findById = (db) => async (id) =>
+  findOneVersion(db, { _id: validateId(id) })
+
+const findByFileId = (db) => async (fileId) =>
+  findOneVersion(db, { 'file.id': validateId(fileId) })
 
 /**
  * @import { Collection, Db, Filter } from 'mongodb'
@@ -575,6 +579,7 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
+    findByFileId: findByFileId(db),
     findIdsWithoutNumbers: findIdsWithoutNumbers(db),
     assignNumbers: assignNumbers(db, logger),
     findLatestSubmitted: findLatestSubmitted(db),

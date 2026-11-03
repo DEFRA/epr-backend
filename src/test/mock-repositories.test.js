@@ -41,6 +41,7 @@ describe('mock-repositories', () => {
         'insert',
         'update',
         'findById',
+        'findByFileId',
         'findIdsWithoutNumbers',
         'assignNumbers',
         'findLatestSubmitted',

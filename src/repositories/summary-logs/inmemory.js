@@ -127,14 +127,22 @@ const assignNumbers =
     scheduleStaleCacheSync(storage, staleCache)
   }
 
-const findById = (staleCache) => async (id) => {
-  const validatedId = validateId(id)
-  // Read from staleCache to simulate reading from replica
-  const doc = staleCache.get(validatedId)
-  if (!doc) {
-    return null
-  }
-  return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
+const toVersion = (doc) =>
+  doc
+    ? { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
+    : null
+
+// Read from staleCache to simulate reading from replica
+const findById = (staleCache) => async (id) =>
+  toVersion(staleCache.get(validateId(id)))
+
+const findByFileId = (staleCache) => async (fileId) => {
+  const validatedId = validateId(fileId)
+  return toVersion(
+    [...staleCache.values()].find(
+      (held) => held?.summaryLog?.file?.id === validatedId
+    )
+  )
 }
 
 /**
@@ -416,6 +424,7 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
+    findByFileId: findByFileId(staleCache),
     findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
     assignNumbers: assignNumbers(storage, staleCache, logger),
     findLatestSubmitted: findLatestSubmitted(staleCache),
