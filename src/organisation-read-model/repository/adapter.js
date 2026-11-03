@@ -5,6 +5,7 @@ import {
   accreditationsForRegistration,
   resolveMaterial
 } from '#domain/organisations/registration-utils.js'
+import { findAccreditationByNumber as findAccreditationInRegistration } from '#organisation-read-model/domain/find-accreditation-by-number.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -71,17 +72,50 @@ export const createOrganisationReadRepository = ({
       .filter((organisation) => organisation !== null)
   }
 
+  /** @type {OrganisationReadRepository['findByOrganisationNumber']} */
+  const findByOrganisationNumber = async (
+    organisationNumber,
+    minimumVersion
+  ) => {
+    const stored = await organisationsRepository.findByOrganisationNumber(
+      organisationNumber,
+      minimumVersion
+    )
+    if (!stored) {
+      return null
+    }
+    const [organisation] = await toOrganisations([stored])
+    return organisation ?? null
+  }
+
+  /** @type {OrganisationReadRepository['findRegistrationByNumber']} */
+  const findRegistrationByNumber = async (
+    organisationNumber,
+    registrationNumber
+  ) => {
+    const organisation = await findByOrganisationNumber(organisationNumber)
+    const registration = organisation?.registrations[registrationNumber]
+    return organisation && registration ? { organisation, registration } : null
+  }
+
   return {
-    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-      const stored = await organisationsRepository.findByOrganisationNumber(
+    findByOrganisationNumber,
+
+    findRegistrationByNumber,
+
+    findAccreditationByNumber: async (
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber
+    ) => {
+      const found = await findRegistrationByNumber(
         organisationNumber,
-        minimumVersion
+        registrationNumber
       )
-      if (!stored) {
-        return null
-      }
-      const [organisation] = await toOrganisations([stored])
-      return organisation ?? null
+      const match =
+        found &&
+        findAccreditationInRegistration(found.registration, accreditationNumber)
+      return found && match ? { ...found, ...match } : null
     },
 
     find: async ({ organisationNumber, ...params }) => {

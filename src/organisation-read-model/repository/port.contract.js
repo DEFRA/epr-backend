@@ -1,7 +1,9 @@
 import { testDroppedRecordsBehaviour } from './contract/dropped-records.contract.js'
 import { testFindAllBehaviour } from './contract/find-all.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
+import { testFindAccreditationByNumberBehaviour } from './contract/find-accreditation-by-number.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
+import { testFindRegistrationByNumberBehaviour } from './contract/find-registration-by-number.contract.js'
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
@@ -30,6 +32,8 @@ export const testOrganisationReadRepositoryContract = (it) => {
     testFindByOrganisationNumberBehaviour(it)
     testFindBehaviour(it)
     testFindAllBehaviour(it)
+    testFindRegistrationByNumberBehaviour(it)
+    testFindAccreditationByNumberBehaviour(it)
     testStatusTimelineBehaviour(it)
     testDroppedRecordsBehaviour(it)
   })
