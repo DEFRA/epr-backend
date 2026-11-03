@@ -174,7 +174,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
         expect(result.accreditations[0].accreditationNumber).toBe('ACC100020')
       })
 
-      it('stores a replaced number trimmed and upper-case', async () => {
+      it('stores a number first given by a replace trimmed and upper-case', async () => {
         const organisation = organisationWithNumbers(null, null)
         await repository.insert(organisation)
         const inserted = await repository.findById(organisation.id)

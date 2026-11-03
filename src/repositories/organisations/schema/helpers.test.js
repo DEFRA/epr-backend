@@ -144,6 +144,15 @@ describe('validateAccreditationNumbersRetained', () => {
     ).not.toThrow()
   })
 
+  it('refuses with a 422, not a validation error, when the stored number is blank', () => {
+    expect(() =>
+      validateAccreditationNumbersRetained(
+        [{ id: 'a1', accreditationNumber: 'ACC100022' }],
+        [{ id: 'a1', accreditationNumber: ' ' }]
+      )
+    ).toThrow(expect.objectContaining({ isBoom: true }))
+  })
+
   it('refuses a different number, naming both', () => {
     expect(() =>
       validateAccreditationNumbersRetained(

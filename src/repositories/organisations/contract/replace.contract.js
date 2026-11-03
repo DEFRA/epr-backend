@@ -1349,6 +1349,25 @@ export const testReplaceBehaviour = (it) => {
         ).rejects.toThrow('cannot lose their accreditation number')
       })
 
+      const insertWithAccreditationNumber = async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, {
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                accreditationNumber: 'ACC999'
+              }
+            ]
+          })
+        )
+        const numbered = await repository.findById(organisation.id, 2)
+        return { organisation, numbered }
+      }
+
       it('accepts the first number given to an accreditation', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
@@ -1371,21 +1390,7 @@ export const testReplaceBehaviour = (it) => {
       })
 
       it('rejects an update that would change the number of an accreditation, naming both numbers', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-        await repository.replace(
-          organisation.id,
-          1,
-          prepareOrgUpdate(organisation, {
-            accreditations: [
-              {
-                ...organisation.accreditations[0],
-                accreditationNumber: 'ACC999'
-              }
-            ]
-          })
-        )
-        const numbered = await repository.findById(organisation.id, 2)
+        const { organisation, numbered } = await insertWithAccreditationNumber()
 
         await expect(
           repository.replace(
@@ -1403,21 +1408,7 @@ export const testReplaceBehaviour = (it) => {
       })
 
       it('accepts an update that leaves the number of an accreditation as it is', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-        await repository.replace(
-          organisation.id,
-          1,
-          prepareOrgUpdate(organisation, {
-            accreditations: [
-              {
-                ...organisation.accreditations[0],
-                accreditationNumber: 'ACC999'
-              }
-            ]
-          })
-        )
-        const numbered = await repository.findById(organisation.id, 2)
+        const { organisation, numbered } = await insertWithAccreditationNumber()
 
         await expect(
           repository.replace(

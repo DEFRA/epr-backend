@@ -11,7 +11,6 @@ import {
 } from '#formsubmission/submission-keys.js'
 import Boom from '@hapi/boom'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
-import { normalisedAccreditationNumberSchema } from './numbers.js'
 
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
@@ -366,13 +365,13 @@ export function validateAccreditationNumbersRetained(
     )
   }
 
-  const canonical = (/** @type {string | null | undefined} */ number) =>
-    Joi.attempt(number, normalisedAccreditationNumberSchema)
-
+  // The incoming number was canonicalised by the update schema. A stored one
+  // may predate that and still carry its old case or spacing.
   const renumbered = accreditations.filter(
     (acc) =>
       numberedById.has(acc.id) &&
-      canonical(acc.accreditationNumber) !== canonical(numberedById.get(acc.id))
+      acc.accreditationNumber !==
+        String(numberedById.get(acc.id)).trim().toUpperCase()
   )
 
   if (renumbered.length > 0) {
