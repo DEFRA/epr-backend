@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
+import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
@@ -32,6 +33,13 @@ const NUMBER_KEYS = [
 ]
 
 const NO_SUMMARY_LOG = 'report names no summary log'
+const LEGACY_SUMMARY_LOG = 'summary log predates accreditation ids'
+
+/** The reasons whose reports are counted by the accreditations matching their registration. */
+const COUNTED_BY_MATCHING_ACCREDITATIONS = new Set([
+  NO_SUMMARY_LOG,
+  LEGACY_SUMMARY_LOG
+])
 
 /**
  * The accreditation a report was made under, or why the report records none.
@@ -60,6 +68,9 @@ const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
     return { unrecorded: 'summary log not found' }
   }
   const { accreditationId } = found.summaryLog
+  if (accreditationId === undefined) {
+    return { unrecorded: LEGACY_SUMMARY_LOG }
+  }
   return accreditationId
     ? { accreditationId }
     : { unrecorded: 'summary log names no accreditation' }
@@ -100,38 +111,34 @@ const causes = (organisation, { registrationId }, accreditation) => ({
 })
 
 /**
- * The organisation's accreditations of the registration's material and waste
- * processing type. The organisation record keeps no history of a
- * registration's accreditation links, but an accreditation stays on the
- * organisation after a registration is re-linked away from it. So one such
- * accreditation is the nearest the record comes to saying the registration has
- * only ever had one.
+ * The organisation's accreditations that match the registration under the rule
+ * that links a registration to its accreditation. The organisation record keeps
+ * no history of a registration's accreditation links, but an accreditation
+ * stays on the organisation after a registration is re-linked away from it. So
+ * one matching accreditation is the nearest the record comes to saying the
+ * registration has only ever had one.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
  */
-const accreditationsOfMaterialAndType = (
-  organisation,
-  { material, wasteProcessingType }
-) =>
-  organisation.accreditations.filter(
-    (accreditation) =>
-      accreditation.material === material &&
-      accreditation.wasteProcessingType === wasteProcessingType
+const accreditationsMatching = (organisation, registration) =>
+  organisation.accreditations.filter((accreditation) =>
+    isAccreditationForRegistration(accreditation, registration)
   )
 
 /**
+ * @param {string} reason
  * @param {Organisation} organisation
  * @param {Registration} registration
  * @returns {MappingCase}
  */
-const noSummaryLogCase = (organisation, registration) => {
-  const candidates = accreditationsOfMaterialAndType(organisation, registration)
+const matchingAccreditationsCase = (reason, organisation, registration) => {
+  const candidates = accreditationsMatching(organisation, registration)
   const held =
     ['no accreditation', 'one accreditation'][candidates.length] ??
     'several accreditations'
   return {
-    name: `no summary log, ${held} of its material and type`,
+    name: `${reason}, ${held} matching its registration`,
     cancelled: candidates.some(
       ({ status }) => status === ACCREDITATION_STATUS.CANCELLED
     )
@@ -157,32 +164,40 @@ const mappingCaseOf = (
   { cadence, registrationId },
   accreditation
 ) => {
+  const recorded =
+    'unrecorded' in accreditation
+      ? undefined
+      : organisation.accreditations.find(
+          ({ id }) => id === accreditation.accreditationId
+        )
+  const cancelled = recorded?.status === ACCREDITATION_STATUS.CANCELLED
   const registration = organisation.registrations.find(
     ({ id }) => id === registrationId
   )
   if (!registration) {
-    return { name: 'registration not found', cancelled: false }
+    return { name: 'registration not found', cancelled }
   }
   if (cadence === CADENCE.quarterly) {
     return { name: 'quarterly', cancelled: false }
   }
   if ('unrecorded' in accreditation) {
-    return accreditation.unrecorded === NO_SUMMARY_LOG
-      ? noSummaryLogCase(organisation, registration)
+    return COUNTED_BY_MATCHING_ACCREDITATIONS.has(accreditation.unrecorded)
+      ? matchingAccreditationsCase(
+          accreditation.unrecorded,
+          organisation,
+          registration
+        )
       : { name: accreditation.unrecorded, cancelled: false }
   }
-  const found = organisation.accreditations.find(
-    ({ id }) => id === accreditation.accreditationId
-  )
-  if (!found) {
+  if (!recorded) {
     return { name: 'accreditation not found', cancelled: false }
   }
   return {
     name:
-      found.id === registration.accreditationId
+      recorded.id === registration.accreditationId
         ? 'summary log accreditation is the current link'
         : 'summary log accreditation differs from the current link',
-    cancelled: found.status === ACCREDITATION_STATUS.CANCELLED
+    cancelled
   }
 }
 

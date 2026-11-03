@@ -46,6 +46,14 @@ const numbers = {
   accreditationNumber: ACCREDITATION_NUMBER
 }
 
+/** @param {object} [overrides] */
+const matchingAccreditation = (overrides = {}) =>
+  accreditation({ reprocessingType: 'input', ...overrides })
+
+const otherSite = {
+  address: { line1: '9 Other processing site', postcode: 'LS1 1AA' }
+}
+
 const organisation = buildOrganisation({
   id: organisationId,
   orgId: 500123,
@@ -61,8 +69,11 @@ const organisation = buildOrganisation({
     })
   ],
   accreditations: [
-    accreditation({ id: accreditationId }),
-    accreditation({ id: unnumberedAccreditationId, accreditationNumber: null })
+    matchingAccreditation({ id: accreditationId }),
+    matchingAccreditation({
+      id: unnumberedAccreditationId,
+      accreditationNumber: null
+    })
   ]
 })
 
@@ -86,7 +97,7 @@ describe('backfillReportNumbers', () => {
 
   /**
    * @param {string} summaryLogId
-   * @param {string | null} submittedForAccreditationId
+   * @param {string | null | undefined} submittedForAccreditationId
    */
   const submitSummaryLog = (summaryLogId, submittedForAccreditationId) =>
     summaryLogsRepository.insert(
@@ -270,7 +281,7 @@ describe('backfillReportNumbers', () => {
           'organisation not found': 1,
           quarterly: 1,
           'registration not found': 1,
-          'no summary log, several accreditations of its material and type': 1,
+          'report names no summary log, several accreditations matching its registration': 1,
           'summary log accreditation differs from the current link': 1,
           'accreditation not found': 1
         },
@@ -366,11 +377,16 @@ describe('backfillReportNumbers', () => {
       [
         'summary log names no accreditation',
         { summaryLogId: 'sl-registered-only', lastUploadedAt: null }
+      ],
+      [
+        'summary log predates accreditation ids',
+        { summaryLogId: 'sl-legacy', lastUploadedAt: null }
       ]
     ])(
       'leaves a monthly report without an accreditation number as "%s"',
       async (reason, source) => {
         await submitSummaryLog('sl-registered-only', null)
+        await submitSummaryLog('sl-legacy', undefined)
         const id = await createReport({ source })
 
         expect((await run(false)).unmappedReasons).toEqual({
@@ -383,36 +399,47 @@ describe('backfillReportNumbers', () => {
   describe('counts each report it meets under its mapping case', () => {
     const noSummaryLog = { summaryLogId: null, lastUploadedAt: null }
 
-    it.each([
-      ['no accreditation', [], 'no accreditation'],
+    describe.each([
+      ['report names no summary log', noSummaryLog],
       [
-        'one accreditation',
-        [
-          accreditation({ id: accreditationId }),
-          exporterAccreditation({ id: relinkedAccreditationId })
-        ],
-        'one accreditation'
-      ],
-      [
-        'several accreditations',
-        [
-          accreditation({ id: accreditationId }),
-          accreditation({ id: relinkedAccreditationId })
-        ],
-        'several accreditations'
+        'summary log predates accreditation ids',
+        { summaryLogId: 'sl-legacy', lastUploadedAt: null }
       ]
-    ])(
-      'counts a report with no summary log whose organisation holds %s of its material and type',
-      async (_, accreditations, held) => {
-        changeOrganisation({ accreditations })
-        await createReport({ source: noSummaryLog })
+    ])('where the %s', (reason, source) => {
+      it.each([
+        ['no accreditation', []],
+        [
+          'one accreditation',
+          [
+            matchingAccreditation({ id: accreditationId }),
+            matchingAccreditation({
+              id: relinkedAccreditationId,
+              site: otherSite
+            }),
+            exporterAccreditation({ id: missingAccreditationId })
+          ]
+        ],
+        [
+          'several accreditations',
+          [
+            matchingAccreditation({ id: accreditationId }),
+            matchingAccreditation({ id: relinkedAccreditationId })
+          ]
+        ]
+      ])(
+        'counts a report whose organisation holds %s matching its registration',
+        async (held, accreditations) => {
+          changeOrganisation({ accreditations })
+          await submitSummaryLog('sl-legacy', undefined)
+          await createReport({ source })
 
-        expect(await run(true)).toMatchObject({
-          cases: { [`no summary log, ${held} of its material and type`]: 1 },
-          cancelledAccreditations: 0
-        })
-      }
-    )
+          expect(await run(true)).toMatchObject({
+            cases: { [`${reason}, ${held} matching its registration`]: 1 },
+            cancelledAccreditations: 0
+          })
+        }
+      )
+    })
 
     it('counts a report whose summary log accreditation is now cancelled', async () => {
       changeOrganisation({
@@ -431,11 +458,11 @@ describe('backfillReportNumbers', () => {
       })
     })
 
-    it('counts a report with no summary log whose organisation holds a cancelled accreditation of its material and type', async () => {
+    it('counts a report with no summary log whose organisation holds a cancelled accreditation matching its registration', async () => {
       changeOrganisation({
         accreditations: [
-          accreditation({ id: accreditationId }),
-          accreditation({
+          matchingAccreditation({ id: accreditationId }),
+          matchingAccreditation({
             id: relinkedAccreditationId,
             statusHistory: granted('cancelled')
           })
@@ -445,8 +472,25 @@ describe('backfillReportNumbers', () => {
 
       expect(await run(true)).toMatchObject({
         cases: {
-          'no summary log, several accreditations of its material and type': 1
+          'report names no summary log, several accreditations matching its registration': 1
         },
+        cancelledAccreditations: 1
+      })
+    })
+
+    it('counts a cancelled summary log accreditation for a report whose registration the organisation no longer holds', async () => {
+      changeOrganisation({
+        accreditations: [
+          matchingAccreditation({
+            id: accreditationId,
+            statusHistory: granted('cancelled')
+          })
+        ]
+      })
+      await createReport({ registrationId: missingRegistrationId })
+
+      expect(await run(true)).toMatchObject({
+        cases: { 'registration not found': 1 },
         cancelledAccreditations: 1
       })
     })
