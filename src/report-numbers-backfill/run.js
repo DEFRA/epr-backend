@@ -1,5 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { backfillReportNumbers } from '#report-numbers-backfill/application/backfill.js'
@@ -10,6 +12,8 @@ import { config } from '../config.js'
 
 const LOCK_NAME = 'report-numbers-backfill'
 const UNMAPPED_SAMPLE_SIZE = 10
+// Required by the repository factory; the backfill never generates download URLs.
+const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
 
 /**
  * Each reason with its count and the first few report ids, so one line says
@@ -25,28 +29,52 @@ const describeUnmapped = (unmappedReasons) =>
     )
     .join('; ')
 
+/** @param {Record<string, number>} cases */
+const describeCases = (cases) =>
+  Object.entries(cases)
+    .map(([name, count]) => `${name}: ${count}`)
+    .join('; ')
+
 /** @param {StartedServer} server */
 const runBackfill = async (server) => {
   const isDryRun = !config.get('featureFlags.reportNumbersBackfill')
 
-  const { mapped, unmapped, unmappedReasons, missing, failed, auditFailed } =
-    await backfillReportNumbers(
-      {
-        reportsRepository: (await createReportsRepository(server.db))(),
-        systemLogsRepository: (await createSystemLogsRepository(server.db))(
-          logger
-        ),
-        organisationsRepository: (
-          await createOrganisationsRepository(server.db)
-        )(),
+  const {
+    mapped,
+    unmapped,
+    unmappedReasons,
+    missing,
+    failed,
+    auditFailed,
+    cases,
+    cancelledAccreditations
+  } = await backfillReportNumbers(
+    {
+      reportsRepository: (await createReportsRepository(server.db))(),
+      systemLogsRepository: (await createSystemLogsRepository(server.db))(
         logger
-      },
-      { isDryRun }
-    )
+      ),
+      organisationsRepository: (
+        await createOrganisationsRepository(server.db)
+      )(),
+      summaryLogsRepository: (
+        await createSummaryLogsRepository(server.db, {
+          s3Client: createS3Client({
+            region: config.get('awsRegion'),
+            endpoint: config.get('s3Endpoint'),
+            forcePathStyle: config.get('isDevelopment')
+          }),
+          preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
+        })
+      )(logger),
+      logger
+    },
+    { isDryRun }
+  )
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}"`
+    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}" cases="${describeCases(cases)}" cancelledAccreditations=${cancelledAccreditations}`
   })
 }
 
@@ -56,7 +84,7 @@ const runBackfill = async (server) => {
  * gets a null accreditation number. Flag off (the default) only reports what it
  * would add; on writes them through the reports repository, auditing each
  * change. Both modes log one summary line, which says why reports cannot be
- * mapped. Idempotent, so safe to leave enabled across restarts.
+ * mapped and how many reports fall into each mapping case. Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */
