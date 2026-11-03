@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 import {
+  neverAccredited,
   readModelAccreditedPeriod,
   readModelOverseasSitesContext,
   toAccreditedPeriod
@@ -118,6 +120,17 @@ describe('readModelAccreditedPeriod', () => {
       '2025'
     )
     expect(period.window?.validFrom).toBe('2025-01-01')
+  })
+})
+
+describe('neverAccredited', () => {
+  it('has no window and an empty timeline', () => {
+    expect(neverAccredited()).toEqual({ window: null, timeline: [] })
+  })
+
+  it('is accredited at no date, unlike a null accreditation', () => {
+    expect(isAccreditedAtDates(['2025-06-01'], neverAccredited())).toBe(false)
+    expect(isAccreditedAtDates(['2025-06-01'], null)).toBe(true)
   })
 })
 

@@ -196,6 +196,7 @@ describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
   let organisationsRepository
+  let organisationReadRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
   let validateSummaryLog
@@ -243,12 +244,35 @@ describe('SummaryLogsValidator', () => {
       })
     }
 
+    // The read model's view of the legacy accreditation above: approved from
+    // 1 January 2025, so accredited for the whole of 2025.
+    organisationReadRepository = {
+      findAccreditationByNumber: vi.fn().mockResolvedValue({
+        organisation: {},
+        registration: {},
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          status: {
+            current: 'approved',
+            timeline: [
+              { status: 'created', at: '2024-12-01T00:00:00.000Z' },
+              { status: 'approved', at: '2025-01-01T00:00:00.000Z' }
+            ]
+          }
+        },
+        year: '2025'
+      })
+    }
+
     summaryLogId = 'summary-log-123'
 
     summaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
+      organisationNumber: '123',
+      registrationNumber: 'REG12345',
+      accreditationNumber: 'ACC12345',
       file: {
         id: 'file-123',
         name: 'test.xlsx',
@@ -273,6 +297,9 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
+      ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -701,6 +728,9 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
+      ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -747,6 +777,9 @@ describe('SummaryLogsValidator', () => {
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
+      ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -999,6 +1032,45 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.invalid.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(1)
       expect(updateCall.loads.added.excluded.rowIds).toEqual(['10001'])
+    })
+
+    // Ruling 20: the read model drops some accreditations (created, rejected,
+    // without a validFrom). A summary log naming one is never accredited, so
+    // even a row dated inside the legacy accreditation's window is IGNORED.
+    it('sets IGNORED outcome for every load when the read model does not serve the summary log’s accreditation', async () => {
+      organisationReadRepository.findAccreditationByNumber.mockResolvedValue(
+        null
+      )
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 10000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updateCall.loads.added.included.count).toBe(0)
+      expect(updateCall.loads.added.excluded.rowIds).toEqual(['10000'])
+      expect(
+        updateCall.loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting
+      ).toEqual({ count: 0, tonnageDelta: 0, rows: [] })
+      expect(
+        organisationReadRepository.findAccreditationByNumber
+      ).toHaveBeenCalledWith('123', 'REG12345', 'ACC12345')
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {

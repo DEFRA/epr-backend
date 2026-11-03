@@ -7,9 +7,14 @@ import {
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { requireStoredNumbers } from '#domain/organisations/numbers.js'
+import {
+  neverAccredited,
+  readModelAccreditedPeriod,
+  readModelOverseasSitesContext
+} from '#waste-balances/domain/classification-context.js'
 import { classifyByPeriodStatus } from './period-status.js'
 import { classifyRecordChanges } from './classify-record-changes.js'
 import {
@@ -21,9 +26,8 @@ import {
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {AccreditedPeriod, OverseasSitesContext} from '#waste-balances/domain/classification-context.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
@@ -152,31 +156,63 @@ export const fetchPeriodicReports = async ({
 }
 
 /**
- * Resolves the overseas-sites context for ORS validation (VAL014). Only
- * exporters carry overseas sites, so other processing types skip the lookup
- * and disable the check, mirroring the submit-time path in
- * sync-from-summary-log.js. Without this, loads requiring ORS approval would
- * be misclassified in the predicted waste-balance delta shown on the check
- * page.
+ * What a summary log's rows classify against: the accreditation it names and,
+ * for an exporter, that accreditation's overseas sites, read from the
+ * organisation read model by the summary log's numbers.
+ *
+ * - An accreditation the read model serves: its accredited period and, for an
+ *   exporter, its approved sites.
+ * - An accreditation the read model does not serve: never accredited, so every
+ *   row is outside the accreditation period and none reaches the overseas-site
+ *   checks.
+ * - Registered-only (accreditation number `null`): no accreditation and no
+ *   sites. The read model holds site approval only per accreditation, and none
+ *   is needed: a registration without an accreditation validates only against
+ *   a registered-only template, whose tables have no waste-balance classifier.
+ *
+ * Only exporters carry overseas sites, so other processing types disable the
+ * overseas-site checks. Without an exporter's sites, loads requiring site
+ * approval would be misclassified in the predicted waste-balance delta shown
+ * on the check page.
  *
  * @param {Object} params
  * @param {ProcessingType} params.processingType
  * @param {SubmittedSummaryLog} params.summaryLog
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
- * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
+ * @param {OrganisationReadRepository} params.organisationReadRepository
+ * @returns {Promise<{ accreditation: AccreditedPeriod | null, overseasSites: OverseasSitesContext }>}
  */
-export const resolveOverseasSitesContext = async ({
+export const resolveClassificationContext = async ({
   processingType,
   summaryLog,
-  organisationsRepository,
-  overseasSitesRepository
-}) =>
-  processingType === PROCESSING_TYPES.EXPORTER
-    ? resolveOverseasSites(
-        organisationsRepository,
-        overseasSitesRepository,
-        summaryLog.organisationId,
-        summaryLog.registrationId
-      )
-    : ORS_VALIDATION_DISABLED
+  organisationReadRepository
+}) => {
+  const isExporter = processingType === PROCESSING_TYPES.EXPORTER
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    requireStoredNumbers(
+      summaryLog,
+      `summary log for registration ${summaryLog.registrationId}`
+    )
+
+  const found =
+    accreditationNumber === null
+      ? null
+      : await organisationReadRepository.findAccreditationByNumber(
+          organisationNumber,
+          registrationNumber,
+          accreditationNumber
+        )
+
+  if (!found) {
+    return {
+      accreditation: accreditationNumber === null ? null : neverAccredited(),
+      overseasSites: isExporter ? {} : ORS_VALIDATION_DISABLED
+    }
+  }
+
+  return {
+    accreditation: readModelAccreditedPeriod(found.accreditation, found.year),
+    overseasSites: isExporter
+      ? readModelOverseasSitesContext(found.registration, found.accreditation)
+      : ORS_VALIDATION_DISABLED
+  }
+}

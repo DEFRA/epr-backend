@@ -1053,6 +1053,76 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
+  // Pins the overseas-site outcome for a registered-only exporter (Ruling 19).
+  // A registration with no accreditation validates only against the
+  // registered-only template, whose tables have no waste-balance classifier, so
+  // the overseas-site checks never run: a row naming an approved site and one
+  // naming a site the registration does not hold classify alike.
+  it('does not check overseas sites for a registered-only exporter', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accredited: false
+    })
+
+    /** @param {number} rowId @param {number} osrId */
+    const exportedRow = (rowId, osrId) => ({
+      ROW_ID: rowId,
+      TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
+      DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
+      OSR_ID: osrId,
+      BASEL_EXPORT_CODE: 'B3020',
+      WAS_THE_WASTE_REFUSED: 'No',
+      WAS_THE_WASTE_STOPPED: 'No',
+      DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: null,
+      OSR_NAME: 'Overseas Reprocessor A',
+      OSR_COUNTRY: 'Vietnam-VN',
+      CUSTOMS_CODES: '123456',
+      CONTAINER_NUMBER: 'CONT123456'
+    })
+
+    await upload(
+      env,
+      'sl-registered-only-exporter-sites',
+      'file-registered-only-exporter-sites',
+      {
+        LOADS_EXPORTED: tableOf('Exported', [
+          exportedRow(2001, 100), // an approved site the registration holds
+          exportedRow(2002, 999) // a site the registration does not hold
+        ])
+      },
+      createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY')
+    )
+    const { loads, loadsByReportingPeriod } = await getCheckPage(
+      env,
+      'sl-registered-only-exporter-sites'
+    )
+
+    expect(loads.added.valid.rowIds).toEqual(['2001', '2002'])
+    expect(loads.added.included.count).toBe(0)
+    expect(loads.added.excluded.count).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
+    ).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.rows.map(
+        ({ rowId, exclusionReasons }) => ({ rowId, exclusionReasons })
+      )
+    ).toEqual([
+      {
+        rowId: '2001',
+        exclusionReasons: [
+          CLASSIFICATION_REASON.TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE
+        ]
+      },
+      {
+        rowId: '2002',
+        exclusionReasons: [
+          CLASSIFICATION_REASON.TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE
+        ]
+      }
+    ])
+  })
+
   // A registered-only submission has no accreditation, so its row states are
   // reachable only through the summary-log-submitted event on the unaccredited
   // ledger stream. Re-uploading identical rows must resolve that submission as

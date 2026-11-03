@@ -1,3 +1,4 @@
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -10,6 +11,7 @@ import {
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -146,9 +148,17 @@ describe('SummaryLogsValidator integration', () => {
       testOrg,
       storedAccreditationId
     )
-    const summaryLog = legacy
-      ? withoutAccreditationId(yearScopedSummaryLog)
-      : yearScopedSummaryLog
+    // Upload stores the numbers beside the ids; a legacy summary log stored
+    // no accreditation id, so it has no accreditation number either.
+    const summaryLog = {
+      ...(legacy
+        ? withoutAccreditationId(yearScopedSummaryLog)
+        : yearScopedSummaryLog),
+      ...numbersFor(testOrg, {
+        registrationId: testOrg.registrations[0].id,
+        accreditationId: legacy ? undefined : storedAccreditationId
+      }).numbers
+    }
     const summaryLogId = randomUUID()
 
     const extractor =
@@ -162,6 +172,11 @@ describe('SummaryLogsValidator integration', () => {
       logger,
       summaryLogsRepository,
       organisationsRepository,
+      organisationReadRepository: createOrganisationReadRepository({
+        organisationsRepository,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger
+      }),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
@@ -876,7 +891,11 @@ describe('SummaryLogsValidator integration', () => {
       )
     })
 
-    it('validates a legacy summary log against the registration’s current accreditation', async () => {
+    // Ruling 21: classification reads the read model by the summary log's
+    // stored numbers, with no fallback to the registration's current
+    // accreditation, so a legacy summary log without an accreditation number
+    // no longer validates.
+    it('fails with a system error for a legacy summary log without an accreditation number', async () => {
       const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
@@ -885,8 +904,15 @@ describe('SummaryLogsValidator integration', () => {
         metadata: exporterMetadata('EXPORTER', '11111111')
       })
 
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(updated.summaryLog.validation.issues).toEqual([])
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual([
+        expect.objectContaining({
+          code: 'VALIDATION_SYSTEM_ERROR',
+          message: expect.stringContaining(
+            'without its numbers: accreditationNumber'
+          )
+        })
+      ])
     })
 
     it('fails with a system error when the stored accreditation cannot be found', async () => {

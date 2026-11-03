@@ -1,3 +1,4 @@
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import ExcelJS from 'exceljs'
 import { http, HttpResponse } from 'msw'
 
@@ -370,6 +371,11 @@ describe('Submission and placeholder tests', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
+        organisationReadRepository: createOrganisationReadRepository({
+          organisationsRepository,
+          overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+          logger: mockLogger
+        }),
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
@@ -800,6 +806,11 @@ describe('Submission and placeholder tests', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        organisationReadRepository: createOrganisationReadRepository({
+          organisationsRepository,
+          overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+          logger: mockLogger
+        }),
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),

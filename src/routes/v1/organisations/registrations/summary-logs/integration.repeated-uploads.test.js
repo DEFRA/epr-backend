@@ -1,3 +1,5 @@
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
 
@@ -257,6 +259,11 @@ describe('Repeated uploads of identical data', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
+        organisationReadRepository: createOrganisationReadRepository({
+          organisationsRepository,
+          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+          logger: mockLogger
+        }),
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,

@@ -1,3 +1,4 @@
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -478,6 +479,11 @@ describe('Advanced validation scenarios', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        organisationReadRepository: createOrganisationReadRepository({
+          organisationsRepository,
+          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+          logger: mockLogger
+        }),
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -658,6 +664,11 @@ describe('Advanced validation scenarios', () => {
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        organisationReadRepository: createOrganisationReadRepository({
+          organisationsRepository,
+          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+          logger: mockLogger
+        }),
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),

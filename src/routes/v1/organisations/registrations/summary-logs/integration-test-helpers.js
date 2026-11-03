@@ -1,3 +1,4 @@
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -667,6 +668,11 @@ export const createTestInfrastructure = async (
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
+    organisationReadRepository: createOrganisationReadRepository({
+      organisationsRepository,
+      overseasSitesRepository,
+      logger: mockLogger
+    }),
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
@@ -802,6 +808,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
+    organisationReadRepository: createOrganisationReadRepository({
+      organisationsRepository,
+      overseasSitesRepository,
+      logger: mockLogger
+    }),
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),

@@ -45,6 +45,17 @@ export const toAccreditedPeriod = (legacyAccreditation) =>
     : null
 
 /**
+ * The period of an accreditation the organisation read model does not serve
+ * (it drops created, rejected, numberless and no-validFrom accreditations).
+ * Classification treats a null accreditation as accredited at every date, so
+ * a summary log naming such an accreditation classifies with this instead:
+ * accredited at no date, so every row is outside the accreditation period.
+ *
+ * @returns {AccreditedPeriod}
+ */
+export const neverAccredited = () => ({ window: null, timeline: [] })
+
+/**
  * The read model keeps no validFrom/validTo for an accreditation. The window
  * starts at the first approval after the last `created` entry (the adapter
  * records the stored validFrom there) and ends on 31 December of the year the

@@ -25,7 +25,7 @@ import {
   classifyLoads,
   fetchPeriodicReports,
   filterWasteBalanceRecords,
-  resolveOverseasSitesContext
+  resolveClassificationContext
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
@@ -35,7 +35,6 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -46,7 +45,8 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
-/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
+/** @import {AccreditedPeriod, OverseasSitesContext} from '#waste-balances/domain/classification-context.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -116,6 +116,15 @@ const accreditationFor = async (
 }
 
 /**
+ * Fetches the legacy registration, with the accreditation the summary log is
+ * validated against. Classification does not read it: it reads the
+ * organisation read model by the summary log's numbers (see
+ * resolveClassificationContext). The legacy registration remains for what has
+ * not moved to the read model: the meta business checks against the
+ * registration, the ledger id of a summary log that stored no accreditation
+ * id, and the report figures (cadence, operator category, and the periods
+ * requiring resubmission), whose reports are joined by legacy ids.
+ *
  * @param {{
  *   organisationsRepository: OrganisationsRepository,
  *   summaryLog: SubmittedSummaryLog,
@@ -166,6 +175,14 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {Registration} [registration] - Registration fetched during validation
+ * @property {ClassificationContext} [classificationContext] - What the rows classify against (only present once the data has been transformed)
+ */
+
+/**
+ * @typedef {{
+ *   accreditation: AccreditedPeriod | null,
+ *   overseasSites: OverseasSitesContext
+ * }} ClassificationContext
  */
 
 /**
@@ -269,6 +286,7 @@ const markIgnoredByDateRange = (
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
  *   organisationsRepository: OrganisationsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
@@ -281,6 +299,7 @@ const performValidationChecks = async ({
   logger,
   summaryLogExtractor,
   organisationsRepository,
+  organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   validateDataSyntax
@@ -292,6 +311,8 @@ const performValidationChecks = async ({
   let meta
   /** @type {Registration | undefined} */
   let registration
+  /** @type {ClassificationContext | undefined} */
+  let classificationContext
 
   try {
     const parsed = await extractSummaryLog({
@@ -347,9 +368,15 @@ const performValidationChecks = async ({
 
     wasteRecords = dataResult.wasteRecords
 
+    classificationContext = await resolveClassificationContext({
+      processingType: meta.PROCESSING_TYPE,
+      summaryLog,
+      organisationReadRepository
+    })
+
     markIgnoredByDateRange(
       wasteRecords,
-      toAccreditedPeriod(registration.accreditation),
+      classificationContext.accreditation,
       meta.PROCESSING_TYPE
     )
 
@@ -363,7 +390,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta, registration }
+  return { issues, wasteRecords, meta, registration, classificationContext }
 }
 
 /**
@@ -564,6 +591,9 @@ const loadSubmittedRowStatesByKey = async ({
 
 /**
  * Fetches periodic reports, classifies loads, and persists the validation result.
+ *
+ * A summary log whose validation stopped before its rows were transformed has
+ * no classification context; it is INVALID, so nothing is classified.
  */
 const classifyAndPersistResult = async ({
   issues,
@@ -573,6 +603,10 @@ const classifyAndPersistResult = async ({
   wasteBalanceRecords,
   wasteRecords,
   registration,
+  classificationContext = /** @type {ClassificationContext} */ ({
+    accreditation: null,
+    overseasSites: ORS_VALIDATION_DISABLED
+  }),
   meta,
   summaryLog,
   summaryLogsRepository,
@@ -580,7 +614,6 @@ const classifyAndPersistResult = async ({
   ledgerRepository,
   version,
   reportsService,
-  organisationsRepository,
   overseasSitesRepository,
   logger
 }) => {
@@ -591,12 +624,8 @@ const classifyAndPersistResult = async ({
     reportsService
   })
 
-  const overseasSites = await resolveOverseasSitesContext({
-    processingType,
-    summaryLog,
-    organisationsRepository,
-    overseasSitesRepository
-  })
+  const { accreditation: accreditedPeriod, overseasSites } =
+    classificationContext
 
   const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
     ledgerRepository,
@@ -604,9 +633,6 @@ const classifyAndPersistResult = async ({
     summaryLog,
     registration
   })
-
-  // Converted once per fetch, not per row.
-  const accreditedPeriod = toAccreditedPeriod(registration?.accreditation)
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
     processingType,
@@ -653,6 +679,7 @@ const classifyAndPersistResult = async ({
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
@@ -665,6 +692,7 @@ export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
   organisationsRepository,
+  organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   reportsService,
@@ -692,13 +720,14 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration } =
+    const { issues, wasteRecords, meta, registration, classificationContext } =
       await performValidationChecks({
         summaryLog,
         loggingContext,
         logger,
         summaryLogExtractor,
         organisationsRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         validateDataSyntax
@@ -731,6 +760,7 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords,
       wasteRecords,
       registration,
+      classificationContext,
       meta,
       summaryLog,
       summaryLogsRepository,
@@ -738,7 +768,6 @@ export const createSummaryLogsValidator = ({
       ledgerRepository,
       version,
       reportsService,
-      organisationsRepository,
       overseasSitesRepository,
       logger
     })

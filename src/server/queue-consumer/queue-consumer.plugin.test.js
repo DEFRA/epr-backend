@@ -102,6 +102,7 @@ describe('commandQueueConsumerPlugin', () => {
         [
           'summaryLogsRepository',
           'organisationsRepository',
+          'organisationReadRepository',
           'wasteBalanceService',
           'uploadsRepository',
           'reportsRepository',
