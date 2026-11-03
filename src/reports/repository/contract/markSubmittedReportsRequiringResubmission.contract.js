@@ -1,4 +1,5 @@
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
@@ -12,7 +13,7 @@ import {
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
-const SL_ID = 'sl-id-new-000000000000000000000002'
+const SL_ID = toSummaryLogFileId('sl-id-new-000000000000000000000002')
 const UPLOADED_AT = '2026-06-01T12:00:00.000Z'
 
 const period = (period, overrides = {}) => ({
@@ -101,6 +102,42 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
         reportId: latestId,
         submissionNumber: 2
       })
+    })
+
+    it('leaves alone a latest submission built from the summary log', async () => {
+      const reportId = await createAndSubmitReport(repository, {
+        source: {
+          summaryLogId: SL_ID,
+          lastUploadedAt: UPLOADED_AT
+        }
+      })
+
+      const flagged = await callMark()
+
+      expect(flagged).toEqual([])
+
+      const report = await repository.findReportById(reportId)
+      expect(report.resubmissionRequired).toBeUndefined()
+    })
+
+    it('does not flag an earlier submission when the latest was built from the summary log', async () => {
+      const earlierId = await createAndSubmitReport(repository, {
+        submissionNumber: 1
+      })
+      await createAndSubmitReport(repository, {
+        submissionNumber: 2,
+        source: {
+          summaryLogId: SL_ID,
+          lastUploadedAt: UPLOADED_AT
+        }
+      })
+
+      const flagged = await callMark()
+
+      expect(flagged).toEqual([])
+
+      const earlier = await repository.findReportById(earlierId)
+      expect(earlier.resubmissionRequired).toBeUndefined()
     })
 
     it('does not touch active (non-submitted) reports', async () => {

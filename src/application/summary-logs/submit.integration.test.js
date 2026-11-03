@@ -155,15 +155,15 @@ const setupSubmit = async ({
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
-  const summaryLogId = `submit-${organisationId}`
-  await summaryLogsRepository.insert(toSummaryLogId(summaryLogId), summaryLog)
+  const summaryLogId = toSummaryLogId(`submit-${organisationId}`)
+  await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
   // Validation writes this artefact via update, not insert, so seed it the same way.
   if (loadsByReportingPeriod) {
-    await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+    await summaryLogsRepository.update(summaryLogId, 1, {
       loadsByReportingPeriod
     })
-    await waitForVersion(summaryLogsRepository, toSummaryLogId(summaryLogId), 2)
+    await waitForVersion(summaryLogsRepository, summaryLogId, 2)
   }
 
   const summaryLogExtractor = createInMemorySummaryLogExtractor({
@@ -219,14 +219,14 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       registrationId
     })
 
-    await expect(
-      submitSummaryLog(toSummaryLogId(summaryLogId), deps)
-    ).rejects.toBeInstanceOf(PermanentError)
+    await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
+      PermanentError
+    )
 
     // The guard throws before any write, so the log is untouched at version 1.
     const { summaryLog, version } = await waitForVersion(
       summaryLogsRepository,
-      toSummaryLogId(summaryLogId),
+      summaryLogId,
       1
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
@@ -249,7 +249,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       buildCreateReportParams({ organisationId, registrationId })
     )
 
-    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
+    await submitSummaryLog(summaryLogId, deps)
 
     const rowStates = await summaryLogRowStatesForRegistration({
       organisationId,
@@ -265,7 +265,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
-      toSummaryLogId(summaryLogId),
+      summaryLogId,
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
@@ -291,11 +291,11 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       registrationId
     })
 
-    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
+    await submitSummaryLog(summaryLogId, deps)
 
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
-      toSummaryLogId(summaryLogId),
+      summaryLogId,
       2
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
@@ -334,7 +334,7 @@ describe('submitSummaryLog resubmission flag source', () => {
     const januaryReportId = await submitReportFor(january)
     const februaryReportId = await submitReportFor(february)
 
-    await submitSummaryLog(toSummaryLogId(summaryLogId), {
+    await submitSummaryLog(summaryLogId, {
       ...deps,
       onSummaryLogUploaded: createOnSummaryLogUploaded({
         reportsRepository,
@@ -394,7 +394,7 @@ describe('submitSummaryLog stale flagging', () => {
       })
     )
 
-    await submitSummaryLog(toSummaryLogId(summaryLogId), {
+    await submitSummaryLog(summaryLogId, {
       ...deps,
       onSummaryLogUploaded: createOnSummaryLogUploaded({
         reportsRepository,
@@ -437,7 +437,7 @@ describe('submitSummaryLog December waste metric', () => {
       data: decemberData
     })
 
-    await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
+    await submitSummaryLog(summaryLogId, deps)
 
     expect(mockRecordDecemberWasteRows).toHaveBeenCalledWith(
       { processingType: 'REPROCESSOR_INPUT' },
@@ -465,7 +465,7 @@ describe('submitSummaryLog row-state numbers', () => {
         accreditationId
       })
 
-      await submitSummaryLog(toSummaryLogId(summaryLogId), deps)
+      await submitSummaryLog(summaryLogId, deps)
 
       const rowStates =
         await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(

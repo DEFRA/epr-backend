@@ -19,7 +19,7 @@ vi.mock('./metrics.js', () => ({
 
 describe('markAsSubmissionFailed', () => {
   it('logs error when repository.update throws', async () => {
-    const summaryLogId = 'test-id'
+    const summaryLogId = toSummaryLogId('test-id')
     const logger = createMockLogger()
     const repository = createMockSummaryLogsRepository({
       findById: vi.fn().mockResolvedValue({
@@ -32,11 +32,7 @@ describe('markAsSubmissionFailed', () => {
       update: vi.fn().mockRejectedValue(new Error('db error'))
     })
 
-    await markAsSubmissionFailed(
-      toSummaryLogId(summaryLogId),
-      repository,
-      logger
-    )
+    await markAsSubmissionFailed(summaryLogId, repository, logger)
 
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -50,7 +46,7 @@ describe('markAsSubmissionFailed', () => {
 
 describe('markAsValidationFailed', () => {
   it('records a validation_failed status transition metric', async () => {
-    const summaryLogId = 'test-id'
+    const summaryLogId = toSummaryLogId('test-id')
     const logger = createMockLogger()
     const repository = createMockSummaryLogsRepository({
       findById: vi.fn().mockResolvedValue({
@@ -63,11 +59,7 @@ describe('markAsValidationFailed', () => {
       update: vi.fn().mockResolvedValue(undefined)
     })
 
-    await markAsValidationFailed(
-      toSummaryLogId(summaryLogId),
-      repository,
-      logger
-    )
+    await markAsValidationFailed(summaryLogId, repository, logger)
 
     expect(mockRecordStatusTransition).toHaveBeenCalledWith({
       status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,

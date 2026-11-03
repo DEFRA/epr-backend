@@ -237,13 +237,16 @@ export const performMarkSubmittedReportsRequiringResubmission = async (
           year: 1,
           cadence: 1,
           period: 1,
-          submissionNumber: 1
+          submissionNumber: 1,
+          'source.summaryLogId': 1
         }
       }
     )
     .toArray()
 
-  const flaggedIds = latestSubmissionPerPeriod(submitted).map((doc) => doc.id)
+  const flaggedIds = latestSubmissionPerPeriod(submitted)
+    .filter((doc) => doc.source?.summaryLogId !== summaryLogId)
+    .map((doc) => doc.id)
 
   if (flaggedIds.length === 0) {
     return []

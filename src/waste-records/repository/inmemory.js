@@ -91,7 +91,7 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
  * @param {SummaryLogRowState[]} storage
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} fileId
+ * @param {SummaryLogFileId} fileId
  * @returns {SummaryLogRowState[]}
  */
 const rowStatesForSummaryLogFile = (
@@ -136,10 +136,11 @@ const rowHistory = (
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {string[]} summaryLogIds
+ * @param {SummaryLogFileId[]} summaryLogIds
  * @returns {Generator<import('./port.js').SubmittedRowState>}
  */
 function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
+  /** @type {Set<string>} */
   const asked = new Set(summaryLogIds)
   for (const doc of storage) {
     if (doc.summaryLogIds.some((id) => asked.has(id))) {
@@ -320,7 +321,7 @@ const repositoryOver = (storage) => ({
   /**
    * @param {string} organisationId
    * @param {string} registrationId
-   * @param {string} fileId
+   * @param {SummaryLogFileId} fileId
    */
   findRowStatesForSummaryLogFile: async (
     organisationId,
@@ -344,7 +345,7 @@ const repositoryOver = (storage) => ({
     rowHistory(storage, organisationId, registrationId, rowId, wasteRecordType),
 
   /**
-   * @param {string[]} summaryLogIds
+   * @param {SummaryLogFileId[]} summaryLogIds
    */
   streamRowStatesForSummaryLogs: async function* (summaryLogIds) {
     yield* submittedRowStatesForSummaryLogs(storage, summaryLogIds)

@@ -58,8 +58,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `validate-test-${Date.now()}`
-        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
+        const summaryLogId = toSummaryLogId(`validate-test-${Date.now()}`)
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         // Verify message was sent by receiving it from the queue
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -93,8 +93,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = 'log-test-123'
-        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
+        const summaryLogId = toSummaryLogId('log-test-123')
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -131,11 +131,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `submit-user-test-${Date.now()}`
-        await executor.summaryLogsWorker.submit(
-          toSummaryLogId(summaryLogId),
-          mockRequest
-        )
+        const summaryLogId = toSummaryLogId(`submit-user-test-${Date.now()}`)
+        await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -206,11 +203,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = 'submit-log-456'
-        await executor.summaryLogsWorker.submit(
-          toSummaryLogId(summaryLogId),
-          mockRequest
-        )
+        const summaryLogId = toSummaryLogId('submit-log-456')
+        await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -347,8 +341,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `trace-test-${Date.now()}`
-        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
+        const summaryLogId = toSummaryLogId(`trace-test-${Date.now()}`)
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -386,8 +380,8 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `no-trace-test-${Date.now()}`
-        await executor.summaryLogsWorker.validate(toSummaryLogId(summaryLogId))
+        const summaryLogId = toSummaryLogId(`no-trace-test-${Date.now()}`)
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })

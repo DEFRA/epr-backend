@@ -134,6 +134,20 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     ])
   })
 
+  it('gives the uploaded file an id of its own, apart from the document id', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.file?.id).toEqual(expect.any(String))
+    expect(stored?.summaryLog.file?.id).not.toBe(body.summaryLogId)
+  })
+
   it('answers with the invalid document and its issues when the content fails validation', async () => {
     const env = await createEnvironment()
 

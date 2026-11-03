@@ -151,7 +151,7 @@ const insertValidatingLog = async (
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
-    file: { id: toSummaryLogFileId(summaryLogId), name: 'summary-log.json' },
+    file: { id: toSummaryLogFileId(randomUUID()), name: 'summary-log.json' },
     organisationId,
     registrationId,
     year,

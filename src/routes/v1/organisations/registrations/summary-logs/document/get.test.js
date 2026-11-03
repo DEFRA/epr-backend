@@ -27,7 +27,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   const registration = reprocessor()
   const organisation = buildOrganisation({ registrations: [registration] })
-  const summaryLogId = new ObjectId().toString()
+  const summaryLogId = toSummaryLogId(new ObjectId().toString())
   const organisationId = organisation.id
   const registrationId = registration.id
   const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
@@ -124,19 +124,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns the whole stored document, without its database ids, including fields the operator view strips', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.submitted({ organisationId, registrationId, meta })
       )
       // loadsByReportingPeriod is added by update at validation time, not at
       // insert, so seed it the same way it reaches a real document.
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         loadsByReportingPeriod
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -175,7 +171,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   describe('when the summary log does not exist', () => {
     it('returns 404', async () => {
       const { server } = await createServer()
-      const nonExistentId = new ObjectId().toString()
+      const nonExistentId = toSummaryLogId(new ObjectId().toString())
 
       const response = await makeRequest(server, nonExistentId)
 

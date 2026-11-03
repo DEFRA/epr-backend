@@ -321,7 +321,7 @@ const performFindWasteRecordStatesForSummaryLog =
  * prefix.
  *
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowStatesForSummaryLogFile =
   (collection) => async (organisationId, registrationId, fileId) => {
@@ -382,7 +382,7 @@ const toSubmittedRowState = ({
 
 /**
  * @param {Collection} collection
- * @returns {(summaryLogIds: string[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
+ * @returns {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
  */
 const performStreamRowStatesForSummaryLogs = (collection) =>
   async function* (summaryLogIds) {

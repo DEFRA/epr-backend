@@ -27,7 +27,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const organisation = buildOrganisation({ registrations: [registration] })
   const organisationId = organisation.id
   const registrationId = registration.id
-  const summaryLogId = new ObjectId().toString()
+  const summaryLogId = toSummaryLogId(new ObjectId().toString())
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -69,7 +69,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('logs a structured info event when a summary log is found', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({ organisationId, registrationId })
       )
 
@@ -92,7 +92,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns the summary log status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({
           organisationId,
           registrationId,
@@ -134,21 +134,17 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const { server, summaryLogsRepository } = await createServer()
       const loads = createLoads()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({
           organisationId,
           registrationId,
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         loads
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -160,7 +156,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('does not include loads when absent', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({
           organisationId,
           registrationId,
@@ -180,20 +176,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('includes processingType and material when meta exists', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
           MATERIAL: 'Paper_and_board'
         }
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -206,21 +198,17 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('includes accreditationNumber when present in meta', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'EXPORTER',
           MATERIAL: 'Aluminium',
           ACCREDITATION_NUMBER: '87654321'
         }
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -232,20 +220,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('does not include accreditationNumber when missing from meta', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'REPROCESSOR_OUTPUT',
           MATERIAL: 'Glass'
         }
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -257,7 +241,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('does not include meta fields when meta is absent', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.preprocessing({ organisationId, registrationId })
       )
 
@@ -273,7 +257,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('omits null meta values from response', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.invalid({ organisationId, registrationId })
       )
       // Raw storage can hold null meta values; the response must omit them.
@@ -283,14 +267,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         MATERIAL: null,
         ACCREDITATION_NUMBER: null
       }
-      await summaryLogsRepository.update(toSummaryLogId(summaryLogId), 1, {
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: dirtyMeta
       })
-      await waitForVersion(
-        summaryLogsRepository,
-        toSummaryLogId(summaryLogId),
-        2
-      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -306,7 +286,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('includes year but not the accreditation id', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validated({
           organisationId,
           registrationId,
@@ -329,7 +309,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns OK', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validationFailed({ organisationId, registrationId })
       )
 
@@ -341,7 +321,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns validation_failed status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validationFailed({ organisationId, registrationId })
       )
 
@@ -354,7 +334,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('does not include loads for validation_failed status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validationFailed({ organisationId, registrationId })
       )
 
@@ -367,7 +347,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('does not include accreditationNumber for validation_failed status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.validationFailed({ organisationId, registrationId })
       )
 
@@ -382,7 +362,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns OK', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.submissionFailed({ organisationId, registrationId })
       )
 
@@ -394,7 +374,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns submission_failed status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        toSummaryLogId(summaryLogId),
+        summaryLogId,
         summaryLogFactory.submissionFailed({ organisationId, registrationId })
       )
 
