@@ -397,6 +397,37 @@ describe('aggregatePrnTonnage - Integration', () => {
     ).rejects.toThrow('registrationNumber')
   })
 
+  it('reports a blank accreditation number for an accreditation that no longer has one', async () => {
+    const organisation = organisationWithRegistration()
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisation,
+      accreditations: [
+        {
+          ...organisation.accreditations[0],
+          accreditationNumber: null,
+          statusHistory: [
+            ...approvedStatusHistory,
+            {
+              status: 'cancelled',
+              updatedAt: new Date('2026-03-01T00:00:00.000Z')
+            }
+          ]
+        }
+      ]
+    })
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    const { rows } = await aggregatePrnTonnage(
+      prnRepository,
+      organisationsRepository,
+      ledgerRepository
+    )
+
+    expect(rows).toStrictEqual([expectedRow({ accreditationNumber: '' })])
+  })
+
   it('reports one row per accreditation when its prns snapshot different organisation names', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)

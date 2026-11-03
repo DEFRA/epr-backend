@@ -1297,6 +1297,72 @@ export const testReplaceBehaviour = (it) => {
           )
         ).rejects.toThrow('"registrations[0].registrationNumber" is required')
       })
+
+      it('accepts an update that takes the number off an accreditation moved back to created', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        const approved = await approve(organisation)
+
+        await repository.replace(
+          organisation.id,
+          approved.version,
+          prepareOrgUpdate(approved, {
+            accreditations: [
+              {
+                ...approved.accreditations[0],
+                status: ACCREDITATION_STATUS.CREATED,
+                accreditationNumber: null
+              }
+            ]
+          })
+        )
+
+        const saved = await repository.findById(organisation.id, 3)
+        expect(saved.accreditations[0]).toMatchObject({
+          status: ACCREDITATION_STATUS.CREATED,
+          accreditationNumber: null
+        })
+      })
+
+      it('accepts an update that takes the number off a cancelled accreditation', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        const approved = await approve(organisation)
+
+        await repository.replace(
+          organisation.id,
+          approved.version,
+          prepareOrgUpdate(approved, {
+            accreditations: [
+              {
+                ...approved.accreditations[0],
+                status: ACCREDITATION_STATUS.SUSPENDED
+              }
+            ]
+          })
+        )
+        const suspended = await repository.findById(organisation.id, 3)
+
+        await repository.replace(
+          organisation.id,
+          suspended.version,
+          prepareOrgUpdate(suspended, {
+            accreditations: [
+              {
+                ...suspended.accreditations[0],
+                status: ACCREDITATION_STATUS.CANCELLED,
+                accreditationNumber: null
+              }
+            ]
+          })
+        )
+
+        const saved = await repository.findById(organisation.id, 4)
+        expect(saved.accreditations[0]).toMatchObject({
+          status: ACCREDITATION_STATUS.CANCELLED,
+          accreditationNumber: null
+        })
+      })
     })
 
     describe('non-updatable fields validation', () => {
