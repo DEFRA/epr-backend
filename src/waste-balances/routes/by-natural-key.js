@@ -3,16 +3,18 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   accreditationsForYear,
+  findOrganisationAndRegistrationReadModels,
   organisationParams,
   organisationPath,
   registrationParams,
   registrationPath,
-  registrationYears,
   servedRegistrations
 } from '#routes/organisations/natural-keys.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
@@ -72,12 +74,21 @@ const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest & { app: Required<ResolvedRecords>, params: { year: Year } }} request
+   * @param {LedgerRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { year } = request.params
-    if (!registrationYears(request.app.registration).includes(year)) {
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
+    const { status } = registration
+
+    if (
+      !approvedYears(status.timeline, utcCalendarDate(new Date())).includes(
+        year
+      )
+    ) {
       throw Boom.notFound('Year not found')
     }
     const events = await readLedgerEvents(request)

@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -45,7 +46,7 @@ describe('closed year', () => {
         expect(
           closedYearRefusal({
             ...write,
-            accreditationYear: 2026,
+            accreditationYear: toYear(2026),
             now: LAST_INSTANT
           })
         ).toBeUndefined()
@@ -57,7 +58,7 @@ describe('closed year', () => {
       (write) => {
         const refusal = closedYearRefusal({
           ...write,
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           now: CLOSED
         })
 
@@ -101,7 +102,7 @@ describe('closed year', () => {
       expect(
         closedYearRefusal({
           ...write,
-          accreditationYear: 2000,
+          accreditationYear: toYear(2000),
           now: new Date('2099-01-01T00:00:00.000Z')
         })
       ).toBeUndefined()
@@ -113,7 +114,7 @@ describe('closed year', () => {
       { now: LAST_INSTANT, open: true },
       { now: CLOSED, open: false }
     ])('should be $open at $now', ({ now, open }) => {
-      expect(isRelevantYearOpen(2026, now)).toBe(open)
+      expect(isRelevantYearOpen(toYear(2026), now)).toBe(open)
     })
   })
 
@@ -121,14 +122,16 @@ describe('closed year', () => {
     it.for([PRN_STATUS.ACCEPTED, PRN_STATUS.AWAITING_ACCEPTANCE])(
       'should be true for %s within the window',
       (status) => {
-        expect(isRegulatorCancellable(status, 2026, LAST_INSTANT)).toBe(true)
+        expect(isRegulatorCancellable(status, toYear(2026), LAST_INSTANT)).toBe(
+          true
+        )
       }
     )
 
     it.for([PRN_STATUS.ACCEPTED, PRN_STATUS.AWAITING_ACCEPTANCE])(
       'should be false for %s once the year has closed',
       (status) => {
-        expect(isRegulatorCancellable(status, 2026, CLOSED)).toBe(false)
+        expect(isRegulatorCancellable(status, toYear(2026), CLOSED)).toBe(false)
       }
     )
 
@@ -143,7 +146,7 @@ describe('closed year', () => {
       expect(
         isRegulatorCancellable(
           status,
-          2000,
+          toYear(2000),
           new Date('2099-01-01T00:00:00.000Z')
         )
       ).toBe(false)
@@ -153,7 +156,7 @@ describe('closed year', () => {
   describe('closedYearConflict', () => {
     it('should be a 409 carrying the closed-year code', () => {
       const conflict = closedYearConflict(
-        new RelevantYearWindowExpiredError(2026),
+        new RelevantYearWindowExpiredError(toYear(2026)),
         'accreditationId=acc-1'
       )
 
@@ -168,7 +171,7 @@ describe('closed year', () => {
   describe('closedYearConflictFor', () => {
     it('should give the 409 for a closed-year refusal', () => {
       const conflict = closedYearConflictFor(
-        new RelevantYearWindowExpiredError(2026)
+        new RelevantYearWindowExpiredError(toYear(2026))
       )
 
       expect(conflict?.output.payload.code).toBe('RELEVANT_YEAR_CLOSED')
@@ -176,7 +179,7 @@ describe('closed year', () => {
 
     it('should name what was refused in the log reason', () => {
       const conflict = closedYearConflictFor(
-        new RelevantYearWindowExpiredError(2026),
+        new RelevantYearWindowExpiredError(toYear(2026)),
         'prnId=prn-1'
       )
 

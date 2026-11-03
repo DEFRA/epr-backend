@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -184,7 +185,7 @@ describe('applyCatchupEventsToPrn', () => {
           3,
           '2026-02-03T12:00:00.000Z'
         ),
-        payload: { prnId: 'prn-1', amount: 50, obligationYear: 2027 }
+        payload: { prnId: 'prn-1', amount: 50, obligationYear: toYear(2027) }
       }
 
       const result = applyCatchupEventsToPrn(prn, [event])

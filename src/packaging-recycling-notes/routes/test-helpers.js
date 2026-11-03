@@ -1,11 +1,15 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 /** @import { JsonWebKey } from 'node:crypto' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_YEAR,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */
 // @ts-expect-error @types/node is missing generateKeyPairSync overloads for jwk format
@@ -81,6 +85,10 @@ export const generateExternalApiTokenWithoutClientId = () => {
   return Jwt.token.generate(claims, jwtSecret, generateTokenOptions)
 }
 
+/**
+ * @param {Partial<PackagingRecyclingNote>} [overrides]
+ * @returns {PackagingRecyclingNote}
+ */
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
   schemaVersion: 2,
@@ -91,14 +99,8 @@ export const createMockIssuedPrn = (overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: 'reg-456',
-  accreditation: {
-    id: 'acc-789',
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
-  obligationYear: 2026,
+  accreditation: buildAccreditationSnapshot({ id: 'acc-789' }),
+  obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'

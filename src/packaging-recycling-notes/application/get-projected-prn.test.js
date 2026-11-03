@@ -1,3 +1,5 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -44,13 +46,7 @@ const buildPrn = (overrides = {}) => ({
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: 'ea'
-  },
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,
@@ -66,7 +62,7 @@ const buildPrn = (overrides = {}) => ({
     history: []
   },
   ...overrides,
-  obligationYear: overrides.obligationYear ?? 2026
+  obligationYear: overrides.obligationYear ?? toYear(2026)
 })
 
 /**

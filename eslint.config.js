@@ -116,7 +116,8 @@ export default [
       '**/*test-helpers.js',
       // These read a year out of a date or string, so mint it.
       'src/common/helpers/dates/year-month.js',
-      'src/reports/domain/period-for-date.js'
+      'src/reports/domain/period-for-date.js',
+      'src/routes/organisations/get.organisation.js'
     ],
     rules: {
       'no-restricted-imports': [

@@ -9,7 +9,10 @@ import {
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAccreditationSnapshot,
+  buildAwaitingAcceptancePrn
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   createMongoLedgerRepository,
   ensureLedgerCollection,
@@ -181,14 +184,7 @@ describe('PRN status concurrency against real MongoDB', () => {
       buildAcceptedPrn({
         organisation: { id: ORG_ID, name: 'Test Reprocessor' },
         registrationId: REG_ID,
-        accreditation: {
-          id: ACC_ID,
-          accreditationNumber: 'ACC-1',
-          accreditationYear: 2026,
-          material: 'plastic',
-          submittedToRegulator: 'ea',
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-        },
+        accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
         tonnage: TONNAGE
       })
     )

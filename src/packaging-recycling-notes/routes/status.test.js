@@ -1,3 +1,5 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
@@ -7,7 +9,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -107,14 +109,11 @@ const createMockPrn = (overrides = {}) => ({
   schemaVersion: 2,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: {
+  accreditation: buildAccreditationSnapshot({
     id: accreditationId,
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: MATERIAL.PLASTIC,
     submittedToRegulator: REGULATOR.EA
-  },
-  obligationYear: 2026,
+  }),
+  obligationYear: toYear(2026),
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'
