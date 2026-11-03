@@ -693,6 +693,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     ) => ({
       organisationId,
       registrationId,
+      accreditationNumber: null,
       year: YEAR,
       cadence: 'quarterly',
       period: QUARTER,

@@ -163,6 +163,11 @@ export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
   ...numbersSchema,
+  accreditationNumber: Joi.when('cadence', {
+    is: CADENCE.monthly,
+    then: Joi.string().required(),
+    otherwise: Joi.valid(null).required()
+  }),
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,

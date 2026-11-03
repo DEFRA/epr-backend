@@ -2,6 +2,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
@@ -69,6 +70,10 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
 export const buildCreateReportParams = (overrides = {}) => ({
   organisationId: DEFAULT_ORG_ID,
   registrationId: DEFAULT_REG_ID,
+  accreditationNumber:
+    (overrides.cadence ?? 'monthly') === 'monthly'
+      ? toAccreditationNumber('A24ER5000000001PL')
+      : null,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,

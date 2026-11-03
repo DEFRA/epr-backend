@@ -3,7 +3,10 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import {
+  MONTHLY_PERIODS,
+  QUARTERLY_PERIODS
+} from '#reports/domain/period-labels.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildCreateReportParams,
@@ -47,6 +50,7 @@ export const testCreateReportBehaviour = (it) => {
         submissionNumber: 1,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
+        accreditationNumber: expect.any(String),
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: DEFAULT_REPORT_PERIOD,
@@ -108,12 +112,41 @@ export const testCreateReportBehaviour = (it) => {
 
     it('stores a null accreditation number for a registered-only report', async () => {
       const { id } = await repository.createReport(
-        buildCreateReportParams({ accreditationNumber: null })
+        buildCreateReportParams({
+          cadence: 'quarterly',
+          period: QUARTERLY_PERIODS.Q1,
+          accreditationNumber: null
+        })
       )
 
       expect(await repository.findReportById(id)).toMatchObject({
         accreditationNumber: null
       })
+    })
+
+    for (const [description, accreditationNumber] of [
+      ['without', undefined],
+      ['with a null', null]
+    ]) {
+      it(`refuses an accredited report ${description} accreditation number`, async () => {
+        await expect(
+          repository.createReport(
+            buildCreateReportParams({ accreditationNumber })
+          )
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+      })
+    }
+
+    it('refuses a registered-only report with an accreditation number', async () => {
+      await expect(
+        repository.createReport(
+          buildCreateReportParams({
+            cadence: 'quarterly',
+            period: QUARTERLY_PERIODS.Q1,
+            accreditationNumber: 'A26ER5000000001PA'
+          })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
     it('throws conflict when creating duplicate report for same period and submissionNumber', async () => {
