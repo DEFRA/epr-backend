@@ -22,7 +22,6 @@ const DOMAIN_LAYERING_MESSAGE =
 
 const ns = neostandard({
   env: ['node', 'vitest'],
-  ignores: [...neostandard.resolveIgnoresFromGitignore()],
   noJsx: true,
   noStyle: true
 })
@@ -41,6 +40,9 @@ const { plugins: _n, ...nodeRecommendedModule } =
   nodePlugin.configs['flat/recommended-module']
 
 export default [
+  // neostandard only scopes its `ignores` option to its own configs, so ignore
+  // gitignored paths globally or configs without `files` still lint them
+  { ignores: neostandard.resolveIgnoresFromGitignore() },
   ...ns,
   nodeRecommendedModule,
   {
