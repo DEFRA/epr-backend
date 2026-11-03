@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 
 import { mapToAdminPrn } from './admin-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 
 describe('mapToAdminPrn', () => {
@@ -27,7 +28,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.ACCEPTED
       },
-      accreditation: { accreditationYear: futureYear }
+      accreditation: buildAccreditation({ accreditationYear: futureYear })
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(true)
@@ -39,7 +40,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.ACCEPTED
       },
-      accreditation: { accreditationYear: toYear(2000) }
+      accreditation: buildAccreditation({ accreditationYear: toYear(2000) })
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)
@@ -52,7 +53,7 @@ describe('mapToAdminPrn', () => {
         ...createMockIssuedPrn().status,
         currentStatus: PRN_STATUS.CANCELLED
       },
-      accreditation: { accreditationYear: futureYear }
+      accreditation: buildAccreditation({ accreditationYear: futureYear })
     })
 
     expect(mapToAdminPrn(prn).regulatorCancellable).toBe(false)

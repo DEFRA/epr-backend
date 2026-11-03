@@ -1,6 +1,6 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 /** @import { JsonWebKey } from 'node:crypto' */
-/** @import { AccreditationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
 import { toYear } from '#common/helpers/dates/year.js'
 import Jwt from '@hapi/jwt'
@@ -87,10 +87,10 @@ export const generateExternalApiTokenWithoutClientId = () => {
 }
 
 /**
- * @param {Partial<Omit<PackagingRecyclingNote, 'accreditation'>> & { accreditation?: Partial<AccreditationSnapshot> }} [overrides]
+ * @param {Partial<PackagingRecyclingNote>} [overrides]
  * @returns {PackagingRecyclingNote}
  */
-export const createMockIssuedPrn = ({ accreditation, ...overrides } = {}) => ({
+export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
   schemaVersion: 2,
   version: 1,
@@ -102,8 +102,7 @@ export const createMockIssuedPrn = ({ accreditation, ...overrides } = {}) => ({
   registrationId: 'reg-456',
   accreditation: buildAccreditation({
     id: 'acc-789',
-    accreditationNumber: 'ACC-2026-001',
-    ...accreditation
+    accreditationNumber: 'ACC-2026-001'
   }),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {
