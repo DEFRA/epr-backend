@@ -175,7 +175,7 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       })
 
       it('stores a replaced number trimmed and upper-case', async () => {
-        const organisation = organisationWithNumbers('ACC100021', null)
+        const organisation = organisationWithNumbers(null, null)
         await repository.insert(organisation)
         const inserted = await repository.findById(organisation.id)
 

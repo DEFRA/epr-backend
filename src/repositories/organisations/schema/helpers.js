@@ -337,7 +337,8 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
  * saved without it. The accreditation keeps its PRNs, which carry the number
  * forward, so the reports that join through them fail on the missing value.
  *
- * A number that is already stored may be corrected, but it may not be removed.
+ * A number that is already stored may be neither removed nor changed. Reads
+ * by number would strand the records stored under the old one.
  *
  * @param {Array<{ id: string, accreditationNumber?: string | null }>} accreditations
  * @param {Array<{ id: string, accreditationNumber?: string | null }>} existingAccreditations
@@ -357,12 +358,24 @@ export function validateAccreditationNumbersRetained(
       numberedById.has(acc.id) && typeof acc.accreditationNumber !== 'string'
   )
 
-  if (unnumbered.length === 0) {
-    return
+  if (unnumbered.length > 0) {
+    const ids = unnumbered.map((acc) => acc.id).join(', ')
+    throw Boom.badData(
+      `Accreditations with id ${ids} cannot lose their accreditation number`
+    )
   }
 
-  const ids = unnumbered.map((acc) => acc.id).join(', ')
-  throw Boom.badData(
-    `Accreditations with id ${ids} cannot lose their accreditation number`
+  const renumbered = accreditations.filter(
+    (acc) =>
+      numberedById.has(acc.id) &&
+      acc.accreditationNumber !== numberedById.get(acc.id)
   )
+
+  if (renumbered.length > 0) {
+    const changes = renumbered.map(
+      (acc) =>
+        `Accreditation ${acc.id} cannot change its number from ${numberedById.get(acc.id)} to ${acc.accreditationNumber}`
+    )
+    throw Boom.badData(changes.join('; '))
+  }
 }

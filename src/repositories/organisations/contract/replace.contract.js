@@ -1348,6 +1348,87 @@ export const testReplaceBehaviour = (it) => {
           )
         ).rejects.toThrow('cannot lose their accreditation number')
       })
+
+      it('accepts the first number given to an accreditation', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, {
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                accreditationNumber: 'ACC999'
+              }
+            ]
+          })
+        )
+
+        const numbered = await repository.findById(organisation.id, 2)
+        expect(numbered.accreditations[0].accreditationNumber).toBe('ACC999')
+      })
+
+      it('rejects an update that would change the number of an accreditation, naming both numbers', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, {
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                accreditationNumber: 'ACC999'
+              }
+            ]
+          })
+        )
+        const numbered = await repository.findById(organisation.id, 2)
+
+        await expect(
+          repository.replace(
+            organisation.id,
+            numbered.version,
+            prepareOrgUpdate(numbered, {
+              accreditations: [
+                { ...numbered.accreditations[0], accreditationNumber: 'ACC888' }
+              ]
+            })
+          )
+        ).rejects.toThrow(
+          `Accreditation ${numbered.accreditations[0].id} cannot change its number from ACC999 to ACC888`
+        )
+      })
+
+      it('accepts an update that leaves the number of an accreditation as it is', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(organisation, {
+            accreditations: [
+              {
+                ...organisation.accreditations[0],
+                accreditationNumber: 'ACC999'
+              }
+            ]
+          })
+        )
+        const numbered = await repository.findById(organisation.id, 2)
+
+        await expect(
+          repository.replace(
+            organisation.id,
+            numbered.version,
+            prepareOrgUpdate(numbered, {
+              accreditations: [{ ...numbered.accreditations[0] }]
+            })
+          )
+        ).resolves.toBeUndefined()
+      })
     })
 
     describe('non-updatable fields validation', () => {
