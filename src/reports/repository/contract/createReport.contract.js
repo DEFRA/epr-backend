@@ -125,7 +125,7 @@ export const testCreateReportBehaviour = (it) => {
     })
 
     for (const [description, accreditationNumber] of [
-      ['without', undefined],
+      ['without an', undefined],
       ['with a null', null]
     ]) {
       it(`refuses an accredited report ${description} accreditation number`, async () => {
