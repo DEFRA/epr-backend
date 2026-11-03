@@ -64,7 +64,11 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
 
       expect(totalFor(totals, accreditation)).toStrictEqual({
-        id: accreditation,
+        id: {
+          organisationId: accreditation.organisationId,
+          registrationId: accreditation.registrationId,
+          accreditationId: accreditation.accreditationId
+        },
         tonnageByStatus: {
           [PRN_STATUS.DRAFT]: 10,
           [PRN_STATUS.AWAITING_ACCEPTANCE]: 50,

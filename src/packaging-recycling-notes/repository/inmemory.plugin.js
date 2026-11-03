@@ -138,17 +138,17 @@ const performSumTonnageByAccreditation =
 
 /**
  * @param {Storage} storage
- * @returns {(accreditationId: import('./port.js').AccreditationId) => Promise<PackagingRecyclingNote[]>}
+ * @returns {(accreditation: import('./port.js').AccreditationNumbers) => Promise<PackagingRecyclingNote[]>}
  */
 const performFindByAccreditation =
   (storage) =>
-  async ({ organisationId, registrationId, accreditationId }) => {
+  async ({ organisationNumber, registrationNumber, accreditationNumber }) => {
     const results = []
     for (const prn of storage.values()) {
       if (
-        prn.organisation?.id === organisationId &&
-        prn.registrationId === registrationId &&
-        prn.accreditation?.id === accreditationId &&
+        prn.organisation?.organisationNumber === organisationNumber &&
+        prn.registration?.registrationNumber === registrationNumber &&
+        prn.accreditation?.accreditationNumber === accreditationNumber &&
         prn.status?.currentStatus !== PRN_STATUS.DELETED
       ) {
         results.push(structuredClone(prn))

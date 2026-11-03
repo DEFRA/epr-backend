@@ -16,6 +16,7 @@ import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.j
  * @typedef {object} PrnRepoFixtures
  * @property {PackagingRecyclingNotesRepositoryFactory} prnRepositoryFactory
  * @property {PackagingRecyclingNotesRepository} prnRepository
+ * @property {() => Promise<void>} givenAccreditation - The in-memory adapter reads the numbers each PRN stores, so no organisation need be held
  */
 
 const it = /** @type {import('vitest').TestAPI<PrnRepoFixtures>} */ (
@@ -30,6 +31,11 @@ const it = /** @type {import('vitest').TestAPI<PrnRepoFixtures>} */ (
       const mockLogger = createMockLogger()
       const repository = prnRepositoryFactory(mockLogger)
       await use(repository)
+    },
+
+    // eslint-disable-next-line no-empty-pattern
+    givenAccreditation: async ({}, use) => {
+      await use(async () => {})
     }
   })
 )

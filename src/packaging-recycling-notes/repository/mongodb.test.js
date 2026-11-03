@@ -2,6 +2,12 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
@@ -19,6 +25,8 @@ import { PrnNumberConflictError } from './port.js'
  */
 
 const DATABASE_NAME = 'epr-backend'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** Asserts a structural test stub satisfies the Mongo Db surface the code under test exercises. */
 const asDb = (/** @type {unknown} */ stub) => /** @type {Db} */ (stub)
@@ -51,6 +59,38 @@ const it = mongoIt.extend({
   prnRepository: async (/** @type {*} */ { prnRepositoryFactory }, use) => {
     const repository = prnRepositoryFactory(stubLogger())
     await use(repository)
+  },
+
+  /** Holds the organisation the adapter reads an accreditation's numbers back to ids from. */
+  givenAccreditation: async (/** @type {*} */ { mongoClient }, use) => {
+    const organisations = (
+      await createOrganisationsRepository(mongoClient.db(DATABASE_NAME))
+    )()
+    await use(
+      async (
+        /** @type {import('./contract/test-data.js').AccreditationKeys} */ keys
+      ) => {
+        await organisations.insert(
+          buildOrganisation({
+            id: keys.organisationId,
+            orgId: Number(keys.organisationNumber),
+            registrations: [
+              buildRegistration({
+                id: keys.registrationId,
+                registrationNumber: keys.registrationNumber,
+                accreditationId: keys.accreditationId
+              })
+            ],
+            accreditations: [
+              buildAccreditation({
+                id: keys.accreditationId,
+                accreditationNumber: keys.accreditationNumber
+              })
+            ]
+          })
+        )
+      }
+    )
   }
 })
 

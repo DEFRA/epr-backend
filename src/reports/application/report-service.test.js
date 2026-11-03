@@ -29,6 +29,7 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -51,7 +52,12 @@ const buildRegistration = (overrides = {}) => {
   const accreditationId = hasAccreditationIdOverride
     ? overrides.accreditationId
     : new ObjectId().toString()
-  const defaultAccreditation = accreditationId ? { status: 'approved' } : null
+  const defaultAccreditation = accreditationId
+    ? {
+        status: 'approved',
+        accreditationNumber: toAccreditationNumber('A25SR500010912PL')
+      }
+    : null
   const accreditation =
     'accreditation' in overrides
       ? overrides.accreditation
@@ -144,7 +150,8 @@ const defaultParams = () => {
     registrationId: registration.id,
     numbers: {
       organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      accreditationNumber: null
     },
     registration,
     year: toYear(2024),
@@ -768,11 +775,14 @@ describe('report-service', () => {
       const accreditationOf = ({
         organisationId,
         registrationId,
+        numbers,
         registration
       }) => ({
         organisationId,
         registrationId,
-        accreditationId: registration.accreditationId
+        accreditationId: registration.accreditationId,
+        ...numbers,
+        accreditationNumber: registration.accreditation?.accreditationNumber
       })
 
       const buildIssuedPrn = (accreditation, tonnage) =>

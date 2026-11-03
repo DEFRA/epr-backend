@@ -1,3 +1,7 @@
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
@@ -42,6 +46,7 @@ import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /**
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
@@ -61,11 +66,17 @@ const organisation = buildOrganisation({
 const ownIds = {
   organisationId: organisation.id,
   registrationId: registration.id,
-  accreditationId: accredited.id
+  accreditationId: accredited.id,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: registration.registrationNumber,
+  accreditationNumber: /** @type {AccreditationNumber} */ (
+    accredited.accreditationNumber
+  )
 }
 const otherIds = {
   ...ownIds,
-  accreditationId: new ObjectId().toString()
+  accreditationId: new ObjectId().toString(),
+  accreditationNumber: toAccreditationNumber('A26ER9999999999PA')
 }
 
 const fullSiteAddress = {
@@ -105,11 +116,13 @@ const exported = {
     ...underAccreditation(ownIds),
     organisation: {
       id: ownIds.organisationId,
+      organisationNumber: ownIds.organisationNumber,
       name: 'Test Organisation',
       tradingName: 'Test Trading'
     },
     accreditation: buildAccreditationSnapshot({
       id: ownIds.accreditationId,
+      accreditationNumber: ownIds.accreditationNumber,
       material: 'glass',
       glassRecyclingProcess: 'glass_re_melt',
       siteAddress: undefined

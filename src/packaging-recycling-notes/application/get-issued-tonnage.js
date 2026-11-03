@@ -3,9 +3,9 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
 
 /**
  * @typedef {Object} GetIssuedTonnageParams
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null | undefined} accreditationId
+ * @property {import('#domain/organisations/numbers.js').OrganisationNumber} organisationNumber
+ * @property {import('#domain/organisations/numbers.js').RegistrationNumber} registrationNumber
+ * @property {Pick<import('#domain/organisations/accreditation.js').Accreditation, 'accreditationNumber'> | null | undefined} accreditation
  * @property {string} startDate - Calendar-date string e.g. '2025-01-01', bare
  *   or a full ISO datetime — startOfDay()/endOfDay() tolerate either shape.
  * @property {string} endDate - Calendar-date string e.g. '2025-01-31', bare
@@ -15,7 +15,9 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
 /**
  * Retrieves all non-deleted PRNs for an accreditation and aggregates their
  * issued tonnage for the given period.
- * Returns undefined when accreditationId is absent (non-accredited operator).
+ * Returns null when there is no accreditation (non-accredited operator). An
+ * accreditation with no number has issued no PRNs, since a PRN carries its
+ * accreditation's number.
  *
  * @param {import('../repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {GetIssuedTonnageParams} params
@@ -23,14 +25,18 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
  */
 export async function getIssuedTonnage(prnRepository, params) {
   const {
-    organisationId,
-    registrationId,
-    accreditationId,
+    organisationNumber,
+    registrationNumber,
+    accreditation,
     startDate,
     endDate
   } = params
-  if (!accreditationId) {
+  if (!accreditation) {
     return null
+  }
+  const { accreditationNumber } = accreditation
+  if (!accreditationNumber) {
+    return { issuedTonnage: 0 }
   }
   const start = startOfDay(startDate)
   const end = endOfDay(endDate)
@@ -38,9 +44,9 @@ export async function getIssuedTonnage(prnRepository, params) {
   // Period filtering stays in the domain layer while the "issued in period" rules are still fluid.
   // Once stable, it could move to the repository with an index on status.issued.at.
   const prns = await prnRepository.findByAccreditation({
-    organisationId,
-    registrationId,
-    accreditationId
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
   })
   return {
     issuedTonnage: aggregateIssuedTonnage(prns, {

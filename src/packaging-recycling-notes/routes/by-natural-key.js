@@ -50,6 +50,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {RegistrationParams & { year: Year }} AccreditationParams
  * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
  * @typedef {AccreditationParams & { prnId: string }} PrnParams
@@ -345,19 +346,20 @@ const prnsList = {
    * caught up to the ledger, and the filters are applied in memory.
    *
    * @param {PrnRequest & {
-   *   params: AccreditationParams & AccreditationIds,
+   *   params: AccreditationParams & AccreditationIds & { accreditationNumber: AccreditationNumber },
    *   query: { statuses?: PrnStatus[], prnNumber?: string }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId, accreditationId } = request.params
+    const { organisationNumber, registrationNumber, accreditationNumber } =
+      request.params
     const { statuses, prnNumber } = request.query
     const stored =
       await request.packagingRecyclingNotesRepository.findByAccreditation({
-        organisationId,
-        registrationId,
-        accreditationId
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber
       })
     const service = createWasteBalanceService(request.ledgerRepository)
     const prns = await Promise.all(

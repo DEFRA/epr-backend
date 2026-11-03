@@ -29,6 +29,12 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
+ * The numbers of an accreditation and the registration and organisation above it.
+ *
+ * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & { accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} AccreditationNumbers
+ */
+
+/**
  * @typedef {Object} UpdateStatusParams
  * @property {string} id - PRN ID
  * @property {number} version - Expected current document version (compare-and-set token for OCC)
@@ -123,7 +129,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
  * @property {(prn: Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
- * @property {(accreditationId: AccreditationId) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
+ * @property {(accreditation: AccreditationNumbers) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByIdsParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByIds
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: SumTonnageByAccreditationParams) => Promise<AccreditationTonnage[]>} sumTonnageByAccreditation - Every accreditation with at least one PRN outside `excludeStatuses`, in no particular order

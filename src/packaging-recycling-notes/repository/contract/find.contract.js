@@ -9,6 +9,7 @@ import {
 } from './test-data.js'
 
 /** @import { PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+/** @import { AccreditationKeys } from './test-data.js' */
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -124,7 +125,29 @@ export const testFindBehaviour = (it) => {
     })
 
     describe('findByAccreditation', () => {
+      /** @type {(accreditation: AccreditationKeys) => Promise<void>} */
+      let givenAccreditation
+
+      beforeEach(
+        async (
+          /** @type {{ givenAccreditation: typeof givenAccreditation }} */ {
+            givenAccreditation: given
+          }
+        ) => {
+          givenAccreditation = given
+        }
+      )
+
       it('returns empty array when no PRNs for accreditation', async () => {
+        const accreditation = buildAccreditationId()
+        await givenAccreditation(accreditation)
+
+        const result = await repository.findByAccreditation(accreditation)
+
+        expect(result).toEqual([])
+      })
+
+      it('returns empty array for an accreditation no organisation holds', async () => {
         const result = await repository.findByAccreditation(
           buildAccreditationId()
         )
@@ -134,6 +157,9 @@ export const testFindBehaviour = (it) => {
 
       it('returns all PRNs for the specified accreditation', async () => {
         const accreditation = buildAccreditationId()
+        const other = buildAccreditationId()
+        await givenAccreditation(accreditation)
+        await givenAccreditation(other)
 
         await repository.create(
           buildDraftPrn(underAccreditation(accreditation, { tonnage: 100 }))
@@ -142,9 +168,7 @@ export const testFindBehaviour = (it) => {
           buildDraftPrn(underAccreditation(accreditation, { tonnage: 200 }))
         )
         await repository.create(
-          buildDraftPrn(
-            underAccreditation(buildAccreditationId(), { tonnage: 300 })
-          )
+          buildDraftPrn(underAccreditation(other, { tonnage: 300 }))
         )
 
         const result = await repository.findByAccreditation(accreditation)
@@ -156,6 +180,7 @@ export const testFindBehaviour = (it) => {
 
       it('returns PRNs with their ids populated', async () => {
         const accreditation = buildAccreditationId()
+        await givenAccreditation(accreditation)
 
         await repository.create(
           buildDraftPrn(underAccreditation(accreditation))
@@ -171,6 +196,8 @@ export const testFindBehaviour = (it) => {
       it('does not return PRNs from different accreditations', async () => {
         const accreditationA = buildAccreditationId()
         const accreditationB = buildAccreditationId()
+        await givenAccreditation(accreditationA)
+        await givenAccreditation(accreditationB)
 
         await repository.create(
           buildDraftPrn(underAccreditation(accreditationA))
@@ -187,13 +214,14 @@ export const testFindBehaviour = (it) => {
 
       it('reads nothing for the same accreditation under a different organisation', async () => {
         const accreditation = buildAccreditationId()
+        await givenAccreditation(accreditation)
         await repository.create(
           buildDraftPrn(underAccreditation(accreditation))
         )
 
         const result = await repository.findByAccreditation({
           ...accreditation,
-          organisationId: 'org-stranger'
+          organisationNumber: buildAccreditationId().organisationNumber
         })
 
         expect(result).toEqual([])
@@ -201,13 +229,14 @@ export const testFindBehaviour = (it) => {
 
       it('reads nothing for the same accreditation under a different registration', async () => {
         const accreditation = buildAccreditationId()
+        await givenAccreditation(accreditation)
         await repository.create(
           buildDraftPrn(underAccreditation(accreditation))
         )
 
         const result = await repository.findByAccreditation({
           ...accreditation,
-          registrationId: 'reg-stranger'
+          registrationNumber: buildAccreditationId().registrationNumber
         })
 
         expect(result).toEqual([])
@@ -215,6 +244,7 @@ export const testFindBehaviour = (it) => {
 
       it('does not return deleted PRNs (soft delete)', async () => {
         const accreditation = buildAccreditationId()
+        await givenAccreditation(accreditation)
 
         await repository.create(
           buildDraftPrn(underAccreditation(accreditation, { tonnage: 100 }))

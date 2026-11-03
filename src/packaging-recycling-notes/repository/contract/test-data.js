@@ -1,5 +1,11 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { randomUUID } from 'node:crypto'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { ObjectId } from 'mongodb'
+import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const ACCREDITATION_YEAR = 2026
@@ -47,34 +53,55 @@ export const buildAccreditationSnapshot = (overrides = {}) => ({
 })
 
 /**
- * Builds the identity of an accreditation: the accreditation, and the
- * registration and organisation above it. Unique per call — the Mongo test
- * database is shared across the tests in a file, so no two may share ids.
- *
- * @param {Partial<import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
+ * @typedef {import('../port.js').AccreditationId & import('../port.js').AccreditationNumbers} AccreditationKeys
  */
-export const buildAccreditationId = (overrides = {}) => ({
-  organisationId: `org-${randomUUID()}`,
-  registrationId: `reg-${randomUUID()}`,
-  accreditationId: `acc-${randomUUID()}`,
-  ...overrides
-})
 
 /**
- * Places a PRN under an accreditation, so that the ids the PRN carries agree
- * with the accreditation identity a reader names it by.
+ * Builds the identity of an accreditation, by both its ids and its numbers:
+ * the accreditation, and the registration and organisation above it. Unique
+ * per call — the Mongo test database is shared across the tests in a file, so
+ * no two may share ids or numbers.
  *
- * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId} accreditationId
+ * @param {Partial<AccreditationKeys>} [overrides]
+ * @returns {AccreditationKeys}
+ */
+export const buildAccreditationId = (overrides = {}) => {
+  const unique = randomInt(100_000_000, 1_000_000_000)
+  return {
+    organisationId: new ObjectId().toHexString(),
+    registrationId: new ObjectId().toHexString(),
+    accreditationId: new ObjectId().toHexString(),
+    organisationNumber: toOrganisationNumber(String(unique)),
+    registrationNumber: toRegistrationNumber(`R26ER${unique}PA`),
+    accreditationNumber: toAccreditationNumber(`A26ER${unique}PA`),
+    ...overrides
+  }
+}
+
+/**
+ * Places a PRN under an accreditation, so that the ids and numbers the PRN
+ * carries agree with the accreditation identity a reader names it by.
+ *
+ * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & Partial<import('#domain/organisations/numbers.js').Numbers>} accreditationId
  * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} [overrides]
  */
 export const underAccreditation = (accreditationId, overrides = {}) => ({
   organisation: {
     id: accreditationId.organisationId,
-    name: 'Test Organisation'
+    name: 'Test Organisation',
+    ...(accreditationId.organisationNumber && {
+      organisationNumber: accreditationId.organisationNumber
+    })
   },
   registrationId: accreditationId.registrationId,
+  ...(accreditationId.registrationNumber && {
+    registration: { registrationNumber: accreditationId.registrationNumber }
+  }),
   accreditation: buildAccreditationSnapshot({
-    id: /** @type {string} */ (accreditationId.accreditationId)
+    id: /** @type {string} */ (accreditationId.accreditationId),
+    ...(accreditationId.accreditationNumber && {
+      accreditationNumber: accreditationId.accreditationNumber
+    })
   }),
   ...overrides
 })

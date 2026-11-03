@@ -6,6 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { idsForNumbers } from '#repositories/organisations/ids-for-numbers.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import {
@@ -17,6 +19,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, PrnNumbers, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -171,20 +174,30 @@ const performCreate = async (db, prn) => {
 }
 
 /**
+ * PRNs are indexed on their organisation's id, not its number, so the
+ * accreditation's numbers are read back to ids first.
+ *
  * @param {Db} db
- * @param {import('./port.js').AccreditationId} accreditationId
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {import('./port.js').AccreditationNumbers} accreditation
  * @returns {Promise<PackagingRecyclingNote[]>}
  */
 const performFindByAccreditation = async (
   db,
-  { organisationId, registrationId, accreditationId }
+  organisationsRepository,
+  accreditation
 ) => {
+  const ids = await idsForNumbers(organisationsRepository, accreditation)
+  if (!ids) {
+    return []
+  }
+
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
-      'organisation.id': organisationId,
-      registrationId,
-      'accreditation.id': accreditationId,
+      'organisation.id': ids.organisationId,
+      registrationId: ids.registrationId,
+      'accreditation.id': ids.accreditationId,
       'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })
     .toArray()
@@ -683,11 +696,12 @@ export const createPackagingRecyclingNotesRepository = async (
   excludeOrganisationIds
 ) => {
   await ensureCollection(db)
+  const organisationsRepository = (await createOrganisationsRepository(db))()
 
   return (/** @type {TypedLogger} */ logger) => ({
     create: (prn) => performCreate(db, prn),
-    findByAccreditation: (accreditationId) =>
-      performFindByAccreditation(db, accreditationId),
+    findByAccreditation: (accreditation) =>
+      performFindByAccreditation(db, organisationsRepository, accreditation),
     findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),

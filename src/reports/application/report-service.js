@@ -21,6 +21,7 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
+ * @import { RequiredNumbers } from '#domain/organisations/numbers.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -28,6 +29,12 @@ import {
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
+ */
+
+/**
+ * The numbers of the registration a report is for.
+ *
+ * @typedef {Pick<RequiredNumbers, 'organisationNumber' | 'registrationNumber'>} RegistrationNumbers
  */
 
 /**
@@ -178,6 +185,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
+ * @param {RegistrationNumbers} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -195,6 +203,7 @@ export async function fetchOrGenerateReportForPeriod({
   overseasSitesRepository,
   organisationId,
   registrationId,
+  numbers,
   registration,
   year,
   cadence,
@@ -242,8 +251,7 @@ export async function fetchOrGenerateReportForPeriod({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
-    organisationId,
-    registrationId,
+    numbers,
     registration,
     year,
     cadence,
@@ -329,8 +337,7 @@ async function readSubmissionRowStates({
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {OperatorCategory} params.operatorCategory
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {RegistrationNumbers} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -343,8 +350,7 @@ async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
   operatorCategory,
-  organisationId,
-  registrationId,
+  numbers,
   registration,
   year,
   cadence,
@@ -369,9 +375,9 @@ async function getAggregatedReportDetail({
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
-    organisationId,
-    registrationId,
-    accreditationId: registration.accreditationId,
+    organisationNumber: numbers.organisationNumber,
+    registrationNumber: numbers.registrationNumber,
+    accreditation: registration.accreditation,
     startDate: aggregatedReportDetail.startDate,
     endDate: aggregatedReportDetail.endDate
   })
@@ -485,7 +491,7 @@ function summariseIncompleteDataIfEnabled(
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
+ * @param {RequiredNumbers} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -551,8 +557,7 @@ export async function createReportForPeriod({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory: getOperatorCategory(registration),
-    organisationId,
-    registrationId,
+    numbers,
     registration,
     year,
     cadence,
