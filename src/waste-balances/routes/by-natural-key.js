@@ -10,6 +10,7 @@ import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   accreditationsForYear,
+  findOrganisationAndRegistrationReadModels,
   organisationParams,
   organisationPath,
   registrationParams,
@@ -24,7 +25,6 @@ import { wasteBalanceSchema } from './response.schema.js'
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
@@ -78,20 +78,11 @@ const registeredOnlyLedgerGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationNumber, registrationNumber, year } = request.params
+    const { year } = request.params
 
-    /**
-     * Route only reached when
-     * - {organisationNumber} exists
-     * - {registrationNumber} exists and belongs to {organisationNumber}
-     * else atNaturalKeys wrapper generates 404 response
-     */
-    const organisation = /** @type {Organisation} */ (
-      await request.organisationReadRepository.findByOrganisationNumber(
-        organisationNumber
-      )
-    )
-    const { status } = organisation.registrations[registrationNumber]
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
+    const { status } = registration
 
     if (
       !approvedYears(status.timeline, utcCalendarDate(new Date())).includes(

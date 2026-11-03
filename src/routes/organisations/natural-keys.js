@@ -14,11 +14,13 @@ import {
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
+ * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  *
  * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
@@ -98,6 +100,33 @@ export async function findRegistrationByNumber(
     organisation,
     registrationNumber
   )
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
+
+  return { organisation, registration }
+}
+
+/**
+ * The organisation and registration the natural keys name, as the read model
+ * shows them. Not found when the organisation does not hold the registration.
+ *
+ * @param {HapiRequest & { params: RegistrationParams }} request
+ * @returns {Promise<{ organisation: ReadModelOrganisation, registration: ReadModelRegistration }>}
+ */
+export async function findOrganisationAndRegistrationReadModels({
+  organisationReadRepository,
+  params: { organisationNumber, registrationNumber }
+}) {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
+    throw Boom.notFound('Organisation not found')
+  }
+
+  const registration = organisation.registrations[registrationNumber]
   if (!registration) {
     throw Boom.notFound('Registration not found')
   }

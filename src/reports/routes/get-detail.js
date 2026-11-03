@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
@@ -10,7 +11,6 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -83,14 +83,11 @@ export const reportsGetDetail = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      organisationReadRepository,
       params
     } = request
     const {
       organisationId,
-      organisationNumber,
       registrationId,
-      registrationNumber,
       year,
       cadence,
       period,
@@ -102,18 +99,8 @@ export const reportsGetDetail = {
       params
     )
 
-    /**
-     * Route only reached when
-     * - {organisationNumber} exists
-     * - {registrationNumber} exists and belongs to {organisationNumber}
-     * else atNaturalKeys wrapper generates 404 response
-     */
-    const organisation = /** @type {Organisation} */ (
-      await organisationReadRepository.findByOrganisationNumber(
-        organisationNumber
-      )
-    )
-    const registration = organisation.registrations[registrationNumber]
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,

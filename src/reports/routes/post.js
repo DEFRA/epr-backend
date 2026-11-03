@@ -11,6 +11,7 @@ import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
@@ -21,7 +22,6 @@ import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
- * @import { Organisation } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -33,6 +33,20 @@ import { reportResponseFailAction } from './response-fail-action.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
+
+/**
+ * @param {TypedLogger} logger
+ * @param {string} reportId
+ */
+const logReportCreated = (logger, reportId) => {
+  logger.info({
+    message: `Report created: id=${reportId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+    }
+  })
+}
 
 /**
  * @param {TypedLogger} logger
@@ -85,16 +99,13 @@ export const reportsPost = {
       packagingRecyclingNotesRepository,
       reportsRepository,
       overseasSitesRepository,
-      organisationReadRepository,
       params,
       app,
       logger
     } = request
     const {
       organisationId,
-      organisationNumber,
       registrationId,
-      registrationNumber,
       year,
       cadence,
       period,
@@ -107,18 +118,8 @@ export const reportsPost = {
         params
       )
 
-      /**
-       * Route only reached when
-       * - {organisationNumber} exists
-       * - {registrationNumber} exists and belongs to {organisationNumber}
-       * else atNaturalKeys wrapper generates 404 response
-       */
-      const organisation = /** @type {Organisation} */ (
-        await organisationReadRepository.findByOrganisationNumber(
-          organisationNumber
-        )
-      )
-      const registration = organisation.registrations[registrationNumber]
+      const { registration } =
+        await findOrganisationAndRegistrationReadModels(request)
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -156,13 +157,7 @@ export const reportsPost = {
         createdAt: createdReport.status.created.at
       })
 
-      logger.info({
-        message: `Report created: id=${createdReport.id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        }
-      })
+      logReportCreated(logger, createdReport.id)
 
       return h
         .response(withRegistrationDetails(createdReport, registration))
