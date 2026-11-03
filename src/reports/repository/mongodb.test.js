@@ -9,7 +9,7 @@ import { createMongoError } from '#test/mongo-error.js'
 
 /**
  * @import { ReportsRepositoryFactory } from './port.js'
- * @typedef {{ mongoClient: MongoClient, reportsRepository: ReportsRepositoryFactory, storeAccreditationNumber: (reportId: string, accreditationNumber: string | null) => Promise<void> }} ReportsFixtures
+ * @typedef {{ mongoClient: MongoClient, reportsRepository: ReportsRepositoryFactory }} ReportsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -27,15 +27,6 @@ const it = /** @type {import('vitest').TestAPI<ReportsFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       const factory = await createReportsRepository(database)
       await use(factory)
-    },
-
-    storeAccreditationNumber: async ({ mongoClient }, use) => {
-      await use(async (reportId, accreditationNumber) => {
-        await mongoClient
-          .db(DATABASE_NAME)
-          .collection('reports')
-          .updateOne({ id: reportId }, { $set: { accreditationNumber } })
-      })
     }
   })
 )

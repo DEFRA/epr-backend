@@ -1,11 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
-import {
-  backfillReportNumbers,
-  removeReportAccreditationNumbers
-} from '#report-numbers-backfill/application/backfill.js'
+import { backfillReportNumbers } from '#report-numbers-backfill/application/backfill.js'
 
 import { config } from '../config.js'
 
@@ -13,6 +12,8 @@ import { config } from '../config.js'
 
 const LOCK_NAME = 'report-numbers-backfill'
 const UNMAPPED_SAMPLE_SIZE = 10
+// Required by the repository factory; the backfill never generates download URLs.
+const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
 
 /**
  * Each reason with its count and the first few report ids, so one line says
@@ -32,30 +33,44 @@ const describeUnmapped = (unmappedReasons) =>
 const runBackfill = async (server) => {
   const isDryRun = !config.get('featureFlags.reportNumbersBackfill')
 
-  const deps = {
-    reportsRepository: (await createReportsRepository(server.db))(),
-    systemLogsRepository: (await createSystemLogsRepository(server.db))(logger),
-    organisationsRepository: (await createOrganisationsRepository(server.db))(),
-    logger
-  }
   const { mapped, unmapped, unmappedReasons, missing, failed, auditFailed } =
-    await backfillReportNumbers(deps, { isDryRun })
-  const removal = await removeReportAccreditationNumbers(deps, { isDryRun })
+    await backfillReportNumbers(
+      {
+        reportsRepository: (await createReportsRepository(server.db))(),
+        systemLogsRepository: (await createSystemLogsRepository(server.db))(
+          logger
+        ),
+        organisationsRepository: (
+          await createOrganisationsRepository(server.db)
+        )(),
+        summaryLogsRepository: (
+          await createSummaryLogsRepository(server.db, {
+            s3Client: createS3Client({
+              region: config.get('awsRegion'),
+              endpoint: config.get('s3Endpoint'),
+              forcePathStyle: config.get('isDevelopment')
+            }),
+            preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
+          })
+        )(logger),
+        logger
+      },
+      { isDryRun }
+    )
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}" accreditationNumbers="held=${removal.held} removed=${removal.removed} failed=${removal.failed} auditFailed=${removal.auditFailed}"`
+    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}"`
   })
 }
 
 /**
- * Startup backfill of the organisation and registration numbers on reports
- * stored before they were written beside the ids, which also removes any
- * accreditation number a report was stored with. Flag off (the default) only
- * reports what it would change; on writes the changes through the reports
- * repository, auditing each change. Both modes log one summary line, which says
- * why reports cannot be mapped and how many accreditation numbers it removes.
- * Idempotent, so safe to leave enabled across restarts.
+ * Startup backfill of the organisation, registration and accreditation numbers
+ * on reports stored before they were written beside the ids. A quarterly report
+ * gets a null accreditation number. Flag off (the default) only reports what it
+ * would add; on writes them through the reports repository, auditing each
+ * change. Both modes log one summary line, which says why reports cannot be
+ * mapped. Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */

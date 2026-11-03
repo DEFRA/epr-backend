@@ -29,7 +29,6 @@ import {
 } from './validation.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @import {
@@ -260,8 +259,10 @@ const findReportById = async (reports, reportId) => {
 const findIdsWithoutNumbers = async (reports) =>
   [...reports.values()]
     .filter(
-      ({ organisationNumber, registrationNumber }) =>
-        organisationNumber === undefined || registrationNumber === undefined
+      ({ organisationNumber, registrationNumber, accreditationNumber }) =>
+        organisationNumber === undefined ||
+        registrationNumber === undefined ||
+        accreditationNumber === undefined
     )
     .map(({ id }) => id)
 
@@ -289,34 +290,6 @@ const assignNumbers = async (reports, reportId, numbers) => {
   }
 
   reports.set(validatedId, { ...report, ...validatedNumbers })
-}
-
-/**
- * @param {Map<string, Report>} reports
- * @returns {Promise<string[]>}
- */
-const findIdsWithAccreditationNumber = async (reports) =>
-  [...reports.values()]
-    .filter((report) => 'accreditationNumber' in report)
-    .map(({ id }) => id)
-
-/**
- * @param {Map<string, Report>} reports
- * @param {string} reportId
- * @returns {Promise<{ accreditationNumber: AccreditationNumber | null } | null>}
- */
-const removeAccreditationNumber = async (reports, reportId) => {
-  const validatedId = validateFindReportById(reportId)
-  const stored = reports.get(validatedId)
-  if (!stored || !('accreditationNumber' in stored)) {
-    return null
-  }
-  const { accreditationNumber, ...report } =
-    /** @type {Report & { accreditationNumber: AccreditationNumber | null }} */ (
-      stored
-    )
-  reports.set(validatedId, report)
-  return { accreditationNumber }
 }
 
 /**
@@ -746,10 +719,6 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
       hasReportSubmittedSince(reports, organisationId, registrationId, since),
     findIdsWithoutNumbers: () => findIdsWithoutNumbers(reports),
     assignNumbers: (reportId, numbers) =>
-      assignNumbers(reports, reportId, numbers),
-    findIdsWithAccreditationNumber: () =>
-      findIdsWithAccreditationNumber(reports),
-    removeAccreditationNumber: (reportId) =>
-      removeAccreditationNumber(reports, reportId)
+      assignNumbers(reports, reportId, numbers)
   })
 }
