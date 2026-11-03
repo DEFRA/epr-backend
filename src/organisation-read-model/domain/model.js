@@ -42,7 +42,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * }} RegistrationCommon
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ReprocessorAccreditation>
+ *   accreditations: Record<string, ReprocessorAccreditation> // keyed by accreditation year
  *   reprocessingType: 'input' | 'output'
  *   site: {
  *     address: UkAddress & {
@@ -54,7 +54,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * }} ReprocessorRegistration
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ExporterAccreditation>
+ *   accreditations: Record<string, ExporterAccreditation> // keyed by accreditation year
  *   overseasSites: Record<string, OverseasSite>
  *   wasteProcessingType: 'exporter'
  * }} ExporterRegistration
