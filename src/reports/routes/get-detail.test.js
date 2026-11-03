@@ -923,7 +923,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       ])
       expect(detail.material).toBe('plastic')
       expect(detail.wasteProcessingType).toBe('reprocessor')
-      expect(detail.details.material).toBe('glass')
+      expect(detail.details.material).toBe('glass_re_melt')
       expect(detail.details.site).toBeDefined()
     })
 
