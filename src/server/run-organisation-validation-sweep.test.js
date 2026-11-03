@@ -210,7 +210,7 @@ describe('runOrganisationValidationSweep', () => {
     })
   })
 
-  it('logs an UNNUMBERED_ACCREDITATION issue for an accredited accreditation that lost its number', async () => {
+  it('logs an UNNUMBERED_ACCREDITATION issue for an approved accreditation without a number', async () => {
     const accreditation = buildAccreditation({
       accreditationNumber: null,
       statusHistory: [
@@ -233,7 +233,7 @@ describe('runOrganisationValidationSweep', () => {
     const [unnumberedAccreditation] = org.accreditations
     expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Organisation validation issue: organisationId=${org.id} code=UNNUMBERED_ACCREDITATION severity=error targetType=accreditation targetId=${unnumberedAccreditation.id} message="Accreditation ${unnumberedAccreditation.id} has been accredited but carries no valid accreditation number"`
+      message: `Organisation validation issue: organisationId=${org.id} code=UNNUMBERED_ACCREDITATION severity=error targetType=accreditation targetId=${unnumberedAccreditation.id} message="Accreditation ${unnumberedAccreditation.id} is approved or suspended but carries no valid accreditation number"`
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Organisation validation sweep: scanned=1 flagged=1 issues=1'
