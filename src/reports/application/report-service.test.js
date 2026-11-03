@@ -772,6 +772,7 @@ describe('report-service', () => {
       const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
+      /** @param {ReturnType<typeof defaultParams>} params */
       const accreditationOf = ({
         organisationId,
         registrationId,

@@ -37,6 +37,7 @@ import {
   buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
@@ -46,7 +47,6 @@ import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /**
- * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
@@ -69,9 +69,7 @@ const ownIds = {
   accreditationId: accredited.id,
   organisationNumber: toOrganisationNumber(String(organisation.orgId)),
   registrationNumber: registration.registrationNumber,
-  accreditationNumber: /** @type {AccreditationNumber} */ (
-    accredited.accreditationNumber
-  )
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
 const otherIds = {
   ...ownIds,
