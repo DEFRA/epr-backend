@@ -5,7 +5,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
@@ -19,6 +18,7 @@ import {
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -29,7 +29,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
- * @import { ResolvedRecords } from '#routes/organisations/at-natural-keys.js'
+ * @import { AccreditationCommon } from '#organisation-read-model/domain/model.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
@@ -79,8 +79,7 @@ export const reportsPost = {
     }
   },
   /**
-   * @param {Omit<HapiRequest, 'app'> & {
-   *   app: ResolvedRecords,
+   * @param {HapiRequest & {
    *   params: PeriodWithSubmissionPathParams,
    *   organisationsRepository: OrganisationsRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -100,7 +99,6 @@ export const reportsPost = {
       reportsRepository,
       overseasSitesRepository,
       params,
-      app,
       logger
     } = request
     const {
@@ -109,6 +107,8 @@ export const reportsPost = {
       year,
       cadence,
       period,
+      organisationNumber,
+      registrationNumber,
       submissionNumber
     } = params
 
@@ -121,6 +121,20 @@ export const reportsPost = {
       const { registration } =
         await findOrganisationAndRegistrationReadModels(request)
 
+      // A monthly report is for the year's accreditation, which atNaturalKeys
+      // has already found, or answered 404 for. A quarterly report is
+      // registered-only, whatever the registration's accreditation for the year.
+      const accreditationNumber =
+        cadence === CADENCE.monthly
+          ? /** @type {AccreditationCommon} */ (
+              registration.accreditations[year]
+            ).accreditationNumber
+          : null
+
+      const reportDataValidationEnabled = request.config.get(
+        'featureFlags.reportDataValidation'
+      )
+
       const createdReport = await createReportForPeriod({
         reportsRepository,
         ledgerRepository,
@@ -129,7 +143,11 @@ export const reportsPost = {
         overseasSitesRepository,
         organisationId,
         registrationId,
-        numbers: numbersFor(app.organisation, params).numbers,
+        numbers: {
+          registrationNumber,
+          organisationNumber,
+          accreditationNumber
+        },
         registration: storedRegistration,
         year,
         cadence,
@@ -141,9 +159,7 @@ export const reportsPost = {
           cadence
         }),
         changedBy: extractChangedBy(request.auth.credentials),
-        reportDataValidationEnabled: request.config.get(
-          'featureFlags.reportDataValidation'
-        )
+        reportDataValidationEnabled
       })
 
       await auditReportCreate(request, {
@@ -163,11 +179,11 @@ export const reportsPost = {
         .response(withRegistrationDetails(createdReport, registration))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
+      if (Boom.isBoom(error)) {
         throw error
       }
 
-      logUnexpectedError(logger, error)
+      logUnexpectedError(logger, /** @type {Error} */ (error))
 
       throw Boom.badImplementation(reportsPostFailureMessage)
     }
