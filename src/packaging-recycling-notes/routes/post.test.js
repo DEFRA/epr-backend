@@ -157,7 +157,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,
-        organisationsRepository: () => organisationsRepository,
+        // The server is built once but the organisation is reseeded per test,
+        // and the read model captures this repository when it registers.
+        organisationsRepository: () =>
+          new Proxy(/** @type {OrganisationsRepository} */ ({}), {
+            get: (_, method) => organisationsRepository[method]
+          }),
         ledgerRepository: () => ledgerRepository
       }
     })
