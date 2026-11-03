@@ -96,17 +96,21 @@ describe('backfillReportNumbers', () => {
   let logger
 
   /**
-   * @param {string} summaryLogId
+   * A report's source names its summary log by the file id the ledger records,
+   * which differs from the summary log's document id.
+   *
+   * @param {string} fileId
    * @param {string | null | undefined} submittedForAccreditationId
    */
-  const submitSummaryLog = (summaryLogId, submittedForAccreditationId) =>
+  const submitSummaryLog = (fileId, submittedForAccreditationId) =>
     summaryLogsRepository.insert(
-      summaryLogId,
+      `document-of-${fileId}`,
       summaryLogFactory.submitted({
         organisationId,
         registrationId,
         year: YEAR,
-        accreditationId: submittedForAccreditationId
+        accreditationId: submittedForAccreditationId,
+        file: { id: fileId }
       })
     )
 

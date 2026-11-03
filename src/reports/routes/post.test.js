@@ -307,6 +307,24 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(created.accreditationNumber).toBeDefined()
   })
 
+  it('stores a null accreditation number on a registered-only report in a year the registration is later accredited in', async () => {
+    const created = await createServer(registeredOnlyReprocessor, {
+      accredited: true
+    })
+
+    const response = await created.server.inject({
+      method: 'POST',
+      url: `/organisations/${created.organisationNumber}/registrations/${created.registrationNumber}/reports/${YEAR}/quarterly/${QUARTER}/submissions/1`,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CREATED)
+    expect(await storedQuarterlyReport(created)).toMatchObject({
+      accreditationNumber: null
+    })
+    expect(created.accreditationNumber).toBeDefined()
+  })
+
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
     const created = await createServer(registeredOnlyReprocessor)
 
