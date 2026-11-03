@@ -65,9 +65,9 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
 const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
   const others = storage.filter((org) => org._id !== id)
 
-  for (const { items, field, numbersOf } of UNIQUE_NUMBER_FIELDS) {
+  for (const { items, field, label, numbersOf } of UNIQUE_NUMBER_FIELDS) {
     const heldElsewhere = new Set(others.flatMap(numbersOf))
-    const repeated = numbersOf(organisation).some(
+    const repeated = numbersOf(organisation).find(
       (number) => typeof number === 'string' && heldElsewhere.has(number)
     )
 
@@ -76,7 +76,8 @@ const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
         operation,
         id,
         conflictFields: `${items}.${field}`,
-        reason: `fields=${items}.${field}`
+        reason: `fields=${items}.${field}`,
+        heldNumber: { label, number: repeated }
       })
     }
   }

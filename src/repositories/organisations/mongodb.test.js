@@ -100,7 +100,7 @@ describe('MongoDB organisations repository', () => {
             )
           }
         },
-        event: { action: 'insert_organisation' }
+        event: { action: 'insert_organisation', reference: expect.any(String) }
       })
     })
 
