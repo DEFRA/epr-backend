@@ -16,7 +16,7 @@ import {
 } from '#domain/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
-  buildAccreditation
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
@@ -85,7 +85,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
       buildAwaitingAcceptancePrn({
         registrationId,
         organisation: { id: organisationId, name: 'Acme Reprocessing' },
-        accreditation: buildAccreditation({
+        accreditation: buildAccreditationSnapshot({
           id: accId,
           accreditationNumber: 'ACC-INTEG',
           material: MATERIAL.PLASTIC

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const ACCREDITATION_YEAR = 2026
-const PRN_YEAR = toYear(ACCREDITATION_YEAR)
+export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -33,9 +33,9 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  * @param {Partial<AccreditationSnapshot>} [overrides]
  * @returns {AccreditationSnapshot}
  */
-export const buildAccreditation = (overrides = {}) => ({
+export const buildAccreditationSnapshot = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
-  accreditationNumber: `ACC-${Date.now()}`,
+  accreditationNumber: 'ACC-2026-001',
   accreditationYear: PRN_YEAR,
   material: 'plastic',
   submittedToRegulator: 'ea',
@@ -73,7 +73,7 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: accreditationId.registrationId,
-  accreditation: buildAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: /** @type {string} */ (accreditationId.accreditationId)
   }),
   ...overrides
@@ -99,7 +99,7 @@ export const buildPrn = (overrides = {}) => {
       tradingName: 'Test Trading'
     },
     registrationId: `reg-${randomUUID()}`,
-    accreditation: buildAccreditation(),
+    accreditation: buildAccreditationSnapshot(),
     obligationYear: PRN_YEAR,
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,
