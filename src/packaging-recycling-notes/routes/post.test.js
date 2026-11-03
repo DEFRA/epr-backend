@@ -32,7 +32,9 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
@@ -104,10 +106,15 @@ const validPayload = {
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes', () => {
   setupAuthContext()
 
+  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
+  /** @type {PackagingRecyclingNotesRepository} */
   let packagingRecyclingNotesRepository
-  /** @type {OrganisationsRepository} */
+  /** @type {import('vitest').MockInstance<PackagingRecyclingNotesRepository['create']>} */
+  let createSpy
+  /** @type {OrganisationsRepositoryFactory} */
   let organisationsRepository
+  /** @type {WasteBalanceLedgerRepository} */
   let ledgerRepository
   /** @type {string} */
   let url
@@ -115,12 +122,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let registrationNumber
 
   /**
-   * Serves the organisation with one accreditation, an output reprocessor's
-   * unless overridden, at the URL its natural keys name.
+   * Starts a server serving the organisation with one accreditation, an output
+   * reprocessor's unless overridden, at the URL its natural keys name.
    *
    * @param {object} [overrides]
    */
-  const useAccreditation = (overrides = {}) => {
+  const useAccreditation = async (overrides = {}) => {
     const accredited = accreditation({
       ...outputReprocessorAccreditation,
       id: accreditationId,
@@ -142,38 +149,43 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
-    ])()
+    ])
+
+    await server?.stop()
+    server = await createTestServer({
+      repositories: {
+        packagingRecyclingNotesRepository: () =>
+          packagingRecyclingNotesRepository,
+        organisationsRepository,
+        ledgerRepository: () => ledgerRepository
+      }
+    })
+    await server.initialize()
+
     const year = new Date(/** @type {string} */ (accredited.validFrom))
     registrationNumber = registration.registrationNumber
     url = `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
   }
 
+  /** The PRN data the route first passed to the repository's create. */
+  const firstCreatedPrn = () => {
+    const call = createSpy.mock.calls[0]
+    if (!call) {
+      throw new Error('Expected the repository to have created a PRN')
+    }
+    return call[0]
+  }
+
   beforeAll(async () => {
     packagingRecyclingNotesRepository =
       createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
-    vi.spyOn(packagingRecyclingNotesRepository, 'create')
-
-    server = await createTestServer({
-      repositories: {
-        packagingRecyclingNotesRepository: () =>
-          packagingRecyclingNotesRepository,
-        // The server is built once but the organisation is reseeded per test,
-        // and the read model captures this repository when it registers.
-        organisationsRepository: () =>
-          new Proxy(/** @type {OrganisationsRepository} */ ({}), {
-            get: (_, method) => organisationsRepository[method]
-          }),
-        ledgerRepository: () => ledgerRepository
-      }
-    })
-
-    await server.initialize()
+    createSpy = vi.spyOn(packagingRecyclingNotesRepository, 'create')
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
-    useAccreditation()
     ledgerRepository = seedStream()
+    await useAccreditation()
   })
 
   afterEach(() => {
@@ -263,7 +275,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       const stored = await packagingRecyclingNotesRepository.findById(
         JSON.parse(response.payload).id
       )
-      expect(stored.organisation).toMatchObject({
+      expect(stored?.organisation).toMatchObject({
         id: organisationId,
         organisationNumber: String(orgId)
       })
@@ -275,7 +287,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('sets obligationYear from the accreditation year', async () => {
       vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
-      useAccreditation({ validFrom: '2027-01-01', validTo: '2027-12-31' })
+      await useAccreditation({ validFrom: '2027-01-01', validTo: '2027-12-31' })
 
       await createPrn()
 
@@ -287,8 +299,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('creates PRN with draft status and history but no created operation', async () => {
       await createPrn()
 
-      const createArg =
-        packagingRecyclingNotesRepository.create.mock.calls[0][0]
+      const createArg = firstCreatedPrn()
       expect(createArg.status.currentStatus).toBe(PRN_STATUS.DRAFT)
       expect(createArg.status).not.toHaveProperty('created')
       expect(createArg.status.history).toStrictEqual([
@@ -348,7 +359,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('sets isExport to true for exporter', async () => {
-      useAccreditation(exporterAccreditation)
+      await useAccreditation(exporterAccreditation)
 
       await createPrn()
 
@@ -358,7 +369,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('snapshots glass recycling process for glass accreditations', async () => {
-      useAccreditation({
+      await useAccreditation({
         material: MATERIAL.GLASS,
         glassRecyclingProcess: ['glass_re_melt'],
         site: { address: { line1: '123 Glass Lane', postcode: 'GL1 2AB' } }
@@ -380,8 +391,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('omits glass recycling process for non-glass accreditations', async () => {
       await createPrn()
 
-      const createArg =
-        packagingRecyclingNotesRepository.create.mock.calls[0][0]
+      const createArg = firstCreatedPrn()
       expect(createArg.accreditation).not.toHaveProperty(
         'glassRecyclingProcess'
       )
@@ -398,8 +408,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
 
-      const createArg =
-        packagingRecyclingNotesRepository.create.mock.calls[0][0]
+      const createArg = firstCreatedPrn()
       expect(createArg.issuedToOrganisation.registrationType).toBe(
         'LARGE_PRODUCER'
       )
@@ -417,16 +426,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
 
-      const createArg =
-        packagingRecyclingNotesRepository.create.mock.calls[0][0]
+      const createArg = firstCreatedPrn()
       expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
     })
 
     it('omits notes key from stored data when no notes provided', async () => {
       await createPrn()
 
-      const createArg =
-        packagingRecyclingNotesRepository.create.mock.calls[0][0]
+      const createArg = firstCreatedPrn()
       expect(createArg).not.toHaveProperty('notes')
     })
 
@@ -464,7 +471,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('accreditation status', () => {
     it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
-      useAccreditation({ statusHistory: cancelledHistory })
+      await useAccreditation({ statusHistory: cancelledHistory })
 
       const response = await createPrn()
 
@@ -476,7 +483,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('creates a PRN once the accreditation is approved again', async () => {
-      useAccreditation({
+      await useAccreditation({
         statusHistory: [
           ...cancelledHistory,
           { status: 'approved', updatedAt: new Date('2026-04-01') }
@@ -489,7 +496,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('creates a PRN when the accreditation is suspended', async () => {
-      useAccreditation({ statusHistory: granted('suspended') })
+      await useAccreditation({ statusHistory: granted('suspended') })
 
       const response = await createPrn()
 
@@ -541,7 +548,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('returns 409 for an exporter (PERN) journey when tonnage exceeds the balance', async () => {
-      useAccreditation(exporterAccreditation)
+      await useAccreditation(exporterAccreditation)
       ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
 
       const response = await createPrn({ ...validPayload, tonnage: 51 })
@@ -614,7 +621,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates the draft for an input reprocessor declaring December inside the window', async () => {
       vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-      useAccreditation({ reprocessingType: REPROCESSING_TYPE.INPUT })
+      await useAccreditation({ reprocessingType: REPROCESSING_TYPE.INPUT })
       ledgerRepository = seedStream(decemberBalance)
 
       const response = await createPrn({
@@ -628,7 +635,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates the draft for an exporter declaring December inside the window', async () => {
       vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-      useAccreditation(exporterAccreditation)
+      await useAccreditation(exporterAccreditation)
       ledgerRepository = seedStream(decemberBalance)
 
       const response = await createPrn({
@@ -642,7 +649,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
       vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
-      useAccreditation(exporterAccreditation)
+      await useAccreditation(exporterAccreditation)
 
       const response = await createPrn({
         ...validPayload,
@@ -654,8 +661,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('December pool routing at the create pre-check', () => {
-    beforeEach(() => {
-      useAccreditation(exporterAccreditation)
+    beforeEach(async () => {
+      await useAccreditation(exporterAccreditation)
     })
 
     it('returns 409 when an exporter December raise exceeds the December pool, even when the total balance covers it', async () => {
@@ -735,7 +742,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   describe('error handling', () => {
     it('re-throws Boom errors from repository', async () => {
       const Boom = await import('@hapi/boom')
-      packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
+      createSpy.mockRejectedValueOnce(
         Boom.default.notFound('Organisation not found')
       )
 
@@ -745,9 +752,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('returns 500 for unexpected errors', async () => {
-      packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
-        new Error('Database connection failed')
-      )
+      createSpy.mockRejectedValueOnce(new Error('Database connection failed'))
 
       const response = await createPrn()
 
