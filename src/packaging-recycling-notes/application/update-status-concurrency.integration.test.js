@@ -1,4 +1,5 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
+import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
@@ -22,7 +23,6 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
@@ -31,12 +31,6 @@ const ORG_ID = 'org-concurrency'
 const REG_ID = 'reg-concurrency'
 const ACC_ID = 'acc-concurrency'
 
-const { buildOrganisationHolding } = createOrganisationBuilders()
-const organisation = buildOrganisationHolding({
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID
-})
 const TONNAGE = 5
 const OPENING = 386.62
 
@@ -182,7 +176,12 @@ describe('PRN status concurrency against real MongoDB', () => {
 
     const { id } = await prnRepositoryFactory(createMockLogger()).create(
       buildAcceptedPrn({
-        organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+        organisation: {
+          id: ORG_ID,
+          organisationNumber: '500001',
+          name: 'Test Reprocessor'
+        },
+        registration: { registrationNumber: 'REG-1' },
         registrationId: REG_ID,
         accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
         tonnage: TONNAGE
@@ -195,9 +194,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     updatePrnStatus({
       prnRepository: repositoryFactory(createMockLogger()),
       ledgerRepository,
-      organisationsRepository: /** @type {*} */ ({
-        findById: async () => organisation
-      }),
+      organisationReadRepository: stubOrganisationReadRepository(),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: createMockLogger(),
       id: prnId,

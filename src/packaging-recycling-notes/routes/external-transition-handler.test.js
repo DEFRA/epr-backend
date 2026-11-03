@@ -72,7 +72,12 @@ const buildPrn = (currentStatus) => ({
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: '500001',
+    name: 'Test Reprocessor'
+  },
+  registration: { registrationNumber: 'REG-1' },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },

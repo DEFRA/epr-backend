@@ -122,7 +122,7 @@ const performCancellation = async (request, previousPrn, id, h, respond) => {
   const {
     packagingRecyclingNotesRepository,
     ledgerRepository,
-    organisationsRepository,
+    organisationReadRepository,
     prnEvents,
     logger,
     auth
@@ -137,7 +137,7 @@ const performCancellation = async (request, previousPrn, id, h, respond) => {
   const updatedPrn = await updatePrnStatus({
     prnRepository: packagingRecyclingNotesRepository,
     ledgerRepository,
-    organisationsRepository,
+    organisationReadRepository,
     prnEvents,
     logger,
     id,

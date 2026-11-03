@@ -18,14 +18,18 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
+import {
+  requireStoredNumbers,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {ReturnType<typeof createWasteBalanceService>} WasteBalanceService
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/domain/model.js').Registration} ReadModelRegistration
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
@@ -64,7 +68,7 @@ export const FOLLOW_RAISE_POOL_STATUSES = new Set([
  * @typedef {{
  *   prnRepository: PackagingRecyclingNotesRepository,
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   prnEvents: { onCancelled: OnPrnCancelled },
  *   logger: import('#common/hapi-types.js').TypedLogger,
  *   id: string,
@@ -90,7 +94,7 @@ export const FOLLOW_RAISE_POOL_STATUSES = new Set([
  * @typedef {{
  *   ledgerId: WasteBalanceLedgerId & { accreditationId: string },
  *   prnRepository: PackagingRecyclingNotesRepository,
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   service: WasteBalanceService,
  *   logger: import('#common/hapi-types.js').TypedLogger,
  *   providedPrn?: PackagingRecyclingNote,
@@ -151,7 +155,7 @@ export async function updatePrnStatus(request) {
 function buildTransitionContext({
   prnRepository,
   ledgerRepository,
-  organisationsRepository,
+  organisationReadRepository,
   logger,
   newStatus,
   actor,
@@ -166,7 +170,7 @@ function buildTransitionContext({
 }) {
   return {
     prnRepository,
-    organisationsRepository,
+    organisationReadRepository,
     service: createWasteBalanceService(ledgerRepository),
     logger,
     providedPrn,
@@ -228,10 +232,7 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  const { numbers: ledgerNumbers } = numbersFor(
-    await ctx.organisationsRepository.findById(ledgerId.organisationId),
-    ledgerId
-  )
+  const ledgerNumbers = storedNumbersOf(prn)
 
   // The note takes its number before the event announcing it, so a read landing
   // between the two never sees an issuance with no number.
@@ -255,6 +256,72 @@ async function applyPrnTransition(ctx) {
 }
 
 /**
+ * The numbers a PRN was stored with. They are optional in the stored type, so
+ * a PRN stored without them cannot be moved.
+ *
+ * @param {PackagingRecyclingNote} prn
+ */
+function storedNumbersOf(prn) {
+  return requireStoredNumbers(
+    {
+      organisationNumber: prn.organisation.organisationNumber,
+      registrationNumber: prn.registration?.registrationNumber,
+      accreditationNumber: toAccreditationNumber(
+        prn.accreditation.accreditationNumber
+      )
+    },
+    `PRN ${prn.id}`
+  )
+}
+
+/**
+ * The part of an accreditation a transition rules on: whether it permits
+ * issuing, who regulates it (the PRN number's agency code) and the processing
+ * type that decides whether it accrues a December pool.
+ *
+ * @typedef {{
+ *   status: import('#domain/organisations/model.js').AccreditationStatus,
+ *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue,
+ *   wasteProcessingType: ReadModelRegistration['wasteProcessingType'],
+ *   reprocessingType?: 'input' | 'output'
+ * }} IssuingAccreditation
+ */
+
+/**
+ * Finds, in the organisation read model, the accreditation a PRN was raised
+ * against, by the numbers the PRN holds.
+ *
+ * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {PackagingRecyclingNote} prn
+ * @returns {Promise<IssuingAccreditation>}
+ */
+async function findIssuingAccreditation(organisationReadRepository, prn) {
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    storedNumbersOf(prn)
+  const found = await organisationReadRepository.findAccreditationByNumber(
+    organisationNumber,
+    registrationNumber,
+    // A PRN is raised against an accredited stream, so its accreditation number
+    // is never null.
+    /** @type {NonNullable<typeof accreditationNumber>} */ (accreditationNumber)
+  )
+  if (!found) {
+    throw Boom.notFound(
+      `Accreditation ${accreditationNumber} of registration ${registrationNumber} of organisation ${organisationNumber} not found`
+    )
+  }
+  const { registration, accreditation } = found
+  return {
+    status: accreditation.status.current,
+    submittedToRegulator: registration.submittedToRegulator.code,
+    wasteProcessingType: registration.wasteProcessingType,
+    ...(registration.wasteProcessingType === 'reprocessor' && {
+      reprocessingType: registration.reprocessingType
+    })
+  }
+}
+
+/**
  * Phase 1 — gather. The balance is read for update first and every other read
  * follows it, so nothing the ruling is made against is older than the head the
  * events would land on (PAE-1844). That ordering is why the PRN is loaded here
@@ -265,12 +332,12 @@ async function applyPrnTransition(ctx) {
  * @param {PrnTransitionContext} ctx
  * @returns {Promise<import('#waste-balances/application/waste-balance-service.js').BalanceForUpdate & {
  *   prn: PackagingRecyclingNote,
- *   issuance: { accreditation: import('#domain/organisations/accreditation.js').Accreditation } | undefined,
+ *   issuance: { accreditation: IssuingAccreditation } | undefined,
  *   pool: import('#waste-balances/repository/ledger-schema.js').Pool | undefined
  * }>}
  */
 async function gatherTransitionState(ctx) {
-  const { service, organisationsRepository, newStatus, ledgerId, user } = ctx
+  const { service, organisationReadRepository, newStatus, ledgerId, user } = ctx
 
   const { balance, append } = await service.readBalanceForUpdate(ledgerId, user)
 
@@ -290,10 +357,7 @@ async function gatherTransitionState(ctx) {
     newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
     (prn.isDecemberWaste && newStatus === PRN_STATUS.AWAITING_AUTHORISATION)
   const accreditation = needsAccreditation
-    ? await organisationsRepository.findAccreditationById(
-        ledgerId.organisationId,
-        ledgerId.accreditationId
-      )
+    ? await findIssuingAccreditation(organisationReadRepository, prn)
     : undefined
 
   const issuance =
@@ -319,7 +383,7 @@ async function gatherTransitionState(ctx) {
  * @param {PrnTransitionContext} ctx
  * @param {Object} gathered
  * @param {PackagingRecyclingNote} gathered.prn
- * @param {import('#domain/organisations/accreditation.js').Accreditation} [gathered.accreditation]
+ * @param {IssuingAccreditation} [gathered.accreditation]
  * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').Pool | undefined>}
  */
 async function resolveTransitionPool(

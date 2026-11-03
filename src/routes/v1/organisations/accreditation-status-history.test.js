@@ -134,19 +134,26 @@ const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
  * @param {string} prnId
  */
 const prnsRepositoryAwaitingAuthorisation = (
-  { id, registrations: [registration] },
+  { id, orgId, registrations: [registration], accreditations: [accreditation] },
   prnId
-) =>
-  createInMemoryPackagingRecyclingNotesRepository([
+) => {
+  const prn = buildAwaitingAuthorisationPrn(
+    underAccreditation({
+      organisationId: id,
+      registrationId: registration.id,
+      accreditationId: /** @type {string} */ (registration.accreditationId)
+    })
+  )
+  return createInMemoryPackagingRecyclingNotesRepository([
     /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
       id: prnId,
-      ...buildAwaitingAuthorisationPrn(
-        underAccreditation({
-          organisationId: id,
-          registrationId: registration.id,
-          accreditationId: /** @type {string} */ (registration.accreditationId)
-        })
-      )
+      ...prn,
+      organisation: { ...prn.organisation, organisationNumber: String(orgId) },
+      registration: { registrationNumber: registration.registrationNumber },
+      accreditation: {
+        ...prn.accreditation,
+        accreditationNumber: accreditation.accreditationNumber
+      }
     })
   ])({
     info: vi.fn(),
@@ -157,6 +164,7 @@ const prnsRepositoryAwaitingAuthorisation = (
     fatal: vi.fn(),
     child: vi.fn()
   })
+}
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }

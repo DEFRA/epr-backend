@@ -365,6 +365,11 @@ export const createPrn =
     const now = new Date()
 
     try {
+      // Stays on the stored accreditation: the PRN's accreditation snapshot
+      // stores `material` as 'glass' with its `glassRecyclingProcess`, which the
+      // read model resolves into glass_re_melt / glass_other, and the
+      // accreditation's own `site.address`, which the read model holds only on
+      // the registration.
       const accreditation = await organisationsRepository.findAccreditationById(
         organisationId,
         accreditationId

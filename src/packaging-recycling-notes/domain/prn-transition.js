@@ -17,7 +17,7 @@ import { closedYearRefusal } from './closed-year.js'
  * @import {PrnStatus, PrnActor} from './model.js'
  * @import {LedgerBalanceSnapshot, LedgerEventKind, PrnAcceptedPayload} from '#waste-balances/repository/ledger-schema.js'
  * @import {BalanceEvent, PrnCommandRejection, PrnDecision} from '#waste-balances/domain/commands.js'
- * @import {Accreditation} from '#domain/organisations/accreditation.js'
+ * @import {AccreditationStatus} from '#domain/organisations/model.js'
  */
 
 /**
@@ -179,7 +179,7 @@ export class PrnLedgerRejectionError extends Error {
  * @param {PrnStatus} params.fromStatus
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
- * @param {Accreditation} [params.accreditation]
+ * @param {{ status: AccreditationStatus }} [params.accreditation]
  * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @returns {Error | undefined}
@@ -214,7 +214,7 @@ const ruleTransition = ({
  * @param {PrnStatus} params.fromStatus - the status ruled on, taken from the projection
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
- * @param {Accreditation} [params.accreditation] - required only for issuance
+ * @param {{ status: AccreditationStatus }} [params.accreditation] - required only for issuance
  * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @param {LedgerBalanceSnapshot | null} params.balance - `null` for a ledger with no events

@@ -1,12 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import {
+  foundAccreditation,
+  stubOrganisationReadRepository
+} from './organisation-read-repository-stub.js'
+import {
   PRN_STATUS,
   PRN_ACTOR,
   AccreditationStatusError,
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
-import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
@@ -26,7 +30,6 @@ import {
   buildPrnAcceptedEvent,
   buildPrnCancelledAfterIssueEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -57,12 +60,6 @@ const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
 
-const { buildOrganisationHolding } = createOrganisationBuilders()
-const organisation = buildOrganisationHolding({
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID
-})
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
 const ISSUED_AMOUNT = 950
@@ -73,9 +70,11 @@ const PRN_BASE = {
   registrationId: REG_ID,
   organisation: {
     id: ORG_ID,
+    organisationNumber: '500001',
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
+  registration: { registrationNumber: 'REG-1' },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
@@ -189,29 +188,13 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
         return ledgerRepository.findLatestInLedger(ledgerId)
       }
     },
-    organisationsRepository:
-      /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
-        /** @type {unknown} */ ({
-          findById: async () => organisation,
-          findAccreditationById: async () => ({
-            status,
-            submittedToRegulator: REGULATOR.EA
-          })
-        })
-      )
+    organisationReadRepository: /** @type {*} */ ({
+      findAccreditationByNumber: async () => foundAccreditation({ status })
+    })
   }
 }
 
-const buildOrganisationsRepository = () =>
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
-    /** @type {unknown} */ ({
-      findById: async () => organisation,
-      findAccreditationById: vi.fn().mockResolvedValue({
-        status: ACCREDITATION_STATUS.APPROVED,
-        submittedToRegulator: REGULATOR.EA
-      })
-    })
-  )
+const buildOrganisationReadRepository = () => stubOrganisationReadRepository()
 
 const COMMITTED_EVENT_NUMBER = 2
 
@@ -313,13 +296,13 @@ describe('updatePrnStatus concurrency', () => {
     const balanceSeed = buildBalanceSeed()
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const issue = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -352,13 +335,13 @@ describe('updatePrnStatus concurrency', () => {
     })
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -392,13 +375,13 @@ describe('updatePrnStatus concurrency', () => {
     })
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -458,7 +441,7 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -492,14 +475,14 @@ describe('updatePrnStatus concurrency', () => {
     const seeded = createInMemoryLedgerRepository()()
     await seedClosingBalance(seeded, buildBalanceSeed())
 
-    const { ledgerRepository, organisationsRepository } =
+    const { ledgerRepository, organisationReadRepository } =
       withAccreditationSuspendedDuringFold(seeded)
 
     await expect(
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -559,7 +542,7 @@ describe('updatePrnStatus concurrency', () => {
     const cancelled = await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: noopLogger(),
       id: PRN_ID,
@@ -627,7 +610,7 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository: racingLedger,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -687,7 +670,7 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
@@ -735,7 +718,7 @@ describe('updatePrnStatus concurrency', () => {
     const issued = await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: noopLogger(),
       id: PRN_ID,
@@ -765,13 +748,13 @@ describe('updatePrnStatus concurrency', () => {
 
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, buildBalanceSeed())
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const issue = (/** @type {string} */ id) =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id,

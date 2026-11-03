@@ -19,6 +19,8 @@ import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repositor
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -51,6 +53,9 @@ const { updatePrnStatus, FOLLOW_RAISE_POOL_STATUSES } =
 const ORG_ID = '507f1f77bcf86cd799439aaa'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
+const ORG_NUMBER = 500001
+const REG_NUMBER = 'R26SR500000789PL'
+const ACC_NUMBER = 'ACC-1'
 const PRN_ID = '507f1f77bcf86cd799439011'
 const USER = { id: 'user-789', name: 'Test User' }
 const EVENT_AT = new Date('2026-02-01T12:00:00.000Z')
@@ -64,10 +69,15 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   version: 1,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: String(ORG_NUMBER),
+    name: 'Test Reprocessor'
+  },
+  registration: { registrationNumber: REG_NUMBER },
   accreditation: buildAccreditationSnapshot({
     id: ACC_ID,
-    accreditationNumber: 'ACC-1'
+    accreditationNumber: ACC_NUMBER
   }),
   tonnage: 100,
   isExport: false,
@@ -159,54 +169,75 @@ const buildPrnLedgerEvent = ({
   createdBy: USER
 })
 
+const APPROVED_HISTORY = [
+  { status: 'created', updatedAt: '2024-01-01' },
+  { status: 'approved', updatedAt: '2024-02-01' }
+]
+
 /**
  * An organisation carrying the numbered registration and accreditation under
  * test, with `ORG_ID`, `REG_ID` and `ACC_ID` pinned by default so the seeded
  * PRN's links resolve. `withAccreditation: false` removes the accreditation so
- * issuance can't find it.
+ * issuance can't find it. The registration takes the accreditation's regulator
+ * and processing type, which the organisation read model serves from it.
  *
  * @param {Object} [options]
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
  * @param {string} [options.organisationId]
  * @param {string} [options.registrationId]
- * @param {string | null} [options.registrationNumber]
  */
 const buildOrgWithAccreditation = ({
   accreditation = {},
   withAccreditation = true,
   organisationId = ORG_ID,
-  registrationId = REG_ID,
-  registrationNumber = 'R26SR500000789PL'
-} = {}) => ({
-  // `status` is derived from `statusHistory` on read; the seeded value only
-  // satisfies the constructor's Organisation type.
-  status: ORGANISATION_STATUS.APPROVED,
-  ...buildOrganisation({
-    id: organisationId,
-    registrations: [
-      buildRegistration({
-        id: registrationId,
-        registrationNumber,
-        accreditationId: ACC_ID
-      })
-    ],
-    accreditations: withAccreditation
-      ? [
-          buildAccreditation({
-            id: ACC_ID,
-            accreditationNumber: 'ACC-1',
-            submittedToRegulator: REGULATOR.EA,
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-01-01' },
-              { status: 'approved', updatedAt: '2024-02-01' }
-            ],
-            ...accreditation
-          })
-        ]
-      : []
+  registrationId = REG_ID
+} = {}) => {
+  const accredited = buildAccreditation({
+    id: ACC_ID,
+    accreditationNumber: ACC_NUMBER,
+    submittedToRegulator: REGULATOR.EA,
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    statusHistory: APPROVED_HISTORY,
+    ...accreditation
   })
-})
+  return {
+    // `status` is derived from `statusHistory` on read; the seeded value only
+    // satisfies the constructor's Organisation type.
+    status: ORGANISATION_STATUS.APPROVED,
+    ...buildOrganisation({
+      id: organisationId,
+      orgId: ORG_NUMBER,
+      statusHistory: APPROVED_HISTORY,
+      registrations: [
+        buildRegistration({
+          id: registrationId,
+          registrationNumber: REG_NUMBER,
+          accreditationId: ACC_ID,
+          validFrom: '2026-01-01',
+          statusHistory: APPROVED_HISTORY,
+          submittedToRegulator: accredited.submittedToRegulator,
+          wasteProcessingType: accredited.wasteProcessingType,
+          reprocessingType: accredited.reprocessingType ?? 'input'
+        })
+      ],
+      accreditations: withAccreditation ? [accredited] : []
+    })
+  }
+}
+
+/**
+ * The organisation read model over the organisations in the repository.
+ *
+ * @param {ReturnType<ReturnType<typeof createInMemoryOrganisationsRepository>>} organisationsRepository
+ */
+const readRepositoryOver = (organisationsRepository) =>
+  createOrganisationReadRepository({
+    organisationsRepository,
+    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+    logger: createMockLogger()
+  })
 
 /**
  * Wire up the three real in-memory adapters for one case. The PRN doc and the
@@ -220,7 +251,6 @@ const buildOrgWithAccreditation = ({
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} [options.ledgerEvents] - raw ledger events to seed, taking precedence over `balance` (for a raised-then-cancelled sequence)
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
- * @param {string | null} [options.registrationNumber]
  */
 const seedRepositories = ({
   prn,
@@ -228,8 +258,7 @@ const seedRepositories = ({
   balance,
   ledgerEvents,
   accreditation,
-  withAccreditation = true,
-  registrationNumber
+  withAccreditation = true
 } = {}) => {
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
     prns ?? (prn ? [prn] : [])
@@ -239,17 +268,14 @@ const seedRepositories = ({
   )()
   const wasteBalanceService = createWasteBalanceService(ledgerRepository)
   const organisationsRepository = createInMemoryOrganisationsRepository([
-    buildOrgWithAccreditation({
-      accreditation,
-      withAccreditation,
-      registrationNumber
-    })
+    buildOrgWithAccreditation({ accreditation, withAccreditation })
   ])()
   return {
     prnRepository,
     ledgerRepository,
     wasteBalanceService,
-    organisationsRepository
+    organisationsRepository,
+    organisationReadRepository: readRepositoryOver(organisationsRepository)
   }
 }
 
@@ -345,8 +371,6 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER
       })
 
-      const organisation =
-        await repositories.organisationsRepository.findById(ORG_ID)
       expect(
         await repositories.ledgerRepository.findLatestInLedger({
           organisationId: ORG_ID,
@@ -354,39 +378,39 @@ describe('updatePrnStatus', () => {
           accreditationId: ACC_ID
         })
       ).toMatchObject({
-        organisationNumber: String(organisation.orgId),
-        registrationNumber: 'R26SR500000789PL',
-        accreditationNumber: 'ACC-1'
+        organisationNumber: String(ORG_NUMBER),
+        registrationNumber: REG_NUMBER,
+        accreditationNumber: ACC_NUMBER
       })
     })
 
-    it('writes the event without a number its organisation record does not give', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          tonnage: 100,
-          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        accreditation: { accreditationNumber: null }
-      })
+    it.each([
+      [
+        'organisation',
+        { organisation: { id: ORG_ID, name: 'Test Reprocessor' } }
+      ],
+      ['registration', { registration: undefined }]
+    ])(
+      'refuses to move a PRN stored without its %s number, appending nothing',
+      async (_, withoutNumber) => {
+        const repositories = seedRepositories({
+          prn: buildPrn({
+            tonnage: 100,
+            status: { currentStatus: PRN_STATUS.DRAFT, history: [] },
+            ...withoutNumber
+          }),
+          balance: { amount: 1000, availableAmount: 1000 }
+        })
 
-      await callUpdate({
-        ...repositories,
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
-      })
-
-      const latest = await repositories.ledgerRepository.findLatestInLedger({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID
-      })
-      expect(latest).toMatchObject({
-        kind: LEDGER_EVENT_KIND.PRN_CREATED,
-        registrationNumber: 'R26SR500000789PL'
-      })
-      expect(latest).not.toHaveProperty('accreditationNumber')
-    })
+        await expect(
+          callUpdate({
+            ...repositories,
+            newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+          })
+        ).rejects.toThrow(`Cannot use PRN ${PRN_ID} without its numbers`)
+      }
+    )
 
     // Tonnage is validated positive at the route and in the PRN schema, so a
     // PRN that reaches the write without one is corruption. The deciders test
@@ -672,38 +696,6 @@ describe('updatePrnStatus', () => {
         })
       ).rejects.toThrow()
     })
-
-    it('issues the PRN when the organisation record gives no registration number', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        registrationNumber: null
-      })
-
-      await callUpdate({
-        ...repositories,
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY
-      })
-
-      const stored = await repositories.prnRepository.findById(PRN_ID)
-      expect(stored?.prnNumber).toBeDefined()
-      const latest = await repositories.ledgerRepository.findLatestInLedger({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID
-      })
-      expect(latest).toMatchObject({
-        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
-        accreditationNumber: 'ACC-1'
-      })
-      expect(latest).not.toHaveProperty('registrationNumber')
-    })
   })
 
   describe('accepting a PRN (awaiting acceptance to accepted)', () => {
@@ -790,7 +782,7 @@ describe('updatePrnStatus', () => {
             updateStatus: vi.fn().mockResolvedValue(null)
           },
           ledgerRepository: createInMemoryLedgerRepository()(),
-          organisationsRepository: {},
+          organisationReadRepository: {},
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -833,7 +825,11 @@ describe('updatePrnStatus', () => {
       const issuedAt = new Date(`${DEFAULT_REPORT_START_DATE}T00:00:00.000Z`)
       const prnRepository = createInMemoryPackagingRecyclingNotesRepository([
         buildPrn({
-          organisation: { id: DEFAULT_ORG_ID, name: 'Test Reprocessor' },
+          organisation: {
+            id: DEFAULT_ORG_ID,
+            organisationNumber: String(ORG_NUMBER),
+            name: 'Test Reprocessor'
+          },
           registrationId: DEFAULT_REG_ID,
           status: {
             currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
@@ -862,6 +858,9 @@ describe('updatePrnStatus', () => {
           registrationId: DEFAULT_REG_ID
         })
       ])()
+      const organisationReadRepository = readRepositoryOver(
+        organisationsRepository
+      )
 
       await updatePrnStatus({
         logger: createMockLogger(),
@@ -872,7 +871,7 @@ describe('updatePrnStatus', () => {
         user: USER,
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: {
           onCancelled: createOnPrnCancelled({
             reportsRepository: reportsRepositoryFactory(),
@@ -1920,9 +1919,9 @@ describe('updatePrnStatus', () => {
         }),
         balance: { amount: 1000, availableAmount: 1000 }
       })
-      const findAccreditationById = vi.spyOn(
-        repositories.organisationsRepository,
-        'findAccreditationById'
+      const findAccreditationByNumber = vi.spyOn(
+        repositories.organisationReadRepository,
+        'findAccreditationByNumber'
       )
 
       await callUpdate({
@@ -1935,7 +1934,7 @@ describe('updatePrnStatus', () => {
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
       expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
-      expect(findAccreditationById).not.toHaveBeenCalled()
+      expect(findAccreditationByNumber).not.toHaveBeenCalled()
     })
 
     it('mirrors an absent raise pool on a non-December issue rather than re-deriving it', async () => {
@@ -2002,9 +2001,9 @@ describe('updatePrnStatus', () => {
           })
         ]
       })
-      const findAccreditationById = vi.spyOn(
-        repositories.organisationsRepository,
-        'findAccreditationById'
+      const findAccreditationByNumber = vi.spyOn(
+        repositories.organisationReadRepository,
+        'findAccreditationByNumber'
       )
 
       await callUpdate({
@@ -2017,7 +2016,7 @@ describe('updatePrnStatus', () => {
         await repositories.ledgerRepository.findLatestInLedger(LEDGER_ID)
       expect(latest?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATION_CANCELLED)
       expect(latest?.payload).toMatchObject({ pool: POOL.GENERAL })
-      expect(findAccreditationById).not.toHaveBeenCalled()
+      expect(findAccreditationByNumber).not.toHaveBeenCalled()
     })
   })
 

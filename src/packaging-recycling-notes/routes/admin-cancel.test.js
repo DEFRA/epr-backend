@@ -90,7 +90,12 @@ const buildAcceptedPrn = ({
   id: prnId,
   version: 1,
   schemaVersion: 2,
-  organisation: { id: organisationId, name: 'Test Organisation' },
+  organisation: {
+    id: organisationId,
+    organisationNumber: '500001',
+    name: 'Test Organisation'
+  },
+  registration: { registrationNumber: 'REG-1' },
   registrationId,
   accreditation: buildAccreditationSnapshot({
     id: accreditationId,

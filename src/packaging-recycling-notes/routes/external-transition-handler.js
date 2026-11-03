@@ -101,7 +101,7 @@ export function createExternalTransitionHandler({
       const {
         packagingRecyclingNotesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents,
         params,
         logger
@@ -129,7 +129,7 @@ export function createExternalTransitionHandler({
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
           ledgerRepository,
-          organisationsRepository,
+          organisationReadRepository,
           prnEvents,
           logger,
           id: prn.id,

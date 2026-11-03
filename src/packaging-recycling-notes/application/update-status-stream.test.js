@@ -1,4 +1,5 @@
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
@@ -7,11 +8,9 @@ import {
   PRN_ACTOR,
   AccreditationStatusError
 } from '#packaging-recycling-notes/domain/model.js'
-import { REGULATOR } from '#domain/organisations/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -27,12 +26,6 @@ const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
 
-const { buildOrganisationHolding } = createOrganisationBuilders()
-const organisation = buildOrganisationHolding({
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID
-})
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const TONNAGE = 50
@@ -59,7 +52,12 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   version: 3,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: '500001',
+    name: 'Test Reprocessor'
+  },
+  registration: { registrationNumber: 'REG-1' },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
@@ -112,14 +110,8 @@ const buildSeededLedgerRepository = () =>
     }
   ])()
 
-const buildOrganisationsRepository = (accreditation = {}) => ({
-  findById: async () => organisation,
-  findAccreditationById: vi.fn().mockResolvedValue({
-    status: 'approved',
-    submittedToRegulator: REGULATOR.EA,
-    ...accreditation
-  })
-})
+const buildOrganisationReadRepository = (accreditation) =>
+  stubOrganisationReadRepository(accreditation)
 
 const buildLedgerRepositories = (storedPrn, events = []) => {
   const packagingRecyclingNotesRepository =
@@ -162,7 +154,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: storedPrn,
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER
@@ -185,7 +177,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     await callUpdate({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: buildPrn({
         status: {
           currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -231,7 +223,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: storedPrn,
       newStatus: PRN_STATUS.ACCEPTED,
       actor: PRN_ACTOR.PRODUCER,
@@ -267,7 +259,9 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         callUpdate({
           prnRepository,
           ledgerRepository,
-          organisationsRepository: buildOrganisationsRepository({ status }),
+          organisationReadRepository: buildOrganisationReadRepository({
+            status
+          }),
           providedPrn: buildPrn({
             status: {
               currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -295,7 +289,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     await callUpdate({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: buildPrn({
         status: {
           currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
@@ -331,7 +325,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
         }),
@@ -364,7 +358,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     await callUpdate({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: buildPrn({
         status: {
           currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -393,7 +387,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -424,7 +418,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -446,7 +440,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: {
             currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
@@ -470,7 +464,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -503,7 +497,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: buildPrn({
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -553,7 +547,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       callUpdate({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         providedPrn: storedPrn,
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.PRODUCER,
@@ -606,7 +600,7 @@ describe('updatePrnStatus composes the read fold with the real CAS-enforcing rep
     const accepted = await callUpdate({
       prnRepository: packagingRecyclingNotesRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       providedPrn: projected,
       newStatus: PRN_STATUS.ACCEPTED,
       actor: PRN_ACTOR.PRODUCER

@@ -131,7 +131,7 @@ export const updatePrnStatusHandler =
     const {
       packagingRecyclingNotesRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       params,
       payload,
@@ -157,7 +157,7 @@ export const updatePrnStatusHandler =
       const updatedPrn = await updatePrnStatus({
         prnRepository: packagingRecyclingNotesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents,
         logger,
         id,

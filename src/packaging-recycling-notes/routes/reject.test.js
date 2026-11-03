@@ -130,7 +130,12 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   schemaVersion: 2,
   version: 1,
   prnNumber,
-  organisation: { id: organisationId, name: 'Test Organisation' },
+  organisation: {
+    id: organisationId,
+    organisationNumber: '500001',
+    name: 'Test Organisation'
+  },
+  registration: { registrationNumber: 'REG-1' },
   registrationId,
   accreditation: buildAccreditationSnapshot({ id: accreditationId }),
   obligationYear: toYear(2026),
@@ -185,7 +190,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
     const issuedPrn = {
       ...buildIssuedPrn(),
-      organisation: { id: testOrgId, name: 'Test Organisation' },
+      organisation: {
+        id: testOrgId,
+        organisationNumber: '500001',
+        name: 'Test Organisation'
+      },
+      registration: { registrationNumber: 'REG-1' },
       registrationId: testRegId,
       accreditation: {
         ...buildIssuedPrn().accreditation,
@@ -238,7 +248,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
     const issuedPrn = {
       ...buildIssuedPrn(),
-      organisation: { id: staleTestOrgId, name: 'Test Organisation' },
+      organisation: {
+        id: staleTestOrgId,
+        organisationNumber: '500001',
+        name: 'Test Organisation'
+      },
+      registration: { registrationNumber: 'REG-1' },
       registrationId: staleTestRegId,
       accreditation: {
         ...buildIssuedPrn().accreditation,

@@ -68,6 +68,25 @@ const otherIds = {
   accreditationId: new ObjectId().toString()
 }
 
+/**
+ * A PRN as stored with the numbers of the accreditation it was raised against,
+ * which a status change reads to find that accreditation.
+ *
+ * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
+ */
+const withStoredNumbers = (prn) => ({
+  ...prn,
+  organisation: {
+    ...prn.organisation,
+    organisationNumber: String(organisation.orgId)
+  },
+  registration: { registrationNumber: REPROCESSOR_NUMBER },
+  accreditation: {
+    ...prn.accreditation,
+    accreditationNumber: accredited.accreditationNumber
+  }
+})
+
 const fullSiteAddress = {
   line1: '1 Test Street',
   line2: 'Unit 4',
@@ -151,13 +170,9 @@ describe('PRN routes by natural key', () => {
   /** @param {{ cancellationEnabled?: boolean }} [options] */
   const startServer = async ({ cancellationEnabled = true } = {}) => {
     const prnRepositoryFactory =
-      createInMemoryPackagingRecyclingNotesRepository([
-        draft,
-        issued,
-        exported,
-        deleted,
-        elsewhere
-      ])
+      createInMemoryPackagingRecyclingNotesRepository(
+        [draft, issued, exported, deleted, elsewhere].map(withStoredNumbers)
+      )
     packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
     ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
@@ -241,7 +256,7 @@ describe('PRN routes by natural key', () => {
           registration: {
             registrationNumber: REPROCESSOR_NUMBER,
             accreditation: {
-              accreditationNumber: issued.accreditation.accreditationNumber,
+              accreditationNumber: accredited.accreditationNumber,
               accreditationYear: 2026,
               wasteProcessingType: 'reprocessor',
               material: 'plastic',
@@ -288,7 +303,7 @@ describe('PRN routes by natural key', () => {
           registration: {
             registrationNumber: REPROCESSOR_NUMBER,
             accreditation: {
-              accreditationNumber: draft.accreditation.accreditationNumber,
+              accreditationNumber: accredited.accreditationNumber,
               accreditationYear: 2026,
               wasteProcessingType: 'reprocessor',
               material: 'plastic',

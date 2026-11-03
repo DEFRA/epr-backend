@@ -13,6 +13,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   granted,
@@ -65,7 +66,13 @@ const organisationsRepositoryWith = (overrides = {}) => {
     statusHistory: [
       { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
     ],
-    registrations: [reprocessor({ id: registrationId, accreditationId })],
+    registrations: [
+      reprocessor({
+        id: registrationId,
+        accreditationId,
+        submittedToRegulator: accredited.submittedToRegulator
+      })
+    ],
     accreditations: [accredited]
   })
   return createInMemoryOrganisationsRepository([partialMock(organisation)])()
@@ -107,10 +114,16 @@ const createMockPrn = (overrides = {}) => ({
   id: prnId,
   version: 1,
   schemaVersion: 2,
-  organisation: { id: organisationId, name: 'Test Organisation' },
+  organisation: {
+    id: organisationId,
+    organisationNumber: String(orgId),
+    name: 'Test Organisation'
+  },
   registrationId,
+  registration: { registrationNumber: REPROCESSOR_NUMBER },
   accreditation: buildAccreditationSnapshot({
     id: accreditationId,
+    accreditationNumber: ACCREDITATION_NUMBER,
     submittedToRegulator: REGULATOR.EA
   }),
   obligationYear: toYear(2026),
@@ -149,6 +162,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     let ledgerRepository
     let organisationsRepository
     const mockPrn = createMockPrn()
+    // The read repository is built once at server start over whichever
+    // repository is registered then, so the registered one defers to the
+    // repository each test sets.
+    const currentOrganisationsRepository = new Proxy(
+      {},
+      {
+        get:
+          (_, method) =>
+          (...args) =>
+            organisationsRepository[method](...args)
+      }
+    )
 
     beforeAll(async () => {
       server = await createTestServer({
@@ -156,7 +181,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => currentOrganisationsRepository
         }
       })
 

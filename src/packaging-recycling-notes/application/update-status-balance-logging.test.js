@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 
+import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
 import {
   PRN_STATUS,
   PRN_ACTOR
 } from '#packaging-recycling-notes/domain/model.js'
-import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
@@ -14,7 +14,6 @@ import {
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -44,12 +43,6 @@ const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
 
-const { buildOrganisationHolding } = createOrganisationBuilders()
-const organisation = buildOrganisationHolding({
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID
-})
 const TONNAGE = 50
 const STARTING_TOTAL = 1000
 const POST_DEDUCTION_AVAILABLE = 950
@@ -59,9 +52,11 @@ const PRN_BASE = {
   id: PRN_ID,
   organisation: {
     id: ORG_ID,
+    organisationNumber: '500001',
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
+  registration: { registrationNumber: 'REG-1' },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
@@ -78,16 +73,7 @@ const buildBalanceSeed = (overrides = {}) => ({
   ...overrides
 })
 
-const buildOrganisationsRepository = () =>
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
-    /** @type {unknown} */ ({
-      findById: async () => organisation,
-      findAccreditationById: vi.fn().mockResolvedValue({
-        status: 'approved',
-        submittedToRegulator: REGULATOR.EA
-      })
-    })
-  )
+const buildOrganisationReadRepository = () => stubOrganisationReadRepository()
 
 /**
  * Stand up the in-memory repositories on the ledger path. The balance's resolved
@@ -113,14 +99,14 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
     })
   ])
 
-  const organisationsRepository = buildOrganisationsRepository()
+  const organisationReadRepository = buildOrganisationReadRepository()
   const prnEvents = { onCancelled: vi.fn().mockResolvedValue(undefined) }
 
   return {
     logger,
     prnRepository,
     ledgerRepository,
-    organisationsRepository,
+    organisationReadRepository,
     prnEvents
   }
 }
@@ -154,7 +140,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       logger,
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents
     } = await setupRepositories({
       prnSeed: buildDraftPrn(PRN_BASE),
@@ -164,7 +150,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
     await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       logger,
       id: PRN_ID,
@@ -191,7 +177,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       logger,
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents
     } = await setupRepositories({
       prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
@@ -203,7 +189,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
     await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       logger,
       id: PRN_ID,
@@ -230,7 +216,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       logger,
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents
     } = await setupRepositories({
       prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
@@ -242,7 +228,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
     await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       logger,
       id: PRN_ID,
@@ -276,7 +262,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       logger,
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents
     } = await setupRepositories({
       prnSeed: awaitingCancellationSeed,
@@ -289,7 +275,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
     await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       logger,
       id: PRN_ID,
@@ -316,7 +302,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       logger,
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents
     } = await setupRepositories({
       prnSeed: buildDraftPrn(PRN_BASE),
@@ -326,7 +312,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
     await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       logger,
       id: PRN_ID,
