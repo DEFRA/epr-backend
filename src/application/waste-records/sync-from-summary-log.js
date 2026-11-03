@@ -1,9 +1,8 @@
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { resolveOverseasSites } from './resolve-overseas-sites.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
+import { resolveClassificationContext } from '#application/summary-logs/classify-and-persist.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
 import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
@@ -16,14 +15,16 @@ import {
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import { requireStoredNumbers } from '#domain/organisations/numbers.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+ * @import { CreditedAccreditation } from '#waste-balances/application/update-via-ledger.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
+ * @import { SubmittedSummaryLog } from '#application/summary-logs/validate-issue-logging.js'
  */
 
 /**
@@ -130,64 +131,9 @@ const prepareRowsForTransformation = (parsedData) => {
 }
 
 /**
- * The accreditation a submit writes to: the summary log's own
- * `accreditationId` when it carries one (including `null`, which means
- * registered-only), otherwise (a legacy summary log, from before this field
- * existed) the registration's current link.
- */
-const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
-  if (summaryLog.accreditationId !== undefined) {
-    return summaryLog.accreditationId
-  }
-
-  const registration = await organisationsRepository.findRegistrationById(
-    summaryLog.organisationId,
-    summaryLog.registrationId
-  )
-  return registration?.accreditationId
-}
-
-/**
- * The numbers the row states and the ledger event are stored with, read from
- * the organisation record.
- *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {{ organisationId: string, registrationId: string }} summaryLog
- * @param {string | null} accreditationId
- * @returns {Promise<import('#domain/organisations/numbers.js').RequiredNumbers>}
- */
-const resolveNumbers = async (
-  organisationsRepository,
-  { organisationId, registrationId },
-  accreditationId
-) =>
-  requiredNumbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId },
-    'row states'
-  )
-
-const resolveAccreditation = async (
-  organisationsRepository,
-  organisationId,
-  accreditationId
-) => {
-  const accreditation = await organisationsRepository.findAccreditationById(
-    organisationId,
-    accreditationId
-  )
-
-  if (!accreditation) {
-    throw new Error(`Accreditation not found: ${accreditationId}`)
-  }
-
-  return accreditation
-}
-
-/**
  * @param {object} params
  * @param {ParsedSummaryLog} params.parsedData
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
+ * @param {CreditedAccreditation} params.accreditation
  * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
@@ -235,7 +181,7 @@ const updateWasteBalances = async ({
  * `0` for registered-only submissions (`accreditation` is `null`).
  *
  * @param {ValidatedWasteRecord[]} changedRecords
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+ * @param {CreditedAccreditation | null} accreditation
  * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} accreditedPeriod
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {number}
@@ -259,7 +205,7 @@ const decemberWasteRowCountFor = (
     )
   )
 
-  return decemberRowCountFor(classifiedRows, accreditation)
+  return decemberRowCountFor(classifiedRows, accreditation.year)
 }
 
 /**
@@ -275,7 +221,7 @@ const decemberWasteRowCountFor = (
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {CreditedAccreditation | null} params.accreditation
  * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
@@ -354,9 +300,9 @@ const countRecordChanges = async ({
  *
  * @param {object} params
  * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
- * @param {string | undefined} params.accreditationId
+ * @param {string | null} params.accreditationId
  * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {CreditedAccreditation | null} params.accreditation
  * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
@@ -385,7 +331,7 @@ const commitStateAndBalance = async ({
     ledgerId: {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null,
+      accreditationId,
       ...numbers
     },
     overseasSites,
@@ -430,8 +376,7 @@ const commitStateAndBalance = async ({
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
- * @param {Object} dependencies.organisationsRepository - The organisations repository
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
+ * @param {OrganisationReadRepository} dependencies.organisationReadRepository - The organisation read model, which the rows classify against
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} dependencies.summaryLogRowStatesRepository - The summary-log row states repository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} dependencies.ledgerRepository - The ledger repository, read to classify created/updated against the committed head
  * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
@@ -441,21 +386,14 @@ export const syncFromSummaryLog = (dependencies) => {
   const {
     extractor,
     wasteBalanceService,
-    organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger
   } = dependencies
 
   /**
-   * @param {Object} summaryLog - The summary log to process
-   * @param {Object} summaryLog.file - The file information
-   * @param {string} summaryLog.file.id - The file ID
-   * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
-   * @param {string} summaryLog.organisationId - The organisation ID
-   * @param {string} summaryLog.registrationId - The registration ID
-   * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
+   * @param {SubmittedSummaryLog} summaryLog - The summary log to process
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */
@@ -466,10 +404,14 @@ export const syncFromSummaryLog = (dependencies) => {
     // 2. Extract row IDs for transformation
     const preparedData = prepareRowsForTransformation(parsedData)
 
-    const accreditationId = await resolveAccreditationId(
+    // The numbers the row states and the ledger event are stored with.
+    const numbers = requireStoredNumbers(
       summaryLog,
-      organisationsRepository
+      `summary log for registration ${summaryLog.registrationId}`
     )
+    // A summary log with its numbers stored carries its accreditation id too
+    // (null for registered-only).
+    const accreditationId = summaryLog.accreditationId ?? null
 
     // 3. Transform to waste records
     const wasteRecords = transformFromSummaryLog(preparedData, {
@@ -478,27 +420,20 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId
     })
 
-    // 4. Resolve overseas sites for exporter ORS validation (VAL014)
+    // 4. What the rows classify against, from the organisation read model
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-    const overseasSites =
-      processingType === PROCESSING_TYPES.EXPORTER
-        ? await resolveOverseasSites(
-            organisationsRepository,
-            overseasSitesRepository,
-            summaryLog.organisationId,
-            summaryLog.registrationId
-          )
-        : ORS_VALIDATION_DISABLED
-
-    const accreditation = accreditationId
-      ? await resolveAccreditation(
-          organisationsRepository,
-          summaryLog.organisationId,
-          accreditationId
-        )
-      : null
-    // Converted once for the whole submission, not per row.
-    const accreditedPeriod = toAccreditedPeriod(accreditation)
+    const {
+      accreditation: accreditedPeriod,
+      overseasSites,
+      year
+    } = await resolveClassificationContext({
+      processingType,
+      summaryLog,
+      organisationReadRepository
+    })
+    /** @type {CreditedAccreditation | null} */
+    const accreditation =
+      accreditationId === null ? null : { id: accreditationId, year }
 
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
@@ -509,7 +444,7 @@ export const syncFromSummaryLog = (dependencies) => {
       ledgerId: {
         organisationId: summaryLog.organisationId,
         registrationId: summaryLog.registrationId,
-        accreditationId: accreditationId ?? null
+        accreditationId
       },
       ledgerRepository,
       summaryLogRowStatesRepository
@@ -520,11 +455,7 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLog,
       accreditationId,
-      numbers: await resolveNumbers(
-        organisationsRepository,
-        summaryLog,
-        accreditationId ?? null
-      ),
+      numbers,
       accreditation,
       accreditedPeriod,
       wasteRecords,

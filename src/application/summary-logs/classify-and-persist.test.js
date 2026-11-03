@@ -75,7 +75,8 @@ describe('resolveClassificationContext', () => {
           name: 'Site A',
           country: 'India'
         }
-      }
+      },
+      year: '2025'
     })
   })
 
@@ -93,9 +94,22 @@ describe('resolveClassificationContext', () => {
     expect(context.overseasSites).toBe(ORS_VALIDATION_DISABLED)
   })
 
-  // Ruling 20: an accreditation the read model drops is never accredited, so
-  // its rows are outside the accreditation period rather than, as a null
-  // accreditation would make them, accredited at every date.
+  it('carries the year the read model keys the accreditation by', async () => {
+    const context = await resolveClassificationContext({
+      processingType: 'REPROCESSOR_INPUT',
+      summaryLog: summaryLogWith({}),
+      organisationReadRepository: readRepositoryServing({
+        ...servedAccreditation,
+        year: '2026'
+      })
+    })
+
+    expect(context.year).toBe('2026')
+  })
+
+  // An accreditation the read model drops is never accredited, so its rows are
+  // outside the accreditation period rather than, as a null accreditation would
+  // make them, accredited at every date. It has no year either.
   it.each([
     ['EXPORTER', {}],
     ['REPROCESSOR_INPUT', ORS_VALIDATION_DISABLED]
@@ -110,7 +124,8 @@ describe('resolveClassificationContext', () => {
 
       expect(context).toEqual({
         accreditation: { window: null, timeline: [] },
-        overseasSites
+        overseasSites,
+        year: null
       })
     }
   )
@@ -130,14 +145,19 @@ describe('resolveClassificationContext', () => {
         organisationReadRepository
       })
 
-      expect(context).toEqual({ accreditation: null, overseasSites })
+      expect(context).toEqual({
+        accreditation: null,
+        overseasSites,
+        year: null
+      })
       expect(
         organisationReadRepository.findAccreditationByNumber
       ).not.toHaveBeenCalled()
     }
   )
 
-  // Ruling 21: no fallback for a summary log without its stored numbers.
+  // Stored numbers are present for every summary log, so there is no fallback
+  // for one without them.
   it('refuses a summary log without its stored numbers', async () => {
     await expect(
       resolveClassificationContext({

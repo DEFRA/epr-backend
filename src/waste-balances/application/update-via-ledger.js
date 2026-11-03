@@ -1,5 +1,13 @@
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
+/**
+ * The accreditation a submission credits, as the ledger needs it: its id, which
+ * names the ledger partition, and its year, which places the December portion
+ * (null when the year is unknown, so nothing accrues to December).
+ *
+ * @typedef {{ id: string, year: string | null }} CreditedAccreditation
+ */
+
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 import { recordWasteBalanceUpdateAudit } from './audit.js'
@@ -20,7 +28,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation - Legacy accreditation, for its id and year
+ * @param {CreditedAccreditation} params.accreditation - The ledger partition's accreditation id and the accreditation year
  * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod - The same accreditation as classification reads it
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
@@ -64,7 +72,7 @@ export const performUpdateViaLedger = async ({
 
   const decemberCreditTotal = decemberCreditTotalFor(
     classifiedRows,
-    accreditation
+    accreditation.year
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(

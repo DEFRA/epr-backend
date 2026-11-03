@@ -14,6 +14,7 @@ describe('monthKeyForDate', () => {
   it.each([
     { description: 'null', value: null },
     { description: 'undefined', value: undefined },
+    { description: 'null', value: null },
     { description: 'an unparseable string', value: 'not-a-date' }
   ])('returns null for $description', ({ value }) => {
     expect(monthKeyForDate(value)).toBeNull()
@@ -52,8 +53,13 @@ describe('decemberKeyForYearOf', () => {
     expect(decemberKeyForYearOf('2025-07-15')).toBe('2025-12')
   })
 
+  it('accepts a bare year', () => {
+    expect(decemberKeyForYearOf('2027')).toBe('2027-12')
+  })
+
   it.each([
     { description: 'undefined', value: undefined },
+    { description: 'null', value: null },
     { description: 'a value too short to carry a year', value: '26' }
   ])('is null for $description', ({ value }) => {
     expect(decemberKeyForYearOf(value)).toBeNull()

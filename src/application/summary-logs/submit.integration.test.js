@@ -7,7 +7,11 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildCreateReportParams,
@@ -31,12 +35,13 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
+  numbersFor,
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -90,20 +95,23 @@ const buildTestOrg = (organisationId, registrationId) => {
   const accreditationId = 'acc-123'
   const testOrg = buildReadOrganisation({
     registrations: [
-      partialMock({
+      buildRegistration({
         id: registrationId,
         registrationNumber: toRegistrationNumber('REG-123'),
-        status: 'approved',
         material: 'paper',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         submittedToRegulator: 'ea',
         validFrom: VALID_FROM,
-        accreditationId
+        accreditationId,
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01' },
+          { status: 'approved', updatedAt: VALID_FROM }
+        ]
       })
     ],
     accreditations: [
-      partialMock({
+      buildAccreditation({
         id: accreditationId,
         accreditationNumber: toAccreditationNumber('ACC-123'),
         material: 'paper',
@@ -111,7 +119,11 @@ const buildTestOrg = (organisationId, registrationId) => {
         reprocessingType: 'input',
         submittedToRegulator: 'ea',
         validFrom: VALID_FROM,
-        validTo: VALID_TO
+        validTo: VALID_TO,
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01' },
+          { status: 'approved', updatedAt: VALID_FROM }
+        ]
       })
     ]
   })
@@ -151,6 +163,8 @@ const setupSubmit = async ({
     organisationId,
     registrationId,
     accreditationId,
+    // Upload stores the numbers the organisation record gives the ids.
+    ...numbersFor(organisation, { registrationId, accreditationId }).numbers,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
@@ -174,13 +188,16 @@ const setupSubmit = async ({
   const deps = {
     logger,
     summaryLogsRepository,
-    organisationsRepository,
+    organisationReadRepository: createOrganisationReadRepository({
+      organisationsRepository,
+      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+      logger
+    }),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     ledgerRepository,
     wasteBalanceService: createWasteBalanceService(ledgerRepository),
     summaryLogExtractor,
-    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),
     user: SUBMIT_USER,
     onSummaryLogUploaded: vi.fn().mockResolvedValue(undefined)
@@ -418,7 +435,7 @@ describe('submitSummaryLog row-state numbers', () => {
     { accreditationId: 'acc-123', accreditationNumber: 'ACC-123' },
     { accreditationId: null, accreditationNumber: null }
   ])(
-    'stores the numbers from the organisation record on each row state, accreditation $accreditationId',
+    'stores the same numbers on each row state as the organisation record gives, accreditation $accreditationId',
     async ({ accreditationId, accreditationNumber }) => {
       const {
         deps,

@@ -25,7 +25,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -368,14 +367,16 @@ describe('Submission and placeholder tests', () => {
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
 
+      const organisationReadRepository = createOrganisationReadRepository({
+        organisationsRepository,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+        logger: mockLogger
+      })
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        organisationReadRepository: createOrganisationReadRepository({
-          organisationsRepository,
-          overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-          logger: mockLogger
-        }),
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
@@ -391,10 +392,7 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationsRepository,
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
-        }),
+        organisationReadRepository,
         logger: mockLogger
       })
 

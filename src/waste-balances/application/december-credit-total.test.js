@@ -7,10 +7,10 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 // A row's granular processing type lives on its own data, exactly as
-// classification reads it; the accreditation supplies only its validFrom year.
-const EXPORTER = { validFrom: '2026-01-01' }
-const REPROCESSOR_INPUT = { validFrom: '2026-01-01' }
-const REPROCESSOR_OUTPUT = { validFrom: '2026-01-01' }
+// classification reads it; the accreditation supplies only its year.
+const EXPORTER = '2026'
+const REPROCESSOR_INPUT = '2026'
+const REPROCESSOR_OUTPUT = '2026'
 
 const included = (transactionAmount) => ({
   outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
@@ -91,11 +91,10 @@ describe('decemberCreditTotalFor', () => {
       expect(decemberCreditTotalFor(rows, EXPORTER)).toBe(10)
     })
 
-    it('reads the December year from validFrom, not the current clock', () => {
+    it('reads the December year from the accreditation year, not the current clock', () => {
       const rows2025 = [exportedRow('2025-12-15', included(30))]
-      const acc2025 = { ...EXPORTER, validFrom: '2025-07-01' }
 
-      expect(decemberCreditTotalFor(rows2025, acc2025)).toBe(30)
+      expect(decemberCreditTotalFor(rows2025, '2025')).toBe(30)
       expect(decemberCreditTotalFor(rows2025, EXPORTER)).toBe(0)
     })
   })
@@ -169,12 +168,10 @@ describe('decemberCreditTotalFor', () => {
   })
 
   describe('undeterminable December key accrues nothing', () => {
-    it('accrues nothing when validFrom is absent', () => {
+    it('accrues nothing without an accreditation year', () => {
       const rows = [exportedRow('2026-12-05', included(10))]
 
-      expect(
-        decemberCreditTotalFor(rows, { ...EXPORTER, validFrom: undefined })
-      ).toBe(0)
+      expect(decemberCreditTotalFor(rows, null)).toBe(0)
     })
 
     it('accrues nothing for a missing or unparseable balance-affecting date', () => {
@@ -200,18 +197,10 @@ describe('decemberCreditTotalFor', () => {
 })
 
 describe('decemberRowCountFor', () => {
-  it('is 0 for a registered-only submission (accreditation is null)', () => {
+  it('is 0 without an accreditation year (registered-only, or not served by the read model)', () => {
     const rows = [exportedRow('2026-12-05', included(10))]
 
     expect(decemberRowCountFor(rows, null)).toBe(0)
-  })
-
-  it('is 0 when the December key is undeterminable (no validFrom)', () => {
-    const rows = [exportedRow('2026-12-05', included(10))]
-
-    expect(
-      decemberRowCountFor(rows, { ...EXPORTER, validFrom: undefined })
-    ).toBe(0)
   })
 
   it('counts only the December-dated, INCLUDED rows among a mix', () => {

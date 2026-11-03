@@ -220,7 +220,7 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation - Legacy accreditation, for its id and year
+     * @param {import('./update-via-ledger.js').CreditedAccreditation} options.accreditation - The ledger partition's accreditation id and the accreditation year
      * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} options.accreditedPeriod - The same accreditation as classification reads it
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {string} options.summaryLogId

@@ -256,14 +256,15 @@ describe('Repeated uploads of identical data', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository = createOrganisationReadRepository({
+        organisationsRepository,
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: mockLogger
+      })
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        organisationReadRepository: createOrganisationReadRepository({
-          organisationsRepository,
-          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-          logger: mockLogger
-        }),
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
@@ -281,10 +282,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationsRepository,
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
-        }),
+        organisationReadRepository,
         logger: mockLogger
       })
 

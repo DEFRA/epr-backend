@@ -1,4 +1,4 @@
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
+import { readModelAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -31,11 +31,46 @@ const LEDGER_ID = {
   accreditationId: null
 }
 
-const summaryLogFor = (fileId, accreditationId) => ({
-  file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  ...(accreditationId && { accreditationId })
+/**
+ * A summary log as upload stores it: its ids and the numbers they map to.
+ * Without an accreditation id it is registered-only.
+ *
+ * @param {string} fileId
+ * @param {string} [accreditationId]
+ */
+const summaryLogFor = (fileId, accreditationId) =>
+  /** @type {any} */ ({
+    file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    accreditationId: accreditationId ?? null,
+    organisationNumber: '500001',
+    registrationNumber: 'REG-1',
+    accreditationNumber: accreditationId ? 'ACC-1' : null
+  })
+
+const approvedTimeline = [
+  { status: 'created', at: '2022-12-01T00:00:00.000Z' },
+  { status: 'approved', at: '2023-01-01T00:00:00.000Z' }
+]
+
+const servedAccreditation = {
+  accreditationNumber: 'ACC-1',
+  status: { current: 'approved', timeline: approvedTimeline },
+  overseasSites: {}
+}
+
+/**
+ * The read model's answer for ACC-1 on REG-1: an approved 2023 accreditation.
+ *
+ * @param {{ registration?: object, accreditation?: object, year?: string }} [overrides]
+ */
+const servedBy = (overrides = {}) => ({
+  organisation: {},
+  registration: { overseasSites: {} },
+  accreditation: servedAccreditation,
+  year: '2023',
+  ...overrides
 })
 
 const reprocessorInput = (rows) =>
@@ -72,8 +107,7 @@ const receivedRow = (rowNumber, rowId, date, weight) => ({
 
 describe('syncFromSummaryLog', () => {
   let wasteBalanceService
-  let organisationsRepository
-  let overseasSitesRepository
+  let organisationReadRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
 
@@ -85,31 +119,15 @@ describe('syncFromSummaryLog', () => {
       submitSummaryLog: vi.fn(),
       commitSummaryLogSubmittedEvent: vi.fn()
     }
-    organisationsRepository = {
-      findById: vi.fn().mockResolvedValue({
-        id: 'org-1',
-        orgId: 500001,
-        registrations: [{ id: 'reg-1', registrationNumber: 'REG-1' }],
-        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
-      }),
-      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
-      findAccreditationById: vi.fn().mockResolvedValue({
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: []
-      })
-    }
-    overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([])
+    organisationReadRepository = {
+      findAccreditationByNumber: vi.fn().mockResolvedValue(servedBy())
     }
   })
 
   const makeSync = (overrides = {}) =>
     /** @type {any} */ (syncFromSummaryLog)({
       wasteBalanceService,
-      organisationsRepository,
-      overseasSitesRepository,
+      organisationReadRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
       ...overrides
@@ -190,7 +208,7 @@ describe('syncFromSummaryLog', () => {
     })
   })
 
-  it('stores no row state its organisation record gives no number for', async () => {
+  it('stores no row state for a summary log without its stored numbers', async () => {
     const fileId = 'file-numbers-missing'
     const extractor = extractorFor(
       fileId,
@@ -198,17 +216,14 @@ describe('syncFromSummaryLog', () => {
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
     )
-    organisationsRepository.findById.mockResolvedValue({
-      id: 'org-1',
-      orgId: 500001,
-      registrations: [{ id: 'reg-1', registrationNumber: null }],
-      accreditations: []
-    })
 
     await expect(
-      makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+      makeSync({ extractor })(
+        { ...summaryLogFor(fileId), registrationNumber: undefined },
+        TEST_USER
+      )
     ).rejects.toThrow(
-      'Cannot store row states without their numbers: registration reg-1 has no registration number'
+      'Cannot use summary log for registration reg-1 without its numbers: registrationNumber'
     )
     expect(
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
@@ -363,6 +378,17 @@ describe('syncFromSummaryLog', () => {
     ])
   })
 
+  it('looks the accreditation up in the read model by the summary log’s numbers', async () => {
+    const fileId = 'file-lookup'
+    const extractor = extractorFor(fileId, exporterInput([]))
+
+    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+
+    expect(
+      organisationReadRepository.findAccreditationByNumber
+    ).toHaveBeenCalledWith('500001', 'REG-1', 'ACC-1')
+  })
+
   it('updates waste balances when accreditationId is present', async () => {
     const fileId = 'file-wb'
     const extractor = extractorFor(
@@ -383,18 +409,11 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: {
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31',
-          statusHistory: []
-        },
-        accreditedPeriod: toAccreditedPeriod({
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31',
-          statusHistory: []
-        }),
+        accreditation: { id: 'acc-1', year: '2023' },
+        accreditedPeriod: readModelAccreditedPeriod(
+          /** @type {any} */ (servedAccreditation),
+          '2023'
+        ),
         overseasSites: {},
         summaryLogId: fileId,
         numbers: {
@@ -406,7 +425,7 @@ describe('syncFromSummaryLog', () => {
     )
   })
 
-  it('resolves overseas sites for exporter waste balance validation', async () => {
+  it('classifies an exporter against the accreditation’s overseas sites from the read model', async () => {
     const fileId = 'file-ors'
     const extractor = extractorFor(
       fileId,
@@ -414,14 +433,21 @@ describe('syncFromSummaryLog', () => {
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
     )
-
-    const validFrom = new Date('2024-01-01')
-    overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
-    }
-    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
-      overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
-    })
+    organisationReadRepository.findAccreditationByNumber.mockResolvedValue(
+      servedBy({
+        registration: {
+          overseasSites: {
+            '001': { name: 'Site A', address: { country: 'India' } }
+          }
+        },
+        accreditation: {
+          ...servedAccreditation,
+          overseasSites: {
+            '001': { status: 'approved', approvedOn: '2024-01-01' }
+          }
+        }
+      })
+    )
 
     await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
 
@@ -429,7 +455,11 @@ describe('syncFromSummaryLog', () => {
       expect.any(Array),
       expect.objectContaining({
         overseasSites: {
-          '001': expect.objectContaining({ approvedFrom: validFrom })
+          '001': {
+            approvedFrom: new Date('2024-01-01'),
+            name: 'Site A',
+            country: 'India'
+          }
         }
       })
     )
@@ -461,30 +491,88 @@ describe('syncFromSummaryLog', () => {
     )
   })
 
-  it('throws when accreditationId exists but accreditation is not found', async () => {
-    const fileId = 'file-no-accred'
-    const extractor = extractorFor(
-      fileId,
-      exporterInput([
-        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
-      ])
-    )
-    organisationsRepository.findAccreditationById.mockResolvedValue(null)
+  describe('crediting a valid row against the read model', () => {
+    const validReceivedRow = {
+      ROW_ID: 1001,
+      DATE_RECEIVED_FOR_REPROCESSING: '2023-06-01',
+      EWC_CODE: '03 03 08',
+      DESCRIPTION_WASTE: 'Paper',
+      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+      GROSS_WEIGHT: 10,
+      TARE_WEIGHT: 0,
+      PALLET_WEIGHT: 0,
+      NET_WEIGHT: 10,
+      BAILING_WIRE_PROTOCOL: 'No',
+      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+      WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+      RECYCLABLE_PROPORTION_PERCENTAGE: 1,
+      TONNAGE_RECEIVED_FOR_RECYCLING: 10
+    }
+    const extractorForValidRow = (fileId, date) =>
+      extractorFor(fileId, {
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: Object.keys(validReceivedRow),
+            rows: [
+              {
+                rowNumber: 2,
+                values: Object.values({
+                  ...validReceivedRow,
+                  DATE_RECEIVED_FOR_REPROCESSING: date
+                })
+              }
+            ]
+          }
+        }
+      })
+    const submit = (fileId, date = '2023-06-01') =>
+      makeSync({
+        extractor: extractorForValidRow(fileId, date),
+        wasteBalanceService: createWasteBalanceService(ledgerRepository)
+      })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+    const accreditedLedgerId = { ...LEDGER_ID, accreditationId: 'acc-1' }
 
-    await expect(
-      makeSync({ extractor })(summaryLogFor(fileId, 'acc-missing'), TEST_USER)
-    ).rejects.toThrow('Accreditation not found: acc-missing')
-  })
+    it('credits the row while the read model serves the accreditation', async () => {
+      await submit('file-served')
 
-  it('resolves accreditationId from the registration when absent on the summary log', async () => {
-    const fileId = 'file-resolve-accred'
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: reprocessorInput([])
+      const [event] = await ledgerRepository.findAllInLedger(accreditedLedgerId)
+      expect(event.payload.creditTotal).toBe(10)
     })
 
-    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+    it('places December in the year the read model keys the accreditation by', async () => {
+      const result = await submit('file-december', '2023-12-05')
 
-    expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
+      expect(result.decemberWasteRowCount).toBe(1)
+      const [event] = await ledgerRepository.findAllInLedger(accreditedLedgerId)
+      expect(event.payload.decemberCreditTotal).toBe(10)
+    })
+
+    // The read model leaves out accreditations that were never approved (and
+    // malformed ones). Their rows are never credited: every row is outside the
+    // accreditation period, matching what validation showed on the check page.
+    it('credits nothing for an accreditation the read model does not serve: every row is outside the accreditation period', async () => {
+      organisationReadRepository.findAccreditationByNumber.mockResolvedValue(
+        null
+      )
+
+      await submit('file-unserved')
+
+      const [rowState] =
+        await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          'org-1',
+          'reg-1',
+          'file-unserved'
+        )
+      expect(rowState.classification).toEqual({
+        outcome: 'IGNORED',
+        reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }],
+        transactionAmount: 0
+      })
+      const [event] = await ledgerRepository.findAllInLedger(accreditedLedgerId)
+      expect(event.payload.creditTotal).toBe(0)
+    })
   })
 
   describe('return value (created/updated counts against the committed head)', () => {

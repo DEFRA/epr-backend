@@ -65,12 +65,12 @@ const decemberAmountForRow = (row, decemberKey) =>
  * submission: the sum of each classified row's `decemberAmountForRow`.
  *
  * @param {import('./target-amount.js').ClassifiedRow[]} classifiedRows
- * @param {{ validFrom?: string }} accreditation - only the accreditation-year
- *   `validFrom` is read; a full `Accreditation` is assignable.
+ * @param {string | null} accreditationYear - the year the accreditation is
+ *   for; null (no accreditation year known) accrues nothing.
  * @returns {number}
  */
-export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
-  const decemberKey = decemberKeyForYearOf(accreditation.validFrom)
+export const decemberCreditTotalFor = (classifiedRows, accreditationYear) => {
+  const decemberKey = decemberKeyForYearOf(accreditationYear)
   if (decemberKey === null) {
     return 0
   }
@@ -89,17 +89,12 @@ export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
  * cancel in `decemberCreditTotalFor` still count here.
  *
  * @param {import('./target-amount.js').ClassifiedRow[]} classifiedRows
- * @param {{ validFrom?: string } | null} accreditation - only the
- *   accreditation-year `validFrom` is read; a full `Accreditation` is
- *   assignable.
+ * @param {string | null} accreditationYear - the year the accreditation is
+ *   for; null (registered-only, or no accreditation year known) counts none.
  * @returns {number}
  */
-export const decemberRowCountFor = (classifiedRows, accreditation) => {
-  if (accreditation === null) {
-    return 0
-  }
-
-  const decemberKey = decemberKeyForYearOf(accreditation.validFrom)
+export const decemberRowCountFor = (classifiedRows, accreditationYear) => {
+  const decemberKey = decemberKeyForYearOf(accreditationYear)
   if (decemberKey === null) {
     return 0
   }

@@ -170,6 +170,10 @@ export const fetchPeriodicReports = async ({
  *   is needed: a registration without an accreditation validates only against
  *   a registered-only template, whose tables have no waste-balance classifier.
  *
+ * The result also carries the accreditation's year (the year the read model
+ * keys it by), which places the December a submission accrues against; it is
+ * null when the read model serves no accreditation.
+ *
  * Only exporters carry overseas sites, so other processing types disable the
  * overseas-site checks. Without an exporter's sites, loads requiring site
  * approval would be misclassified in the predicted waste-balance delta shown
@@ -179,7 +183,7 @@ export const fetchPeriodicReports = async ({
  * @param {ProcessingType} params.processingType
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {OrganisationReadRepository} params.organisationReadRepository
- * @returns {Promise<{ accreditation: AccreditedPeriod | null, overseasSites: OverseasSitesContext }>}
+ * @returns {Promise<{ accreditation: AccreditedPeriod | null, overseasSites: OverseasSitesContext, year: string | null }>}
  */
 export const resolveClassificationContext = async ({
   processingType,
@@ -205,7 +209,8 @@ export const resolveClassificationContext = async ({
   if (!found) {
     return {
       accreditation: accreditationNumber === null ? null : neverAccredited(),
-      overseasSites: isExporter ? {} : ORS_VALIDATION_DISABLED
+      overseasSites: isExporter ? {} : ORS_VALIDATION_DISABLED,
+      year: null
     }
   }
 
@@ -213,6 +218,7 @@ export const resolveClassificationContext = async ({
     accreditation: readModelAccreditedPeriod(found.accreditation, found.year),
     overseasSites: isExporter
       ? readModelOverseasSitesContext(found.registration, found.accreditation)
-      : ORS_VALIDATION_DISABLED
+      : ORS_VALIDATION_DISABLED,
+    year: found.year
   }
 }

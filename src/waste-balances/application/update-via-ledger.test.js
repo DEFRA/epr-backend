@@ -71,13 +71,16 @@ const { organisationNumber, registrationNumber, accreditationNumber } =
   withNumbers(ledgerId)
 const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
+const accreditation = { id: accreditationId, year: '2023' }
+
 /** @type {Accreditation} */
-const accreditation = partialMock({
+const legacyAccreditation = partialMock({
   id: accreditationId,
   validFrom: '2023-01-01',
   validTo: '2030-12-31',
   statusHistory: []
 })
+const accreditedPeriod = toAccreditedPeriod(legacyAccreditation)
 
 const overseasSites = /** @type {*} */ (new Map())
 const user = {
@@ -128,7 +131,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -160,7 +163,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -176,7 +179,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -208,7 +211,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -235,7 +238,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -258,7 +261,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -281,7 +284,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -321,7 +324,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent: auditlessSubmit,
         numbers,
         dependencies: {},
@@ -355,7 +358,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -374,7 +377,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -395,7 +398,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
-        accreditedPeriod: toAccreditedPeriod(accreditation),
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -423,7 +426,7 @@ describe('performUpdateViaLedger', () => {
         performUpdateViaLedger({
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
-          accreditedPeriod: toAccreditedPeriod(accreditation),
+          accreditedPeriod,
           commitSummaryLogSubmittedEvent,
           numbers,
           dependencies: { systemLogsRepository },

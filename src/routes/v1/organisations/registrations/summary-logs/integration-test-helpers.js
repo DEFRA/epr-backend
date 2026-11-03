@@ -805,14 +805,16 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const packagingRecyclingNotesRepository =
     packagingRecyclingNotesRepositoryFactory(mockLogger)
 
+  const organisationReadRepository = createOrganisationReadRepository({
+    organisationsRepository,
+    overseasSitesRepository,
+    logger: mockLogger
+  })
+
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    organisationReadRepository: createOrganisationReadRepository({
-      organisationsRepository,
-      overseasSitesRepository,
-      logger: mockLogger
-    }),
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
@@ -824,8 +826,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteBalanceService,
-    organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger: mockLogger
