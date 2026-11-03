@@ -11,9 +11,9 @@ import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
-  REGISTRATION_STATUSES
+  REGISTRATION_STATUSES,
+  REG_ACC_STATUS
 } from '#organisation-read-model/domain/model.js'
-import { REG_ACC_STATUSES } from '#organisation-read-model/domain/reg-acc-status-by-date.js'
 
 /*
  * Routes validate responses with `stripUnknown`, so these schemas also decide
@@ -29,7 +29,6 @@ const regulatorSchema = Joi.object({
 
 const yearKey = Joi.string().pattern(/^\d{4}$/)
 const orsIdKey = Joi.string().pattern(/^\d{3}$/)
-const dateKey = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)
 
 const isoDate = isoDateString()
 
@@ -126,10 +125,10 @@ const ukAddressSchema = Joi.alternatives().try(
 
 const regAccStatusByDateSchema = keyedByYear(
   Joi.object().pattern(
-    dateKey,
+    isoDate,
     Joi.object({
       status: Joi.string()
-        .valid(...REG_ACC_STATUSES)
+        .valid(...Object.values(REG_ACC_STATUS))
         .required()
     })
   )

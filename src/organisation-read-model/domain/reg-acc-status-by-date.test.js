@@ -18,22 +18,30 @@ const cancelledOn = changeTo('cancelled')
 
 /**
  * @param {StatusTimeline} registration
+ * @param {Record<number, StatusTimeline>} accreditations
+ * @returns {Registration}
+ */
+const registrationWith = (registration, accreditations) =>
+  /** @type {Registration} */ (
+    /** @type {unknown} */ ({
+      status: { timeline: registration },
+      accreditations: Object.fromEntries(
+        Object.entries(accreditations).map(([key, timeline]) => [
+          key,
+          { status: { timeline } }
+        ])
+      )
+    })
+  )
+
+/**
+ * @param {StatusTimeline} registration
  * @param {Record<number, StatusTimeline>} [accreditations]
  * @param {number} [year]
  */
 const byDate = (registration, accreditations = {}, year = 2026) =>
   regAccStatusByDate(
-    /** @type {Registration} */ (
-      /** @type {unknown} */ ({
-        status: { timeline: registration },
-        accreditations: Object.fromEntries(
-          Object.entries(accreditations).map(([key, timeline]) => [
-            key,
-            { status: { timeline } }
-          ])
-        )
-      })
-    ),
+    registrationWith(registration, accreditations),
     toYear(year)
   )
 
