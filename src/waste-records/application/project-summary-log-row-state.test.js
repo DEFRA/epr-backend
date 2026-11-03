@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, it, expect } from 'vitest'
 
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
@@ -133,7 +134,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
-      accreditation,
+      toAccreditedPeriod(accreditation),
       overseasSites
     )
 

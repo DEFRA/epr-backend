@@ -32,7 +32,7 @@ const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
  * cross-field reconciliation arithmetic requires.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {Object} accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {SummaryLogRowStateEntry}
  */

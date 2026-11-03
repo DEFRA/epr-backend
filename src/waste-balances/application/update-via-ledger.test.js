@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
@@ -127,6 +128,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -158,6 +160,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -173,6 +176,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -204,6 +208,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -230,6 +235,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: records,
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -252,6 +258,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -274,6 +281,7 @@ describe('performUpdateViaLedger', () => {
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -313,6 +321,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent: auditlessSubmit,
         numbers,
         dependencies: {},
@@ -346,6 +355,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -364,6 +374,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -384,6 +395,7 @@ describe('performUpdateViaLedger', () => {
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
+        accreditedPeriod: toAccreditedPeriod(accreditation),
         commitSummaryLogSubmittedEvent,
         numbers,
         dependencies: { systemLogsRepository },
@@ -411,6 +423,7 @@ describe('performUpdateViaLedger', () => {
         performUpdateViaLedger({
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
+          accreditedPeriod: toAccreditedPeriod(accreditation),
           commitSummaryLogSubmittedEvent,
           numbers,
           dependencies: { systemLogsRepository },

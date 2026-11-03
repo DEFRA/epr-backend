@@ -220,7 +220,8 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
+     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation - Legacy accreditation, for its id and year
+     * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} options.accreditedPeriod - The same accreditation as classification reads it
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {string} options.summaryLogId
      * @param {import('#domain/organisations/numbers.js').RequiredNumbers} options.numbers
@@ -228,7 +229,14 @@ export const createWasteBalanceService = (
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId, numbers }
+      {
+        user,
+        accreditation,
+        accreditedPeriod,
+        overseasSites,
+        summaryLogId,
+        numbers
+      }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -240,6 +248,7 @@ export const createWasteBalanceService = (
           ...accreditation,
           id: validateAccreditationId(accreditation.id)
         },
+        accreditedPeriod,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,

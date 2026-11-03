@@ -19,7 +19,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
- * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditation
  * @param {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId

@@ -11,7 +11,6 @@ import {
   isDateInSubmittedPeriod
 } from '#reports/domain/submitted-periods.js'
 import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 
 /** Internal reporting-period status. Not serialised: mapped to output keys via PERIOD_TO_KEY. */
 const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
@@ -25,7 +24,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {LoadsByReportingPeriod, PeriodStatusByRecordChange, RowDetail, RowIdentity} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
@@ -35,7 +34,7 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 
 /**
  * @typedef {Object} ClassificationContext
- * @property {Accreditation | null} accreditation
+ * @property {AccreditedPeriod | null} accreditation
  * @property {OverseasSitesContext} overseasSites
  */
 
@@ -207,8 +206,7 @@ const classifyRowForWasteBalance = (schema, data, context) => {
   }
 
   const result = classify(data, {
-    // legacy adapter until Task 7
-    accreditation: toAccreditedPeriod(context.accreditation),
+    accreditation: context.accreditation,
     overseasSites: context.overseasSites
   })
   const transactionAmount =

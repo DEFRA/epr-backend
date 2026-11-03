@@ -1,10 +1,12 @@
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
+/** @import {OverseasSitesContext} from '#waste-balances/domain/classification-context.js' */
 
 /**
- * @typedef {Object} OverseasSiteContextEntry
- * @property {Date | null} approvedFrom - Approval date used by classifyForWasteBalance.
- * @property {string} name - Approved site name (for OSR_NAME_REVISED).
- * @property {string} country - Destination country (for OSR_COUNTRY_REVISED).
+ * One approved site in the context: `approvedFrom` is used by
+ * classifyForWasteBalance, `name` populates OSR_NAME_REVISED and `country`
+ * OSR_COUNTRY_REVISED.
+ *
+ * @typedef {Exclude<OverseasSitesContext, symbol>[string]} OverseasSiteContextEntry
  */
 
 /**
@@ -25,12 +27,12 @@
  *
  * @param {{ overseasSites?: Record<string, { overseasSiteId: string }> | null }} registration
  * @param {Map<string, OverseasSite>} sitesById
- * @returns {Record<string, OverseasSiteContextEntry>}
+ * @returns {Exclude<OverseasSitesContext, symbol>}
  */
 export const buildOverseasSitesContext = (registration, sitesById) => {
   const entries = Object.entries(registration?.overseasSites ?? {})
 
-  /** @type {Record<string, OverseasSiteContextEntry>} */
+  /** @type {Exclude<OverseasSitesContext, symbol>} */
   const context = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = sitesById.get(overseasSiteId)

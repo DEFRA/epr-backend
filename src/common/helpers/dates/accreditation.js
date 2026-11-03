@@ -63,12 +63,22 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (window === null) {
     return false
   }
+  // Sorted once for every date, not once per date.
+  const statusHistory = timelineDateTimes(timeline)
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, window) &&
-      !isSuspendedOrCancelledAtDate(date, timeline)
+      !isSuspendedOrCancelled(statusHeldAt(date, statusHistory))
   )
 }
+
+/**
+ * @param {AccreditationStatus | undefined} status
+ * @returns {boolean}
+ */
+const isSuspendedOrCancelled = (status) =>
+  status === ACCREDITATION_STATUS.SUSPENDED ||
+  status === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * Convert dates to numbers and sort descending
@@ -154,11 +164,7 @@ export function statusHeldAtOnTimeline(date, timeline) {
  * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
  */
 export function isSuspendedOrCancelledAtDate(date, timeline) {
-  const status = statusHeldAtOnTimeline(date, timeline)
-  return (
-    status === ACCREDITATION_STATUS.SUSPENDED ||
-    status === ACCREDITATION_STATUS.CANCELLED
-  )
+  return isSuspendedOrCancelled(statusHeldAtOnTimeline(date, timeline))
 }
 
 /**

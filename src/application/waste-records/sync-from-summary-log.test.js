@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -388,6 +389,12 @@ describe('syncFromSummaryLog', () => {
           validTo: '2023-12-31',
           statusHistory: []
         },
+        accreditedPeriod: toAccreditedPeriod({
+          id: 'acc-default',
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31',
+          statusHistory: []
+        }),
         overseasSites: {},
         summaryLogId: fileId,
         numbers: {

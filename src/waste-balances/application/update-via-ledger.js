@@ -20,7 +20,8 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation - Legacy accreditation, for its id and year
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod - The same accreditation as classification reads it
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
@@ -32,6 +33,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 export const performUpdateViaLedger = async ({
   wasteRecords,
   accreditation,
+  accreditedPeriod,
   commitSummaryLogSubmittedEvent,
   dependencies = {},
   user,
@@ -50,7 +52,7 @@ export const performUpdateViaLedger = async ({
     classifyWasteRecord(
       record,
       record.data?.processingType,
-      accreditation,
+      accreditedPeriod,
       overseasSites
     )
   )

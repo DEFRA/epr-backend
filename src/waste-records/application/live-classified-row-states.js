@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js'
 
@@ -74,7 +75,7 @@ export const liveClassifiedRowStatesForRegistration = async ({
   )
 
   return reclassifyWasteRecordStates(rowStates, {
-    accreditation,
+    accreditation: toAccreditedPeriod(accreditation),
     overseasSites
   })
 }

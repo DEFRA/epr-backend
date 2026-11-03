@@ -16,7 +16,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {ReportableWasteRecordState} from '#reports/domain/aggregation/aggregate-report-detail.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
@@ -44,7 +44,7 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
- * @param {Accreditation | null} accreditation
+ * @param {AccreditedPeriod | null} accreditation
  * @param {OverseasSitesContext} overseasSites
  * @returns {ReportableWasteRecordState[]}
  */
@@ -242,6 +242,7 @@ const logPeriodOutcome = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Registration | undefined} params.registration
+ * @param {AccreditedPeriod | null} params.accreditedPeriod
  * @param {OverseasSitesContext} params.overseasSites
  * @param {ReportsService} params.reportsService
  * @param {OverseasSitesRepository} params.overseasSitesRepository
@@ -258,6 +259,7 @@ const computePeriodsRequiringResubmission = async ({
   periodicReports,
   wasteRecords,
   registration,
+  accreditedPeriod,
   overseasSites,
   reportsService,
   overseasSitesRepository,
@@ -276,7 +278,7 @@ const computePeriodsRequiringResubmission = async ({
     registration,
     newHeadRowStates: toNewHeadRowStates(
       wasteRecords,
-      registration.accreditation ?? null,
+      accreditedPeriod,
       overseasSites
     ),
     overseasSitesRepository,
