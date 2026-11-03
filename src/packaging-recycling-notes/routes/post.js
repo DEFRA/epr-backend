@@ -30,12 +30,17 @@ import { findOrganisationAndRegistrationReadModels } from '#root/routes/organisa
 
 /**
  * @import { Accreditation, AccreditationAddress } from '#domain/organisations/accreditation.js'
- * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { Actor, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue } from '#domain/organisations/model.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationContext } from '#waste-balances/domain/credited-tonnage.js'
+ * @import { AccreditationParams } from './by-natural-key.js'
  */
 
 /**
@@ -59,11 +64,11 @@ const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
 /**
  * @typedef {{
  *   id: string,
- *   accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber,
- *   accreditationYear: import('#common/helpers/dates/year.js').Year,
- *   material: import('#domain/organisations/model.js').AppliedForMaterial,
- *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue,
- *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess
+ *   accreditationNumber: AccreditationNumber,
+ *   accreditationYear: Year,
+ *   material: AppliedForMaterial,
+ *   submittedToRegulator: RegulatorValue,
+ *   glassRecyclingProcess?: GlassRecyclingProcess
  *   siteAddress?: AccreditationAddress
  * }} SnapshotAccreditation
  */
@@ -81,16 +86,14 @@ const snapshotAccreditation = (accreditation) => {
     id: accreditation.id,
     // Only an approved accreditation has a number; the insert schema refuses a
     // PRN snapshot without one.
-    accreditationNumber:
-      /** @type {import('#domain/organisations/numbers.js').AccreditationNumber} */ (
-        accreditation.accreditationNumber
-      ),
+    accreditationNumber: /** @type {AccreditationNumber} */ (
+      accreditation.accreditationNumber
+    ),
     accreditationYear: deriveAccreditationYear(accreditation),
     material: accreditation.material,
-    submittedToRegulator:
-      /** @type {import('#domain/organisations/model.js').RegulatorValue} */ (
-        accreditation.submittedToRegulator
-      )
+    submittedToRegulator: /** @type {RegulatorValue} */ (
+      accreditation.submittedToRegulator
+    )
   }
 
   if (
@@ -111,12 +114,12 @@ const snapshotAccreditation = (accreditation) => {
  * Build PRN data for creation
  *
  * @param {{
- *   organisation: import('#packaging-recycling-notes/domain/model.js').OrganisationSnapshot,
+ *   organisation: OrganisationSnapshot,
  *   registrationId: string,
- *   registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   accreditation: Accreditation,
  *   payload: PackagingRecyclingNotesCreatePayload,
- *   user: import('#packaging-recycling-notes/domain/model.js').Actor,
+ *   user: Actor,
  *   isExport: boolean,
  *   now: Date
  * }} params
@@ -205,8 +208,8 @@ const throwCreatePrnError = (error, logger) => {
  * pre-check and the ringfence cannot disagree.
  *
  * @param {Object} params
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.tonnage
  * @param {boolean} params.isDecemberWaste
  * @param {Accreditation} params.accreditation
@@ -305,9 +308,7 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
     material: accreditation.material,
     isDecemberWaste,
     processingType: processingTypeFor(
-      /** @type {import('#waste-balances/domain/credited-tonnage.js').AccreditationContext} */ (
-        accreditation
-      )
+      /** @type {AccreditationContext} */ (accreditation)
     )
   })
 }
@@ -315,7 +316,7 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
 /**
  * @param {Object} params
  * @param {string} params.organisationId
- * @param {import('#domain/organisations/numbers.js').OrganisationNumber} [params.organisationNumber]
+ * @param {OrganisationNumber} [params.organisationNumber]
  * @param {string} params.name
  * @param {string} [params.tradingName]
  */
@@ -342,7 +343,7 @@ export const createPrn =
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
    *   organisationsRepository: OrganisationsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   params: { organisationId: string, registrationId: string, accreditationId: string } & import('./by-natural-key.js').AccreditationParams
+   *   params: { organisationId: string, registrationId: string, accreditationId: string } & AccreditationParams
    * }} request
    * @param {HapiResponseToolkit} h
    */

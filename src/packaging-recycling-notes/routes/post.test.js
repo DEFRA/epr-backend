@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
@@ -32,6 +33,7 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { MockInstance } from 'vitest' */
 /** @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
@@ -110,7 +112,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let server
   /** @type {PackagingRecyclingNotesRepository} */
   let packagingRecyclingNotesRepository
-  /** @type {import('vitest').MockInstance<PackagingRecyclingNotesRepository['create']>} */
+  /** @type {MockInstance<PackagingRecyclingNotesRepository['create']>} */
   let createSpy
   /** @type {OrganisationsRepositoryFactory} */
   let organisationsRepository
@@ -741,10 +743,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('error handling', () => {
     it('re-throws Boom errors from repository', async () => {
-      const Boom = await import('@hapi/boom')
-      createSpy.mockRejectedValueOnce(
-        Boom.default.notFound('Organisation not found')
-      )
+      createSpy.mockRejectedValueOnce(Boom.notFound('Organisation not found'))
 
       const response = await createPrn()
 
