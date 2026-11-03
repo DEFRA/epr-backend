@@ -8,6 +8,11 @@ import {
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from './test-data.js'
 
+/**
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { SummaryLogStats } from '../port.js'
+ */
+
 const generateOrgReg = () => {
   const unique = randomInt(100_000_000, 1_000_000_000)
   return {
@@ -18,6 +23,11 @@ const generateOrgReg = () => {
   }
 }
 
+/**
+ * @param {SummaryLogStats[]} stats
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
+ */
 function getMatchingStats(stats, organisationNumber, registrationNumber) {
   return stats.filter(
     (s) =>

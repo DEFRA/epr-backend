@@ -344,6 +344,9 @@ const performFindAllLinked =
     return matches.map(toLinkedOrganisationSummary)
   }
 
+/**
+ * @returns {import('./port.js').OrganisationsRepository['findByOrganisationNumbers']}
+ */
 const performFindByOrganisationNumbers =
   (staleCache) => async (organisationNumbers) => {
     const orgIds = new Set(organisationNumbers.map(storedOrgId))

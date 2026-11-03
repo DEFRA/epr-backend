@@ -15,10 +15,19 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
+/**
+ * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
+ */
+
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation, nextOrgId } = organisationBuilders
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
+/**
+ * @param {Pick<Organisation, 'orgId'>} organisation
+ * @param {Pick<Registration, 'registrationNumber'>} registration
+ */
 const numbersOf = (organisation, registration) => ({
   organisationNumber: toOrganisationNumber(String(organisation.orgId)),
   registrationNumber: registration.registrationNumber
@@ -298,9 +307,8 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('gives an empty accreditation number for a registration with no accreditation', async () => {
-    const registeredOnly = buildRegistration({
-      registrationNumber: toRegistrationNumber('R26ER5000000001PA')
-    })
+    const registrationNumber = toRegistrationNumber('R26ER5000000001PA')
+    const registeredOnly = buildRegistration({ registrationNumber })
     const registeredOnlyOrg = buildOrganisation({
       orgId: nextOrgId(),
       registrations: [registeredOnly],
@@ -313,7 +321,10 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: registeredOnlyOrg.id,
         registrationId: registeredOnly.id,
-        ...numbersOf(registeredOnlyOrg, registeredOnly)
+        organisationNumber: toOrganisationNumber(
+          String(registeredOnlyOrg.orgId)
+        ),
+        registrationNumber
       })
     )
 
@@ -324,7 +335,7 @@ describe('generateSummaryLogUploadsReport', () => {
 
     expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
-        registrationNumber: registeredOnly.registrationNumber,
+        registrationNumber,
         accreditationNumber: ''
       })
     ])

@@ -367,6 +367,9 @@ const performFindAllLinked =
     return docs.map(toLinkedOrganisationSummary)
   }
 
+/**
+ * @returns {import('./port.js').OrganisationsRepository['findByOrganisationNumbers']}
+ */
 const performFindByOrganisationNumbers =
   (db) => async (organisationNumbers) => {
     const docs = await db
