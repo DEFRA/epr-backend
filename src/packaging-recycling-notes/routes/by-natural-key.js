@@ -247,6 +247,17 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
 }
 
 /**
+ * @param {BusinessOperation} operation
+ * @returns {PrnOperation}
+ */
+const toPrnOperation = ({ at, by }) => ({
+  at: new Date(at).toISOString(),
+  ...(by.name && {
+    by: { name: by.name, ...(by.position && { position: by.position }) }
+  })
+})
+
+/**
  * A PRN as the accreditation serves it. Its number is a field, present once
  * the PRN is issued, and a client finds a PRN by it through the collection.
  *
@@ -259,17 +270,6 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
  * @param {Date} now
  * @returns {PrnResource}
  */
-/**
- * @param {BusinessOperation} operation
- * @returns {PrnOperation}
- */
-const toPrnOperation = ({ at, by }) => ({
-  at: new Date(at).toISOString(),
-  ...(by.name && {
-    by: { name: by.name, ...(by.position && { position: by.position }) }
-  })
-})
-
 const toPrnResource = (
   prn,
   { organisationNumber, registrationNumber },
