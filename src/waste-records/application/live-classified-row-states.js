@@ -1,9 +1,11 @@
 import Boom from '@hapi/boom'
 
-import { latestSubmittedSummaryLogId } from '#waste-balances/application/latest-submitted-summary-log-id.js'
-import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
-import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
+import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { requireStoredNumbers } from '#domain/organisations/numbers.js'
+import {
+  readModelAccreditedPeriod,
+  readModelOverseasSitesContext
+} from '#waste-balances/domain/classification-context.js'
 import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js'
 
 /**
@@ -22,26 +24,33 @@ import { reclassifyWasteRecordStates } from './reclassify-waste-record-states.js
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId & {
  *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
  *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
- *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
- *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
+ *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository
  * }} context
  * @returns {Promise<WasteRecordState[]>}
  */
 export const liveClassifiedRowStatesForRegistration = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
-  overseasSitesRepository,
+  organisationReadRepository,
   organisationId,
   registrationId,
   accreditationId
 }) => {
   const ledgerId = { organisationId, registrationId, accreditationId }
 
-  const head = await latestSubmittedSummaryLogId(ledgerRepository, ledgerId)
-  if (head === null) {
+  // The head event carries the numbers beside its ids; the row states port
+  // projects them away, so they are read from here.
+  const headEvent = await ledgerRepository.findLatestInLedgerByKind(
+    ledgerId,
+    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+  )
+  if (headEvent === null) {
     return []
   }
+  const { summaryLogId: head } =
+    /** @type {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedPayload} */ (
+      headEvent.payload
+    )
 
   const rowStates =
     await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
@@ -52,30 +61,48 @@ export const liveClassifiedRowStatesForRegistration = async ({
     return []
   }
 
-  const organisation = await organisationsRepository.findById(organisationId)
-  const registration = organisation.registrations?.find(
-    (candidate) => candidate.id === registrationId
-  )
-  if (!registration) {
-    throw Boom.notFound(`Registration with id ${registrationId} not found`)
+  // Resolved from the partition being read, by the numbers its head carries,
+  // rather than the registration's current pointer, so rows stay with the
+  // accreditation that credited them.
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    requireStoredNumbers(headEvent, `ledger head event of ${head}`)
+
+  /** @type {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} */
+  let accreditation = null
+  /** @type {import('#waste-balances/domain/classification-context.js').OverseasSitesContext} */
+  let overseasSites = {}
+
+  if (accreditationNumber === null) {
+    const found = await organisationReadRepository.findRegistrationByNumber(
+      organisationNumber,
+      registrationNumber
+    )
+    if (!found) {
+      throw Boom.notFound(
+        `Registration ${registrationNumber} of organisation ${organisationNumber} not found`
+      )
+    }
+    // The REGISTERED_ONLY template is NOT_APPLICABLE whatever the sites.
+  } else {
+    const found = await organisationReadRepository.findAccreditationByNumber(
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber
+    )
+    if (!found) {
+      throw Boom.notFound(
+        `Accreditation ${accreditationNumber} of registration ${registrationNumber} of organisation ${organisationNumber} not found`
+      )
+    }
+    accreditation = readModelAccreditedPeriod(found.accreditation, found.year)
+    overseasSites = readModelOverseasSitesContext(
+      found.registration,
+      found.accreditation
+    )
   }
 
-  // Resolved from the partition being read rather than the registration's
-  // current pointer, so rows stay with the accreditation that credited them.
-  const accreditation = resolveAccreditation({ accreditationId }, organisation)
-
-  const sites = await overseasSitesRepository.findByIds(
-    Object.values(registration.overseasSites ?? {}).map(
-      ({ overseasSiteId }) => overseasSiteId
-    )
-  )
-  const overseasSites = buildOverseasSitesContext(
-    registration,
-    new Map(sites.map((site) => [site.id, site]))
-  )
-
   return reclassifyWasteRecordStates(rowStates, {
-    accreditation: toAccreditedPeriod(accreditation),
+    accreditation,
     overseasSites
   })
 }

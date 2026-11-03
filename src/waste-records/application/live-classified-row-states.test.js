@@ -4,15 +4,9 @@ import { liveClassifiedRowStatesForRegistration } from './live-classified-row-st
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import {
-  ACCREDITATION_STATUS,
-  REPROCESSING_TYPE,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
@@ -39,9 +33,11 @@ const ORGANISATION_ID = '6a5e271fe01bc18f22a9941e'
 const REGISTRATION_ID = '6a5e271fe01bc18f22a9941c'
 const ACCREDITATION_ID = '6a5e271fe01bc18f22a99419'
 
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2024-01-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2024-02-01' }
+const YEAR = '2026'
+
+const timelineApprovedOn = (approvedOn) => [
+  { status: 'created', at: '2025-11-01T00:00:00.000Z' },
+  { status: 'approved', at: new Date(approvedOn).toISOString() }
 ]
 
 /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */
@@ -51,36 +47,16 @@ const ACCREDITED_LEDGER_ID = {
   accreditationId: ACCREDITATION_ID
 }
 
-const reprocessorAccreditedFrom = (validFrom) => ({
+const reprocessorAccreditedFrom = (approvedOn) => ({
   ledgerId: { ...ACCREDITED_LEDGER_ID },
-  organisation: partialMock({
-    id: ORGANISATION_ID,
-    orgId: 500001,
-    version: 1,
-    statusHistory: approvedHistory,
-    accreditations: [
-      {
-        id: ACCREDITATION_ID,
-        accreditationNumber: 'ACC-1',
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        validFrom,
-        validTo: '2027-01-01',
-        statusHistory: approvedHistory
-      }
-    ],
-    registrations: [
-      {
-        id: REGISTRATION_ID,
-        accreditationId: ACCREDITATION_ID,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        reprocessingType: REPROCESSING_TYPE.INPUT,
-        statusHistory: approvedHistory
-      }
-    ]
-  })
+  registration: {
+    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+  },
+  accreditation: {
+    status: { current: 'approved', timeline: timelineApprovedOn(approvedOn) }
+  }
 })
 
-const OVERSEAS_SITE_ID = '6a5e271fe01bc18f22a99420'
 const OSR_KEY = '099'
 
 const exportedRowData = {
@@ -107,46 +83,26 @@ const exportedRowData = {
   DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
 }
 
-const exporterWithOverseasSite = () => ({
-  ledgerId: {
-    organisationId: ORGANISATION_ID,
-    registrationId: REGISTRATION_ID,
-    accreditationId: ACCREDITATION_ID
+const exporterWithOverseasSite = ({ siteApprovedOn } = {}) => ({
+  ledgerId: { ...ACCREDITED_LEDGER_ID },
+  registration: {
+    wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+    overseasSites: {
+      [OSR_KEY]: {
+        name: 'Test Overseas Site',
+        address: { country: 'Netherlands' }
+      }
+    }
   },
-  organisation: partialMock({
-    id: ORGANISATION_ID,
-    orgId: 500001,
-    version: 1,
-    statusHistory: approvedHistory,
-    accreditations: [
-      {
-        id: ACCREDITATION_ID,
-        accreditationNumber: 'ACC-1',
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        validFrom: '2026-01-01',
-        validTo: '2027-01-01',
-        statusHistory: approvedHistory
-      }
-    ],
-    registrations: [
-      {
-        id: REGISTRATION_ID,
-        accreditationId: ACCREDITATION_ID,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        overseasSites: { [OSR_KEY]: { overseasSiteId: OVERSEAS_SITE_ID } },
-        statusHistory: approvedHistory
-      }
-    ]
-  })
+  accreditation: {
+    status: { current: 'approved', timeline: timelineApprovedOn('2026-01-01') },
+    overseasSites: {
+      [OSR_KEY]: siteApprovedOn
+        ? { status: 'approved', approvedOn: siteApprovedOn }
+        : { status: 'pending' }
+    }
+  }
 })
-
-const overseasSiteApprovedFrom = (validFrom) =>
-  partialMock({
-    id: OVERSEAS_SITE_ID,
-    name: 'Test Overseas Site',
-    country: 'Netherlands',
-    validFrom
-  })
 
 const rowStateEntry = (overrides = {}) => ({
   rowId: '1001',
@@ -162,20 +118,54 @@ const rowStateEntry = (overrides = {}) => ({
 })
 
 const readLiveStates = async ({
-  organisation,
+  registration,
+  accreditation,
   ledgerId,
   entries = [rowStateEntry()],
   submitted = true,
-  overseasSites = /** @type {import('#overseas-sites/repository/port.js').OverseasSite[]} */ ([])
+  readModelHolds = true
 }) => {
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
+  const numbers = withNumbers(ledgerId)
   if (submitted) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      numbers,
       entries,
       SUMMARY_LOG_ID
     )
+  }
+
+  const readModelRegistration = {
+    ...registration,
+    accreditations:
+      ledgerId.accreditationId === null
+        ? {}
+        : {
+            [YEAR]: {
+              accreditationNumber: numbers.accreditationNumber,
+              ...accreditation
+            }
+          }
+  }
+  const organisation = {
+    organisationNumber: numbers.organisationNumber,
+    registrations: { [numbers.registrationNumber]: readModelRegistration }
+  }
+  const organisationReadRepository = {
+    findRegistrationByNumber: async () =>
+      readModelHolds
+        ? { organisation, registration: readModelRegistration }
+        : null,
+    findAccreditationByNumber: async () =>
+      readModelHolds
+        ? {
+            organisation,
+            registration: readModelRegistration,
+            accreditation: readModelRegistration.accreditations[YEAR],
+            year: YEAR
+          }
+        : null
   }
 
   return liveClassifiedRowStatesForRegistration({
@@ -193,11 +183,7 @@ const readLiveStates = async ({
         : []
     )(),
     summaryLogRowStatesRepository,
-    organisationsRepository: createInMemoryOrganisationsRepository([
-      organisation
-    ])(),
-    overseasSitesRepository:
-      createInMemoryOverseasSitesRepository(overseasSites)(),
+    organisationReadRepository: /** @type {any} */ (organisationReadRepository),
     ...ledgerId
   })
 }
@@ -259,8 +245,7 @@ describe('liveClassifiedRowStatesForRegistration', () => {
           processingType: PROCESSING_TYPES.EXPORTER,
           data: exportedRowData
         })
-      ],
-      overseasSites: [overseasSiteApprovedFrom(null)]
+      ]
     })
 
     expect(state.classification).toEqual({
@@ -272,15 +257,14 @@ describe('liveClassifiedRowStatesForRegistration', () => {
 
   it('includes that same row once the overseas site approval covers the export date', async () => {
     const [state] = await readLiveStates({
-      ...exporterWithOverseasSite(),
+      ...exporterWithOverseasSite({ siteApprovedOn: '2026-01-01' }),
       entries: [
         rowStateEntry({
           wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
           processingType: PROCESSING_TYPES.EXPORTER,
           data: exportedRowData
         })
-      ],
-      overseasSites: [overseasSiteApprovedFrom(new Date('2026-01-01'))]
+      ]
     })
 
     expect(state.classification).toEqual({
@@ -290,18 +274,18 @@ describe('liveClassifiedRowStatesForRegistration', () => {
     })
   })
 
-  it('reads rows submitted under a since-cancelled accreditation as not applicable, rather than renaming their template', async () => {
+  it('reads a row dated after the accreditation was cancelled as outside the accreditation period', async () => {
     const scenario = reprocessorAccreditedFrom('2026-01-01')
-    scenario.organisation.accreditations[0].statusHistory = [
-      ...approvedHistory,
-      { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-05-01' }
-    ]
+    scenario.accreditation.status.timeline.push({
+      status: 'cancelled',
+      at: '2026-01-15T00:00:00.000Z'
+    })
 
     const [state] = await readLiveStates(scenario)
 
     expect(state.classification).toEqual({
-      outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
-      reasons: [],
+      outcome: WASTE_BALANCE_OUTCOME.IGNORED,
+      reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }],
       transactionAmount: 0
     })
   })
@@ -309,7 +293,6 @@ describe('liveClassifiedRowStatesForRegistration', () => {
   it('reads a registered-only partition under the registered-only template', async () => {
     const scenario = reprocessorAccreditedFrom('2026-01-01')
     scenario.ledgerId = { ...scenario.ledgerId, accreditationId: null }
-    scenario.organisation.registrations[0].accreditationId = undefined
 
     const [state] = await readLiveStates({
       ...scenario,
@@ -336,22 +319,33 @@ describe('liveClassifiedRowStatesForRegistration', () => {
 
   it('returns nothing for a submission with no rows even when the organisation no longer holds the registration', async () => {
     const scenario = reprocessorAccreditedFrom('2026-01-01')
-    scenario.organisation.registrations = []
 
     // A partition with nothing committed answers with nothing; it does not
     // reach the registration lookup and turn into a 404.
-    await expect(readLiveStates({ ...scenario, entries: [] })).resolves.toEqual(
-      []
-    )
+    await expect(
+      readLiveStates({ ...scenario, readModelHolds: false, entries: [] })
+    ).resolves.toEqual([])
   })
 
-  it('fails when the ledger names a registration the organisation does not hold', async () => {
-    const scenario = reprocessorAccreditedFrom('2026-01-01')
-    scenario.organisation.registrations = []
+  it('fails when the read model does not hold the accreditation the rows name', async () => {
+    await expect(
+      readLiveStates({
+        ...reprocessorAccreditedFrom('2026-01-01'),
+        readModelHolds: false
+      })
+    ).rejects.toThrow('Accreditation ACC-')
+  })
 
-    await expect(readLiveStates(scenario)).rejects.toThrow(
-      `Registration with id ${REGISTRATION_ID} not found`
-    )
+  it('fails when the read model does not hold a registered-only registration', async () => {
+    const scenario = reprocessorAccreditedFrom('2026-01-01')
+
+    await expect(
+      readLiveStates({
+        ...scenario,
+        ledgerId: { ...scenario.ledgerId, accreditationId: null },
+        readModelHolds: false
+      })
+    ).rejects.toThrow('Registration REG-')
   })
 
   it('reads rows under the template they were submitted under, not one the registration would name', async () => {
