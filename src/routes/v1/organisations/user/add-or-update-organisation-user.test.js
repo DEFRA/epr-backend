@@ -2,7 +2,7 @@ import { USER_ROLES } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { ObjectId } from 'mongodb'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   addOrUpdateOrganisationUser,
@@ -14,7 +14,20 @@ const { buildOrganisation } = createOrganisationBuilders()
 /**
  * @import {HapiRequest} from '#common/hapi-types.js'
  * @import {Organisation} from '#domain/organisations/model.js'
+ * @import {OrganisationUsers} from './add-or-update-organisation-user.js'
  */
+
+/**
+ * The stored organisation's users as the read model shows them.
+ *
+ * @param {Organisation} organisation
+ * @returns {OrganisationUsers}
+ */
+const asReadModel = ({ orgId, version, users }) => ({
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  version,
+  users
+})
 
 describe('addOrUpdateOrganisationUser', () => {
   let mockRequest
@@ -41,8 +54,7 @@ describe('addOrUpdateOrganisationUser', () => {
     }
 
     mockOrganisation = {
-      id: new ObjectId().toString(),
-      orgId: 500001,
+      organisationNumber: '500001',
       version: 1,
       users: []
     }
@@ -128,7 +140,7 @@ describe('addOrUpdateOrganisationUser', () => {
           firstName: 'New Name',
           lastName: 'New Me'
         }),
-        org
+        asReadModel(org)
       )
 
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
@@ -194,7 +206,7 @@ describe('addOrUpdateOrganisationUser', () => {
           lastName: 'New Me',
           contactId: 'contact-123'
         }),
-        org
+        asReadModel(org)
       )
 
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
@@ -254,85 +266,10 @@ describe('addOrUpdateOrganisationUser', () => {
           lastName: 'User',
           contactId: 'contact-123'
         }),
-        org
+        asReadModel(org)
       )
 
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.NO_CHANGE)
-    })
-  })
-
-  describe('when organisation has no users property', () => {
-    test('should add user when users property is undefined', async () => {
-      mockOrganisation = /** @type {Organisation} */ (
-        /** @type {unknown} */ ({
-          id: new ObjectId().toString(),
-          orgId: 500001,
-          version: 1
-          // users property is missing/undefined
-        })
-      )
-
-      await addOrUpdateOrganisationUser(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(
-        mockOrganisationsRepository.replaceUsers
-      ).toHaveBeenCalledExactlyOnceWith('500001', mockOrganisation.version, [
-        {
-          contactId: 'contact-123',
-          email: 'newuser@example.com',
-          fullName: 'John Doe',
-          roles: [USER_ROLES.STANDARD]
-        }
-      ])
-    })
-
-    test('should add user when users property is null', async () => {
-      mockOrganisation = /** @type {Organisation} */ (
-        /** @type {unknown} */ ({
-          id: new ObjectId().toString(),
-          orgId: 500001,
-          version: 1,
-          users: null
-        })
-      )
-
-      await addOrUpdateOrganisationUser(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(
-        mockOrganisationsRepository.replaceUsers
-      ).toHaveBeenCalledExactlyOnceWith('500001', mockOrganisation.version, [
-        {
-          contactId: 'contact-123',
-          email: 'newuser@example.com',
-          fullName: 'John Doe',
-          roles: [USER_ROLES.STANDARD]
-        }
-      ])
-    })
-
-    test('should initialize empty users array when adding first user', async () => {
-      delete mockOrganisation.users
-
-      await addOrUpdateOrganisationUser(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.replaceUsers.mock.calls[0]
-      const usersArray = updateCall[2]
-
-      expect(usersArray).toHaveLength(1)
-      expect(usersArray[0].email).toBe('newuser@example.com')
-      expect(usersArray[0].fullName).toBe('John Doe')
     })
   })
 

@@ -1,11 +1,13 @@
 import { stringEquals } from '#auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import partition from 'lodash.partition'
 
-/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
+/** @import {CollatedUser} from '#domain/organisations/model.js' */
+/** @import {Organisation} from '#organisation-read-model/domain/model.js' */
 /** @import {DefraIdTokenPayload} from '#auth/types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
+
+/** @typedef {Pick<Organisation, 'organisationNumber' | 'version' | 'users'>} OrganisationUsers */
 
 export const ORGANISATION_USER_RESULTS = Object.freeze(
   /** @type {const} */ ({
@@ -17,7 +19,13 @@ export const ORGANISATION_USER_RESULTS = Object.freeze(
 
 /** @typedef {(typeof ORGANISATION_USER_RESULTS)[keyof typeof ORGANISATION_USER_RESULTS]} OrganisationUserModification */
 
-/** @typedef {{outcome: OrganisationUserModification, userBefore: CollatedUser | null, userAfter: CollatedUser}} OrganisationUserResult */
+/**
+ * @typedef {{
+ * outcome: OrganisationUserModification,
+ * userBefore: CollatedUser | null,
+ * userAfter: CollatedUser
+ * }} OrganisationUserResult
+ */
 
 export const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
@@ -35,13 +43,14 @@ const withChangedDetails = (
     !stringEquals(user.fullName, getDisplayName({ firstName, lastName })))
 
 /**
- * @param {Organisation} organisation
+ * @param {OrganisationUsers} organisation
  * @param {DefraIdTokenPayload} token
  * @returns {{ user: CollatedUser|null, otherUsers: CollatedUser[] }}
  */
 const extractUserAndOthers = (organisation, { email, contactId }) => {
   const [matchingUsers, otherUsers] = partition(
-    organisation.users ?? [],
+    // The read model copies the stored users, whose roles are user roles.
+    /** @type {CollatedUser[]} */ (organisation.users),
     /**
      * @param {CollatedUser} user
      * @returns {boolean}
@@ -59,7 +68,7 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
  * Adds a user to an organisation if they are not there
  * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
- * @param {Organisation} organisation - The organisation object
+ * @param {OrganisationUsers} organisation - The organisation, as the read model shows it
  * @returns {Promise<OrganisationUserResult>} - Result indicating if a user was added, updated, or no change
  */
 export const addOrUpdateOrganisationUser = async (
@@ -81,7 +90,7 @@ export const addOrUpdateOrganisationUser = async (
       roles: user?.roles ?? [USER_ROLES.STANDARD]
     }
     await organisationsRepository.replaceUsers(
-      toOrganisationNumber(String(organisation.orgId)),
+      organisation.organisationNumber,
       organisation.version,
       [newUser, ...otherUsers]
     )
