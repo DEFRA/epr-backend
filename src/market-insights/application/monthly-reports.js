@@ -7,10 +7,7 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
-import {
-  accreditationWindow,
-  getStatusHistoryDateTimes
-} from '#common/helpers/dates/accreditation.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
@@ -21,7 +18,8 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
+/** @import { AccreditedPeriod } from '#waste-balances/domain/classification-context.js' */
+/** @import { StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
@@ -46,15 +44,18 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * latest status change dated in or before the month decides it.
  *
  * @param {YearMonth} month
- * @param {StatusHistoryDateTime[]} history - descending
+ * @param {StatusTimeline} timeline
  */
-const isCancelledByEndOf = (month, history) =>
-  history.find(
-    ({ updatedAt }) =>
-      toYearMonth(
-        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
-      ).localeCompare(month) <= 0
-  )?.status === ACCREDITATION_STATUS.CANCELLED
+const isCancelledByEndOf = (month, timeline) =>
+  // Stable sort, so entries sharing an instant keep their recorded order.
+  [...timeline]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .find(
+      ({ at }) =>
+        toYearMonth(
+          formatLocalDateTime(new Date(at), UK_TIME_ZONE)
+        ).localeCompare(month) <= 0
+    )?.status === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * The monthly periods an accreditation owed among the months served: those
@@ -69,11 +70,12 @@ const isCancelledByEndOf = (month, history) =>
  * @param {Accreditation} accreditation
  */
 const owedPeriods = (served, years, accreditation) => {
-  const window = accreditationWindow(accreditation)
+  const { window, timeline } = /** @type {AccreditedPeriod} */ (
+    toAccreditedPeriod(accreditation)
+  )
   if (window === null) {
     return []
   }
-  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
   return filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
@@ -81,7 +83,7 @@ const owedPeriods = (served, years, accreditation) => {
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledByEndOf(toYearMonth(period.startDate), history)
+      !isCancelledByEndOf(toYearMonth(period.startDate), timeline)
   )
 }
 
