@@ -2,7 +2,8 @@ import vitest from '@vitest/eslint-plugin'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import importX from 'eslint-plugin-import-x'
 import nodePlugin from 'eslint-plugin-n'
-import neostandard from 'neostandard'
+import { globalIgnores } from 'eslint/config'
+import { neostandard, resolveIgnoresFromGitignore } from 'neostandard'
 
 const REPOSITORIES = './src/repositories'
 
@@ -40,9 +41,8 @@ const { plugins: _n, ...nodeRecommendedModule } =
   nodePlugin.configs['flat/recommended-module']
 
 export default [
-  // neostandard only scopes its `ignores` option to its own configs, so ignore
-  // gitignored paths globally or configs without `files` still lint them
-  { ignores: neostandard.resolveIgnoresFromGitignore() },
+  // neostandard's own `ignores` option only covers neostandard's configs
+  globalIgnores(resolveIgnoresFromGitignore()),
   ...ns,
   nodeRecommendedModule,
   {
