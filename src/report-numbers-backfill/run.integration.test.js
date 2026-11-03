@@ -171,7 +171,7 @@ describe('runReportNumbersBackfill (mongo)', () => {
     ).toBe(0)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Report numbers backfill (dry-run): missing=4 mapped=3 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
+      message: `Report numbers backfill (dry-run): missing=4 mapped=3 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} cases="quarterly: 2; summary log accreditation is the current link: 1; organisation not found: 1" cancelledAccreditations=0`
     })
   })
 
@@ -217,7 +217,7 @@ describe('runReportNumbersBackfill (mongo)', () => {
     expect(logs[0].event.action).toBe('numbers-backfill-migration')
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons}`
+      message: `Report numbers backfill (backfill): missing=1 mapped=0 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} cases="organisation not found: 1" cancelledAccreditations=0`
     })
   })
 })

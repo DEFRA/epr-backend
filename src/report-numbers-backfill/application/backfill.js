@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { auditReportNumbersBackfill } from './audit.js'
@@ -9,6 +10,7 @@ import { auditReportNumbersBackfill } from './audit.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -28,6 +30,8 @@ const NUMBER_KEYS = [
   'registrationNumber',
   'accreditationNumber'
 ]
+
+const NO_SUMMARY_LOG = 'report names no summary log'
 
 /**
  * The accreditation a report was made under, or why the report records none.
@@ -49,7 +53,7 @@ const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
     return { accreditationId: null }
   }
   if (!source?.summaryLogId) {
-    return { unrecorded: 'report names no summary log' }
+    return { unrecorded: NO_SUMMARY_LOG }
   }
   const found = await summaryLogsRepository.findById(source.summaryLogId)
   if (!found) {
@@ -96,9 +100,96 @@ const causes = (organisation, { registrationId }, accreditation) => ({
 })
 
 /**
+ * The organisation's accreditations of the registration's material and waste
+ * processing type. The organisation record keeps no history of a
+ * registration's accreditation links, but an accreditation stays on the
+ * organisation after a registration is re-linked away from it. So one such
+ * accreditation is the nearest the record comes to saying the registration has
+ * only ever had one.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ */
+const accreditationsOfMaterialAndType = (
+  organisation,
+  { material, wasteProcessingType }
+) =>
+  organisation.accreditations.filter(
+    (accreditation) =>
+      accreditation.material === material &&
+      accreditation.wasteProcessingType === wasteProcessingType
+  )
+
+/**
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @returns {MappingCase}
+ */
+const noSummaryLogCase = (organisation, registration) => {
+  const candidates = accreditationsOfMaterialAndType(organisation, registration)
+  const held =
+    ['no accreditation', 'one accreditation'][candidates.length] ??
+    'several accreditations'
+  return {
+    name: `no summary log, ${held} of its material and type`,
+    cancelled: candidates.some(
+      ({ status }) => status === ACCREDITATION_STATUS.CANCELLED
+    )
+  }
+}
+
+/**
+ * Which mapping rule decides a report, so that the summary line counts the
+ * reports each rule decides, and whether an accreditation the case rests on is
+ * cancelled.
+ *
+ * @typedef {{ name: string, cancelled: boolean }} MappingCase
+ */
+
+/**
+ * @param {Organisation} organisation
+ * @param {Report} report
+ * @param {ReportAccreditation} accreditation
+ * @returns {MappingCase}
+ */
+const mappingCaseOf = (
+  organisation,
+  { cadence, registrationId },
+  accreditation
+) => {
+  const registration = organisation.registrations.find(
+    ({ id }) => id === registrationId
+  )
+  if (!registration) {
+    return { name: 'registration not found', cancelled: false }
+  }
+  if (cadence === CADENCE.quarterly) {
+    return { name: 'quarterly', cancelled: false }
+  }
+  if ('unrecorded' in accreditation) {
+    return accreditation.unrecorded === NO_SUMMARY_LOG
+      ? noSummaryLogCase(organisation, registration)
+      : { name: accreditation.unrecorded, cancelled: false }
+  }
+  const found = organisation.accreditations.find(
+    ({ id }) => id === accreditation.accreditationId
+  )
+  if (!found) {
+    return { name: 'accreditation not found', cancelled: false }
+  }
+  return {
+    name:
+      found.id === registration.accreditationId
+        ? 'summary log accreditation is the current link'
+        : 'summary log accreditation differs from the current link',
+    cancelled: found.status === ACCREDITATION_STATUS.CANCELLED
+  }
+}
+
+/**
  * @param {Repositories} repositories
  * @param {Report} report
- * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[] }>}
+ * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[], mappingCase: MappingCase }>}
  */
 const lookUpNumbers = async (
   { organisationsRepository, summaryLogsRepository },
@@ -120,10 +211,18 @@ const lookUpNumbers = async (
     const unmapped = NUMBER_KEYS.filter(
       (key) => numbers[key] === undefined && report[key] === undefined
     ).map((key) => cause[key])
-    return { numbers, unmapped }
+    return {
+      numbers,
+      unmapped,
+      mappingCase: mappingCaseOf(organisation, report, accreditation)
+    }
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
-      return { numbers: {}, unmapped: ['organisation not found'] }
+      return {
+        numbers: {},
+        unmapped: ['organisation not found'],
+        mappingCase: { name: 'organisation not found', cancelled: false }
+      }
     }
     throw error
   }
@@ -164,7 +263,7 @@ const numbersLacking = (numbers, report) =>
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
- * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
+ * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean, mappingCase: MappingCase } | null>} null if gone
  */
 const backfillOne = async (repositories, id, isDryRun, logger) => {
   const { reportsRepository, systemLogsRepository } = repositories
@@ -174,13 +273,17 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
   }
 
   const { organisationId, registrationId } = report
-  const { numbers, unmapped } = await lookUpNumbers(repositories, report)
+  const { numbers, unmapped, mappingCase } = await lookUpNumbers(
+    repositories,
+    report
+  )
 
   const lacking = numbersLacking(numbers, report)
   const outcome = {
     mapped: Object.keys(lacking).length > 0,
     unmapped,
-    auditFailed: false
+    auditFailed: false,
+    mappingCase
   }
   if (!outcome.mapped || isDryRun) {
     return outcome
@@ -211,17 +314,35 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
  * it lacks, read from its organisation record for the accreditation the report
  * was made under.
  *
+ * Counts the reports it meets under their mapping case, and counts those whose
+ * case rests on a cancelled accreditation.
+ *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
- * @returns {Promise<ReasonedBackfillResult>}
+ * @returns {Promise<ReasonedBackfillResult & { cases: Record<string, number>, cancelledAccreditations: number }>}
  */
 export const backfillReportNumbers = async (
   { logger, ...repositories },
   { isDryRun }
-) =>
-  sweepNumbersBackfillByReason({
+) => {
+  /** @type {Record<string, number>} */
+  const cases = {}
+  let cancelledAccreditations = 0
+
+  const result = await sweepNumbersBackfillByReason({
     ids: await repositories.reportsRepository.findIdsWithoutNumbers(),
-    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
+    backfillOne: async (id) => {
+      const outcome = await backfillOne(repositories, id, isDryRun, logger)
+      if (outcome) {
+        const { name, cancelled } = outcome.mappingCase
+        cases[name] = (cases[name] ?? 0) + 1
+        cancelledAccreditations += Number(cancelled)
+      }
+      return outcome
+    },
     documentName: 'report',
     logger
   })
+
+  return { ...result, cases, cancelledAccreditations }
+}

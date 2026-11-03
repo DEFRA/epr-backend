@@ -10,6 +10,8 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import {
   ACCREDITATION_NUMBER,
   accreditation,
+  exporterAccreditation,
+  granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
@@ -159,7 +161,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 0,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: { 'summary log accreditation is the current link': 2 },
+      cancelledAccreditations: 0
     })
 
     expect(await stored(unnumbered)).toMatchObject(numbers)
@@ -208,7 +212,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 0,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: { 'summary log accreditation is the current link': 1 },
+      cancelledAccreditations: 0
     })
 
     expect(await stored(id)).not.toHaveProperty('organisationNumber')
@@ -259,7 +265,16 @@ describe('backfillReportNumbers', () => {
           'accreditation not found': [accreditationGone]
         },
         failed: 0,
-        auditFailed: 0
+        auditFailed: 0,
+        cases: {
+          'organisation not found': 1,
+          quarterly: 1,
+          'registration not found': 1,
+          'no summary log, several accreditations of its material and type': 1,
+          'summary log accreditation differs from the current link': 1,
+          'accreditation not found': 1
+        },
+        cancelledAccreditations: 0
       })
       expect(logger.info).not.toHaveBeenCalled()
     })
@@ -324,7 +339,8 @@ describe('backfillReportNumbers', () => {
           ]
         }
       ],
-      ['without a validFrom', { validFrom: undefined }]
+      ['without a validFrom', { validFrom: undefined }],
+      ['cancelled', { statusHistory: granted('cancelled') }]
     ])(
       'maps a report whose accreditation is now %s but still holds its number',
       async (_, changes) => {
@@ -362,6 +378,78 @@ describe('backfillReportNumbers', () => {
         })
       }
     )
+  })
+
+  describe('counts each report it meets under its mapping case', () => {
+    const noSummaryLog = { summaryLogId: null, lastUploadedAt: null }
+
+    it.each([
+      ['no accreditation', [], 'no accreditation'],
+      [
+        'one accreditation',
+        [
+          accreditation({ id: accreditationId }),
+          exporterAccreditation({ id: relinkedAccreditationId })
+        ],
+        'one accreditation'
+      ],
+      [
+        'several accreditations',
+        [
+          accreditation({ id: accreditationId }),
+          accreditation({ id: relinkedAccreditationId })
+        ],
+        'several accreditations'
+      ]
+    ])(
+      'counts a report with no summary log whose organisation holds %s of its material and type',
+      async (_, accreditations, held) => {
+        changeOrganisation({ accreditations })
+        await createReport({ source: noSummaryLog })
+
+        expect(await run(true)).toMatchObject({
+          cases: { [`no summary log, ${held} of its material and type`]: 1 },
+          cancelledAccreditations: 0
+        })
+      }
+    )
+
+    it('counts a report whose summary log accreditation is now cancelled', async () => {
+      changeOrganisation({
+        accreditations: [
+          accreditation({
+            id: accreditationId,
+            statusHistory: granted('cancelled')
+          })
+        ]
+      })
+      await createReport()
+
+      expect(await run(true)).toMatchObject({
+        cases: { 'summary log accreditation is the current link': 1 },
+        cancelledAccreditations: 1
+      })
+    })
+
+    it('counts a report with no summary log whose organisation holds a cancelled accreditation of its material and type', async () => {
+      changeOrganisation({
+        accreditations: [
+          accreditation({ id: accreditationId }),
+          accreditation({
+            id: relinkedAccreditationId,
+            statusHistory: granted('cancelled')
+          })
+        ]
+      })
+      await createReport({ source: noSummaryLog })
+
+      expect(await run(true)).toMatchObject({
+        cases: {
+          'no summary log, several accreditations of its material and type': 1
+        },
+        cancelledAccreditations: 1
+      })
+    })
   })
 
   it('still adds the numbers it can find to a report it cannot fully map', async () => {
@@ -417,7 +505,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 1,
       unmappedReasons: { 'organisation not found': [organisationGone] },
       failed: 0,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: { 'organisation not found': 1 },
+      cancelledAccreditations: 0
     })
     expect(await systemLogs()).toHaveLength(1)
   })
@@ -431,7 +521,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 0,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: {},
+      cancelledAccreditations: 0
     })
   })
 
@@ -446,7 +538,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 1,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: {},
+      cancelledAccreditations: 0
     })
     expect(logger.error).toHaveBeenCalledWith({
       err: outage,
@@ -471,7 +565,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 1,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: { 'summary log accreditation is the current link': 1 },
+      cancelledAccreditations: 0
     })
     expect(logger.error).toHaveBeenCalledWith({
       err: outage,
@@ -491,7 +587,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 1,
-      auditFailed: 0
+      auditFailed: 0,
+      cases: {},
+      cancelledAccreditations: 0
     })
   })
 
@@ -506,7 +604,9 @@ describe('backfillReportNumbers', () => {
       unmapped: 0,
       unmappedReasons: {},
       failed: 0,
-      auditFailed: 1
+      auditFailed: 1,
+      cases: { 'summary log accreditation is the current link': 1 },
+      cancelledAccreditations: 0
     })
     expect(await stored(id)).toMatchObject(numbers)
     expect(logger.error).toHaveBeenCalledWith({
