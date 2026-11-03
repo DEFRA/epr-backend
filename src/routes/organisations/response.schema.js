@@ -13,6 +13,7 @@ import {
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES
 } from '#organisation-read-model/domain/model.js'
+import { REG_ACC_STATUSES } from '#organisation-read-model/domain/reg-acc-status-by-date.js'
 
 /*
  * Routes validate responses with `stripUnknown`, so these schemas also decide
@@ -28,6 +29,7 @@ const regulatorSchema = Joi.object({
 
 const yearKey = Joi.string().pattern(/^\d{4}$/)
 const orsIdKey = Joi.string().pattern(/^\d{3}$/)
+const dateKey = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)
 
 const isoDate = isoDateString()
 
@@ -122,8 +124,22 @@ const ukAddressSchema = Joi.alternatives().try(
   Joi.object({ fullAddress: Joi.string().required() })
 )
 
+const regAccStatusByDateSchema = keyedByYear(
+  Joi.object().pattern(
+    dateKey,
+    Joi.object({
+      status: Joi.string()
+        .valid(...REG_ACC_STATUSES)
+        .required()
+    })
+  )
+).description(
+  'By year, the date each status starts. A status holds until the next date, or the end of the year.'
+)
+
 const registrationCommon = {
   material: materialSchema.required(),
+  regAccStatusByDate: regAccStatusByDateSchema,
   status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
