@@ -419,7 +419,7 @@
  *   exists for the period).
  * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkSubmittedReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
  *   For each given period, flags the latest submitted report as requiring resubmission,
- *   skipping any report already flagged from `summaryLogId` or built from it.
+ *   skipping any report already flagged from `summaryLogId`.
  *   Returns the per-report details for auditing.
  * @property {(params: MarkSubmittedReportRequiringResubmissionByOperatorParams) => Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>} markSubmittedReportRequiringResubmissionByOperator
  *   Flags the exact report identified by `submissionNumber` as requiring

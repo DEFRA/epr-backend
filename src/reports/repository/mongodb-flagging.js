@@ -194,7 +194,7 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
 /**
  * For each given period, flags the latest submitted report as requiring
  * resubmission. Skips a period whose latest submitted report is already flagged
- * from this `summaryLogId` or was itself built from it (retry-safe).
+ * from this `summaryLogId` (retry-safe).
  *
  * @param {Db} db
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params
@@ -237,16 +237,13 @@ export const performMarkSubmittedReportsRequiringResubmission = async (
           year: 1,
           cadence: 1,
           period: 1,
-          submissionNumber: 1,
-          'source.summaryLogId': 1
+          submissionNumber: 1
         }
       }
     )
     .toArray()
 
-  const flaggedIds = latestSubmissionPerPeriod(submitted)
-    .filter((doc) => doc.source?.summaryLogId !== summaryLogId)
-    .map((doc) => doc.id)
+  const flaggedIds = latestSubmissionPerPeriod(submitted).map((doc) => doc.id)
 
   if (flaggedIds.length === 0) {
     return []

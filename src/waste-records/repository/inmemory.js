@@ -140,7 +140,6 @@ const rowHistory = (
  * @returns {Generator<import('./port.js').SubmittedRowState>}
  */
 function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
-  /** @type {Set<string>} */
   const asked = new Set(summaryLogIds)
   for (const doc of storage) {
     if (doc.summaryLogIds.some((id) => asked.has(id))) {

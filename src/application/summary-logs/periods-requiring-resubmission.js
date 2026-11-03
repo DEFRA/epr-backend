@@ -8,6 +8,7 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { ledgerIdFor } from './ledger-id.js'
 
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {PeriodicReport, Report, ReportPerPeriod} from '#reports/repository/port.js' */
@@ -101,7 +102,7 @@ const aggregatePeriodFigures = (
 /**
  * sourceSummaryLogId is undefined when the report records no source at all.
  *
- * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId?: string | null }} Baseline
+ * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId?: SummaryLogFileId | null }} Baseline
  * @typedef {{ baseline: Baseline, changedFields: string[] } | { baseline: Baseline, cannotCompare: string }} Comparison
  */
 

@@ -104,42 +104,6 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
       })
     })
 
-    it('leaves alone a latest submission built from the summary log', async () => {
-      const reportId = await createAndSubmitReport(repository, {
-        source: {
-          summaryLogId: SL_ID,
-          lastUploadedAt: UPLOADED_AT
-        }
-      })
-
-      const flagged = await callMark()
-
-      expect(flagged).toEqual([])
-
-      const report = await repository.findReportById(reportId)
-      expect(report.resubmissionRequired).toBeUndefined()
-    })
-
-    it('does not flag an earlier submission when the latest was built from the summary log', async () => {
-      const earlierId = await createAndSubmitReport(repository, {
-        submissionNumber: 1
-      })
-      await createAndSubmitReport(repository, {
-        submissionNumber: 2,
-        source: {
-          summaryLogId: SL_ID,
-          lastUploadedAt: UPLOADED_AT
-        }
-      })
-
-      const flagged = await callMark()
-
-      expect(flagged).toEqual([])
-
-      const earlier = await repository.findReportById(earlierId)
-      expect(earlier.resubmissionRequired).toBeUndefined()
-    })
-
     it('does not touch active (non-submitted) reports', async () => {
       const { id: activeId } = await repository.createReport(
         buildCreateReportParams()

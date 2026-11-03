@@ -532,9 +532,8 @@ const markSubmittedReportsRequiringResubmission = async (
   const wantedPeriods = new Set(periods.map(periodKey))
 
   const alreadyHandled = (/** @type {Report} */ report) =>
-    report.source?.summaryLogId === summaryLogId ||
     report.resubmissionRequired?.closedPeriodRestated?.summaryLogId ===
-      summaryLogId
+    summaryLogId
 
   const submitted = /** @type {Report[]} */ ([...reports.values()]).filter(
     (r) =>

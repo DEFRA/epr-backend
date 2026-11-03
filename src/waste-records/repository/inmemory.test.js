@@ -53,7 +53,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
           reasons: [],
           transactionAmount: 10
         },
-        summaryLogIds: ['log-seed']
+        summaryLogIds: [toSummaryLogFileId('log-seed')]
       }
     ])()
 
