@@ -1,4 +1,4 @@
-import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
@@ -109,7 +109,7 @@ const createMockPrn = (overrides = {}) => ({
   schemaVersion: 2,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: buildAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: accreditationId,
     submittedToRegulator: REGULATOR.EA
   }),

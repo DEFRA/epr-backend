@@ -15,7 +15,7 @@ import {
   POOL
 } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { buildAccreditation as buildPrnAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -65,7 +65,7 @@ const buildPrn = (overrides = {}) => ({
   version: 1,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: buildPrnAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: ACC_ID,
     accreditationNumber: 'ACC-1'
   }),

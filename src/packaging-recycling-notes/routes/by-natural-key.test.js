@@ -15,7 +15,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
-  buildAccreditation,
+  buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
@@ -108,7 +108,7 @@ const exported = {
       name: 'Test Organisation',
       tradingName: 'Test Trading'
     },
-    accreditation: buildAccreditation({
+    accreditation: buildAccreditationSnapshot({
       id: ownIds.accreditationId,
       material: 'glass',
       glassRecyclingProcess: 'glass_re_melt',

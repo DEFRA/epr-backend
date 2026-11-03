@@ -8,7 +8,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
-  buildAccreditation,
+  buildAccreditationSnapshot,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
   buildDraftPrn
@@ -62,7 +62,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: buildAccreditation({ id: ACC_ID }),
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 

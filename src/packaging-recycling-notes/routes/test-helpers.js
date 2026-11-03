@@ -8,7 +8,7 @@ import { generateKeyPairSync } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   PRN_YEAR,
-  buildAccreditation
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 /** @type {{ publicKey: JsonWebKey, privateKey: string }} */
@@ -99,7 +99,7 @@ export const createMockIssuedPrn = (overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: 'reg-456',
-  accreditation: buildAccreditation({ id: 'acc-789' }),
+  accreditation: buildAccreditationSnapshot({ id: 'acc-789' }),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',

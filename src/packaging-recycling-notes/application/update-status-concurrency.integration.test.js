@@ -10,7 +10,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
-  buildAccreditation,
+  buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
@@ -184,7 +184,7 @@ describe('PRN status concurrency against real MongoDB', () => {
       buildAcceptedPrn({
         organisation: { id: ORG_ID, name: 'Test Reprocessor' },
         registrationId: REG_ID,
-        accreditation: buildAccreditation({ id: ACC_ID }),
+        accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
         tonnage: TONNAGE
       })
     )

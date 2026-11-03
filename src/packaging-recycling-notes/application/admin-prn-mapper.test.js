@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 
 import { mapToAdminPrn } from './admin-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 
 describe('mapToAdminPrn', () => {
@@ -47,7 +47,7 @@ describe('mapToAdminPrn', () => {
     }
   ])('$description', ({ currentStatus, accreditationYear, cancellable }) => {
     const issued = createMockIssuedPrn({
-      accreditation: buildAccreditation({ accreditationYear })
+      accreditation: buildAccreditationSnapshot({ accreditationYear })
     })
     const prn = { ...issued, status: { ...issued.status, currentStatus } }
 

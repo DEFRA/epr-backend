@@ -14,7 +14,7 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
-  buildAccreditation,
+  buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -76,7 +76,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: buildAccreditation({ id: ACC_ID }),
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 

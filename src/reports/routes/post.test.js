@@ -24,7 +24,7 @@ import {
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
-  buildAccreditation,
+  buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -635,7 +635,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ...buildAwaitingAcceptancePrn({
             organisation: { id: organisationId, name: 'Test Organisation' },
             registrationId,
-            accreditation: buildAccreditation({
+            accreditation: buildAccreditationSnapshot({
               id: accreditationId,
               accreditationYear: YEAR,
               material: 'glass',

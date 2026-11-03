@@ -32,7 +32,7 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  * @param {Partial<AccreditationSnapshot>} [overrides]
  * @returns {AccreditationSnapshot}
  */
-export const buildAccreditation = (overrides = {}) => ({
+export const buildAccreditationSnapshot = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
   accreditationNumber: 'ACC-2026-001',
   accreditationYear: PRN_YEAR,
@@ -72,7 +72,7 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: accreditationId.registrationId,
-  accreditation: buildAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: /** @type {string} */ (accreditationId.accreditationId)
   }),
   ...overrides
@@ -98,7 +98,7 @@ export const buildPrn = (overrides = {}) => {
       tradingName: 'Test Trading'
     },
     registrationId: `reg-${randomUUID()}`,
-    accreditation: buildAccreditation(),
+    accreditation: buildAccreditationSnapshot(),
     obligationYear: PRN_YEAR,
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,

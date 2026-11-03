@@ -1,4 +1,4 @@
-import { buildAccreditation } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -118,7 +118,7 @@ const buildPrn = (
   prnNumber,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: buildAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: accreditationId,
     accreditationYear: toYear(2026)
   }),
