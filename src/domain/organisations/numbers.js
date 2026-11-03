@@ -152,3 +152,39 @@ export const requiredNumbersFor = (organisation, ids, documents) => {
   }
   return { organisationNumber, registrationNumber, accreditationNumber }
 }
+
+/**
+ * Narrows stored numbers to every number, for a use that needs them all, such
+ * as a lookup in the organisation read model. Stored numbers stay optional, so
+ * this refuses where one is absent. A null accreditation number is valid, for
+ * a registered-only registration.
+ *
+ * @param {Numbers} numbers
+ * @param {string} description - what the numbers belong to, for the error
+ * @returns {RequiredNumbers}
+ */
+export const requireStoredNumbers = (numbers, description) => {
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    numbers
+  /** @type {string[]} */
+  const missing = []
+  if (organisationNumber === undefined) {
+    missing.push('organisationNumber')
+  }
+  if (registrationNumber === undefined) {
+    missing.push('registrationNumber')
+  }
+  if (accreditationNumber === undefined) {
+    missing.push('accreditationNumber')
+  }
+  if (
+    organisationNumber === undefined ||
+    registrationNumber === undefined ||
+    accreditationNumber === undefined
+  ) {
+    throw new Error(
+      `Cannot use ${description} without its numbers: ${missing.join(', ')}`
+    )
+  }
+  return { organisationNumber, registrationNumber, accreditationNumber }
+}

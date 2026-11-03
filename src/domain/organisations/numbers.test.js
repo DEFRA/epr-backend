@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   numbersFor,
   requiredNumbersFor,
+  requireStoredNumbers,
   toOrganisationNumber
 } from './numbers.js'
 
@@ -166,6 +167,96 @@ describe('requiredNumbersFor', () => {
       )
     ).toThrow(
       'Cannot store ledger events without their numbers: accreditation acc-2 has no accreditation number'
+    )
+  })
+})
+
+describe('requireStoredNumbers', () => {
+  it('gives every number when all are present', () => {
+    expect(
+      requireStoredNumbers(
+        {
+          organisationNumber: /** @type {any} */ ('500123'),
+          registrationNumber: /** @type {any} */ ('R25SR500010912PL'),
+          accreditationNumber: /** @type {any} */ ('ACC500123')
+        },
+        'summary log 123'
+      )
+    ).toEqual({
+      organisationNumber: '500123',
+      registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: 'ACC500123'
+    })
+  })
+
+  it('accepts a null accreditation number for a registered-only registration', () => {
+    expect(
+      requireStoredNumbers(
+        {
+          organisationNumber: /** @type {any} */ ('500123'),
+          registrationNumber: /** @type {any} */ ('R25SR500010912PL'),
+          accreditationNumber: null
+        },
+        'summary log 123'
+      )
+    ).toEqual({
+      organisationNumber: '500123',
+      registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: null
+    })
+  })
+
+  it('throws naming the description and every missing key', () => {
+    expect(() => requireStoredNumbers({}, 'summary log 123')).toThrow(
+      new Error(
+        'Cannot use summary log 123 without its numbers: organisationNumber, registrationNumber, accreditationNumber'
+      )
+    )
+  })
+
+  it('throws naming only the missing organisation number', () => {
+    expect(() =>
+      requireStoredNumbers(
+        {
+          registrationNumber: /** @type {any} */ ('R25SR500010912PL'),
+          accreditationNumber: null
+        },
+        'ledger event 7'
+      )
+    ).toThrow(
+      new Error(
+        'Cannot use ledger event 7 without its numbers: organisationNumber'
+      )
+    )
+  })
+
+  it('throws naming only the missing registration number', () => {
+    expect(() =>
+      requireStoredNumbers(
+        {
+          organisationNumber: /** @type {any} */ ('500123'),
+          accreditationNumber: null
+        },
+        'row state 9'
+      )
+    ).toThrow(
+      new Error(
+        'Cannot use row state 9 without its numbers: registrationNumber'
+      )
+    )
+  })
+
+  it('throws naming the accreditation number when it is undefined', () => {
+    expect(() =>
+      requireStoredNumbers(
+        {
+          organisationNumber: /** @type {any} */ ('500123'),
+          registrationNumber: /** @type {any} */ ('R25SR500010912PL')
+        },
+        'PRN 4'
+      )
+    ).toThrow(
+      new Error('Cannot use PRN 4 without its numbers: accreditationNumber')
     )
   })
 })
