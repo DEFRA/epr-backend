@@ -25,8 +25,8 @@
 
 /**
  * @typedef {Object} SummaryLogStats
- * @property {string} organisationId - Organisation ID
- * @property {string} registrationId - Registration ID
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Date|null} lastSuccessful - Date of last submitted log
  * @property {Date|null} lastFailed - Date of last failed log
  * @property {number} successfulCount - Count of submitted logs
@@ -68,7 +68,7 @@
  * @property {(id: string, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
- * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
+ * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
  * @property {(fileId: string, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId

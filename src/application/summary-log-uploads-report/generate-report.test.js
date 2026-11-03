@@ -1,17 +1,28 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { assertPresent } from '#test/type-helpers.js'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildRegistration,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation, nextOrgId } = organisationBuilders
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
+
+const numbersOf = (organisation, registration) => ({
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: registration.registrationNumber
+})
 
 describe('generateSummaryLogUploadsReport', () => {
   let organisationRepo
@@ -49,6 +60,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         submittedAt
       })
     )
@@ -84,6 +96,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         submittedAt
       })
     )
@@ -120,6 +133,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         submittedAt: firstSuccessfulAt
       })
     )
@@ -129,6 +143,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         submittedAt: latestSuccessfulAt
       })
     )
@@ -138,6 +153,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         createdAt: firstFailedAt
       })
     )
@@ -147,6 +163,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         createdAt: latestFailedAt
       })
     )
@@ -157,6 +174,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org2.id,
         registrationId: registration2.id,
+        ...numbersOf(org2, registration2),
         submittedAt: firstSuccessfulAt
       })
     )
@@ -166,6 +184,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org2.id,
         registrationId: registration2.id,
+        ...numbersOf(org2, registration2),
         submittedAt: latestSuccessfulAt
       })
     )
@@ -175,6 +194,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org2.id,
         registrationId: registration2.id,
+        ...numbersOf(org2, registration2),
         createdAt: firstFailedAt
       })
     )
@@ -184,6 +204,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org2.id,
         registrationId: registration2.id,
+        ...numbersOf(org2, registration2),
         createdAt: latestFailedAt
       })
     )
@@ -225,6 +246,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
+        ...numbersOf(org, registration),
         createdAt
       })
     )
@@ -235,6 +257,8 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: new ObjectId().toString(),
         registrationId: new ObjectId().toString(),
+        organisationNumber: toOrganisationNumber(String(nextOrgId())),
+        registrationNumber: toRegistrationNumber('R26ER9999999999PA'),
         createdAt
       })
     )
@@ -252,9 +276,7 @@ describe('generateSummaryLogUploadsReport', () => {
     ])
   })
 
-  it('returns empty strings when the registration and accreditation carry no numbers', async () => {
-    const createdAt = '2026-01-15T10:30:00.000Z'
-
+  it('leaves out a registration that carries no number', async () => {
     const unapprovedOrg = buildOrganisation({ orgId: nextOrgId() })
     await organisationRepo.insert(unapprovedOrg)
 
@@ -263,7 +285,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: unapprovedOrg.id,
         registrationId: unapprovedOrg.registrations[0].id,
-        createdAt
+        organisationNumber: toOrganisationNumber(String(unapprovedOrg.orgId))
       })
     )
 
@@ -272,12 +294,39 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogsRepo
     )
 
-    const row = result.summaryLogUploads.find(
-      (r) => r.orgId === unapprovedOrg.orgId
+    expect(result.summaryLogUploads).toEqual([])
+  })
+
+  it('gives an empty accreditation number for a registration with no accreditation', async () => {
+    const registeredOnly = buildRegistration({
+      registrationNumber: toRegistrationNumber('R26ER5000000001PA')
+    })
+    const registeredOnlyOrg = buildOrganisation({
+      orgId: nextOrgId(),
+      registrations: [registeredOnly],
+      accreditations: []
+    })
+    await organisationRepo.insert(registeredOnlyOrg)
+
+    await summaryLogsRepo.insert(
+      new ObjectId().toString(),
+      summaryLogFactory.submitted({
+        organisationId: registeredOnlyOrg.id,
+        registrationId: registeredOnly.id,
+        ...numbersOf(registeredOnlyOrg, registeredOnly)
+      })
     )
 
-    assertPresent(row)
-    expect(row.registrationNumber).toBe('')
-    expect(row.accreditationNumber).toBe('')
+    const result = await generateSummaryLogUploadsReport(
+      organisationRepo,
+      summaryLogsRepo
+    )
+
+    expect(result.summaryLogUploads).toEqual([
+      expect.objectContaining({
+        registrationNumber: registeredOnly.registrationNumber,
+        accreditationNumber: ''
+      })
+    ])
   })
 })
