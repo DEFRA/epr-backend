@@ -2,7 +2,8 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
-export const PRN_YEAR = toYear(2026)
+const ACCREDITATION_YEAR = 2026
+export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
 
