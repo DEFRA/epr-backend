@@ -1,42 +1,11 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { dayBefore } from '#common/helpers/dates/calendar-day.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
-import {
-  joinDateRanges,
-  restrictDateRanges,
-  subtractDateRanges
-} from '#common/helpers/dates/date-range.js'
-import { HELD_ACCREDITATION_STATUSES } from './model.js'
-import { statusRanges } from './status-timeline.js'
+import { regAccStatusByDate } from './reg-acc-status-by-date.js'
 
 /** @import { CalendarDateRange } from '#common/helpers/dates/date-range.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Registration } from './model.js' */
-
-/**
- * @param {Registration} registration
- * @param {CalendarDateRange} bounds
- * @returns {CalendarDateRange[]}
- */
-const registeredWindows = (registration, bounds) =>
-  restrictDateRanges(
-    statusRanges(registration.status.timeline, bounds.to).approved ?? [],
-    bounds
-  )
-
-/**
- * @param {Registration} registration
- * @param {CalendarDateRange} bounds
- * @param {Year} year
- * @returns {CalendarDateRange[]}
- */
-const accreditedWindows = (registration, bounds, year) => {
-  const ranges = statusRanges(
-    registration.accreditations[year]?.status.timeline ?? [],
-    bounds.to
-  )
-  return joinDateRanges(
-    [...HELD_ACCREDITATION_STATUSES].flatMap((status) => ranges[status] ?? [])
-  )
-}
 
 /**
  * When a registration is registered only, and when it is accredited, in
@@ -47,15 +16,21 @@ const accreditedWindows = (registration, bounds, year) => {
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
  */
 export const registrationStatusWindows = (registration, year) => {
-  const { start, end } = yearBounds(year)
-  const bounds = { from: start, to: end }
-  const registered = registeredWindows(registration, bounds)
-  const accredited = accreditedWindows(registration, bounds, year).flatMap(
-    (window) => restrictDateRanges(registered, window)
-  )
+  const { end } = yearBounds(year)
+  const entries = Object.entries(regAccStatusByDate(registration, year))
 
-  return {
-    registeredOnly: subtractDateRanges(registered, accredited),
-    accredited
-  }
+  /** @type {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }} */
+  const windows = { registeredOnly: [], accredited: [] }
+
+  entries.forEach(([date, { status }], index) => {
+    if (status !== 'cancelled') {
+      const next = entries[index + 1]
+      windows[status].push({
+        from: calendarDate(date),
+        to: next ? dayBefore(calendarDate(next[0])) : end
+      })
+    }
+  })
+
+  return windows
 }
