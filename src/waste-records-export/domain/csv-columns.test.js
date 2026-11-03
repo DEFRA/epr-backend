@@ -19,9 +19,9 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, AccreditationCommon} from '#organisation-read-model/domain/model.js' */
 
 describe('csv-columns', () => {
   const userFixture = {
@@ -178,35 +178,31 @@ describe('csv-columns', () => {
     const dataCol = (name) =>
       METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
 
-    /** @type {Accreditation} */
-    const accreditationFixture = {
-      id: 'acc-1',
-      statusHistory: [],
-      formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
-      material: 'plastic',
-      orgName: 'Acme Ltd',
-      prnIssuance: {
-        incomeBusinessPlan: [],
-        signatories: [],
-        tonnageBand: 'up_to_500'
-      },
-      samplingInspectionPlanPart2FileUploads: [],
-      submittedToRegulator: 'ea',
-      submitterContactDetails: userFixture,
-      wasteProcessingType: 'reprocessor',
-      accreditationNumber: toAccreditationNumber('ACC-001'),
-      status: 'approved',
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31'
-    }
+    /** @type {ReadModelOrganisation} */
+    const readOrgFixture = /** @type {any} */ ({
+      organisationNumber: '500001',
+      name: 'Acme Ltd',
+      registrations: {}
+    })
 
-    /** @returns {Registration} */
-    const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
+    /** @type {ReadModelRegistration} */
+    const readRegFixture = /** @type {any} */ ({
+      material: 'plastic',
+      submittedToRegulator: { code: 'ea' },
+      accreditations: {}
+    })
+
+    /** @type {AccreditationCommon} */
+    const readAccreditationFixture = /** @type {any} */ ({
+      accreditationNumber: toAccreditationNumber('ACC-001'),
+      status: { current: 'approved', timeline: [] }
+    })
 
     const baseInput = {
-      org: orgFixture,
-      registration: regFixture,
-      accreditation: accreditationFixture,
+      org: readOrgFixture,
+      registration: readRegFixture,
+      registrationNumber: toRegistrationNumber('REG-001'),
+      accreditation: readAccreditationFixture,
       data: dataFixture,
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       rowId: '1001',
@@ -247,23 +243,12 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Row ID']]).toBe('1001')
     })
 
-    it('emits the glass recycling process in place of "glass" for the Material column', () => {
+    it('emits the material as the read model holds it, glass recycling process included', () => {
       const row = buildDataRow({
         ...baseInput,
-        registration: buildReg({
-          material: 'glass',
-          glassRecyclingProcess: ['glass_re_melt']
-        })
+        registration: { ...readRegFixture, material: 'glass_re_melt' }
       })
       expect(row[METADATA_COL_INDEX['Material']]).toBe('glass_re_melt')
-    })
-
-    it('emits an empty Registration Number when the registration has none', () => {
-      const row = buildDataRow({
-        ...baseInput,
-        registration: buildReg({ registrationNumber: undefined })
-      })
-      expect(row[METADATA_COL_INDEX['Registration Number']]).toBe('')
     })
 
     it('emits an empty Accreditation Number when the row has no accreditation', () => {
@@ -304,7 +289,7 @@ describe('csv-columns', () => {
     it('apostrophe-prefixes the organisation name when it begins with a formula trigger', () => {
       const row = buildDataRow({
         ...baseInput,
-        org: { ...orgFixture, companyDetails: { name: '=cmd|calc' } }
+        org: { ...readOrgFixture, name: '=cmd|calc' }
       })
       expect(row[METADATA_COL_INDEX['Organisation Name']]).toBe("'=cmd|calc")
     })

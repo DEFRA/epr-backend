@@ -8,13 +8,11 @@ import { buildDownloadDisposition } from '#repositories/summary-logs/download-di
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 const CSV_EXTENSION = 'csv'
 
@@ -35,30 +33,26 @@ const registrationWasteRecordsExport = {
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationReadRepository: OrganisationReadRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
-   *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   overseasSitesRepository: OverseasSitesRepository,
-   *   app: { organisation: Organisation }
+   *   ledgerRepository: WasteBalanceLedgerRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisation } = request.app
-    const { registrationNumber } = request.params
+    const { organisationNumber, registrationNumber } = request.params
 
     // No single submission stands behind this export, so it is stamped with
     // the moment it was taken.
     return h
       .response(
         streamCsvExportToReadable({
-          organisationsRepository: request.organisationsRepository,
+          organisationReadRepository: request.organisationReadRepository,
           summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,
-          overseasSitesRepository: request.overseasSitesRepository,
-          organisation,
+          organisationNumber,
           registrationNumber
         })
       )

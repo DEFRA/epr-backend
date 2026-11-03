@@ -1,5 +1,4 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   materialFromSpreadsheet,
   metaText
@@ -13,9 +12,10 @@ import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocess
 import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Organisation as LegacyOrganisation} from '#domain/organisations/model.js' */
+/** @import {Registration as LegacyRegistration} from '#domain/organisations/registration.js' */
+/** @import {Organisation, Registration, AccreditationCommon} from '#organisation-read-model/domain/model.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
@@ -179,7 +179,8 @@ const buildDataCells = (data, dataFieldColumns) =>
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
  * @property {Registration} registration
- * @property {Accreditation | null} accreditation
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationCommon | null} accreditation
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
  * @property {WasteRecordType} wasteRecordType
  * @property {string} rowId
@@ -211,6 +212,7 @@ const buildDataCells = (data, dataFieldColumns) =>
 export const buildDataRow = ({
   org,
   registration,
+  registrationNumber,
   accreditation,
   data,
   wasteRecordType,
@@ -227,10 +229,10 @@ export const buildDataRow = ({
     : undefined
 
   const metadata = [
-    uppercaseString(registration.submittedToRegulator),
-    org.companyDetails.name,
-    registration.registrationNumber ?? '',
-    resolveMaterial(registration),
+    uppercaseString(registration.submittedToRegulator.code),
+    org.name,
+    registrationNumber,
+    registration.material,
     data.processingType,
     accredited,
     accreditation?.accreditationNumber ?? '',
@@ -277,8 +279,8 @@ export const buildSubmissionHeaderRow = (dataFieldColumns) => [
 
 /**
  * @typedef {Object} BuildSubmissionDataRowInput
- * @property {Organisation} org
- * @property {Registration} registration
+ * @property {LegacyOrganisation} org
+ * @property {LegacyRegistration} registration
  * @property {SummaryLogMeta | undefined} meta - The submission's stored cover sheet.
  * @property {string} submittedAt
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.

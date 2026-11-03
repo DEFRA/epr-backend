@@ -13,7 +13,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -24,6 +27,11 @@ const ORGANISATION_NUMBER = 500123
 const REGISTRATION_ID = 'reg-1'
 const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
+const LEDGER_NUMBERS = {
+  organisationNumber: toOrganisationNumber(String(ORGANISATION_NUMBER)),
+  registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
+  accreditationNumber: null
+}
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
 const buildRegistration = () => {
@@ -76,6 +84,7 @@ const createServer = async ({
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
       accreditationId: null,
+      ...LEDGER_NUMBERS,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
     })
   ])
@@ -88,14 +97,28 @@ const createServer = async ({
     registrations: [/** @type {any} */ (buildRegistration())]
   })
 
+  const readModelOrganisation = {
+    organisationNumber: LEDGER_NUMBERS.organisationNumber,
+    name: 'Acme Ltd',
+    registrations: {
+      [REGISTRATION_NUMBER]: {
+        material: 'plastic',
+        submittedToRegulator: { code: 'ea' },
+        accreditations: {},
+        overseasSites: {}
+      }
+    }
+  }
+
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers({
+    {
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
-      accreditationId: null
-    }),
+      accreditationId: null,
+      ...LEDGER_NUMBERS
+    },
     [receivedRowState()],
     FILE_ID
   )
@@ -118,15 +141,23 @@ const createServer = async ({
           Promise.reject(new Error('read again'))
         )
       }),
+      // The export reads the registration's classification inputs from the
+      // read model, by the numbers the path named.
+      organisationReadRepository: () => ({
+        findByOrganisationNumber: vi.fn((organisationNumber) =>
+          Promise.resolve(
+            organisationNumber === LEDGER_NUMBERS.organisationNumber
+              ? readModelOrganisation
+              : null
+          )
+        )
+      }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => createInMemoryLedgerRepository(ledgerEvents)(),
       summaryLogsRepository: () => ({
         findAll: vi
           .fn()
           .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
-      }),
-      overseasSitesRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([])
       })
     }
   })

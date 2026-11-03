@@ -2,8 +2,15 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
-import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
+import {
+  readModelAccreditedPeriod,
+  readModelOverseasSitesContext
+} from '#waste-balances/domain/classification-context.js'
+import {
+  accreditationKey,
+  indexReadModelAccreditations
+} from '#waste-balances/application/accreditation-index.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
@@ -12,36 +19,34 @@ import {
   buildDataRow,
   buildDataFieldColumns
 } from '../domain/csv-columns.js'
-import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Organisation, Registration, ExporterRegistration} from '#organisation-read-model/domain/model.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
+/** @import {AccreditationReadModelContext} from '#waste-balances/application/accreditation-index.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {NumberedLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
+/** @import {OverseasSitesContext} from '#waste-balances/domain/classification-context.js' */
 /** @import {OverseasSiteContextEntry} from '../domain/overseas-sites-context.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<OrganisationReadRepository, 'findAll' | 'findByOrganisationNumber'>} organisationReadRepository
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
- * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
- * @property {Organisation} [organisation] - When set, export only this organisation.
- * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
+ * @property {OrganisationNumber} [organisationNumber] - When set, export only this organisation.
+ * @property {RegistrationNumber} [registrationNumber] - When set (with organisationNumber), export only this registration.
  */
 
-const sortById = (a, b) => a.id.localeCompare(b.id)
+/** @type {(a: [string, unknown], b: [string, unknown]) => number} */
+const compareKeys = ([a], [b]) => a.localeCompare(b)
 
 /**
  * @param {Pick<SummaryLogRowState, 'wasteRecordType' | 'rowId'>} a
@@ -96,10 +101,10 @@ export const encodeRow = async (cells) => {
 }
 
 // Deterministic partition order within a registration: registered-only
-// (null accreditation) first, then accreditation ids ascending.
-const sortEntriesByAccreditationId = (a, b) =>
-  String(a.ledgerId.accreditationId ?? '').localeCompare(
-    String(b.ledgerId.accreditationId ?? '')
+// (null accreditation) first, then accreditation numbers ascending.
+const sortEntriesByAccreditationNumber = (a, b) =>
+  String(a.ledgerId.accreditationNumber ?? '').localeCompare(
+    String(b.ledgerId.accreditationNumber ?? '')
   )
 
 /**
@@ -115,51 +120,106 @@ const recomputedClassification = (rowState, context) =>
   reclassifyWasteRecordState(rowState, context).classification
 
 /**
+ * Every site the registration names, for the OSR_NAME_REVISED and
+ * OSR_COUNTRY_REVISED columns. A row shows its site's name and country
+ * whether or not an accreditation vouches for it; only classification reads
+ * the accreditation's approvals.
+ *
+ * @param {Registration} registration
+ * @returns {Record<string, OverseasSiteContextEntry>}
+ */
+const registeredSites = (registration) =>
+  Object.fromEntries(
+    Object.entries(
+      /** @type {ExporterRegistration} */ (registration).overseasSites ?? {}
+    ).map(([osr, site]) => [
+      osr,
+      { approvedFrom: null, name: site.name, country: site.address.country }
+    ])
+  )
+
+/**
+ * The accreditation a partition is classified and displayed against: the one
+ * its numbers name, as it stands at export time, and only while it is held
+ * (approved or suspended). A partition whose accreditation is registered-only,
+ * no longer held or absent from the read model is not accredited, but its rows
+ * are still exported.
+ *
+ * @param {Map<string, AccreditationReadModelContext>} accreditationIndex
+ * @param {NumberedLedgerId} ledgerId
+ * @returns {AccreditationReadModelContext | null}
+ */
+const heldAccreditationOf = (accreditationIndex, ledgerId) => {
+  if (ledgerId.accreditationNumber === null) {
+    return null
+  }
+  const found = accreditationIndex.get(
+    accreditationKey({
+      ...ledgerId,
+      accreditationNumber: ledgerId.accreditationNumber
+    })
+  )
+  return found &&
+    HELD_ACCREDITATION_STATUSES.has(found.accreditation.status.current)
+    ? found
+    : null
+}
+
+/**
  * Yield one CSV row per row state of a single ledger partition, ordered by
  * `(wasteRecordType, rowId)`.
  *
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
- * @param {WasteBalanceLedgerId} input.ledgerId
+ * @param {RegistrationNumber} input.registrationNumber
+ * @param {AccreditationReadModelContext | null} input.accreditation
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
- * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites
  * @param {string[]} input.dataFieldColumns
  * @returns {AsyncGenerator<string>}
  */
 async function* streamPartitionRows({
   org,
   registration,
-  ledgerId,
+  registrationNumber,
+  accreditation,
   rowStates,
   summaryLogEntry,
-  overseasSites,
   dataFieldColumns
 }) {
-  // The Accredited columns read the partition's own accreditation, resolved
-  // active-only (approved/suspended) as of export time — not the
-  // registration's current link. Rows submitted under a since-cancelled
-  // accreditation or a registered-only period render as not accredited but are
-  // still exported.
-  const accreditation = resolveAccreditation(
-    { accreditationId: ledgerId.accreditationId },
-    org
-  )
-  const accreditedPeriod = toAccreditedPeriod(accreditation)
+  // The Accredited columns read the partition's own accreditation, held as of
+  // export time — not the registration's current one. A registered-only
+  // period renders as not accredited, and registered-only rows are not
+  // applicable whatever the registration's sites, so they classify against
+  // none.
+  /** @type {Exclude<OverseasSitesContext, symbol>} */
+  const classificationSites = accreditation
+    ? /** @type {Exclude<OverseasSitesContext, symbol>} */ (
+        readModelOverseasSitesContext(registration, accreditation.accreditation)
+      )
+    : {}
+  const accreditedPeriod = accreditation
+    ? readModelAccreditedPeriod(accreditation.accreditation, accreditation.year)
+    : null
+  const overseasSites = {
+    ...registeredSites(registration),
+    ...classificationSites
+  }
 
   for (const rowState of [...rowStates].sort(sortRowStates)) {
     yield await encodeRow(
       buildDataRow({
         org,
         registration,
-        accreditation,
+        registrationNumber,
+        accreditation: accreditation?.accreditation ?? null,
         data: coerceForExport(rowState),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
         classification: recomputedClassification(rowState, {
           accreditation: accreditedPeriod,
-          overseasSites
+          overseasSites: classificationSites
         }),
         summaryLogEntry,
         overseasSites,
@@ -173,8 +233,9 @@ async function* streamPartitionRows({
  * @typedef {Object} RegistrationRowsContext
  * @property {Organisation} org
  * @property {Registration} registration
+ * @property {RegistrationNumber} registrationNumber
+ * @property {Map<string, AccreditationReadModelContext>} accreditationIndex
  * @property {Map<string, { submittedAt: string }>} summaryLogMap
- * @property {Record<string, OverseasSiteContextEntry>} overseasSites
  * @property {string[]} dataFieldColumns
  */
 
@@ -183,7 +244,8 @@ async function* streamPartitionRows({
  * summary log of every ledger partition it has written to, each partition's
  * rows fetched in turn.
  *
- * @param {RegistrationRowsContext & {
+ * @param {Omit<RegistrationRowsContext, 'accreditationIndex'> & {
+ *   accreditationIndex: Map<string, AccreditationReadModelContext>,
  *   entries: LatestSubmittedSummaryLogPerLedger[],
  *   summaryLogRowStatesRepository: Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>
  * }} input
@@ -193,14 +255,15 @@ async function* streamLatestSubmissionRows({
   entries,
   summaryLogRowStatesRepository,
   summaryLogMap,
+  accreditationIndex,
   ...context
 }) {
   for (const { ledgerId, summaryLogId } of [...entries].sort(
-    sortEntriesByAccreditationId
+    sortEntriesByAccreditationNumber
   )) {
     yield* streamPartitionRows({
       ...context,
-      ledgerId,
+      accreditation: heldAccreditationOf(accreditationIndex, ledgerId),
       rowStates:
         await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
           ledgerId,
@@ -222,8 +285,9 @@ async function* streamLatestSubmissionRows({
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
+ * @param {RegistrationNumber} input.registrationNumber
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
- * @param {Map<string, OverseasSite>} input.sitesById
+ * @param {Map<string, AccreditationReadModelContext>} input.accreditationIndex
  * @param {string[]} input.dataFieldColumns
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAll'>} input.summaryLogsRepository
@@ -232,8 +296,9 @@ async function* streamLatestSubmissionRows({
 async function* streamRegistrationRows({
   org,
   registration,
+  registrationNumber,
   entries,
-  sitesById,
+  accreditationIndex,
   dataFieldColumns,
   summaryLogRowStatesRepository,
   summaryLogsRepository
@@ -245,12 +310,13 @@ async function* streamRegistrationRows({
   yield* streamLatestSubmissionRows({
     org,
     registration,
+    registrationNumber,
+    accreditationIndex,
     dataFieldColumns,
-    overseasSites: buildOverseasSitesContext(registration, sitesById),
     summaryLogMap: await loadSummaryLogMap(
       summaryLogsRepository,
-      org,
-      registration
+      org.organisationNumber,
+      registrationNumber
     ),
     entries,
     summaryLogRowStatesRepository
@@ -276,45 +342,50 @@ async function* streamRegistrationRows({
  */
 export async function* streamCsvExport(deps) {
   const {
-    organisationsRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository,
-    overseasSitesRepository,
-    organisation,
+    organisationNumber,
     registrationNumber
   } = deps
 
-  const [allSites, observedKeys, latestSubmittedEntries] = await Promise.all([
-    overseasSitesRepository.findAll(),
+  const [observedKeys, latestSubmittedEntries] = await Promise.all([
     summaryLogRowStatesRepository.findDistinctDataKeys(),
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
   ])
 
-  const sitesById = new Map(allSites.map((s) => [s.id, s]))
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
   const entriesByRegistration = groupByRegistration(latestSubmittedEntries)
 
-  const orgsSorted = organisation
-    ? [organisation]
-    : await findExportableOrgs(organisationsRepository)
+  const orgsSorted = organisationNumber
+    ? await findScopedOrg(organisationReadRepository, organisationNumber)
+    : await findExportableOrgs(organisationReadRepository)
+  // Test organisations are already dropped (or asked for by number), so the
+  // index takes every organisation it is given.
+  const { index: accreditationIndex } = indexReadModelAccreditations(
+    orgsSorted,
+    { includeTestOrganisations: true }
+  )
   for (const org of orgsSorted) {
-    const registrations = [...(org.registrations ?? [])]
+    const registrations = Object.entries(org.registrations)
       .filter(
-        (reg) =>
-          !registrationNumber || reg.registrationNumber === registrationNumber
+        ([number]) => !registrationNumber || number === registrationNumber
       )
-      .sort(sortById)
-    for (const registration of registrations) {
+      .sort(compareKeys)
+    for (const [number, registration] of registrations) {
+      const registrationNumberOfOrg = /** @type {RegistrationNumber} */ (number)
       yield* streamRegistrationRows({
         org,
         registration,
+        registrationNumber: registrationNumberOfOrg,
         entries:
-          entriesByRegistration.get(registrationKey(org.id, registration.id)) ??
-          [],
-        sitesById,
+          entriesByRegistration.get(
+            registrationKey(org.organisationNumber, registrationNumberOfOrg)
+          ) ?? [],
+        accreditationIndex,
         dataFieldColumns,
         summaryLogRowStatesRepository,
         summaryLogsRepository
@@ -324,12 +395,12 @@ export async function* streamCsvExport(deps) {
 }
 
 /**
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {string} organisationNumber
+ * @param {string} registrationNumber
  * @returns {string}
  */
-const registrationKey = (organisationId, registrationId) =>
-  `${organisationId}::${registrationId}`
+const registrationKey = (organisationNumber, registrationNumber) =>
+  `${organisationNumber}/${registrationNumber}`
 
 /**
  * Group the per-partition latest-submission entries by owning
@@ -344,8 +415,8 @@ const groupByRegistration = (entries) => {
   const grouped = new Map()
   for (const entry of entries) {
     const key = registrationKey(
-      entry.ledgerId.organisationId,
-      entry.ledgerId.registrationId
+      entry.ledgerId.organisationNumber,
+      entry.ledgerId.registrationNumber
     )
     const list = grouped.get(key)
     if (list) {
@@ -357,17 +428,36 @@ const groupByRegistration = (entries) => {
   return grouped
 }
 
+const byOrganisationNumber = (a, b) =>
+  a.organisationNumber.localeCompare(b.organisationNumber)
+
 /**
- * Every non-test organisation, sorted by id for deterministic output.
+ * Every non-test organisation, sorted by number for deterministic output.
  *
- * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationReadRepository, 'findAll'>} organisationReadRepository
  * @returns {Promise<Organisation[]>}
  */
-async function findExportableOrgs(organisationsRepository) {
-  const orgs = await organisationsRepository.findAll()
+async function findExportableOrgs(organisationReadRepository) {
+  const orgs = await organisationReadRepository.findAll()
   return orgs
-    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
-    .sort(sortById)
+    .filter((org) => !TEST_ORGANISATION_IDS.has(Number(org.organisationNumber)))
+    .sort(byOrganisationNumber)
+}
+
+/**
+ * The one organisation an export is scoped to — test organisations included,
+ * since it was asked for by number.
+ *
+ * @param {Pick<OrganisationReadRepository, 'findByOrganisationNumber'>} organisationReadRepository
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {Promise<Organisation[]>}
+ */
+async function findScopedOrg(organisationReadRepository, organisationNumber) {
+  const org =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  return org ? [org] : []
 }
 
 /**

@@ -16,6 +16,12 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
@@ -162,6 +168,120 @@ const summaryLogDocument = (fileId, submittedAt) => ({
 })
 
 /**
+ * The read-model view of a legacy-shaped fixture organisation: registrations
+ * keyed by number, accreditations keyed by the year they end in, and overseas
+ * sites resolved to the name and country the registration carries. Every
+ * accreditation of the organisation is attached to every registration, so a
+ * registration reads each partition it has written to.
+ *
+ * @param {any} org
+ * @param {OverseasSite[]} sites
+ */
+const toReadModelOrganisation = (org, sites) => {
+  const sitesById = new Map(sites.map((site) => [site.id, site]))
+  return {
+    organisationNumber: toOrganisationNumber(String(org.orgId)),
+    name: org.companyDetails.name,
+    registrations: Object.fromEntries(
+      (org.registrations ?? []).map((registration) => {
+        const registrationSites = Object.entries(
+          registration.overseasSites ?? {}
+        ).flatMap(([osr, { overseasSiteId }]) => {
+          const site = sitesById.get(overseasSiteId)
+          return site ? [[osr, site]] : []
+        })
+        return [
+          registration.registrationNumber,
+          {
+            material: resolveMaterial(registration),
+            submittedToRegulator: { code: registration.submittedToRegulator },
+            // Only exporters carry overseas sites.
+            ...(registration.overseasSites && {
+              overseasSites: Object.fromEntries(
+                registrationSites.map(([osr, site]) => [
+                  osr,
+                  { name: site.name, address: { country: site.country } }
+                ])
+              )
+            }),
+            accreditations: Object.fromEntries(
+              org.accreditations.map((accreditation) => [
+                accreditation.validTo.slice(0, 4),
+                {
+                  accreditationNumber: accreditation.accreditationNumber,
+                  status: {
+                    current: accreditation.status,
+                    timeline: [
+                      { status: 'created', at: '2025-12-31T00:00:00.000Z' },
+                      {
+                        status: 'approved',
+                        at: new Date(accreditation.validFrom).toISOString()
+                      },
+                      ...(accreditation.status === 'approved'
+                        ? []
+                        : [
+                            {
+                              status: accreditation.status,
+                              at: new Date(accreditation.validTo).toISOString()
+                            }
+                          ])
+                    ]
+                  },
+                  overseasSites: Object.fromEntries(
+                    registrationSites.map(([osr, site]) => [
+                      osr,
+                      site.validFrom
+                        ? {
+                            status: 'approved',
+                            approvedOn: site.validFrom.toISOString()
+                          }
+                        : { status: 'pending' }
+                    ])
+                  )
+                }
+              ])
+            )
+          }
+        ]
+      })
+    )
+  }
+}
+
+/**
+ * The numbers a fixture ledger id carries: those of the fixture organisation,
+ * registration and accreditation it names, or the generated ones where it
+ * names none.
+ *
+ * @param {any[]} orgs
+ * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId
+ */
+const numbersOf = (orgs, ledgerId) => {
+  const org = orgs.find(({ id }) => id === ledgerId.organisationId)
+  const registration = org?.registrations?.find(
+    ({ id }) => id === ledgerId.registrationId
+  )
+  if (!org || !registration) {
+    return withNumbers(ledgerId)
+  }
+  const accreditation = org.accreditations.find(
+    ({ id }) => id === ledgerId.accreditationId
+  )
+  return {
+    ...ledgerId,
+    organisationNumber: toOrganisationNumber(String(org.orgId)),
+    registrationNumber: toRegistrationNumber(registration.registrationNumber),
+    accreditationNumber:
+      ledgerId.accreditationId === null
+        ? null
+        : toAccreditationNumber(
+            accreditation?.accreditationNumber ??
+              `ACC-${ledgerId.accreditationId}`
+          )
+  }
+}
+
+/**
  * Build export deps backed by the real in-memory ledger and row-state
  * adapters. `seeds` lists each registration's submitted summary log and its
  * committed rows; the ledger records one submitted event per seed so the
@@ -184,11 +304,14 @@ const buildDeps = async ({
   organisation,
   registrationNumber
 } = {}) => {
+  const ledgerIdOf = (seed) => ({
+    organisationId: seed.organisationId ?? 'org-1',
+    registrationId: seed.registrationId ?? 'reg-1',
+    accreditationId: seed.accreditationId ?? null
+  })
   const ledgerEvents = seeds.map((seed) =>
     buildLedgerEvent({
-      organisationId: seed.organisationId ?? 'org-1',
-      registrationId: seed.registrationId ?? 'reg-1',
-      accreditationId: seed.accreditationId ?? null,
+      ...numbersOf(orgs, ledgerIdOf(seed)),
       // A partition seeded twice needs ascending numbers so the later
       // submission is the one the latest-per-ledger query resolves.
       number: seed.number ?? 1,
@@ -206,19 +329,22 @@ const buildDeps = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers({
-        organisationId: seed.organisationId ?? 'org-1',
-        registrationId: seed.registrationId ?? 'reg-1',
-        accreditationId: seed.accreditationId ?? null
-      }),
+      numbersOf(orgs, ledgerIdOf(seed)),
       seed.rows ?? [],
       seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID
     )
   }
 
   return {
-    organisationsRepository: {
-      findAll: async () => orgs
+    organisationReadRepository: {
+      findAll: async () =>
+        orgs.map((org) => toReadModelOrganisation(org, sites)),
+      findByOrganisationNumber: async (organisationNumber) => {
+        const org = orgs.find(
+          ({ orgId }) => String(orgId) === organisationNumber
+        )
+        return org ? toReadModelOrganisation(org, sites) : null
+      }
     },
     summaryLogRowStatesRepository,
     ledgerRepository,
@@ -226,10 +352,9 @@ const buildDeps = async ({
       findAll: async ({ organisationNumber, registrationNumber }) =>
         summaryLogs[`${organisationNumber}/${registrationNumber}`] ?? []
     },
-    overseasSitesRepository: {
-      findAll: async () => sites
-    },
-    organisation,
+    organisationNumber: organisation
+      ? toOrganisationNumber(String(organisation.orgId))
+      : undefined,
     registrationNumber
   }
 }
@@ -408,7 +533,7 @@ describe('streamCsvExport', () => {
     expect(out[4]).toContain('Other Co')
   })
 
-  it('builds the ORS context once per registration from the pre-loaded sites map', async () => {
+  it('includes an exported row whose overseas site was approved by the export date', async () => {
     const org = baseOrg({
       accreditations: [approvedAccreditation()],
       registrations: [
@@ -419,13 +544,9 @@ describe('streamCsvExport', () => {
         })
       ]
     })
-    const findAll = vi
-      .fn()
-      .mockResolvedValue([
-        overseasSite('site-a', { validFrom: new Date('2026-01-01') })
-      ])
     const deps = await buildDeps({
       orgs: [org],
+      sites: [overseasSite('site-a', { validFrom: new Date('2026-01-01') })],
       seeds: [
         {
           accreditationId: 'acc-1',
@@ -441,11 +562,9 @@ describe('streamCsvExport', () => {
         }
       ]
     })
-    deps.overseasSitesRepository.findAll = findAll
 
     const out = await collect(streamCsvExport(deps))
     expect(out).toHaveLength(2)
-    expect(findAll).toHaveBeenCalledTimes(1)
     const cells = out[1].trim().split(',')
     expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('true')
   })
@@ -529,6 +648,34 @@ describe('streamCsvExport', () => {
     const cells = out[1].trim().split(',')
     expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('Germany')
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('Acme Recycling')
+    // A registered-only period is not applicable whatever its sites.
+    expect(cells[METADATA_COL_INDEX['Included in Waste Balance']]).toBe('NA')
+  })
+
+  it('exports a registration that carries no overseas sites, as a reprocessor does', async () => {
+    const deps = await buildDeps({
+      orgs: [
+        baseOrg({
+          registrations: [baseRegistration({ overseasSites: undefined })]
+        })
+      ],
+      seeds: [{ rows: [receivedRowState()] }]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(2)
+  })
+
+  it('exports nothing when scoped to an organisation the read model does not hold', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const deps = await buildDeps({
+      orgs: [],
+      seeds: [{ rows: [receivedRowState()] }],
+      organisation: org
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(1) // header only
   })
 
   it('leaves the derived OSR columns blank for a reprocessor row with no OSR_ID', async () => {
@@ -581,11 +728,13 @@ describe('streamCsvExport', () => {
   })
 
   it('ignores a row the stamped classification included once the accreditation no longer covers its date', async () => {
+    // The read model keeps no validTo, so the window opens on approval and
+    // closes at the end of the year: a row dated before approval is outside it.
     const org = baseOrg({
       accreditations: [
         approvedAccreditation({
-          validFrom: '2026-01-01',
-          validTo: '2026-03-31'
+          validFrom: '2026-07-01',
+          validTo: '2026-12-31'
         })
       ],
       registrations: [
@@ -806,7 +955,9 @@ describe('streamCsvExport', () => {
       accreditations: [
         approvedAccreditation({
           id: 'acc-old',
-          accreditationNumber: 'ACC-OLD'
+          accreditationNumber: 'ACC-OLD',
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31'
         }),
         approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
       ],
@@ -845,7 +996,9 @@ describe('streamCsvExport', () => {
       accreditations: [
         approvedAccreditation({
           id: 'acc-old',
-          accreditationNumber: 'ACC-OLD'
+          accreditationNumber: 'ACC-OLD',
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31'
         }),
         approvedAccreditation({ id: 'acc-new', accreditationNumber: 'ACC-NEW' })
       ],
@@ -931,8 +1084,13 @@ describe('streamCsvExport', () => {
   it("orders a registration's partitions registered-only first, then by accreditation id", async () => {
     const org = baseOrg({
       accreditations: [
-        approvedAccreditation({ id: 'acc-a' }),
-        approvedAccreditation({ id: 'acc-b' })
+        approvedAccreditation({
+          id: 'acc-a',
+          accreditationNumber: 'ACC-A',
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31'
+        }),
+        approvedAccreditation({ id: 'acc-b', accreditationNumber: 'ACC-B' })
       ],
       registrations: [
         baseRegistration({ accreditation: null, accreditationId: 'acc-b' })
@@ -968,17 +1126,19 @@ describe('streamCsvExport', () => {
     expect(rowIds).toEqual(['1001', '2002', '3003'])
   })
 
-  it('iterates organisations and registrations sorted by id for deterministic output', async () => {
+  it('iterates organisations and registrations sorted by number for deterministic output', async () => {
     const orgB = baseOrg({
       id: 'org-b',
+      orgId: 500002,
       companyDetails: { name: 'Beta' },
       registrations: [
-        baseRegistration({ id: 'reg-2' }),
-        baseRegistration({ id: 'reg-1' })
+        baseRegistration({ id: 'reg-2', registrationNumber: 'REG-2' }),
+        baseRegistration({ id: 'reg-1', registrationNumber: 'REG-1' })
       ]
     })
     const orgA = baseOrg({
       id: 'org-a',
+      orgId: 500001,
       companyDetails: { name: 'Alpha' },
       registrations: [baseRegistration({ id: 'reg-x' })]
     })
@@ -1085,15 +1245,6 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(1) // header only
   })
 
-  it('skips organisations that have no registrations array', async () => {
-    const deps = await buildDeps({
-      orgs: [baseOrg({ registrations: undefined })]
-    })
-
-    const out = await collect(streamCsvExport(deps))
-    expect(out).toHaveLength(1) // header only
-  })
-
   it('excludes organisations configured as test organisations', async () => {
     // 999999 is set as a test organisation via process.env.TEST_ORGANISATIONS
     // in .vite/setup-files.js, matching the prod pattern of gating test orgs
@@ -1147,7 +1298,7 @@ describe('streamCsvExport', () => {
       organisation: org
     })
     const findAll = vi.fn().mockResolvedValue([])
-    deps.organisationsRepository.findAll = findAll
+    deps.organisationReadRepository.findAll = findAll
 
     const out = await collect(streamCsvExport(deps))
 
