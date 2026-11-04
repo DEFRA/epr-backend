@@ -251,11 +251,15 @@ export function toReadModelRegistration(
   registration,
   onDrop = () => {}
 ) {
-  const entry = toRegistrationEntry(registration, organisation, {
-    onDrop,
-    overseasSitesById: new Map(),
-    today: new Date().toISOString().slice(0, 10)
-  })
+  const entry = toRegistrationEntry(
+    { ...registration, overseasSites: {} },
+    organisation,
+    {
+      onDrop,
+      overseasSitesById: new Map(),
+      today: new Date().toISOString().slice(0, 10)
+    }
+  )
   return entry?.[1] ?? null
 }
 

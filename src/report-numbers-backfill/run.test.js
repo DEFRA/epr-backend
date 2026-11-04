@@ -9,12 +9,6 @@ import { runReportNumbersBackfill } from './run.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
-vi.mock('#common/helpers/s3/s3-client.js', () => ({
-  createS3Client: vi.fn()
-}))
-vi.mock('#repositories/summary-logs/mongodb.js', () => ({
-  createSummaryLogsRepository: vi.fn(async () => () => ({}))
-}))
 vi.mock('#reports/repository/mongodb.js', () => ({
   createReportsRepository: vi.fn(async () => () => ({}))
 }))
@@ -48,15 +42,13 @@ describe('runReportNumbersBackfill', () => {
       unmapped: 13,
       unmappedReasons: {
         'organisation not found': reportIds(1, 12),
-        'no accreditation number': reportIds(13, 13)
+        'no 2026 accreditation on R26ER5001180114PL, holds none': reportIds(
+          13,
+          13
+        )
       },
       failed: 0,
-      auditFailed: 0,
-      cases: {
-        'organisation not found': 12,
-        'summary log accreditation is the current link': 3
-      },
-      cancelledAccreditations: 1
+      auditFailed: 0
     })
   })
 
@@ -72,8 +64,7 @@ describe('runReportNumbersBackfill', () => {
       isDryRun: true
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (report-1, report-2, report-3, report-4, report-5, report-6, report-7, report-8, report-9, report-10); no accreditation number: 1 (report-13)" cases="organisation not found: 12; summary log accreditation is the current link: 3" cancelledAccreditations=1'
+      message: `Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (${reportIds(1, 10).join(', ')}); no 2026 accreditation on R26ER5001180114PL, holds none: 1 (report-13)"`
     })
     expect(lock.free).toHaveBeenCalled()
   })
