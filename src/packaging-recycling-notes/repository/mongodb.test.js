@@ -2,18 +2,15 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import {
-  buildAccreditation,
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
   generateTestPrnNumber
 } from './contract/test-data.js'
-import { createPackagingRecyclingNotesRepository } from './mongodb.js'
+import {
+  COLLECTION_NAME,
+  createPackagingRecyclingNotesRepository
+} from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
 
@@ -25,8 +22,6 @@ import { PrnNumberConflictError } from './port.js'
  */
 
 const DATABASE_NAME = 'epr-backend'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 /** Asserts a structural test stub satisfies the Mongo Db surface the code under test exercises. */
 const asDb = (/** @type {unknown} */ stub) => /** @type {Db} */ (stub)
@@ -59,38 +54,6 @@ const it = mongoIt.extend({
   prnRepository: async (/** @type {*} */ { prnRepositoryFactory }, use) => {
     const repository = prnRepositoryFactory(stubLogger())
     await use(repository)
-  },
-
-  /** Holds the organisation the adapter reads an accreditation's numbers back to ids from. */
-  givenAccreditation: async (/** @type {*} */ { mongoClient }, use) => {
-    const organisations = (
-      await createOrganisationsRepository(mongoClient.db(DATABASE_NAME))
-    )()
-    await use(
-      async (
-        /** @type {import('./contract/test-data.js').AccreditationKeys} */ keys
-      ) => {
-        await organisations.insert(
-          buildOrganisation({
-            id: keys.organisationId,
-            orgId: Number(keys.organisationNumber),
-            registrations: [
-              buildRegistration({
-                id: keys.registrationId,
-                registrationNumber: keys.registrationNumber,
-                accreditationId: keys.accreditationId
-              })
-            ],
-            accreditations: [
-              buildAccreditation({
-                id: keys.accreditationId,
-                accreditationNumber: keys.accreditationNumber
-              })
-            ]
-          })
-        )
-      }
-    )
   }
 })
 
@@ -257,6 +220,23 @@ describe('MongoDB packaging recycling notes repository', () => {
           prnNumber
         })
       ).rejects.toThrow(PrnNumberConflictError)
+    })
+  })
+
+  it('indexes the numbers that find the PRNs of an accreditation', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const db = mongoClient.db(DATABASE_NAME)
+    await createPackagingRecyclingNotesRepository(db, [])
+
+    const indexes = await db.collection(COLLECTION_NAME).indexes()
+
+    expect(
+      indexes.find(({ name }) => name === 'accreditationNumbers')?.key
+    ).toStrictEqual({
+      'organisation.organisationNumber': 1,
+      'registration.registrationNumber': 1,
+      'accreditation.accreditationNumber': 1
     })
   })
 
