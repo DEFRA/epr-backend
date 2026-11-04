@@ -24,6 +24,9 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn(async () => () => ({}))
 }))
+vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
+  createMongoLedgerRepository: vi.fn(async () => () => ({}))
+}))
 vi.mock('./application/backfill.js', () => ({
   backfillReportNumbers: vi.fn()
 }))

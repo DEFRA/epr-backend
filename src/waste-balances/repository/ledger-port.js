@@ -128,8 +128,10 @@ export class LedgerSequenceError extends Error {
  * registration or accreditation under the wrong organisation matches nothing —
  * it does not fall back to the ledger that registration happens to live in. The
  * exceptions are `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
- * reporting query, and `findLedgerIdsWithoutNumbers`, the numbers backfill's
- * sweep, which scan partitions rather than naming one.
+ * reporting query, `findAccreditationIdsOfSummaryLog`, which asks which of a
+ * registration's ledgers record a summary log, and
+ * `findLedgerIdsWithoutNumbers`, the numbers backfill's sweep, which scan
+ * partitions rather than naming one.
  *
  * @typedef {Object} WasteBalanceLedgerRepository
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
@@ -152,6 +154,10 @@ export class LedgerSequenceError extends Error {
  *   the highest-numbered such event in that partition. Registered-only
  *   partitions appear with `accreditationId: null`; partitions with no
  *   submitted summary log never appear. Order is unspecified.
+ * @property {(registration: Pick<WasteBalanceLedgerId, 'organisationId' | 'registrationId'>, summaryLogId: SummaryLogFileId) => Promise<(string | null)[]>} findAccreditationIdsOfSummaryLog
+ *   The accreditation id of each of the registration's ledgers that records the
+ *   summary log's submission, once each, with `null` for its registered-only
+ *   ledger. Order is unspecified.
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.
  *   Returns the number of deleted events. No-op on empty ledger.

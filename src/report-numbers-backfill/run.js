@@ -5,6 +5,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { backfillReportNumbers } from '#report-numbers-backfill/application/backfill.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 
 import { config } from '../config.js'
 
@@ -67,6 +68,7 @@ const runBackfill = async (server) => {
           preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
         })
       )(logger),
+      ledgerRepository: (await createMongoLedgerRepository(server.db))(),
       logger
     },
     { isDryRun }

@@ -132,9 +132,10 @@ const findDuplicateKeyWriteError = (error) => {
 /**
  * The filter selecting exactly the events of one ledger. Every per-ledger read
  * builds its filter from this, so no such read can name a ledger by less than
- * its whole id. The cross-ledger reporting query
- * (`findLatestSubmittedSummaryLogPerLedger`) is the deliberate exception: it
- * scans across partitions rather than filtering to one.
+ * its whole id. The cross-ledger queries
+ * (`findLatestSubmittedSummaryLogPerLedger`, `findAccreditationIdsOfSummaryLog`)
+ * are the deliberate exceptions: they scan across partitions rather than
+ * filtering to one.
  *
  * @param {WasteBalanceLedgerId} ledgerId
  */
@@ -233,6 +234,19 @@ const performFindLatestSubmittedSummaryLogPerLedger =
 
     return /** @type {LatestSubmittedSummaryLogPerLedger[]} */ (results)
   }
+
+/**
+ * @param {Collection} collection
+ * @returns {(registration: { organisationId: string, registrationId: string }, summaryLogId: string) => Promise<(string | null)[]>}
+ */
+const performFindAccreditationIdsOfSummaryLog =
+  (collection) =>
+  async ({ organisationId, registrationId }, summaryLogId) =>
+    collection.distinct('accreditationId', {
+      organisationId,
+      registrationId,
+      'payload.summaryLogId': summaryLogId
+    })
 
 /**
  * @migration PAE-1382 — delete all events for a ledgerId.
@@ -421,6 +435,8 @@ export const createMongoLedgerRepository = async (db) => {
     findAllInLedger: performFindAllInLedger(collection),
     findLatestSubmittedSummaryLogPerLedger:
       performFindLatestSubmittedSummaryLogPerLedger(collection),
+    findAccreditationIdsOfSummaryLog:
+      performFindAccreditationIdsOfSummaryLog(collection),
     deleteAllInLedger: performDeleteInLedger(collection),
     appendEvents: performAppendEvents(collection),
     findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),

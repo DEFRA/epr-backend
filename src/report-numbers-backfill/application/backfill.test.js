@@ -18,6 +18,8 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -83,6 +85,7 @@ const organisation = buildOrganisation({
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
 describe('backfillReportNumbers', () => {
   /** @type {ReportsRepository} */
@@ -93,6 +96,8 @@ describe('backfillReportNumbers', () => {
   let organisationsRepository
   /** @type {SummaryLogsRepository} */
   let summaryLogsRepository
+  /** @type {WasteBalanceLedgerRepository} */
+  let ledgerRepository
   /** @type {TypedLogger} */
   let logger
 
@@ -130,6 +135,7 @@ describe('backfillReportNumbers', () => {
       partialMock(organisation)
     ])()
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+    ledgerRepository = createInMemoryLedgerRepository()()
     await submitSummaryLog('sl-1', accreditationId)
   })
 
@@ -141,6 +147,7 @@ describe('backfillReportNumbers', () => {
         systemLogsRepository,
         organisationsRepository,
         summaryLogsRepository,
+        ledgerRepository,
         logger
       },
       { isDryRun }
@@ -382,16 +389,11 @@ describe('backfillReportNumbers', () => {
       [
         'summary log names no accreditation',
         { summaryLogId: 'sl-registered-only', lastUploadedAt: null }
-      ],
-      [
-        'summary log predates accreditation ids',
-        { summaryLogId: 'sl-legacy', lastUploadedAt: null }
       ]
     ])(
       'leaves a monthly report without an accreditation number as "%s"',
       async (reason, source) => {
         await submitSummaryLog('sl-registered-only', null)
-        await submitSummaryLog('sl-legacy', undefined)
         const id = await createReport({ source })
 
         expect((await run(false)).unmappedReasons).toEqual({
@@ -401,50 +403,171 @@ describe('backfillReportNumbers', () => {
     )
   })
 
+  describe('where the summary log predates accreditation ids', () => {
+    const source = { summaryLogId: 'sl-legacy', lastUploadedAt: null }
+
+    /** @param {string | null} recordedAccreditationId */
+    const recordInLedger = (recordedAccreditationId) =>
+      ledgerRepository.appendEvents([
+        buildLedgerEvent({
+          organisationId,
+          registrationId,
+          accreditationId: recordedAccreditationId,
+          payload: { summaryLogId: 'sl-legacy', creditTotal: 0 }
+        })
+      ])
+
+    beforeEach(async () => {
+      await submitSummaryLog('sl-legacy', undefined)
+    })
+
+    it('takes the number of the accreditation whose ledger records the summary log', async () => {
+      await recordInLedger(accreditationId)
+      const id = await createReport({ source })
+
+      expect(await run(false)).toMatchObject({
+        unmapped: 0,
+        cases: { 'ledger accreditation is the current link': 1 }
+      })
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it('keeps the recorded accreditation after the registration is re-linked', async () => {
+      changeOrganisation({
+        registrations: [
+          reprocessor({
+            id: registrationId,
+            registrationNumber: numbers.registrationNumber,
+            accreditationId: relinkedAccreditationId
+          })
+        ],
+        accreditations: [
+          matchingAccreditation({ id: accreditationId }),
+          matchingAccreditation({
+            id: relinkedAccreditationId,
+            accreditationNumber: toAccreditationNumber('A26ER5000000002PA')
+          })
+        ]
+      })
+      await recordInLedger(accreditationId)
+      const id = await createReport({ source })
+
+      expect(await run(false)).toMatchObject({
+        cases: { 'ledger accreditation differs from the current link': 1 }
+      })
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it('ignores the registered-only ledger', async () => {
+      await recordInLedger(accreditationId)
+      await recordInLedger(null)
+      const id = await createReport({ source })
+
+      await run(false)
+
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it('takes the number of an accreditation that no longer holds a validFrom', async () => {
+      changeOrganisation({
+        accreditations: [
+          matchingAccreditation({ id: accreditationId, validFrom: undefined })
+        ]
+      })
+      await recordInLedger(accreditationId)
+      const id = await createReport({ source })
+
+      await run(false)
+
+      expect(await stored(id)).toMatchObject(numbers)
+    })
+
+    it('finds nothing when no ledger records the summary log', async () => {
+      await recordInLedger(null)
+      const id = await createReport({ source })
+
+      expect(await run(false)).toMatchObject({
+        unmappedReasons: {
+          'ledger records no accreditation for summary log': [id]
+        },
+        cases: { 'ledger records no accreditation for summary log': 1 }
+      })
+    })
+
+    it('refuses to choose when several accreditations record the summary log', async () => {
+      await recordInLedger(accreditationId)
+      await recordInLedger(relinkedAccreditationId)
+      const id = await createReport({ source })
+
+      expect((await run(false)).unmappedReasons).toEqual({
+        'ledger records several accreditations for summary log': [id]
+      })
+    })
+
+    it("refuses another year's accreditation, so a later accreditation is never chosen", async () => {
+      changeOrganisation({
+        accreditations: [
+          matchingAccreditation({
+            id: accreditationId,
+            validFrom: `${YEAR + 1}-01-01`
+          })
+        ]
+      })
+      await recordInLedger(accreditationId)
+      const id = await createReport({ source })
+
+      expect((await run(false)).unmappedReasons).toEqual({
+        "ledger names another year's accreditation": [id]
+      })
+    })
+
+    it('says so when the organisation no longer holds the recorded accreditation', async () => {
+      await recordInLedger(missingAccreditationId)
+      const id = await createReport({ source })
+
+      expect((await run(false)).unmappedReasons).toEqual({
+        'accreditation not found': [id]
+      })
+    })
+  })
+
   describe('counts each report it meets under its mapping case', () => {
     const noSummaryLog = { summaryLogId: null, lastUploadedAt: null }
 
-    describe.each([
-      ['report names no summary log', noSummaryLog],
+    it.each([
+      ['no accreditation', []],
       [
-        'summary log predates accreditation ids',
-        { summaryLogId: 'sl-legacy', lastUploadedAt: null }
-      ]
-    ])('where the %s', (reason, source) => {
-      it.each([
-        ['no accreditation', []],
+        'one accreditation',
         [
-          'one accreditation',
-          [
-            matchingAccreditation({ id: accreditationId }),
-            matchingAccreditation({
-              id: relinkedAccreditationId,
-              site: otherSite
-            }),
-            exporterAccreditation({ id: missingAccreditationId })
-          ]
-        ],
-        [
-          'several accreditations',
-          [
-            matchingAccreditation({ id: accreditationId }),
-            matchingAccreditation({ id: relinkedAccreditationId })
-          ]
+          matchingAccreditation({ id: accreditationId }),
+          matchingAccreditation({
+            id: relinkedAccreditationId,
+            site: otherSite
+          }),
+          exporterAccreditation({ id: missingAccreditationId })
         ]
-      ])(
-        'counts a report whose organisation holds %s matching its registration',
-        async (held, accreditations) => {
-          changeOrganisation({ accreditations })
-          await submitSummaryLog('sl-legacy', undefined)
-          await createReport({ source })
+      ],
+      [
+        'several accreditations',
+        [
+          matchingAccreditation({ id: accreditationId }),
+          matchingAccreditation({ id: relinkedAccreditationId })
+        ]
+      ]
+    ])(
+      'counts a report with no summary log whose organisation holds %s matching its registration',
+      async (held, accreditations) => {
+        changeOrganisation({ accreditations })
+        await createReport({ source: noSummaryLog })
 
-          expect(await run(true)).toMatchObject({
-            cases: { [`${reason}, ${held} matching its registration`]: 1 },
-            cancelledAccreditations: 0
-          })
-        }
-      )
-    })
+        expect(await run(true)).toMatchObject({
+          cases: {
+            [`report names no summary log, ${held} matching its registration`]: 1
+          },
+          cancelledAccreditations: 0
+        })
+      }
+    )
 
     it('counts a report whose summary log accreditation is now cancelled', async () => {
       changeOrganisation({

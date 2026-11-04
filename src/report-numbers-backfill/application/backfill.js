@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { numbersFor } from '#domain/organisations/numbers.js'
@@ -16,6 +17,8 @@ import { auditReportNumbersBackfill } from './audit.js'
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
 /**
  * @typedef {Object} Repositories
@@ -23,6 +26,7 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
  * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {WasteBalanceLedgerRepository} ledgerRepository
  */
 
 /** @type {(keyof ReportNumbers)[]} */
@@ -33,32 +37,75 @@ const NUMBER_KEYS = [
 ]
 
 const NO_SUMMARY_LOG = 'report names no summary log'
-const LEGACY_SUMMARY_LOG = 'summary log predates accreditation ids'
-
-/** The reasons whose reports are counted by the accreditations matching their registration. */
-const COUNTED_BY_MATCHING_ACCREDITATIONS = new Set([
-  NO_SUMMARY_LOG,
-  LEGACY_SUMMARY_LOG
-])
 
 /**
- * The accreditation a report was made under, or why the report records none.
+ * The accreditation a report was made under and what records it, or why the
+ * report records none.
  *
- * @typedef {{ accreditationId: string | null } | { unrecorded: string }} ReportAccreditation
+ * @typedef {{ accreditationId: string | null, recordedBy: string } | { unrecorded: string }} ReportAccreditation
  */
+
+/**
+ * A summary log from before summary logs stored their accreditation was
+ * appended to one accreditation's ledger, which a report built from it read.
+ * The rebuild that first filled the ledgers filed each older summary log under
+ * the accreditation linked at that time, which can be later than the one the
+ * report was made under, so an accreditation for another year is refused.
+ *
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {Organisation} organisation
+ * @param {Report} report
+ * @param {SummaryLogFileId} fileId
+ * @returns {Promise<ReportAccreditation>}
+ */
+const accreditationInLedger = async (
+  ledgerRepository,
+  organisation,
+  { organisationId, registrationId, year },
+  fileId
+) => {
+  const accreditationIds = (
+    await ledgerRepository.findAccreditationIdsOfSummaryLog(
+      { organisationId, registrationId },
+      fileId
+    )
+  ).filter((id) => id !== null)
+  if (accreditationIds.length === 0) {
+    return { unrecorded: 'ledger records no accreditation for summary log' }
+  }
+  if (accreditationIds.length > 1) {
+    return {
+      unrecorded: 'ledger records several accreditations for summary log'
+    }
+  }
+  const [accreditationId] = accreditationIds
+  const accreditation = organisation.accreditations.find(
+    ({ id }) => id === accreditationId
+  )
+  return accreditation?.validFrom &&
+    deriveAccreditationYear(accreditation) !== year
+    ? { unrecorded: "ledger names another year's accreditation" }
+    : { accreditationId, recordedBy: 'ledger' }
+}
 
 /**
  * A monthly report is built from the ledger of its source summary log, so its
  * accreditation is the one that summary log was submitted for, whatever the
  * registration links to now. A quarterly report has none.
  *
- * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {Pick<Repositories, 'summaryLogsRepository' | 'ledgerRepository'>} repositories
+ * @param {Organisation} organisation
  * @param {Report} report
  * @returns {Promise<ReportAccreditation>}
  */
-const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
+const accreditationOf = async (
+  { summaryLogsRepository, ledgerRepository },
+  organisation,
+  report
+) => {
+  const { cadence, source } = report
   if (cadence === CADENCE.quarterly) {
-    return { accreditationId: null }
+    return { accreditationId: null, recordedBy: 'cadence' }
   }
   if (!source?.summaryLogId) {
     return { unrecorded: NO_SUMMARY_LOG }
@@ -70,10 +117,15 @@ const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
   }
   const { accreditationId } = found.summaryLog
   if (accreditationId === undefined) {
-    return { unrecorded: LEGACY_SUMMARY_LOG }
+    return accreditationInLedger(
+      ledgerRepository,
+      organisation,
+      report,
+      fileIdTheLedgerRecords
+    )
   }
   return accreditationId
-    ? { accreditationId }
+    ? { accreditationId, recordedBy: 'summary log' }
     : { unrecorded: 'summary log names no accreditation' }
 }
 
@@ -128,18 +180,17 @@ const accreditationsMatching = (organisation, registration) =>
   )
 
 /**
- * @param {string} reason
  * @param {Organisation} organisation
  * @param {Registration} registration
  * @returns {MappingCase}
  */
-const matchingAccreditationsCase = (reason, organisation, registration) => {
+const noSummaryLogCase = (organisation, registration) => {
   const candidates = accreditationsMatching(organisation, registration)
   const held =
     ['no accreditation', 'one accreditation'][candidates.length] ??
     'several accreditations'
   return {
-    name: `${reason}, ${held} matching its registration`,
+    name: `${NO_SUMMARY_LOG}, ${held} matching its registration`,
     cancelled: candidates.some(
       ({ status }) => status === ACCREDITATION_STATUS.CANCELLED
     )
@@ -182,12 +233,8 @@ const mappingCaseOf = (
     return { name: 'quarterly', cancelled: false }
   }
   if ('unrecorded' in accreditation) {
-    return COUNTED_BY_MATCHING_ACCREDITATIONS.has(accreditation.unrecorded)
-      ? matchingAccreditationsCase(
-          accreditation.unrecorded,
-          organisation,
-          registration
-        )
+    return accreditation.unrecorded === NO_SUMMARY_LOG
+      ? noSummaryLogCase(organisation, registration)
       : { name: accreditation.unrecorded, cancelled: false }
   }
   if (!recorded) {
@@ -196,8 +243,8 @@ const mappingCaseOf = (
   return {
     name:
       recorded.id === registration.accreditationId
-        ? 'summary log accreditation is the current link'
-        : 'summary log accreditation differs from the current link',
+        ? `${accreditation.recordedBy} accreditation is the current link`
+        : `${accreditation.recordedBy} accreditation differs from the current link`,
     cancelled
   }
 }
@@ -207,15 +254,16 @@ const mappingCaseOf = (
  * @param {Report} report
  * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[], mappingCase: MappingCase }>}
  */
-const lookUpNumbers = async (
-  { organisationsRepository, summaryLogsRepository },
-  report
-) => {
+const lookUpNumbers = async (repositories, report) => {
   try {
-    const organisation = await organisationsRepository.findById(
+    const organisation = await repositories.organisationsRepository.findById(
       report.organisationId
     )
-    const accreditation = await accreditationOf(summaryLogsRepository, report)
+    const accreditation = await accreditationOf(
+      repositories,
+      organisation,
+      report
+    )
     const { numbers } = numbersFor(organisation, {
       registrationId: report.registrationId,
       accreditationId:

@@ -8,6 +8,11 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION } from '#repositories/summary-logs/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+  createMongoLedgerRepository
+} from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { partialMock } from '#test/type-helpers.js'
 import { config } from '../config.js'
@@ -38,6 +43,7 @@ const reportIds = {
   firstQuarter: randomUUID(),
   secondQuarter: randomUUID(),
   january: randomUUID(),
+  february: randomUUID(),
   organisationGone: randomUUID()
 }
 
@@ -113,6 +119,29 @@ const seed = async (database) => {
       file: { id: 'january-source' }
     })
   })
+  const { accreditationId: _absentFromLegacyLogs, ...legacySummaryLog } =
+    summaryLogFactory.submitted({
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      year: 2026,
+      file: { id: 'february-source' }
+    })
+  await summaryLogs(database).insertOne({
+    _id: toSummaryLogId('february-source-document'),
+    version: 1,
+    ...legacySummaryLog
+  })
+  await database.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
+  await (
+    await createMongoLedgerRepository(database)
+  )().appendEvents([
+    buildLedgerEvent({
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      accreditationId: accreditation.id,
+      payload: { summaryLogId: 'february-source', creditTotal: 0 }
+    })
+  ])
 
   await collection.insertMany([
     storedReport(reportIds.firstQuarter, organisation.id, registration.id, 1),
@@ -123,6 +152,14 @@ const seed = async (database) => {
       endDate: '2026-01-31',
       dueDate: '2026-02-20',
       source: { summaryLogId: 'january-source', lastUploadedAt: null }
+    },
+    {
+      ...storedReport(reportIds.february, organisation.id, registration.id, 2),
+      cadence: 'monthly',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+      dueDate: '2026-03-20',
+      source: { summaryLogId: 'february-source', lastUploadedAt: null }
     },
     storedReport(
       reportIds.organisationGone,
@@ -173,7 +210,7 @@ describe('runReportNumbersBackfill (mongo)', () => {
     ).toBe(0)
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(logger.info).toHaveBeenCalledWith({
-      message: `Report numbers backfill (dry-run): missing=4 mapped=3 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} cases="quarterly: 2; summary log accreditation is the current link: 1; organisation not found: 1" cancelledAccreditations=0`
+      message: `Report numbers backfill (dry-run): missing=5 mapped=4 unmapped=1 failed=0 auditFailed=0 ${unmappedReasons} cases="quarterly: 2; summary log accreditation is the current link: 1; ledger accreditation is the current link: 1; organisation not found: 1" cancelledAccreditations=0`
     })
   })
 
@@ -193,10 +230,12 @@ describe('runReportNumbersBackfill (mongo)', () => {
         version: 3
       })
     }
-    expect(await collection.findOne({ id: reportIds.january })).toMatchObject({
-      ...numbers,
-      accreditationNumber
-    })
+    for (const id of [reportIds.january, reportIds.february]) {
+      expect(await collection.findOne({ id })).toMatchObject({
+        ...numbers,
+        accreditationNumber
+      })
+    }
     expect(
       await collection.findOne({ id: reportIds.organisationGone })
     ).not.toHaveProperty('organisationNumber')
@@ -214,7 +253,7 @@ describe('runReportNumbersBackfill (mongo)', () => {
         })
       ])
     )
-    expect(logs).toHaveLength(3)
+    expect(logs).toHaveLength(4)
     expect(logs[0].createdBy.id).toBe('system')
     expect(logs[0].event.action).toBe('numbers-backfill-migration')
 
