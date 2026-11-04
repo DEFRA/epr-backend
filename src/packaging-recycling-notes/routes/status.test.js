@@ -342,6 +342,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       it('uses regulator code for agency prefix', async () => {
         const awaitingAuthPrn = createMockPrn({
+          accreditation: buildAccreditationSnapshot({
+            id: accreditationId,
+            accreditationNumber: ACCREDITATION_NUMBER,
+            submittedToRegulator: REGULATOR.NRW
+          }),
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: [
@@ -357,10 +362,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
-
-        organisationsRepository = organisationsRepositoryWith({
-          submittedToRegulator: REGULATOR.NRW
-        })
 
         await server.inject({
           method: 'POST',

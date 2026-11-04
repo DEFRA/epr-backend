@@ -1053,10 +1053,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
-  // Pins the overseas-site outcome for a registered-only exporter (Ruling 19).
-  // A registration with no accreditation validates only against the
-  // registered-only template, whose tables have no waste-balance classifier, so
-  // the overseas-site checks never run: a row naming an approved site and one
+  // Pins the overseas-site outcome for a registered-only exporter.
+  // A registered-only exporter's rows never reach the overseas-site checks,
+  // because the processing-type check forces a registered-only template, whose
+  // tables have no waste-balance classifier, so the checks never run: a row naming an approved site and one
   // naming a site the registration does not hold classify alike.
   it('does not check overseas sites for a registered-only exporter', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({

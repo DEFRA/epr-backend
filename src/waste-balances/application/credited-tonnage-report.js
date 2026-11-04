@@ -11,6 +11,7 @@ import {
   indexReadModelAccreditations
 } from '#waste-balances/application/accreditation-index.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
@@ -137,8 +138,7 @@ export const buildCreditedTonnageReport = async ({
     (entry) => entry.ledgerId.accreditationId !== null
   )
 
-  const { index, testOrgAccreditationNumbers } =
-    indexReadModelAccreditations(organisations)
+  const { index } = indexReadModelAccreditations(organisations)
 
   /** @type {CreditedTonnageRow[]} */
   const rows = []
@@ -158,7 +158,7 @@ export const buildCreditedTonnageReport = async ({
       accreditationKey({ ...ledgerId, accreditationNumber })
     )
     if (!context) {
-      if (!testOrgAccreditationNumbers.has(accreditationNumber)) {
+      if (!TEST_ORGANISATION_IDS.has(Number(ledgerId.organisationNumber))) {
         logger.warn({
           message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
           event: {

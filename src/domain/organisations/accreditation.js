@@ -3,8 +3,8 @@
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
- * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
- * consumer contract genuinely accepts either.
+ * consumers normalise string inputs via `new Date(...)`, so the contract
+ * genuinely accepts either.
  *
  * @template {string} S
  * @typedef {{

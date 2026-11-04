@@ -105,29 +105,24 @@ describe('indexReadModelAccreditations', () => {
       })
     })
 
-    it('excludes them from the index and collects all their accreditation numbers', () => {
-      const { index, testOrgAccreditationNumbers } =
-        indexReadModelAccreditations([testOrganisation, otherTestOrganisation])
+    it('excludes them from the index', () => {
+      const { index } = indexReadModelAccreditations([
+        testOrganisation,
+        otherTestOrganisation
+      ])
 
       expect(index.size).toBe(0)
-      expect([...testOrgAccreditationNumbers].sort()).toEqual([
-        'ACC-E-1',
-        'ACC-R-1',
-        'ACC-T3'
-      ])
     })
 
     it('indexes them when includeTestOrganisations is set', () => {
-      const { index, testOrgAccreditationNumbers } =
-        indexReadModelAccreditations([testOrganisation], {
-          includeTestOrganisations: true
-        })
+      const { index } = indexReadModelAccreditations([testOrganisation], {
+        includeTestOrganisations: true
+      })
 
       expect([...index.keys()].sort()).toEqual([
         '999/REG-T1/ACC-R-1',
         '999/REG-T2/ACC-E-1'
       ])
-      expect(testOrgAccreditationNumbers.size).toBe(0)
     })
   })
 })

@@ -313,7 +313,8 @@ async function findIssuingAccreditation(organisationReadRepository, prn) {
   const { registration, accreditation } = found
   return {
     status: accreditation.status.current,
-    submittedToRegulator: registration.submittedToRegulator.code,
+    // The regulator the PRN was raised under, as stored on the PRN.
+    submittedToRegulator: prn.accreditation.submittedToRegulator,
     wasteProcessingType: registration.wasteProcessingType,
     ...(registration.wasteProcessingType === 'reprocessor' && {
       reprocessingType: registration.reprocessingType

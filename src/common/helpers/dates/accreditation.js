@@ -5,7 +5,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 /** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {StatusTimeline} from '#organisation-read-model/domain/model.js' */
@@ -34,10 +34,10 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * held while it was live — the schema allows exactly that, requiring the dates
  * only for `approved`/`suspended` and permitting them otherwise — and loads
  * made before the cancellation are still accredited. Status decides whether a
- * *given date* falls inside the window (see `isSuspendedOrCancelledAtDate`),
+ * *given date* falls inside the window (see `isAccreditedAtDates`),
  * not whether a window exists at all.
  *
- * @param {Accreditation} accreditation
+ * @param {Pick<Accreditation, 'validFrom' | 'validTo'>} accreditation
  * @returns {AccreditationWindow | null}
  */
 export function accreditationWindow({ validFrom, validTo }) {
@@ -79,19 +79,6 @@ export function isAccreditedAtDates(dates, accreditation) {
 const isSuspendedOrCancelled = (status) =>
   status === ACCREDITATION_STATUS.SUSPENDED ||
   status === ACCREDITATION_STATUS.CANCELLED
-
-/**
- * Convert dates to numbers and sort descending
- * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history
- * @returns {StatusHistoryDateTime[]} Sorted list
- */
-export function getStatusHistoryDateTimes(statusHistory) {
-  const statusDates = statusHistory.map((s) => ({
-    updatedAt: new Date(s.updatedAt).getTime(),
-    status: s.status
-  }))
-  return statusDates.sort((a, b) => b.updatedAt - a.updatedAt)
-}
 
 /**
  * A status timeline as descending date-times, the shape `statusHeldAt` reads.
@@ -150,21 +137,6 @@ export function statusHeldAt(date, statusHistory) {
  */
 export function statusHeldAtOnTimeline(date, timeline) {
   return statusHeldAt(date, timelineDateTimes(timeline))
-}
-
-/**
- * Whether the accreditation's history excludes a date from its validity
- * window. Suspension is temporary and cancellation is terminal, but both take
- * effect from their status-history `updatedAt`, so a date before the change is
- * unaffected and still counts. The window itself (validFrom/validTo) is never
- * altered by these transitions.
- *
- * @param {string|Date} date - The date to check
- * @param {StatusTimeline} timeline - Accreditation status timeline
- * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
- */
-export function isSuspendedOrCancelledAtDate(date, timeline) {
-  return isSuspendedOrCancelled(statusHeldAtOnTimeline(date, timeline))
 }
 
 /**

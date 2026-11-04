@@ -76,12 +76,10 @@ export const readModelAccreditedPeriod = (accreditation, year) => {
 
   return {
     window: approvalAt
-      ? accreditationWindow(
-          /** @type {any} */ ({
-            validFrom: approvalAt,
-            validTo: `${year}-12-31`
-          })
-        )
+      ? accreditationWindow({
+          validFrom: approvalAt,
+          validTo: `${year}-12-31`
+        })
       : null,
     timeline
   }

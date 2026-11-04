@@ -1,5 +1,6 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import {
   readModelAccreditedPeriod,
   readModelOverseasSitesContext
@@ -231,11 +232,7 @@ const warnAboutUnmatchedPartition = (logger, accreditationId) => {
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Map<string, PublishedPartition>}
  */
-const resolvePublishedPartitions = (
-  entries,
-  { index, testOrgAccreditationNumbers },
-  logger
-) => {
+const resolvePublishedPartitions = (entries, { index }, logger) => {
   /** @type {Map<string, PublishedPartition>} */
   const partitions = new Map()
   for (const { ledgerId, summaryLogId } of entries) {
@@ -251,7 +248,7 @@ const resolvePublishedPartitions = (
       accreditationKey({ ...ledgerId, accreditationNumber })
     )
     if (context === undefined) {
-      if (!testOrgAccreditationNumbers.has(accreditationNumber)) {
+      if (!TEST_ORGANISATION_IDS.has(Number(ledgerId.organisationNumber))) {
         warnAboutUnmatchedPartition(logger, accreditationId)
       }
       continue

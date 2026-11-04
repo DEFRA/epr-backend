@@ -1,5 +1,5 @@
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
+import { stubOrganisationReadRepository } from './organisation-read-repository-test-helpers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 

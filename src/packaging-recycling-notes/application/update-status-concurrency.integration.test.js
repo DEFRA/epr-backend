@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
-import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
+import { stubOrganisationReadRepository } from './organisation-read-repository-test-helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 

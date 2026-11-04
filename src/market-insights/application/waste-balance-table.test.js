@@ -438,7 +438,12 @@ const numberedLedgerId = (ledgerId, organisations) => {
     ({ id }) => id === ledgerId.organisationId
   )
   if (!organisation) {
-    return withNumbers(ledgerId)
+    return {
+      ...withNumbers(ledgerId),
+      ...(ledgerId.organisationNumber && {
+        organisationNumber: ledgerId.organisationNumber
+      })
+    }
   }
   const accreditation = organisation.accreditations.find(
     (/** @type {any} */ { id }) => id === ledgerId.accreditationId
@@ -1723,6 +1728,27 @@ describe('buildWasteBalanceTable', () => {
       organisations: [operator.organisation],
       submissions: [
         { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+      ]
+    })
+
+    expect(reported(table)).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+
+  it('does not warn for a test-organisation partition the read model does not serve', async () => {
+    const operator = makeOperator({ orgId: TEST_ORG_ID })
+
+    const { table, logger } = await run({
+      organisations: [],
+      submissions: [
+        {
+          ...operator,
+          ledgerId: {
+            ...operator.ledgerId,
+            organisationNumber: toOrganisationNumber(String(TEST_ORG_ID))
+          },
+          rows: [receivedRow('row-1', '2026-02-10', 40)]
+        }
       ]
     })
 

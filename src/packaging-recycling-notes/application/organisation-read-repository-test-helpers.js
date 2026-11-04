@@ -6,19 +6,16 @@ import { vi } from 'vitest'
  *
  * @param {{
  *   status?: string,
- *   submittedToRegulator?: string,
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output'
  * }} [accreditation]
  */
 export const foundAccreditation = ({
   status = 'approved',
-  submittedToRegulator = 'ea',
   wasteProcessingType = 'reprocessor',
   reprocessingType
 } = {}) => ({
   registration: {
-    submittedToRegulator: { code: submittedToRegulator },
     wasteProcessingType,
     reprocessingType
   },

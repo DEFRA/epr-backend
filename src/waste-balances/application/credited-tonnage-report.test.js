@@ -381,6 +381,21 @@ describe('buildCreditedTonnageReport', () => {
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
+  it('does not warn for a test-organisation ledger entry the read model does not serve', async () => {
+    const testOrg = makeAccreditation({ orgId: TEST_ORG_ID })
+
+    const { report, logger } = run({
+      organisations: [],
+      entries: [testOrg.ledgerEntry],
+      rowStatesByAccreditationId: {
+        [testOrg.accreditationId]: [receivedRow('2026-01-10', 999)]
+      }
+    })
+
+    expect((await report).data).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+
   it('ignores a registered-only registration (no accreditation) without warning', async () => {
     const registeredOnly = {
       organisationNumber: '500007',

@@ -1034,9 +1034,10 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.excluded.rowIds).toEqual(['10001'])
     })
 
-    // Ruling 20: the read model drops some accreditations (created, rejected,
-    // without a validFrom). A summary log naming one is never accredited, so
-    // even a row dated inside the legacy accreditation's window is IGNORED.
+    // The read model drops some accreditations (created, rejected, without a
+    // validFrom). An accreditation number the read model does not serve is never
+    // accredited, so its rows are ignored and never credited, even a row dated
+    // inside the legacy accreditation's window.
     it('sets IGNORED outcome for every load when the read model does not serve the summary log’s accreditation', async () => {
       organisationReadRepository.findAccreditationByNumber.mockResolvedValue(
         null

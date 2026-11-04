@@ -611,6 +611,32 @@ describe('updatePrnStatus', () => {
       )
     })
 
+    it('takes the PRN number’s agency code from the regulator stored on the PRN', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          accreditation: buildAccreditationSnapshot({
+            id: ACC_ID,
+            accreditationNumber: ACC_NUMBER,
+            submittedToRegulator: REGULATOR.SEPA
+          }),
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.prnNumber).toMatch(/^SR26\d{5}$/)
+    })
+
     it('throws conflict and leaves the balance untouched when the tonnage exceeds the total balance', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({

@@ -19,6 +19,7 @@ import {
   findSchemaForProcessingType,
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
+import { neverAccredited } from '#waste-balances/domain/classification-context.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
@@ -604,7 +605,7 @@ const classifyAndPersistResult = async ({
   wasteRecords,
   registration,
   classificationContext = /** @type {ClassificationContext} */ ({
-    accreditation: null,
+    accreditation: neverAccredited(),
     overseasSites: ORS_VALIDATION_DISABLED
   }),
   meta,

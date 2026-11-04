@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 
-import { stubOrganisationReadRepository } from './organisation-read-repository-stub.js'
+import { stubOrganisationReadRepository } from './organisation-read-repository-test-helpers.js'
 import {
   PRN_STATUS,
   PRN_ACTOR

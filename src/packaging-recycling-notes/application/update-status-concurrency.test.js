@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   foundAccreditation,
   stubOrganisationReadRepository
-} from './organisation-read-repository-stub.js'
+} from './organisation-read-repository-test-helpers.js'
 import {
   PRN_STATUS,
   PRN_ACTOR,

@@ -891,10 +891,9 @@ describe('SummaryLogsValidator integration', () => {
       )
     })
 
-    // Ruling 21: classification reads the read model by the summary log's
-    // stored numbers, with no fallback to the registration's current
-    // accreditation, so a legacy summary log without an accreditation number
-    // no longer validates.
+    // A summary log stored without its numbers is refused rather than falling
+    // back to the registration's current accreditation, so a legacy summary log
+    // without an accreditation number no longer validates.
     it('fails with a system error for a legacy summary log without an accreditation number', async () => {
       const { updated } = await runValidation({
         registrationType: 'exporter',

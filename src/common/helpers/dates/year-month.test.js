@@ -14,7 +14,6 @@ describe('monthKeyForDate', () => {
   it.each([
     { description: 'null', value: null },
     { description: 'undefined', value: undefined },
-    { description: 'null', value: null },
     { description: 'an unparseable string', value: 'not-a-date' }
   ])('returns null for $description', ({ value }) => {
     expect(monthKeyForDate(value)).toBeNull()

@@ -25,8 +25,6 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 /**
  * @typedef {Object} AccreditationReadModelIndex
  * @property {Map<string, AccreditationReadModelContext>} index
- * @property {Set<AccreditationNumber>} testOrgAccreditationNumbers
- *   accreditation numbers belonging to dropped test organisations
  */
 
 /**
@@ -48,8 +46,7 @@ export const accreditationKey = ({
 /**
  * Index every non-test read-model organisation's accreditations by their
  * natural key (see `accreditationKey`). No status filtering. Test
- * organisations' accreditation numbers are collected separately rather than
- * indexed, unless `includeTestOrganisations` asks for them to be indexed too.
+ * organisations are left out unless `includeTestOrganisations` asks for them.
  *
  * @param {ReadModelOrganisation[]} organisations
  * @param {{ includeTestOrganisations?: boolean }} [options]
@@ -61,8 +58,6 @@ export const indexReadModelAccreditations = (
 ) => {
   /** @type {Map<string, AccreditationReadModelContext>} */
   const index = new Map()
-  /** @type {Set<AccreditationNumber>} */
-  const testOrgAccreditationNumbers = new Set()
   for (const organisation of organisations) {
     const isTestOrganisation = TEST_ORGANISATION_IDS.has(
       Number(organisation.organisationNumber)
@@ -75,7 +70,6 @@ export const indexReadModelAccreditations = (
         registration.accreditations
       )) {
         if (dropped) {
-          testOrgAccreditationNumbers.add(accreditation.accreditationNumber)
           continue
         }
         index.set(
@@ -99,5 +93,5 @@ export const indexReadModelAccreditations = (
       }
     }
   }
-  return { index, testOrgAccreditationNumbers }
+  return { index }
 }
