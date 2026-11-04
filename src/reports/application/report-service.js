@@ -475,26 +475,33 @@ function summariseIncompleteDataIfEnabled(
 }
 
 /**
+ * @typedef {{
+ *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
+ *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+ *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   numbers: Pick<import('#reports/repository/port.js').ReportNumbers, 'organisationNumber' | 'registrationNumber'>,
+ *   registration: Registration,
+ *   year: Year,
+ *   period: number,
+ *   submissionNumber: number,
+ *   requiredPeriods: GeneratedPeriod[],
+ *   changedBy: import('#reports/repository/port.js').UserSummary,
+ *   reportDataValidationEnabled?: boolean
+ * } & import('#reports/repository/port.js').ReportCadence} CreateReportForPeriodParams
+ */
+
+/**
  * Creates a report for a given period. Validates the period has ended,
  * checks no report already exists, aggregates waste data, and persists.
  *
- * @param {object} params
- * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
- * @param {Registration} params.registration
- * @param {Year} params.year
- * @param {Cadence} params.cadence
- * @param {number} params.period
- * @param {number} params.submissionNumber
- * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
- * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
- * @param {boolean} [params.reportDataValidationEnabled]
+ * `requiredPeriods` are the ended periods of the cadence the registration
+ * owes a report for in the year.
+ *
+ * @param {CreateReportForPeriodParams} params
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
@@ -508,15 +515,15 @@ export async function createReportForPeriod({
   numbers,
   registration,
   year,
-  cadence,
   period,
   submissionNumber,
   requiredPeriods,
   changedBy,
-  reportDataValidationEnabled
+  reportDataValidationEnabled,
+  ...reportCadence
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
-    cadence,
+    reportCadence.cadence,
     year,
     period
   )
@@ -526,7 +533,7 @@ export async function createReportForPeriod({
     organisationId,
     registrationId,
     year,
-    cadence,
+    cadence: reportCadence.cadence,
     period,
     submissionNumber,
     requiredPeriods
@@ -556,7 +563,7 @@ export async function createReportForPeriod({
     registrationId,
     registration,
     year,
-    cadence,
+    cadence: reportCadence.cadence,
     period,
     wasteRecordStates,
     latestSubmission
@@ -566,8 +573,8 @@ export async function createReportForPeriod({
     organisationId,
     registrationId,
     ...numbers,
+    ...reportCadence,
     year,
-    cadence,
     period,
     startDate,
     endDate,

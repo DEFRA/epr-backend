@@ -321,14 +321,21 @@
  */
 
 /**
- * @typedef {Object} CreateReportParams
+ * @typedef {{ cadence: 'monthly', accreditationNumber: AccreditationNumber }
+ *   | { cadence: 'quarterly', accreditationNumber: null }} ReportCadence
+ */
+
+/**
+ * @typedef {CreateReportBase & ReportCadence} CreateReportParams
+ */
+
+/**
+ * @typedef {Object} CreateReportBase
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
  * @property {OrganisationNumber} [organisationNumber]
  * @property {RegistrationNumber} [registrationNumber]
- * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
  * @property {Year} year
- * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive

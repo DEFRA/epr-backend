@@ -116,7 +116,7 @@ const registeredOnly = ({ organisation }) => ({
 const reportParams = ({ operator, period, submissionNumber }) => ({
   ...operator.reportRef,
   year: toYear(2026),
-  cadence: 'monthly',
+  cadence: /** @type {const} */ ('monthly'),
   period,
   submissionNumber
 })

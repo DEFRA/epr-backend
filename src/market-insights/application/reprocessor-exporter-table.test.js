@@ -128,13 +128,13 @@ const prn = (
  *
  * @param {ReturnType<typeof makeOperator>} operator
  * @param {number} period
- * @param {Partial<import('#reports/repository/port.js').CreateReportParams>} figures
+ * @param {Partial<import('#reports/repository/port.js').CreateReportBase>} figures
  */
 const monthlyReport = (operator, period, figures = {}) => ({
   organisationId: operator.id,
   registrationId: operator.registrations[0].id,
   year: toYear(2026),
-  cadence: 'monthly',
+  cadence: /** @type {const} */ ('monthly'),
   period,
   ...figures
 })
@@ -145,7 +145,7 @@ const monthlyReport = (operator, period, figures = {}) => ({
  *
  * @param {{
  *   organisations: any[],
- *   reports?: ReturnType<typeof monthlyReport>[],
+ *   reports?: Partial<import('#reports/repository/port.js').CreateReportParams>[],
  *   inFlightResubmissions?: ReturnType<typeof monthlyReport>[],
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   regulator?: import('#domain/organisations/model.js').RegulatorValue
@@ -579,7 +579,7 @@ describe('buildReprocessorExporterTable', () => {
       reports: [
         {
           ...monthlyReport(operator, 1, { prn: prn(10, 0, 1000) }),
-          cadence: 'quarterly'
+          cadence: /** @type {const} */ ('quarterly')
         }
       ]
     })

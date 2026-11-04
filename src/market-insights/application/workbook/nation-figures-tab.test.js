@@ -41,7 +41,7 @@ const insertAccreditedOperator =
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
 /** @import { NationFiguresTabName } from './nation-figures-tab.js' */
@@ -137,7 +137,7 @@ const seedOperator = (
  * @param {Register} register
  * @param {{ organisationId: string, registrationId: string }} operator
  * @param {number} period
- * @param {Partial<CreateReportParams>} figures
+ * @param {Partial<CreateReportBase>} figures
  */
 const submitMonthlyReport = (
   { reportsRepository },
@@ -441,7 +441,7 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
         await seedOperator(register, { material: MATERIAL.WOOD }),
         await seedOperator(register, { material: MATERIAL.WOOD })
       ]
-      /** @type {Partial<CreateReportParams>} */
+      /** @type {Partial<CreateReportBase>} */
       const reported = {
         recyclingActivity: {
           suppliers: [],

@@ -252,7 +252,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
 const januaryPrns = (operator, issuedTonnage) => ({
   ...operator,
   year: toYear(2026),
-  cadence: 'monthly',
+  cadence: /** @type {const} */ ('monthly'),
   period: 1,
   prn: {
     issuedTonnage,

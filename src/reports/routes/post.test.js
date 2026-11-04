@@ -718,7 +718,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId,
       accreditationNumber: null,
       year: YEAR,
-      cadence: 'quarterly',
+      cadence: /** @type {const} */ ('quarterly'),
       period: QUARTER,
       startDate: calendarDate('2026-01-01'),
       endDate: calendarDate('2026-03-31'),

@@ -23,7 +23,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { ReportCadence, ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -124,12 +124,16 @@ export const reportsPost = {
       // A monthly report is for the year's accreditation, which atNaturalKeys
       // has already found, or answered 404 for. A quarterly report is
       // registered-only, whatever the registration's accreditation for the year.
-      const accreditationNumber =
+      /** @type {ReportCadence} */
+      const reportCadence =
         cadence === CADENCE.monthly
-          ? /** @type {AccreditationCommon} */ (
-              registration.accreditations[year]
-            ).accreditationNumber
-          : null
+          ? {
+              cadence,
+              accreditationNumber: /** @type {AccreditationCommon} */ (
+                registration.accreditations[year]
+              ).accreditationNumber
+            }
+          : { cadence, accreditationNumber: null }
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -141,12 +145,11 @@ export const reportsPost = {
         registrationId,
         numbers: {
           registrationNumber,
-          organisationNumber,
-          accreditationNumber
+          organisationNumber
         },
+        ...reportCadence,
         registration: storedRegistration,
         year,
-        cadence,
         period,
         submissionNumber,
         requiredPeriods: requiredReportingPeriods({

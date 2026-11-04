@@ -275,6 +275,15 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env.registrationId
     )
 
+    const { accreditationNumber, ...numbers } = numbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      {
+        registrationId: env.registrationId,
+        accreditationId:
+          cadence === 'monthly' ? registration.accreditationId : null
+      }
+    ).numbers
+
     return createReportForPeriod({
       reportsRepository: env.reportsRepository,
       ledgerRepository: env.ledgerRepository,
@@ -283,17 +292,13 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers: numbersFor(
-        await env.organisationsRepository.findById(env.organisationId),
-        {
-          registrationId: env.registrationId,
-          accreditationId:
-            cadence === 'monthly' ? registration.accreditationId : null
-        }
-      ).numbers,
+      numbers,
+      .../** @type {import('#reports/repository/port.js').ReportCadence} */ ({
+        cadence,
+        accreditationNumber
+      }),
       registration,
       year,
-      cadence,
       period,
       submissionNumber,
       requiredPeriods: generateAllPeriodsForYear(cadence, year),

@@ -146,14 +146,12 @@ const defaultParams = () => {
     registrationId: registration.id,
     numbers: {
       organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
-      accreditationNumber: toAccreditationNumber('A24ER5000000001PL')
+      registrationNumber: toRegistrationNumber('R25SR500010912PL')
     },
     registration,
     year: toYear(2024),
-    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
-      'monthly'
-    ),
+    cadence: /** @type {const} */ ('monthly'),
+    accreditationNumber: toAccreditationNumber('A24ER5000000001PL'),
     period: 1,
     submissionNumber: 1,
     requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2024)),
@@ -293,7 +291,7 @@ describe('report-service', () => {
       await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        accreditationNumber: params.numbers.accreditationNumber,
+        accreditationNumber: params.accreditationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -349,9 +347,9 @@ describe('report-service', () => {
       const baseReport = {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
-        accreditationNumber: params.numbers.accreditationNumber,
+        accreditationNumber: params.accreditationNumber,
         year: toYear(2024),
-        cadence: 'monthly',
+        cadence: /** @type {const} */ ('monthly'),
         period: 1,
         startDate: calendarDate('2024-01-01'),
         endDate: calendarDate('2024-01-31'),
@@ -528,7 +526,7 @@ describe('report-service', () => {
         await reportsRepository.createReport({
           organisationId: params.organisationId,
           registrationId: params.registrationId,
-          accreditationNumber: params.numbers.accreditationNumber,
+          accreditationNumber: params.accreditationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -576,9 +574,9 @@ describe('report-service', () => {
     const baseReportFields = (params, changedBy) => ({
       organisationId: params.organisationId,
       registrationId: params.registrationId,
-      accreditationNumber: params.numbers.accreditationNumber,
+      accreditationNumber: params.accreditationNumber,
       year: toYear(2024),
-      cadence: 'monthly',
+      cadence: /** @type {const} */ ('monthly'),
       period: 1,
       startDate: calendarDate('2024-01-01'),
       endDate: calendarDate('2024-01-31'),

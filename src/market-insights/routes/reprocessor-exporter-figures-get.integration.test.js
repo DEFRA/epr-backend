@@ -100,7 +100,7 @@ const submitJanuaryTwice = async (repositories) => {
   const january = {
     ...operator,
     year: toYear(2026),
-    cadence: 'monthly',
+    cadence: /** @type {const} */ ('monthly'),
     period: 1
   }
 
