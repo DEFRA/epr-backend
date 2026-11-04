@@ -22,7 +22,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   tradingName?: string
- *   users: { contactId?: string, email: string, roles: string[] }[]
+ *   users: { contactId?: string, email: string, fullName: string, roles: string[] }[]
  *   version: number
  * }} Organisation
  *
