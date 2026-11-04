@@ -1,3 +1,7 @@
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
 import { statusRanges } from '#organisation-read-model/domain/status-timeline.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
@@ -59,11 +63,21 @@ const onePerPeriod = (periods) => {
 }
 
 /**
+ * @param {Registration} registration
+ * @param {Year} year
+ * @returns {boolean}
+ */
+const isCancelled = (registration, year) =>
+  registration.status.current === REGISTRATION_STATUS.CANCELLED ||
+  registration.accreditations[year]?.status.current ===
+    ACCREDITATION_STATUS.CANCELLED
+
+/**
  * The reporting obligations a year has, by status. With mid-year status
  * transition on, each kind covers the days that status applied, so a period can
- * be part of a quarter or month. Otherwise a year with an accreditation is
- * accredited only, up to any cancellation, and one without is registered only,
- * in whole periods, as reports are made today.
+ * be part of a quarter or month. Otherwise a cancelled registration or
+ * accreditation has none, and only the current status's kind has them, in
+ * whole periods, as reports are made today.
  *
  * @param {Registration} registration
  * @param {Year} year
@@ -73,6 +87,9 @@ const reportingWindowsFor = (registration, year) => {
   const windows = registrationStatusWindows(registration, year)
   if (config.get('featureFlags.midYearStatusTransition')) {
     return { ...windows, wholePeriods: false }
+  }
+  if (isCancelled(registration, year)) {
+    return { registeredOnly: [], accredited: [], wholePeriods: true }
   }
   return registration.accreditations[year]
     ? { registeredOnly: [], accredited: windows.accredited, wholePeriods: true }
