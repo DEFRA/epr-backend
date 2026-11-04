@@ -379,7 +379,7 @@ describe('yearCalendar with mid-year status transition off', () => {
     expect(result.accredited?.reportingPeriods).toHaveLength(11)
   })
 
-  it('lists nothing for a cancelled accreditation', () => {
+  it('lists whole registered-only quarters from the one the accreditation was cancelled in', () => {
     const result = calendar({
       registration: registeredSinceLastYear([
         approvedOn('2026-01-01'),
@@ -387,7 +387,11 @@ describe('yearCalendar with mid-year status transition off', () => {
       ])
     })
 
-    expect(result).toEqual({ year: 2026 })
+    expect(result).not.toHaveProperty('accredited')
+    expect(spans(result.registeredOnly?.reportingPeriods)).toEqual([
+      { period: 3, startDate: '2026-07-01', endDate: '2026-09-30' },
+      { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
+    ])
   })
 
   it('lists nothing for a cancelled registration, whatever its accreditation', () => {
@@ -528,7 +532,7 @@ describe('reportingPeriodsByKind', () => {
       )
 
       expect(periodNumbers(result.accredited)).toEqual([3])
-      expect(result.registeredOnly).toEqual([])
+      expect(periodNumbers(result.registeredOnly)).toEqual([1, 3, 4])
     })
 
     it('lists only the current kind, in whole periods', () => {
