@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
 import { asStoredRowStates } from './as-stored-row-states-test-helpers.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import wasteRecordsAccreditedJson from './test-data/exporter-accredited.json' with { type: 'json' }
 import wasteRecordsRegisteredOnlyJson from './test-data/exporter-reg-only.json' with { type: 'json' }
 
@@ -40,7 +41,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
       orsDetailsMap,
       source: {
         lastUploadedAt: '2026-04-02T11:31:06.440Z',
-        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+        summaryLogId: toSummaryLogFileId('dccebb57-da7a-4d50-9f17-2984f6c9fb22')
       }
     })
 
@@ -145,7 +146,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       period: 2,
       source: {
         lastUploadedAt: '2026-04-02T11:31:06.440Z',
-        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+        summaryLogId: toSummaryLogFileId('dccebb57-da7a-4d50-9f17-2984f6c9fb22')
       }
     })
 
@@ -216,7 +217,7 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
       orsDetailsMap,
       source: {
         lastUploadedAt: '2026-04-02T12:11:42.889Z',
-        summaryLogId: '98c1e68c-05c6-4b1d-bdca-59727d302c1b'
+        summaryLogId: toSummaryLogFileId('98c1e68c-05c6-4b1d-bdca-59727d302c1b')
       }
     })
 

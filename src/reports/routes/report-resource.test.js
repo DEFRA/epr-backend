@@ -19,6 +19,7 @@ import {
   reportResourceSchema,
   toReportResource
 } from './report-resource.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { PreviewBody } from './report-resource.js' */
 
@@ -42,7 +43,7 @@ const NOTHING_SENT = {
   finalDestinations: []
 }
 const SUBMITTED_SOURCE = {
-  summaryLogId: 'sl-1',
+  summaryLogId: toSummaryLogFileId('sl-1'),
   lastUploadedAt: '2026-04-01T21:22:28.351Z'
 }
 const CREATOR = { name: 'Test User', position: 'Officer' }
@@ -417,7 +418,7 @@ describe('toReportResource', () => {
           await repository.markActiveReportsStaleForSummaryLog(
             DEFAULT_ORG_ID,
             DEFAULT_REG_ID,
-            'sl-2',
+            toSummaryLogFileId('sl-2'),
             '2026-05-01T00:00:00.000Z'
           )
         }
@@ -485,7 +486,7 @@ describe('toReportResource', () => {
           await repository.markSubmittedReportsRequiringResubmission({
             organisationId: DEFAULT_ORG_ID,
             registrationId: DEFAULT_REG_ID,
-            summaryLogId: 'sl-2',
+            summaryLogId: toSummaryLogFileId('sl-2'),
             uploadedAt: '2026-05-01T00:00:00.000Z',
             periods: [periodRef]
           })
@@ -626,7 +627,7 @@ describe('reportResourceSchema', () => {
     await repository.markActiveReportsStaleForSummaryLog(
       DEFAULT_ORG_ID,
       DEFAULT_REG_ID,
-      'sl-2',
+      toSummaryLogFileId('sl-2'),
       '2026-05-01T00:00:00.000Z'
     )
     const resource = toReportResource(await bodyOf(repository, id), {

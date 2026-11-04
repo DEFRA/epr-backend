@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
@@ -100,7 +101,7 @@ const flagReportsByIdempotencyKey = async (
  * @param {Db} db
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
@@ -193,7 +194,7 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
 /**
  * For each given period, flags the latest submitted report as requiring
  * resubmission. Skips a period whose latest submitted report is already flagged
- * from this `summaryLogId` or was itself built from it (retry-safe).
+ * from this `summaryLogId` (retry-safe).
  *
  * @param {Db} db
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params

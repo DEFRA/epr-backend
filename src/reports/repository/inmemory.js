@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   ACTIVE_REPORT_STATUSES,
@@ -338,7 +339,7 @@ const findPeriodicReportsForYear = async (reports, params) => {
  * @param {Map<string, Object>} reports
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */

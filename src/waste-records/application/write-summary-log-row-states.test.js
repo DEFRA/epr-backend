@@ -8,6 +8,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -99,7 +100,7 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     const committed =
@@ -125,7 +126,7 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     const [committed] =
@@ -143,7 +144,7 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     const [committed] =
@@ -165,7 +166,7 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     const committed =
@@ -194,7 +195,7 @@ describe('writeSummaryLogRowStates', () => {
       },
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     expect(
@@ -222,7 +223,7 @@ describe('writeSummaryLogRowStates', () => {
       },
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
-      summaryLogId: 'log-A'
+      summaryLogId: toSummaryLogFileId('log-A')
     })
 
     const [committed] =
@@ -248,7 +249,7 @@ describe('writeSummaryLogRowStates', () => {
         accreditation: null,
         ledgerId: withNumbers(registeredOnlyLedgerId),
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
     await submit()

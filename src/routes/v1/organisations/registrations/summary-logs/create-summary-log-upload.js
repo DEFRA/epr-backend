@@ -6,9 +6,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
+/** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 
 const FAILURE_MESSAGE = 'Failure initiating summary log upload'
 
@@ -25,9 +27,9 @@ const FAILURE_MESSAGE = 'Failure initiating summary log upload'
  *   organisationId: string,
  *   registrationId: string,
  *   redirectUrl: string,
- *   callbackUrlFor: (summaryLogId: string) => string
+ *   callbackUrlFor: (summaryLogId: SummaryLogId) => string
  * }} args
- * @returns {Promise<{ summaryLogId: string, uploadId: string, uploadUrl: string, statusUrl: string }>}
+ * @returns {Promise<{ summaryLogId: SummaryLogId, uploadId: string, uploadUrl: string, statusUrl: string }>}
  */
 export async function createSummaryLogUpload({
   uploadsRepository,
@@ -37,7 +39,7 @@ export async function createSummaryLogUpload({
   redirectUrl,
   callbackUrlFor
 }) {
-  const summaryLogId = randomUUID()
+  const summaryLogId = toSummaryLogId(randomUUID())
   const resolvedRedirectUrl = redirectUrl.replace(
     '{summaryLogId}',
     summaryLogId

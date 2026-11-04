@@ -12,6 +12,7 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -104,7 +105,7 @@ const buildSeededLedgerRepository = () =>
       organisationId: ORG_ID,
       number: SEED_NUMBER,
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId: 'seed', creditTotal: 1000 },
+      payload: { summaryLogId: toSummaryLogFileId('seed'), creditTotal: 1000 },
       openingBalance: { amount: 0, availableAmount: 0 },
       closingBalance: { amount: 1000, availableAmount: 1000 },
       createdAt: EVENT_AT,

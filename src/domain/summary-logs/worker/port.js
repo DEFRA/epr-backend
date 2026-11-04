@@ -1,3 +1,5 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
+
 /**
  * @typedef {Object} SubmitUser
  * @property {string} id
@@ -9,8 +11,8 @@
 
 /**
  * @typedef {Object} SummaryLogsCommandExecutor
- * @property {(summaryLogId: string) => Promise<void>} validate
- * @property {(summaryLogId: string, request: import('#common/hapi-types.js').AuthenticatedRequest) => Promise<void>} submit
+ * @property {(summaryLogId: SummaryLogId) => Promise<void>} validate
+ * @property {(summaryLogId: SummaryLogId, request: import('#common/hapi-types.js').AuthenticatedRequest) => Promise<void>} submit
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

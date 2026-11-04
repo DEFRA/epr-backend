@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -32,7 +33,7 @@ export const summaryLogsSubmit = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor,
    *   systemLogsRepository: SystemLogsRepository

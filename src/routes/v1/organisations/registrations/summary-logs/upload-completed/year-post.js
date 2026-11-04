@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 import {
@@ -39,7 +40,7 @@ export const summaryLogsUploadCompletedYear = {
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, year: Year, summaryLogId: string, accreditationId: string | null },
+   *   params: { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor

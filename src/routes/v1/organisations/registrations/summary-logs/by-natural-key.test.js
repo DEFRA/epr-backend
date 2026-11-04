@@ -32,6 +32,7 @@ import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -141,7 +142,7 @@ describe('summary-log routes by natural key', () => {
    * @param {(overrides: object) => object} build
    */
   const seed = async (overrides, build) => {
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
     const { numbers } = numbersFor(partialMock(organisation), {
       accreditationId: null,
       ...overrides
@@ -198,7 +199,7 @@ describe('summary-log routes by natural key', () => {
       })
 
       it('stores the summary log for the registration, year and accreditation when the upload completes', async () => {
-        const summaryLogId = randomUUID()
+        const summaryLogId = toSummaryLogId(randomUUID())
 
         const response = await server.inject({
           method: 'POST',
@@ -273,7 +274,7 @@ describe('summary-log routes by natural key', () => {
   ])(
     'reads a summary log that %s without a ledger accreditation',
     async (_, unstamped) => {
-      const summaryLogId = randomUUID()
+      const summaryLogId = toSummaryLogId(randomUUID())
       const { numbers } = numbersFor(partialMock(organisation), {
         registrationId: accreditedRegistration.id,
         accreditationId: accredited.id
@@ -309,7 +310,7 @@ describe('summary-log routes by natural key', () => {
   )
 
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     const response = await server.inject({
       method: 'POST',
@@ -333,7 +334,7 @@ describe('summary-log routes by natural key', () => {
       },
       summaryLogFactory.submitted
     )
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     await server.inject({
       method: 'POST',
@@ -357,7 +358,9 @@ describe('summary-log routes by natural key', () => {
       })
 
     it('is read under its registration, whatever its year', async () => {
-      const summaryLogId = await seedOwn({ year: toYear(YEAR - 1) })
+      const summaryLogId = toSummaryLogId(
+        await seedOwn({ year: toYear(YEAR - 1) })
+      )
 
       const response = await server.inject({
         method: 'GET',
@@ -385,7 +388,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('is submitted, answering with its own address', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'POST',
@@ -398,7 +401,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('has its file downloaded', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'GET',
@@ -410,7 +413,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('has its document read', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'GET',
@@ -433,7 +436,7 @@ describe('summary-log routes by natural key', () => {
         { registrationId: registeredOnlyRegistration.id }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
-      const summaryLogId = await seedOwn(overrides)
+      const summaryLogId = toSummaryLogId(await seedOwn(overrides))
 
       const responses = await Promise.all(
         [

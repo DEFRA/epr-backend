@@ -32,6 +32,7 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -210,7 +211,7 @@ const submit = async (repositories, rows) => {
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     withNumbers(ledgerId),
     rows,
-    summaryLogId
+    toSummaryLogFileId(summaryLogId)
   )
   await repositories.ledgerRepository.appendEvents([
     partialMock(

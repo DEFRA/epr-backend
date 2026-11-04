@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { StatusCodes } from 'http-status-codes'
 
 import {
@@ -24,7 +25,7 @@ export const summaryLogsGet = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit

@@ -13,6 +13,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { config } from '../config.js'
 
 import { runReportNumbersBackfill } from './run.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -102,7 +103,7 @@ const seed = async (database) => {
   const [accreditation] = organisation.accreditations
 
   await summaryLogs(database).insertOne({
-    _id: 'january-source-document',
+    _id: toSummaryLogId('january-source-document'),
     version: 1,
     ...summaryLogFactory.submitted({
       organisationId: organisation.id,

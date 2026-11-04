@@ -15,6 +15,7 @@ import {
   canRequestResubmission,
   requestOperatorResubmission
 } from './resubmission-service.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -252,7 +253,10 @@ describe('resubmission-service', () => {
         changedBy,
         material: 'plastic',
         wasteProcessingType: 'reprocessor',
-        source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+        source: {
+          summaryLogId: toSummaryLogFileId('sl-1'),
+          lastUploadedAt: null
+        },
         prn: null,
         recyclingActivity: {
           suppliers: [],

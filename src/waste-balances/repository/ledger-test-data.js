@@ -1,3 +1,4 @@
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 
 import { LEDGER_EVENT_KIND } from './ledger-schema.js'
@@ -34,7 +35,7 @@ export const buildLedgerEvent = (overrides = {}) => ({
   number: 1,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: {
-    summaryLogId: 'log-1',
+    summaryLogId: toSummaryLogFileId('log-1'),
     creditTotal: 100
   },
   openingBalance: { amount: 0, availableAmount: 0 },

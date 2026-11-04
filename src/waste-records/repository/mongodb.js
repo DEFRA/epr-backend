@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import { Collection, Db } from 'mongodb' */
 
 import { createHash } from 'node:crypto'
@@ -167,7 +168,7 @@ const identityKey = (fields) =>
  * to the ledger that wrote it, so the summary log alone does not identify it.
  *
  * @param {WasteBalanceLedgerId} ledgerId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
   organisationId: ledgerId.organisationId,
@@ -190,7 +191,7 @@ const numbersHeldBy = (numbers) =>
 /**
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
   updateOne: {
@@ -213,7 +214,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
 /**
  * @param {NumberedLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const prepareRowState = (ledgerId, entry, summaryLogId) => {
   const candidate = validateSummaryLogRowStateInsert({
@@ -237,7 +238,7 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
  * their content-addressed identity.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performUpsertSummaryLogRowStates =
   (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {
@@ -300,7 +301,7 @@ const toWasteRecordState = ({
  * 40% of the credited tonnage report's read time over 423 summary logs.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<import('./port.js').WasteRecordState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
  */
 const performFindWasteRecordStatesForSummaryLog =
   (collection) => async (ledgerId, summaryLogId) => {
@@ -320,7 +321,7 @@ const performFindWasteRecordStatesForSummaryLog =
  * prefix.
  *
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowStatesForSummaryLogFile =
   (collection) => async (organisationId, registrationId, fileId) => {
@@ -381,7 +382,7 @@ const toSubmittedRowState = ({
 
 /**
  * @param {Collection} collection
- * @returns {(summaryLogIds: string[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
+ * @returns {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
  */
 const performStreamRowStatesForSummaryLogs = (collection) =>
   async function* (summaryLogIds) {

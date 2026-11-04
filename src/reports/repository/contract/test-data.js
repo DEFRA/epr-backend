@@ -2,6 +2,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
 import {
@@ -78,7 +79,10 @@ export const buildCreateReportParams = (overrides = {}) => ({
   material: MATERIAL.PLASTIC,
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   changedBy: buildUserSummary(),
-  source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-04-01T21:22:28.351Z' },
+  source: {
+    summaryLogId: toSummaryLogFileId('sl-1'),
+    lastUploadedAt: '2026-04-01T21:22:28.351Z'
+  },
   prn: null,
   recyclingActivity: {
     suppliers: [],
