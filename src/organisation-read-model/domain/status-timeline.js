@@ -6,7 +6,11 @@ import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusTimeline } from './model.js' */
 
-/** @typedef {import('#common/helpers/dates/date-range.js').CalendarDateRange} CalendarDateRange */
+/**
+ * A stretch of calendar days, both ends included.
+ *
+ * @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange
+ */
 
 /**
  * One status per day, keyed by ISO 8601 date (ADR-0051).

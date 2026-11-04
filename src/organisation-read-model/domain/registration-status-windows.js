@@ -1,41 +1,42 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { dayBefore } from '#common/helpers/dates/calendar-day.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
-import {
-  joinDateRanges,
-  restrictDateRanges,
-  subtractDateRanges
-} from '#common/helpers/dates/date-range.js'
-import { HELD_ACCREDITATION_STATUSES } from './model.js'
-import { statusRanges } from './status-timeline.js'
+import { REG_ACC_STATUS } from './model.js'
 
-/** @import { CalendarDateRange } from '#common/helpers/dates/date-range.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration } from './model.js' */
+/** @import { RegAccStatus, Registration } from './model.js' */
+/** @import { CalendarDateRange } from './status-timeline.js' */
 
 /**
- * @param {Registration} registration
- * @param {CalendarDateRange} bounds
- * @returns {CalendarDateRange[]}
+ * @typedef {CalendarDateRange & { status: RegAccStatus }} Period
  */
-const registeredWindows = (registration, bounds) =>
-  restrictDateRanges(
-    statusRanges(registration.status.timeline, bounds.to).approved ?? [],
-    bounds
-  )
 
 /**
  * @param {Registration} registration
- * @param {CalendarDateRange} bounds
  * @param {Year} year
+ * @returns {Period[]}
+ */
+const periodsIn = (registration, year) => {
+  const { end } = yearBounds(year)
+  const entries = Object.entries(registration.regAccStatusByDate[year] ?? {})
+
+  return entries.map(([date, { status }], index) => {
+    const next = entries[index + 1]
+    const to = next ? dayBefore(calendarDate(next[0])) : end
+
+    return { status, from: calendarDate(date), to }
+  })
+}
+
+/**
+ * @param {Period[]} periods
+ * @param {RegAccStatus} status
  * @returns {CalendarDateRange[]}
  */
-const accreditedWindows = (registration, bounds, year) => {
-  const ranges = statusRanges(
-    registration.accreditations[year]?.status.timeline ?? [],
-    bounds.to
-  )
-  return joinDateRanges(
-    [...HELD_ACCREDITATION_STATUSES].flatMap((status) => ranges[status] ?? [])
-  )
+const rangesWithStatus = (periods, status) => {
+  const matching = periods.filter((period) => period.status === status)
+
+  return matching.map(({ from, to }) => ({ from, to }))
 }
 
 /**
@@ -47,15 +48,10 @@ const accreditedWindows = (registration, bounds, year) => {
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
  */
 export const registrationStatusWindows = (registration, year) => {
-  const { start, end } = yearBounds(year)
-  const bounds = { from: start, to: end }
-  const registered = registeredWindows(registration, bounds)
-  const accredited = accreditedWindows(registration, bounds, year).flatMap(
-    (window) => restrictDateRanges(registered, window)
-  )
+  const periods = periodsIn(registration, year)
 
   return {
-    registeredOnly: subtractDateRanges(registered, accredited),
-    accredited
+    registeredOnly: rangesWithStatus(periods, REG_ACC_STATUS.REGISTERED_ONLY),
+    accredited: rangesWithStatus(periods, REG_ACC_STATUS.ACCREDITED)
   }
 }

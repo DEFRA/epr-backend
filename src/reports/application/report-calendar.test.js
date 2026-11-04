@@ -1,4 +1,6 @@
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
@@ -26,26 +28,42 @@ const cancelledOn = changeTo('cancelled')
 const AFTER_YEAR_END = new Date('2027-01-02T12:00:00Z')
 
 /**
+ * @param {object} fields
+ * @returns {Registration}
+ */
+const withRegAccStatus = (fields) => {
+  const registration = /** @type {Registration} */ (
+    /** @type {unknown} */ (fields)
+  )
+
+  return {
+    ...registration,
+    regAccStatusByDate: regAccStatusByYear(
+      registration,
+      utcCalendarDate(AFTER_YEAR_END)
+    )
+  }
+}
+
+/**
  * @param {StatusTimeline} [accreditation]
  * @returns {Registration}
  */
 const registeredSinceLastYear = (accreditation) =>
-  /** @type {Registration} */ (
-    /** @type {unknown} */ ({
-      status: { timeline: [approvedOn('2025-06-02')] },
-      accreditations: accreditation
-        ? {
-            2026: {
-              accreditationNumber: 'ACC-2026',
-              status: {
-                current: accreditation.at(-1)?.status,
-                timeline: accreditation
-              }
+  withRegAccStatus({
+    status: { timeline: [approvedOn('2025-06-02')] },
+    accreditations: accreditation
+      ? {
+          2026: {
+            accreditationNumber: 'ACC-2026',
+            status: {
+              current: accreditation.at(-1)?.status,
+              timeline: accreditation
             }
           }
-        : {}
-    })
-  )
+        }
+      : {}
+  })
 
 /**
  * @param {boolean} enabled
@@ -377,12 +395,10 @@ describe('yearCalendar with mid-year status transition off', () => {
   })
 
   it('lists whole quarters from the one a registration was approved in', () => {
-    const registration = /** @type {Registration} */ (
-      /** @type {unknown} */ ({
-        status: { timeline: [approvedOn('2026-05-15')] },
-        accreditations: {}
-      })
-    )
+    const registration = withRegAccStatus({
+      status: { timeline: [approvedOn('2026-05-15')] },
+      accreditations: {}
+    })
 
     expect(
       spans(calendar({ registration }).registeredOnly?.reportingPeriods)

@@ -132,6 +132,12 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
+            regAccStatusByDate: expect.objectContaining({
+              2026: {
+                '2026-02-01': { status: 'registeredOnly' },
+                '2026-07-01': { status: 'accredited' }
+              }
+            }),
             submittedToRegulator: { code: 'ea' },
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
@@ -181,6 +187,9 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',
+        regAccStatusByDate: expect.objectContaining({
+          2026: { '2026-02-01': { status: 'registeredOnly' } }
+        }),
         submittedToRegulator: { code: 'ea' },
         wasteProcessingType: 'exporter',
         overseasSites: {

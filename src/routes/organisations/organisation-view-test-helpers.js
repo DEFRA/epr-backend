@@ -47,6 +47,12 @@ export const createAccreditedOrganisationBuilder =
 /** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
+  regAccStatusByDate: {
+    2026: {
+      '2026-02-01': { status: 'registeredOnly' },
+      '2026-07-01': { status: 'accredited' }
+    }
+  },
   validFrom: '2026-02-01',
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
@@ -82,6 +88,12 @@ const exporterAccreditationResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
+  regAccStatusByDate: {
+    2026: {
+      '2026-02-01': { status: 'registeredOnly' },
+      '2026-07-01': { status: 'accredited' }
+    }
+  },
   validFrom: '2026-02-01',
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
