@@ -42,7 +42,7 @@ const NO_SUMMARY_LOG = 'report names no summary log'
  * The accreditation a report was made under and what records it, or why the
  * report records none.
  *
- * @typedef {{ accreditationId: string | null, recordedBy: string } | { unrecorded: string }} ReportAccreditation
+ * @typedef {{ accreditationId: string | null, recordedBy: 'cadence' | 'summary log' | 'ledger' } | { unrecorded: string }} ReportAccreditation
  */
 
 /**
@@ -50,7 +50,8 @@ const NO_SUMMARY_LOG = 'report names no summary log'
  * appended to one accreditation's ledger, which a report built from it read.
  * The rebuild that first filled the ledgers filed each older summary log under
  * the accreditation linked at that time, which can be later than the one the
- * report was made under, so an accreditation for another year is refused.
+ * report was made under, so only an accreditation for the report's year is
+ * accepted.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {Organisation} organisation
@@ -82,10 +83,15 @@ const accreditationInLedger = async (
   const accreditation = organisation.accreditations.find(
     ({ id }) => id === accreditationId
   )
-  return accreditation?.validFrom &&
-    deriveAccreditationYear(accreditation) !== year
-    ? { unrecorded: "ledger names another year's accreditation" }
-    : { accreditationId, recordedBy: 'ledger' }
+  if (!accreditation) {
+    return { accreditationId, recordedBy: 'ledger' }
+  }
+  if (!accreditation.validFrom) {
+    return { unrecorded: 'ledger names an accreditation with no year' }
+  }
+  return deriveAccreditationYear(accreditation) === year
+    ? { accreditationId, recordedBy: 'ledger' }
+    : { unrecorded: "ledger names another year's accreditation" }
 }
 
 /**

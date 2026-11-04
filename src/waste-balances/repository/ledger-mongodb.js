@@ -1,4 +1,5 @@
 /** @import { Collection, Db } from 'mongodb' */
+/** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
 
 /**
  * @typedef {import('./ledger-schema.js').LedgerEventInsert} LedgerEventInsert
@@ -237,7 +238,7 @@ const performFindLatestSubmittedSummaryLogPerLedger =
 
 /**
  * @param {Collection} collection
- * @returns {(registration: { organisationId: string, registrationId: string }, summaryLogId: string) => Promise<(string | null)[]>}
+ * @returns {(registration: Pick<WasteBalanceLedgerId, 'organisationId' | 'registrationId'>, summaryLogId: SummaryLogFileId) => Promise<(string | null)[]>}
  */
 const performFindAccreditationIdsOfSummaryLog =
   (collection) =>

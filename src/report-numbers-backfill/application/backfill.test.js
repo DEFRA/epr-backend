@@ -468,20 +468,6 @@ describe('backfillReportNumbers', () => {
       expect(await stored(id)).toMatchObject(numbers)
     })
 
-    it('takes the number of an accreditation that no longer holds a validFrom', async () => {
-      changeOrganisation({
-        accreditations: [
-          matchingAccreditation({ id: accreditationId, validFrom: undefined })
-        ]
-      })
-      await recordInLedger(accreditationId)
-      const id = await createReport({ source })
-
-      await run(false)
-
-      expect(await stored(id)).toMatchObject(numbers)
-    })
-
     it('finds nothing when no ledger records the summary log', async () => {
       await recordInLedger(null)
       const id = await createReport({ source })
@@ -518,6 +504,20 @@ describe('backfillReportNumbers', () => {
 
       expect((await run(false)).unmappedReasons).toEqual({
         "ledger names another year's accreditation": [id]
+      })
+    })
+
+    it('refuses an accreditation whose year cannot be told', async () => {
+      changeOrganisation({
+        accreditations: [
+          matchingAccreditation({ id: accreditationId, validFrom: undefined })
+        ]
+      })
+      await recordInLedger(accreditationId)
+      const id = await createReport({ source })
+
+      expect((await run(false)).unmappedReasons).toEqual({
+        'ledger names an accreditation with no year': [id]
       })
     })
 
