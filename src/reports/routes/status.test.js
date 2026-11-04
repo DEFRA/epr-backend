@@ -15,6 +15,7 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -528,7 +529,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await reportsRepository.markActiveReportsStaleForSummaryLog(
         organisationId,
         registrationId,
-        'sl-new',
+        toSummaryLogFileId('sl-new'),
         new Date().toISOString()
       )
 

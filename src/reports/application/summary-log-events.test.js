@@ -16,6 +16,7 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { SummaryLogUploadedParams, SummaryLogUploadedRepositories } from './summary-log-events.js'
@@ -84,7 +85,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -108,7 +109,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -139,7 +140,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -163,7 +164,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
     })
@@ -190,7 +191,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: createInMemoryReportsRepository()(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -207,7 +208,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
@@ -230,7 +231,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
@@ -265,7 +266,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
-      summaryLogId: DEFAULT_SL_ID,
+      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })

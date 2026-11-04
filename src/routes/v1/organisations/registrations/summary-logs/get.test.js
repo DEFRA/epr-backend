@@ -17,6 +17,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{summaryLogId}', () => {
@@ -26,7 +27,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const organisation = buildOrganisation({ registrations: [registration] })
   const organisationId = organisation.id
   const registrationId = registration.id
-  const summaryLogId = new ObjectId().toString()
+  const summaryLogId = toSummaryLogId(new ObjectId().toString())
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -140,7 +141,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
-      await summaryLogsRepository.update(summaryLogId, 1, { loads })
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        loads
+      })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
@@ -264,7 +267,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         MATERIAL: null,
         ACCREDITATION_NUMBER: null
       }
-      await summaryLogsRepository.update(summaryLogId, 1, { meta: dirtyMeta })
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        meta: dirtyMeta
+      })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)

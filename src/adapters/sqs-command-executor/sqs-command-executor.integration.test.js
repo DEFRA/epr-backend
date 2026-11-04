@@ -3,6 +3,7 @@ import { GetQueueUrlCommand, ReceiveMessageCommand } from '@aws-sdk/client-sqs'
 import { getTraceId } from '@defra/hapi-tracing'
 import { it } from '#vite/fixtures/sqs.js'
 import { createSqsCommandExecutor } from './sqs-command-executor.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 vi.mock(import('@defra/hapi-tracing'), () => ({
   getTraceId: vi.fn(() => null),
@@ -57,7 +58,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `validate-test-${Date.now()}`
+        const summaryLogId = toSummaryLogId(`validate-test-${Date.now()}`)
         await executor.summaryLogsWorker.validate(summaryLogId)
 
         // Verify message was sent by receiving it from the queue
@@ -92,7 +93,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = 'log-test-123'
+        const summaryLogId = toSummaryLogId('log-test-123')
         await executor.summaryLogsWorker.validate(summaryLogId)
 
         expect(logger.info).toHaveBeenCalledWith(
@@ -130,7 +131,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `submit-user-test-${Date.now()}`
+        const summaryLogId = toSummaryLogId(`submit-user-test-${Date.now()}`)
         await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -183,7 +184,7 @@ describe('SQS command executor integration', () => {
 
         await expect(
           executor.summaryLogsWorker.submit(
-            `submit-machine-${Date.now()}`,
+            toSummaryLogId(`submit-machine-${Date.now()}`),
             machineRequest
           )
         ).rejects.toThrow(
@@ -202,7 +203,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = 'submit-log-456'
+        const summaryLogId = toSummaryLogId('submit-log-456')
         await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         expect(logger.info).toHaveBeenCalledWith(
@@ -340,7 +341,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `trace-test-${Date.now()}`
+        const summaryLogId = toSummaryLogId(`trace-test-${Date.now()}`)
         await executor.summaryLogsWorker.validate(summaryLogId)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -379,7 +380,7 @@ describe('SQS command executor integration', () => {
           logger
         })
 
-        const summaryLogId = `no-trace-test-${Date.now()}`
+        const summaryLogId = toSummaryLogId(`no-trace-test-${Date.now()}`)
         await executor.summaryLogsWorker.validate(summaryLogId)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(

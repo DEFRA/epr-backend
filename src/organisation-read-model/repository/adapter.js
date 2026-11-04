@@ -137,8 +137,9 @@ function toOrganisation(stored, context) {
     status: { current: status, timeline },
     submittedToRegulator: { code: stored.submittedToRegulator },
     submitterContactDetails: toContact(stored.submitterContactDetails),
-    users: stored.users.map(({ contactId, email, roles }) => ({
+    users: stored.users.map(({ contactId, email, fullName, roles }) => ({
       email,
+      fullName,
       roles,
       ...omitNullish({ contactId })
     })),

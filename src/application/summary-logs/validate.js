@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -441,7 +442,7 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 
 /**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -493,7 +494,7 @@ const recordValidationMetrics = async ({
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
  * @param {SummaryLog} params.summaryLog
- * @param {string} params.summaryLogId
+ * @param {SummaryLogId} params.summaryLogId
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {number} params.version
  */
@@ -648,7 +649,7 @@ const classifyAndPersistResult = async ({
  *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
- * @returns {(summaryLogId: string) => Promise<void>}
+ * @returns {(summaryLogId: SummaryLogId) => Promise<void>}
  */
 export const createSummaryLogsValidator = ({
   logger,

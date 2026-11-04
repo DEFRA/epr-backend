@@ -138,27 +138,29 @@ const toVersion = (doc) =>
 
 /**
  * @param {SummaryLogStore} staleCache
- * @param {string} fileId
+ * @param {SummaryLogFileId} fileId
  */
 const holdingFile = (staleCache, fileId) =>
   [...staleCache.values()].find((held) => held?.summaryLog?.file?.id === fileId)
 
 // Read from staleCache to simulate reading from replica
 /** @param {SummaryLogStore} staleCache */
-const findById = (staleCache) => async (/** @type {string} */ id) =>
+const findById = (staleCache) => async (/** @type {SummaryLogId} */ id) =>
   toVersion(staleCache.get(validateId(id)))
 
 /** @param {SummaryLogStore} staleCache */
-const findByFileId = (staleCache) => async (/** @type {string} */ fileId) =>
-  toVersion(holdingFile(staleCache, validateId(fileId)))
+const findByFileId =
+  (staleCache) => async (/** @type {SummaryLogFileId} */ fileId) =>
+    toVersion(holdingFile(staleCache, validateId(fileId)))
 
 /**
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
- * @typedef {Map<string, SummaryLogVersion>} SummaryLogStore
+ * @typedef {Map<SummaryLogId, SummaryLogVersion>} SummaryLogStore
  * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
  */
 
@@ -168,7 +170,7 @@ const findByFileId = (staleCache) => async (/** @type {string} */ fileId) =>
  * @returns {SummaryLogWithId | null}
  */
 const latestSubmitted = (staleCache, matches) => {
-  /** @type {{ id: string, doc: SummaryLogVersion, submittedAt: string } | null} */
+  /** @type {{ id: SummaryLogId, doc: SummaryLogVersion, submittedAt: string } | null} */
   let latest = null
 
   for (const [id, doc] of staleCache) {

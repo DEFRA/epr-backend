@@ -7,6 +7,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockSummaryLogsRepository } from '#test/mock-repositories.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -18,7 +19,7 @@ vi.mock('./metrics.js', () => ({
 
 describe('markAsSubmissionFailed', () => {
   it('logs error when repository.update throws', async () => {
-    const summaryLogId = 'test-id'
+    const summaryLogId = toSummaryLogId('test-id')
     const logger = createMockLogger()
     const repository = createMockSummaryLogsRepository({
       findById: vi.fn().mockResolvedValue({
@@ -45,7 +46,7 @@ describe('markAsSubmissionFailed', () => {
 
 describe('markAsValidationFailed', () => {
   it('records a validation_failed status transition metric', async () => {
-    const summaryLogId = 'test-id'
+    const summaryLogId = toSummaryLogId('test-id')
     const logger = createMockLogger()
     const repository = createMockSummaryLogsRepository({
       findById: vi.fn().mockResolvedValue({

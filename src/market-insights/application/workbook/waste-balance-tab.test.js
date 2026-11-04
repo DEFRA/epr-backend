@@ -25,6 +25,7 @@ import {
   renderTab
 } from './published-workbook-test-helpers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -148,7 +149,7 @@ const seedOperator = async (
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     withNumbers(ledgerId),
     rows,
-    summaryLogId
+    toSummaryLogFileId(summaryLogId)
   )
   await ledgerRepository.appendEvents([
     partialMock(

@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
@@ -17,7 +18,7 @@ import { summaryLogMetrics } from './metrics.js'
  * @param {{
  *   summaryLogsRepository: SummaryLogsRepository,
  *   summaryLog: SummaryLog,
- *   summaryLogId: string,
+ *   summaryLogId: SummaryLogId,
  *   version: number
  * }} params
  * @returns {Promise<boolean>} true when the log was stale and is now superseded

@@ -14,6 +14,7 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -97,7 +98,7 @@ const createServer = async ({
       accreditationId: null
     }),
     [receivedRowState()],
-    FILE_ID
+    toSummaryLogFileId(FILE_ID)
   )
 
   return createTestServer({

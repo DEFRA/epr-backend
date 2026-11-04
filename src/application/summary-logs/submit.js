@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -58,7 +59,7 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * submission, not only periods this log touches. See PAE-1686.
  *
  * @param {SubmittableSummaryLog} summaryLog
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {ReportsService} reportsService
  * @returns {Promise<void>}
  */
@@ -85,7 +86,7 @@ const assertNoReportSubmittedSinceCreation = async (
  * Syncs the summary log's waste records, transitions it to SUBMITTED and records
  * the submission metrics.
  *
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {number} version
  * @param {SubmittableSummaryLog} summaryLog
  * @param {SubmitDependencies} deps
@@ -147,7 +148,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   await onSummaryLogUploaded({
     organisationId: summaryLog.organisationId,
     registrationId: summaryLog.registrationId,
-    summaryLogId,
+    summaryLogId: fileId,
     periodsRequiringResubmission:
       summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
       summaryLog.loadsByReportingPeriod?.closedPeriods ??
@@ -177,7 +178,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
 /**
  * Submits a summary log by syncing its waste records and updating status.
  *
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {SubmitDependencies} deps
  * @returns {Promise<void>}
  */

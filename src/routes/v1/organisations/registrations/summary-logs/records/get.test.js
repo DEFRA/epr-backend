@@ -23,6 +23,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -124,7 +125,7 @@ const createServer = async ({
       accreditationId
     }),
     rows,
-    FILE_ID
+    toSummaryLogFileId(FILE_ID)
   )
 
   const summaryLogsRepository =
@@ -320,7 +321,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         accreditationId: null
       }),
       [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],
-      'file-other'
+      toSummaryLogFileId('file-other')
     )
 
     const after = await download()

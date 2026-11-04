@@ -5,6 +5,7 @@ import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
 
@@ -43,15 +44,19 @@ describe('In-memory summary logs repository', () => {
       const id = `isolation-test-${randomUUID()}`
 
       await repository.insert(
-        id,
+        toSummaryLogId(id),
         summaryLogFactory.validating({ file: { name: 'original.xlsx' } })
       )
 
-      const retrieved = await waitForVersion(repository, id, 1)
+      const retrieved = await waitForVersion(repository, toSummaryLogId(id), 1)
       retrieved.summaryLog.file.name = 'modified.xlsx'
       retrieved.summaryLog.file.uri = 's3://hacked-bucket/hacked-key'
 
-      const retrievedAgain = await waitForVersion(repository, id, 1)
+      const retrievedAgain = await waitForVersion(
+        repository,
+        toSummaryLogId(id),
+        1
+      )
       expect(retrievedAgain.summaryLog.file.name).toBe('original.xlsx')
       expect(retrievedAgain.summaryLog.file.uri).toBe(
         's3://test-bucket/test-key'
@@ -67,12 +72,12 @@ describe('In-memory summary logs repository', () => {
         file: { name: 'original.xlsx' }
       })
 
-      await repository.insert(id, summaryLog)
+      await repository.insert(toSummaryLogId(id), summaryLog)
 
       summaryLog.file.name = 'mutated.xlsx'
       summaryLog.file.uri = 's3://mutated-bucket/mutated-key'
 
-      const retrieved = await waitForVersion(repository, id, 1)
+      const retrieved = await waitForVersion(repository, toSummaryLogId(id), 1)
       expect(retrieved.summaryLog.file.name).toBe('original.xlsx')
       expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })
@@ -83,7 +88,10 @@ describe('In-memory summary logs repository', () => {
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
 
-      await repository.insert(id, summaryLogFactory.validating())
+      await repository.insert(
+        toSummaryLogId(id),
+        summaryLogFactory.validating()
+      )
 
       // year/accreditationId are set once at insert time and forbidden on
       // update, so they're excluded here even though the factory sets them.
@@ -94,12 +102,12 @@ describe('In-memory summary logs repository', () => {
       } = summaryLogFactory.validated({
         file: { name: 'updated.xlsx' }
       })
-      await repository.update(id, 1, updates)
+      await repository.update(toSummaryLogId(id), 1, updates)
 
       updates.file.name = 'mutated.xlsx'
       updates.file.uri = 's3://evil-bucket/evil-key'
 
-      const retrieved = await waitForVersion(repository, id, 2)
+      const retrieved = await waitForVersion(repository, toSummaryLogId(id), 2)
       expect(retrieved.summaryLog.file.name).toBe('updated.xlsx')
       expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })

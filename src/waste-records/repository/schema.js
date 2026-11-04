@@ -73,7 +73,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
  *   data: Record<string, any>,
  *   classification: RowClassification,
- *   summaryLogIds: string[]
+ *   summaryLogIds: import('#domain/summary-logs/ids.js').SummaryLogFileId[]
  * }} RowStateFields
  */
 

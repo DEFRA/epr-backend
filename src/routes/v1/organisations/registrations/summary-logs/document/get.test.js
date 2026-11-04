@@ -18,6 +18,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -26,7 +27,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   const registration = reprocessor()
   const organisation = buildOrganisation({ registrations: [registration] })
-  const summaryLogId = new ObjectId().toString()
+  const summaryLogId = toSummaryLogId(new ObjectId().toString())
   const organisationId = organisation.id
   const registrationId = registration.id
   const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
@@ -170,7 +171,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   describe('when the summary log does not exist', () => {
     it('returns 404', async () => {
       const { server } = await createServer()
-      const nonExistentId = new ObjectId().toString()
+      const nonExistentId = toSummaryLogId(new ObjectId().toString())
 
       const response = await makeRequest(server, nonExistentId)
 

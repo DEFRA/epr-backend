@@ -22,6 +22,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { backfillReportNumbers } from './backfill.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -104,7 +105,7 @@ describe('backfillReportNumbers', () => {
    */
   const submitSummaryLog = (fileId, submittedForAccreditationId) =>
     summaryLogsRepository.insert(
-      `document-of-${fileId}`,
+      toSummaryLogId(`document-of-${fileId}`),
       summaryLogFactory.submitted({
         organisationId,
         registrationId,

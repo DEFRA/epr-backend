@@ -5,10 +5,11 @@
  * bad document never stops the sweep, and is retried on the next run.
  *
  * @template Outcome
+ * @template {string} Id
  * @param {{
- *   ids: string[],
- *   backfillOne: (id: string) => Promise<Outcome | null>,
- *   tally: (id: string, outcome: Outcome) => void,
+ *   ids: Id[],
+ *   backfillOne: (id: Id) => Promise<Outcome | null>,
+ *   tally: (id: Id, outcome: Outcome) => void,
  *   documentName: string,
  *   logger: TypedLogger
  * }} sweep

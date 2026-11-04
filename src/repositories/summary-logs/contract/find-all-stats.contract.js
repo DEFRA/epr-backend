@@ -7,6 +7,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from './test-data.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
@@ -76,7 +77,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       const latestSubmittedCreatedAt = '2024-01-20T15:30:00.000Z'
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
@@ -87,7 +88,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
@@ -130,7 +131,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       const latestFailedCreatedAt = '2024-02-05T14:30:00.000Z'
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
@@ -141,7 +142,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
@@ -187,7 +188,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       const latestFailedCreatedAt = '2024-02-10T16:45:00.000Z'
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
@@ -198,7 +199,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
@@ -209,7 +210,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
@@ -221,7 +222,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
@@ -264,7 +265,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       const org2LatestFailedCreatedAt = '2024-02-05T14:30:00.000Z'
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId: org1.organisationId,
           registrationId: org1.registrationId,
@@ -275,7 +276,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId: org1.organisationId,
           registrationId: org1.registrationId,
@@ -286,7 +287,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId: org2.organisationId,
           registrationId: org2.registrationId,
@@ -297,7 +298,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submissionFailed({
           organisationId: org2.organisationId,
           registrationId: org2.registrationId,
@@ -357,7 +358,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       const olderSubmittedAt = '2024-01-10T10:00:00.000Z'
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
@@ -368,7 +369,7 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       )
 
       await repo.insert(
-        new ObjectId().toString(),
+        toSummaryLogId(new ObjectId().toString()),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,

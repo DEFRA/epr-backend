@@ -31,6 +31,7 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -346,7 +347,7 @@ describe('report routes by natural key', () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,
           registration.id,
-          'sl-2',
+          toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
 
@@ -439,7 +440,7 @@ describe('report routes by natural key', () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,
           registration.id,
-          'sl-2',
+          toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
 

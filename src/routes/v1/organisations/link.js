@@ -8,7 +8,7 @@ import { linkedDefraOrganisationViewSchema } from '#routes/organisations/respons
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
 
 const linkedOrganisationSchema = Joi.object({
   status: Joi.string()
@@ -34,17 +34,14 @@ export const organisationsLink = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
-   *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
-   * }} request
+   * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, organisationReadRepository } = request
-    const { organisation } = request.app
+    const { organisationId, organisationNumber } = request.params
+    const { version: currentVersion } = await findOrganisationReadModel(request)
     const {
       decoded: { payload: tokenPayload }
     } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
@@ -72,7 +69,7 @@ export const organisationsLink = {
       await organisationsRepository.findAllLinkableForUser(tokenPayload.email)
 
     const orgToLink = linkableOrganisations.find(
-      (linkableOrganisation) => linkableOrganisation.id === organisation.id
+      (linkableOrganisation) => linkableOrganisation.id === organisationId
     )
 
     if (!orgToLink) {
@@ -91,17 +88,13 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    const { id, orgId, version: currentVersion } = organisation
-
-    const organisationNumber = toOrganisationNumber(String(orgId))
-
     await organisationsRepository.linkDefraOrganisation(
       organisationNumber,
       currentVersion,
       linkedDefraOrg
     )
 
-    await auditOrganisationLinking(request, id, {
+    await auditOrganisationLinking(request, organisationId, {
       id: linkedDefraOrg.orgId,
       name: linkedDefraOrg.orgName
     })

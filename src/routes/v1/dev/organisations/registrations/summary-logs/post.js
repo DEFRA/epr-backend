@@ -13,6 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import {
   numbersFor,
   toAccreditationNumber
@@ -37,6 +38,7 @@ import {
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
@@ -127,7 +129,7 @@ const naming = (error, summaryLogId) => {
  * registration's latest submission.
  *
  * @param {SubmitRequest} request
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {Year} year
  * @param {string | null} accreditationId
  */
@@ -149,7 +151,7 @@ const insertValidatingLog = async (
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
-    file: { id: summaryLogId, name: 'summary-log.json' },
+    file: { id: toSummaryLogFileId(randomUUID()), name: 'summary-log.json' },
     organisationId,
     registrationId,
     year,
@@ -269,7 +271,7 @@ export const devSummaryLogsSubmit = {
       request
     const { organisationId, registrationId, year } = request.params
     const user = extractUser(request)
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     const registration = await organisationsRepository.findRegistrationById(
       organisationId,

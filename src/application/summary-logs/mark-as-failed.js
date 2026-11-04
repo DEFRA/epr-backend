@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import {
   PROCESSING_STATUSES,
   SUBMISSION_PROCESSING_STATUSES,
@@ -16,7 +17,7 @@ import { summaryLogMetrics } from './metrics.js'
  * Marks a summary log as validation_failed if it's still in a processing state.
  * Used as a "safety net" when processing fails unexpectedly.
  *
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogsRepository} repository
  * @param {TypedLogger} logger
  * @returns {Promise<void>}
@@ -64,7 +65,7 @@ export const markAsValidationFailed = async (
  * Marks a summary log as submission_failed if it's still in submitting state.
  * Used as a "safety net" when processing fails unexpectedly.
  *
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogsRepository} repository
  * @param {TypedLogger} logger
  * @returns {Promise<void>}

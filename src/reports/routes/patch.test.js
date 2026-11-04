@@ -15,6 +15,7 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { buildUpdatedPrn } from './patch.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -597,7 +598,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       await reportsRepository.markActiveReportsStaleForSummaryLog(
         organisationId,
         registrationId,
-        'sl-new',
+        toSummaryLogFileId('sl-new'),
         new Date().toISOString()
       )
 

@@ -37,6 +37,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -154,7 +155,7 @@ const setupSubmit = async ({
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
-  const summaryLogId = `submit-${organisationId}`
+  const summaryLogId = toSummaryLogId(`submit-${organisationId}`)
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
   // Validation writes this artefact via update, not insert, so seed it the same way.
@@ -371,6 +372,38 @@ describe('submitSummaryLog resubmission flag source', () => {
     })
 
     expect(flagged).toEqual({ january: true, february: true })
+  })
+})
+
+describe('submitSummaryLog stale flagging', () => {
+  it('leaves alone an active report already built from the summary log being submitted', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const { deps, summaryLogId, summaryLog, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        createdAt: '2099-01-01T00:00:00.000Z'
+      })
+    const { id: reportId } = await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId,
+        registrationId,
+        source: {
+          summaryLogId: summaryLog.file.id,
+          lastUploadedAt: '2099-01-01T00:00:00.000Z'
+        }
+      })
+    )
+
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+      })
+    })
+
+    const report = await reportsRepository.findReportById(reportId)
+    expect(report.stale).toBeUndefined()
   })
 })
 
