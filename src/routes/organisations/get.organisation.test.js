@@ -355,6 +355,87 @@ describe('GET /organisations/{organisationNumber}', () => {
     )
   })
 
+  describe('regAccStatusByDate', () => {
+    const approvedSince = (updatedAt) => [
+      { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
+      { status: 'approved', updatedAt }
+    ]
+
+    const regAccStatusOf = async (organisation, query = '') => {
+      await serve(organisation)
+      const response = await get(`/organisations/${organisation.orgId}${query}`)
+      return body(response).registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
+    })
+
+    it('serves every year the registration was approved in', async () => {
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            validFrom: '2026-02-01',
+            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
+          })
+        ]
+      })
+
+      expect(await regAccStatusOf(organisation)).toEqual({
+        2026: { '2026-02-01': { status: 'registeredOnly' } },
+        2027: { '2027-01-01': { status: 'registeredOnly' } }
+      })
+    })
+
+    it('serves only the year asked for', async () => {
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            validFrom: '2026-02-01',
+            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
+          })
+        ]
+      })
+
+      expect(await regAccStatusOf(organisation, '?year=2026')).toEqual({
+        2026: { '2026-02-01': { status: 'registeredOnly' } }
+      })
+    })
+
+    it('serves a later year the registration holds an accreditation for', async () => {
+      const accredited = accreditation({
+        validFrom: '2028-01-01',
+        validTo: '2028-12-31',
+        statusHistory: approvedSince('2027-02-01T09:00:00.000Z')
+      })
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            accreditationId: accredited.id,
+            validFrom: '2027-01-10',
+            statusHistory: approvedSince('2027-01-10T09:00:00.000Z')
+          })
+        ],
+        accreditations: [accredited]
+      })
+
+      expect(await regAccStatusOf(organisation)).toEqual({
+        2027: { '2027-01-10': { status: 'registeredOnly' } },
+        2028: { '2028-01-01': { status: 'accredited' } }
+      })
+    })
+
+    it('serves a registration cancelled part way through a year', async () => {
+      expect(await regAccStatusOf(approvedThenCancelled())).toEqual({
+        2025: { '2025-03-01': { status: 'registeredOnly' } },
+        2026: {
+          '2026-01-01': { status: 'registeredOnly' },
+          '2026-03-01': { status: 'cancelled' }
+        }
+      })
+    })
+  })
+
   describe('with a year', () => {
     const urlFor = (organisation, year) =>
       `/organisations/${organisation.orgId}?year=${year}`

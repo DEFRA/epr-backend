@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { regAccStatusByDate } from './reg-acc-status-by-date.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -30,23 +31,27 @@ const windows = ({
   year = toYear(2026),
   registration = REGISTERED_LAST_YEAR,
   accreditations = {}
-}) =>
-  registrationStatusWindows(
-    /** @type {Registration} */ (
-      /** @type {unknown} */ ({
-        status: { timeline: registration },
-        accreditations: Object.fromEntries(
-          Object.entries(accreditations).map(
-            ([accreditationYear, timeline]) => [
-              accreditationYear,
-              { status: { timeline } }
-            ]
-          )
-        )
-      })
-    ),
+}) => {
+  const source = /** @type {Registration} */ (
+    /** @type {unknown} */ ({
+      status: { timeline: registration },
+      accreditations: Object.fromEntries(
+        Object.entries(accreditations).map(([accreditationYear, timeline]) => [
+          accreditationYear,
+          { status: { timeline } }
+        ])
+      )
+    })
+  )
+
+  return registrationStatusWindows(
+    {
+      ...source,
+      regAccStatusByDate: { [year]: regAccStatusByDate(source, year) }
+    },
     year
   )
+}
 
 /**
  * @param {string} from
@@ -388,5 +393,28 @@ describe('registrationStatusWindows', () => {
         })
       })
     })
+  })
+
+  it('has no windows for a year with no status dates', () => {
+    const registration = /** @type {Registration} */ (
+      /** @type {unknown} */ ({ regAccStatusByDate: {} })
+    )
+
+    expect(registrationStatusWindows(registration, toYear(2026))).toEqual({
+      registeredOnly: [],
+      accredited: []
+    })
+  })
+
+  it('gives one window when cancelled and reinstated on the same day', () => {
+    expect(
+      windows({
+        registration: [
+          approvedOn('2025-06-02'),
+          cancelledOn('2026-04-01', '09:00'),
+          approvedOn('2026-04-01', '15:00')
+        ]
+      })
+    ).toEqual({ registeredOnly: [WHOLE_YEAR], accredited: [] })
   })
 })
