@@ -46,6 +46,29 @@ export const accreditationKey = ({
 }) => `${organisationNumber}/${registrationNumber}/${accreditationNumber}`
 
 /**
+ * Every accreditation of one organisation, with the registration number and
+ * accreditation year each is keyed by.
+ *
+ * @param {ReadModelOrganisation} organisation
+ * @returns {AccreditationReadModelContext[]}
+ */
+const accreditationContexts = (organisation) =>
+  Object.entries(organisation.registrations).flatMap(
+    ([registrationNumber, registration]) =>
+      Object.entries(registration.accreditations).map(
+        ([year, accreditation]) => ({
+          organisation,
+          registrationNumber: /** @type {RegistrationNumber} */ (
+            registrationNumber
+          ),
+          registration,
+          accreditation,
+          year
+        })
+      )
+  )
+
+/**
  * Index every non-test read-model organisation's accreditations by their
  * natural key (see `accreditationKey`). No status filtering. Test
  * organisations' accreditation numbers are collected separately rather than
@@ -67,36 +90,22 @@ export const indexReadModelAccreditations = (
     const isTestOrganisation = TEST_ORGANISATION_IDS.has(
       Number(organisation.organisationNumber)
     )
-    const dropped = isTestOrganisation && !includeTestOrganisations
-    for (const [registrationNumber, registration] of Object.entries(
-      organisation.registrations
-    )) {
-      for (const [year, accreditation] of Object.entries(
-        registration.accreditations
-      )) {
-        if (dropped) {
-          testOrgAccreditationNumbers.add(accreditation.accreditationNumber)
-          continue
-        }
-        index.set(
-          accreditationKey({
-            organisationNumber: organisation.organisationNumber,
-            registrationNumber: /** @type {RegistrationNumber} */ (
-              registrationNumber
-            ),
-            accreditationNumber: accreditation.accreditationNumber
-          }),
-          {
-            organisation,
-            registrationNumber: /** @type {RegistrationNumber} */ (
-              registrationNumber
-            ),
-            registration,
-            accreditation,
-            year
-          }
-        )
+    const contexts = accreditationContexts(organisation)
+    if (isTestOrganisation && !includeTestOrganisations) {
+      for (const { accreditation } of contexts) {
+        testOrgAccreditationNumbers.add(accreditation.accreditationNumber)
       }
+      continue
+    }
+    for (const context of contexts) {
+      index.set(
+        accreditationKey({
+          organisationNumber: organisation.organisationNumber,
+          registrationNumber: context.registrationNumber,
+          accreditationNumber: context.accreditation.accreditationNumber
+        }),
+        context
+      )
     }
   }
   return { index, testOrgAccreditationNumbers }
