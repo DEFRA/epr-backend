@@ -246,6 +246,7 @@ const performFindAccreditationIdsOfSummaryLog =
     collection.distinct('accreditationId', {
       organisationId,
       registrationId,
+      kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       'payload.summaryLogId': summaryLogId
     })
 

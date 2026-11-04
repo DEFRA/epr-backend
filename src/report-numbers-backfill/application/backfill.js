@@ -46,12 +46,55 @@ const NO_SUMMARY_LOG = 'report names no summary log'
  */
 
 /**
+ * The organisation's accreditations that match the registration under the rule
+ * that links a registration to its accreditation. The organisation record keeps
+ * no history of a registration's accreditation links, but an accreditation
+ * stays on the organisation after a registration is re-linked away from it. So
+ * one matching accreditation is the nearest the record comes to saying the
+ * registration has only ever had one.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ */
+const accreditationsMatching = (organisation, registration) =>
+  organisation.accreditations.filter((accreditation) =>
+    isAccreditationForRegistration(accreditation, registration)
+  )
+
+/**
+ * Whether the registration could have been linked to a different accreditation
+ * in the report's year. A match with no validFrom counts, as its year cannot be
+ * told.
+ *
+ * @param {Organisation} organisation
+ * @param {Report} report
+ * @param {string} accreditationId
+ */
+const anotherAccreditationFitsYear = (
+  organisation,
+  { registrationId, year },
+  accreditationId
+) => {
+  const registration = organisation.registrations.find(
+    ({ id }) => id === registrationId
+  )
+  return (
+    registration !== undefined &&
+    accreditationsMatching(organisation, registration).some(
+      (candidate) =>
+        candidate.id !== accreditationId &&
+        (!candidate.validFrom || deriveAccreditationYear(candidate) === year)
+    )
+  )
+}
+
+/**
  * A summary log from before summary logs stored their accreditation was
  * appended to one accreditation's ledger, which a report built from it read.
  * The rebuild that first filled the ledgers filed each older summary log under
  * the accreditation linked at that time, which can be later than the one the
- * report was made under, so only an accreditation for the report's year is
- * accepted.
+ * report was made under. So the ledger's accreditation is accepted only if it
+ * is for the report's year and no other accreditation could be.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {Organisation} organisation
@@ -62,9 +105,10 @@ const NO_SUMMARY_LOG = 'report names no summary log'
 const accreditationInLedger = async (
   ledgerRepository,
   organisation,
-  { organisationId, registrationId, year },
+  report,
   fileId
 ) => {
+  const { organisationId, registrationId, year } = report
   const accreditationIds = (
     await ledgerRepository.findAccreditationIdsOfSummaryLog(
       { organisationId, registrationId },
@@ -89,15 +133,18 @@ const accreditationInLedger = async (
   if (!accreditation.validFrom) {
     return { unrecorded: 'ledger names an accreditation with no year' }
   }
-  return deriveAccreditationYear(accreditation) === year
-    ? { accreditationId, recordedBy: 'ledger' }
-    : { unrecorded: "ledger names another year's accreditation" }
+  if (deriveAccreditationYear(accreditation) !== year) {
+    return { unrecorded: "ledger names another year's accreditation" }
+  }
+  return anotherAccreditationFitsYear(organisation, report, accreditationId)
+    ? { unrecorded: "several accreditations match in the report's year" }
+    : { accreditationId, recordedBy: 'ledger' }
 }
 
 /**
  * A monthly report is built from the ledger of its source summary log, so its
- * accreditation is the one that summary log was submitted for, whatever the
- * registration links to now. A quarterly report has none.
+ * accreditation comes from that summary log or, for an older log, that ledger,
+ * whatever the registration links to now. A quarterly report has none.
  *
  * @param {Pick<Repositories, 'summaryLogsRepository' | 'ledgerRepository'>} repositories
  * @param {Organisation} organisation
@@ -168,22 +215,6 @@ const causes = (organisation, { registrationId }, accreditation) => ({
     : 'registration not found',
   accreditationNumber: accreditationCause(organisation, accreditation)
 })
-
-/**
- * The organisation's accreditations that match the registration under the rule
- * that links a registration to its accreditation. The organisation record keeps
- * no history of a registration's accreditation links, but an accreditation
- * stays on the organisation after a registration is re-linked away from it. So
- * one matching accreditation is the nearest the record comes to saying the
- * registration has only ever had one.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- */
-const accreditationsMatching = (organisation, registration) =>
-  organisation.accreditations.filter((accreditation) =>
-    isAccreditationForRegistration(accreditation, registration)
-  )
 
 /**
  * @param {Organisation} organisation

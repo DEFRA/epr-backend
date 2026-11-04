@@ -418,6 +418,9 @@ describe('backfillReportNumbers', () => {
       ])
 
     beforeEach(async () => {
+      changeOrganisation({
+        accreditations: [matchingAccreditation({ id: accreditationId })]
+      })
       await submitSummaryLog('sl-legacy', undefined)
     })
 
@@ -432,7 +435,7 @@ describe('backfillReportNumbers', () => {
       expect(await stored(id)).toMatchObject(numbers)
     })
 
-    it('keeps the recorded accreditation after the registration is re-linked', async () => {
+    it("keeps the recorded accreditation after the registration is re-linked to a later year's", async () => {
       changeOrganisation({
         registrations: [
           reprocessor({
@@ -445,7 +448,9 @@ describe('backfillReportNumbers', () => {
           matchingAccreditation({ id: accreditationId }),
           matchingAccreditation({
             id: relinkedAccreditationId,
-            accreditationNumber: toAccreditationNumber('A26ER5000000002PA')
+            accreditationNumber: toAccreditationNumber('A26ER5000000002PA'),
+            validFrom: `${YEAR + 1}-01-01`,
+            validTo: `${YEAR + 1}-12-31`
           })
         ]
       })
@@ -458,6 +463,42 @@ describe('backfillReportNumbers', () => {
       expect(await stored(id)).toMatchObject(numbers)
     })
 
+    it.each([
+      ['for the same year', {}],
+      ['whose year cannot be told', { validFrom: undefined }]
+    ])(
+      'refuses to choose when another accreditation %s matches the registration',
+      async (_, changes) => {
+        changeOrganisation({
+          accreditations: [
+            matchingAccreditation({ id: accreditationId }),
+            matchingAccreditation({
+              id: relinkedAccreditationId,
+              accreditationNumber: toAccreditationNumber('A26ER5000000002PA'),
+              ...changes
+            })
+          ]
+        })
+        await recordInLedger(accreditationId)
+        const id = await createReport({ source })
+
+        expect((await run(false)).unmappedReasons).toEqual({
+          "several accreditations match in the report's year": [id]
+        })
+      }
+    )
+
+    it('says so when the organisation no longer holds the registration', async () => {
+      changeOrganisation({
+        accreditations: [matchingAccreditation({ id: accreditationId })],
+        registrations: []
+      })
+      await recordInLedger(accreditationId)
+      await createReport({ source })
+
+      expect((await run(false)).cases).toEqual({ 'registration not found': 1 })
+    })
+
     it('ignores the registered-only ledger', async () => {
       await recordInLedger(accreditationId)
       await recordInLedger(null)
@@ -468,8 +509,14 @@ describe('backfillReportNumbers', () => {
       expect(await stored(id)).toMatchObject(numbers)
     })
 
-    it('finds nothing when no ledger records the summary log', async () => {
-      await recordInLedger(null)
+    it.each([
+      ['no ledger records the summary log', async () => {}],
+      [
+        'only the registered-only ledger records the summary log',
+        () => recordInLedger(null)
+      ]
+    ])('finds nothing when %s', async (_, record) => {
+      await record()
       const id = await createReport({ source })
 
       expect(await run(false)).toMatchObject({
@@ -490,7 +537,7 @@ describe('backfillReportNumbers', () => {
       })
     })
 
-    it("refuses another year's accreditation, so a later accreditation is never chosen", async () => {
+    it("refuses another year's accreditation", async () => {
       changeOrganisation({
         accreditations: [
           matchingAccreditation({
