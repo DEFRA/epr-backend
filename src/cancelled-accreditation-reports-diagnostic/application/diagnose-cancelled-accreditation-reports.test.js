@@ -15,6 +15,9 @@ import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accreditation-reports.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+
+/** @import { Cadence } from '#reports/domain/cadence.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -141,14 +144,21 @@ describe('diagnoseCancelledAccreditationReports', () => {
       organisationId: organisation.id,
       registrationId: registration.id
     }
-    for (const [year, cadence, period] of [
-      [2026, 'quarterly', 1],
-      [2026, 'monthly', 2],
-      [2025, 'monthly', 12],
-      [2026, 'monthly', 1]
-    ]) {
+    /** @type {[number, Cadence, number][]} */
+    const reports = [
+      [2026, CADENCE.quarterly, 1],
+      [2026, CADENCE.monthly, 2],
+      [2025, CADENCE.monthly, 12],
+      [2026, CADENCE.monthly, 1]
+    ]
+    for (const [year, cadence, period] of reports) {
       await reportsRepository.createReport(
-        buildCreateReportParams({ ...base, year, cadence, period })
+        buildCreateReportParams({
+          ...base,
+          year: toYear(year),
+          cadence,
+          period
+        })
       )
     }
 

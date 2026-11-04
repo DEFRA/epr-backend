@@ -321,12 +321,7 @@
  */
 
 /**
- * @typedef {{ cadence: 'monthly', accreditationNumber: AccreditationNumber }
- *   | { cadence: 'quarterly', accreditationNumber: null }} ReportCadence
- */
-
-/**
- * @typedef {CreateReportBase & ReportCadence} CreateReportParams
+ * @typedef {CreateReportBase & CadenceAccreditation} CreateReportParams
  */
 
 /**
@@ -455,6 +450,7 @@
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
+ * @import { CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */
 

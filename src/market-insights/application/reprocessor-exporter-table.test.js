@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
@@ -134,7 +135,7 @@ const monthlyReport = (operator, period, figures = {}) => ({
   organisationId: operator.id,
   registrationId: operator.registrations[0].id,
   year: toYear(2026),
-  cadence: /** @type {const} */ ('monthly'),
+  cadence: CADENCE.monthly,
   period,
   ...figures
 })
@@ -579,7 +580,7 @@ describe('buildReprocessorExporterTable', () => {
       reports: [
         {
           ...monthlyReport(operator, 1, { prn: prn(10, 0, 1000) }),
-          cadence: /** @type {const} */ ('quarterly')
+          cadence: CADENCE.quarterly
         }
       ]
     })

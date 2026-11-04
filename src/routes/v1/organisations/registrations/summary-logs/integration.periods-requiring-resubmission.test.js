@@ -13,6 +13,7 @@ import {
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
@@ -293,12 +294,12 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
       numbers,
-      .../** @type {import('#reports/repository/port.js').ReportCadence} */ ({
-        cadence,
-        accreditationNumber
-      }),
       registration,
       year,
+      cadenceAccreditation: cadenceAccreditationFor(
+        cadence,
+        accreditationNumber
+      ),
       period,
       submissionNumber,
       requiredPeriods: generateAllPeriodsForYear(cadence, year),

@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
@@ -100,7 +101,7 @@ const submitJanuaryTwice = async (repositories) => {
   const january = {
     ...operator,
     year: toYear(2026),
-    cadence: /** @type {const} */ ('monthly'),
+    cadence: CADENCE.monthly,
     period: 1
   }
 

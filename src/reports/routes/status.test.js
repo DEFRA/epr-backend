@@ -1,3 +1,6 @@
+import { CADENCE } from '#reports/domain/cadence.js'
+/** @import { Cadence } from '#reports/domain/cadence.js' */
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -25,7 +28,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 // Populated enough for any operator category to pass the completeness check.
 const COMPLETE_MANUAL_FIELDS = {
@@ -62,8 +65,8 @@ const INCOMPLETE_PRN = {
   }
 }
 
-const REGISTERED_ONLY = { cadence: 'quarterly', period: 1 }
-const ACCREDITED = { cadence: 'monthly', period: 7 }
+const REGISTERED_ONLY = { cadence: CADENCE.quarterly, period: 1 }
+const ACCREDITED = { cadence: CADENCE.monthly, period: 7 }
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/.../submissions/{submissionNumber}/status', () => {
   setupAuthContext()
@@ -72,7 +75,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {{
    *   reportOverrides?: object,
    *   accreditationStatus?: AccreditationStatus,
-   *   stream?: { cadence: string, period: number },
+   *   stream?: { cadence: Cadence, period: number },
    *   withReport?: boolean
    * }} [options]
    */

@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -252,7 +253,7 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
 const januaryPrns = (operator, issuedTonnage) => ({
   ...operator,
   year: toYear(2026),
-  cadence: /** @type {const} */ ('monthly'),
+  cadence: CADENCE.monthly,
   period: 1,
   prn: {
     issuedTonnage,

@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import {
@@ -116,7 +117,7 @@ const registeredOnly = ({ organisation }) => ({
 const reportParams = ({ operator, period, submissionNumber }) => ({
   ...operator.reportRef,
   year: toYear(2026),
-  cadence: /** @type {const} */ ('monthly'),
+  cadence: CADENCE.monthly,
   period,
   submissionNumber
 })

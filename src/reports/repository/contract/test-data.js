@@ -68,8 +68,9 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
 }
 
 /**
- * Overrides are unchecked, so contract tests can build params the repository
- * must refuse.
+ * Each override is checked on its own, so a contract test can still pair a
+ * cadence with the wrong accreditation number for the repository to refuse.
+ * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
  * @returns {import('../port.js').CreateReportParams}
  */
 export const buildCreateReportParams = (overrides = {}) =>

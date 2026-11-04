@@ -18,18 +18,17 @@ import {
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
-import { CADENCE } from '#reports/domain/cadence.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { ReportCadence, ReportsRepository } from '#reports/repository/port.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
- * @import { AccreditationCommon } from '#organisation-read-model/domain/model.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
@@ -121,19 +120,12 @@ export const reportsPost = {
       const { registration } =
         await findOrganisationAndRegistrationReadModels(request)
 
-      // A monthly report is for the year's accreditation, which atNaturalKeys
-      // has already found, or answered 404 for. A quarterly report is
-      // registered-only, whatever the registration's accreditation for the year.
-      /** @type {ReportCadence} */
-      const reportCadence =
-        cadence === CADENCE.monthly
-          ? {
-              cadence,
-              accreditationNumber: /** @type {AccreditationCommon} */ (
-                registration.accreditations[year]
-              ).accreditationNumber
-            }
-          : { cadence, accreditationNumber: null }
+      // atNaturalKeys has already answered 404 for a monthly report whose
+      // registration holds no accreditation for the year.
+      const cadenceAccreditation = cadenceAccreditationFor(
+        cadence,
+        registration.accreditations[year]?.accreditationNumber
+      )
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -147,9 +139,9 @@ export const reportsPost = {
           registrationNumber,
           organisationNumber
         },
-        ...reportCadence,
         registration: storedRegistration,
         year,
+        cadenceAccreditation,
         period,
         submissionNumber,
         requiredPeriods: requiredReportingPeriods({

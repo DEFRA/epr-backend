@@ -25,7 +25,7 @@ import {
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
- * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
@@ -475,33 +475,26 @@ function summariseIncompleteDataIfEnabled(
 }
 
 /**
- * @typedef {{
- *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
- *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
- *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
- *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
- *   organisationId: string,
- *   registrationId: string,
- *   numbers: Pick<import('#reports/repository/port.js').ReportNumbers, 'organisationNumber' | 'registrationNumber'>,
- *   registration: Registration,
- *   year: Year,
- *   period: number,
- *   submissionNumber: number,
- *   requiredPeriods: GeneratedPeriod[],
- *   changedBy: import('#reports/repository/port.js').UserSummary,
- *   reportDataValidationEnabled?: boolean
- * } & import('#reports/repository/port.js').ReportCadence} CreateReportForPeriodParams
- */
-
-/**
  * Creates a report for a given period. Validates the period has ended,
  * checks no report already exists, aggregates waste data, and persists.
  *
- * `requiredPeriods` are the ended periods of the cadence the registration
- * owes a report for in the year.
- *
- * @param {CreateReportForPeriodParams} params
+ * @param {object} params
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
+ * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {Pick<import('#reports/repository/port.js').ReportNumbers, 'organisationNumber' | 'registrationNumber'>} params.numbers
+ * @param {Registration} params.registration
+ * @param {Year} params.year
+ * @param {CadenceAccreditation} params.cadenceAccreditation
+ * @param {number} params.period
+ * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
+ * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
+ * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
  */
 export async function createReportForPeriod({
@@ -515,15 +508,15 @@ export async function createReportForPeriod({
   numbers,
   registration,
   year,
+  cadenceAccreditation,
   period,
   submissionNumber,
   requiredPeriods,
   changedBy,
-  reportDataValidationEnabled,
-  ...reportCadence
+  reportDataValidationEnabled
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
-    reportCadence.cadence,
+    cadenceAccreditation.cadence,
     year,
     period
   )
@@ -533,7 +526,7 @@ export async function createReportForPeriod({
     organisationId,
     registrationId,
     year,
-    cadence: reportCadence.cadence,
+    cadence: cadenceAccreditation.cadence,
     period,
     submissionNumber,
     requiredPeriods
@@ -563,7 +556,7 @@ export async function createReportForPeriod({
     registrationId,
     registration,
     year,
-    cadence: reportCadence.cadence,
+    cadence: cadenceAccreditation.cadence,
     period,
     wasteRecordStates,
     latestSubmission
@@ -573,7 +566,7 @@ export async function createReportForPeriod({
     organisationId,
     registrationId,
     ...numbers,
-    ...reportCadence,
+    ...cadenceAccreditation,
     year,
     period,
     startDate,

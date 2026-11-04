@@ -57,7 +57,6 @@ describe('the reports port ties the accreditation number to the cadence', () => 
       await repository.createReport({
         ...REPORT,
         cadence: 'quarterly',
-        period: 1,
         accreditationNumber: null
       })
     ]
@@ -89,7 +88,6 @@ describe('the reports port ties the accreditation number to the cadence', () => 
       repository.createReport({
         ...REPORT,
         cadence: 'quarterly',
-        period: 1,
         accreditationNumber: ACCREDITATION_NUMBER
       })
     ).rejects.toMatchObject({ output: { statusCode: 400 } })

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -37,7 +38,7 @@ const missingOrganisationId = '6512a0c2f1e4b8a9d0c3e999'
 const missingRegistrationId = '6512a0c2f1e4b8a9d0c3e888'
 
 // The accreditation from the read-model fixtures covers 2026.
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const numbers = {
   organisationNumber: '500123',

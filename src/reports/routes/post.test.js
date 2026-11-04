@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -718,7 +719,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId,
       accreditationNumber: null,
       year: YEAR,
-      cadence: /** @type {const} */ ('quarterly'),
+      cadence: CADENCE.quarterly,
       period: QUARTER,
       startDate: calendarDate('2026-01-01'),
       endDate: calendarDate('2026-03-31'),
