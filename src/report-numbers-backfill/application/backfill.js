@@ -2,7 +2,10 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { auditReportNumbersBackfill } from './audit.js'
@@ -10,6 +13,7 @@ import { auditReportNumbersBackfill } from './audit.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -27,6 +31,18 @@ const NUMBER_KEYS = [
   'registrationNumber',
   'accreditationNumber'
 ]
+
+/**
+ * Accreditations of registrations held at `created` to work round a bug, so
+ * left out of the read model. By registration number, then year.
+ *
+ * @type {Record<string, Record<string, AccreditationNumber>>}
+ */
+const HELD_REGISTRATION_ACCREDITATIONS = {
+  R26ER5003510176PL: { 2026: toAccreditationNumber('A26ER5003510171PL') },
+  R26EX5002660006AL: { 2026: toAccreditationNumber('A26EX5002660016AL') },
+  R26EX5002660007PL: { 2026: toAccreditationNumber('A26EX5002660017PL') }
+}
 
 /**
  * A failed lookup: `reason` groups reports, `detail` says what this
@@ -110,6 +126,12 @@ const lookUpNumbers = async (
     (message) => drops.push(message)
   )
   if (!readRegistration) {
+    const held =
+      HELD_REGISTRATION_ACCREDITATIONS[registrationNumber]?.[String(year)]
+    if (held) {
+      numbers.accreditationNumber = held
+      return { numbers }
+    }
     return {
       numbers,
       failure: {

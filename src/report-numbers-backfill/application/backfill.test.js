@@ -246,6 +246,54 @@ describe('backfillReportNumbers', () => {
     })
   })
 
+  describe('for a registration held at created to work round a bug', () => {
+    const heldRegistrationNumber = 'R26ER5003510176PL'
+
+    beforeEach(() => {
+      changeOrganisation({
+        registrations: [
+          reprocessor({
+            id: registrationId,
+            registrationNumber: heldRegistrationNumber,
+            status: 'created',
+            statusHistory: [
+              ...granted('approved'),
+              { status: 'created', updatedAt: '2026-11-04T09:00:00.000Z' }
+            ]
+          })
+        ]
+      })
+    })
+
+    it('gives a monthly report the accreditation number held for the report year', async () => {
+      const id = await createReport()
+
+      expect(await run(false)).toEqual({
+        missing: 1,
+        mapped: 1,
+        ...nothingFlagged
+      })
+      expect(await stored(id)).toMatchObject({
+        organisationNumber: numbers.organisationNumber,
+        registrationNumber: heldRegistrationNumber,
+        accreditationNumber: 'A26ER5003510171PL'
+      })
+    })
+
+    it('leaves a monthly report from a year with no held accreditation without an accreditation number', async () => {
+      const id = await createReport({ year: 2027 })
+
+      expect(await run(false)).toEqual({
+        missing: 1,
+        mapped: 1,
+        ...nothingFlagged,
+        unmapped: 1,
+        unmappedReasons: { 'registration not in read model': [id] }
+      })
+      expect(await stored(id)).not.toHaveProperty('accreditationNumber')
+    })
+  })
+
   it('logs why once for every report of the registration', async () => {
     await createReport({ year: 2027, period: MONTHLY_PERIODS.January })
     await createReport({ year: 2027, period: MONTHLY_PERIODS.February })
