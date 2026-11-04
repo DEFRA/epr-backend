@@ -3,18 +3,19 @@ import { StatusCodes } from 'http-status-codes'
 
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
-/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 /**
@@ -22,7 +23,21 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @property {ReportsRepository} reportsRepository
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {OrganisationReadRepository} organisationReadRepository
+ */
+
+/**
+ * @typedef {(organisationNumber: OrganisationNumber) => Promise<ReadModelOrganisation | null>} ReadModelLookup
+ */
+
+/**
+ * A registration matched by more than one accreditation that was granted.
+ *
+ * @typedef {{
+ *   organisationNumber: number,
+ *   registrationId: string,
+ *   accreditations: { id: string, accreditationNumber: string | null, status: string, validFrom?: string }[]
+ * }} RegistrationWithSeveralAccreditations
  */
 
 /** @type {(keyof ReportNumbers)[]} */
@@ -32,216 +47,88 @@ const NUMBER_KEYS = [
   'accreditationNumber'
 ]
 
-const NO_SUMMARY_LOG = 'report names no summary log'
-const LEGACY_SUMMARY_LOG = 'summary log predates accreditation ids'
-
-/** The reasons whose reports are counted by the accreditations matching their registration. */
-const COUNTED_BY_MATCHING_ACCREDITATIONS = new Set([
-  NO_SUMMARY_LOG,
-  LEGACY_SUMMARY_LOG
+/** @type {ReadonlySet<string>} */
+const NEVER_GRANTED = new Set([
+  ACCREDITATION_STATUS.CREATED,
+  ACCREDITATION_STATUS.REJECTED
 ])
 
 /**
- * The accreditation a report was made under, or why the report records none.
- *
- * @typedef {{ accreditationId: string | null } | { unrecorded: string }} ReportAccreditation
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {string} id
+ * @returns {Promise<Organisation | null>} null if not found
  */
-
-/**
- * A monthly report is built from the ledger of its source summary log, so its
- * accreditation is the one that summary log was submitted for, whatever the
- * registration links to now. A quarterly report has none.
- *
- * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {Report} report
- * @returns {Promise<ReportAccreditation>}
- */
-const accreditationOf = async (summaryLogsRepository, { cadence, source }) => {
-  if (cadence === CADENCE.quarterly) {
-    return { accreditationId: null }
-  }
-  if (!source?.summaryLogId) {
-    return { unrecorded: NO_SUMMARY_LOG }
-  }
-  const fileIdTheLedgerRecords = source.summaryLogId
-  const found = await summaryLogsRepository.findByFileId(fileIdTheLedgerRecords)
-  if (!found) {
-    return { unrecorded: 'summary log not found' }
-  }
-  const { accreditationId } = found.summaryLog
-  if (accreditationId === undefined) {
-    return { unrecorded: LEGACY_SUMMARY_LOG }
-  }
-  return accreditationId
-    ? { accreditationId }
-    : { unrecorded: 'summary log names no accreditation' }
-}
-
-/**
- * @param {Organisation} organisation
- * @param {ReportAccreditation} accreditation
- */
-const accreditationCause = (organisation, accreditation) => {
-  if ('unrecorded' in accreditation) {
-    return accreditation.unrecorded
-  }
-  return organisation.accreditations.some(
-    ({ id }) => id === accreditation.accreditationId
-  )
-    ? 'no accreditation number'
-    : 'accreditation not found'
-}
-
-/**
- * Why each number cannot be read, worded the same for every report so that
- * reports group by cause.
- *
- * @param {Organisation} organisation
- * @param {Report} report
- * @param {ReportAccreditation} accreditation
- * @returns {Record<keyof ReportNumbers, string>}
- */
-const causes = (organisation, { registrationId }, accreditation) => ({
-  organisationNumber: 'no organisation number',
-  registrationNumber: organisation.registrations.some(
-    ({ id }) => id === registrationId
-  )
-    ? 'no registration number'
-    : 'registration not found',
-  accreditationNumber: accreditationCause(organisation, accreditation)
-})
-
-/**
- * The organisation's accreditations that match the registration under the rule
- * that links a registration to its accreditation. The organisation record keeps
- * no history of a registration's accreditation links, but an accreditation
- * stays on the organisation after a registration is re-linked away from it. So
- * one matching accreditation is the nearest the record comes to saying the
- * registration has only ever had one.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- */
-const accreditationsMatching = (organisation, registration) =>
-  organisation.accreditations.filter((accreditation) =>
-    isAccreditationForRegistration(accreditation, registration)
-  )
-
-/**
- * @param {string} reason
- * @param {Organisation} organisation
- * @param {Registration} registration
- * @returns {MappingCase}
- */
-const matchingAccreditationsCase = (reason, organisation, registration) => {
-  const candidates = accreditationsMatching(organisation, registration)
-  const held =
-    ['no accreditation', 'one accreditation'][candidates.length] ??
-    'several accreditations'
-  return {
-    name: `${reason}, ${held} matching its registration`,
-    cancelled: candidates.some(
-      ({ status }) => status === ACCREDITATION_STATUS.CANCELLED
-    )
+const findOrganisation = async (organisationsRepository, id) => {
+  try {
+    return await organisationsRepository.findById(id)
+  } catch (error) {
+    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
+      return null
+    }
+    throw error
   }
 }
 
 /**
- * Which mapping rule decides a report, so that the summary line counts the
- * reports each rule decides, and whether an accreditation the case rests on is
- * cancelled.
+ * The organisation and registration numbers come from the stored organisation.
+ * A monthly report's accreditation is the one its registration holds in the
+ * read model for the report's year; a quarterly report has none. The failure
+ * names the first lookup that found nothing.
  *
- * @typedef {{ name: string, cancelled: boolean }} MappingCase
- */
-
-/**
- * @param {Organisation} organisation
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {ReadModelLookup} readModelOrganisation
  * @param {Report} report
- * @param {ReportAccreditation} accreditation
- * @returns {MappingCase}
+ * @returns {Promise<{ numbers: ReportNumbers, failure?: string }>}
  */
-const mappingCaseOf = (
-  organisation,
-  { cadence, registrationId },
-  accreditation
+const lookUpNumbers = async (
+  organisationsRepository,
+  readModelOrganisation,
+  { organisationId, registrationId, cadence, year }
 ) => {
-  const recorded =
-    'unrecorded' in accreditation
-      ? undefined
-      : organisation.accreditations.find(
-          ({ id }) => id === accreditation.accreditationId
-        )
-  const cancelled = recorded?.status === ACCREDITATION_STATUS.CANCELLED
+  const organisation = await findOrganisation(
+    organisationsRepository,
+    organisationId
+  )
+  if (!organisation) {
+    return { numbers: {}, failure: 'organisation not found' }
+  }
+  const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+  /** @type {ReportNumbers} */
+  const numbers =
+    cadence === CADENCE.quarterly
+      ? { organisationNumber, accreditationNumber: null }
+      : { organisationNumber }
+
   const registration = organisation.registrations.find(
     ({ id }) => id === registrationId
   )
   if (!registration) {
-    return { name: 'registration not found', cancelled }
+    return { numbers, failure: 'registration not found' }
   }
-  if (cadence === CADENCE.quarterly) {
-    return { name: 'quarterly', cancelled: false }
+  const { registrationNumber } = registration
+  if (!registrationNumber) {
+    return { numbers, failure: 'no registration number' }
   }
-  if ('unrecorded' in accreditation) {
-    return COUNTED_BY_MATCHING_ACCREDITATIONS.has(accreditation.unrecorded)
-      ? matchingAccreditationsCase(
-          accreditation.unrecorded,
-          organisation,
-          registration
-        )
-      : { name: accreditation.unrecorded, cancelled: false }
-  }
-  if (!recorded) {
-    return { name: 'accreditation not found', cancelled: false }
-  }
-  return {
-    name:
-      recorded.id === registration.accreditationId
-        ? 'summary log accreditation is the current link'
-        : 'summary log accreditation differs from the current link',
-    cancelled
-  }
-}
+  numbers.registrationNumber = registrationNumber
 
-/**
- * @param {Repositories} repositories
- * @param {Report} report
- * @returns {Promise<{ numbers: ReportNumbers, unmapped: string[], mappingCase: MappingCase }>}
- */
-const lookUpNumbers = async (
-  { organisationsRepository, summaryLogsRepository },
-  report
-) => {
-  try {
-    const organisation = await organisationsRepository.findById(
-      report.organisationId
-    )
-    const accreditation = await accreditationOf(summaryLogsRepository, report)
-    const { numbers } = numbersFor(organisation, {
-      registrationId: report.registrationId,
-      accreditationId:
-        'unrecorded' in accreditation
-          ? undefined
-          : accreditation.accreditationId
-    })
-    const cause = causes(organisation, report, accreditation)
-    const unmapped = NUMBER_KEYS.filter(
-      (key) => numbers[key] === undefined && report[key] === undefined
-    ).map((key) => cause[key])
-    return {
-      numbers,
-      unmapped,
-      mappingCase: mappingCaseOf(organisation, report, accreditation)
-    }
-  } catch (error) {
-    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
-      return {
-        numbers: {},
-        unmapped: ['organisation not found'],
-        mappingCase: { name: 'organisation not found', cancelled: false }
-      }
-    }
-    throw error
+  if (cadence === CADENCE.quarterly) {
+    return { numbers }
   }
+
+  const readModel = await readModelOrganisation(organisationNumber)
+  if (!readModel) {
+    return { numbers, failure: 'organisation not in read model' }
+  }
+  const readRegistration = readModel.registrations[registrationNumber]
+  if (!readRegistration) {
+    return { numbers, failure: 'registration not in read model' }
+  }
+  const accreditation = readRegistration.accreditations[String(year)]
+  if (!accreditation) {
+    return { numbers, failure: 'no accreditation for the report year' }
+  }
+  numbers.accreditationNumber = accreditation.accreditationNumber
+  return { numbers }
 }
 
 /**
@@ -276,35 +163,46 @@ const numbersLacking = (numbers, report) =>
  * apart from write failures.
  *
  * @param {Repositories} repositories
+ * @param {ReadModelLookup} readModelOrganisation
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
- * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean, mappingCase: MappingCase } | null>} null if gone
+ * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
  */
-const backfillOne = async (repositories, id, isDryRun, logger) => {
-  const { reportsRepository, systemLogsRepository } = repositories
+const backfillOne = async (
+  repositories,
+  readModelOrganisation,
+  id,
+  isDryRun,
+  logger
+) => {
+  const { reportsRepository, systemLogsRepository, organisationsRepository } =
+    repositories
   const report = await findReport(reportsRepository, id)
   if (!report) {
     return null
   }
 
-  const { organisationId, registrationId } = report
-  const { numbers, unmapped, mappingCase } = await lookUpNumbers(
-    repositories,
+  const { numbers, failure } = await lookUpNumbers(
+    organisationsRepository,
+    readModelOrganisation,
     report
+  )
+  const leftLacking = NUMBER_KEYS.some(
+    (key) => numbers[key] === undefined && report[key] === undefined
   )
 
   const lacking = numbersLacking(numbers, report)
   const outcome = {
     mapped: Object.keys(lacking).length > 0,
-    unmapped,
-    auditFailed: false,
-    mappingCase
+    unmapped: failure && leftLacking ? [failure] : [],
+    auditFailed: false
   }
   if (!outcome.mapped || isDryRun) {
     return outcome
   }
 
+  const { organisationId, registrationId } = report
   await reportsRepository.assignNumbers(id, lacking)
 
   try {
@@ -326,39 +224,92 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
 }
 
 /**
- * Adds to each report the organisation, registration and accreditation numbers
- * it lacks, read from its organisation record for the accreditation the report
- * was made under.
+ * Each registration matched by more than one accreditation that was granted,
+ * which would make the year of a report made under it ambiguous.
  *
- * Counts the reports it meets under their mapping case, and counts those whose
- * case rests on a cancelled accreditation.
+ * @param {Organisation[]} organisations
+ * @returns {RegistrationWithSeveralAccreditations[]}
+ */
+export const registrationsWithSeveralAccreditations = (organisations) =>
+  organisations.flatMap((organisation) =>
+    organisation.registrations.flatMap((registration) => {
+      const granted = organisation.accreditations.filter(
+        (accreditation) =>
+          !NEVER_GRANTED.has(accreditation.status) &&
+          isAccreditationForRegistration(accreditation, registration)
+      )
+      if (granted.length < 2) {
+        return []
+      }
+      return [
+        {
+          organisationNumber: organisation.orgId,
+          registrationId: registration.id,
+          accreditations: granted.map(
+            ({ id, accreditationNumber, status, validFrom }) => ({
+              id,
+              accreditationNumber,
+              status,
+              validFrom
+            })
+          )
+        }
+      ]
+    })
+  )
+
+/**
+ * Looks each organisation up in the read model once per run.
+ *
+ * @param {OrganisationReadRepository} organisationReadRepository
+ * @returns {ReadModelLookup}
+ */
+const readModelLookup = (organisationReadRepository) => {
+  /** @type {Map<OrganisationNumber, Promise<ReadModelOrganisation | null>>} */
+  const found = new Map()
+  return (organisationNumber) => {
+    if (!found.has(organisationNumber)) {
+      found.set(
+        organisationNumber,
+        organisationReadRepository.findByOrganisationNumber(organisationNumber)
+      )
+    }
+    return /** @type {Promise<ReadModelOrganisation | null>} */ (
+      found.get(organisationNumber)
+    )
+  }
+}
+
+/**
+ * Adds to each report the organisation, registration and accreditation numbers
+ * it lacks, and lists the registrations whose accreditation for a year could
+ * be ambiguous.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
- * @returns {Promise<ReasonedBackfillResult & { cases: Record<string, number>, cancelledAccreditations: number }>}
+ * @returns {Promise<ReasonedBackfillResult & { registrationsWithSeveralAccreditations: RegistrationWithSeveralAccreditations[] }>}
  */
 export const backfillReportNumbers = async (
   { logger, ...repositories },
   { isDryRun }
 ) => {
-  /** @type {Record<string, number>} */
-  const cases = {}
-  let cancelledAccreditations = 0
+  const readModelOrganisation = readModelLookup(
+    repositories.organisationReadRepository
+  )
 
   const result = await sweepNumbersBackfillByReason({
     ids: await repositories.reportsRepository.findIdsWithoutNumbers(),
-    backfillOne: async (id) => {
-      const outcome = await backfillOne(repositories, id, isDryRun, logger)
-      if (outcome) {
-        const { name, cancelled } = outcome.mappingCase
-        cases[name] = (cases[name] ?? 0) + 1
-        cancelledAccreditations += Number(cancelled)
-      }
-      return outcome
-    },
+    backfillOne: (id) =>
+      backfillOne(repositories, readModelOrganisation, id, isDryRun, logger),
     documentName: 'report',
     logger
   })
 
-  return { ...result, cases, cancelledAccreditations }
+  return {
+    ...result,
+    registrationsWithSeveralAccreditations:
+      registrationsWithSeveralAccreditations(
+        await repositories.organisationsRepository.findAll()
+      )
+  }
 }

@@ -9,12 +9,6 @@ import { runReportNumbersBackfill } from './run.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
-vi.mock('#common/helpers/s3/s3-client.js', () => ({
-  createS3Client: vi.fn()
-}))
-vi.mock('#repositories/summary-logs/mongodb.js', () => ({
-  createSummaryLogsRepository: vi.fn(async () => () => ({}))
-}))
 vi.mock('#reports/repository/mongodb.js', () => ({
   createReportsRepository: vi.fn(async () => () => ({}))
 }))
@@ -23,6 +17,12 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
 }))
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn(async () => () => ({}))
+}))
+vi.mock('#overseas-sites/repository/mongodb.js', () => ({
+  createOverseasSitesRepository: vi.fn(async () => () => ({}))
+}))
+vi.mock('#organisation-read-model/repository/adapter.js', () => ({
+  createOrganisationReadRepository: vi.fn(() => ({}))
 }))
 vi.mock('./application/backfill.js', () => ({
   backfillReportNumbers: vi.fn()
@@ -48,19 +48,34 @@ describe('runReportNumbersBackfill', () => {
       unmapped: 13,
       unmappedReasons: {
         'organisation not found': reportIds(1, 12),
-        'no accreditation number': reportIds(13, 13)
+        'no accreditation for the report year': reportIds(13, 13)
       },
       failed: 0,
       auditFailed: 0,
-      cases: {
-        'organisation not found': 12,
-        'summary log accreditation is the current link': 3
-      },
-      cancelledAccreditations: 1
+      registrationsWithSeveralAccreditations: [
+        {
+          organisationNumber: 500123,
+          registrationId: 'reg-1',
+          accreditations: [
+            {
+              id: 'acc-1',
+              accreditationNumber: 'A26ER5001180114PL',
+              status: 'approved',
+              validFrom: '2026-07-01'
+            },
+            {
+              id: 'acc-2',
+              accreditationNumber: null,
+              status: 'cancelled',
+              validFrom: '2026-01-01'
+            }
+          ]
+        }
+      ]
     })
   })
 
-  it('runs as a dry run when the flag is off, and logs the counts with up to ten reports for each reason', async () => {
+  it('runs as a dry run when the flag is off, and logs the counts with every report for each reason and each registration with several accreditations', async () => {
     vi.mocked(config.get).mockReturnValue(false)
 
     await runReportNumbersBackfill(server)
@@ -72,8 +87,7 @@ describe('runReportNumbersBackfill', () => {
       isDryRun: true
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (report-1, report-2, report-3, report-4, report-5, report-6, report-7, report-8, report-9, report-10); no accreditation number: 1 (report-13)" cases="organisation not found: 12; summary log accreditation is the current link: 3" cancelledAccreditations=1'
+      message: `Report numbers backfill (dry-run): missing=15 mapped=2 unmapped=13 failed=0 auditFailed=0 unmappedReasons="organisation not found: 12 (${reportIds(1, 12).join(', ')}); no accreditation for the report year: 1 (report-13)" severalAccreditations=1 registrations="500123 reg-1: acc-1 (A26ER5001180114PL) approved from 2026-07-01, acc-2 (null) cancelled from 2026-01-01"`
     })
     expect(lock.free).toHaveBeenCalled()
   })

@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
+import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { backfillReportNumbers } from '#report-numbers-backfill/application/backfill.js'
@@ -9,35 +9,40 @@ import { backfillReportNumbers } from '#report-numbers-backfill/application/back
 import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
+/** @import { RegistrationWithSeveralAccreditations } from '#report-numbers-backfill/application/backfill.js' */
 
 const LOCK_NAME = 'report-numbers-backfill'
-const UNMAPPED_SAMPLE_SIZE = 10
-// Required by the repository factory; the backfill never generates download URLs.
-const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
 
 /**
- * Each reason with its count and the first few report ids, so one line says
- * what to act on however many reports cannot be mapped.
+ * Each reason with its count and every report id it applies to.
  *
  * @param {Record<string, string[]>} unmappedReasons
  */
 const describeUnmapped = (unmappedReasons) =>
   Object.entries(unmappedReasons)
-    .map(
-      ([reason, ids]) =>
-        `${reason}: ${ids.length} (${ids.slice(0, UNMAPPED_SAMPLE_SIZE).join(', ')})`
-    )
+    .map(([reason, ids]) => `${reason}: ${ids.length} (${ids.join(', ')})`)
     .join('; ')
 
-/** @param {Record<string, number>} cases */
-const describeCases = (cases) =>
-  Object.entries(cases)
-    .map(([name, count]) => `${name}: ${count}`)
+/** @param {RegistrationWithSeveralAccreditations[]} registrations */
+const describeSeveralAccreditations = (registrations) =>
+  registrations
+    .map(
+      ({ organisationNumber, registrationId, accreditations }) =>
+        `${organisationNumber} ${registrationId}: ${accreditations
+          .map(
+            ({ id, accreditationNumber, status, validFrom }) =>
+              `${id} (${accreditationNumber}) ${status} from ${validFrom}`
+          )
+          .join(', ')}`
+    )
     .join('; ')
 
 /** @param {StartedServer} server */
 const runBackfill = async (server) => {
   const isDryRun = !config.get('featureFlags.reportNumbersBackfill')
+  const organisationsRepository = (
+    await createOrganisationsRepository(server.db)
+  )()
 
   const {
     mapped,
@@ -46,27 +51,21 @@ const runBackfill = async (server) => {
     missing,
     failed,
     auditFailed,
-    cases,
-    cancelledAccreditations
+    registrationsWithSeveralAccreditations
   } = await backfillReportNumbers(
     {
       reportsRepository: (await createReportsRepository(server.db))(),
       systemLogsRepository: (await createSystemLogsRepository(server.db))(
         logger
       ),
-      organisationsRepository: (
-        await createOrganisationsRepository(server.db)
-      )(),
-      summaryLogsRepository: (
-        await createSummaryLogsRepository(server.db, {
-          s3Client: createS3Client({
-            region: config.get('awsRegion'),
-            endpoint: config.get('s3Endpoint'),
-            forcePathStyle: config.get('isDevelopment')
-          }),
-          preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
-        })
-      )(logger),
+      organisationsRepository,
+      organisationReadRepository: createOrganisationReadRepository({
+        organisationsRepository,
+        overseasSitesRepository: (
+          await createOverseasSitesRepository(server.db)
+        )(),
+        logger
+      }),
       logger
     },
     { isDryRun }
@@ -74,17 +73,17 @@ const runBackfill = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}" cases="${describeCases(cases)}" cancelledAccreditations=${cancelledAccreditations}`
+    message: `Report numbers backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} failed=${failed} auditFailed=${auditFailed} unmappedReasons="${describeUnmapped(unmappedReasons)}" severalAccreditations=${registrationsWithSeveralAccreditations.length} registrations="${describeSeveralAccreditations(registrationsWithSeveralAccreditations)}"`
   })
 }
 
 /**
  * Startup backfill of the organisation, registration and accreditation numbers
- * on reports stored before they were written beside the ids. A quarterly report
- * gets a null accreditation number. Flag off (the default) only reports what it
- * would add; on writes them through the reports repository, auditing each
- * change. Both modes log one summary line, which says why reports cannot be
- * mapped and how many reports fall into each mapping case. Idempotent, so safe to leave enabled across restarts.
+ * on reports stored before they were written beside the ids. Flag off (the
+ * default) only reports what it would add; on writes them, auditing each
+ * change. Both modes log one summary line: why reports cannot be mapped, and
+ * the registrations matched by more than one granted accreditation.
+ * Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */
