@@ -2,18 +2,14 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { sweepNumbersBackfillByReason } from '#common/helpers/numbers-backfill.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { auditReportNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { ReasonedBackfillResult } from '#common/helpers/numbers-backfill.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { Report, ReportNumbers, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -23,21 +19,6 @@ import { auditReportNumbersBackfill } from './audit.js'
  * @property {ReportsRepository} reportsRepository
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
- * @property {OrganisationReadRepository} organisationReadRepository
- */
-
-/**
- * @typedef {(organisationNumber: OrganisationNumber) => Promise<ReadModelOrganisation | null>} ReadModelLookup
- */
-
-/**
- * A registration matched by more than one accreditation that was granted.
- *
- * @typedef {{
- *   organisationNumber: number,
- *   registrationId: string,
- *   accreditations: { id: string, accreditationNumber: string | null, status: string, validFrom?: string }[]
- * }} RegistrationWithSeveralAccreditations
  */
 
 /** @type {(keyof ReportNumbers)[]} */
@@ -47,11 +28,12 @@ const NUMBER_KEYS = [
   'accreditationNumber'
 ]
 
-/** @type {ReadonlySet<string>} */
-const NEVER_GRANTED = new Set([
-  ACCREDITATION_STATUS.CREATED,
-  ACCREDITATION_STATUS.REJECTED
-])
+/**
+ * @param {string} failure
+ * @param {string[]} drops why the read model left records out
+ */
+const explained = (failure, drops) =>
+  drops.length ? `${failure} (${drops.join(', ')})` : failure
 
 /**
  * @param {OrganisationsRepository} organisationsRepository
@@ -70,19 +52,17 @@ const findOrganisation = async (organisationsRepository, id) => {
 }
 
 /**
- * The organisation and registration numbers come from the stored organisation.
  * A monthly report's accreditation is the one its registration holds in the
  * read model for the report's year; a quarterly report has none. The failure
- * names the first lookup that found nothing.
+ * names the first lookup that found nothing, and why the read model left
+ * records out.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {ReadModelLookup} readModelOrganisation
  * @param {Report} report
  * @returns {Promise<{ numbers: ReportNumbers, failure?: string }>}
  */
 const lookUpNumbers = async (
   organisationsRepository,
-  readModelOrganisation,
   { organisationId, registrationId, cadence, year }
 ) => {
   const organisation = await findOrganisation(
@@ -115,17 +95,30 @@ const lookUpNumbers = async (
     return { numbers }
   }
 
-  const readModel = await readModelOrganisation(organisationNumber)
-  if (!readModel) {
-    return { numbers, failure: 'organisation not in read model' }
-  }
-  const readRegistration = readModel.registrations[registrationNumber]
+  /** @type {string[]} */
+  const drops = []
+  const readRegistration = toReadModelRegistration(
+    organisation,
+    registration,
+    (message) => drops.push(message)
+  )
   if (!readRegistration) {
-    return { numbers, failure: 'registration not in read model' }
+    return {
+      numbers,
+      failure: explained('registration not in read model', drops)
+    }
   }
-  const accreditation = readRegistration.accreditations[String(year)]
+  const { accreditations } = readRegistration
+  const accreditation = accreditations[String(year)]
   if (!accreditation) {
-    return { numbers, failure: 'no accreditation for the report year' }
+    const held = Object.keys(accreditations).join(', ') || 'none'
+    return {
+      numbers,
+      failure: explained(
+        `no ${year} accreditation on ${registrationNumber}, holds ${held}`,
+        drops
+      )
+    }
   }
   numbers.accreditationNumber = accreditation.accreditationNumber
   return { numbers }
@@ -163,19 +156,12 @@ const numbersLacking = (numbers, report) =>
  * apart from write failures.
  *
  * @param {Repositories} repositories
- * @param {ReadModelLookup} readModelOrganisation
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
  * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
  */
-const backfillOne = async (
-  repositories,
-  readModelOrganisation,
-  id,
-  isDryRun,
-  logger
-) => {
+const backfillOne = async (repositories, id, isDryRun, logger) => {
   const { reportsRepository, systemLogsRepository, organisationsRepository } =
     repositories
   const report = await findReport(reportsRepository, id)
@@ -185,7 +171,6 @@ const backfillOne = async (
 
   const { numbers, failure } = await lookUpNumbers(
     organisationsRepository,
-    readModelOrganisation,
     report
   )
   const leftLacking = NUMBER_KEYS.some(
@@ -224,92 +209,20 @@ const backfillOne = async (
 }
 
 /**
- * Each registration matched by more than one accreditation that was granted,
- * which would make the year of a report made under it ambiguous.
- *
- * @param {Organisation[]} organisations
- * @returns {RegistrationWithSeveralAccreditations[]}
- */
-export const registrationsWithSeveralAccreditations = (organisations) =>
-  organisations.flatMap((organisation) =>
-    organisation.registrations.flatMap((registration) => {
-      const granted = organisation.accreditations.filter(
-        (accreditation) =>
-          !NEVER_GRANTED.has(accreditation.status) &&
-          isAccreditationForRegistration(accreditation, registration)
-      )
-      if (granted.length < 2) {
-        return []
-      }
-      return [
-        {
-          organisationNumber: organisation.orgId,
-          registrationId: registration.id,
-          accreditations: granted.map(
-            ({ id, accreditationNumber, status, validFrom }) => ({
-              id,
-              accreditationNumber,
-              status,
-              validFrom
-            })
-          )
-        }
-      ]
-    })
-  )
-
-/**
- * Looks each organisation up in the read model once per run.
- *
- * @param {OrganisationReadRepository} organisationReadRepository
- * @returns {ReadModelLookup}
- */
-const readModelLookup = (organisationReadRepository) => {
-  /** @type {Map<OrganisationNumber, Promise<ReadModelOrganisation | null>>} */
-  const found = new Map()
-  return (organisationNumber) => {
-    if (!found.has(organisationNumber)) {
-      found.set(
-        organisationNumber,
-        organisationReadRepository.findByOrganisationNumber(organisationNumber)
-      )
-    }
-    return /** @type {Promise<ReadModelOrganisation | null>} */ (
-      found.get(organisationNumber)
-    )
-  }
-}
-
-/**
  * Adds to each report the organisation, registration and accreditation numbers
- * it lacks, and lists the registrations whose accreditation for a year could
- * be ambiguous.
+ * it lacks.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
- * @returns {Promise<ReasonedBackfillResult & { registrationsWithSeveralAccreditations: RegistrationWithSeveralAccreditations[] }>}
+ * @returns {Promise<ReasonedBackfillResult>}
  */
 export const backfillReportNumbers = async (
   { logger, ...repositories },
   { isDryRun }
-) => {
-  const readModelOrganisation = readModelLookup(
-    repositories.organisationReadRepository
-  )
-
-  const result = await sweepNumbersBackfillByReason({
+) =>
+  sweepNumbersBackfillByReason({
     ids: await repositories.reportsRepository.findIdsWithoutNumbers(),
-    backfillOne: (id) =>
-      backfillOne(repositories, readModelOrganisation, id, isDryRun, logger),
+    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
     documentName: 'report',
     logger
   })
-
-  return {
-    ...result,
-    registrationsWithSeveralAccreditations:
-      registrationsWithSeveralAccreditations(
-        await repositories.organisationsRepository.findAll()
-      )
-  }
-}

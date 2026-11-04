@@ -5,13 +5,10 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation as readModelAccreditation,
-  exporterAccreditation,
   granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
@@ -72,7 +69,6 @@ const organisation = buildOrganisation({
 })
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -103,24 +99,13 @@ describe('backfillReportNumbers', () => {
     ])()
   })
 
-  /**
-   * @param {boolean} isDryRun
-   * @param {OrganisationReadRepository} [organisationReadRepository]
-   */
-  const run = (
-    isDryRun,
-    organisationReadRepository = createOrganisationReadRepository({
-      organisationsRepository,
-      overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-      logger
-    })
-  ) =>
+  /** @param {boolean} isDryRun */
+  const run = (isDryRun) =>
     backfillReportNumbers(
       {
         reportsRepository,
         systemLogsRepository,
         organisationsRepository,
-        organisationReadRepository,
         logger
       },
       { isDryRun }
@@ -148,8 +133,7 @@ describe('backfillReportNumbers', () => {
     unmapped: 0,
     unmappedReasons: {},
     failed: 0,
-    auditFailed: 0,
-    registrationsWithSeveralAccreditations: []
+    auditFailed: 0
   }
 
   it('gives a monthly report the number of the accreditation its registration holds for the report year, auditing each as the system user', async () => {
@@ -216,7 +200,7 @@ describe('backfillReportNumbers', () => {
     ['a backfill', false],
     ['a dry run', true]
   ])('on %s', (_, isDryRun) => {
-    it('returns each report it cannot map under the lookup that failed', async () => {
+    it('returns each report it cannot map under the lookup that failed and why', async () => {
       const organisationGone = await createReport({
         organisationId: missingOrganisationId
       })
@@ -240,23 +224,26 @@ describe('backfillReportNumbers', () => {
           'organisation not found': [organisationGone],
           'registration not found': [registrationGone],
           'no registration number': [unnumbered],
-          'registration not in read model': [unserved],
-          'no accreditation for the report year': [otherYear]
+          'registration not in read model (Registration R26ER5001180099PL has no validFrom)':
+            [unserved],
+          [`no 2027 accreditation on ${REPROCESSOR_NUMBER}, holds 2026`]: [
+            otherYear
+          ]
         }
       })
       expect(logger.info).not.toHaveBeenCalled()
     })
   })
 
-  it('returns a monthly report whose organisation the read model does not serve', async () => {
+  it('leaves a monthly report without an accreditation number when its registration is linked to none', async () => {
+    changeOrganisation({
+      registrations: [reprocessor({ id: registrationId })]
+    })
     const id = await createReport()
 
-    const { unmappedReasons } = await run(
-      true,
-      partialMock({ findByOrganisationNumber: async () => null })
-    )
-
-    expect(unmappedReasons).toEqual({ 'organisation not in read model': [id] })
+    expect((await run(true)).unmappedReasons).toEqual({
+      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds none`]: [id]
+    })
   })
 
   it('leaves a monthly report without an accreditation number once its registration is linked to an accreditation for another year', async () => {
@@ -280,7 +267,7 @@ describe('backfillReportNumbers', () => {
     const id = await createReport()
 
     expect((await run(true)).unmappedReasons).toEqual({
-      'no accreditation for the report year': [id]
+      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds 2027`]: [id]
     })
   })
 
@@ -312,95 +299,11 @@ describe('backfillReportNumbers', () => {
       ]
     })
     const id = await createReport()
+    const today = new Date().toISOString().slice(0, 10)
 
     expect((await run(true)).unmappedReasons).toEqual({
-      'no accreditation for the report year': [id]
-    })
-  })
-
-  describe('lists the registrations matched by more than one granted accreditation', () => {
-    /** @param {object[]} others */
-    const withAccreditations = (others) =>
-      changeOrganisation({
-        registrations: [registration],
-        accreditations: [accreditation({ id: accreditationId }), ...others]
-      })
-
-    it.each([
-      ['approved', granted('approved')],
-      ['suspended', granted('suspended')],
-      ['cancelled', granted('cancelled')]
-    ])(
-      'lists one matched by a second, %s, accreditation',
-      async (status, statusHistory) => {
-        withAccreditations([
-          accreditation({
-            id: otherAccreditationId,
-            accreditationNumber: toAccreditationNumber('A26ER5009999999PL'),
-            validFrom: '2026-03-01',
-            statusHistory
-          })
-        ])
-
-        expect(
-          (await run(true)).registrationsWithSeveralAccreditations
-        ).toEqual([
-          {
-            organisationNumber: 500123,
-            registrationId,
-            accreditations: [
-              {
-                id: accreditationId,
-                accreditationNumber: ACCREDITATION_NUMBER,
-                status: 'approved',
-                validFrom: '2026-07-01'
-              },
-              {
-                id: otherAccreditationId,
-                accreditationNumber: 'A26ER5009999999PL',
-                status,
-                validFrom: '2026-03-01'
-              }
-            ]
-          }
-        ])
-      }
-    )
-
-    it.each([
-      [
-        'created',
-        accreditation({
-          id: otherAccreditationId,
-          accreditationNumber: null,
-          statusHistory: [
-            { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' }
-          ]
-        })
-      ],
-      [
-        'rejected',
-        accreditation({
-          id: otherAccreditationId,
-          statusHistory: granted('rejected')
-        })
-      ],
-      [
-        'for another site',
-        accreditation({
-          id: otherAccreditationId,
-          site: {
-            address: { line1: '9 Other processing site', postcode: 'LS1 1AA' }
-          }
-        })
-      ],
-      ['for exporting', exporterAccreditation({ id: otherAccreditationId })]
-    ])('ignores a second accreditation %s', async (_, other) => {
-      withAccreditations([other])
-
-      expect((await run(true)).registrationsWithSeveralAccreditations).toEqual(
-        []
-      )
+      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds none (Accreditation ${ACCREDITATION_NUMBER} has status created on ${today})`]:
+        [id]
     })
   })
 
