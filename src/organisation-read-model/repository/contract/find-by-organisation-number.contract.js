@@ -320,7 +320,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(organisation).not.toHaveProperty('registeredAddress')
     })
 
-    it("lists the organisation's users with their roles", async ({
+    it("lists the organisation's users with their names and roles", async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -352,9 +352,14 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         {
           contactId: 'contact-1',
           email: 'han@example.com',
+          fullName: 'Han Solo',
           roles: ['initial_user']
         },
-        { email: 'leia@example.com', roles: ['standard_user'] }
+        {
+          email: 'leia@example.com',
+          fullName: 'Leia Organa',
+          roles: ['standard_user']
+        }
       ])
     })
 
