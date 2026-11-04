@@ -25,20 +25,11 @@ import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
-// A registration's own status can never be suspended (suspension is an
-// accreditation-only concept), so suspended is excluded here.
-/** @type {Set<RegistrationStatus>} */
-const REGISTRATION_INCLUDED_STATUSES = new Set([
-  REGISTRATION_STATUS.APPROVED,
-  REGISTRATION_STATUS.CANCELLED
-])
-
-// Cancelled and suspended accreditations remain on the public register (BR-E8).
+// A cancelled accreditation leaves its registration registered only.
 /** @type {Set<AccreditationStatus>} */
 const ACCREDITATION_INCLUDED_STATUSES = new Set([
   ACCREDITATION_STATUS.APPROVED,
-  ACCREDITATION_STATUS.SUSPENDED,
-  ACCREDITATION_STATUS.CANCELLED
+  ACCREDITATION_STATUS.SUSPENDED
 ])
 
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
@@ -126,7 +117,7 @@ function getLinkedAccreditation(registration, accreditations) {
 
 /** @param {{ status: RegistrationStatus }} item */
 function isRegistrationInPublishableState(item) {
-  return REGISTRATION_INCLUDED_STATUSES.has(item.status)
+  return item.status === REGISTRATION_STATUS.APPROVED
 }
 
 /** @param {{ status: AccreditationStatus }} item */
