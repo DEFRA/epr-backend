@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -17,7 +18,7 @@ import Boom from '@hapi/boom'
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<Record<string, { validFrom: Date | null }>>}
+ * @returns {Promise<Record<string, import('#waste-records-export/domain/overseas-sites-context.js').OverseasSiteContextEntry>>}
  */
 export const resolveOverseasSites = async (
   organisationsRepository,
@@ -46,14 +47,5 @@ export const resolveOverseasSites = async (
   const sites = await overseasSitesRepository.findByIds(siteIds)
   const sitesById = new Map(sites.map((site) => [site.id, site]))
 
-  /** @type {Record<string, { validFrom: Date | null }>} */
-  const resolved = {}
-  for (const [osrKey, { overseasSiteId }] of entries) {
-    const site = sitesById.get(overseasSiteId)
-    if (site) {
-      resolved[osrKey] = { validFrom: site.validFrom ?? null }
-    }
-  }
-
-  return resolved
+  return buildOverseasSitesContext(registration, sitesById)
 }

@@ -45,7 +45,7 @@ describe('buildOverseasSitesContext', () => {
           country: 'Germany'
         })
       ],
-      // site-b has no validFrom, so the context should surface validFrom: null
+      // site-b has no validFrom, so the context should surface approvedFrom: null
       [
         'site-b',
         buildSite({ id: 'site-b', name: 'Beta Sorting', country: 'India' })
@@ -53,11 +53,11 @@ describe('buildOverseasSitesContext', () => {
     ])
     expect(buildOverseasSitesContext(registration, sitesById)).toEqual({
       '001': {
-        validFrom: new Date('2026-01-01'),
-        siteName: 'Acme Recycling',
+        approvedFrom: new Date('2026-01-01'),
+        name: 'Acme Recycling',
         country: 'Germany'
       },
-      '042': { validFrom: null, siteName: 'Beta Sorting', country: 'India' }
+      '042': { approvedFrom: null, name: 'Beta Sorting', country: 'India' }
     })
   })
 
@@ -91,8 +91,8 @@ describe('buildOverseasSitesContext', () => {
     ])
     expect(buildOverseasSitesContext(registration, sitesById)).toEqual({
       '042': {
-        validFrom: new Date('2026-01-01'),
-        siteName: 'Acme Recycling',
+        approvedFrom: new Date('2026-01-01'),
+        name: 'Acme Recycling',
         country: 'Germany'
       }
     })

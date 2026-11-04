@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -375,14 +376,16 @@ describe('REPROCESSED_LOADS', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = buildAccreditation({
-      validFrom: '2024-01-01',
-      validTo: '2024-12-31',
-      statusHistory: [
-        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-      ]
-    })
+    const accreditation = toAccreditedPeriod(
+      buildAccreditation({
+        validFrom: '2024-01-01',
+        validTo: '2024-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+        ]
+      })
+    )
 
     /** @type {Record<string, any>} */
     const completeRow = {
@@ -486,11 +489,13 @@ describe('REPROCESSED_LOADS', () => {
 
       it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: buildAccreditation({
-            validFrom: '2024-01-01',
-            validTo: '2024-12-31',
-            statusHistory: []
-          })
+          accreditation: toAccreditedPeriod(
+            buildAccreditation({
+              validFrom: '2024-01-01',
+              validTo: '2024-12-31',
+              statusHistory: []
+            })
+          )
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -499,15 +504,17 @@ describe('REPROCESSED_LOADS', () => {
 
     describe('IGNORED outcome - suspended accreditation', () => {
       it('returns IGNORED when accreditation was suspended before the row date', () => {
-        const suspendedAccreditation = buildAccreditation({
-          validFrom: '2024-01-01',
-          validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
-          ]
-        })
+        const suspendedAccreditation = toAccreditedPeriod(
+          buildAccreditation({
+            validFrom: '2024-01-01',
+            validTo: '2024-12-31',
+            statusHistory: [
+              { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+              { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
+            ]
+          })
+        )
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: suspendedAccreditation
         })
@@ -518,16 +525,18 @@ describe('REPROCESSED_LOADS', () => {
       })
 
       it('returns INCLUDED when accreditation was suspended then re-approved before the row date', () => {
-        const reapprovedAccreditation = buildAccreditation({
-          validFrom: '2024-01-01',
-          validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
-          ]
-        })
+        const reapprovedAccreditation = toAccreditedPeriod(
+          buildAccreditation({
+            validFrom: '2024-01-01',
+            validTo: '2024-12-31',
+            statusHistory: [
+              { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+              { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
+            ]
+          })
+        )
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation: reapprovedAccreditation
         })

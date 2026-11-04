@@ -21,6 +21,7 @@ import {
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
@@ -53,6 +54,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
+ * @param {AccreditedPeriod | null} params.accreditedPeriod - The registration's accreditation, converted once by the caller
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
@@ -64,6 +66,7 @@ export const classifyLoads = ({
   periodicReports,
   overseasSites,
   registration,
+  accreditedPeriod,
   submittedRowStatesByKey
 }) => {
   if (
@@ -80,7 +83,7 @@ export const classifyLoads = ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    accreditation: registration?.accreditation ?? null,
+    accreditation: accreditedPeriod,
     overseasSites
   })
 
@@ -108,7 +111,7 @@ export const classifyLoads = ({
           tableSchemas,
           operatorCategory: getOperatorCategory(registration),
           classificationContext: {
-            accreditation: registration.accreditation ?? null,
+            accreditation: accreditedPeriod,
             overseasSites
           }
         })

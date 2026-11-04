@@ -190,7 +190,8 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: {
         id: 'acc-1',
         validFrom: '2023-01-01',
-        validTo: '2030-12-31'
+        validTo: '2030-12-31',
+        statusHistory: []
       },
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
@@ -218,7 +219,8 @@ describe('writeSummaryLogRowStates', () => {
       accreditation: {
         id: 'acc-1',
         validFrom: '2023-01-01',
-        validTo: '2030-12-31'
+        validTo: '2030-12-31',
+        statusHistory: []
       },
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,

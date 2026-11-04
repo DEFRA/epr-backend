@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
@@ -187,6 +188,7 @@ const resolveAccreditation = async (
  * @param {object} params
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
@@ -198,6 +200,7 @@ const updateWasteBalances = async ({
   numbers,
   parsedData,
   accreditation,
+  accreditedPeriod,
   wasteBalanceService,
   wasteRecords,
   user,
@@ -214,7 +217,14 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites, summaryLogId, numbers }
+      {
+        user,
+        accreditation,
+        accreditedPeriod,
+        overseasSites,
+        summaryLogId,
+        numbers
+      }
     )
   }
 }
@@ -226,12 +236,14 @@ const updateWasteBalances = async ({
  *
  * @param {ValidatedWasteRecord[]} changedRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} accreditedPeriod
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {number}
  */
 const decemberWasteRowCountFor = (
   changedRecords,
   accreditation,
+  accreditedPeriod,
   overseasSites
 ) => {
   if (accreditation === null) {
@@ -242,7 +254,7 @@ const decemberWasteRowCountFor = (
     classifyWasteRecord(
       record,
       record.data?.processingType,
-      accreditation,
+      accreditedPeriod,
       overseasSites
     )
   )
@@ -264,6 +276,7 @@ const decemberWasteRowCountFor = (
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
@@ -273,6 +286,7 @@ const decemberWasteRowCountFor = (
 const countRecordChanges = async ({
   wasteRecords,
   accreditation,
+  accreditedPeriod,
   overseasSites,
   ledgerId,
   ledgerRepository,
@@ -294,7 +308,7 @@ const countRecordChanges = async ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    accreditation,
+    accreditation: accreditedPeriod,
     overseasSites
   })
 
@@ -321,6 +335,7 @@ const countRecordChanges = async ({
     decemberWasteRowCount: decemberWasteRowCountFor(
       changedRecords,
       accreditation,
+      accreditedPeriod,
       overseasSites
     )
   }
@@ -342,6 +357,7 @@ const countRecordChanges = async ({
  * @param {string | undefined} params.accreditationId
  * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} params.accreditedPeriod
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {ParsedSummaryLog} params.parsedData
@@ -354,6 +370,7 @@ const commitStateAndBalance = async ({
   accreditationId,
   numbers,
   accreditation,
+  accreditedPeriod,
   wasteRecords,
   overseasSites,
   parsedData,
@@ -364,7 +381,7 @@ const commitStateAndBalance = async ({
   await writeSummaryLogRowStates({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
-    accreditation,
+    accreditation: accreditedPeriod,
     ledgerId: {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
@@ -380,6 +397,7 @@ const commitStateAndBalance = async ({
       numbers,
       parsedData,
       accreditation,
+      accreditedPeriod,
       wasteBalanceService,
       wasteRecords,
       user,
@@ -479,11 +497,14 @@ export const syncFromSummaryLog = (dependencies) => {
           accreditationId
         )
       : null
+    // Converted once for the whole submission, not per row.
+    const accreditedPeriod = toAccreditedPeriod(accreditation)
 
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
       accreditation,
+      accreditedPeriod,
       overseasSites,
       ledgerId: {
         organisationId: summaryLog.organisationId,
@@ -505,6 +526,7 @@ export const syncFromSummaryLog = (dependencies) => {
         accreditationId ?? null
       ),
       accreditation,
+      accreditedPeriod,
       wasteRecords,
       overseasSites,
       parsedData,

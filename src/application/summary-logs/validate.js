@@ -35,6 +35,7 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -45,6 +46,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -215,7 +217,7 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
-  /** @type Registration */ registration,
+  /** @type AccreditedPeriod | null */ accreditation,
   /** @type string */ processingType
 ) => {
   for (const wasteRecord of wasteRecords) {
@@ -226,7 +228,7 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration.accreditation,
+      accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -345,7 +347,11 @@ const performValidationChecks = async ({
 
     wasteRecords = dataResult.wasteRecords
 
-    markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
+    markIgnoredByDateRange(
+      wasteRecords,
+      toAccreditedPeriod(registration.accreditation),
+      meta.PROCESSING_TYPE
+    )
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -599,6 +605,9 @@ const classifyAndPersistResult = async ({
     registration
   })
 
+  // Converted once per fetch, not per row.
+  const accreditedPeriod = toAccreditedPeriod(registration?.accreditation)
+
   const { loads, loadsByReportingPeriod } = classifyLoads({
     processingType,
     status,
@@ -607,6 +616,7 @@ const classifyAndPersistResult = async ({
     periodicReports,
     overseasSites,
     registration,
+    accreditedPeriod,
     submittedRowStatesByKey
   })
 
@@ -618,6 +628,7 @@ const classifyAndPersistResult = async ({
       periodicReports,
       wasteRecords,
       registration,
+      accreditedPeriod,
       overseasSites,
       summaryLog,
       summaryLogId,

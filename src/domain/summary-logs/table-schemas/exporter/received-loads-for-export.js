@@ -41,7 +41,7 @@ import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditedPeriod} from '#waste-balances/domain/classification-context.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 /**
@@ -237,7 +237,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} */ {
+    /** @type {{ accreditation: AccreditedPeriod | null, overseasSites: OverseasSitesContext }} */ {
       accreditation,
       overseasSites
     }
@@ -296,7 +296,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
         }
       }
       // VAL014: site is registered but its approval does not cover the export date.
-      if (!isOrsApprovedAtDate(ors.validFrom, data[FIELDS.DATE_OF_EXPORT])) {
+      if (!isOrsApprovedAtDate(ors.approvedFrom, data[FIELDS.DATE_OF_EXPORT])) {
         return {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: CLASSIFICATION_REASON.ORS_NOT_APPROVED }]

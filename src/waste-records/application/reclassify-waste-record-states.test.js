@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -55,7 +56,7 @@ const receivedRowState = (overrides = {}) => ({
  * @returns {import('./reclassify-waste-record-states.js').ReclassificationContext}
  */
 const contextWith = (accreditation) => ({
-  accreditation,
+  accreditation: toAccreditedPeriod(accreditation),
   overseasSites: ORS_VALIDATION_DISABLED
 })
 
@@ -181,13 +182,14 @@ const fullPrecisionReceivedRecord = (tonnage) => ({
 
 describe('reclassifying a projected row state preserves the stamped classification', () => {
   const covering = accreditationCovering('2026-01-01', '2027-01-01')
+  const coveringPeriod = toAccreditedPeriod(covering)
   const fullPrecisionTonnage = 9.126789
   const twoDecimalPlaceTonnage = roundToTwoDecimalPlaces(fullPrecisionTonnage)
 
   it('drops precision below two decimal places when it stamps and stores the row', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
-      covering,
+      coveringPeriod,
       ORS_VALIDATION_DISABLED
     )
 
@@ -203,12 +205,12 @@ describe('reclassifying a projected row state preserves the stamped classificati
   it('reproduces the stamped classification when it re-derives from the stored two-decimal-place data', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
-      covering,
+      coveringPeriod,
       ORS_VALIDATION_DISABLED
     )
 
     const reclassified = reclassifyWasteRecordState(stamped, {
-      accreditation: covering,
+      accreditation: coveringPeriod,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 

@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { getWasteBalanceClassification } from './is-included-in-waste-balance.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -94,7 +95,7 @@ describe('getWasteBalanceClassification', () => {
       [
         'registered-only processing type, accredited',
         PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
-        accreditation,
+        toAccreditedPeriod(accreditation),
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
@@ -106,13 +107,13 @@ describe('getWasteBalanceClassification', () => {
       [
         'no schema for the processing type',
         /** @type {*} */ ('NOT_A_REAL_TYPE'),
-        accreditation,
+        toAccreditedPeriod(accreditation),
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
         'schema has no classifyForWasteBalance',
         PROCESSING_TYPES.EXPORTER,
-        accreditation,
+        toAccreditedPeriod(accreditation),
         WASTE_RECORD_TYPE.SENT_ON
       ]
     ])('%s', (_name, processingType, acc, type) => {
@@ -151,7 +152,7 @@ describe('getWasteBalanceClassification', () => {
     const result = getWasteBalanceClassification(
       record,
       PROCESSING_TYPES.REPROCESSOR_INPUT,
-      accreditation,
+      toAccreditedPeriod(accreditation),
       ORS_VALIDATION_DISABLED
     )
 
@@ -167,7 +168,7 @@ describe('getWasteBalanceClassification', () => {
     const result = getWasteBalanceClassification(
       fullyFilledReprocessorRecord,
       PROCESSING_TYPES.REPROCESSOR_INPUT,
-      accreditation,
+      toAccreditedPeriod(accreditation),
       ORS_VALIDATION_DISABLED
     )
     expect(result).toEqual({ included: true, reasons: [], tonnage: 9 })
@@ -177,7 +178,7 @@ describe('getWasteBalanceClassification', () => {
     const result = getWasteBalanceClassification(
       prnIssuedExporterRecord,
       PROCESSING_TYPES.EXPORTER,
-      accreditation,
+      toAccreditedPeriod(accreditation),
       ORS_VALIDATION_DISABLED
     )
     expect(result).not.toBeNull()

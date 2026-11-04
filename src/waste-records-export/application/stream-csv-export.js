@@ -2,6 +2,7 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -145,6 +146,7 @@ async function* streamPartitionRows({
     { accreditationId: ledgerId.accreditationId },
     org
   )
+  const accreditedPeriod = toAccreditedPeriod(accreditation)
 
   for (const rowState of [...rowStates].sort(sortRowStates)) {
     yield await encodeRow(
@@ -156,7 +158,7 @@ async function* streamPartitionRows({
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
         classification: recomputedClassification(rowState, {
-          accreditation,
+          accreditation: accreditedPeriod,
           overseasSites
         }),
         summaryLogEntry,

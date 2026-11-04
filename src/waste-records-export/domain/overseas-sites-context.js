@@ -1,16 +1,18 @@
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
+/** @import {OverseasSitesContext} from '#waste-balances/domain/classification-context.js' */
 
 /**
- * @typedef {Object} OverseasSiteContextEntry
- * @property {Date | null} validFrom - Approval date used by classifyForWasteBalance.
- * @property {string} siteName - Approved site name (for OSR_NAME_REVISED).
- * @property {string} country - Destination country (for OSR_COUNTRY_REVISED).
+ * One approved site in the context: `approvedFrom` is used by
+ * classifyForWasteBalance, `name` populates OSR_NAME_REVISED and `country`
+ * OSR_COUNTRY_REVISED.
+ *
+ * @typedef {Exclude<OverseasSitesContext, symbol>[string]} OverseasSiteContextEntry
  */
 
 /**
  * Builds an ORS context map for a single registration from a pre-loaded
  * sites-by-id Map. The returned object is keyed by the 3-digit OSR key
- * (as stored on the registration) and contains the validFrom date used
+ * (as stored on the registration) and contains the approvedFrom date used
  * by classifyForWasteBalance, along with the approved site name and
  * destination country used to populate the derived OSR_NAME_REVISED /
  * OSR_COUNTRY_REVISED export columns.
@@ -25,19 +27,19 @@
  *
  * @param {{ overseasSites?: Record<string, { overseasSiteId: string }> | null }} registration
  * @param {Map<string, OverseasSite>} sitesById
- * @returns {Record<string, OverseasSiteContextEntry>}
+ * @returns {Exclude<OverseasSitesContext, symbol>}
  */
 export const buildOverseasSitesContext = (registration, sitesById) => {
   const entries = Object.entries(registration?.overseasSites ?? {})
 
-  /** @type {Record<string, OverseasSiteContextEntry>} */
+  /** @type {Exclude<OverseasSitesContext, symbol>} */
   const context = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = sitesById.get(overseasSiteId)
     if (site) {
       context[osrKey] = {
-        validFrom: site.validFrom ?? null,
-        siteName: site.name,
+        approvedFrom: site.validFrom ?? null,
+        name: site.name,
         country: site.country
       }
     }

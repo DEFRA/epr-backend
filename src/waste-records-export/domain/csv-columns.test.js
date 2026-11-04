@@ -397,8 +397,8 @@ describe('csv-columns', () => {
 
       const overseasSites = {
         '001': {
-          validFrom: new Date('2026-01-01'),
-          siteName: 'Acme Recycling',
+          approvedFrom: new Date('2026-01-01'),
+          name: 'Acme Recycling',
           country: 'Germany'
         }
       }

@@ -239,7 +239,7 @@ export const buildDataRow = ({
     ...buildWasteBalanceCells(classification),
     String(rowId),
     orsDetails?.country ?? '',
-    orsDetails?.siteName ?? ''
+    orsDetails?.name ?? ''
   ]
 
   return [...metadata, ...buildDataCells(data, dataFieldColumns)].map(

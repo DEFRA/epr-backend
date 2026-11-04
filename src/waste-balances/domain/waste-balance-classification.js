@@ -48,8 +48,8 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  *
  * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
  * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
- * @param {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} accreditation
+ * @param {import('#waste-balances/domain/classification-context.js').OverseasSitesContext} overseasSites
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (

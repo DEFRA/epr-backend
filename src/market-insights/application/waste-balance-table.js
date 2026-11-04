@@ -1,5 +1,6 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
@@ -55,7 +56,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {string} summaryLogId - the partition's latest submission
  * @property {Organisation} org
  * @property {import('#domain/organisations/registration.js').Registration} registration
- * @property {import('#domain/organisations/accreditation.js').Accreditation} accreditation
+ * @property {import('#waste-balances/domain/classification-context.js').AccreditedPeriod | null} accreditation
  * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  */
 
@@ -241,7 +242,7 @@ const resolvePublishedPartitions = (
       summaryLogId,
       org: context.organisation,
       registration: context.registration,
-      accreditation: context.accreditation,
+      accreditation: toAccreditedPeriod(context.accreditation),
       overseasSites: buildOverseasSitesContext(context.registration, sitesById)
     })
   }

@@ -1,10 +1,9 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Accreditation, StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js' */
@@ -56,10 +55,20 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * @param {Accreditation} accreditation
  * @returns {string | null}
  */
-const cancelledAt = (accreditation) => {
-  const latest = getStatusHistoryDateTimes(accreditation.statusHistory).find(
-    ({ status }) => status === ACCREDITATION_STATUS.CANCELLED
-  )
+const cancelledAt = ({ statusHistory }) => {
+  /** @type {StatusHistoryEntry | null} */
+  let latest = null
+  for (const entry of statusHistory) {
+    if (entry.status !== ACCREDITATION_STATUS.CANCELLED) {
+      continue
+    }
+    if (
+      latest === null ||
+      new Date(entry.updatedAt).getTime() > new Date(latest.updatedAt).getTime()
+    ) {
+      latest = entry
+    }
+  }
   return latest ? new Date(latest.updatedAt).toISOString() : null
 }
 

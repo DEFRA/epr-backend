@@ -1,3 +1,4 @@
+import { toAccreditedPeriod } from '#waste-balances/domain/classification-context.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
@@ -335,7 +336,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     // First submission: project and persist the zero-debit sent-on row.
     const entry = projectSummaryLogRowState(
       zeroTonnageSentOn,
-      accreditation,
+      toAccreditedPeriod(accreditation),
       overseasSites
     )
     await repository.upsertSummaryLogRowStates(
@@ -357,7 +358,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentUpload],
       submittedRowStatesByKey,
-      accreditation,
+      accreditation: toAccreditedPeriod(accreditation),
       overseasSites
     })
 
