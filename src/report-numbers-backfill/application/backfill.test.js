@@ -7,8 +7,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation as readModelAccreditation,
+  exporter,
   granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
@@ -129,6 +131,12 @@ describe('backfillReportNumbers', () => {
   const systemLogs = async () =>
     (await systemLogsRepository.find({ limit: 10 })).systemLogs
 
+  /** @param {string} message */
+  const explained = (message) =>
+    expect(logger.info).toHaveBeenCalledWith({
+      message: `Report numbers backfill: ${message}`
+    })
+
   const nothingFlagged = {
     unmapped: 0,
     unmappedReasons: {},
@@ -200,7 +208,7 @@ describe('backfillReportNumbers', () => {
     ['a backfill', false],
     ['a dry run', true]
   ])('on %s', (_, isDryRun) => {
-    it('returns each report it cannot map under the lookup that failed and why', async () => {
+    it('returns each report it cannot map under the lookup that failed, and logs why', async () => {
       const organisationGone = await createReport({
         organisationId: missingOrganisationId
       })
@@ -224,15 +232,41 @@ describe('backfillReportNumbers', () => {
           'organisation not found': [organisationGone],
           'registration not found': [registrationGone],
           'no registration number': [unnumbered],
-          'registration not in read model (Registration R26ER5001180099PL has no validFrom)':
-            [unserved],
-          [`no 2027 accreditation on ${REPROCESSOR_NUMBER}, holds 2026`]: [
-            otherYear
-          ]
+          'registration not in read model': [unserved],
+          'no accreditation for the report year': [otherYear]
         }
       })
-      expect(logger.info).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledTimes(2)
+      explained(
+        'registration not in read model: R26ER5001180099PL (Registration R26ER5001180099PL has no validFrom)'
+      )
+      explained(
+        `no accreditation for the report year: ${REPROCESSOR_NUMBER} has no 2027 accreditation, holds 2026`
+      )
     })
+  })
+
+  it('logs why once for every report of the registration', async () => {
+    await createReport({ year: 2027, period: MONTHLY_PERIODS.January })
+    await createReport({ year: 2027, period: MONTHLY_PERIODS.February })
+
+    expect((await run(true)).unmapped).toBe(2)
+    expect(logger.info).toHaveBeenCalledTimes(1)
+  })
+
+  it('explains an exporter without naming its overseas sites', async () => {
+    changeOrganisation({
+      registrations: [exporter({ id: registrationId })]
+    })
+    const id = await createReport()
+
+    expect((await run(true)).unmappedReasons).toEqual({
+      'no accreditation for the report year': [id]
+    })
+    expect(logger.info).toHaveBeenCalledTimes(1)
+    explained(
+      `no accreditation for the report year: ${EXPORTER_NUMBER} has no 2026 accreditation, holds none`
+    )
   })
 
   it('leaves a monthly report without an accreditation number when its registration is linked to none', async () => {
@@ -242,8 +276,11 @@ describe('backfillReportNumbers', () => {
     const id = await createReport()
 
     expect((await run(true)).unmappedReasons).toEqual({
-      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds none`]: [id]
+      'no accreditation for the report year': [id]
     })
+    explained(
+      `no accreditation for the report year: ${REPROCESSOR_NUMBER} has no 2026 accreditation, holds none`
+    )
   })
 
   it('leaves a monthly report without an accreditation number once its registration is linked to an accreditation for another year', async () => {
@@ -267,8 +304,11 @@ describe('backfillReportNumbers', () => {
     const id = await createReport()
 
     expect((await run(true)).unmappedReasons).toEqual({
-      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds 2027`]: [id]
+      'no accreditation for the report year': [id]
     })
+    explained(
+      `no accreditation for the report year: ${REPROCESSOR_NUMBER} has no 2026 accreditation, holds 2027`
+    )
   })
 
   it('maps a report whose accreditation is now cancelled', async () => {
@@ -302,9 +342,11 @@ describe('backfillReportNumbers', () => {
     const today = new Date().toISOString().slice(0, 10)
 
     expect((await run(true)).unmappedReasons).toEqual({
-      [`no 2026 accreditation on ${REPROCESSOR_NUMBER}, holds none (Accreditation ${ACCREDITATION_NUMBER} has status created on ${today})`]:
-        [id]
+      'no accreditation for the report year': [id]
     })
+    explained(
+      `no accreditation for the report year: ${REPROCESSOR_NUMBER} has no 2026 accreditation, holds none (Accreditation ${ACCREDITATION_NUMBER} has status created on ${today})`
+    )
   })
 
   it('still adds the numbers it can find to a report it cannot fully map', async () => {

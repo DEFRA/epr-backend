@@ -29,11 +29,18 @@ const NUMBER_KEYS = [
 ]
 
 /**
- * @param {string} failure
+ * A failed lookup: `reason` groups reports, `detail` says what this
+ * registration's records hold.
+ *
+ * @typedef {{ reason: string, detail?: string }} Failure
+ */
+
+/**
+ * @param {string} detail
  * @param {string[]} drops why the read model left records out
  */
-const explained = (failure, drops) =>
-  drops.length ? `${failure} (${drops.join(', ')})` : failure
+const withDrops = (detail, drops) =>
+  drops.length ? `${detail} (${drops.join(', ')})` : detail
 
 /**
  * @param {OrganisationsRepository} organisationsRepository
@@ -59,7 +66,7 @@ const findOrganisation = async (organisationsRepository, id) => {
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {Report} report
- * @returns {Promise<{ numbers: ReportNumbers, failure?: string }>}
+ * @returns {Promise<{ numbers: ReportNumbers, failure?: Failure }>}
  */
 const lookUpNumbers = async (
   organisationsRepository,
@@ -70,7 +77,7 @@ const lookUpNumbers = async (
     organisationId
   )
   if (!organisation) {
-    return { numbers: {}, failure: 'organisation not found' }
+    return { numbers: {}, failure: { reason: 'organisation not found' } }
   }
   const organisationNumber = toOrganisationNumber(String(organisation.orgId))
   /** @type {ReportNumbers} */
@@ -83,11 +90,11 @@ const lookUpNumbers = async (
     ({ id }) => id === registrationId
   )
   if (!registration) {
-    return { numbers, failure: 'registration not found' }
+    return { numbers, failure: { reason: 'registration not found' } }
   }
   const { registrationNumber } = registration
   if (!registrationNumber) {
-    return { numbers, failure: 'no registration number' }
+    return { numbers, failure: { reason: 'no registration number' } }
   }
   numbers.registrationNumber = registrationNumber
 
@@ -105,7 +112,10 @@ const lookUpNumbers = async (
   if (!readRegistration) {
     return {
       numbers,
-      failure: explained('registration not in read model', drops)
+      failure: {
+        reason: 'registration not in read model',
+        detail: withDrops(registrationNumber, drops)
+      }
     }
   }
   const { accreditations } = readRegistration
@@ -114,10 +124,13 @@ const lookUpNumbers = async (
     const held = Object.keys(accreditations).join(', ') || 'none'
     return {
       numbers,
-      failure: explained(
-        `no ${year} accreditation on ${registrationNumber}, holds ${held}`,
-        drops
-      )
+      failure: {
+        reason: 'no accreditation for the report year',
+        detail: withDrops(
+          `${registrationNumber} has no ${year} accreditation, holds ${held}`,
+          drops
+        )
+      }
     }
   }
   numbers.accreditationNumber = accreditation.accreditationNumber
@@ -159,9 +172,10 @@ const numbersLacking = (numbers, report) =>
  * @param {string} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
+ * @param {(failure: Failure) => void} explain
  * @returns {Promise<{ mapped: boolean, unmapped: string[], auditFailed: boolean } | null>} null if gone
  */
-const backfillOne = async (repositories, id, isDryRun, logger) => {
+const backfillOne = async (repositories, id, isDryRun, logger, explain) => {
   const { reportsRepository, systemLogsRepository, organisationsRepository } =
     repositories
   const report = await findReport(reportsRepository, id)
@@ -177,10 +191,15 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
     (key) => numbers[key] === undefined && report[key] === undefined
   )
 
+  const unmapped = failure && leftLacking ? failure : undefined
+  if (unmapped) {
+    explain(unmapped)
+  }
+
   const lacking = numbersLacking(numbers, report)
   const outcome = {
     mapped: Object.keys(lacking).length > 0,
-    unmapped: failure && leftLacking ? [failure] : [],
+    unmapped: unmapped ? [unmapped.reason] : [],
     auditFailed: false
   }
   if (!outcome.mapped || isDryRun) {
@@ -209,6 +228,23 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
 }
 
 /**
+ * Logs each distinct detail once, however many reports share it.
+ *
+ * @param {TypedLogger} logger
+ * @returns {(failure: Failure) => void}
+ */
+const explainer = (logger) => {
+  const logged = new Set()
+  return ({ reason, detail }) => {
+    const message = `Report numbers backfill: ${reason}: ${detail}`
+    if (detail && !logged.has(message)) {
+      logged.add(message)
+      logger.info({ message })
+    }
+  }
+}
+
+/**
  * Adds to each report the organisation, registration and accreditation numbers
  * it lacks.
  *
@@ -219,10 +255,13 @@ const backfillOne = async (repositories, id, isDryRun, logger) => {
 export const backfillReportNumbers = async (
   { logger, ...repositories },
   { isDryRun }
-) =>
-  sweepNumbersBackfillByReason({
+) => {
+  const explain = explainer(logger)
+  return sweepNumbersBackfillByReason({
     ids: await repositories.reportsRepository.findIdsWithoutNumbers(),
-    backfillOne: (id) => backfillOne(repositories, id, isDryRun, logger),
+    backfillOne: (id) =>
+      backfillOne(repositories, id, isDryRun, logger, explain),
     documentName: 'report',
     logger
   })
+}
