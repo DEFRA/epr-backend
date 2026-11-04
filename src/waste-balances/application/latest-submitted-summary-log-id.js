@@ -1,5 +1,7 @@
 import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
 
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+
 /**
  * Resolve the `summaryLogId` of the most recent submitted summary log for a
  * ledger — the head the summary-log-row-state reads pivot on. Returns
@@ -7,7 +9,7 @@ import { latestSubmittedSummaryLog } from './latest-submitted-summary-log.js'
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
- * @returns {Promise<string | null>}
+ * @returns {Promise<SummaryLogFileId | null>}
  */
 export const latestSubmittedSummaryLogId = async (
   ledgerRepository,

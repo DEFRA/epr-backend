@@ -44,6 +44,7 @@ import {
 import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -97,7 +98,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       withNumbers(ledgerId),
       rows,
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
@@ -712,7 +713,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       submissionNumber,
       material: 'plastic',
       wasteProcessingType: 'exporter',
-      source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-01-15' },
+      source: {
+        summaryLogId: toSummaryLogFileId('sl-1'),
+        lastUploadedAt: '2026-01-15'
+      },
       prn: null,
       recyclingActivity: {
         suppliers: [],

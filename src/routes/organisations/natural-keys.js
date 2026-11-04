@@ -109,14 +109,33 @@ export async function findRegistrationByNumber(
 
 /**
  * The organisation and registration the natural keys name, as the read model
- * shows them. Not found when the organisation does not hold the registration.
+ * shows them. Throws not found when the organisation does not hold the registration.
  *
  * @param {HapiRequest & { params: RegistrationParams }} request
  * @returns {Promise<{ organisation: ReadModelOrganisation, registration: ReadModelRegistration }>}
  */
-export async function findOrganisationAndRegistrationReadModels({
+export async function findOrganisationAndRegistrationReadModels(request) {
+  const organisation = await findOrganisationReadModel(request)
+
+  const registration =
+    organisation.registrations[request.params.registrationNumber]
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
+
+  return { organisation, registration }
+}
+
+/**
+ * The organisation the natural key names, as the read model shows it.
+ * Throws not found when no organisation found for supplied `params.organisationNumber`
+ *
+ * @param {HapiRequest & { params: OrganisationParams }} request
+ * @returns {Promise<ReadModelOrganisation>}
+ */
+export async function findOrganisationReadModel({
   organisationReadRepository,
-  params: { organisationNumber, registrationNumber }
+  params: { organisationNumber }
 }) {
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
@@ -125,13 +144,7 @@ export async function findOrganisationAndRegistrationReadModels({
   if (!organisation) {
     throw Boom.notFound('Organisation not found')
   }
-
-  const registration = organisation.registrations[registrationNumber]
-  if (!registration) {
-    throw Boom.notFound('Registration not found')
-  }
-
-  return { organisation, registration }
+  return organisation
 }
 
 /**

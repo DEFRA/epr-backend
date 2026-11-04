@@ -23,6 +23,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -147,7 +148,7 @@ const createServerWithRepos = async ({
         accreditationId: seed.accreditationId ?? null
       }),
       seed.rows ?? [],
-      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
+      toSummaryLogFileId(seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID)
     )
   }
 
@@ -222,7 +223,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
           {
             // The ledger records the submission by its file id, so the
             // document's own id is deliberately something else.
-            id: 'sl-doc-1',
+            id: toSummaryLogId('sl-doc-1'),
             version: 1,
             summaryLog: summaryLogFactory.submitted({
               file: { id: DEFAULT_SUMMARY_LOG_ID },

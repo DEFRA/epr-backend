@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Joi from 'joi'
 
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
@@ -39,12 +40,12 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /**
  * @typedef {object} ValidateCommandPayload
- * @property {string} summaryLogId
+ * @property {SummaryLogId} summaryLogId
  */
 
 /**
  * @typedef {object} SubmitCommandPayload
- * @property {string} summaryLogId
+ * @property {SummaryLogId} summaryLogId
  * @property {SubmitUser} user
  */
 

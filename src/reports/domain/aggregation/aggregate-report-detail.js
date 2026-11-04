@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isExporterCategory } from '../operator-category.js'
 import { periodBounds } from '../reporting-period.js'
@@ -86,7 +87,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @property {number} period
  * @property {CalendarDate} startDate
  * @property {CalendarDate} endDate
- * @property {{ summaryLogId: string|null, lastUploadedAt: string|null }} source
+ * @property {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }} source
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
@@ -108,7 +109,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @param {Cadence} options.cadence
  * @param {Year} options.year
  * @param {number} options.period
- * @param {{ summaryLogId: string|null, lastUploadedAt: string|null }} options.source
+ * @param {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }} options.source
  * @param {Map<string, OrsDetails>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */

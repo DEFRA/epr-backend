@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
@@ -279,8 +280,8 @@ export async function fetchOrGenerateReportForPeriod({
  * The report source — which submission produced the current state, and when
  * it was submitted. A ledger with no submission yet has a null source.
  *
- * @param {{ summaryLogId: string, submittedAt: Date } | null} latestSubmission
- * @returns {{ summaryLogId: string|null, lastUploadedAt: string|null }}
+ * @param {{ summaryLogId: SummaryLogFileId, submittedAt: Date } | null} latestSubmission
+ * @returns {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }}
  */
 function toSource(latestSubmission) {
   return latestSubmission === null

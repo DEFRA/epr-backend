@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 
 /**
@@ -10,7 +11,7 @@ import Boom from '@hapi/boom'
  * belongs to. One not stored yet passes: its upload is still in progress.
  *
  * @param {ResolvedRequest & {
- *   params: { summaryLogId: string },
+ *   params: { summaryLogId: SummaryLogId },
  *   summaryLogsRepository: SummaryLogsRepository
  * }} request
  */

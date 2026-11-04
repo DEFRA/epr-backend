@@ -9,6 +9,8 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -23,6 +25,8 @@ import {
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
@@ -540,16 +544,25 @@ describe('POST /organisations/{organisationNumber}/link', () => {
             createInMemoryOrganisationsRepository([])
           unreadableOrganisationsRepository = organisationsRepositoryFactory()
 
+          const readable = createOrganisationReadRepository({
+            organisationsRepository: unreadableOrganisationsRepository,
+            overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+            logger: /** @type {TypedLogger} */ (
+              /** @type {unknown} */ ({ warn: () => {} })
+            )
+          })
+
+          // The organisation reads as it stands, but never as linked.
           /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
           const organisationReadRepository = {
-            findByOrganisationNumber: async () => null,
-            find: async () => ({
-              items: [],
-              page: 1,
-              pageSize: 0,
-              totalItems: 0,
-              totalPages: 0
-            })
+            ...readable,
+            findByOrganisationNumber: async (
+              organisationNumber,
+              minimumVersion
+            ) =>
+              minimumVersion === undefined
+                ? readable.findByOrganisationNumber(organisationNumber)
+                : null
           }
 
           unreadableServer = await createTestServer({

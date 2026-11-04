@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 
 /**
@@ -7,7 +8,7 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
- * @returns {Promise<{ summaryLogId: string, submittedAt: Date } | null>}
+ * @returns {Promise<{ summaryLogId: SummaryLogFileId, submittedAt: Date } | null>}
  */
 export const latestSubmittedSummaryLog = async (ledgerRepository, ledgerId) => {
   const latest = await ledgerRepository.findLatestInLedgerByKind(

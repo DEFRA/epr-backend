@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
+import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
 
 /**
  * Removes the link between the organisation and its Defra ID organisation.
@@ -20,20 +21,16 @@ export const organisationsUnlink = {
   /**
    * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
+   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository } = request
-    const { organisationNumber } = request.params
-    const {
-      id,
-      version: currentVersion,
-      linkedDefraOrganisation: linkedOrg
-    } = request.app.organisation
+    const { organisationId, organisationNumber } = request.params
+    const { version: currentVersion, linkedDefraOrganisation: linkedOrg } =
+      await findOrganisationReadModel(request)
 
     if (!linkedOrg) {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
@@ -44,9 +41,9 @@ export const organisationsUnlink = {
       currentVersion
     )
 
-    await auditOrganisationUnlinking(request, id, {
-      id: linkedOrg.orgId,
-      name: linkedOrg.orgName
+    await auditOrganisationUnlinking(request, organisationId, {
+      id: linkedOrg.defraOrganisation.id,
+      name: linkedOrg.defraOrganisation.name
     })
     await organisationLinkingMetrics.organisationUnlinked()
 

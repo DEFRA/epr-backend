@@ -12,6 +12,7 @@ import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -131,7 +132,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -162,7 +163,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       await performUpdateViaLedger({
@@ -177,7 +178,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-B'
+        summaryLogId: toSummaryLogFileId('log-B')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -208,7 +209,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -234,7 +235,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -256,7 +257,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       expect(appendSpy).not.toHaveBeenCalled()
@@ -278,7 +279,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -317,7 +318,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: {},
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -350,7 +351,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -368,7 +369,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -393,7 +394,7 @@ describe('performUpdateViaLedger', () => {
           role: null
         },
         overseasSites,
-        summaryLogId: 'log-A'
+        summaryLogId: toSummaryLogFileId('log-A')
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)

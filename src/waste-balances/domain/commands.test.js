@@ -16,11 +16,15 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from './commands.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 describe('submitSummaryLog', () => {
   it('opens a ledger from zero on the first submission', () => {
     expect(
-      submitSummaryLog(null, { summaryLogId: 'log-1', creditTotal: 150 })
+      submitSummaryLog(null, {
+        summaryLogId: toSummaryLogFileId('log-1'),
+        creditTotal: 150
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -39,7 +43,10 @@ describe('submitSummaryLog', () => {
     }
 
     expect(
-      submitSummaryLog(state, { summaryLogId: 'log-2', creditTotal: 200 })
+      submitSummaryLog(state, {
+        summaryLogId: toSummaryLogFileId('log-2'),
+        creditTotal: 200
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -58,7 +65,10 @@ describe('submitSummaryLog', () => {
     }
 
     expect(
-      submitSummaryLog(state, { summaryLogId: 'log-3', creditTotal: 150 })
+      submitSummaryLog(state, {
+        summaryLogId: toSummaryLogFileId('log-3'),
+        creditTotal: 150
+      })
     ).toEqual([
       {
         kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,

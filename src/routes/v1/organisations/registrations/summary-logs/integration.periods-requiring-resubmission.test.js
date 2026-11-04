@@ -39,6 +39,7 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   TEST_OVERSEAS_SITE_ID
 } from './integration-test-helpers.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @typedef {Record<string, { value: unknown, location: { sheet: string, row: number, column: string } }>} SummaryLogMeta
@@ -1118,7 +1119,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         return {
           ...report,
           source: {
-            summaryLogId: 'file-without-row-states',
+            summaryLogId: toSummaryLogFileId('file-without-row-states'),
             lastUploadedAt: report.source?.lastUploadedAt ?? null
           }
         }
@@ -1203,12 +1204,14 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    const afterFailure = await env.summaryLogsRepository.findById('sl-retry')
+    const afterFailure = await env.summaryLogsRepository.findById(
+      toSummaryLogId('sl-retry')
+    )
     expect(afterFailure?.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
     expect(afterFailure?.summaryLog.loadsByReportingPeriod).toBeUndefined()
 
     // As the queue would on redelivery.
-    await env.validateSummaryLog('sl-retry')
+    await env.validateSummaryLog(toSummaryLogId('sl-retry'))
     await pollForValidation(env.server, 'sl-retry')
 
     const loadsByReportingPeriod = await getLoadsByReportingPeriod(

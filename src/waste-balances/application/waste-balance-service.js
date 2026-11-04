@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 
 import { submitSummaryLog as decideSummaryLog } from '../domain/commands.js'
@@ -222,7 +223,7 @@ export const createWasteBalanceService = (
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
      * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
-     * @param {string} options.summaryLogId
+     * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#domain/organisations/numbers.js').RequiredNumbers} options.numbers
      * @returns {Promise<void>}
      */

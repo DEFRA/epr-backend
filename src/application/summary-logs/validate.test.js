@@ -20,6 +20,7 @@ import {
   buildSummaryLogRowStateEntry,
   withNumbers
 } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
@@ -47,7 +48,7 @@ const seedSubmittedSummaryLog = async ({
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     withNumbers(ledgerId),
     rows.map((row) => buildSummaryLogRowStateEntry(row)),
-    summaryLogId
+    toSummaryLogFileId(summaryLogId)
   )
   await ledgerRepository.appendEvents([
     buildLedgerEvent({

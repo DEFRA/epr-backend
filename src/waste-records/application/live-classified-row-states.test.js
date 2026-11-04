@@ -16,6 +16,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const SUMMARY_LOG_ID = 'log-1'
 
@@ -174,7 +175,7 @@ const readLiveStates = async ({
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       withNumbers(ledgerId),
       entries,
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
   }
 

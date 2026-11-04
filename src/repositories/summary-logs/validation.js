@@ -10,14 +10,19 @@ import {
   summaryLogUpdateSchema
 } from './schema.js'
 
+/**
+ * @template {string} Id
+ * @param {Id} id
+ * @returns {Id}
+ */
 export const validateId = (id) => {
-  const { error, value } = idSchema.validate(id)
+  const { error } = idSchema.validate(id)
 
   if (error) {
     throw Boom.badData(error.message)
   }
 
-  return value
+  return id
 }
 
 export const validateSummaryLogInsert = (data) => {

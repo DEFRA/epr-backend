@@ -9,8 +9,9 @@ const RETRY_DELAY_MS = 25
  * Returns the polled resource. The shape varies by repository (organisations,
  * summary-logs, ...), so the return is intentionally untyped.
  *
- * @param {{findById: (arg0: string) => Promise<{ version: number } | null>}} repository - Repository instance with findById method
- * @param {string} id - Resource ID to poll
+ * @template {string} Id
+ * @param {{findById: (arg0: Id) => Promise<{ version: number } | null>}} repository - Repository instance with findById method
+ * @param {Id} id - Resource ID to poll
  * @param {number} expectedVersion - Version number to wait for
  * @returns {Promise<any>}
  * @throws {Error} If expected version not reached after MAX_RETRIES

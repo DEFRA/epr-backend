@@ -18,6 +18,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -150,7 +151,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     it('returns 404 for preprocessing status', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
-        summaryLogId,
+        toSummaryLogId(summaryLogId),
         summaryLogFactory.preprocessing({ organisationId, registrationId })
       )
 

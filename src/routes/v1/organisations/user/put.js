@@ -5,6 +5,11 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
+import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
+
+/** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { OrganisationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 
 /**
  * Adds the user in the token to the organisation, or updates their details.
@@ -17,11 +22,10 @@ export const organisationsUserPut = {
     response: { schema: false }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   params: { organisationId: string },
-   *   app: import('#routes/organisations/at-natural-keys.js').ResolvedRecords
+   * @param {ResolvedRequest & {
+   *   params: OrganisationParams,
    * }} request
-   * @param {import('@hapi/hapi').ResponseToolkit} h
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { organisationId } = request.params
@@ -34,7 +38,7 @@ export const organisationsUserPut = {
     const result = await addOrUpdateOrganisationUser(
       request,
       tokenPayload,
-      request.app.organisation
+      await findOrganisationReadModel(request)
     )
 
     if (

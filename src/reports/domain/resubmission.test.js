@@ -3,6 +3,7 @@ import {
   isResubmissionRequired,
   resubmissionIneligibleReasonToErrorCode
 } from './resubmission.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 describe('isResubmissionRequired', () => {
   it('returns false for null', () => {
@@ -20,7 +21,10 @@ describe('isResubmissionRequired', () => {
   it('returns true when closedPeriodRestated is set', () => {
     expect(
       isResubmissionRequired({
-        closedPeriodRestated: { uploadedAt: '2026-01-01', summaryLogId: 'sl-1' }
+        closedPeriodRestated: {
+          uploadedAt: '2026-01-01',
+          summaryLogId: toSummaryLogFileId('sl-1')
+        }
       })
     ).toBe(true)
   })

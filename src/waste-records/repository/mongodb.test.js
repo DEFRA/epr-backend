@@ -21,6 +21,7 @@ import {
   DEFAULT_LEDGER_ID,
   withNumbers
 } from './test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -236,7 +237,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
         repository.upsertSummaryLogRowStates(
           withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
-          'log-1'
+          toSummaryLogFileId('log-1')
         )
       ).rejects.toBe(upstream)
     })

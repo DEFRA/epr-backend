@@ -8,6 +8,7 @@ import { auditSummaryLogNumbersBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { SummaryLogNumbers } from '#domain/summary-logs/numbers.js' */
 /** @import { SummaryLogStatus } from '#domain/summary-logs/status.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -110,7 +111,7 @@ const reportUnmapped = (
  * reconciliation and counted apart from write failures.
  *
  * @param {Repositories} repositories
- * @param {string} id
+ * @param {SummaryLogId} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
  * @returns {Promise<{ inFlight: boolean, mapped: boolean, unmapped: boolean, auditFailed: boolean } | null>} null if gone

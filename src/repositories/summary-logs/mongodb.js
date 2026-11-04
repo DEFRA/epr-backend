@@ -240,8 +240,9 @@ const assignNumbers = (db, logger) => async (id, version, numbers) => {
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
- * @typedef {SummaryLog & { _id: string, version: number }} SummaryLogDocument
+ * @typedef {SummaryLog & { _id: SummaryLogId, version: number }} SummaryLogDocument
  */
 
 /**
@@ -266,11 +267,11 @@ const findOneVersion = async (db, filter) => {
 }
 
 /** @param {Db} db */
-const findById = (db) => async (/** @type {string} */ id) =>
+const findById = (db) => async (/** @type {SummaryLogId} */ id) =>
   findOneVersion(db, { _id: validateId(id) })
 
 /** @param {Db} db */
-const findByFileId = (db) => async (/** @type {string} */ fileId) =>
+const findByFileId = (db) => async (/** @type {SummaryLogFileId} */ fileId) =>
   findOneVersion(db, { 'file.id': validateId(fileId) })
 
 /**

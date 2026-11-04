@@ -7,6 +7,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
@@ -75,7 +76,7 @@ describe('validateRowContinuity', () => {
    */
   const createPreviousSubmission = (wasteRecordStates) => ({
     summaryLog: {
-      summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
+      summaryLogId: toSummaryLogFileId(PREVIOUS_SUMMARY_LOG_ID),
       submittedAt: PREVIOUS_SUBMITTED_AT
     },
     wasteRecordStates

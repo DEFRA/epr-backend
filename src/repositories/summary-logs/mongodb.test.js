@@ -13,6 +13,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
@@ -82,7 +83,7 @@ describe('MongoDB summary logs repository', () => {
     const insertSubmitted = async (repository, overrides = {}) => {
       const id = `mongo-${randomUUID()}`
       await repository.insert(
-        id,
+        toSummaryLogId(id),
         summaryLogFactory.submitted({
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -100,7 +101,7 @@ describe('MongoDB summary logs repository', () => {
       const id = await insertSubmitted(summaryLogsRepository)
 
       await summaryLogsRepository.getDownloadUrl(
-        id,
+        toSummaryLogId(id),
         toRegistrationNumber('R26ER5000000002PA')
       )
 
@@ -120,13 +121,13 @@ describe('MongoDB summary logs repository', () => {
       })
 
       await summaryLogsRepository.getDownloadUrl(
-        morning,
+        toSummaryLogId(morning),
         toRegistrationNumber('R26ER5000000002PA')
       )
       const first = await lastSignedDisposition()
 
       await summaryLogsRepository.getDownloadUrl(
-        afternoon,
+        toSummaryLogId(afternoon),
         toRegistrationNumber('R26ER5000000002PA')
       )
 
@@ -143,7 +144,7 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertSubmitted(summaryLogsRepository)
 
-      await summaryLogsRepository.getDownloadUrl(id)
+      await summaryLogsRepository.getDownloadUrl(toSummaryLogId(id))
 
       expect(await lastSignedDisposition()).toBeUndefined()
     })
@@ -282,7 +283,7 @@ describe('MongoDB summary logs repository', () => {
 
       await expect(
         repository.insert(
-          `test-${randomUUID()}`,
+          toSummaryLogId(`test-${randomUUID()}`),
           summaryLogFactory.validating()
         )
       ).rejects.toThrow('Connection timeout')
@@ -310,7 +311,9 @@ describe('MongoDB summary logs repository', () => {
       )
       const repository = repositoryFactory(createMockLogger())
 
-      const result = await repository.transitionToSubmittingExclusive(logId)
+      const result = await repository.transitionToSubmittingExclusive(
+        toSummaryLogId(logId)
+      )
 
       expect(result.success).toBe(false)
     })
@@ -332,7 +335,7 @@ describe('MongoDB summary logs repository', () => {
       const repository = repositoryFactory(createMockLogger())
 
       await expect(
-        repository.transitionToSubmittingExclusive(logId)
+        repository.transitionToSubmittingExclusive(toSummaryLogId(logId))
       ).rejects.toThrow('Connection timeout')
     })
   })
@@ -378,7 +381,7 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertLegacySummaryLog(mongoClient, {})
 
-      const found = await summaryLogsRepository.findById(id)
+      const found = await summaryLogsRepository.findById(toSummaryLogId(id))
 
       expect(found?.summaryLog.loads?.added.valid.rowIds).toEqual([
         '1000',

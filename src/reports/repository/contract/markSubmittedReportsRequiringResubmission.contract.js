@@ -1,4 +1,5 @@
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
@@ -12,7 +13,7 @@ import {
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
-const SL_ID = 'sl-id-new-000000000000000000000002'
+const SL_ID = toSummaryLogFileId('sl-id-new-000000000000000000000002')
 const UPLOADED_AT = '2026-06-01T12:00:00.000Z'
 
 const period = (period, overrides = {}) => ({

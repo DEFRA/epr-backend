@@ -34,6 +34,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -118,7 +119,7 @@ const seedState = async ({ organisationId, registration }, entries) => {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       withNumbers(ledgerId),
       entries,
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     ledgerEvents.push(
       buildLedgerEvent({
@@ -205,12 +206,12 @@ describe('report-service', () => {
       await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
         withNumbers(ledgerId),
         [buildReceivedEntry({ SUPPLIER_NAME: 'First Supplier' })],
-        'sl-1'
+        toSummaryLogFileId('sl-1')
       )
       await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
         withNumbers(ledgerId),
         [buildReceivedEntry({ SUPPLIER_NAME: 'Second Supplier' })],
-        'sl-2'
+        toSummaryLogFileId('sl-2')
       )
 
       const firstSubmission = /** @type {LedgerEvent} */ (
@@ -308,7 +309,7 @@ describe('report-service', () => {
         material: 'plastic',
         wasteProcessingType: 'reprocessor',
         source: {
-          summaryLogId: 'sl-1',
+          summaryLogId: toSummaryLogFileId('sl-1'),
           lastUploadedAt: '2026-04-01T21:22:28.351Z'
         },
         prn: null,
@@ -361,7 +362,10 @@ describe('report-service', () => {
         changedBy,
         material: 'plastic',
         wasteProcessingType: 'reprocessor',
-        source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+        source: {
+          summaryLogId: toSummaryLogFileId('sl-1'),
+          lastUploadedAt: null
+        },
         prn: null,
         recyclingActivity: {
           suppliers: [],
@@ -537,7 +541,10 @@ describe('report-service', () => {
           changedBy,
           material: 'plastic',
           wasteProcessingType: 'reprocessor',
-          source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+          source: {
+            summaryLogId: toSummaryLogFileId('sl-1'),
+            lastUploadedAt: null
+          },
           prn: null,
           recyclingActivity: {
             suppliers: [],
@@ -580,7 +587,10 @@ describe('report-service', () => {
       changedBy,
       material: 'plastic',
       wasteProcessingType: 'reprocessor',
-      source: { summaryLogId: 'sl-1', lastUploadedAt: null },
+      source: {
+        summaryLogId: toSummaryLogFileId('sl-1'),
+        lastUploadedAt: null
+      },
       prn: null,
       recyclingActivity: {
         suppliers: [],

@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 
 /**
@@ -27,7 +28,7 @@ import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-su
  *
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
- * @param {string | null} head
+ * @param {SummaryLogFileId | null} head
  * @returns {Promise<WasteRecordState[]>}
  */
 export const wasteRecordStatesForHead = async (
@@ -47,7 +48,7 @@ export const wasteRecordStatesForHead = async (
  * that belong to it — the baseline a subsequent upload is judged against.
  *
  * @typedef {Object} PreviousSubmission
- * @property {{ summaryLogId: string, submittedAt: Date }} summaryLog
+ * @property {{ summaryLogId: SummaryLogFileId, submittedAt: Date }} summaryLog
  * @property {WasteRecordState[]} wasteRecordStates
  */
 
