@@ -272,6 +272,35 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
+  it.each([
+    { held: 'registrations', number: 'registrationNumber' },
+    { held: 'accreditations', number: 'accreditationNumber' }
+  ])(
+    'refuses a summary log, storing nothing, when the $number is missing',
+    async ({ held, number }) => {
+      const env = await createEnvironment()
+      const { organisationsRepository } = env
+      const findById = organisationsRepository.findById
+      vi.spyOn(organisationsRepository, 'findById').mockImplementation(
+        async (id) => {
+          const organisation = /** @type {*} */ (await findById(id))
+          delete organisation[held][0][number]
+          return organisation
+        }
+      )
+
+      const response = await submit(
+        env,
+        payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual(
+        []
+      )
+    }
+  )
+
   it('returns 422 for an invalid year', async () => {
     const env = await createEnvironment()
 
