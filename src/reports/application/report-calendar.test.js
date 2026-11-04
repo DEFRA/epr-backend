@@ -379,7 +379,7 @@ describe('yearCalendar with mid-year status transition off', () => {
     expect(result.accredited?.reportingPeriods).toHaveLength(11)
   })
 
-  it('lists whole registered-only quarters from the one the accreditation was cancelled in', () => {
+  it('lists accredited months up to the one the accreditation was cancelled in, and nothing after', () => {
     const result = calendar({
       registration: registeredSinceLastYear([
         approvedOn('2026-01-01'),
@@ -387,11 +387,44 @@ describe('yearCalendar with mid-year status transition off', () => {
       ])
     })
 
-    expect(result).not.toHaveProperty('accredited')
-    expect(spans(result.registeredOnly?.reportingPeriods)).toEqual([
-      { period: 3, startDate: '2026-07-01', endDate: '2026-09-30' },
-      { period: 4, startDate: '2026-10-01', endDate: '2026-12-31' }
+    expect(result).not.toHaveProperty('registeredOnly')
+    expect(periodNumbers(result.accredited?.reportingPeriods)).toEqual([
+      1, 2, 3, 4, 5, 6, 7
     ])
+  })
+
+  it('lists accredited months up to the one the registration was cancelled in, and nothing after', () => {
+    const registration = withRegAccStatus({
+      status: {
+        timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
+      },
+      accreditations: {
+        2026: {
+          accreditationNumber: 'ACC-2026',
+          status: { current: 'approved', timeline: [approvedOn('2026-01-01')] }
+        }
+      }
+    })
+
+    const result = calendar({ registration })
+
+    expect(result).not.toHaveProperty('registeredOnly')
+    expect(periodNumbers(result.accredited?.reportingPeriods)).toEqual([
+      1, 2, 3, 4, 5
+    ])
+  })
+
+  it('lists registered-only quarters up to the one the registration was cancelled in, and nothing after', () => {
+    const registration = withRegAccStatus({
+      status: {
+        timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
+      },
+      accreditations: {}
+    })
+
+    expect(
+      periodNumbers(calendar({ registration }).registeredOnly?.reportingPeriods)
+    ).toEqual([1, 2])
   })
 
   it('lists whole quarters from the one a registration was approved in', () => {
@@ -478,7 +511,7 @@ describe('reportingPeriodsByKind', () => {
   describe('with mid-year status transition off', () => {
     withMidYearStatusTransition(false)
 
-    it('lists only the stored reports of an accreditation cancelled since', () => {
+    it('lists only accredited months, up to the cancellation, for an accreditation cancelled since', () => {
       const result = byKind(
         registeredSinceLastYear([
           approvedOn('2026-02-15'),
@@ -487,10 +520,8 @@ describe('reportingPeriodsByKind', () => {
         [storedMarch]
       )
 
-      expect(result.accredited.map(({ period }) => period)).toEqual([3])
-      expect(result.registeredOnly.map(({ period }) => period)).toEqual([
-        1, 3, 4
-      ])
+      expect(periodNumbers(result.accredited)).toEqual([2, 3, 4, 5, 6, 7])
+      expect(result.registeredOnly).toEqual([])
     })
 
     it('lists only the current kind, in whole periods', () => {
