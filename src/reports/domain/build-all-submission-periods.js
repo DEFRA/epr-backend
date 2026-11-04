@@ -35,14 +35,15 @@ import { REPORT_STATUS } from './report-status.js'
  * synthetic skeleton slot.
  *
  * @param {MergedPeriod[]} mergedPeriods
+ * @param {Date} [now]
  * @returns {CalendarPeriod[]}
  */
-export const buildAllSubmissionPeriods = (mergedPeriods) =>
+export const buildAllSubmissionPeriods = (mergedPeriods, now = new Date()) =>
   mergedPeriods.flatMap((mergedPeriod) => {
     // previousSubmissions is a feed-only projection, not part of a calendar
     // item, so it is dropped rather than spread through.
     const { previousSubmissions = [], ...period } = mergedPeriod
-    const currentStateItems = buildCalendarPeriods([mergedPeriod])
+    const currentStateItems = buildCalendarPeriods([mergedPeriod], now)
     const surfacedReportIds = new Set(
       currentStateItems.flatMap((item) => (item.report ? [item.report.id] : []))
     )

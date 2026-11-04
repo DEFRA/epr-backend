@@ -1,9 +1,11 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { summaryLogMetrics } from './metrics.js'
 
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -16,9 +18,7 @@ import { summaryLogMetrics } from './metrics.js'
  * @param {{
  *   summaryLogsRepository: SummaryLogsRepository,
  *   summaryLog: SummaryLog,
- *   summaryLogId: string,
- *   organisationId: string,
- *   registrationId: string,
+ *   summaryLogId: SummaryLogId,
  *   version: number
  * }} params
  * @returns {Promise<boolean>} true when the log was stale and is now superseded
@@ -27,17 +27,11 @@ export const supersedeIfStale = async ({
   summaryLogsRepository,
   summaryLog,
   summaryLogId,
-  organisationId,
-  registrationId,
   version
 }) => {
-  const currentLatest =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg({
-      organisationId,
-      registrationId,
-      year: summaryLog.year,
-      accreditationId: summaryLog.accreditationId
-    })
+  const currentLatest = await summaryLogsRepository.findLatestSubmitted(
+    summaryLogKeyOf(summaryLog)
+  )
 
   const baseline = summaryLog.validatedAgainstSummaryLogId
   const current = currentLatest?.id ?? NO_PRIOR_SUBMISSION

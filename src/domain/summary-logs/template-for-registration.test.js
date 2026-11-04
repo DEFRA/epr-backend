@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { PROCESSING_TYPES } from './meta-fields.js'
 import { templateForRegistration } from './template-for-registration.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TemplateRegistration } from './template-for-registration.js' */
 /** @import { ProcessingType } from './meta-fields.js' */
 
-const accreditation = { accreditationNumber: 'ACC-1' }
+const accreditation = { accreditationNumber: toAccreditationNumber('ACC-1') }
 
 /** @type {[string, TemplateRegistration, ProcessingType, number][]} */
 const cases = [

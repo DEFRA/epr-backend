@@ -1,6 +1,6 @@
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -18,9 +18,11 @@ import {
   overseasSites,
   pendingOverseasSite,
   reprocessor,
-  reprocessorAt,
-  yoda
+  reprocessorAt
 } from './organisation-read-test-helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -33,10 +35,50 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       organisationReadRepositoryWith
     }) => {
       const repository = await organisationReadRepositoryWith({
-        organisations: [buildOrganisation({ orgId: 500001 })]
+        organisations: [buildOrganisation()]
       })
 
-      expect(await repository.findByOrganisationNumber(500002)).toBeNull()
+      expect(
+        await repository.findByOrganisationNumber(
+          toOrganisationNumber(String(nextOrgId()))
+        )
+      ).toBeNull()
+    })
+
+    it('returns the organisation once the stored version reaches minimumVersion', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = { ...buildOrganisation(), version: 3 }
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await repository.findByOrganisationNumber(
+        toOrganisationNumber(String(stored.orgId)),
+        3
+      )
+
+      expect(organisation?.organisationNumber).toBe(String(stored.orgId))
+    })
+
+    it('throws timeout error when minimumVersion never arrives', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      await expect(
+        repository.findByOrganisationNumber(
+          toOrganisationNumber(String(stored.orgId)),
+          999
+        )
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        message: 'Consistency timeout waiting for minimum version'
+      })
     })
 
     it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({
@@ -51,10 +93,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation).toEqual({
-        organisationNumber: stored.orgId,
+        organisationNumber: String(stored.orgId),
         name: 'ACME ltd',
         tradingName: 'ACME ltd',
         companiesHouseNumber: 'AC012345',
@@ -63,11 +108,14 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           town: 'London',
           postcode: 'SW1A 0AA'
         },
-        status: 'created',
-        statusTimeline: {
-          [new Date(stored.statusHistory[0].updatedAt).toISOString()]: {
-            status: 'created'
-          }
+        status: {
+          current: 'created',
+          timeline: [
+            {
+              status: 'created',
+              at: new Date(stored.statusHistory[0].updatedAt).toISOString()
+            }
+          ]
         },
         submittedToRegulator: { code: 'ea' },
         submitterContactDetails: anakin,
@@ -77,11 +125,19 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           [REPROCESSOR_NUMBER]: {
             applicationContactDetails: luke,
             approvedPersons: [luke],
-            status: 'approved',
-            statusTimeline: approvedTimeline('2026-02-01'),
+            status: {
+              current: 'approved',
+              timeline: approvedTimeline('2026-02-01')
+            },
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
+            regAccStatusByDate: expect.objectContaining({
+              2026: {
+                '2026-02-01': { status: 'registeredOnly' },
+                '2026-07-01': { status: 'accredited' }
+              }
+            }),
             submittedToRegulator: { code: 'ea' },
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
@@ -95,10 +151,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             accreditations: {
               2026: {
                 accreditationNumber: ACCREDITATION_NUMBER,
-                prnIssuance: { signatories: [yoda], tonnageBand: 'over_10000' },
-                status: 'approved',
-                statusTimeline: approvedTimeline('2026-07-01'),
-                submitterContactDetails: yoda
+                prnIssuance: { tonnageBand: 'over_10000' },
+                status: {
+                  current: 'approved',
+                  timeline: approvedTimeline('2026-07-01')
+                }
               }
             }
           }
@@ -115,16 +172,24 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         overseasSites
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
         applicationContactDetails: anakin,
         approvedPersons: [anakin],
-        status: 'approved',
-        statusTimeline: approvedTimeline('2026-02-01'),
+        status: {
+          current: 'approved',
+          timeline: approvedTimeline('2026-02-01')
+        },
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',
+        regAccStatusByDate: expect.objectContaining({
+          2026: { '2026-02-01': { status: 'registeredOnly' } }
+        }),
         submittedToRegulator: { code: 'ea' },
         wasteProcessingType: 'exporter',
         overseasSites: {
@@ -148,7 +213,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         overseasSites
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         organisation.registrations[EXPORTER_NUMBER].accreditations[2026]
@@ -176,7 +244,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         Object.keys(
@@ -205,7 +276,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
         'site',
@@ -223,7 +297,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toHaveProperty(
         'overseasSites',
@@ -242,14 +319,17 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation).not.toHaveProperty('tradingName')
       expect(organisation).not.toHaveProperty('companiesHouseNumber')
       expect(organisation).not.toHaveProperty('registeredAddress')
     })
 
-    it("lists the organisation's users with their roles", async ({
+    it("lists the organisation's users with their names and roles", async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -272,15 +352,23 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.users).toEqual([
         {
           contactId: 'contact-1',
           email: 'han@example.com',
+          fullName: 'Han Solo',
           roles: ['initial_user']
         },
-        { email: 'leia@example.com', roles: ['standard_user'] }
+        {
+          email: 'leia@example.com',
+          fullName: 'Leia Organa',
+          roles: ['standard_user']
+        }
       ])
     })
 
@@ -296,7 +384,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.linkedDefraOrganisation).toEqual({
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
@@ -320,7 +411,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(organisation.linkedDefraOrganisation?.linkedAt).toBe(
         '2026-03-04T05:06:07.000Z'
@@ -340,7 +434,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         organisations: [stored]
       })
 
-      const organisation = await findOrganisation(repository, stored.orgId)
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].applicationContactDetails

@@ -1,38 +1,60 @@
+import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import {
-  summaryLogFactory,
-  withoutYear
-} from '#repositories/summary-logs/contract/test-data.js'
+  REPROCESSOR_NUMBER,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { summaryLogsListPath } from './get.js'
 
-const pathFor = (organisationId, registrationId) =>
-  summaryLogsListPath
-    .replace('{organisationId}', organisationId)
-    .replace('{registrationId}', registrationId)
+const { buildOrganisation } = createOrganisationBuilders()
 
-describe(`${summaryLogsListPath} route`, () => {
+const OTHER_REGISTRATION_NUMBER = 'R26ER5001180099PL'
+
+const registration = reprocessor()
+const otherRegistration = reprocessor({
+  registrationNumber: OTHER_REGISTRATION_NUMBER
+})
+const organisation = buildOrganisation({
+  registrations: [registration, otherRegistration]
+})
+
+const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+const registrationNumber = registration.registrationNumber
+const registrations = `/organisations/${organisation.orgId}/registrations`
+const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
+const year = currentUtcYear()
+const urlForYear = `${url}?year=${year}`
+
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs', () => {
   setupAuthContext()
 
   let server
   let summaryLogsRepository
 
-  beforeAll(async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository()()
+  beforeEach(async () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -40,191 +62,168 @@ describe(`${summaryLogsListPath} route`, () => {
     await server.initialize()
   })
 
-  afterAll(async () => {
+  afterEach(async () => {
     await server.stop()
   })
 
+  const list = (path = urlForYear) =>
+    server.inject({ method: 'GET', url: path, ...asServiceMaintainer() })
+
   describe('successful requests', () => {
     it('returns 200 with an empty array when no logs exist for the registration', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({ summaryLogs: [] })
     })
 
     it('returns successful and failed logs for the registration, newest first', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
       const submittedId = new ObjectId().toString()
       const failedId = new ObjectId().toString()
 
       await summaryLogsRepository.insert(
         submittedId,
-        withoutYear(
-          summaryLogFactory.submitted({
-            organisationId,
-            registrationId,
-            submittedAt: '2026-02-01T10:00:00.000Z',
-            createdAt: '2026-02-01T09:55:00.000Z',
-            file: { name: 'january.xlsx' }
-          })
-        )
+        summaryLogFactory.submitted({
+          organisationNumber,
+          registrationNumber,
+          year,
+          submittedAt: '2026-02-01T10:00:00.000Z',
+          createdAt: '2026-02-01T09:55:00.000Z',
+          file: { name: 'january.xlsx' }
+        })
       )
 
       await summaryLogsRepository.insert(
         failedId,
-        withoutYear(
-          summaryLogFactory.validationFailed({
-            organisationId,
-            registrationId,
-            createdAt: '2026-02-02T11:00:00.000Z',
-            file: { name: 'february.xlsx' }
-          })
-        )
+        summaryLogFactory.validationFailed({
+          organisationNumber,
+          registrationNumber,
+          year,
+          createdAt: '2026-02-02T11:00:00.000Z',
+          file: { name: 'february.xlsx' }
+        })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-
-      const payload = JSON.parse(response.payload)
-      expect(payload).toEqual({
+      expect(JSON.parse(response.payload)).toEqual({
         summaryLogs: [
           {
             summaryLogId: failedId,
             filename: 'february.xlsx',
             uploadedAt: '2026-02-02T11:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            year,
+            accreditationNumber: null
           },
           {
             summaryLogId: submittedId,
             filename: 'january.xlsx',
             uploadedAt: '2026-02-01T10:00:00.000Z',
-            status: SUMMARY_LOG_STATUS.SUBMITTED
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            year,
+            accreditationNumber: null
           }
         ]
       })
     })
 
-    it('includes year and accreditationId when present', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-      const submittedId = new ObjectId().toString()
-
+    it('does not include the accreditation id', async () => {
       await summaryLogsRepository.insert(
-        submittedId,
+        new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          year: 2026,
+          organisationNumber,
+          registrationNumber,
           accreditationId: 'acc-1'
         })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
-      const payload = JSON.parse(response.payload)
-      expect(payload.summaryLogs[0]).toMatchObject({
-        year: 2026,
-        accreditationId: 'acc-1'
-      })
+      const [row] = JSON.parse(response.payload).summaryLogs
+      expect(row).not.toHaveProperty('accreditationId')
     })
 
-    it('omits year and accreditationId for a legacy log carrying neither', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-      const submittedId = new ObjectId().toString()
-
+    it('includes the accreditation number for an accredited log', async () => {
       await summaryLogsRepository.insert(
-        submittedId,
-        withoutYear(
-          summaryLogFactory.submitted({ organisationId, registrationId })
-        )
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationNumber,
+          registrationNumber,
+          accreditationId: 'acc-1',
+          accreditationNumber: toAccreditationNumber('A26ER5001180001PL')
+        })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
-      const payload = JSON.parse(response.payload)
-      expect(payload.summaryLogs[0]).not.toHaveProperty('year')
-      expect(payload.summaryLogs[0]).not.toHaveProperty('accreditationId')
+      const [row] = JSON.parse(response.payload).summaryLogs
+      expect(row.accreditationNumber).toBe('A26ER5001180001PL')
+    })
+
+    it('returns only the logs for the year asked for', async () => {
+      const ids = {}
+      for (const logYear of [2025, 2026]) {
+        ids[logYear] = new ObjectId().toString()
+        await summaryLogsRepository.insert(
+          ids[logYear],
+          summaryLogFactory.submitted({
+            organisationNumber,
+            registrationNumber,
+            year: toYear(logYear)
+          })
+        )
+      }
+
+      const response = await list(`${url}?year=2025`)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { summaryLogs } = JSON.parse(response.payload)
+      expect(summaryLogs.map(({ summaryLogId }) => summaryLogId)).toEqual([
+        ids[2025]
+      ])
     })
 
     it('excludes intermediate statuses from the list', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.preprocessing({ organisationId, registrationId })
-      )
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.validating({ organisationId, registrationId })
-      )
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.validated({ organisationId, registrationId })
-      )
-      await summaryLogsRepository.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submitting({ organisationId, registrationId })
-      )
+      for (const build of [
+        summaryLogFactory.preprocessing,
+        summaryLogFactory.validating,
+        summaryLogFactory.validated,
+        summaryLogFactory.submitting
+      ]) {
+        await summaryLogsRepository.insert(
+          new ObjectId().toString(),
+          build({ organisationNumber, registrationNumber })
+        )
+      }
 
       const visibleId = new ObjectId().toString()
       await summaryLogsRepository.insert(
         visibleId,
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           submittedAt: '2026-03-01T10:00:00.000Z'
         })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.summaryLogs).toHaveLength(1)
-      expect(payload.summaryLogs[0].summaryLogId).toBe(visibleId)
-      expect(payload.summaryLogs[0].status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+      const { summaryLogs } = JSON.parse(response.payload)
+      expect(summaryLogs).toHaveLength(1)
+      expect(summaryLogs[0].summaryLogId).toBe(visibleId)
+      expect(summaryLogs[0].status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
     })
 
     it('does not leak logs from other organisations or registrations', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-      const otherOrgId = new ObjectId().toString()
-      const otherRegId = new ObjectId().toString()
-
       const ownId = new ObjectId().toString()
       await summaryLogsRepository.insert(
         ownId,
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           submittedAt: '2026-04-01T10:00:00.000Z'
         })
       )
@@ -232,8 +231,8 @@ describe(`${summaryLogsListPath} route`, () => {
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId: otherOrgId,
-          registrationId,
+          organisationNumber: toOrganisationNumber('999999'),
+          registrationNumber,
           submittedAt: '2026-04-02T10:00:00.000Z'
         })
       )
@@ -241,66 +240,81 @@ describe(`${summaryLogsListPath} route`, () => {
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId,
-          registrationId: otherRegId,
+          organisationNumber,
+          registrationNumber: otherRegistration.registrationNumber,
           submittedAt: '2026-04-03T10:00:00.000Z'
         })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
       expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.summaryLogs).toHaveLength(1)
-      expect(payload.summaryLogs[0].summaryLogId).toBe(ownId)
+      const { summaryLogs } = JSON.parse(response.payload)
+      expect(summaryLogs).toHaveLength(1)
+      expect(summaryLogs[0].summaryLogId).toBe(ownId)
     })
 
     it('uses createdAt for uploadedAt when submittedAt is absent (e.g. invalid/validation_failed)', async () => {
-      const organisationId = new ObjectId().toString()
-      const registrationId = new ObjectId().toString()
-
       const failedId = new ObjectId().toString()
       await summaryLogsRepository.insert(
         failedId,
         summaryLogFactory.invalid({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           createdAt: '2026-05-10T08:00:00.000Z'
         })
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(organisationId, registrationId),
-        ...asServiceMaintainer()
-      })
+      const response = await list()
 
-      const payload = JSON.parse(response.payload)
-      const row = payload.summaryLogs.find((r) => r.summaryLogId === failedId)
+      const row = JSON.parse(response.payload).summaryLogs.find(
+        (r) => r.summaryLogId === failedId
+      )
       expect(row.uploadedAt).toBe('2026-05-10T08:00:00.000Z')
       expect(row.status).toBe(SUMMARY_LOG_STATUS.INVALID)
     })
   })
 
   describe('error scenarios', () => {
-    it('returns 500 when repository throws', async () => {
-      const errorSpy = vi
-        .spyOn(summaryLogsRepository, 'findAllByOrgReg')
-        .mockRejectedValue(new Error('Simulated Database Failure'))
+    it('returns 404 for a registration the organisation does not hold', async () => {
+      const response = await list(
+        `${registrations}/R26ER9999999999PL/summary-logs?year=${year}`
+      )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: pathFor(new ObjectId().toString(), new ObjectId().toString()),
-        ...asServiceMaintainer()
-      })
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for an unknown organisation', async () => {
+      const response = await list(
+        `/organisations/999999/registrations/${REPROCESSOR_NUMBER}/summary-logs?year=${year}`
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 422 when the year is missing', async () => {
+      const response = await list(url)
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it.each(['abc', '2026.5', '1999'])(
+      'returns 422 for the year %s',
+      async (invalidYear) => {
+        const response = await list(`${url}?year=${invalidYear}`)
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
+
+    it('returns 500 when repository throws', async () => {
+      vi.spyOn(summaryLogsRepository, 'findAll').mockRejectedValue(
+        new Error('Simulated Database Failure')
+      )
+
+      const response = await list()
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-
-      errorSpy.mockRestore()
     })
   })
 
@@ -308,7 +322,7 @@ describe(`${summaryLogsListPath} route`, () => {
     it('returns 401 when not authenticated', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: pathFor(new ObjectId().toString(), new ObjectId().toString())
+        url: urlForYear
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -317,7 +331,7 @@ describe(`${summaryLogsListPath} route`, () => {
     it('returns 403 when user is not a service maintainer', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: pathFor(new ObjectId().toString(), new ObjectId().toString()),
+        url: urlForYear,
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 

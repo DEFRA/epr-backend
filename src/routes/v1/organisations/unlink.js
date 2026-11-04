@@ -4,10 +4,13 @@ import { StatusCodes } from 'http-status-codes'
 
 import { auditOrganisationUnlinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
+import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
 
+/**
+ * Removes the link between the organisation and its Defra ID organisation.
+ */
 export const organisationsUnlink = {
   method: 'DELETE',
-  path: '/v1/organisations/{organisationId}/link',
   options: {
     auth: {
       scope: [SCOPES.adminWrite]
@@ -16,37 +19,31 @@ export const organisationsUnlink = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest & {
    *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
-   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
-   *    params: { organisationId: string }
+   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationId } = request.params
-
     const { organisationsRepository } = request
-    const {
-      id,
-      version: currentVersion,
-      ...organisation
-    } = await organisationsRepository.findById(organisationId)
+    const { organisationId, organisationNumber } = request.params
+    const { version: currentVersion, linkedDefraOrganisation: linkedOrg } =
+      await findOrganisationReadModel(request)
 
-    if (!organisation.linkedDefraOrganisation) {
+    if (!linkedOrg) {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
-    const linkedOrg = organisation.linkedDefraOrganisation
-    await organisationsRepository.replace(id, currentVersion, {
-      ...organisation,
-      linkedDefraOrganisation: undefined
-    })
+    await organisationsRepository.unlinkDefraOrganisation(
+      organisationNumber,
+      currentVersion
+    )
 
-    await auditOrganisationUnlinking(request, id, {
-      id: linkedOrg.orgId,
-      name: linkedOrg.orgName
+    await auditOrganisationUnlinking(request, organisationId, {
+      id: linkedOrg.defraOrganisation.id,
+      name: linkedOrg.defraOrganisation.name
     })
     await organisationLinkingMetrics.organisationUnlinked()
 

@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { StatusCodes } from 'http-status-codes'
 
 import {
@@ -5,7 +6,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { getDefaultStatus } from '#domain/summary-logs/status.js'
-import { summaryLogResponseSchema } from './response.schema.js'
+import { summaryLogGetResponseSchema } from './response.schema.js'
 import { toSummaryLogResponse } from './summary-log-response.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -13,22 +14,18 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
-export const summaryLogsGetPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}'
-
 export const summaryLogsGet = {
   method: 'GET',
-  path: summaryLogsGetPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead]),
     tags: ['api'],
     response: {
-      schema: summaryLogResponseSchema
+      schema: summaryLogGetResponseSchema
     }
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit

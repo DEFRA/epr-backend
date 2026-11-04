@@ -1,28 +1,23 @@
 import Joi from 'joi'
 
-import { yearSchema } from '#common/validation/year-schema.js'
-import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
+export const calendarQuerySchema = Joi.object({
+  expand: Joi.string().valid('submissions')
+})
 
 export const submissionNumberSchema = Joi.number().integer().min(1).required()
 
-export const periodParamsSchema = Joi.object({
-  organisationId: Joi.string().required(),
-  registrationId: Joi.string().required(),
-  year: yearSchema().required(),
-  cadence: cadenceSchema,
-  period: periodSchema,
-  submissionNumber: submissionNumberSchema
-})
-
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  *
- * @typedef {{
+ * @typedef {RegistrationParams & {
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: Cadence,
  *   period: number,
  *   accreditationId?: string | null
@@ -59,7 +54,7 @@ export async function findRegistrationForReport(
 /**
  * Wraps a report (stored or computed) with registration details.
  * @param {object} report
- * @param {Registration} registration
+ * @param {ReadModelRegistration} registration
  * @returns {object}
  */
 export function withRegistrationDetails(report, registration) {
@@ -67,7 +62,7 @@ export function withRegistrationDetails(report, registration) {
     ...report,
     details: {
       material: registration.material,
-      site: registration.site
+      site: 'site' in registration ? registration.site : undefined
     }
   }
 }

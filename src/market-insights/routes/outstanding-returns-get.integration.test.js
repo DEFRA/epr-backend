@@ -1,3 +1,5 @@
+import { toYear } from '#common/helpers/dates/year.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -8,7 +10,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import {
@@ -22,6 +24,9 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const januaryToFebruary2026 = marketInsightsOutstandingReturnsPath
   .replace('{year}', '2026')
@@ -114,7 +119,7 @@ const seedOperatorOwingFebruary = async ({
   await buildSubmittedReport(reportsRepository, {
     organisationId: organisation.id,
     registrationId: registration.id,
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 1
   })

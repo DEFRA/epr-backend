@@ -2,7 +2,8 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 const REGISTERED_ONLY = { ...DEFAULT_LEDGER_ID, accreditationId: null }
@@ -35,7 +36,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns every row state of the submission', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1' }),
           buildSummaryLogRowStateEntry({ rowId: 'row-2' }),
@@ -55,7 +56,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns the full row state, carrying the partition that wrote it', async () => {
       await repository.upsertSummaryLogRowStates(
-        REGISTERED_ONLY,
+        withNumbers(REGISTERED_ONLY),
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'file-1'
       )
@@ -75,7 +76,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns the rows of whichever partition wrote them without being told which', async () => {
       await repository.upsertSummaryLogRowStates(
-        OTHER_ACCREDITATION,
+        withNumbers(OTHER_ACCREDITATION),
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'file-1'
       )
@@ -88,7 +89,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns an empty list for that file id under a different registration', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'file-1'
       )
@@ -98,7 +99,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns an empty list for that file id under a different organisation', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'file-1'
       )
@@ -108,14 +109,14 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
 
     it('returns the rows of an earlier submission, not only the latest', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 1 } })
         ],
         'file-old'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 2 } })
         ],

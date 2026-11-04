@@ -10,9 +10,6 @@ permissions:
   contents: write
   pull-requests: write
 
-concurrency:
-  group: publish
-
 env:
   AWS_REGION: eu-west-2
   AWS_ACCOUNT_ID: "094954420758"
@@ -21,7 +18,8 @@ jobs:
   build:
     if: github.run_number != 1
     name: CDP-build-workflow
-    needs: lint-types
+    concurrency:
+      group: publish
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -29,16 +27,35 @@ jobs:
         with:
           fetch-depth: 0 # Depth 0 is required for branch-based versioning
 
+      - name: Build and Publish
+        uses: DEFRA/cdp-build-action/build@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-and-scan:
+    if: github.run_number != 1
+    name: Test and Scan
+    concurrency:
+      group: publish-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Depth 0 is required for the Sonar baseline tag
+
+      # The shared action takes Sonar's version from the nearest tag, so a tag
+      # the build has already put on HEAD would reset the baseline too early.
+      - name: Drop the tag the build puts on HEAD
+        run: git tag --points-at HEAD | xargs -r git tag -d
+
       - name: Test and Scan
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           sonar-token: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Build and Publish
-        uses: DEFRA/cdp-build-action/build@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint-types:
     name: Lint Types

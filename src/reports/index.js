@@ -7,6 +7,5 @@
  */
 
 // Route exports
-export { reportsGet } from './routes/get.js'
 export { reportsGetDetail } from './routes/get-detail.js'
 export { getReportSubmissions } from './routes/submissions.js'

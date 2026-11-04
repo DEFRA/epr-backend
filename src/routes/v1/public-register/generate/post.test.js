@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -6,9 +7,12 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockAuditPublicRegisterGenerate = vi.fn()
 

@@ -1,10 +1,11 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -17,6 +18,9 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { runCancelledAccreditationReportsDiagnostic } from './run.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -86,7 +90,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
   it('logs each cancelled accreditation, each of its reports and the summary', async () => {
     const accreditation = buildAccreditation({
       status: 'cancelled',
-      accreditationNumber: 'A26RE000001PA',
+      accreditationNumber: toAccreditationNumber('A26RE000001PA'),
       material: 'paper',
       validFrom: '2026-01-01',
       validTo: '2026-12-31',
@@ -107,7 +111,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     const reportId = await createAndSubmitReport(reportsRepository, {
       organisationId: organisation.id,
       registrationId: registration.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 3
     })

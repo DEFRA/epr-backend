@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import {
   reportDetailResponseSchema,
-  reportsCalendarResponseSchema
+  reportsYearCalendarResponseSchema
 } from './response.schema.js'
 
 const validReport = {
@@ -22,20 +22,24 @@ const validItem = {
   dueDate: '2026-02-20',
   submissionNumber: 1,
   periodStatus: PERIOD_STATUS.DUE,
-  report: null
+  report: null,
+  cadence: 'monthly'
 }
 
-const validResponse = {
-  cadence: 'monthly',
-  reportingPeriods: [
-    validItem,
-    { ...validItem, period: 2, report: validReport }
-  ]
-}
+/** @param {object[]} reportingPeriods */
+const accreditedCalendar = (reportingPeriods) => ({
+  year: 2026,
+  accredited: { accreditationNumber: 'ACC-1', reportingPeriods }
+})
 
-describe('reportsCalendarResponseSchema', () => {
+const validResponse = accreditedCalendar([
+  validItem,
+  { ...validItem, period: 2, report: validReport }
+])
+
+describe('reportsYearCalendarResponseSchema', () => {
   it('accepts a well-formed calendar response', () => {
-    const { error } = reportsCalendarResponseSchema.validate(validResponse)
+    const { error } = reportsYearCalendarResponseSchema.validate(validResponse)
 
     expect(error).toBeUndefined()
   })
@@ -43,47 +47,37 @@ describe('reportsCalendarResponseSchema', () => {
   it.each(Object.values(PERIOD_STATUS))(
     'accepts periodStatus "%s"',
     (periodStatus) => {
-      const response = {
-        cadence: 'monthly',
-        reportingPeriods: [{ ...validItem, periodStatus }]
-      }
+      const response = accreditedCalendar([{ ...validItem, periodStatus }])
 
-      const { error } = reportsCalendarResponseSchema.validate(response)
+      const { error } = reportsYearCalendarResponseSchema.validate(response)
 
       expect(error).toBeUndefined()
     }
   )
 
   it('rejects a null periodStatus', () => {
-    const response = {
-      cadence: 'monthly',
-      reportingPeriods: [{ ...validItem, periodStatus: null }]
-    }
+    const response = accreditedCalendar([{ ...validItem, periodStatus: null }])
 
-    const { error } = reportsCalendarResponseSchema.validate(response)
+    const { error } = reportsYearCalendarResponseSchema.validate(response)
 
     expect(error).toBeDefined()
   })
 
   it('rejects a missing periodStatus', () => {
     const { periodStatus: _, ...itemWithoutStatus } = validItem
-    const response = {
-      cadence: 'monthly',
-      reportingPeriods: [itemWithoutStatus]
-    }
+    const response = accreditedCalendar([itemWithoutStatus])
 
-    const { error } = reportsCalendarResponseSchema.validate(response)
+    const { error } = reportsYearCalendarResponseSchema.validate(response)
 
     expect(error).toBeDefined()
   })
 
   it('rejects an unknown periodStatus value', () => {
-    const response = {
-      cadence: 'monthly',
-      reportingPeriods: [{ ...validItem, periodStatus: 'archived' }]
-    }
+    const response = accreditedCalendar([
+      { ...validItem, periodStatus: 'archived' }
+    ])
 
-    const { error } = reportsCalendarResponseSchema.validate(response)
+    const { error } = reportsYearCalendarResponseSchema.validate(response)
 
     expect(error).toBeDefined()
   })

@@ -2,7 +2,7 @@ import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -14,13 +14,16 @@ import {
   asSupport,
   asUnscopedAdminUser
 } from '#test/inject-auth.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationUnlinkedMetric = vi.fn()
@@ -50,7 +53,7 @@ const ADMIN_USER = {
   scope: [...ADMIN_ROLES.service_maintainer_write]
 }
 
-describe('DELETE /v1/organisations/{organisationId}/link', () => {
+describe('DELETE /organisations/{organisationNumber}/link', () => {
   setupAuthContext()
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
@@ -75,7 +78,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
   })
 
   describe('access control', () => {
-    const unlinkUrl = `/v1/organisations/${buildOrganisation().id}/link`
+    const unlinkUrl = '/organisations/999999/link'
 
     it('returns 401 when the request is not authenticated', async () => {
       const response = await server.inject({
@@ -121,7 +124,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
     it('returns 404 when the organisation does not exist', async () => {
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/organisations/${buildOrganisation().id}/link`,
+        url: '/organisations/999999/link',
         ...asServiceMaintainerWrite()
       })
 
@@ -133,11 +136,14 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
 
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/organisations/${org.id}/link`,
+        url: `/organisations/${org.orgId}/link`,
         ...asServiceMaintainerWrite()
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Organisation is not linked so cannot be unlinked'
+      )
     })
 
     describe('when the request succeeds', () => {
@@ -151,7 +157,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: `/v1/organisations/${org.id}/link`,
+          url: `/organisations/${org.orgId}/link`,
           ...asServiceMaintainerWrite()
         })
 
@@ -186,7 +192,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationId=${unlinkedOrg.id}`,
+          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.orgId}`,
           ...asServiceMaintainerWrite()
         })
 

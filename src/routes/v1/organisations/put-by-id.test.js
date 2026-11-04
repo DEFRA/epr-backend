@@ -1,9 +1,9 @@
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -14,6 +14,9 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
@@ -135,7 +138,7 @@ describe('PUT /v1/organisations/{id}', () => {
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${initialOrg.orgId}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -395,6 +398,34 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
+  it('rejects a registration linked to a malformed accreditation id', async () => {
+    const org = await createOrganisation()
+    const [firstRegistration, ...otherRegistrations] = org.registrations
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      },
+      payload: {
+        version: org.version,
+        updateFragment: {
+          ...org,
+          registrations: [
+            { ...firstRegistration, accreditationId: 'invalid' },
+            ...otherRegistrations
+          ]
+        }
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      'Invalid organisation data: registrations.0.accreditationId: id must be a valid MongoDB ObjectId'
+    )
+  })
+
   testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
@@ -468,6 +499,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
   setupAuthContext()
   let server
   let organisationsRepository
+  let overseasSitesRepository
 
   const knownSiteId = new ObjectId().toString()
 
@@ -503,6 +535,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
         updatedAt: new Date()
       }
     ])
+    overseasSitesRepository = overseasSitesRepoFactory()
 
     server = await createTestServer({
       repositories: {
@@ -729,15 +762,8 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     expect(finalExporter.overseasSites).toEqual({})
 
     // The overseas site record itself must still exist
-    const siteResponse = await server.inject({
-      method: 'GET',
-      url: `/v1/overseas-sites/${knownSiteId}`,
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(siteResponse.statusCode).toBe(StatusCodes.OK)
-    const site = JSON.parse(siteResponse.payload)
-    expect(site.id).toBe(knownSiteId)
+    const site = await overseasSitesRepository.findById(knownSiteId)
+    expect(site?.id).toBe(knownSiteId)
   })
 })
 
@@ -994,7 +1020,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
           accreditations: [
             buildAccreditation({
               statusHistory: accreditationHistory,
-              accreditationNumber: 'ACC12345',
+              accreditationNumber: toAccreditationNumber('ACC12345'),
               validFrom: '2026-01-01',
               validTo: '2027-01-01',
               reprocessingType: 'input'
@@ -1094,7 +1120,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
     const systemLogsResponse = await server.inject({
       method: 'GET',
-      url: `/v1/system-logs/search?organisationId=${org.id}`,
+      url: `/v1/system-logs/search?organisationNumber=${org.orgId}`,
       headers: { Authorization: `Bearer ${validToken}` }
     })
 

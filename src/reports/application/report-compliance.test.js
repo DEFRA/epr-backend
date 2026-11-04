@@ -1,8 +1,9 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
@@ -12,11 +13,21 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  buildOrganisation,
   prepareOrgUpdate,
-  getValidDateRange
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import {
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { logger } from '#common/helpers/logging/logger.js'
+import { config } from '#root/config.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,15 +43,13 @@ async function buildRegisteredOnlyOrg(orgRepo) {
 
   await orgRepo.insert(org)
 
-  const { VALID_FROM } = getValidDateRange()
-
   const approvedRegistrations = [
     {
       ...org.registrations[0],
       status: REGISTRATION_STATUS.APPROVED,
       registrationNumber: 'REG1',
       reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: VALID_FROM
+      validFrom: '2026-01-01'
     }
   ]
 
@@ -191,7 +200,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 1
     })
@@ -227,7 +236,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'quarterly',
       period: 1
     })
@@ -345,7 +354,7 @@ describe('generateReportCompliance', () => {
     await buildSubmittedReport(reportsRepo, {
       organisationId: org.id,
       registrationId: reg.id,
-      year: 2026,
+      year: toYear(2026),
       cadence: 'monthly',
       period: 2
     })
@@ -473,5 +482,78 @@ describe('generateReportCompliance', () => {
         ]
       ])
     )
+  })
+
+  describe('read model registrations', () => {
+    const accredited = {
+      ...accreditation({
+        validFrom: '2026-02-15',
+        statusHistory: [{ status: 'approved', updatedAt: '2026-02-15' }]
+      }),
+      status: 'approved'
+    }
+
+    /**
+     * @param {object} [overrides]
+     */
+    const organisationWith = (overrides = {}) =>
+      buildOrganisation({
+        registrations: [
+          {
+            ...reprocessor({
+              validFrom: '2026-01-01',
+              statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
+              accreditationId: accredited.id
+            }),
+            status: 'approved',
+            ...overrides
+          }
+        ],
+        accreditations: [accredited]
+      })
+
+    /**
+     * @param {object} organisation
+     */
+    const complianceFor = (organisation) =>
+      generateReportCompliance(
+        /** @type {any} */ ({ findAll: async () => [organisation] }),
+        createInMemoryReportsRepository()()
+      )
+
+    afterEach(() => {
+      config.reset('featureFlags.midYearStatusTransition')
+    })
+
+    it('lists both kinds, split at the accreditation date, with mid-year status transition on', async () => {
+      config.set('featureFlags.midYearStatusTransition', true)
+      const organisation = organisationWith()
+
+      const result = await complianceFor(organisation)
+
+      expect(
+        result.entries.get(organisation.registrations[0].id)?.submittedDates
+      ).toEqual(
+        new Map([
+          ['2026:quarterly:1', null],
+          ['2026:monthly:2', null],
+          ['2026:monthly:3', null]
+        ])
+      )
+    })
+
+    it('has no entry for a registration the read model does not serve, logging why', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+
+      const result = await complianceFor(
+        organisationWith({ validFrom: undefined })
+      )
+
+      expect(result.entries).toEqual(new Map())
+      expect(warn).toHaveBeenCalledWith({
+        message: `Registration ${REPROCESSOR_NUMBER} has no validFrom`
+      })
+      warn.mockRestore()
+    })
   })
 })

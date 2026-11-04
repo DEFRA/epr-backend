@@ -9,6 +9,7 @@ import { it } from '#vite/fixtures/msw.js'
 
 import {
   asOperator,
+  accreditationUrl,
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
@@ -89,7 +90,7 @@ describe('December waste balance accrual', () => {
     env.fileDataMap[fileId] = { meta, data }
     await env.server.inject({
       method: 'POST',
-      url: buildPostUrl(env.organisationId, env.registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId),
       payload: createUploadPayload(
         env.organisationId,
         env.registrationId,
@@ -99,27 +100,18 @@ describe('December waste balance accrual', () => {
       ),
       ...asOperator()
     })
-    await pollForValidation(
-      env.server,
-      env.organisationId,
-      env.registrationId,
-      summaryLogId
-    )
+    await pollForValidation(env.server, summaryLogId)
   }
 
   const submit = async (env, summaryLogId) => {
     await env.server.inject({
       method: 'POST',
-      url: buildSubmitUrl(env.organisationId, env.registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
-    return pollWhileStatus(
-      env.server,
-      env.organisationId,
-      env.registrationId,
-      summaryLogId,
-      { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
-    )
+    return pollWhileStatus(env.server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+    })
   }
 
   const submitLoads = async (env, meta, summaryLogId, data) => {
@@ -130,7 +122,7 @@ describe('December waste balance accrual', () => {
   const readLedger = async (env) => {
     const response = await env.server.inject({
       method: 'GET',
-      url: `/v1/organisations/${env.organisationId}/registrations/${env.registrationId}/accreditations/${env.accreditationId}/waste-balance-ledger`,
+      url: `${accreditationUrl}/ledger`,
       ...asServiceMaintainer()
     })
     expect(response.statusCode).toBe(200)

@@ -1,4 +1,9 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { buildPrn, buildDraftPrn } from './test-data.js'
 
 export const testCreateBehaviour = (it) => {
@@ -33,7 +38,7 @@ export const testCreateBehaviour = (it) => {
           accreditation: {
             id: 'acc-glass',
             accreditationNumber: 'ACC-G1',
-            accreditationYear: 2026,
+            accreditationYear: toYear(2026),
             material: 'glass',
             submittedToRegulator: 'ea',
             glassRecyclingProcess: 'glass_re_melt',
@@ -55,18 +60,22 @@ export const testCreateBehaviour = (it) => {
         const prnInput = buildPrn({
           organisation: {
             id: 'org-preserve-test',
+            organisationNumber: toOrganisationNumber('500123'),
             name: 'Preserve Org',
             tradingName: 'Preserve Trading'
           },
           registrationId: 'reg-preserve-test',
+          registration: {
+            registrationNumber: toRegistrationNumber('R25SR500010912PL')
+          },
           accreditation: {
             id: 'acc-preserve-test',
             accreditationNumber: 'ACC-PRESERVE',
-            accreditationYear: 2026,
+            accreditationYear: toYear(2026),
             material: 'paper',
             submittedToRegulator: 'nrw'
           },
-          obligationYear: 2027,
+          obligationYear: toYear(2027),
           issuedToOrganisation: {
             id: 'recipient-preserve-test',
             name: 'Recipient Org',
@@ -85,14 +94,18 @@ export const testCreateBehaviour = (it) => {
 
         expect(found.organisation).toStrictEqual({
           id: 'org-preserve-test',
+          organisationNumber: '500123',
           name: 'Preserve Org',
           tradingName: 'Preserve Trading'
         })
         expect(found.registrationId).toBe('reg-preserve-test')
+        expect(found.registration).toStrictEqual({
+          registrationNumber: 'R25SR500010912PL'
+        })
         expect(found.accreditation).toStrictEqual({
           id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'paper',
           submittedToRegulator: 'nrw'
         })

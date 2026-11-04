@@ -8,14 +8,20 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import {
   buildRegistration,
-  buildOrganisationWithRegistration
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { creditedTonnageGetPath } from './credited-tonnage-get.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+
+const { buildOrganisationWithRegistration } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-credited-1'
 
@@ -102,7 +108,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
+      withNumbers(ledgerId),
       [
         buildSummaryLogRowStateEntry({
           rowId: 'row-1',
@@ -132,7 +138,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
           }
         })
       ],
-      SUMMARY_LOG_ID
+      toSummaryLogFileId(SUMMARY_LOG_ID)
     )
 
     const ledgerRepository = createInMemoryLedgerRepository([

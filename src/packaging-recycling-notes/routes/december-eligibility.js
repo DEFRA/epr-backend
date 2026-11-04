@@ -10,29 +10,23 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
-import {
-  DECEMBER_WASTE_CONTROL_MODE,
-  decemberWasteControlModeFor
-} from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
+import { decemberWasteControlModeFor } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
-export const packagingRecyclingNotesDecemberEligibilityPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/december-prn-eligibility'
+const DECEMBER_ELIGIBILITY_FAILURE = 'Failure reading December PRN eligibility'
 
 /**
  * Which December Waste declaration control an accreditation should be shown,
  * and whether it may currently be submitted (PAE-1913, PAE-1922). For a live
  * accreditation `mode` is a fixed property of its type - `manual` or `pool`
  * (see december-waste-control-mode.js) - while `windowOpen` is time-varying.
- * A non-live accreditation has no eligibility and answers `none`. The frontend
- * composes the two; this endpoint states them separately so it never has to
+ * The frontend composes the two; this endpoint states them separately so it never has to
  * restate the rule.
  */
 export const packagingRecyclingNotesDecemberEligibility = {
   method: 'GET',
-  path: packagingRecyclingNotesDecemberEligibilityPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead]),
     tags: ['api']
@@ -54,21 +48,6 @@ export const packagingRecyclingNotesDecemberEligibility = {
         accreditationId
       )
 
-      // A registered-only accreditation (created or rejected, never approved)
-      // has no validFrom to derive a year from, so answer `none` rather than
-      // reaching deriveAccreditationYear, which throws on a missing validFrom.
-      // Anything that was ever live (approved/suspended, and cancelled, which
-      // retains the window it held) keeps its validFrom and stays on the live
-      // path below, so a cancelled accreditation still reports its real mode.
-      if (!accreditation.validFrom) {
-        return h
-          .response({
-            mode: DECEMBER_WASTE_CONTROL_MODE.NONE,
-            windowOpen: false
-          })
-          .code(StatusCodes.OK)
-      }
-
       const relevantYear = deriveAccreditationYear(accreditation)
       const windowOpen = isWithinDecemberWasteWindow(
         relevantYear,
@@ -83,13 +62,9 @@ export const packagingRecyclingNotesDecemberEligibility = {
         })
         .code(StatusCodes.OK)
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
       logger.error({
         error,
-        message: `Failure on ${packagingRecyclingNotesDecemberEligibilityPath}`,
+        message: DECEMBER_ELIGIBILITY_FAILURE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -101,9 +76,7 @@ export const packagingRecyclingNotesDecemberEligibility = {
         }
       })
 
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesDecemberEligibilityPath}`
-      )
+      throw Boom.badImplementation(DECEMBER_ELIGIBILITY_FAILURE)
     }
   }
 }

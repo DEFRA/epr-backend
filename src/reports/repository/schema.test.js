@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { aggregateWasteExported } from '#reports/domain/aggregation/aggregate-waste-exported.js'
@@ -6,7 +7,7 @@ import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { exportActivitySchema } from './schema.js'
 
-const reportingPeriod = periodBounds(CADENCE.monthly, 2026, 1)
+const reportingPeriod = periodBounds(CADENCE.monthly, toYear(2026), 1)
 
 const exportedRow = (data = {}) => ({
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,

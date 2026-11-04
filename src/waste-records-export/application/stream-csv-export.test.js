@@ -17,10 +17,12 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 /**
  * @param {string} id
@@ -42,6 +44,7 @@ const collect = async (gen) => {
 
 const baseOrg = (overrides = {}) => ({
   id: 'org-1',
+  orgId: 500001,
   companyDetails: { name: 'Acme Ltd' },
   submittedToRegulator: 'ea',
   registrations: [],
@@ -51,6 +54,7 @@ const baseOrg = (overrides = {}) => ({
 
 const baseRegistration = (overrides = {}) => ({
   id: 'reg-1',
+  registrationNumber: 'REG-1',
   material: 'plastic',
   submittedToRegulator: 'ea',
   accreditation: {
@@ -146,7 +150,7 @@ const approvedAccreditation = (overrides = {}) => ({
 const DEFAULT_SUMMARY_LOG_FILE_ID = 'file-1'
 
 /**
- * A summary log document as `findAllByOrgReg` returns it: its own id, and the
+ * A summary log document as `findAll` returns it: its own id, and the
  * file id the submission is addressed by.
  *
  * @param {string} fileId
@@ -168,8 +172,8 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  *   seeds?: any[],
  *   summaryLogs?: Record<string, any[]>,
  *   sites?: OverseasSite[],
- *   organisationId?: string,
- *   registrationId?: string
+ *   organisation?: any,
+ *   registrationNumber?: RegistrationNumber
  * }} [options]
  */
 const buildDeps = async ({
@@ -177,8 +181,8 @@ const buildDeps = async ({
   seeds = [],
   summaryLogs = {},
   sites = [],
-  organisationId,
-  registrationId
+  organisation,
+  registrationNumber
 } = {}) => {
   const ledgerEvents = seeds.map((seed) =>
     buildLedgerEvent({
@@ -202,11 +206,11 @@ const buildDeps = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: seed.organisationId ?? 'org-1',
         registrationId: seed.registrationId ?? 'reg-1',
         accreditationId: seed.accreditationId ?? null
-      },
+      }),
       seed.rows ?? [],
       seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID
     )
@@ -214,19 +218,19 @@ const buildDeps = async ({
 
   return {
     organisationsRepository: {
-      findAll: async () => orgs,
-      findById: async (id) => orgs.find((org) => org.id === id)
+      findAll: async () => orgs
     },
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository: {
-      findAllByOrgReg: async (org, reg) => summaryLogs[`${org}/${reg}`] ?? []
+      findAll: async ({ organisationNumber, registrationNumber }) =>
+        summaryLogs[`${organisationNumber}/${registrationNumber}`] ?? []
     },
     overseasSitesRepository: {
       findAll: async () => sites
     },
-    organisationId,
-    registrationId
+    organisation,
+    registrationNumber
   }
 }
 
@@ -249,7 +253,7 @@ describe('streamCsvExport', () => {
       orgs: [baseOrg({ registrations: [baseRegistration()] })],
       seeds: [{ rows: [receivedRowState()] }],
       summaryLogs: {
-        'org-1/reg-1': [
+        '500001/REG-1': [
           summaryLogDocument(
             DEFAULT_SUMMARY_LOG_FILE_ID,
             '2026-04-15T09:00:00Z'
@@ -1131,7 +1135,7 @@ describe('streamCsvExport', () => {
     expect(out[1]).not.toContain('Test Org')
   })
 
-  it('fetches a single organisation by id and skips findAll when scoped by organisationId', async () => {
+  it('exports only the given organisation and skips findAll when scoped to one', async () => {
     const org = baseOrg({
       id: 'org-scoped',
       companyDetails: { name: 'Scoped Org' },
@@ -1140,7 +1144,7 @@ describe('streamCsvExport', () => {
     const deps = await buildDeps({
       orgs: [org],
       seeds: [{ organisationId: 'org-scoped', rows: [receivedRowState()] }],
-      organisationId: 'org-scoped'
+      organisation: org
     })
     const findAll = vi.fn().mockResolvedValue([])
     deps.organisationsRepository.findAll = findAll
@@ -1152,12 +1156,12 @@ describe('streamCsvExport', () => {
     expect(out[1]).toContain('Scoped Org')
   })
 
-  it('exports only the requested registration when scoped by registrationId', async () => {
+  it('exports only the requested registration when scoped by registrationNumber', async () => {
     const org = baseOrg({
       id: 'org-scoped',
       registrations: [
-        baseRegistration({ id: 'reg-1' }),
-        baseRegistration({ id: 'reg-2' })
+        baseRegistration({ id: 'reg-1', registrationNumber: 'R26-1' }),
+        baseRegistration({ id: 'reg-2', registrationNumber: 'R26-2' })
       ]
     })
     const deps = await buildDeps({
@@ -1176,8 +1180,8 @@ describe('streamCsvExport', () => {
           rows: [receivedRowState({ rowId: '2001' })]
         }
       ],
-      organisationId: 'org-scoped',
-      registrationId: 'reg-2'
+      organisation: org,
+      registrationNumber: /** @type {RegistrationNumber} */ ('R26-2')
     })
 
     const out = await collect(streamCsvExport(deps))
@@ -1186,7 +1190,7 @@ describe('streamCsvExport', () => {
     expect(out[1].trim().split(',')[METADATA_COL_INDEX['Row ID']]).toBe('2001')
   })
 
-  it('includes a test organisation when it is explicitly requested by id', async () => {
+  it('includes a test organisation when the export is scoped to it', async () => {
     const testOrg = baseOrg({
       id: 'org-test',
       orgId: 999999,
@@ -1202,7 +1206,7 @@ describe('streamCsvExport', () => {
           rows: [receivedRowState()]
         }
       ],
-      organisationId: 'org-test'
+      organisation: testOrg
     })
 
     const out = await collect(streamCsvExport(deps))

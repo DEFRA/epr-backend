@@ -2,17 +2,6 @@ import Joi from 'joi'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
-/**
- * The ledger the events belong to. `accreditationId` is null for the ledger a
- * registration keeps before it holds an accreditation, which the registration
- * route addresses.
- */
-const ledgerSchema = Joi.object({
-  organisationId: Joi.string().required(),
-  registrationId: Joi.string().required(),
-  accreditationId: Joi.string().allow(null).required()
-})
-
 const balanceSchema = Joi.object({
   total: Joi.number().required(),
   available: Joi.number().required(),
@@ -104,9 +93,10 @@ export const ledgerEventSchema = Joi.alternatives().try(
 )
 
 /**
- * The width of a waste balance ledger read, enforced at the wire.
+ * The width of a waste balance ledger read, enforced at the wire. The path
+ * names the ledger, so only its events are served.
  *
- * Mirrors `LedgerResource` in
+ * Mirrors the events of `LedgerResource` in
  * `src/waste-balances/application/read-ledger.js` — keep the two in sync; this
  * schema is the runtime gate, those typedefs are the check-time gate.
  *
@@ -114,12 +104,6 @@ export const ledgerEventSchema = Joi.alternatives().try(
  * shape and carries the second under the `x-alternatives` extension, which a
  * standard reader ignores. The generated document understates the contract.
  */
-export const wasteBalanceLedgerResponseSchema = Joi.object({
-  ledger: ledgerSchema.required(),
-  events: Joi.array().items(ledgerEventSchema).required()
-})
-
-/** A ledger addressed by natural key: the path names it, so no `ledger`. */
 export const naturalKeyLedgerResponseSchema = Joi.object({
   events: Joi.array().items(ledgerEventSchema).required()
 })

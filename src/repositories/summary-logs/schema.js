@@ -55,6 +55,12 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
+const numbersSchema = {
+  organisationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().optional(),
+  accreditationNumber: Joi.string().allow(null).optional()
+}
+
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
   validation: validationSchema.optional(),
@@ -65,8 +71,9 @@ export const summaryLogInsertSchema = Joi.object({
   }),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
-  year: yearSchema().optional(),
+  year: yearSchema().required(),
   accreditationId: Joi.string().allow(null).optional(),
+  ...numbersSchema,
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
   createdAt: Joi.string().isoDate().required(),
@@ -86,6 +93,25 @@ export const summaryLogInsertSchema = Joi.object({
   })
 }).messages(commonMessages)
 
+export const summaryLogNumbersSchema = Joi.object(numbersSchema)
+  .min(1)
+  .custom((numbers, helpers) =>
+    Object.values(numbers).includes(undefined)
+      ? helpers.error('object.undefinedNumber')
+      : numbers
+  )
+  .messages({
+    'object.min': 'numbers must contain at least one number',
+    'object.undefinedNumber': 'a number must not be undefined'
+  })
+
+export const summaryLogKeySchema = Joi.object({
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.string().allow(null).optional(),
+  year: yearSchema().optional()
+})
+
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   validation: validationSchema.optional(),
@@ -101,7 +127,10 @@ export const summaryLogUpdateSchema = Joi.object({
   validatedAgainstSummaryLogId: Joi.forbidden(),
   // Set once at insert time - the year/accreditation a summary log belongs to is fixed
   year: Joi.forbidden(),
-  accreditationId: Joi.forbidden()
+  accreditationId: Joi.forbidden(),
+  organisationNumber: Joi.forbidden(),
+  registrationNumber: Joi.forbidden(),
+  accreditationNumber: Joi.forbidden()
 })
   .with('status', 'expiresAt')
   .with('expiresAt', 'status')

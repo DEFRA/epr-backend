@@ -1,5 +1,6 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { NumberHolder, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -10,13 +11,22 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
+  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  storedOrgId,
+  UNIQUE_NUMBER_FIELDS,
+  versionConflict
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import {
+  performLinkDefraOrganisation,
+  performReplaceUsers,
+  performUnlinkDefraOrganisation
+} from './inmemory.targeted-updates.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -43,6 +53,55 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
   })
 }
 
+/**
+ * Stands in for the unique indexes the MongoDB adapter holds on each number,
+ * which span organisations.
+ *
+ * @param {Array<NumberHolder & { _id: string }>} storage
+ * @param {string} id - the organisation being written
+ * @param {NumberHolder} organisation - as it will be stored
+ * @param {WriteOperation} operation
+ */
+const assertNumbersUnheldElsewhere = (storage, id, organisation, operation) => {
+  const others = storage.filter((org) => org._id !== id)
+
+  for (const { items, field, label, numbersOf } of UNIQUE_NUMBER_FIELDS) {
+    const heldElsewhere = new Set(others.flatMap(numbersOf))
+    const repeated = numbersOf(organisation).find(
+      (number) => typeof number === 'string' && heldElsewhere.has(number)
+    )
+
+    if (repeated) {
+      throw duplicateKeyConflict({
+        operation,
+        id,
+        conflictFields: `${items}.${field}`,
+        reason: `fields=${items}.${field}`,
+        heldNumber: { label, number: repeated }
+      })
+    }
+  }
+}
+
+/**
+ * Stands in for the MongoDB adapter's unique index on orgId.
+ *
+ * @param {Array<{ _id: string, orgId: number }>} storage
+ * @param {string} id - the organisation being written
+ * @param {number} orgId - as it will be stored
+ * @param {WriteOperation} operation
+ */
+const assertOrgIdUnheldElsewhere = (storage, id, orgId, operation) => {
+  if (storage.some((org) => org._id !== id && org.orgId === orgId)) {
+    throw duplicateKeyConflict({
+      operation,
+      id,
+      conflictFields: 'orgId',
+      reason: 'fields=orgId'
+    })
+  }
+}
+
 const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
@@ -52,8 +111,15 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     throw Boom.conflict(`Organisation with ${id} already exists`)
   }
 
+  assertOrgIdUnheldElsewhere(storage, id, orgFields.orgId, 'inserting')
   const registrations = initializeItems(orgFields.registrations)
   const accreditations = initializeItems(orgFields.accreditations)
+  assertNumbersUnheldElsewhere(
+    storage,
+    id,
+    { registrations, accreditations },
+    'inserting'
+  )
 
   const newOrg = structuredClone({
     _id: id,
@@ -83,9 +149,7 @@ const performReplace =
     }
 
     if (existing.version !== version) {
-      throw Boom.conflict(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
+      throw versionConflict(version, existing.version)
     }
 
     const replaced = prepareForReplace(
@@ -93,60 +157,76 @@ const performReplace =
       updates
     )
 
+    assertOrgIdUnheldElsewhere(
+      storage,
+      existing._id,
+      replaced.orgId,
+      'updating'
+    )
+    assertNumbersUnheldElsewhere(storage, existing._id, replaced, 'updating')
     storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
-const performFindById = (staleCache) => (id) => {
+/**
+ * Reads the one organisation `predicate` matches, retrying until its version
+ * is at least `minimumVersion`. Without `minimumVersion` it reads once.
+ * Resolves null when no organisation matches, and throws 500 when the version
+ * never arrives.
+ *
+ * @param {Object[]} staleCache
+ * @param {(org: Object) => boolean} predicate
+ * @param {number} [minimumVersion]
+ */
+const findOneAtMinimumVersion = async (
+  staleCache,
+  predicate,
+  minimumVersion
+) => {
+  for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+    const found = staleCache.find(predicate)
+    const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
+
+    if (found) {
+      if (minimumVersion === undefined || found.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(structuredClone(found))
+      }
+      // Document exists but version too low - will retry
+    } else if (minimumVersion === undefined || isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+      )
+    }
+  }
+
+  throw Boom.internal('Consistency timeout waiting for minimum version')
+}
+
+const performFindById = (staleCache) => async (id, minimumVersion) => {
   try {
     validateId(id)
   } catch {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  const found = staleCache.find((o) => o._id === id)
+  const found = await findOneAtMinimumVersion(
+    staleCache,
+    (o) => o._id === id,
+    minimumVersion
+  )
   if (!found) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
-
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
+  return found
 }
-
-const performFindByIdWithRetry =
-  (findByIdFromCache) => async (id, minimumVersion) => {
-    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-      try {
-        const result = findByIdFromCache(id)
-
-        // No version expectation - return immediately (may be stale)
-        if (minimumVersion === undefined) {
-          return result
-        }
-
-        // Version matches - consistency achieved
-        if (result.version >= minimumVersion) {
-          return result
-        }
-      } catch (error) {
-        // Document not found - retry in case it's propagating
-        if (i === MAX_CONSISTENCY_RETRIES - 1) {
-          throw error
-        }
-      }
-
-      // Wait before retry
-      if (i < MAX_CONSISTENCY_RETRIES - 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-        )
-      }
-    }
-
-    // Timeout - throw error
-    throw Boom.internal('Consistency timeout waiting for minimum version')
-  }
 
 const performFindAll = (staleCache) => async () => {
   return structuredClone(staleCache).map((org) =>
@@ -164,26 +244,6 @@ const anchoredMatcher = (value) => {
 }
 
 /**
- * @param {string} value
- * @returns {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} - one
- *   predicate per parseable interpretation; empty when the value parses as
- *   neither, so nothing matches
- */
-const buildOrgIdMatchers = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const matchers = []
-  if (businessOrgId !== null) {
-    matchers.push((org) => org.orgId === businessOrgId)
-  }
-  if (documentId !== null) {
-    // The in-memory store keeps _id as the plain id string, unlike MongoDB
-    matchers.push((org) => org._id === documentId)
-  }
-
-  return matchers
-}
-
-/**
  * The in-memory equivalent of the MongoDB adapter's find filter, applied to
  * raw stored documents — so `_id` rather than `id`. The shared criteria
  * semantics live in helpers.js and the find contract tests hold the two
@@ -194,14 +254,8 @@ const buildOrgIdMatchers = (value) => {
  *   the organisation satisfies every criterion
  */
 const buildFindMatcher = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
+  const { search, orgId, registrationNumber, accreditationNumber } =
+    normaliseCriteria(criteria)
 
   /** @type {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} */
   const checks = []
@@ -210,23 +264,13 @@ const buildFindMatcher = (criteria) => {
     checks.push((org) => pattern.test(org.companyDetails.name))
   }
   if (orgId !== '') {
-    const matchers = buildOrgIdMatchers(orgId)
-    checks.push((org) => matchers.some((matches) => matches(org)))
-  }
-  if (registrationId !== '') {
-    checks.push((org) =>
-      org.registrations.some((reg) => reg.id === registrationId)
-    )
+    const wantedOrgId = parseOrgIdCriterion(orgId)
+    checks.push((org) => org.orgId === wantedOrgId)
   }
   if (registrationNumber !== '') {
     const matchesNumber = anchoredMatcher(registrationNumber)
     checks.push((org) =>
       org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
-    )
-  }
-  if (accreditationId !== '') {
-    checks.push((org) =>
-      org.accreditations.some((acc) => acc.id === accreditationId)
     )
   }
   if (accreditationNumber !== '') {
@@ -268,13 +312,19 @@ const performFind =
     return { items, page, pageSize, totalItems, totalPages }
   }
 
-const toLinkedOrganisationSummary = (org) => ({
+/** @returns {import('./port.js').OrganisationSummary} */
+const toOrganisationSummary = (org) => ({
   id: org._id.toString(),
   orgId: org.orgId,
   companyDetails: { name: org.companyDetails.name },
-  status: getCurrentStatus(org),
+  status: getCurrentStatus(org)
+})
+
+/** @returns {import('./port.js').LinkedOrganisationSummary} */
+const toLinkedOrganisationSummary = (org) => ({
+  ...toOrganisationSummary(org),
   linkedDefraOrganisation: {
-    ...org.linkedDefraOrganisation,
+    ...structuredClone(org.linkedDefraOrganisation),
     linkedAt: new Date(org.linkedDefraOrganisation.linkedAt).toISOString()
   }
 })
@@ -316,38 +366,24 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
     return null
   }
 
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
+  return toLinkedOrganisationSummary(found)
 }
 
-const performFindByAccreditationNumber =
-  (staleCache) => async (accreditationNumber) => {
-    const found = staleCache.find((org) =>
+const performIsAccreditationNumberInUse =
+  (staleCache) => async (accreditationNumber) =>
+    staleCache.some((org) =>
       org.accreditations.some(
         (acc) => acc.accreditationNumber === accreditationNumber
       )
     )
 
-    if (!found) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
-  }
-
-const performFindByRegistrationNumber =
-  (staleCache) => async (registrationNumber) => {
-    const found = staleCache.find((org) =>
+const performIsRegistrationNumberInUse =
+  (staleCache) => async (registrationNumber) =>
+    staleCache.some((org) =>
       org.registrations.some(
         (reg) => reg.registrationNumber === registrationNumber
       )
     )
-
-    if (!found) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(structuredClone(found))
-  }
 
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
@@ -374,18 +410,16 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
     return isInitialUser
   })
 
-  return matches.map((org) =>
-    mapDocumentWithCurrentStatuses(structuredClone(org))
-  )
+  return matches.map(toOrganisationSummary)
 }
 
-const performFindByOrgId = (staleCache) => async (orgId) => {
-  const found = staleCache.find((o) => o.orgId === orgId)
-  if (!found) {
-    return null
-  }
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
-}
+const performFindByOrganisationNumber =
+  (staleCache) => (organisationNumber, minimumVersion) =>
+    findOneAtMinimumVersion(
+      staleCache,
+      (o) => o.orgId === storedOrgId(organisationNumber),
+      minimumVersion
+    )
 
 const performReplaceRegistrationOverseasSites =
   (storage, staleCache, pendingSyncRef) =>
@@ -491,20 +525,32 @@ export const createInMemoryOrganisationsRepository = (
     _id: id,
     ...rest
   }))
+  storage.forEach(({ _id, orgId }, index) =>
+    assertOrgIdUnheldElsewhere(storage.slice(0, index), _id, orgId, 'inserting')
+  )
 
   const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
-
-  const findByIdFromCache = performFindById(staleCache)
+  const syncStaleCache = () =>
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
 
   return () => {
-    const findById = performFindByIdWithRetry(findByIdFromCache)
+    const findById = performFindById(staleCache)
     const insertFn = performInsert(storage, staleCache)
     const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
 
     return {
       insert: insertFn,
       replace: replaceFn,
+      linkDefraOrganisation: performLinkDefraOrganisation(
+        storage,
+        syncStaleCache
+      ),
+      unlinkDefraOrganisation: performUnlinkDefraOrganisation(
+        storage,
+        syncStaleCache
+      ),
+      replaceUsers: performReplaceUsers(storage, syncStaleCache),
       findAll: performFindAll(staleCache),
       find: performFind(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
@@ -512,10 +558,10 @@ export const createInMemoryOrganisationsRepository = (
       findById,
       findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
-      findByAccreditationNumber: performFindByAccreditationNumber(staleCache),
-      findByRegistrationNumber: performFindByRegistrationNumber(staleCache),
+      isAccreditationNumberInUse: performIsAccreditationNumberInUse(staleCache),
+      isRegistrationNumberInUse: performIsRegistrationNumberInUse(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
-      findByOrgId: performFindByOrgId(staleCache),
+      findByOrganisationNumber: performFindByOrganisationNumber(staleCache),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(
         storage,
         staleCache,

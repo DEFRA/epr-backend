@@ -2,7 +2,8 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
+  DEFAULT_LEDGER_ID,
+  withNumbers
 } from '../test-data.js'
 
 export const testFindDistinctDataKeysBehaviour = (it) => {
@@ -19,7 +20,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
 
     it('returns the union of data keys across every stored row state', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-1',
@@ -29,7 +30,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-2',
@@ -45,7 +46,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
 
     it('surfaces keys from superseded states, not just the latest submitted summary log', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-1',
@@ -55,7 +56,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-1',
@@ -71,7 +72,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
 
     it('deduplicates keys that appear on multiple states', async () => {
       await repository.upsertSummaryLogRowStates(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { SHARED: 1 } }),
           buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { SHARED: 2 } })

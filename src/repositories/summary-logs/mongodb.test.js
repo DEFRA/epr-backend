@@ -9,6 +9,11 @@ import { summaryLogFactory } from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
 import { partialMock } from '#test/type-helpers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
@@ -78,7 +83,7 @@ describe('MongoDB summary logs repository', () => {
     const insertSubmitted = async (repository, overrides = {}) => {
       const id = `mongo-${randomUUID()}`
       await repository.insert(
-        id,
+        toSummaryLogId(id),
         summaryLogFactory.submitted({
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -95,7 +100,10 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertSubmitted(summaryLogsRepository)
 
-      await summaryLogsRepository.getDownloadUrl(id, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        toSummaryLogId(id),
+        toRegistrationNumber('R26ER5000000002PA')
+      )
 
       expect(await lastSignedDisposition()).toBe(
         'attachment; filename="R26ER5000000002PA-2024-01-01-000000.xlsx"'
@@ -112,10 +120,16 @@ describe('MongoDB summary logs repository', () => {
         submittedAt: '2024-01-01T16:42:07.000Z'
       })
 
-      await summaryLogsRepository.getDownloadUrl(morning, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        toSummaryLogId(morning),
+        toRegistrationNumber('R26ER5000000002PA')
+      )
       const first = await lastSignedDisposition()
 
-      await summaryLogsRepository.getDownloadUrl(afternoon, 'R26ER5000000002PA')
+      await summaryLogsRepository.getDownloadUrl(
+        toSummaryLogId(afternoon),
+        toRegistrationNumber('R26ER5000000002PA')
+      )
 
       expect(first).toBe(
         'attachment; filename="R26ER5000000002PA-2024-01-01-091530.xlsx"'
@@ -130,14 +144,14 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertSubmitted(summaryLogsRepository)
 
-      await summaryLogsRepository.getDownloadUrl(id)
+      await summaryLogsRepository.getDownloadUrl(toSummaryLogId(id))
 
       expect(await lastSignedDisposition()).toBeUndefined()
     })
   })
 
   describe('legacy index migration', () => {
-    it('creates the year-scoped lock before dropping only the pre-year-scoping lock', async () => {
+    it('creates the year-scoped lock before dropping the pre-year-scoping lock', async () => {
       const calls = []
       const createdIndexes = []
 
@@ -154,7 +168,9 @@ describe('MongoDB summary logs repository', () => {
       await createSummaryLogsRepository(mockDb, mockS3Config)
 
       expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
-        'drop:organisationId_1_registrationId_1'
+        'drop:organisationId_1_registrationId_1',
+        'drop:organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1',
+        'drop:organisationId_1_registrationId_1_status_1_submittedAt_-1'
       ])
       expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
         calls.indexOf('drop:organisationId_1_registrationId_1')
@@ -170,8 +186,58 @@ describe('MongoDB summary logs repository', () => {
       })
     })
 
+    it('reads by number through an index on the numbers, and drops the year-scoped id index no read uses', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+      const collection = database.collection('summary-logs')
+      await collection.createIndex({
+        organisationId: 1,
+        registrationId: 1,
+        year: 1,
+        accreditationId: 1,
+        status: 1,
+        submittedAt: -1
+      })
+
+      await createSummaryLogsRepository(database, mockS3Config)
+
+      const keys = (await collection.indexes()).map(({ key }) => key)
+      expect(keys).toContainEqual({
+        organisationNumber: 1,
+        registrationNumber: 1,
+        status: 1,
+        submittedAt: -1
+      })
+      expect(keys).not.toContainEqual(
+        expect.objectContaining({ year: 1, accreditationId: 1, status: 1 })
+      )
+      await database.dropDatabase()
+    })
+
+    it('drops the id index the list by registration read through', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+      const collection = database.collection('summary-logs')
+      await collection.createIndex({
+        organisationId: 1,
+        registrationId: 1,
+        status: 1,
+        submittedAt: -1
+      })
+
+      await createSummaryLogsRepository(database, mockS3Config)
+
+      const keys = (await collection.indexes()).map(({ key }) => key)
+      expect(keys).not.toContainEqual(
+        expect.objectContaining({ organisationId: 1, status: 1 })
+      )
+      await database.dropDatabase()
+    })
+
     it.each(['IndexNotFound', 'NamespaceNotFound'])(
-      'ignores %s when dropping the legacy lock index',
+      'ignores %s when dropping a retired index',
       async (codeName) => {
         const mockDb = createMockDb({
           dropIndex: async () => {
@@ -217,7 +283,7 @@ describe('MongoDB summary logs repository', () => {
 
       await expect(
         repository.insert(
-          `test-${randomUUID()}`,
+          toSummaryLogId(`test-${randomUUID()}`),
           summaryLogFactory.validating()
         )
       ).rejects.toThrow('Connection timeout')
@@ -245,7 +311,9 @@ describe('MongoDB summary logs repository', () => {
       )
       const repository = repositoryFactory(createMockLogger())
 
-      const result = await repository.transitionToSubmittingExclusive(logId)
+      const result = await repository.transitionToSubmittingExclusive(
+        toSummaryLogId(logId)
+      )
 
       expect(result.success).toBe(false)
     })
@@ -267,7 +335,7 @@ describe('MongoDB summary logs repository', () => {
       const repository = repositoryFactory(createMockLogger())
 
       await expect(
-        repository.transitionToSubmittingExclusive(logId)
+        repository.transitionToSubmittingExclusive(toSummaryLogId(logId))
       ).rejects.toThrow('Connection timeout')
     })
   })
@@ -313,7 +381,7 @@ describe('MongoDB summary logs repository', () => {
     }) => {
       const id = await insertLegacySummaryLog(mongoClient, {})
 
-      const found = await summaryLogsRepository.findById(id)
+      const found = await summaryLogsRepository.findById(toSummaryLogId(id))
 
       expect(found?.summaryLog.loads?.added.valid.rowIds).toEqual([
         '1000',
@@ -321,21 +389,19 @@ describe('MongoDB summary logs repository', () => {
       ])
     })
 
-    it('findAllByOrgReg returns them as strings', async ({
+    it('findAll returns them as strings', async ({
       mongoClient,
       summaryLogsRepository
     }) => {
-      const organisationId = `org-${randomUUID()}`
-      const registrationId = `reg-${randomUUID()}`
-      await insertLegacySummaryLog(mongoClient, {
-        organisationId,
-        registrationId
-      })
+      const key = {
+        organisationNumber: toOrganisationNumber(
+          String(Math.floor(Math.random() * 1e9) + 1)
+        ),
+        registrationNumber: toRegistrationNumber(`reg-${randomUUID()}`)
+      }
+      await insertLegacySummaryLog(mongoClient, key)
 
-      const results = await summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      )
+      const results = await summaryLogsRepository.findAll(key)
 
       expect(results[0]?.summaryLog.loads?.added.valid.rowIds).toEqual([
         '1000',

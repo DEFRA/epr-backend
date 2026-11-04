@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import unzipper from 'unzipper'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
@@ -65,7 +66,7 @@ const run = async (months = JANUARY_TO_MARCH_2026, overrides = {}) =>
     overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 3,
     months,

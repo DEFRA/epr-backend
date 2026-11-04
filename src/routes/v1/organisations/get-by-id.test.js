@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -12,7 +12,11 @@ import {
   testRegulatorCanRead
 } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
@@ -53,6 +57,25 @@ describe('GET /v1/organisations/{id}', () => {
       const result = JSON.parse(response.payload)
       expect(result.id).toBe(org1.id)
       expect(result.orgId).toBe(org1.orgId)
+    })
+
+    it('returns the organisation found by its organisation number', async () => {
+      const org1 = buildOrganisation()
+      const org2 = buildOrganisation()
+
+      await organisationsRepository.insert(org1)
+      await organisationsRepository.insert(org2)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${org2.orgId}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).id).toBe(org2.id)
     })
 
     it('includes Cache-Control header in successful response', async () => {
@@ -112,6 +135,18 @@ describe('GET /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 404 for a key that is neither a database id nor an organisation number', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations/not-a-key',
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -217,6 +252,24 @@ describe('GET /v1/organisations/{id}', () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+
+      it('returns 401 with wrong Basic Auth credentials', async () => {
+        const org = buildOrganisation()
+        await basicAuthRepository.insert(org)
+
+        const response = await basicAuthServer.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: {
+            Authorization: `Basic ${Buffer.from('invalid:invalid').toString('base64')}`
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+        expect(JSON.parse(response.payload).message).toBe(
+          'Missing authentication'
+        )
       })
     })
   })

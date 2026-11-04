@@ -1,4 +1,6 @@
 import Joi from 'joi'
+
+import { yearSchema } from '#common/validation/year-schema.js'
 import { VALUE_TYPE } from '#domain/organisations/model.js'
 
 const valueTypeSchema = Joi.string()
@@ -29,16 +31,8 @@ const productsMadeFromRecyclingSchema = Joi.object({
   weightInTonnes: Joi.number().required()
 })
 
-const START_YEAR = 2024
-const MAX_YEAR = 2100
-const yearSchema = Joi.number()
-  .integer()
-  .min(START_YEAR)
-  .max(MAX_YEAR)
-  .required()
-
 export const yearlyMetricsSchema = Joi.object({
-  year: yearSchema,
+  year: yearSchema().required(),
   input: inputSchema.required(),
   rawMaterialInputs: Joi.array()
     .items(rawMaterialInputsSchema)

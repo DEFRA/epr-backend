@@ -4,6 +4,7 @@ import { buildWasteBalanceTable } from '#market-insights/application/waste-balan
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * The five scopes the pages cover: the UK, drawn from every regulator, and one
@@ -27,7 +28,7 @@ const SCOPES = Object.freeze([
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @property {import('#common/hapi-types.js').TypedLogger} logger
- * @property {number} year
+ * @property {Year} year
  * @property {YearMonth[]} months - the reporting months to publish, in order
  * @property {Date} now - the one clock reading every figure is taken at
  */
@@ -71,7 +72,7 @@ const readOnce = (read) => {
  * `year`, so the ignored argument cannot hide a different question.
  *
  * @param {Pick<ReadMarketInsightsFiguresParams, 'organisationsRepository' | 'reportsRepository'>} repositories
- * @param {number} year
+ * @param {Year} year
  */
 const asReadOnce = ({ organisationsRepository, reportsRepository }, year) => ({
   organisationsRepository: {

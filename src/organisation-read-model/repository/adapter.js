@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
@@ -10,10 +11,12 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { Address, LinkedDefraOrganisation as StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -44,27 +47,54 @@ export const createOrganisationReadRepository = ({
   organisationsRepository,
   overseasSitesRepository,
   logger
-}) => ({
-  findByOrganisationNumber: async (organisationNumber) => {
-    const stored = await organisationsRepository.findByOrgId(organisationNumber)
-    if (!stored) {
-      return null
-    }
-
-    const siteIds = stored.registrations.flatMap((registration) =>
-      Object.values(registration.overseasSites ?? {}).map(
-        ({ overseasSiteId }) => overseasSiteId
+}) => {
+  /**
+   * @param {StoredOrganisation[]} stored
+   * @returns {Promise<Organisation[]>}
+   */
+  const toOrganisations = async (stored) => {
+    const siteIds = stored.flatMap(({ registrations }) =>
+      registrations.flatMap((registration) =>
+        Object.values(registration.overseasSites ?? {}).map(
+          ({ overseasSiteId }) => overseasSiteId
+        )
       )
     )
     const sites = await overseasSitesRepository.findByIds(siteIds)
 
-    return toOrganisation(stored, {
+    /** @type {Context} */
+    const context = {
       onDrop: (message) => logger.warn({ message }),
       overseasSitesById: new Map(sites.map((site) => [site.id, site])),
       today: new Date().toISOString().slice(0, 10)
-    })
+    }
+    return stored
+      .map((organisation) => toOrganisation(organisation, context))
+      .filter((organisation) => organisation !== null)
   }
-})
+
+  return {
+    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
+      const stored = await organisationsRepository.findByOrganisationNumber(
+        organisationNumber,
+        minimumVersion
+      )
+      if (!stored) {
+        return null
+      }
+      const [organisation] = await toOrganisations([stored])
+      return organisation ?? null
+    },
+
+    find: async ({ organisationNumber, ...params }) => {
+      const { items, ...page } = await organisationsRepository.find({
+        ...params,
+        orgId: organisationNumber
+      })
+      return { ...page, items: await toOrganisations(items) }
+    }
+  }
+}
 
 /**
  * @param {StoredOrganisation} stored
@@ -87,8 +117,8 @@ export function servesOrganisation(stored, today) {
  * @returns {Organisation | null}
  */
 function toOrganisation(stored, context) {
-  const statusTimeline = toStatusTimeline(stored.statusHistory)
-  const status = statusOn(statusTimeline, context.today)
+  const timeline = toStatusTimeline(stored.statusHistory)
+  const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
       `Organisation ${stored.orgId} has status ${status} on ${context.today}`
@@ -99,19 +129,19 @@ function toOrganisation(stored, context) {
   const { companyDetails, linkedDefraOrganisation } = stored
 
   return {
-    organisationNumber: stored.orgId,
+    organisationNumber: toOrganisationNumber(String(stored.orgId)),
     name: companyDetails.name,
     ...omitNullish({
       companiesHouseNumber: companyDetails.companiesHouseNumber,
       registeredAddress: toUkAddress(companyDetails.registeredAddress),
       tradingName: companyDetails.tradingName
     }),
-    status,
-    statusTimeline,
+    status: { current: status, timeline },
     submittedToRegulator: { code: stored.submittedToRegulator },
     submitterContactDetails: toContact(stored.submitterContactDetails),
-    users: stored.users.map(({ contactId, email, roles }) => ({
+    users: stored.users.map(({ contactId, email, fullName, roles }) => ({
       email,
+      fullName,
       roles,
       ...omitNullish({ contactId })
     })),
@@ -134,7 +164,7 @@ function toOrganisation(stored, context) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-export function toLinkedDefraOrganisation(linked) {
+function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),
@@ -156,7 +186,7 @@ export function toRegistrationEntry(registration, organisation, context) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(registration.statusHistory, validFrom)
+  const timeline = toStatusTimeline(registration.statusHistory, validFrom)
   const { status } = registration
   if (!isOneOf(REGISTRATION_STATUSES, status)) {
     onDrop(
@@ -175,23 +205,28 @@ export function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  /** @type {RegistrationCommon} */
-  const common = {
-    applicationContactDetails: toContact(applicationContactDetails),
-    approvedPersons: registration.approvedPersons.map(toContact),
-    material: resolveMaterial(registration),
-    status,
-    statusTimeline,
-    submittedToRegulator: { code: registration.submittedToRegulator },
-    submitterContactDetails: toContact(registration.submitterContactDetails),
-    validFrom
-  }
   const accreditations = keyedRecords(
     accreditationsForRegistration(registration, organisation),
     (accreditation) => toAccreditationEntry(accreditation, context),
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
+  const registrationStatus = { current: status, timeline }
+
+  /** @type {RegistrationCommon} */
+  const common = {
+    applicationContactDetails: toContact(applicationContactDetails),
+    approvedPersons: registration.approvedPersons.map(toContact),
+    material: resolveMaterial(registration),
+    regAccStatusByDate: regAccStatusByYear(
+      { status: registrationStatus, accreditations },
+      calendarDate(today)
+    ),
+    status: registrationStatus,
+    submittedToRegulator: { code: registration.submittedToRegulator },
+    submitterContactDetails: toContact(registration.submitterContactDetails),
+    validFrom
+  }
 
   const converted =
     registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
@@ -199,6 +234,33 @@ export function toRegistrationEntry(registration, organisation, context) {
       : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
+}
+
+/**
+ * The registration as the read model shows it, or null when the read model
+ * does not serve it, with the reason passed to `onDrop`. Its overseas sites are
+ * left out, as reporting does not need them.
+ *
+ * @param {StoredOrganisation} organisation
+ * @param {StoredRegistration} registration
+ * @param {OnDrop} [onDrop]
+ * @returns {Registration | null}
+ */
+export function toReadModelRegistration(
+  organisation,
+  registration,
+  onDrop = () => {}
+) {
+  const entry = toRegistrationEntry(
+    { ...registration, overseasSites: {} },
+    organisation,
+    {
+      onDrop,
+      overseasSitesById: new Map(),
+      today: new Date().toISOString().slice(0, 10)
+    }
+  )
+  return entry?.[1] ?? null
 }
 
 /**
@@ -278,7 +340,7 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const statusTimeline = toStatusTimeline(
+  const timeline = toStatusTimeline(
     accreditation.statusHistory,
     accreditation.validFrom
   )
@@ -298,13 +360,8 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     String(deriveAccreditationYear(accreditation)),
     {
       accreditationNumber,
-      prnIssuance: {
-        signatories: prnIssuance.signatories.map(toContact),
-        tonnageBand: prnIssuance.tonnageBand
-      },
-      status,
-      statusTimeline,
-      submitterContactDetails: toContact(accreditation.submitterContactDetails)
+      prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
+      status: { current: status, timeline }
     }
   ]
 }
@@ -336,16 +393,9 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  const timed = recorded.toSorted(byDate)
-  for (let i = 1; i < timed.length; i++) {
-    // On a tie the earlier-recorded entry keeps the time; the later moves 1ms on
-    if (timed[i].at <= timed[i - 1].at) {
-      timed[i].at = new Date(timed[i - 1].at.getTime() + 1)
-    }
-  }
-  return Object.fromEntries(
-    timed.map(({ status, at }) => [at.toISOString(), { status }])
-  )
+  return recorded
+    .toSorted(byDate)
+    .map(({ status, at }) => ({ status, at: at.toISOString() }))
 }
 
 /**

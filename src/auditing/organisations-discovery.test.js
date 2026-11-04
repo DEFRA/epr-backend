@@ -49,8 +49,8 @@ describe('auditOrganisationsDiscovery', () => {
     action: 'organisations-discovered'
   }
 
-  /** @type {import('#domain/organisations/model.js').Organisation} */
-  const linkedOrg = /** @type {any} */ ({
+  /** @type {import('#repositories/organisations/port.js').LinkedOrganisationSummary} */
+  const linkedOrg = {
     id: 'epr-org-1',
     orgId: 1001,
     status: 'approved',
@@ -61,7 +61,7 @@ describe('auditOrganisationsDiscovery', () => {
       linkedBy: { email: 'linker@example.com', id: 'linker-id' },
       linkedAt: '2026-01-01T00:00:00.000Z'
     }
-  })
+  }
 
   const defraIdRelationships = [
     {

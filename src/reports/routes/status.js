@@ -11,14 +11,7 @@ import { assertNotStale } from '#reports/domain/stale.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import {
-  extractChangedBy,
-  findRegistrationForReport,
-  periodParamsSchema
-} from './shared.js'
-
-export const reportsStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}/status'
+import { extractChangedBy, findRegistrationForReport } from './shared.js'
 
 const MIN_DECLARED_BY_LENGTH = 2
 const MAX_DECLARED_BY_LENGTH = 255
@@ -46,12 +39,10 @@ const payloadSchema = Joi.object({
 
 export const reportsStatus = {
   method: 'POST',
-  path: reportsStatusPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
-      params: periodParamsSchema,
       payload: payloadSchema
     }
   },
@@ -65,10 +56,14 @@ export const reportsStatus = {
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
-    const period = Number(params.period)
-    const submissionNumber = Number(params.submissionNumber)
+    const {
+      organisationId,
+      registrationId,
+      cadence,
+      year,
+      period,
+      submissionNumber
+    } = params
     const { status, version, submissionDeclaredBy } = request.payload
 
     const [registration, report] = await Promise.all([

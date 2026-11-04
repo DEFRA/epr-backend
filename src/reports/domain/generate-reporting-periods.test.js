@@ -1,13 +1,16 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
 import {
   generateAllPeriodsForYear,
+  generatePeriodsInRange,
   generateReportingPeriods
 } from './generate-reporting-periods.js'
 
 describe('generateAllPeriodsForYear', () => {
   it('returns all 12 monthly periods regardless of current date', () => {
-    const periods = generateAllPeriodsForYear(CADENCE.monthly, 2099)
+    const periods = generateAllPeriodsForYear(CADENCE.monthly, toYear(2099))
 
     expect(periods).toHaveLength(12)
     expect(periods[0].period).toBe(1)
@@ -15,7 +18,7 @@ describe('generateAllPeriodsForYear', () => {
   })
 
   it('returns all 4 quarterly periods regardless of current date', () => {
-    const periods = generateAllPeriodsForYear(CADENCE.quarterly, 2099)
+    const periods = generateAllPeriodsForYear(CADENCE.quarterly, toYear(2099))
 
     expect(periods).toHaveLength(4)
   })
@@ -26,7 +29,11 @@ const march20 = new Date('2026-03-20T12:00:00Z')
 describe('generateReportingPeriods', () => {
   describe('monthly cadence', () => {
     it('returns only periods that have ended', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods).toHaveLength(2)
       expect(periods[0].period).toBe(1)
@@ -34,7 +41,11 @@ describe('generateReportingPeriods', () => {
     })
 
     it('returns correct start and end dates', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods[0].startDate).toBe('2026-01-01')
       expect(periods[0].endDate).toBe('2026-01-31')
@@ -43,7 +54,11 @@ describe('generateReportingPeriods', () => {
     })
 
     it('computes dueDate as 20th of month following period end', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods[0].dueDate).toBe('2026-02-20')
       expect(periods[1].dueDate).toBe('2026-03-20')
@@ -53,7 +68,7 @@ describe('generateReportingPeriods', () => {
       const january2027 = new Date('2027-01-15T12:00:00Z')
       const periods = generateReportingPeriods(
         CADENCE.monthly,
-        2026,
+        toYear(2026),
         january2027
       )
 
@@ -61,13 +76,21 @@ describe('generateReportingPeriods', () => {
     })
 
     it('returns report as null for all periods', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods.every((p) => p.report === null)).toBe(true)
     })
 
     it('excludes the current in-progress month', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods.find((p) => p.period === 3)).toBeUndefined()
     })
@@ -76,7 +99,7 @@ describe('generateReportingPeriods', () => {
       const january2027 = new Date('2027-01-15T12:00:00Z')
       const periods = generateReportingPeriods(
         CADENCE.monthly,
-        2026,
+        toYear(2026),
         january2027
       )
 
@@ -85,7 +108,11 @@ describe('generateReportingPeriods', () => {
 
     it('excludes December when current date is still in December', () => {
       const december = new Date('2026-12-15T12:00:00Z')
-      const periods = generateReportingPeriods(CADENCE.monthly, 2026, december)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2026),
+        december
+      )
 
       expect(periods).toHaveLength(11)
     })
@@ -93,14 +120,22 @@ describe('generateReportingPeriods', () => {
 
   describe('quarterly cadence', () => {
     it('excludes current quarter that has not ended', () => {
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods).toHaveLength(0)
     })
 
     it('includes quarter once it has ended', () => {
       const april1 = new Date('2026-04-01T00:00:00Z')
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2026, april1)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2026),
+        april1
+      )
 
       expect(periods).toHaveLength(1)
       expect(periods[0].period).toBe(1)
@@ -108,7 +143,11 @@ describe('generateReportingPeriods', () => {
 
     it('returns correct start and end dates', () => {
       const may = new Date('2026-05-15T12:00:00Z')
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2026, may)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2026),
+        may
+      )
 
       expect(periods).toHaveLength(1)
       expect(periods[0].startDate).toBe('2026-01-01')
@@ -117,13 +156,21 @@ describe('generateReportingPeriods', () => {
 
     it('computes dueDate as 20th of month following quarter end', () => {
       const may = new Date('2026-05-15T12:00:00Z')
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2026, may)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2026),
+        may
+      )
 
       expect(periods[0].dueDate).toBe('2026-04-20')
     })
 
     it('excludes future quarters', () => {
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2026, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2026),
+        march20
+      )
 
       expect(periods.find((p) => p.period === 2)).toBeUndefined()
     })
@@ -132,7 +179,7 @@ describe('generateReportingPeriods', () => {
       const november = new Date('2026-11-15T12:00:00Z')
       const periods = generateReportingPeriods(
         CADENCE.quarterly,
-        2026,
+        toYear(2026),
         november
       )
 
@@ -143,7 +190,7 @@ describe('generateReportingPeriods', () => {
       const january2027 = new Date('2027-01-01T00:00:00Z')
       const periods = generateReportingPeriods(
         CADENCE.quarterly,
-        2026,
+        toYear(2026),
         january2027
       )
 
@@ -153,50 +200,55 @@ describe('generateReportingPeriods', () => {
 
   describe('year filtering', () => {
     it('returns empty array for a future year', () => {
-      const periods = generateReportingPeriods(CADENCE.monthly, 2027, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.monthly,
+        toYear(2027),
+        march20
+      )
 
       expect(periods).toStrictEqual([])
     })
 
     it('returns all periods for a past year', () => {
-      const periods = generateReportingPeriods(CADENCE.quarterly, 2025, march20)
+      const periods = generateReportingPeriods(
+        CADENCE.quarterly,
+        toYear(2025),
+        march20
+      )
 
       expect(periods).toHaveLength(4)
     })
   })
+})
 
-  describe('fromDate bound', () => {
-    it('drops periods that ended before fromDate', () => {
-      const periods = generateReportingPeriods(
-        CADENCE.monthly,
-        2026,
-        march20,
-        '2026-02-01'
-      )
+describe('generatePeriodsInRange', () => {
+  const range = (/** @type {string} */ from, /** @type {string} */ to) =>
+    generatePeriodsInRange(
+      'quarterly',
+      calendarDate(from),
+      calendarDate(to)
+    ).map(({ period, startDate, endDate }) => [period, startDate, endDate])
 
-      expect(periods.map((p) => p.period)).toEqual([2])
-    })
+  it('trims the first and last period to the range', () => {
+    expect(range('2026-02-01', '2026-05-14')).toEqual([
+      [1, '2026-02-01', '2026-03-31'],
+      [2, '2026-04-01', '2026-05-14']
+    ])
+  })
 
-    it('keeps the period containing a mid-period fromDate', () => {
-      const periods = generateReportingPeriods(
-        CADENCE.monthly,
-        2026,
-        march20,
-        '2026-02-10'
-      )
+  it('returns one period when the range sits inside it', () => {
+    expect(range('2026-02-01', '2026-02-14')).toEqual([
+      [1, '2026-02-01', '2026-02-14']
+    ])
+  })
 
-      expect(periods.map((p) => p.period)).toEqual([2])
-    })
+  it('keeps the normal due date of a trimmed period', () => {
+    const [period] = generatePeriodsInRange(
+      'quarterly',
+      calendarDate('2026-01-01'),
+      calendarDate('2026-02-14')
+    )
 
-    it('is a no-op when fromDate is null', () => {
-      const periods = generateReportingPeriods(
-        CADENCE.monthly,
-        2026,
-        march20,
-        null
-      )
-
-      expect(periods.map((p) => p.period)).toEqual([1, 2])
-    })
+    expect(period.dueDate).toBe('2026-04-20')
   })
 })

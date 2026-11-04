@@ -1,6 +1,10 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAwaitingAuthorisationPrn, buildDraftPrn } from './test-data.js'
+import {
+  buildAwaitingAuthorisationPrn,
+  buildDraftPrn,
+  generateTestPrnNumber
+} from './test-data.js'
 
 const updaterUser = { id: 'user-raiser', name: 'Raiser User' }
 const issuerUser = { id: 'user-issuer', name: 'Issuer User' }
@@ -81,7 +85,7 @@ export const testOptimisticConcurrency = (it) => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: issuerUser,
           updatedAt: new Date(),
-          prnNumber: `ER26${Date.now().toString().slice(-5)}A`
+          prnNumber: generateTestPrnNumber()
         })
         expect(issued.version).toBe(2)
 
@@ -172,7 +176,7 @@ export const testOptimisticConcurrency = (it) => {
 
       it('surfaces 409 (not a duplicate-key 500) when two issues race for the same PRN', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const baseSuffix = Date.now().toString().slice(-5)
+        const basePrnNumber = generateTestPrnNumber()
         const issueWithSuffix = (suffix) =>
           repository.updateStatus({
             id: created.id,
@@ -180,7 +184,7 @@ export const testOptimisticConcurrency = (it) => {
             status: PRN_STATUS.AWAITING_ACCEPTANCE,
             updatedBy: issuerUser,
             updatedAt: new Date(),
-            prnNumber: `ER26${baseSuffix}${suffix}`,
+            prnNumber: `${basePrnNumber}${suffix}`,
             operation: { slot: 'issued', at: new Date(), by: issuerUser }
           })
 

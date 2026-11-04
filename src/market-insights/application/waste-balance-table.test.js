@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -22,6 +23,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
@@ -340,7 +342,7 @@ const approvalReverted = ({ organisation }) => ({
 const monthlyReport = ({ ledgerId }, period) => ({
   organisationId: ledgerId.organisationId,
   registrationId: ledgerId.registrationId,
-  year: 2026,
+  year: toYear(2026),
   cadence: 'monthly',
   period
 })
@@ -389,7 +391,7 @@ const run = async ({
 
   for (const { ledgerId, summaryLogId, rows } of submissions) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
+      withNumbers(ledgerId),
       rows,
       summaryLogId
     )

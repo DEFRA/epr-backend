@@ -48,9 +48,10 @@ export const latestSubmitted = (current, previousSubmissions) =>
  * single submitted item and the superseded flag is never consulted.
  *
  * @param {MergedPeriod[]} mergedPeriods
+ * @param {Date} [now]
  * @returns {CalendarPeriod[]}
  */
-export const buildCalendarPeriods = (mergedPeriods) =>
+export const buildCalendarPeriods = (mergedPeriods, now = new Date()) =>
   // previousSubmissions is a feed-only projection, not part of a calendar item,
   // so it is dropped here rather than spread through.
   mergedPeriods.flatMap(({ previousSubmissions = [], ...period }) => {
@@ -60,7 +61,7 @@ export const buildCalendarPeriods = (mergedPeriods) =>
       !flaggedSubmitted ||
       !isResubmissionRequired(flaggedSubmitted.resubmissionRequired)
     ) {
-      return [{ ...period, periodStatus: derivePeriodStatus(period) }]
+      return [{ ...period, periodStatus: derivePeriodStatus(period, now) }]
     }
 
     // `current` is the highest-submissionNumber report for the period. When it

@@ -92,7 +92,7 @@ const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
   orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().required(),
+  accreditationNumber: Joi.string().allow('').required(),
   material: Joi.string().required(),
   tonnageBand: Joi.string().required(),
   ledgerId: Joi.object({
@@ -151,7 +151,8 @@ const toAggregatedRow = (
     organisationName: resolved?.organisation.companyDetails.name,
     orgId: resolved && String(resolved.organisation.orgId),
     registrationNumber: resolved?.registration.registrationNumber,
-    accreditationNumber: resolved?.accreditation.accreditationNumber,
+    accreditationNumber:
+      resolved && (resolved.accreditation.accreditationNumber ?? ''),
     material: resolved?.accreditation.material,
     tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
     ledgerId: { organisationId, registrationId, accreditationId },

@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import crypto from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -6,13 +7,17 @@ import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { TestServer } from '#test/create-test-server.js' */

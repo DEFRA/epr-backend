@@ -11,7 +11,8 @@ import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
-  REGISTRATION_STATUSES
+  REGISTRATION_STATUSES,
+  REG_ACC_STATUS
 } from '#organisation-read-model/domain/model.js'
 
 /*
@@ -64,19 +65,39 @@ const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
 
-const statusTimelineSchema = Joi.object()
-  .pattern(
-    Joi.string().pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
-    Joi.object({ status: Joi.string().required() })
+const statusTimelineSchema = Joi.array()
+  .items(
+    Joi.object({
+      at: isoDateTime.required(),
+      status: Joi.string().required()
+    })
+  )
+  .description(
+    'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
   )
   .required()
 
+/**
+ * @param {readonly string[]} statuses
+ */
+const statusSchema = (statuses) =>
+  Joi.object({
+    current: Joi.string()
+      .valid(...statuses)
+      .required(),
+    timeline: statusTimelineSchema
+  }).required()
+
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
-  status: Joi.string()
-    .valid(...ACCREDITATION_STATUSES)
-    .required(),
-  statusTimeline: statusTimelineSchema
+  prns: Joi.object({
+    open: Joi.boolean()
+      .required()
+      .description(
+        'Whether PRNs and PERNs can still be raised and issued for the year: until the end of 31 January after it.'
+      )
+  }).required(),
+  status: statusSchema(ACCREDITATION_STATUSES)
 }
 
 const reprocessorAccreditationSchema = Joi.object(accreditationCommon)
@@ -102,12 +123,23 @@ const ukAddressSchema = Joi.alternatives().try(
   Joi.object({ fullAddress: Joi.string().required() })
 )
 
+const regAccStatusByDateSchema = keyedByYear(
+  Joi.object().pattern(
+    isoDate,
+    Joi.object({
+      status: Joi.string()
+        .valid(...Object.values(REG_ACC_STATUS))
+        .required()
+    })
+  )
+).description(
+  'By year, the date each status starts. A status holds until the next date, or the end of the year.'
+)
+
 const registrationCommon = {
   material: materialSchema.required(),
-  status: Joi.string()
-    .valid(...REGISTRATION_STATUSES)
-    .required(),
-  statusTimeline: statusTimelineSchema,
+  regAccStatusByDate: regAccStatusByDateSchema,
+  status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
 }
@@ -150,15 +182,25 @@ export const linkedDefraOrganisationViewSchema = Joi.object({
 })
 
 export const organisationViewSchema = Joi.object({
+  displayName: Joi.string().required(),
   linkedDefraOrganisation: linkedDefraOrganisationViewSchema,
   name: Joi.string().required(),
-  organisationNumber: Joi.number().integer().required(),
+  organisationNumber: Joi.string().required(),
   registrations: registrationsViewSchema,
-  status: Joi.string()
-    .valid(...ORGANISATION_STATUSES)
-    .required(),
-  submittedToRegulator: regulatorSchema,
-  tradingName: Joi.string()
+  status: Joi.object({
+    current: Joi.string()
+      .valid(...ORGANISATION_STATUSES)
+      .required()
+  }).required(),
+  submittedToRegulator: regulatorSchema
+})
+
+export const organisationListResponseSchema = Joi.object({
+  items: Joi.array().items(organisationViewSchema).required(),
+  page: Joi.number().required(),
+  pageSize: Joi.number().required(),
+  totalItems: Joi.number().required(),
+  totalPages: Joi.number().required()
 })
 
 const servedYear = yearSchema().custom((year, helpers) =>

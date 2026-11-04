@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import { Collection, Db } from 'mongodb' */
 
 import { createHash } from 'node:crypto'
@@ -18,10 +19,24 @@ import { createHash } from 'node:crypto'
  * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
+/**
+ * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
+ */
+
+/**
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
+ */
+
+/**
+ * @typedef {import('./port.js').LedgerLackingNumbers} LedgerLackingNumbers
+ */
+
 import {
+  validateRowStateNumbers,
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
+import { ROW_STATE_NUMBER_KEYS } from './schema.js'
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
@@ -153,7 +168,7 @@ const identityKey = (fields) =>
  * to the ledger that wrote it, so the summary log alone does not identify it.
  *
  * @param {WasteBalanceLedgerId} ledgerId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
   organisationId: ledgerId.organisationId,
@@ -163,9 +178,20 @@ const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
 })
 
 /**
+ * @param {RowStateNumbers} numbers
+ * @returns {RowStateNumbers}
+ */
+const numbersHeldBy = (numbers) =>
+  Object.fromEntries(
+    ROW_STATE_NUMBER_KEYS.filter((key) => numbers[key] !== undefined).map(
+      (key) => [key, numbers[key]]
+    )
+  )
+
+/**
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
   updateOne: {
@@ -174,6 +200,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
+        ...numbersHeldBy(candidate),
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -185,15 +212,13 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
 })
 
 /**
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {NumberedLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  */
 const prepareRowState = (ledgerId, entry, summaryLogId) => {
   const candidate = validateSummaryLogRowStateInsert({
-    organisationId: ledgerId.organisationId,
-    registrationId: ledgerId.registrationId,
-    accreditationId: ledgerId.accreditationId,
+    ...ledgerId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
     processingType: entry.processingType,
@@ -213,7 +238,7 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
  * their content-addressed identity.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performUpsertSummaryLogRowStates =
   (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {
@@ -276,7 +301,7 @@ const toWasteRecordState = ({
  * 40% of the credited tonnage report's read time over 423 summary logs.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: string) => Promise<import('./port.js').WasteRecordState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
  */
 const performFindWasteRecordStatesForSummaryLog =
   (collection) => async (ledgerId, summaryLogId) => {
@@ -296,7 +321,7 @@ const performFindWasteRecordStatesForSummaryLog =
  * prefix.
  *
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, fileId: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowStatesForSummaryLogFile =
   (collection) => async (organisationId, registrationId, fileId) => {
@@ -357,7 +382,7 @@ const toSubmittedRowState = ({
 
 /**
  * @param {Collection} collection
- * @returns {(summaryLogIds: string[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
+ * @returns {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
  */
 const performStreamRowStatesForSummaryLogs = (collection) =>
   async function* (summaryLogIds) {
@@ -392,6 +417,102 @@ const performFindDistinctDataKeys = (collection) => async () => {
   return docs.map((doc) => /** @type {string} */ (doc._id))
 }
 
+const LACKING_A_NUMBER = {
+  $or: ROW_STATE_NUMBER_KEYS.map((key) => ({ [key]: { $exists: false } }))
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {() => Promise<LedgerLackingNumbers[]>}
+ */
+const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
+  const groups = await collection
+    .aggregate([
+      { $match: LACKING_A_NUMBER },
+      {
+        $group: {
+          _id: {
+            organisationId: '$organisationId',
+            registrationId: '$registrationId',
+            accreditationId: '$accreditationId'
+          },
+          documents: { $sum: 1 },
+          ...Object.fromEntries(
+            ROW_STATE_NUMBER_KEYS.map((key) => [
+              key,
+              { $max: { $eq: [{ $type: `$${key}` }, 'missing'] } }
+            ])
+          )
+        }
+      }
+    ])
+    .toArray()
+  return groups.map((group) => ({
+    ledgerId: /** @type {WasteBalanceLedgerId} */ (group._id),
+    documents: group.documents,
+    lacking: ROW_STATE_NUMBER_KEYS.filter((key) => group[key])
+  }))
+}
+
+/**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RowStateNumbers} given
+ */
+const lackingGivenNumbersFilter = (ledgerId, given) => ({
+  organisationId: ledgerId.organisationId,
+  registrationId: ledgerId.registrationId,
+  accreditationId: ledgerId.accreditationId,
+  $or: Object.keys(given).map((key) => ({ [key]: { $exists: false } }))
+})
+
+/**
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
+ */
+const performCountRowStatesLacking =
+  (collection) => async (ledgerId, numbers) => {
+    const given = numbersHeldBy(validateRowStateNumbers(numbers))
+    if (Object.keys(given).length === 0) {
+      return 0
+    }
+    return collection.countDocuments(lackingGivenNumbersFilter(ledgerId, given))
+  }
+
+/**
+ * One update over every row state of the ledger, each number set only where
+ * the row state lacks it.
+ *
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
+ */
+const performAssignNumbers = (collection) => async (ledgerId, numbers) => {
+  const given = numbersHeldBy(validateRowStateNumbers(numbers))
+  if (Object.keys(given).length === 0) {
+    return 0
+  }
+
+  const { modifiedCount } = await collection.updateMany(
+    lackingGivenNumbersFilter(ledgerId, given),
+    [
+      {
+        $set: Object.fromEntries(
+          Object.entries(given).map(([key, value]) => [
+            key,
+            {
+              $cond: [
+                { $eq: [{ $type: `$${key}` }, 'missing'] },
+                { $literal: value },
+                `$${key}`
+              ]
+            }
+          ])
+        )
+      }
+    ]
+  )
+  return modifiedCount
+}
+
 /**
  * Creates a MongoDB-backed summary-log row state repository.
  *
@@ -410,6 +531,9 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     findRowHistory: performFindRowHistory(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection)
+    findDistinctDataKeys: performFindDistinctDataKeys(collection),
+    findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),
+    countRowStatesLacking: performCountRowStatesLacking(collection),
+    assignNumbers: performAssignNumbers(collection)
   })
 }

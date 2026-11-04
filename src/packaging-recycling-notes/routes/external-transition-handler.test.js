@@ -1,8 +1,9 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import {
   PRN_ACTOR,
   PRN_STATUS,
@@ -22,6 +23,7 @@ import {
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from './test-helpers.js'
 import { mapTransitionError } from './external-transition-handler.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
@@ -37,6 +39,18 @@ vi.mock('@defra/cdp-auditing', () => ({
 const REG_ID = 'reg-789'
 const ACC_ID = 'acc-456'
 const ORG_ID = 'org-123'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+// The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
+// repository requires, so the organisation is handed back as it stands.
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
+const organisationsRepository = () => ({
+  findById: async () => organisation
+})
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const baseAt = new Date('2026-01-15T10:00:00.000Z')
@@ -59,14 +73,8 @@ const buildPrn = (currentStatus) => ({
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
-  obligationYear: 2026,
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,
@@ -125,7 +133,7 @@ const startServer = async ({ currentStatus, events }) => {
           buildPrn(currentStatus)
         ]),
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({})
+      organisationsRepository
     }
   })
   return server

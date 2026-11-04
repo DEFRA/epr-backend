@@ -9,7 +9,10 @@ import {
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAccreditationSnapshot,
+  buildAwaitingAcceptancePrn
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   createMongoLedgerRepository,
   ensureLedgerCollection,
@@ -19,6 +22,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
@@ -26,6 +30,13 @@ const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORG_ID = 'org-concurrency'
 const REG_ID = 'reg-concurrency'
 const ACC_ID = 'acc-concurrency'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const TONNAGE = 5
 const OPENING = 386.62
 
@@ -173,14 +184,7 @@ describe('PRN status concurrency against real MongoDB', () => {
       buildAcceptedPrn({
         organisation: { id: ORG_ID, name: 'Test Reprocessor' },
         registrationId: REG_ID,
-        accreditation: {
-          id: ACC_ID,
-          accreditationNumber: 'ACC-1',
-          accreditationYear: 2026,
-          material: 'plastic',
-          submittedToRegulator: 'ea',
-          siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-        },
+        accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
         tonnage: TONNAGE
       })
     )
@@ -191,7 +195,9 @@ describe('PRN status concurrency against real MongoDB', () => {
     updatePrnStatus({
       prnRepository: repositoryFactory(createMockLogger()),
       ledgerRepository,
-      organisationsRepository: /** @type {*} */ ({}),
+      organisationsRepository: /** @type {*} */ ({
+        findById: async () => organisation
+      }),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: createMockLogger(),
       id: prnId,

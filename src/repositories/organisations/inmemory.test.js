@@ -2,19 +2,27 @@ import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import {
-  buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
+import { partialMock } from '#test/type-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
+
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
 
 const it = base.extend({
-  // eslint-disable-next-line no-empty-pattern
-  organisationsRepository: async ({}, use) => {
+  organisationsRepository: async (
+    // eslint-disable-next-line no-empty-pattern
+    /** @type {object} */ {},
+    /** @type {(factory: OrganisationsRepositoryFactory) => Promise<void>} */ use
+  ) => {
     const factory = createInMemoryOrganisationsRepository([])
     await use(factory)
   }
@@ -25,28 +33,23 @@ describe('In-memory organisations repository', () => {
     testOrganisationsRepositoryContract(it)
   })
 
-  describe('findByOrgId', () => {
-    let repository
+  describe('seeding', () => {
+    it('refuses two seeded organisations with the same orgId', () => {
+      const first = buildOrganisation()
+      const second = buildOrganisation({ orgId: first.orgId })
 
-    beforeEach(() => {
-      const factory = createInMemoryOrganisationsRepository([])
-      repository = factory()
-    })
-
-    it('returns organisation matching the business orgId', async () => {
-      const organisation = buildOrganisation()
-      await repository.insert(organisation)
-
-      const found = await repository.findByOrgId(organisation.orgId)
-
-      expect(found).toBeDefined()
-      expect(found.id).toBe(organisation.id)
-      expect(found.orgId).toBe(organisation.orgId)
-    })
-
-    it('returns null when no organisation matches', async () => {
-      const found = await repository.findByOrgId(999999)
-      expect(found).toBeNull()
+      expect(() =>
+        createInMemoryOrganisationsRepository([
+          partialMock(first),
+          partialMock(second)
+        ])
+      ).toThrow(
+        expect.objectContaining({
+          isBoom: true,
+          output: expect.objectContaining({ statusCode: 409 }),
+          message: `Duplicate key conflict inserting organisation ${second.id} (orgId)`
+        })
+      )
     })
   })
 

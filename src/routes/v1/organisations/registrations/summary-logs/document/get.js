@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -11,12 +12,8 @@ import { summaryLogDocumentResponseSchema } from './response.schema.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
-export const summaryLogDocumentPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/document'
-
 export const summaryLogDocument = {
   method: 'GET',
-  path: summaryLogDocumentPath,
   options: {
     auth: {
       // Both required (+ prefix): the caller must hold summary-log.read AND
@@ -32,7 +29,7 @@ export const summaryLogDocument = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: string },
+   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit

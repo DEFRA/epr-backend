@@ -9,7 +9,7 @@ const prnTonnageRowSchema = Joi.object({
   registrationType: Joi.string()
     .valid(...Object.values(REGISTRATION_TYPE))
     .required(),
-  accreditationNumber: Joi.string().required(),
+  accreditationNumber: Joi.string().allow('').required(),
   material: Joi.string()
     .valid(...Object.values(MATERIAL))
     .required(),

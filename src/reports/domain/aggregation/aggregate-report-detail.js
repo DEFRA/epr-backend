@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isExporterCategory } from '../operator-category.js'
 import { periodBounds } from '../reporting-period.js'
@@ -12,6 +13,7 @@ import {
 import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from '../cadence.js'
@@ -81,11 +83,11 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @typedef {Object} AggregatedReportDetail
  * @property {OperatorCategory} operatorCategory
  * @property {Cadence} cadence
- * @property {number} year
+ * @property {Year} year
  * @property {number} period
  * @property {CalendarDate} startDate
  * @property {CalendarDate} endDate
- * @property {{ summaryLogId: string|null, lastUploadedAt: string|null }} source
+ * @property {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }} source
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
@@ -105,9 +107,9 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
  * @param {object} options
  * @param {OperatorCategory} options.operatorCategory
  * @param {Cadence} options.cadence
- * @param {number} options.year
+ * @param {Year} options.year
  * @param {number} options.period
- * @param {{ summaryLogId: string|null, lastUploadedAt: string|null }} options.source
+ * @param {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }} options.source
  * @param {Map<string, OrsDetails>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */

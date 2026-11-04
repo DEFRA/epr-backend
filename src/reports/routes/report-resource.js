@@ -12,6 +12,7 @@ import {
 } from '#reports/repository/schema.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Issue } from '#reports/application/report-mandatory/assert-report-data-complete.js'
  * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatus as StoredStatus, ReportStatusObject, ReportSubmittedSlot, UserSummary, WasteSent } from '#reports/repository/port.js'
@@ -34,7 +35,7 @@ import {
  *   & Partial<Pick<RecyclingActivity, 'tonnageRecycled' | 'tonnageNotRecycled'>>} ServedRecyclingActivity
  *
  * @typedef {{
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -45,7 +46,8 @@ import {
  *   exportActivity?: ExportActivity,
  *   wasteSent?: WasteSent,
  *   prn?: PrnData,
- *   source?: { summaryLogId: string, lastUploadedAt: string | null }
+ *   source?: { summaryLogId: string, lastUploadedAt: string | null },
+ *   detail?: Record<string, unknown>
  * }} ReportResourceBase
  *
  * @typedef {ReportResourceBase & {
@@ -220,6 +222,25 @@ export function toReportResource(body, { submissionNumber }) {
     : toStoredResource(body)
 }
 
+/** The expansions a report read can ask for with `?expand=`. */
+export const REPORT_EXPANSION = Object.freeze({ detail: 'detail' })
+
+/**
+ * The report as the service holds it, for a reader that needs all of it: only
+ * the database ids are left out, as the natural-key routes never serve them.
+ * @param {StoredReportBody | PreviewBody} body
+ * @returns {Record<string, unknown>}
+ */
+export const toReportDetail = (body) => {
+  const {
+    id: _id,
+    organisationId: _organisationId,
+    registrationId: _registrationId,
+    ...detail
+  } = /** @type {Record<string, unknown>} */ (body)
+  return detail
+}
+
 const personSchema = Joi.object({
   name: Joi.string(),
   position: Joi.string().required()
@@ -308,4 +329,16 @@ const previewSchema = Joi.object({
 export const reportResourceSchema = Joi.alternatives().try(
   storedReportSchema,
   previewSchema
+)
+
+const detailSchema = Joi.object({
+  id: Joi.forbidden(),
+  organisationId: Joi.forbidden(),
+  registrationId: Joi.forbidden()
+}).unknown()
+
+/** The report resource a read can expand with `detail`. */
+export const expandableReportResourceSchema = Joi.alternatives().try(
+  storedReportSchema.keys({ detail: detailSchema }),
+  previewSchema.keys({ detail: detailSchema })
 )

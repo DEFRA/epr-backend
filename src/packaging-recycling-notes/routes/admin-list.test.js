@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import {
   afterAll,
@@ -12,6 +13,7 @@ import {
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createMockIssuedPrn } from './test-helpers.js'
@@ -134,11 +136,11 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
 
     it('returns null for accreditationNumber and submittedToRegulator when not present', async () => {
       const mockPrn = createMockIssuedPrn({
-        accreditation: {
+        accreditation: partialMock({
           id: 'acc-789',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic'
-        }
+        })
       })
       packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
         items: [mockPrn],
@@ -297,10 +299,12 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       })
 
       const payload = JSON.parse(response.payload)
-      expect(payload.items[0].issuedAt).toBe(
-        mockPrn.status.issued.at.toISOString()
-      )
-      expect(payload.items[0].issuedBy).toEqual(mockPrn.status.issued.by)
+      expect(payload.items[0].issuedAt).toBe('2026-01-15T10:00:00.000Z')
+      expect(payload.items[0].issuedBy).toEqual({
+        id: 'user-issuer',
+        name: 'Issuer User',
+        position: 'Manager'
+      })
     })
 
     it('returns issuedToOrganisation details', async () => {

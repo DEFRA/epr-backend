@@ -1,11 +1,12 @@
 import { reportedPeriodForDate } from './period-for-date.js'
 import { REPORT_STATUS } from './report-status.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {Cadence} from './cadence.js' */
 
 /**
- * @param {number} year
+ * @param {Year} year
  * @param {number | string} period
  * @returns {string}
  */

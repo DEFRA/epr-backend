@@ -1,7 +1,10 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
+/** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
@@ -15,10 +18,10 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * establishes both are there — an accreditation may carry neither, and the
  * range check has no sensible answer for half a window.
  *
- * @typedef {{
+ * @typedef {Brand<{
  *   validFrom: CalendarDate,
  *   validTo: CalendarDate
- * } & { readonly __brand: 'AccreditationWindow' }} AccreditationWindow
+ * }, 'AccreditationWindow'>} AccreditationWindow
  */
 
 /**
@@ -137,7 +140,7 @@ export function isSuspendedOrCancelledAtDate(date, statusHistory) {
  * consumer only ever serves approved accreditations.
  *
  * @param {{ id: string; validFrom?: string }} accreditation
- * @returns {number}
+ * @returns {Year}
  * @throws {Error} if validFrom is missing
  */
 export function deriveAccreditationYear(accreditation) {
@@ -146,5 +149,5 @@ export function deriveAccreditationYear(accreditation) {
       `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
     )
   }
-  return new Date(accreditation.validFrom).getUTCFullYear()
+  return utcYearOf(accreditation.validFrom)
 }

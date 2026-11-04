@@ -1,30 +1,39 @@
-import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
+import { classifierTail } from '#common/helpers/logging/cdp-boom.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { errorCodes } from './enums/error-codes.js'
 import {
   anchoredPattern,
   createInitialStatusHistory,
+  duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion,
-  prepareForReplace
+  prepareForReplace,
+  storedOrgId,
+  UNIQUE_NUMBER_FIELDS,
+  versionConflict
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
+import {
+  performLinkDefraOrganisation,
+  performReplaceUsers,
+  performUnlinkDefraOrganisation
+} from './mongodb.targeted-updates.js'
 
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-
 /**
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
@@ -46,6 +55,14 @@ async function ensureCollection(db) {
     { unique: true, sparse: true }
   )
   await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
+  await Promise.all(
+    UNIQUE_NUMBER_FIELDS.map(({ items, field }) =>
+      collection.createIndex(
+        { [`${items}.${field}`]: 1 },
+        { unique: true, sparse: true }
+      )
+    )
+  )
 
   return collection
 }
@@ -82,32 +99,47 @@ const performInsert = (db) => async (organisation) => {
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throw Boom.conflict(`Organisation with ${id} already exists`)
+      if (error.keyPattern?._id) {
+        throw Boom.conflict(`Organisation with ${id} already exists`)
+      }
+      throwCuratedDuplicateKeyBoom(error, id, 'inserting')
     }
     throw error
   }
 }
 
 /**
- * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
+ * @param {{ keyValue?: Record<string, unknown> }} error
+ * @returns {HeldNumber | undefined}
+ */
+const heldNumberOf = ({ keyValue }) => {
+  for (const { items, field, label } of UNIQUE_NUMBER_FIELDS) {
+    const number = keyValue?.[`${items}.${field}`]
+    if (typeof number === 'string') {
+      return { label, number }
+    }
+  }
+  return undefined
+}
+
+/**
+ * @param {Error & { code: number, keyPattern?: Record<string, number>, keyValue?: Record<string, unknown> }} error
  * @param {string} id
+ * @param {WriteOperation} operation
  * @returns {never}
  */
-const throwCuratedDuplicateKeyBoom = (error, id) => {
+const throwCuratedDuplicateKeyBoom = (error, id, operation) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
 
-  throw conflict(
-    `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
-    errorCodes.organisationDuplicateKey,
-    {
-      event: {
-        action: 'update_organisation',
-        reason: `fields=${conflictFields} ${classifierTail(error)}`
-      }
-    }
-  )
+  throw duplicateKeyConflict({
+    operation,
+    id,
+    conflictFields,
+    reason: `fields=${conflictFields} ${classifierTail(error)}`,
+    heldNumber: heldNumberOf(error)
+  })
 }
 
 const performReplace = (db) => async (id, version, updates) => {
@@ -130,39 +162,58 @@ const performReplace = (db) => async (id, version, updates) => {
       )
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throwCuratedDuplicateKeyBoom(error, validatedId)
+      throwCuratedDuplicateKeyBoom(error, validatedId, 'updating')
     }
     throw error
   }
 
   if (result.matchedCount === 0) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-    )
+    throw versionConflict(version, existing.version)
   }
 }
 
 /**
- * @returns {(
- *   | { shouldReturn: true, result: ReturnType<typeof mapDocumentWithCurrentStatuses> }
- *   | { shouldReturn: false }
- * )}
+ * Reads the one organisation `filter` matches, retrying until its version is
+ * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
+ * null when no organisation matches, and throws 500 when the version never
+ * arrives.
+ *
+ * @param {Db} db
+ * @param {number} maxRetries
+ * @param {number} retryDelayMs
+ * @param {Filter<Document>} filter
+ * @param {number} [minimumVersion]
+ * @returns {Promise<Organisation | null>}
  */
-const handleFoundDocument = (doc, minimumVersion) => {
-  const mapped = mapDocumentWithCurrentStatuses(doc)
+const findOneAtMinimumVersion = async (
+  db,
+  maxRetries,
+  retryDelayMs,
+  filter,
+  minimumVersion
+) => {
+  for (let i = 0; i < maxRetries; i++) {
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
-  // No version expectation - return immediately
-  if (minimumVersion === undefined) {
-    return { shouldReturn: true, result: mapped }
+    const isLastRetry = i === maxRetries - 1
+
+    if (doc) {
+      if (minimumVersion === undefined || doc.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(doc)
+      }
+      // Document exists but version too low - will retry
+    } else if (minimumVersion === undefined || isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+    }
   }
 
-  // Version matches - return
-  if (mapped.version >= minimumVersion) {
-    return { shouldReturn: true, result: mapped }
-  }
-
-  // Version doesn't match yet - retry
-  return { shouldReturn: false }
+  throw Boom.internal('Consistency timeout waiting for minimum version')
 }
 
 const performFindById =
@@ -173,33 +224,17 @@ const performFindById =
     }
     const validatedId = validateId(id)
 
-    for (let i = 0; i < maxRetries; i++) {
-      const doc = await db
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
-      const isLastRetry = i === maxRetries - 1
-
-      if (doc) {
-        const outcome = handleFoundDocument(doc, minimumVersion)
-        if (outcome.shouldReturn) {
-          return outcome.result
-        }
-        // Document exists but version too low - will retry
-      } else if (minimumVersion === undefined || isLastRetry) {
-        throw Boom.notFound(`Organisation with id ${id} not found`)
-      } else {
-        // Document not found but have retries left - will retry
-      }
-
-      // Wait before next retry
-      if (!isLastRetry) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
-      }
+    const found = await findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { _id: ObjectId.createFromHexString(validatedId) },
+      minimumVersion
+    )
+    if (!found) {
+      throw Boom.notFound(`Organisation with id ${id} not found`)
     }
-
-    // Exhausted retries waiting for minimum version
-    throw Boom.internal('Consistency timeout waiting for minimum version')
+    return found
   }
 
 const performFindAll = (db) => async () => {
@@ -224,16 +259,8 @@ const anchoredCaseInsensitive = (value) => ({
  * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
  */
 const buildOrgIdFilter = (value) => {
-  const { businessOrgId, documentId } = parseOrgIdCriterion(value)
-  const branches = []
-  if (businessOrgId !== null) {
-    branches.push({ orgId: businessOrgId })
-  }
-  if (documentId !== null) {
-    branches.push({ _id: ObjectId.createFromHexString(documentId) })
-  }
-
-  return branches.length === 0 ? UNSATISFIABLE_FILTER : { $or: branches }
+  const orgId = parseOrgIdCriterion(value)
+  return orgId === null ? UNSATISFIABLE_FILTER : { orgId }
 }
 
 /**
@@ -245,14 +272,8 @@ const buildOrgIdFilter = (value) => {
  * @returns {object} - a filter matching organisations satisfying every criterion
  */
 const buildFindFilter = (criteria) => {
-  const {
-    search,
-    orgId,
-    registrationId,
-    registrationNumber,
-    accreditationId,
-    accreditationNumber
-  } = normaliseCriteria(criteria)
+  const { search, orgId, registrationNumber, accreditationNumber } =
+    normaliseCriteria(criteria)
 
   const conditions = []
   if (search !== '') {
@@ -263,17 +284,11 @@ const buildFindFilter = (criteria) => {
   if (orgId !== '') {
     conditions.push(buildOrgIdFilter(orgId))
   }
-  if (registrationId !== '') {
-    conditions.push({ 'registrations.id': registrationId })
-  }
   if (registrationNumber !== '') {
     conditions.push({
       'registrations.registrationNumber':
         anchoredCaseInsensitive(registrationNumber)
     })
-  }
-  if (accreditationId !== '') {
-    conditions.push({ 'accreditations.id': accreditationId })
   }
   if (accreditationNumber !== '') {
     conditions.push({
@@ -305,18 +320,28 @@ const performFind =
     return { items, page, pageSize, totalItems, totalPages }
   }
 
-const LINKED_ORG_PROJECTION = {
+const ORG_SUMMARY_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
-  statusHistory: 1,
+  statusHistory: 1
+}
+
+const LINKED_ORG_PROJECTION = {
+  ...ORG_SUMMARY_PROJECTION,
   linkedDefraOrganisation: 1
 }
 
-const toLinkedOrganisationSummary = (doc) => ({
+/** @returns {import('./port.js').OrganisationSummary} */
+const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
   orgId: doc.orgId,
   companyDetails: { name: doc.companyDetails.name },
-  status: getCurrentStatus(doc),
+  status: getCurrentStatus(doc)
+})
+
+/** @returns {import('./port.js').LinkedOrganisationSummary} */
+const toLinkedOrganisationSummary = (doc) => ({
+  ...toOrganisationSummary(doc),
   linkedDefraOrganisation: {
     ...doc.linkedDefraOrganisation,
     linkedAt: new Date(doc.linkedDefraOrganisation.linkedAt).toISOString()
@@ -363,66 +388,60 @@ const performFindByIds = (db) => async (ids) => {
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ 'linkedDefraOrganisation.orgId': defraOrgId })
+    .findOne(
+      { 'linkedDefraOrganisation.orgId': defraOrgId },
+      { projection: LINKED_ORG_PROJECTION }
+    )
 
   if (!doc) {
     return null
   }
 
-  return mapDocumentWithCurrentStatuses(doc)
+  return toLinkedOrganisationSummary(doc)
 }
 
-const performFindByAccreditationNumber =
-  (db) => async (accreditationNumber) => {
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ 'accreditations.accreditationNumber': accreditationNumber })
-
-    if (!doc) {
-      return null
-    }
-
-    return mapDocumentWithCurrentStatuses(doc)
-  }
-
-const performFindByRegistrationNumber = (db) => async (registrationNumber) => {
+const isInUse = async (db, filter) => {
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ 'registrations.registrationNumber': registrationNumber })
-
-  if (!doc) {
-    return null
-  }
-
-  return mapDocumentWithCurrentStatuses(doc)
+    .findOne(filter, { projection: { _id: 1 } })
+  return doc !== null
 }
+
+const performIsAccreditationNumberInUse = (db) => async (accreditationNumber) =>
+  isInUse(db, { 'accreditations.accreditationNumber': accreditationNumber })
+
+const performIsRegistrationNumberInUse = (db) => async (registrationNumber) =>
+  isInUse(db, { 'registrations.registrationNumber': registrationNumber })
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
-    .find({
-      // Must not be linked — matches never-linked (field absent) and unlinked
-      // (field cleared to null by the unlink flow)
-      linkedDefraOrganisation: null,
-      // Must be approved, or active but unlinked (check last status in
-      // statusHistory) — both are re-linkable candidates
-      $expr: {
-        $in: [
-          { $arrayElemAt: ['$statusHistory.status', -1] },
-          LINKABLE_ORGANISATION_STATUSES
-        ]
-      },
-      // User must be an initial user (case-insensitive email match)
-      users: {
-        $elemMatch: {
-          email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
-          roles: USER_ROLES.INITIAL
+    .find(
+      {
+        // Must not be linked — matches never-linked (field absent) and unlinked
+        // (field cleared to null by the unlink flow)
+        linkedDefraOrganisation: null,
+        // Must be approved, or active but unlinked (check last status in
+        // statusHistory) — both are re-linkable candidates
+        $expr: {
+          $in: [
+            { $arrayElemAt: ['$statusHistory.status', -1] },
+            LINKABLE_ORGANISATION_STATUSES
+          ]
+        },
+        // User must be an initial user (case-insensitive email match)
+        users: {
+          $elemMatch: {
+            email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
+            roles: USER_ROLES.INITIAL
+          }
         }
-      }
-    })
+      },
+      { projection: ORG_SUMMARY_PROJECTION }
+    )
     .toArray()
 
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+  return docs.map(toOrganisationSummary)
 }
 
 const findAllIds = (db) => async () => {
@@ -458,15 +477,15 @@ const findAllIds = (db) => async () => {
   )
 }
 
-const performFindByOrgId = (db) => async (orgId) => {
-  const doc = await db.collection(COLLECTION_NAME).findOne({ orgId })
-
-  if (!doc) {
-    return null
-  }
-
-  return mapDocumentWithCurrentStatuses(doc)
-}
+const performFindByOrganisationNumber =
+  (db, maxRetries, retryDelayMs) => (organisationNumber, minimumVersion) =>
+    findOneAtMinimumVersion(
+      db,
+      maxRetries,
+      retryDelayMs,
+      { orgId: storedOrgId(organisationNumber) },
+      minimumVersion
+    )
 
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
@@ -544,6 +563,13 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
+      linkDefraOrganisation: performLinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
+      replaceUsers: performReplaceUsers(db.collection(COLLECTION_NAME)),
+      unlinkDefraOrganisation: performUnlinkDefraOrganisation(
+        db.collection(COLLECTION_NAME)
+      ),
       findById,
       findAll: performFindAll(db),
       find: performFind(db),
@@ -551,12 +577,16 @@ export const createOrganisationsRepository = async (
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
-      findByAccreditationNumber: performFindByAccreditationNumber(db),
-      findByRegistrationNumber: performFindByRegistrationNumber(db),
+      isAccreditationNumberInUse: performIsAccreditationNumberInUse(db),
+      isRegistrationNumberInUse: performIsRegistrationNumberInUse(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
-      findByOrgId: performFindByOrgId(db),
+      findByOrganisationNumber: performFindByOrganisationNumber(
+        db,
+        maxRetries,
+        retryDelayMs
+      ),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }

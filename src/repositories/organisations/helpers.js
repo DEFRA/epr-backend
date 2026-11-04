@@ -1,5 +1,7 @@
+import Boom from '@hapi/boom'
 import {
   normaliseOrganisationFromDb,
+  validateLinkedDefraOrganisation,
   validateOrganisationUpdate,
   validateStatusHistory
 } from './schema/index.js'
@@ -12,19 +14,23 @@ import {
   validateAccreditationLinkExists,
   validateAccreditationLinkMatches,
   validateAccreditationLinkUniqueness,
-  validateAccreditationNumbersRetained,
   validateApprovals
 } from './schema/helpers.js'
 import {
   assertAccreditationStatusTransitionValid,
+  assertOrgStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { WithId } from 'mongodb' */
-/** @import { Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './port.js' */
 
 /**
@@ -124,6 +130,77 @@ export const updateStatusHistoryForItems = (
   })
 }
 
+/** @typedef {Pick<Organisation, 'registrations' | 'accreditations'>} NumberHolder */
+
+/**
+ * @typedef {{
+ *   items: 'registrations' | 'accreditations',
+ *   field: 'registrationNumber' | 'accreditationNumber',
+ *   label: string,
+ *   numbersOf: (organisation: NumberHolder) => Array<string | null | undefined>
+ * }} UniqueNumberField
+ */
+
+/**
+ * Numbers that no two items share across all organisations. The MongoDB
+ * adapter holds a sparse unique index on each.
+ *
+ * @type {UniqueNumberField[]}
+ */
+export const UNIQUE_NUMBER_FIELDS = [
+  {
+    items: 'registrations',
+    field: 'registrationNumber',
+    label: 'Registration',
+    numbersOf: ({ registrations }) =>
+      registrations.map(({ registrationNumber }) => registrationNumber)
+  },
+  {
+    items: 'accreditations',
+    field: 'accreditationNumber',
+    label: 'Accreditation',
+    numbersOf: ({ accreditations }) =>
+      accreditations.map(({ accreditationNumber }) => accreditationNumber)
+  }
+]
+
+/** @typedef {'inserting' | 'updating'} WriteOperation */
+
+/** @typedef {{ label: string, number: string }} HeldNumber */
+
+/**
+ * @param {{
+ *   operation: WriteOperation,
+ *   id: string,
+ *   conflictFields: string,
+ *   reason: string,
+ *   heldNumber?: HeldNumber
+ * }} params
+ */
+export const duplicateKeyConflict = ({
+  operation,
+  id,
+  conflictFields,
+  reason,
+  heldNumber
+}) =>
+  conflict(
+    heldNumber
+      ? `${heldNumber.label} number ${heldNumber.number} is already held by another organisation`
+      : `Duplicate key conflict ${operation} organisation ${id} (${conflictFields})`,
+    errorCodes.organisationDuplicateKey,
+    {
+      event: {
+        action:
+          operation === 'inserting'
+            ? 'insert_organisation'
+            : 'update_organisation',
+        reference: id,
+        reason
+      }
+    }
+  )
+
 export const mapDocumentWithCurrentStatuses = (org) => {
   const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
     normaliseOrganisationFromDb(org)
@@ -176,7 +253,6 @@ function prepareRegAccForReplace(validated, existing) {
     assertAccreditationStatusTransitionValid,
     cascadeCancelledIds
   )
-  validateAccreditationNumbersRetained(accreditations, existing.accreditations)
   return { registrations, accreditations }
 }
 
@@ -251,6 +327,49 @@ export const prepareForReplace = (existing, updates) => {
   }
 }
 
+/**
+ * What linking writes to a stored organisation: the validated link, and the
+ * status history entry that activates the organisation. An organisation that
+ * is already active (unlinked and being re-linked) gets no new entry.
+ *
+ * @param {{ statusHistory: StatusHistoryEntryInput[] }} existing
+ * @param {StoredLinkedDefraOrganisation} linkedDefraOrganisation
+ * @returns {{
+ *   linkedDefraOrganisation: StoredLinkedDefraOrganisation,
+ *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
+ * }}
+ */
+export const prepareLink = (existing, linkedDefraOrganisation) => {
+  const validated = validateLinkedDefraOrganisation(linkedDefraOrganisation)
+  const status = getCurrentStatus(existing)
+  if (status === ORGANISATION_STATUS.ACTIVE) {
+    return { linkedDefraOrganisation: validated, statusHistoryEntry: null }
+  }
+
+  assertOrgStatusTransitionValid(status, ORGANISATION_STATUS.ACTIVE)
+  return {
+    linkedDefraOrganisation: validated,
+    statusHistoryEntry: createStatusHistoryEntry(ORGANISATION_STATUS.ACTIVE)
+  }
+}
+
+/**
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {Error}
+ */
+export const organisationNumberNotFound = (organisationNumber) =>
+  Boom.notFound(`Organisation with number ${organisationNumber} not found`)
+
+/**
+ * @param {number} version
+ * @param {number} currentVersion
+ * @returns {Error}
+ */
+export const versionConflict = (version, currentVersion) =>
+  Boom.conflict(
+    `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
+  )
+
 export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
@@ -262,7 +381,6 @@ export const escapeRegex = (string) =>
  */
 
 const INTEGER_PATTERN = /^\d+$/
-const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 
 /**
  * @param {SearchCriteria} criteria
@@ -271,30 +389,29 @@ const DOCUMENT_ID_PATTERN = /^[0-9a-fA-F]{24}$/
 export const normaliseCriteria = ({
   search,
   orgId,
-  registrationId,
   registrationNumber,
-  accreditationId,
   accreditationNumber
 }) => ({
   search: (search ?? '').trim(),
   orgId: (orgId ?? '').trim(),
-  registrationId: (registrationId ?? '').trim(),
   registrationNumber: (registrationNumber ?? '').trim(),
-  accreditationId: (accreditationId ?? '').trim(),
   accreditationNumber: (accreditationNumber ?? '').trim()
 })
 
 /**
- * The interpretations an orgId criterion parses into. Both can apply at once —
- * a 24-digit decimal string is a valid business orgId and a valid document id.
- *
  * @param {string} value
- * @returns {{ businessOrgId: number | null, documentId: string | null }}
+ * @returns {number | null} - the stored orgId, or null when the value is not a number
  */
-export const parseOrgIdCriterion = (value) => ({
-  businessOrgId: INTEGER_PATTERN.test(value) ? Number(value) : null,
-  documentId: DOCUMENT_ID_PATTERN.test(value) ? value : null
-})
+export const parseOrgIdCriterion = (value) =>
+  INTEGER_PATTERN.test(value) ? Number(value) : null
+
+/**
+ * The orgId an organisation is stored under.
+ *
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {number}
+ */
+export const storedOrgId = (organisationNumber) => Number(organisationNumber)
 
 /**
  * The pattern both adapters match numbers with: the whole value, escaped.

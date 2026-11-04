@@ -11,34 +11,48 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+
+/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 export {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-export const buildAccreditedOrganisation = (overrides = {}) => {
-  const reprocessorAccreditation = accreditation()
-  const exportAccreditation = exporterAccreditation()
-  return buildOrganisation({
-    registrations: [
-      reprocessor({ accreditationId: reprocessorAccreditation.id }),
-      exporter({ accreditationId: exportAccreditation.id })
-    ],
-    accreditations: [reprocessorAccreditation, exportAccreditation],
-    ...overrides
-  })
-}
+/**
+ * Builds accredited organisations with the caller's builders, so they draw
+ * orgIds from the same sequence as the caller's other organisations.
+ *
+ * @param {OrganisationBuilders} builders
+ */
+export const createAccreditedOrganisationBuilder =
+  ({ buildOrganisation }) =>
+  (overrides = {}) => {
+    const reprocessorAccreditation = accreditation()
+    const exportAccreditation = exporterAccreditation()
+    return buildOrganisation({
+      registrations: [
+        reprocessor({ accreditationId: reprocessorAccreditation.id }),
+        exporter({ accreditationId: exportAccreditation.id })
+      ],
+      accreditations: [reprocessorAccreditation, exportAccreditation],
+      ...overrides
+    })
+  }
 
-/** What `buildAccreditedOrganisation` serves for its reprocessor. */
+/** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-02-01'),
+  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
+  regAccStatusByDate: {
+    2026: {
+      '2026-02-01': { status: 'registeredOnly' },
+      '2026-07-01': { status: 'accredited' }
+    }
+  },
   validFrom: '2026-02-01',
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
@@ -54,8 +68,8 @@ export const reprocessorResponse = {
   accreditations: {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
-      status: 'approved',
-      statusTimeline: approvedTimeline('2026-07-01')
+      prns: { open: true },
+      status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
     }
   }
 }
@@ -63,8 +77,8 @@ export const reprocessorResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
 const exporterAccreditationResponse = {
   accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-07-01'),
+  prns: { open: true },
+  status: { current: 'approved', timeline: approvedTimeline('2026-07-01') },
   overseasSites: {
     '001': { status: 'approved', approvedOn: '2026-01-01' },
     '002': { status: 'pending' }
@@ -73,8 +87,13 @@ const exporterAccreditationResponse = {
 
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
-  status: 'approved',
-  statusTimeline: approvedTimeline('2026-02-01'),
+  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
+  regAccStatusByDate: {
+    2026: {
+      '2026-02-01': { status: 'registeredOnly' },
+      '2026-07-01': { status: 'accredited' }
+    }
+  },
   validFrom: '2026-02-01',
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },

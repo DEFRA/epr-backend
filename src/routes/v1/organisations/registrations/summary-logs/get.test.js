@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import {
@@ -5,23 +6,28 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  summaryLogFactory,
-  withoutYear
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}', () => {
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{summaryLogId}', () => {
   setupAuthContext()
 
-  const organisationId = new ObjectId().toString()
-  const registrationId = new ObjectId().toString()
-  const summaryLogId = new ObjectId().toString()
+  const registration = reprocessor()
+  const organisation = buildOrganisation({ registrations: [registration] })
+  const organisationId = organisation.id
+  const registrationId = registration.id
+  const summaryLogId = toSummaryLogId(new ObjectId().toString())
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -30,6 +36,9 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     const server = await createTestServer({
       repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
         summaryLogsRepository: summaryLogsRepositoryFactory
       }
     })
@@ -40,7 +49,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   const makeRequest = (server) =>
     server.inject({
       method: 'GET',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+      url: `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs/${summaryLogId}`,
       ...asOperator()
     })
 
@@ -132,7 +141,9 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
-      await summaryLogsRepository.update(summaryLogId, 1, { loads })
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        loads
+      })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
@@ -256,7 +267,9 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         MATERIAL: null,
         ACCREDITATION_NUMBER: null
       }
-      await summaryLogsRepository.update(summaryLogId, 1, { meta: dirtyMeta })
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        meta: dirtyMeta
+      })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
@@ -269,15 +282,15 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
   })
 
-  describe('year and accreditationId in response', () => {
-    it('includes year and accreditationId when present', async () => {
+  describe('year in response', () => {
+    it('includes year but not the accreditation id', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
         summaryLogFactory.validated({
           organisationId,
           registrationId,
-          year: 2026,
+          year: toYear(2026),
           accreditationId: 'acc-1',
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
@@ -288,49 +301,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.year).toBe(2026)
-      expect(payload.accreditationId).toBe('acc-1')
-    })
-
-    it('includes a null accreditationId for a registered-only accreditation', async () => {
-      const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        summaryLogFactory.validated({
-          organisationId,
-          registrationId,
-          year: 2026,
-          accreditationId: null,
-          meta: { PROCESSING_TYPE: 'EXPORTER' }
-        })
-      )
-
-      const response = await makeRequest(server)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.accreditationId).toBeNull()
-    })
-
-    it('omits year and accreditationId for a legacy summary log carrying neither', async () => {
-      const { server, summaryLogsRepository } = await createServer()
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        partialMock(
-          withoutYear(
-            summaryLogFactory.validated({ organisationId, registrationId })
-          )
-        )
-      )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        meta: { PROCESSING_TYPE: 'EXPORTER' }
-      })
-      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
-
-      const response = await makeRequest(server)
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload).not.toHaveProperty('year')
       expect(payload).not.toHaveProperty('accreditationId')
     })
   })

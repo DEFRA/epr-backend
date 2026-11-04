@@ -1,8 +1,6 @@
-import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   auditOverseasSiteCreate,
-  auditOverseasSiteUpdate,
   auditOverseasSiteDelete,
   auditOverseasSiteImport
 } from './auditing.js'
@@ -84,68 +82,6 @@ describe('overseas sites auditing', () => {
         },
         context: { site }
       })
-    })
-  })
-
-  describe('auditOverseasSiteUpdate', () => {
-    it('sends audit event and system log with previous and next state', async () => {
-      const siteId = 'site-001'
-      const previous = { name: 'Old Name', country: 'India' }
-      const next = { name: 'New Name', country: 'India' }
-
-      await auditOverseasSiteUpdate(createMockRequest(), siteId, previous, next)
-
-      expect(mockAudit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'update'
-          },
-          context: { siteId, previous, next },
-          user: expectedUser
-        })
-      )
-
-      const storedLog = await findStoredLog()
-      expect(storedLog).toEqual({
-        createdAt: now,
-        createdBy: expectedUser,
-        event: {
-          category: 'entity',
-          subCategory: 'overseas-sites',
-          action: 'update'
-        },
-        context: { siteId, previous, next }
-      })
-    })
-
-    it('omits previous and next from audit event for large payloads', async () => {
-      const siteId = 'site-001'
-      const veryLongString = randomBytes(1e6).toString('hex')
-      const previous = { name: 'Old Name', veryLongString }
-      const next = { name: 'New Name', veryLongString }
-
-      await auditOverseasSiteUpdate(createMockRequest(), siteId, previous, next)
-
-      expect(mockAudit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: {
-            category: 'entity',
-            subCategory: 'overseas-sites',
-            action: 'update'
-          },
-          context: { siteId }
-        })
-      )
-
-      const storedLog = await findStoredLog()
-      expect(storedLog.event).toEqual({
-        category: 'entity',
-        subCategory: 'overseas-sites',
-        action: 'update'
-      })
-      expect(storedLog.context).toEqual({ siteId, previous, next })
     })
   })
 

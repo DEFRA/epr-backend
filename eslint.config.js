@@ -2,7 +2,8 @@ import vitest from '@vitest/eslint-plugin'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import importX from 'eslint-plugin-import-x'
 import nodePlugin from 'eslint-plugin-n'
-import neostandard from 'neostandard'
+import { globalIgnores } from 'eslint/config'
+import { neostandard, resolveIgnoresFromGitignore } from 'neostandard'
 
 const REPOSITORIES = './src/repositories'
 
@@ -22,7 +23,6 @@ const DOMAIN_LAYERING_MESSAGE =
 
 const ns = neostandard({
   env: ['node', 'vitest'],
-  ignores: [...neostandard.resolveIgnoresFromGitignore()],
   noJsx: true,
   noStyle: true
 })
@@ -41,6 +41,7 @@ const { plugins: _n, ...nodeRecommendedModule } =
   nodePlugin.configs['flat/recommended-module']
 
 export default [
+  globalIgnores(resolveIgnoresFromGitignore()),
   ...ns,
   nodeRecommendedModule,
   {
@@ -104,6 +105,34 @@ export default [
       'vitest/no-standalone-expect': [
         'error',
         { additionalTestBlockFunctions: ['it', 'test', 'it.for'] }
+      ]
+    }
+  },
+  {
+    files: ['src/**/*.js'],
+    ignores: [
+      '**/*.test.js',
+      '**/*.contract.js',
+      '**/contract/test-data.js',
+      '**/*test-helpers.js',
+      // These read a year out of a date or string, so mint it.
+      'src/common/helpers/dates/year-month.js',
+      'src/reports/domain/period-for-date.js',
+      'src/routes/organisations/get.organisation.js'
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dates/year.js'],
+              importNames: ['toYear'],
+              message:
+                'Type a yearSchema-validated param as Year, or read one from a date with utcYearOf or currentUtcYear.'
+            }
+          ]
+        }
       ]
     }
   },

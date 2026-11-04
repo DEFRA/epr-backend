@@ -13,6 +13,15 @@ const extendedIt = base.extend({
   ledgerRepository: async (/** @type {*} */ { ledgerStorage }, use) => {
     const factory = createInMemoryLedgerRepository(ledgerStorage)
     await use(factory)
+  },
+  removeStoredNumbers: async (/** @type {*} */ { ledgerStorage }, use) => {
+    await use(async (/** @type {string[]} */ keys) => {
+      for (const event of ledgerStorage) {
+        for (const key of keys) {
+          delete event[key]
+        }
+      }
+    })
   }
 })
 

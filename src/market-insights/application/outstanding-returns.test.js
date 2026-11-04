@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -114,7 +115,7 @@ const registeredOnly = ({ organisation }) => ({
  */
 const reportParams = ({ operator, period, submissionNumber }) => ({
   ...operator.reportRef,
-  year: 2026,
+  year: toYear(2026),
   cadence: 'monthly',
   period,
   submissionNumber

@@ -62,7 +62,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -72,26 +72,21 @@ describe('Submission and placeholder tests (Exporter)', () => {
         )
       })
 
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
+      await pollForValidation(server, summaryLogId)
 
       return server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
     }
 
     const submitAndPoll = async (env, summaryLogId) => {
-      const { server, organisationId, registrationId } = env
+      const { server } = env
 
       await server.inject({
         method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+        url: buildSubmitUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -107,7 +102,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
         const checkResponse = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
 

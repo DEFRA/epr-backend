@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
@@ -17,6 +18,7 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
@@ -145,6 +147,26 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
   return registration?.accreditationId
 }
 
+/**
+ * The numbers the row states and the ledger event are stored with, read from
+ * the organisation record.
+ *
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {{ organisationId: string, registrationId: string }} summaryLog
+ * @param {string | null} accreditationId
+ * @returns {Promise<import('#domain/organisations/numbers.js').RequiredNumbers>}
+ */
+const resolveNumbers = async (
+  organisationsRepository,
+  { organisationId, registrationId },
+  accreditationId
+) =>
+  requiredNumbersFor(
+    await organisationsRepository.findById(organisationId),
+    { registrationId, accreditationId },
+    'row states'
+  )
+
 const resolveAccreditation = async (
   organisationsRepository,
   organisationId,
@@ -170,9 +192,11 @@ const resolveAccreditation = async (
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {string} params.summaryLogId
+ * @param {SummaryLogFileId} params.summaryLogId
+ * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
  */
 const updateWasteBalances = async ({
+  numbers,
   parsedData,
   accreditation,
   wasteBalanceService,
@@ -191,7 +215,7 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites, summaryLogId }
+      { user, accreditation, overseasSites, summaryLogId, numbers }
     )
   }
 }
@@ -315,8 +339,9 @@ const countRecordChanges = async ({
  * zero-delta — the submission is still recorded, it just moves no tonnage.
  *
  * @param {object} params
- * @param {{ file: { id: string }, organisationId: string, registrationId: string }} params.summaryLog
+ * @param {{ file: { id: SummaryLogFileId }, organisationId: string, registrationId: string }} params.summaryLog
  * @param {string | undefined} params.accreditationId
+ * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
@@ -328,6 +353,7 @@ const countRecordChanges = async ({
 const commitStateAndBalance = async ({
   summaryLog,
   accreditationId,
+  numbers,
   accreditation,
   wasteRecords,
   overseasSites,
@@ -343,7 +369,8 @@ const commitStateAndBalance = async ({
     ledgerId: {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null
+      accreditationId: accreditationId ?? null,
+      ...numbers
     },
     overseasSites,
     summaryLogId: summaryLog.file.id
@@ -351,6 +378,7 @@ const commitStateAndBalance = async ({
 
   if (accreditation) {
     await updateWasteBalances({
+      numbers,
       parsedData,
       accreditation,
       wasteBalanceService,
@@ -364,7 +392,8 @@ const commitStateAndBalance = async ({
       {
         registrationId: summaryLog.registrationId,
         accreditationId: null,
-        organisationId: summaryLog.organisationId
+        organisationId: summaryLog.organisationId,
+        ...numbers
       },
       { summaryLogId: summaryLog.file.id, creditTotal: 0 },
       {
@@ -405,7 +434,7 @@ export const syncFromSummaryLog = (dependencies) => {
   /**
    * @param {Object} summaryLog - The summary log to process
    * @param {Object} summaryLog.file - The file information
-   * @param {string} summaryLog.file.id - The file ID
+   * @param {SummaryLogFileId} summaryLog.file.id - The file ID
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
@@ -471,6 +500,11 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLog,
       accreditationId,
+      numbers: await resolveNumbers(
+        organisationsRepository,
+        summaryLog,
+        accreditationId ?? null
+      ),
       accreditation,
       wasteRecords,
       overseasSites,

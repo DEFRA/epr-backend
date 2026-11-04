@@ -1,6 +1,7 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, StoredLinkedDefraOrganisation, Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {{
@@ -35,10 +36,8 @@
  * not required to describe a linked pair.
  * @typedef {Object} SearchCriteria
  * @property {string} [search] - case-insensitive substring on companyDetails.name
- * @property {string} [orgId] - business orgId or the organisation's document id; unparseable values match nothing
- * @property {string} [registrationId] - exact match on registrations[].id
+ * @property {string} [orgId] - the organisation number; a value that is not a number matches nothing
  * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
- * @property {string} [accreditationId] - exact match on accreditations[].id
  * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
  */
 
@@ -48,22 +47,39 @@
  */
 
 /**
+ * An organisation as the lookups that only name it return it, without its
+ * registrations, accreditations or users.
+ * @typedef {Pick<Organisation, 'id' | 'orgId' | 'status'> & {
+ *   companyDetails: Pick<Organisation['companyDetails'], 'name'>
+ * }} OrganisationSummary
+ */
+
+/**
+ * An {@link OrganisationSummary} of an organisation linked to a Defra
+ * organisation, with the link.
+ * @typedef {OrganisationSummary & Required<Pick<Organisation, 'linkedDefraOrganisation'>>} LinkedOrganisationSummary
+ */
+
+/**
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
+ * @property {(organisationNumber: OrganisationNumber, version: number, linkedDefraOrganisation: StoredLinkedDefraOrganisation) => Promise<void>} linkDefraOrganisation - Link the organisation to a Defra organisation and make it active. Throws 409 when the stored version is not `version`
+ * @property {(organisationNumber: OrganisationNumber, version: number) => Promise<void>} unlinkDefraOrganisation - Remove the organisation's link to a Defra organisation, leaving its status as it is. Throws 409 when the stored version is not `version`
+ * @property {(organisationNumber: OrganisationNumber, version: number, users: CollatedUser[]) => Promise<void>} replaceUsers - Replace the organisation's users with `users`, which must be the full list. Throws 409 when the stored version is not `version`
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
- * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
- * @property {(accreditationNumber: string) => Promise<Organisation|null>} findByAccreditationNumber - Find the organisation holding an accreditation with this number, regardless of the accreditation's status
- * @property {(registrationNumber: string) => Promise<Organisation|null>} findByRegistrationNumber - Find the organisation holding a registration with this number, regardless of the registration's status
- * @property {(filter?: { name?: string }) => Promise<Organisation[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
- * @property {(email: string) => Promise<Organisation[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
+ * @property {(defraOrgId: string) => Promise<LinkedOrganisationSummary|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
+ * @property {(accreditationNumber: AccreditationNumber) => Promise<boolean>} isAccreditationNumberInUse - Whether any accreditation in any organisation holds this number, regardless of the accreditation's status
+ * @property {(registrationNumber: RegistrationNumber) => Promise<boolean>} isRegistrationNumberInUse - Whether any registration in any organisation holds this number, regardless of the registration's status
+ * @property {(filter?: { name?: string }) => Promise<LinkedOrganisationSummary[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
+ * @property {(email: string) => Promise<OrganisationSummary[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
- * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId
+ * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<Organisation|null>} findByOrganisationNumber - Find the organisation with this number. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
  */
 

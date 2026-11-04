@@ -1,8 +1,12 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAwaitingAuthorisationPrn } from './contract/test-data.js'
+import {
+  buildAwaitingAuthorisationPrn,
+  generateTestPrnNumber
+} from './contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -142,6 +146,35 @@ describe('MongoDB packaging recycling notes repository', () => {
           expectedVersion: 1
         })
       ).rejects.toThrow('Connection timeout')
+    })
+
+    it('conflicts when a PRN changes between assigning its numbers and reading it back', async ({
+      mongoClient
+    }) => {
+      const database = /** @type {MongoClient} */ (mongoClient).db(
+        DATABASE_NAME
+      )
+      const created = await (
+        await createPackagingRecyclingNotesRepository(database, [])
+      )(stubLogger()).create(buildAwaitingAuthorisationPrn())
+      const updateLost = asDb({
+        collection: (/** @type {string} */ name) =>
+          Object.assign(Object.create(database.collection(name)), {
+            updateOne: async () => ({ matchedCount: 0 })
+          })
+      })
+      const repository = (
+        await createPackagingRecyclingNotesRepository(updateLost, [])
+      )(stubLogger())
+
+      await expect(
+        repository.assignNumbers(created.id, {
+          organisationNumber: toOrganisationNumber('500123')
+        })
+      ).rejects.toMatchObject({
+        message: `PRN ${created.id} changed while its numbers were being assigned`,
+        output: { statusCode: 409 }
+      })
     })
 
     it('throws PrnNumberConflictError on duplicate key error for prnNumber', async () => {
@@ -727,7 +760,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
         updatedBy: { id: 'user-issuer', name: 'Issuer User' },
         updatedAt: new Date(),
-        prnNumber: `TT2699999`
+        prnNumber: generateTestPrnNumber()
       })
 
       expect(updated?.version).toBe(2)

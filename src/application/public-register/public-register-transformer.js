@@ -43,13 +43,17 @@ const ACCREDITATION_INCLUDED_STATUSES = new Set([
 
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
-function buildReportComplianceFields(periods, registrationReportSubmissions) {
+/**
+ * A registration with no compliance entry, as the read model does not serve it,
+ * has no submittedDates, so every period is 'N/A'.
+ */
+function buildReportComplianceFields(periods, submittedDates) {
   return Object.fromEntries(
     periods.map((period) => {
-      if (!registrationReportSubmissions.submittedDates.has(period.key)) {
+      if (!submittedDates.has(period.key)) {
         return [period.label, 'N/A']
       }
-      const date = registrationReportSubmissions.submittedDates.get(period.key)
+      const date = submittedDates.get(period.key)
       return [period.label, date ? formatDate(date) : '']
     })
   )
@@ -151,10 +155,10 @@ function processBatch(batch, reportComplianceData) {
             registration,
             org.accreditations
           )
-          const entry = entries.get(registration.id)
-          const reportComplianceFields = entry
-            ? buildReportComplianceFields(periods, entry)
-            : {}
+          const reportComplianceFields = buildReportComplianceFields(
+            periods,
+            entries.get(registration.id)?.submittedDates ?? new Map()
+          )
           return transformRegAcc(
             org,
             registration,

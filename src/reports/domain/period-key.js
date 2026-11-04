@@ -1,6 +1,8 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * A reporting-period reference: the fields that together identify one period.
- * @typedef {{ year: number, cadence: string, period: number }} PeriodRef
+ * @typedef {{ year: Year, cadence: string, period: number }} PeriodRef
  */
 
 /**

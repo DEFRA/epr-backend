@@ -3,6 +3,7 @@ import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.j
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -13,7 +14,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * @typedef {Object} CancelledAccreditationReportRow
  * @property {string} registrationId
  * @property {Cadence} cadence
- * @property {number} year
+ * @property {Year} year
  * @property {number} period
  * @property {number} submissionNumber
  * @property {ReportStatus} status

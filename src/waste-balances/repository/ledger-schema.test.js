@@ -164,6 +164,36 @@ describe('ledger event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts an event written without the numbers', () => {
+    const {
+      organisationNumber: _organisationNumber,
+      registrationNumber: _registrationNumber,
+      accreditationNumber: _accreditationNumber,
+      ...withoutNumbers
+    } = buildLedgerEvent()
+    const { error } = validate(withoutNumbers)
+    expect(error).toBeUndefined()
+  })
+
+  it('rejects an accreditation number on a registered-only event', () => {
+    const { error } = validate(
+      buildLedgerEvent({
+        accreditationId: null,
+        accreditationNumber: 'ACC-acc-1'
+      })
+    )
+    expect(error?.details.map((d) => d.path[0])).toEqual([
+      'accreditationNumber'
+    ])
+  })
+
+  it('rejects a null accreditation number on an accredited event', () => {
+    const { error } = validate(buildLedgerEvent({ accreditationNumber: null }))
+    expect(error?.details.map((d) => d.path[0])).toEqual([
+      'accreditationNumber'
+    ])
+  })
+
   it('rejects PRN kinds when accreditationId is null', () => {
     const { error } = validate(
       buildLedgerEvent({
@@ -256,6 +286,18 @@ describe('ledger event validation', () => {
     it('returns the stored event as written', () => {
       const event = buildLedgerEvent()
       expect(validateLedgerEventRead(event)).toEqual(event)
+    })
+
+    it('accepts an event stored without the numbers', () => {
+      const {
+        organisationNumber: _organisationNumber,
+        registrationNumber: _registrationNumber,
+        accreditationNumber: _accreditationNumber,
+        ...storedWithoutNumbers
+      } = buildLedgerEvent()
+      expect(validateLedgerEventRead(storedWithoutNumbers)).toEqual(
+        storedWithoutNumbers
+      )
     })
 
     it('keeps the document id the store gave the event', () => {

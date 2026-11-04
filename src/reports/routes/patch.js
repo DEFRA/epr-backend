@@ -12,14 +12,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import {
-  extractChangedBy,
-  findRegistrationForReport,
-  periodParamsSchema
-} from './shared.js'
-
-export const reportsPatchPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
+import { extractChangedBy, findRegistrationForReport } from './shared.js'
 
 const MAX_SUPPORTING_INFO_LENGTH = 2000
 
@@ -144,12 +137,10 @@ function buildUpdateFields(payload, report) {
 
 export const reportsPatch = {
   method: 'PATCH',
-  path: reportsPatchPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
     validate: {
-      params: periodParamsSchema,
       payload: payloadSchema
     }
   },
@@ -162,10 +153,14 @@ export const reportsPatch = {
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
-    const { organisationId, registrationId, cadence } = params
-    const year = Number(params.year)
-    const period = Number(params.period)
-    const submissionNumber = Number(params.submissionNumber)
+    const {
+      organisationId,
+      registrationId,
+      cadence,
+      year,
+      period,
+      submissionNumber
+    } = params
 
     const [registration, report] = await Promise.all([
       findRegistrationForReport(organisationsRepository, params),

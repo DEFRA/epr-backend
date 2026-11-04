@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { prnInsertSchema, prnReadSchema } from './schema.js'
@@ -88,7 +89,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea',
           glassRecyclingProcess: 'glass_re_melt',
@@ -104,7 +105,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
           siteAddress: {
@@ -122,7 +123,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
           siteAddress: {
@@ -219,7 +220,7 @@ describe('PRN insert schema', () => {
         ...buildValidPrnInsert(),
         accreditation: {
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
@@ -233,7 +234,7 @@ describe('PRN insert schema', () => {
         ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
@@ -262,7 +263,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           submittedToRegulator: 'ea'
         }
       }
@@ -276,7 +277,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic'
         }
       }
@@ -332,7 +333,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'unobtainium',
           submittedToRegulator: 'ea'
         }
@@ -359,7 +360,7 @@ describe('PRN insert schema', () => {
             ? {
                 id: 'acc-1',
                 accreditationNumber: 'ACC-001',
-                accreditationYear: 2026,
+                accreditationYear: toYear(2026),
                 material,
                 submittedToRegulator: 'ea',
                 glassRecyclingProcess: 'glass_re_melt',
@@ -368,7 +369,7 @@ describe('PRN insert schema', () => {
             : {
                 id: 'acc-1',
                 accreditationNumber: 'ACC-001',
-                accreditationYear: 2026,
+                accreditationYear: toYear(2026),
                 material,
                 submittedToRegulator: 'ea',
                 siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
@@ -388,7 +389,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea',
           glassRecyclingProcess: 'glass_magic'
@@ -403,7 +404,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea',
           glassRecyclingProcess: 'glass_other',
@@ -421,7 +422,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea'
         }
@@ -435,7 +436,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
           glassRecyclingProcess: 'glass_re_melt',
@@ -452,7 +453,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
@@ -467,7 +468,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
@@ -482,7 +483,7 @@ describe('PRN insert schema', () => {
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
-          accreditationYear: 2026,
+          accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
           siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
@@ -591,7 +592,7 @@ describe('PRN read schema', () => {
   })
 
   it('retains an explicit obligationYear on a document', () => {
-    const data = buildReadDocument({ obligationYear: 2027 })
+    const data = buildReadDocument({ obligationYear: toYear(2027) })
     const { error, value } = prnReadSchema.validate(data)
     expect(error).toBeUndefined()
     expect(value.obligationYear).toBe(2027)

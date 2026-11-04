@@ -158,6 +158,7 @@ describe('transformValidationResponse', () => {
       // Verify the response passes Hapi schema validation (this would have caught the original bug)
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.INVALID,
+        year: 2026,
         ...result
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)
@@ -764,6 +765,7 @@ describe('transformValidationResponse', () => {
 
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
+        year: 2026,
         processingType: 'EXPORTER',
         ...transformValidationResponse(validation),
         loadsByReportingPeriod: emptyLoadsByReportingPeriod()
@@ -787,6 +789,7 @@ describe('transformValidationResponse', () => {
 
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.INVALID,
+        year: 2026,
         ...transformValidationResponse(validation)
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)

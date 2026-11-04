@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
@@ -5,6 +6,7 @@ import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-su
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
   assertResubmissionAllowed,
@@ -18,11 +20,13 @@ import {
 } from './report-mandatory/assert-report-data-complete.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
@@ -61,7 +65,7 @@ export const createReportsService = (reportsRepository) => ({
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -176,10 +180,11 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
  * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<(import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail) & { canRequestResubmission: boolean, incompleteSummaryLogRows?: { total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } }>}
  */
@@ -196,6 +201,7 @@ export async function fetchOrGenerateReportForPeriod({
   cadence,
   period,
   submissionNumber,
+  requiredPeriods,
   reportDataValidationEnabled
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
@@ -218,6 +224,8 @@ export async function fetchOrGenerateReportForPeriod({
   if (storedReport) {
     return buildStoredReportResult(storedReport, periodicReports)
   }
+
+  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
 
   const operatorCategory = getOperatorCategory(registration)
 
@@ -245,14 +253,9 @@ export async function fetchOrGenerateReportForPeriod({
     latestSubmission
   })
 
-  // Attached on every generate-branch preview (any period without a stored
-  // report) regardless of period status: a not-yet-ended period resolves to a
-  // null period status yet still generates. The frontend controller redirects
-  // to the validation-error screen unconditionally on this signal, with no
-  // period-status check. What keeps a not-yet-ended period off that screen is
-  // the reports list upstream, which only offers a link into the generate
-  // branch for Due/Over Due (or requires-resubmission) periods, never a future
-  // one (PAE-1420).
+  // Attached on every generate-branch preview. The frontend controller
+  // redirects to the validation-error screen unconditionally on this signal;
+  // a not-yet-ended period never gets here, as it is not a required period.
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
     reportDataValidationEnabled,
     wasteRecordStates
@@ -269,8 +272,8 @@ export async function fetchOrGenerateReportForPeriod({
  * The report source — which submission produced the current state, and when
  * it was submitted. A ledger with no submission yet has a null source.
  *
- * @param {{ summaryLogId: string, submittedAt: Date } | null} latestSubmission
- * @returns {{ summaryLogId: string|null, lastUploadedAt: string|null }}
+ * @param {{ summaryLogId: SummaryLogFileId, submittedAt: Date } | null} latestSubmission
+ * @returns {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }}
  */
 function toSource(latestSubmission) {
   return latestSubmission === null
@@ -330,7 +333,7 @@ async function readSubmissionRowStates({
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
@@ -379,7 +382,8 @@ async function getAggregatedReportDetail({
 
 /**
  * Asserts a report can be created for the period. Loads the registration's
- * periodic reports and rejects a duplicate submission before a disallowed
+ * periodic reports, rejects a period with nothing stored that the registration
+ * does not owe, then rejects a duplicate submission before a disallowed
  * resubmission: existence is the more fundamental precondition, so a duplicate
  * is reported as such regardless of whether a fresh create would have been
  * permitted.
@@ -388,10 +392,11 @@ async function getAggregatedReportDetail({
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods
  * @returns {Promise<void>}
  */
 async function assertReportCreationAllowed({
@@ -401,13 +406,15 @@ async function assertReportCreationAllowed({
   year,
   cadence,
   period,
-  submissionNumber
+  submissionNumber,
+  requiredPeriods
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationId,
     registrationId
   })
 
+  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
   assertNoExistingReport(
     periodicReports,
     year,
@@ -479,11 +486,13 @@ function summariseIncompleteDataIfEnabled(
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
+ * @param {import('#reports/repository/port.js').ReportNumbers} params.numbers
  * @param {Registration} params.registration
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber
+ * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
  * @param {import('#reports/repository/port.js').UserSummary} params.changedBy
  * @param {boolean} [params.reportDataValidationEnabled]
  * @returns {Promise<import('#reports/repository/port.js').Report>}
@@ -496,11 +505,13 @@ export async function createReportForPeriod({
   overseasSitesRepository,
   organisationId,
   registrationId,
+  numbers,
   registration,
   year,
   cadence,
   period,
   submissionNumber,
+  requiredPeriods,
   changedBy,
   reportDataValidationEnabled
 }) {
@@ -517,10 +528,9 @@ export async function createReportForPeriod({
     year,
     cadence,
     period,
-    submissionNumber
+    submissionNumber,
+    requiredPeriods
   })
-
-  const operatorCategory = getOperatorCategory(registration)
 
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
@@ -541,7 +551,7 @@ export async function createReportForPeriod({
   const aggregatedReportData = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
-    operatorCategory,
+    operatorCategory: getOperatorCategory(registration),
     organisationId,
     registrationId,
     registration,
@@ -555,6 +565,7 @@ export async function createReportForPeriod({
   return reportsRepository.createReport({
     organisationId,
     registrationId,
+    ...numbers,
     year,
     cadence,
     period,

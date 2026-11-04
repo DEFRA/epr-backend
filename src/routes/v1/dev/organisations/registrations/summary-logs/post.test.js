@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -18,6 +19,7 @@ import {
 } from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
 
 import { devSummaryLogsSubmitPath } from './post.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const ACCREDITED_YEAR = 2025
 
@@ -132,6 +134,20 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     ])
   })
 
+  it('gives the uploaded file an id of its own, apart from the document id', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.file?.id).toEqual(expect.any(String))
+    expect(stored?.summaryLog.file?.id).not.toBe(body.summaryLogId)
+  })
+
   it('answers with the invalid document and its issues when the content fails validation', async () => {
     const env = await createEnvironment()
 
@@ -159,7 +175,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
-  it('stores the year given in the URL, and resolves accreditationId from the payload', async () => {
+  it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 
     const response = await submit(
@@ -173,6 +189,14 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+    const { orgId } = await env.organisationsRepository.findById(
+      env.organisationId
+    )
+    expect(stored?.summaryLog).toMatchObject({
+      organisationNumber: String(orgId),
+      registrationNumber: 'REG-123',
+      accreditationNumber: 'ACC-123'
+    })
   })
 
   it('uses the registered-only template when the payload carries no ACCREDITATION_NUMBER, but still stamps the registration accreditation', async () => {
@@ -213,7 +237,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
   })
 
-  it('stores a null accreditationId for a registration with no accreditation', async () => {
+  it('stores a null accreditationId and accreditation number for a registration with no accreditation', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'input',
@@ -245,6 +269,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.accreditationId).toBeNull()
+    expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
   it('returns 422 for an invalid year', async () => {
@@ -262,7 +287,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers with a conflict when another submission for the registration is in progress', async () => {
     const env = await createEnvironment()
     await env.summaryLogsRepository.insert(
-      'another-submission',
+      toSummaryLogId('another-submission'),
       summaryLogFactory.submitting({
         organisationId: env.organisationId,
         registrationId: env.registrationId,
@@ -331,23 +356,35 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   const storedAfterReplication = async (env, summaryLogId) => {
     assert(summaryLogId)
     await new Promise((resolve) => setImmediate(resolve))
-    const stored = await env.summaryLogsRepository.findById(summaryLogId)
+    const stored = await env.summaryLogsRepository.findById(
+      toSummaryLogId(summaryLogId)
+    )
     return stored?.summaryLog
   }
 
   it('answers with a conflict and supersedes the log when a submission landed while it validated', async () => {
     const env = await createEnvironment()
-    const minted = beforeTransitionToSubmitting(env, () =>
-      env.summaryLogsRepository.insert(
-        'landed-meanwhile',
-        summaryLogFactory.submitted({
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          year: ACCREDITED_YEAR,
-          accreditationId: env.accreditationId
-        })
+    const minted = beforeTransitionToSubmitting(env, async () => {
+      const ids = {
+        registrationId: env.registrationId,
+        accreditationId: env.accreditationId
+      }
+      const { numbers } = numbersFor(
+        await env.organisationsRepository.findById(env.organisationId),
+        ids
       )
-    )
+      await env.summaryLogsRepository.insert(
+        toSummaryLogId('landed-meanwhile'),
+        {
+          ...summaryLogFactory.submitted({
+            organisationId: env.organisationId,
+            year: ACCREDITED_YEAR,
+            ...ids
+          }),
+          ...numbers
+        }
+      )
+    })
 
     const response = await submit(
       env,
@@ -464,12 +501,8 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    expect(
-      await env.summaryLogsRepository.findAllByOrgReg(
-        env.organisationId,
-        'no-such-registration'
-      )
-    ).toEqual([])
+    // A summary log stored under an unknown registration can hold no number.
+    expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual([])
   })
 
   it('rejects a payload that names the template, since it is inferred from the registration', async () => {

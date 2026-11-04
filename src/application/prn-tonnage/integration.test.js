@@ -14,7 +14,7 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
-  buildAccreditation
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -61,7 +61,7 @@ const prnWithStatus = (currentStatus, tonnage) =>
   buildPrn({
     registrationId,
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
-    accreditation: buildAccreditation({
+    accreditation: buildAccreditationSnapshot({
       id: accId,
       accreditationNumber: 'ACC-1',
       material: MATERIAL.PLASTIC
@@ -292,6 +292,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       registrations: accreditations.map(([accreditationId]) => ({
         ...base.registrations[0],
         id: `reg-${accreditationId}`,
+        registrationNumber: `REG-${accreditationId}`,
         accreditationId
       }))
     })
@@ -304,12 +305,12 @@ describe('aggregatePrnTonnage - Integration', () => {
       ...prnWithStatus(PRN_STATUS.ACCEPTED, 40),
       registrationId: `reg-${accreditationId}`,
       organisation: { id, name: 'as raised' },
-      accreditation: buildAccreditation({ id: accreditationId })
+      accreditation: buildAccreditationSnapshot({ id: accreditationId })
     })
 
     await db.collection(ORGANISATIONS_COLLECTION).insertMany([
       organisation(secondOrganisationId, orgId + 1, 'Zenith Recycling', [
-        ['acc-z', 'ACC-1']
+        ['acc-z', 'ACC-0']
       ]),
       organisation(organisationId, orgId, 'Acme Reprocessing', [
         ['acc-b', 'ACC-2'],
@@ -335,7 +336,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     ).toStrictEqual([
       ['Acme Reprocessing', 'ACC-1'],
       ['Acme Reprocessing', 'ACC-2'],
-      ['Zenith Recycling', 'ACC-1']
+      ['Zenith Recycling', 'ACC-0']
     ])
   })
 
@@ -394,6 +395,37 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow('registrationNumber')
+  })
+
+  it('reports a blank accreditation number for an accreditation that no longer has one', async () => {
+    const organisation = organisationWithRegistration()
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisation,
+      accreditations: [
+        {
+          ...organisation.accreditations[0],
+          accreditationNumber: null,
+          statusHistory: [
+            ...approvedStatusHistory,
+            {
+              status: 'cancelled',
+              updatedAt: new Date('2026-03-01T00:00:00.000Z')
+            }
+          ]
+        }
+      ]
+    })
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+    const { rows } = await aggregatePrnTonnage(
+      prnRepository,
+      organisationsRepository,
+      ledgerRepository
+    )
+
+    expect(rows).toStrictEqual([expectedRow({ accreditationNumber: '' })])
   })
 
   it('reports one row per accreditation when its prns snapshot different organisation names', async () => {

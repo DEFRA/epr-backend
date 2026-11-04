@@ -1,65 +1,96 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { yearEndOrToday } from '#common/helpers/dates/year.js'
+import { utcYearOf, yearEndOrToday } from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
+import { regAccStatusByDate } from './reg-acc-status-by-date.js'
 import { approvedYears } from './status-timeline.js'
 
-/** @import { Organisation, Registration } from './model.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { Organisation, RegAccStatusByYear, Registration } from './model.js' */
+/** @import { RegAccStatusSource } from './reg-acc-status-by-date.js' */
 
 /**
  * The calendar years in which the organisation held an approved registration,
  * newest first, up to and including the current year.
  *
  * @param {Organisation} organisation
- * @param {Date} [now]
- * @returns {number[]}
+ * @param {Date} now
+ * @returns {Year[]}
  */
-export const organisationYears = (organisation, now = new Date()) => {
+export const organisationYears = (organisation, now) => {
   const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
-    ({ statusTimeline }) => approvedYears(statusTimeline, today)
+    ({ status }) => approvedYears(status.timeline, today)
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
 
 /**
  * @param {Registration['accreditations']} accreditations
- * @param {number} year
+ * @param {Year} year
  */
 const accreditationIn = (accreditations, year) =>
   Object.hasOwn(accreditations, year) ? { [year]: accreditations[year] } : {}
 
 /**
  * The organisation as it stood in `year`: registrations approved at any point
- * in it, each with only that year's accreditation. Organisation and
- * registration statuses are those at the end of the year, or today while the
- * year is current.
+ * in it, each with only that year's accreditation and status dates.
+ * Organisation and registration statuses are those at the end of the year, or
+ * today while the year is current.
  *
  * @param {Organisation} organisation
- * @param {number} year
- * @param {Date} [now]
+ * @param {Year} year
+ * @param {Date} now
  * @returns {Organisation}
  */
-export const organisationInYear = (organisation, year, now = new Date()) => {
+export const organisationInYear = (organisation, year, now) => {
   const today = utcCalendarDate(now)
   const day = yearEndOrToday(year, today)
   const registrations = Object.entries(organisation.registrations)
-    .filter(([, { statusTimeline }]) =>
-      approvedYears(statusTimeline, today).includes(year)
+    .filter(([, { status }]) =>
+      approvedYears(status.timeline, today).includes(year)
     )
     .map(([number, registration]) => [
       number,
       {
         ...registration,
-        status: statusOn(registration.statusTimeline, day),
-        accreditations: accreditationIn(registration.accreditations, year)
+        status: {
+          ...registration.status,
+          current: statusOn(registration.status.timeline, day)
+        },
+        accreditations: accreditationIn(registration.accreditations, year),
+        regAccStatusByDate: { [year]: registration.regAccStatusByDate[year] }
       }
     ])
 
   return {
     ...organisation,
-    status: /** @type {Organisation['status']} */ (
-      statusOn(organisation.statusTimeline, day) ?? organisation.status
-    ),
+    status: {
+      ...organisation.status,
+      current: /** @type {Organisation['status']['current']} */ (
+        statusOn(organisation.status.timeline, day) ??
+          organisation.status.current
+      )
+    },
     registrations: Object.fromEntries(registrations)
   }
+}
+
+/**
+ * `regAccStatusByDate` for each year the registration was approved in up to
+ * `today`, or holds an accreditation for, which can be a later year.
+ *
+ * @param {RegAccStatusSource} registration
+ * @param {CalendarDate} today
+ * @returns {RegAccStatusByYear}
+ */
+export const regAccStatusByYear = (registration, today) => {
+  const years = [
+    ...approvedYears(registration.status.timeline, today),
+    ...Object.keys(registration.accreditations).map(utcYearOf)
+  ]
+
+  return Object.fromEntries(
+    years.map((year) => [year, regAccStatusByDate(registration, year)])
+  )
 }

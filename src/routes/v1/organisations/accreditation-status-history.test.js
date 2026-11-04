@@ -1,10 +1,13 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildAwaitingAuthorisationPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAwaitingAuthorisationPrn,
+  underAccreditation
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -19,6 +22,9 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -68,7 +74,7 @@ const buildOrgWithAccreditationStatus = (
     // required once an accreditation has been approved or suspended.
     validFrom: '2024-01-01',
     validTo: '2025-01-01',
-    accreditationNumber: 'ACC123456',
+    accreditationNumber: toAccreditationNumber('ACC123456'),
     reprocessingType: 'input',
     statusHistory:
       /** @type {import('#domain/organisations/accreditation.js').StatusHistoryEntry[]} */ (
@@ -99,6 +105,58 @@ const statusHistoryUrl = ({
   accreditationId
 }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/status-history`
+
+/**
+ * An approved organisation with an approved registration, which the read
+ * model serves, so the PRN routes can find it by its natural keys.
+ * @param {string} status
+ */
+const buildServedOrgWithAccreditationStatus = (status) => ({
+  ...buildOrgWithAccreditationStatus(status, {
+    registrationStatus: 'approved'
+  }),
+  statusHistory:
+    /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
+      { status: 'approved', updatedAt: new Date('2024-01-01') }
+    ])
+})
+
+/**
+ * @param {import('#domain/organisations/model.js').Organisation} organisation
+ * @param {string} prnId
+ */
+const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
+  `/organisations/${orgId}/registrations/${registration.registrationNumber}/accreditations/2024/packaging-recycling-notes/${prnId}/status`
+
+/**
+ * A PRN awaiting authorisation under the organisation's accreditation.
+ * @param {import('#domain/organisations/model.js').Organisation} organisation
+ * @param {string} prnId
+ */
+const prnsRepositoryAwaitingAuthorisation = (
+  { id, registrations: [registration] },
+  prnId
+) =>
+  createInMemoryPackagingRecyclingNotesRepository([
+    /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
+      id: prnId,
+      ...buildAwaitingAuthorisationPrn(
+        underAccreditation({
+          organisationId: id,
+          registrationId: registration.id,
+          accreditationId: /** @type {string} */ (registration.accreditationId)
+        })
+      )
+    })
+  ])({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
+  })
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
@@ -259,7 +317,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${ctx.organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${ctx.org.orgId}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -1057,7 +1115,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
   describe('downstream effect: PRN issuance', () => {
     it('refuses to issue a PRN once the accreditation has been suspended through this endpoint', async () => {
-      const fixture = buildOrgWithAccreditationStatus('approved')
+      const fixture = buildServedOrgWithAccreditationStatus('approved')
       const registration = fixture.registrations[0]
       const accreditationId = /** @type {string} */ (
         registration.accreditationId
@@ -1065,29 +1123,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const prnId = new ObjectId().toHexString()
 
       const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([
-          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
-            /** @type {unknown} */ (
-              buildAwaitingAuthorisationPrn({
-                id: prnId,
-                organisation: { id: fixture.id, name: 'Test Organisation' },
-                registrationId: registration.id,
-                accreditation:
-                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
-                    id: accreditationId
-                  })
-              })
-            )
-          )
-        ])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
 
       const integrationServer = await createTestServer({
         repositories: {
@@ -1114,7 +1150,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const issueResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        url: prnStatusUrl(fixture, prnId),
         ...asOperator(),
         payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
@@ -1126,9 +1162,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
 
     it('permits issuing a PRN again once the accreditation has been reinstated through this endpoint', async () => {
-      const fixture = buildOrgWithAccreditationStatus('suspended', {
-        registrationStatus: 'approved'
-      })
+      const fixture = buildServedOrgWithAccreditationStatus('suspended')
       const registration = fixture.registrations[0]
       const accreditationId = /** @type {string} */ (
         registration.accreditationId
@@ -1136,30 +1170,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const prnId = new ObjectId().toHexString()
 
       const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([
-          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
-            /** @type {unknown} */ (
-              buildAwaitingAuthorisationPrn({
-                id: prnId,
-                organisation: { id: fixture.id, name: 'Test Organisation' },
-                registrationId: registration.id,
-                accreditation:
-                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
-                    id: accreditationId,
-                    accreditationYear: 2026
-                  })
-              })
-            )
-          )
-        ])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
 
       // A ledger holding enough balance for the PRN's tonnage, so the issue
       // succeeds once the suspension is lifted.
@@ -1203,7 +1214,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const issueResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        url: prnStatusUrl(fixture, prnId),
         ...asOperator(),
         payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
@@ -1212,7 +1223,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
 
     it('refuses to issue a PRN once the accreditation has been cancelled through this endpoint', async () => {
-      const fixture = buildOrgWithAccreditationStatus('suspended')
+      const fixture = buildServedOrgWithAccreditationStatus('suspended')
       const registration = fixture.registrations[0]
       const accreditationId = /** @type {string} */ (
         registration.accreditationId
@@ -1220,29 +1231,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const prnId = new ObjectId().toHexString()
 
       const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([
-          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
-            /** @type {unknown} */ (
-              buildAwaitingAuthorisationPrn({
-                id: prnId,
-                organisation: { id: fixture.id, name: 'Test Organisation' },
-                registrationId: registration.id,
-                accreditation:
-                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
-                    id: accreditationId
-                  })
-              })
-            )
-          )
-        ])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
 
       const integrationServer = await createTestServer({
         repositories: {
@@ -1269,7 +1258,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const issueResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        url: prnStatusUrl(fixture, prnId),
         ...asOperator(),
         payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
@@ -1281,9 +1270,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     })
 
     it('permits issuing a PRN again once the accreditation has been reinstated after an appeal through this endpoint', async () => {
-      const fixture = buildOrgWithAccreditationStatus('cancelled', {
-        registrationStatus: 'approved'
-      })
+      const fixture = buildServedOrgWithAccreditationStatus('cancelled')
       const registration = fixture.registrations[0]
       const accreditationId = /** @type {string} */ (
         registration.accreditationId
@@ -1291,30 +1278,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const prnId = new ObjectId().toHexString()
 
       const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([
-          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
-            /** @type {unknown} */ (
-              buildAwaitingAuthorisationPrn({
-                id: prnId,
-                organisation: { id: fixture.id, name: 'Test Organisation' },
-                registrationId: registration.id,
-                accreditation:
-                  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['accreditation']} */ ({
-                    id: accreditationId,
-                    accreditationYear: 2026
-                  })
-              })
-            )
-          )
-        ])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
 
       // A ledger holding enough balance for the PRN's tonnage, so the issue
       // succeeds once the cancellation is overturned.
@@ -1358,7 +1322,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const issueResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+        url: prnStatusUrl(fixture, prnId),
         ...asOperator(),
         payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
       })

@@ -1,5 +1,7 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
 import { asStoredRowStates } from './as-stored-row-states-test-helpers.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import wasteRecordsRegisteredOnlyJson from './test-data/reprocessor-registered-only.json' with { type: 'json' }
 import wasteRecordsAccreditedJson from './test-data/reprocessor-on-input-accredited.json' with { type: 'json' }
 
@@ -13,11 +15,11 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
     const result = aggregateReportDetail(wasteRecordsRegisteredOnly, {
       operatorCategory: 'REPROCESSOR_REGISTERED_ONLY',
       cadence: 'quarterly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: {
         lastUploadedAt: '2026-03-31T19:35:45.562Z',
-        summaryLogId: '18bde18b-5200-4e86-9aad-738a16b05db8'
+        summaryLogId: toSummaryLogFileId('18bde18b-5200-4e86-9aad-738a16b05db8')
       }
     })
 
@@ -112,11 +114,11 @@ describe('#aggregateReportDetail — REPROCESSOR accredited monthly January 2026
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'REPROCESSOR',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: {
         lastUploadedAt: '2026-03-31T19:37:45.709Z',
-        summaryLogId: 'a8721bcb-8d55-44ea-9d5b-d0a4776e9aad'
+        summaryLogId: toSummaryLogFileId('a8721bcb-8d55-44ea-9d5b-d0a4776e9aad')
       }
     })
 

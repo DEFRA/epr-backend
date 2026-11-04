@@ -3,19 +3,22 @@ import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import {
-  buildAccreditation,
-  buildOrganisation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { summaryLogsUploadCompletedYearPath } from './year-post.js'
+const { buildOrganisation } = createOrganisationBuilders()
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -27,6 +30,8 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 
 const organisationId = '507f1f77bcf86cd799439011'
 const registrationId = '507f1f77bcf86cd799439012'
+const orgId = 500123
+const registrationNumber = REPROCESSOR_NUMBER
 
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
@@ -47,22 +52,20 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
 })
 
 const uploadCompletedUrl = (year, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${year}/${summaryLogId}/upload-completed`
+  `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
-    {
-      ...buildOrganisation({
+    partialMock(
+      buildOrganisation({
         id: organisationId,
-        registrations: [
-          buildRegistration({ id: registrationId, accreditationId: undefined })
-        ]
-      }),
-      status: 'active'
-    }
+        orgId,
+        registrations: [reprocessor({ id: registrationId })]
+      })
+    )
   ])()
 
-describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
+describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
   // but the route itself is unauthenticated.
   setupAuthContext()
@@ -102,7 +105,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     await server.stop()
   })
 
-  it('stores the year from the path and the accreditation from the registration', async () => {
+  it('stores the year from the path, no accreditation, and the numbers', async () => {
     const summaryLogId = randomUUID()
 
     const response = await server.inject({
@@ -118,7 +121,10 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       organisationId,
       registrationId,
       year: 2026,
-      accreditationId: null
+      accreditationId: null,
+      organisationNumber: String(orgId),
+      registrationNumber,
+      accreditationNumber: null
     })
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBeDefined()
 
@@ -128,10 +134,25 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     })
   })
 
-  describe('when the registration has an active accreditation', () => {
+  describe('when the path names an accreditation', () => {
     const accreditedOrganisationId = '507f1f77bcf86cd799439013'
     const accreditedRegistrationId = '507f1f77bcf86cd799439014'
-    const accreditationId = '507f1f77bcf86cd799439015'
+    const accredited = accreditation()
+    const accreditedOrganisation = buildOrganisation({
+      id: accreditedOrganisationId,
+      registrations: [
+        reprocessor({
+          id: accreditedRegistrationId,
+          accreditationId: accredited.id
+        })
+      ],
+      accreditations: [accredited]
+    })
+    const unnumbered = accreditation({ accreditationNumber: undefined })
+    const unnumberedOrganisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: unnumbered.id })],
+      accreditations: [unnumbered]
+    })
 
     let accreditedServer
     let accreditedSummaryLogsRepository
@@ -144,25 +165,8 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
 
       const accreditedOrganisationsRepository =
         createInMemoryOrganisationsRepository([
-          {
-            ...buildOrganisation({
-              id: accreditedOrganisationId,
-              registrations: [
-                buildRegistration({
-                  id: accreditedRegistrationId,
-                  accreditationId,
-                  statusHistory: [{ status: 'approved', updatedAt: new Date() }]
-                })
-              ],
-              accreditations: [
-                buildAccreditation({
-                  id: accreditationId,
-                  statusHistory: [{ status: 'approved', updatedAt: new Date() }]
-                })
-              ]
-            }),
-            status: 'active'
-          }
+          partialMock(accreditedOrganisation),
+          partialMock(unnumberedOrganisation)
         ])()
 
       accreditedServer = await createTestServer({
@@ -180,12 +184,12 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       await accreditedServer.stop()
     })
 
-    it('stores the accreditation from the registration', async () => {
+    it('stores the accreditation the path names, and its number', async () => {
       const summaryLogId = randomUUID()
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${accreditedOrganisationId}/registrations/${accreditedRegistrationId}/summary-logs/2026/${summaryLogId}/upload-completed`,
+        url: `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -207,8 +211,24 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       )
       expect(stored.summaryLog).toMatchObject({
         year: 2026,
-        accreditationId
+        accreditationId: accredited.id,
+        accreditationNumber: ACCREDITATION_NUMBER
       })
+    })
+
+    it('finds no accreditation without a number, and stores nothing', async () => {
+      const summaryLogId = randomUUID()
+
+      const response = await accreditedServer.inject({
+        method: 'POST',
+        url: `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        payload: createCompletePayload('file-unnumbered')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(
+        await accreditedSummaryLogsRepository.findById(summaryLogId)
+      ).toBeNull()
     })
   })
 
@@ -283,35 +303,64 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('rejects a callback arriving after the log has moved on from validating', async () => {
-    const summaryLogId = randomUUID()
-
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: createCompletePayload('file-complete-1')
-    })
-
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: {
-        uploadStatus: 'ready',
-        metadata: { organisationId, registrationId },
-        form: {
-          summaryLogUpload: createFileDetails({
-            fileId: 'file-pending-1',
-            fileStatus: 'pending',
-            s3Bucket: undefined,
-            s3Key: undefined
-          })
+  it.each([
+    ['complete', 'rejected', 'validating', 'rejected'],
+    ['complete', 'pending', 'validating', 'preprocessing'],
+    ['rejected', 'complete', 'rejected', 'validating'],
+    ['rejected', 'pending', 'rejected', 'preprocessing'],
+    ['rejected', 'rejected', 'rejected', 'rejected'],
+    ['complete', 'complete', 'validating', 'validating']
+  ])(
+    'refuses a %s callback followed by a %s callback, naming the move from %s to %s',
+    async (firstFileStatus, secondFileStatus, fromStatus, toStatus) => {
+      const summaryLogId = randomUUID()
+      const withoutS3Location = { s3Bucket: undefined, s3Key: undefined }
+      /** @type {Record<string, object>} */
+      const callbackByFileStatus = {
+        complete: createCompletePayload('file-complete'),
+        pending: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-pending',
+              fileStatus: 'pending',
+              ...withoutS3Location
+            })
+          }
         },
-        numberOfRejectedFiles: 0
+        rejected: {
+          ...createCompletePayload(),
+          form: {
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-rejected',
+              fileStatus: 'rejected',
+              ...withoutS3Location,
+              hasError: true,
+              errorMessage: 'The selected file contains a virus'
+            })
+          },
+          numberOfRejectedFiles: 1
+        }
       }
-    })
 
-    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-  })
+      const first = await server.inject({
+        method: 'POST',
+        url: uploadCompletedUrl(2026, summaryLogId),
+        payload: callbackByFileStatus[firstFileStatus]
+      })
+      const second = await server.inject({
+        method: 'POST',
+        url: uploadCompletedUrl(2026, summaryLogId),
+        payload: callbackByFileStatus[secondFileStatus]
+      })
+
+      expect(first.statusCode).toBe(StatusCodes.ACCEPTED)
+      expect(second.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(second.payload).message).toBe(
+        `Cannot transition summary log from ${fromStatus} to ${toStatus}`
+      )
+    }
+  )
 
   describe('when the repository fails unexpectedly', () => {
     let failingServer
@@ -324,7 +373,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
         repositories: {
           summaryLogsRepository: () => ({
             findById: async () => null,
-            findLatestSubmittedForOrgReg: async () => null,
+            findLatestSubmitted: async () => null,
             insert: async () => {
               throw insertError
             }
@@ -364,7 +413,7 @@ describe(`${summaryLogsUploadCompletedYearPath} route`, () => {
       expect(failingServer.loggerMocks.error).toHaveBeenCalledWith(
         expect.objectContaining({
           err: insertError,
-          message: `Failure on ${summaryLogsUploadCompletedYearPath}`,
+          message: 'Failure completing summary log upload',
           event: {
             category: 'server',
             action: 'response_failure'

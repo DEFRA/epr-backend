@@ -35,6 +35,11 @@ export const ACCREDITATION_STATUS = Object.freeze({
  * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
  */
 
+export const LEDGER_ACCREDITATION_KIND = Object.freeze({
+  ACCREDITED: 'accredited',
+  REGISTERED_ONLY: 'registeredOnly'
+})
+
 /** @type {ReadonlySet<AccreditationStatus>} */
 export const ACTIVE_ACCREDITATION_STATUSES = new Set([
   ACCREDITATION_STATUS.APPROVED,
@@ -259,7 +264,7 @@ export const USER_ROLES = Object.freeze({
  *     email: string
  *     id: string
  *   }
- * }} LinkedDefraOrganisation
+ * }} StoredLinkedDefraOrganisation
  */
 
 /**
@@ -307,7 +312,7 @@ export const USER_ROLES = Object.freeze({
  *   businessType?: BusinessTypeValue;
  *   companyDetails: CompanyDetails;
  *   formSubmission: { id: string; time: Date };
- *   linkedDefraOrganisation?: LinkedDefraOrganisation;
+ *   linkedDefraOrganisation?: StoredLinkedDefraOrganisation;
  *   managementContactDetails?: User;
  *   orgId: number;
  *   partnership?: Partnership;

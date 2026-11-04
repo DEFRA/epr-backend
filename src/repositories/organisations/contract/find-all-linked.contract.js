@@ -1,18 +1,24 @@
 import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildLinkedDefraOrg, buildOrganisation } from './test-data.js'
+import { buildLinkedDefraOrg } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testFindAllLinkedBehaviour = (it) => {
   describe('findAllLinked', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 

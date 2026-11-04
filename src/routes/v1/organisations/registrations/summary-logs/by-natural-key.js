@@ -7,10 +7,11 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { summaryLogDocument } from './document/get.js'
 import { summaryLogFile, summaryLogFileByFileId } from './file/get.js'
 import { summaryLogsGet } from './get.js'
+import { summaryLogsList } from './list/get.js'
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { summaryLogRecordsCsv } from './records/get.js'
 import { summaryLogsSubmit } from './submit/post.js'
@@ -20,6 +21,7 @@ import { summaryLogsYearCreate } from './year-post.js'
 
 /**
  * @import { ResponseObject } from '@hapi/hapi'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  */
 
@@ -43,7 +45,7 @@ const uploadAddresses = [
 
 /**
  * @param {boolean} accredited
- * @returns {(request: ResolvedRequest) => void}
+ * @returns {(request: ResolvedRequest & { params: { year: Year } }) => void}
  */
 const callbackToNaturalKeys = (accredited) => (request) => {
   const { organisationNumber, registrationNumber, year } = request.params
@@ -55,7 +57,7 @@ const callbackToNaturalKeys = (accredited) => (request) => {
     `${config.get('appBaseUrl')}${uploadCompletedPath({
       organisationNumber,
       registrationNumber,
-      year: /** @type {number} */ (year),
+      year,
       accredited,
       summaryLogId: id
     })}`
@@ -134,6 +136,7 @@ export const summaryLogRoutesByNaturalKey = [
       { accredited }
     )
   ]),
+  summaryLogsList,
   atNaturalKeys(
     withoutDatabaseIds(summaryLogsGet, ['accreditationId']),
     summaryLog,

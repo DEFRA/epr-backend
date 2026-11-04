@@ -1,6 +1,5 @@
 import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
-import * as summaryLogsRoutes from '#routes/v1/organisations/registrations/summary-logs/index.js'
 import * as organisationRoutes from '#routes/v1/organisations/index.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
@@ -17,27 +16,20 @@ import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availa
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import * as marketInsightsRoutes from '#market-insights/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
-import { adminAccreditationPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-accreditation-list.js'
 import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
+import {
+  prnCancelByNaturalKey,
+  prnRoutesByNaturalKey
+} from '#packaging-recycling-notes/routes/by-natural-key.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
-import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
-import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { reportRoutesByNaturalKey } from '#reports/routes/by-natural-key.js'
 import { adminMeGet } from '#routes/v1/admin/me/get.js'
-import { accreditationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/accreditations/waste-balance-ledger/get.js'
-import {
-  registrationAccreditationGet,
-  registrationAccreditationsGet,
-  registrationGet
-} from '#routes/v1/organisations/registrations/get.js'
-import { registrationsList } from '#routes/v1/organisations/registrations/list/get.js'
-import { registrationWasteBalanceLedgerGet } from '#routes/v1/organisations/registrations/waste-balance-ledger/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -51,19 +43,16 @@ const router = {
         ? Object.values(devRoutes)
         : []
 
-      const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } = reportsRoutes
-
       const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
         'featureFlags.prnAdminCancellation'
       )
-        ? [adminPackagingRecyclingNotesCancel]
+        ? [adminPackagingRecyclingNotesCancel, prnCancelByNaturalKey]
         : []
 
       server.route([
         health,
         ...apply,
         ...Object.values(meRoutes),
-        ...Object.values(summaryLogsRoutes),
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
         ...Object.values(organisationRoutes),
@@ -78,26 +67,18 @@ const router = {
         ...Object.values(prnTonnageRoutes),
         ...Object.values(wasteBalanceAvailabilityRoutes),
         ...Object.values(linkedOrganisationsRoutes),
-        ...Object.values(packagingRecyclingNotesRoutes),
         packagingRecyclingNotesAccept,
         packagingRecyclingNotesList,
         packagingRecyclingNotesReject,
+        ...prnRoutesByNaturalKey,
         ...summaryLogUploadsReportRoutes,
-        adminAccreditationPackagingRecyclingNotesList,
         adminPackagingRecyclingNotesList,
         ...prnAdminCancellationRoutesBehindFeatureFlag,
         ...Object.values(overseasSitesRoutes),
         ...Object.values(marketInsightsRoutes),
-        ...Object.values(coreReportsRoutes),
-        reportsUnsubmit,
+        ...Object.values(reportsRoutes),
         ...reportRoutesByNaturalKey,
         adminMeGet,
-        accreditationWasteBalanceLedgerGet,
-        registrationsList,
-        registrationGet,
-        registrationAccreditationsGet,
-        registrationAccreditationGet,
-        registrationWasteBalanceLedgerGet,
         dlqMessagesGet,
         dlqPurgePost
       ])

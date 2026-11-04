@@ -14,6 +14,7 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
+  buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -25,6 +26,7 @@ import {
   buildPrnAcceptedEvent,
   buildPrnCancelledAfterIssueEvent
 } from '#waste-balances/repository/ledger-test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -54,6 +56,13 @@ const SECOND_PRN_ID = '507f1f77bcf86cd799439012'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
 const ISSUED_AMOUNT = 950
@@ -67,14 +76,7 @@ const PRN_BASE = {
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA,
-    siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-  },
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   tonnage: TONNAGE
 }
 
@@ -147,7 +149,7 @@ const seedClosingBalance = (ledgerRepository, balanceSeed) =>
  * does not.
  *
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('#waste-balances/repository/ledger-port.js').LedgerEvent} competingEvent
+ * @param {import('#waste-balances/repository/ledger-port.js').LedgerEventInsert} competingEvent
  * @returns {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository}
  */
 const withCompetingWriteDuringFold = (ledgerRepository, competingEvent) => {
@@ -190,6 +192,7 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
     organisationsRepository:
       /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
         /** @type {unknown} */ ({
+          findById: async () => organisation,
           findAccreditationById: async () => ({
             status,
             submittedToRegulator: REGULATOR.EA
@@ -202,6 +205,7 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
     /** @type {unknown} */ ({
+      findById: async () => organisation,
       findAccreditationById: vi.fn().mockResolvedValue({
         status: ACCREDITATION_STATUS.APPROVED,
         submittedToRegulator: REGULATOR.EA

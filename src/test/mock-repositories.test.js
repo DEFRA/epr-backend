@@ -21,14 +21,17 @@ describe('mock-repositories', () => {
         'findByIds',
         'findById',
         'findByLinkedDefraOrgId',
-        'findByAccreditationNumber',
-        'findByRegistrationNumber',
+        'linkDefraOrganisation',
+        'unlinkDefraOrganisation',
+        'replaceUsers',
+        'isAccreditationNumberInUse',
+        'isRegistrationNumberInUse',
         'findAllLinked',
         'findAllLinkableForUser',
         'findRegistrationById',
         'findAccreditationById',
         'findAllIds',
-        'findByOrgId',
+        'findByOrganisationNumber',
         'replaceRegistrationOverseasSites'
       ]
     },
@@ -38,8 +41,11 @@ describe('mock-repositories', () => {
         'insert',
         'update',
         'findById',
-        'findLatestSubmittedForOrgReg',
-        'findAllByOrgReg',
+        'findByFileId',
+        'findIdsWithoutNumbers',
+        'assignNumbers',
+        'findLatestSubmitted',
+        'findAll',
         'findAllSummaryLogStatsByRegistrationId',
         'transitionToSubmittingExclusive',
         'getDownloadUrl',
@@ -76,7 +82,9 @@ describe('mock-repositories', () => {
         'sumTonnageByAccreditation',
         'updateStatus',
         'updateWatermark',
-        'persistProjection'
+        'persistProjection',
+        'findIdsWithoutNumbers',
+        'assignNumbers'
       ]
     },
     createMockOverseasSitesRepository: {
@@ -85,7 +93,6 @@ describe('mock-repositories', () => {
         'findById',
         'findByProperties',
         'create',
-        'update',
         'remove',
         'findAll',
         'findByIds'

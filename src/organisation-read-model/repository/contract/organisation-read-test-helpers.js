@@ -4,6 +4,10 @@ import {
   buildAccreditation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
 export const EXPORTER_NUMBER = 'R26EX5001180042PL'
@@ -38,17 +42,18 @@ export const overseasSites = [approvedSite, pendingSite]
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '../port.js' */
 
 /**
  * @param {OrganisationReadRepository} repository
- * @param {number} organisationNumber
+ * @param {string} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export const findOrganisation = async (repository, organisationNumber) => {
-  const organisation =
-    await repository.findByOrganisationNumber(organisationNumber)
+  const organisation = await repository.findByOrganisationNumber(
+    toOrganisationNumber(organisationNumber)
+  )
   expect(organisation).not.toBeNull()
   return /** @type {Organisation} */ (organisation)
 }
@@ -66,15 +71,16 @@ export const granted = (status) => [
  * The timeline of a record built with `granted('approved')`.
  *
  * @param {string} validFrom
+ * @returns {StatusTimeline}
  */
-export const approvedTimeline = (validFrom) => ({
-  '2026-01-01T09:00:00.000Z': { status: 'created' },
-  [new Date(validFrom).toISOString()]: { status: 'approved' }
-})
+export const approvedTimeline = (validFrom) => [
+  { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+  { status: 'approved', at: new Date(validFrom).toISOString() }
+]
 
 export const accreditation = (overrides = {}) =>
   buildAccreditation({
-    accreditationNumber: ACCREDITATION_NUMBER,
+    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
     validFrom: '2026-07-01',
     validTo: '2026-12-31',
     statusHistory: granted('approved'),
@@ -144,10 +150,4 @@ export const anakin = {
   email: 'anakin.skywalker@starwars.com',
   fullName: 'Anakin Skywalker',
   phone: '823456789'
-}
-
-export const yoda = {
-  email: 'yoda@starwars.com',
-  fullName: 'Yoda',
-  phone: '1234567890'
 }

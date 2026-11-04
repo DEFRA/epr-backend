@@ -1,52 +1,38 @@
-import {
-  calendarDate,
-  utcCalendarDate
-} from '#common/helpers/date-formatter.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { dayBefore } from '#common/helpers/dates/calendar-day.js'
+import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusTimeline } from './model.js' */
 
-/** @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange */
+/**
+ * A stretch of calendar days, both ends included.
+ *
+ * @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange
+ */
 
 /**
- * @param {CalendarDate} date
- * @returns {CalendarDate}
+ * One status per day, keyed by ISO 8601 date (ADR-0051).
+ *
+ * @typedef {Record<CalendarDate, { status: string }>} DailyTimeline
  */
-const dayBefore = (date) => {
-  const day = new Date(date)
-  day.setUTCDate(day.getUTCDate() - 1)
-  return utcCalendarDate(day)
-}
-
-/**
- * @param {CalendarDate} date
- * @returns {number}
- */
-const yearOf = (date) => new Date(date).getUTCFullYear()
 
 /**
  * @param {CalendarDateRange} range
- * @returns {number[]}
+ * @returns {Year[]}
  */
-const yearsIn = ({ from, to }) => {
-  const years = []
-  for (let year = yearOf(from); year <= yearOf(to); year++) {
-    years.push(year)
-  }
-  return years
-}
+const yearsIn = ({ from, to }) => yearsFromTo(utcYearOf(from), utcYearOf(to))
 
 /**
- * @param {StatusTimeline} timeline
+ * @param {DailyTimeline} daily
  * @param {CalendarDate} today
  * @returns {CalendarDate[]}
  */
-const datesUpTo = (timeline, today) => {
-  const dates = Object.keys(timeline)
+const datesUpTo = (daily, today) =>
+  Object.keys(daily)
     .map(calendarDate)
     .filter((date) => date.localeCompare(today) <= 0)
-  return dates.sort((a, b) => a.localeCompare(b))
-}
 
 /**
  * A status holds until the day before the next one starts; the latest status
@@ -59,16 +45,14 @@ const datesUpTo = (timeline, today) => {
 const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
 
 /**
- * The status at the end of each UTC day with a change, keyed by ISO 8601 date.
+ * The status at the end of each UTC day with a change.
  *
  * @param {StatusTimeline} timeline
- * @returns {StatusTimeline}
+ * @returns {DailyTimeline}
  */
 export const dailyTimeline = (timeline) =>
   Object.fromEntries(
-    Object.keys(timeline)
-      .sort((a, b) => a.localeCompare(b))
-      .map((key) => [calendarDate(key), timeline[key]])
+    timeline.map(({ status, at }) => [calendarDate(at), { status }])
   )
 
 /**
@@ -103,7 +87,7 @@ export const statusRanges = (timeline, today) => {
  *
  * @param {StatusTimeline} timeline
  * @param {CalendarDate} today
- * @returns {number[]}
+ * @returns {Year[]}
  */
 export const approvedYears = (timeline, today) => {
   const approvedRanges = statusRanges(timeline, today).approved ?? []

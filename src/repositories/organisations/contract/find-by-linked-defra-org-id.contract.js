@@ -1,6 +1,8 @@
 import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
+import { prepareOrgUpdate } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 /**
  * Builds a valid linkedDefraOrganisation object that passes schema validation
@@ -21,14 +23,18 @@ const buildLinkedDefraOrg = (orgId, orgName) => ({
 export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
   describe('findByLinkedDefraOrgId', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -69,6 +75,26 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
           orgId: defraOrgId,
           orgName: 'Test Defra Org'
         }
+      })
+    })
+
+    it('returns only the summary fields and the link', async () => {
+      const defraOrgId = crypto.randomUUID()
+      const linkedDefraOrganisation = buildLinkedDefraOrg(
+        defraOrgId,
+        'Test Defra Org'
+      )
+      const org = buildOrganisation({ linkedDefraOrganisation })
+      await repository.insert(org)
+
+      const result = await repository.findByLinkedDefraOrgId(defraOrgId)
+
+      expect(result).toEqual({
+        id: org.id,
+        orgId: org.orgId,
+        companyDetails: { name: org.companyDetails.name },
+        status: 'created',
+        linkedDefraOrganisation
       })
     })
 

@@ -4,15 +4,17 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  buildOrganisation,
   prepareOrgUpdate,
-  getValidDateRange
+  getValidDateRange,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -23,6 +25,12 @@ import {
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const mockCdpAuditing = vi.fn()
 const mockOrganisationLinkedMetric = vi.fn()
@@ -83,7 +91,7 @@ function defraIdJwtTokenWith({
   })
 }
 
-describe('POST /v1/organisations/{organisationId}/link', () => {
+describe('POST /organisations/{organisationNumber}/link', () => {
   setupAuthContext()
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
@@ -109,22 +117,24 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   })
 
   const performLink = async (
-    /** @type {string} */ organisationId,
+    /** @type {{ orgId: number }} */ organisation,
     /** @type {string} */ jwtAccessToken
   ) => {
     return await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/link`,
+      url: `/organisations/${organisation.orgId}/link`,
       headers: {
         Authorization: `Bearer ${jwtAccessToken}`
       }
     })
   }
 
-  const performUnlink = async (/** @type {string} */ organisationId) => {
+  const performUnlink = async (
+    /** @type {{ orgId: number }} */ organisation
+  ) => {
     return await server.inject({
       method: 'DELETE',
-      url: `/v1/organisations/${organisationId}/link`,
+      url: `/organisations/${organisation.orgId}/link`,
       ...asServiceMaintainerWrite()
     })
   }
@@ -136,21 +146,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       await organisationsRepository.insert(org1)
       return {
         method: 'POST',
-        url: `/v1/organisations/${org1.id}/link`
+        url: `/organisations/${org1.orgId}/link`
       }
     }
   })
 
   describe('the request contains a valid Defra Id token', () => {
-    it('when the organisation in the request does not exist, returns 404', async () => {
-      const organisationId = 'some-uuid-for-an-org-that-is-not-in-the-service'
-      const response = await performLink(
-        organisationId,
-        defraIdJwtTokenWith({})
-      )
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-
     describe('the request is valid, the org exists', () => {
       const user1Email = 'user1@email.com'
       const user2Email = 'user2@email.com'
@@ -219,7 +220,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                     /** @type {import('#domain/organisations/registration.js').RegistrationOther} */ (
                       org.registrations[0]
                     ).cbduNumber || 'CBDU123456',
-                  registrationNumber: 'REG1',
+                  registrationNumber: `REG${org.orgId}`,
                   validFrom: VALID_FROM,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
@@ -235,7 +236,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
           await waitForVersion(organisationsRepository, org.id, org.version + 1)
 
-          const response = await performLink(org.id, defraIdJwtToken)
+          const response = await performLink(org, defraIdJwtToken)
 
           expect(response.statusCode).toBe(expectedStatusCode)
         }
@@ -249,21 +250,15 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           submitterContactDetails(userEmail)
         )
 
-        const firstLinkResponse = await performLink(
-          approvedOrg.id,
-          defraIdToken
-        )
+        const firstLinkResponse = await performLink(approvedOrg, defraIdToken)
 
         expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
 
-        const unlinkResponse = await performUnlink(approvedOrg.id)
+        const unlinkResponse = await performUnlink(approvedOrg)
 
         expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-        const secondLinkResponse = await performLink(
-          approvedOrg.id,
-          defraIdToken
-        )
+        const secondLinkResponse = await performLink(approvedOrg, defraIdToken)
 
         expect(secondLinkResponse.statusCode).toBe(StatusCodes.OK)
       })
@@ -276,17 +271,33 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           submitterContactDetails(userEmail)
         )
 
-        const firstLinkResponse = await performLink(org.id, defraIdToken)
+        const firstLinkResponse = await performLink(org, defraIdToken)
 
         expect(firstLinkResponse.statusCode).toBe(StatusCodes.OK)
 
-        await waitForVersion(organisationsRepository, org.id, org.version + 1)
+        const linked = await waitForVersion(
+          organisationsRepository,
+          org.id,
+          org.version + 1
+        )
 
-        const secondLinkResponse = await performLink(org.id, defraIdToken)
+        const secondLinkResponse = await performLink(
+          org,
+          defraIdJwtTokenWith({
+            email: userEmail,
+            defraIdOrganisationName: 'another org ltd'
+          })
+        )
 
         expect(secondLinkResponse.statusCode).toBe(StatusCodes.CONFLICT)
         expect(JSON.parse(secondLinkResponse.payload).message).toBe(
           'Organisation is not in a linkable state'
+        )
+
+        const unchanged = await organisationsRepository.findById(org.id)
+        expect(unchanged.version).toBe(linked.version)
+        expect(unchanged.linkedDefraOrganisation).toEqual(
+          linked.linkedDefraOrganisation
         )
       })
 
@@ -307,20 +318,20 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           submitterContactDetails(user1Email)
         )
 
-        const user1LinkResponse = await performLink(org.id, user1DefraIdToken)
+        const user1LinkResponse = await performLink(org, user1DefraIdToken)
 
         expect(user1LinkResponse.statusCode).toBe(StatusCodes.OK)
 
         // add user 2 to organisation
         const addUser2Response = await server.inject({
           method: 'PUT',
-          url: `/v1/organisations/${org.id}/user`,
+          url: `/organisations/${org.orgId}/user`,
           headers: {
             Authorization: `Bearer ${user2DefraIdToken}`
           }
         })
 
-        expect(addUser2Response.statusCode).toBe(StatusCodes.OK)
+        expect(addUser2Response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
         await waitForVersion(organisationsRepository, org.id, org.version + 2)
 
@@ -350,12 +361,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         )
 
         // unlink
-        const unlinkResponse = await performUnlink(org.id)
+        const unlinkResponse = await performUnlink(org)
 
         expect(unlinkResponse.statusCode).toBe(StatusCodes.NO_CONTENT)
 
         // user 2 (not initial_user) attempts to link
-        const user2LinkResponse = await performLink(org.id, user2DefraIdToken)
+        const user2LinkResponse = await performLink(org, user2DefraIdToken)
 
         expect(user2LinkResponse.statusCode).toBe(StatusCodes.CONFLICT)
       })
@@ -378,7 +389,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             submitterContactDetails(userEmail)
           )
 
-          const response = await performLink(org.id, defraIdToken)
+          const response = await performLink(org, defraIdToken)
 
           const finalOrgVersion = await waitForVersion(
             organisationsRepository,
@@ -401,14 +412,13 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
           expect(result).toEqual({
             status: ORGANISATION_STATUS.ACTIVE,
-            linked: {
-              id: defraIdOrganisationId,
-              name: defraIdOrganisationName,
+            linkedDefraOrganisation: {
+              defraOrganisation: {
+                id: defraIdOrganisationId,
+                name: defraIdOrganisationName
+              },
               linkedAt: expect.stringMatching(ISO_DATE_STRING_REGEX),
-              linkedBy: {
-                email: userEmail,
-                id: defraIdContactId
-              }
+              linkedBy: { email: userEmail }
             }
           })
         })
@@ -443,7 +453,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
           const systemLogsResponse = await server.inject({
             method: 'GET',
-            url: `/v1/system-logs/search?organisationId=${finalOrgVersion.id}`,
+            url: `/v1/system-logs/search?organisationNumber=${finalOrgVersion.orgId}`,
             ...asServiceMaintainer()
           })
 
@@ -520,6 +530,73 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           await performPostLinkOrganisation()
 
           expect(mockOrganisationLinkedMetric).toHaveBeenCalledTimes(1)
+        })
+      })
+
+      describe('when the linked organisation cannot be read back', () => {
+        /** @type {import('#test/create-test-server.js').TestServer} */
+        let unreadableServer
+        /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+        let unreadableOrganisationsRepository
+
+        beforeAll(async () => {
+          const organisationsRepositoryFactory =
+            createInMemoryOrganisationsRepository([])
+          unreadableOrganisationsRepository = organisationsRepositoryFactory()
+
+          const readable = createOrganisationReadRepository({
+            organisationsRepository: unreadableOrganisationsRepository,
+            overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
+            logger: /** @type {TypedLogger} */ (
+              /** @type {unknown} */ ({ warn: () => {} })
+            )
+          })
+
+          // The organisation reads as it stands, but never as linked.
+          /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+          const organisationReadRepository = {
+            ...readable,
+            findByOrganisationNumber: async (
+              organisationNumber,
+              minimumVersion
+            ) =>
+              minimumVersion === undefined
+                ? readable.findByOrganisationNumber(organisationNumber)
+                : null
+          }
+
+          unreadableServer = await createTestServer({
+            repositories: {
+              organisationsRepository: organisationsRepositoryFactory,
+              organisationReadRepository,
+              systemLogsRepository: createSystemLogsRepository()
+            }
+          })
+        })
+
+        it('returns 500 and still links the organisation', async () => {
+          const userEmail = 'unreadable@email.com'
+          const org = await buildApprovedOrg(
+            unreadableOrganisationsRepository,
+            submitterContactDetails(userEmail)
+          )
+
+          const response = await unreadableServer.inject({
+            method: 'POST',
+            url: `/organisations/${org.orgId}/link`,
+            headers: {
+              Authorization: `Bearer ${defraIdJwtTokenWith({ email: userEmail })}`
+            }
+          })
+
+          expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+
+          const linked = await waitForVersion(
+            unreadableOrganisationsRepository,
+            org.id,
+            org.version + 1
+          )
+          expect(linked.status).toBe(ORGANISATION_STATUS.ACTIVE)
         })
       })
     })

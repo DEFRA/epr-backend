@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { ObjectId } from 'mongodb'
@@ -26,7 +27,10 @@ import {
   EXPORTER_HEADERS,
   pollForValidation,
   pollWhileStatus,
-  setupWasteBalanceIntegrationEnvironment
+  setupWasteBalanceIntegrationEnvironment,
+  createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
+  tableOf
 } from './integration-test-helpers.js'
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
@@ -80,7 +84,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -90,20 +94,15 @@ describe('loadsByReportingPeriod population at validate time', () => {
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
   }
 
   const getCheckPage = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -125,24 +124,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
   }
 
   const submitAndPoll = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
-    await pollWhileStatus(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId,
-      {
-        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
-        maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
-      }
-    )
+    await pollWhileStatus(server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
+      maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
+    })
   }
 
   // Submits a January 2025 monthly report so loads dated in January fall into a
@@ -151,7 +144,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
       startDate: calendarDate('2025-01-01'),
@@ -163,7 +156,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.February,
       startDate: calendarDate('2025-02-01'),
@@ -940,62 +933,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   // A registered-only operator has no accreditation, so it reports on a
   // quarterly cadence and its loads carry no waste-balance classifier.
-  const registeredOnlyMeta = {
-    REGISTRATION_NUMBER: {
-      value: 'REG-123',
-      location: { sheet: 'Cover', row: 1, column: 'B' }
-    },
-    PROCESSING_TYPE: {
-      value: 'REPROCESSOR_REGISTERED_ONLY',
-      location: { sheet: 'Cover', row: 2, column: 'B' }
-    },
-    MATERIAL: {
-      value: 'Paper_and_board',
-      location: { sheet: 'Cover', row: 3, column: 'B' }
-    },
-    TEMPLATE_VERSION: {
-      value: 2.1,
-      location: { sheet: 'Cover', row: 4, column: 'B' }
-    }
-  }
+  const registeredOnlyMeta = createRegisteredOnlyMeta(
+    'REPROCESSOR_REGISTERED_ONLY'
+  )
 
-  const REGISTERED_ONLY_RECEIVED_HEADERS = [
-    'ROW_ID',
-    'MONTH_RECEIVED_FOR_REPROCESSING',
-    'NET_WEIGHT',
-    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-    'RECYCLABLE_PROPORTION_PERCENTAGE',
-    'TONNAGE_RECEIVED_FOR_RECYCLING',
-    'SUPPLIER_NAME',
-    'SUPPLIER_ADDRESS',
-    'SUPPLIER_POSTCODE',
-    'SUPPLIER_EMAIL',
-    'SUPPLIER_PHONE_NUMBER',
-    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
-  ]
-
-  const createRegisteredOnlyUploadData = (rows) => ({
-    RECEIVED_LOADS_FOR_REPROCESSING: {
-      location: { sheet: 'Received', row: TABLE_HEADER_ROW, column: 'A' },
-      headers: REGISTERED_ONLY_RECEIVED_HEADERS,
-      rows: rows.map(({ rowId, month }, index) => ({
-        rowNumber: FIRST_DATA_ROW + index,
-        values: [
-          rowId,
-          month,
-          10.5,
-          'Actual weight (100%)',
-          0.95,
-          9.975,
-          'Supplier Co',
-          '1 High St',
-          'SW1A 1AA',
-          'supplier@example.com',
-          '01234567',
-          'Sorting'
-        ]
-      }))
-    }
+  /** @param {{ rowId: number, month: string }[]} loads */
+  const createRegisteredOnlyUploadData = (loads) => ({
+    RECEIVED_LOADS_FOR_REPROCESSING: tableOf(
+      'Received',
+      loads.map((load) => createRegisteredOnlyReceivedRow(load))
+    )
   })
 
   it('classifies registered-only loads by quarter, closing a submitted quarter', async () => {
@@ -1013,7 +960,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     await createAndSubmitReport(env.reportsRepository, {
       organisationId,
       registrationId,
-      year: 2025,
+      year: toYear(2025),
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,
       startDate: calendarDate('2025-01-01'),
@@ -1043,6 +990,62 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.closedPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
+    ).toBe(0)
+  })
+
+  it('classifies every registered-only exporter load as valid and nonBalanceAffecting', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      accredited: false
+    })
+
+    await upload(
+      env,
+      'sl-registered-only-exporter',
+      'file-registered-only-exporter',
+      {
+        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
+          createRegisteredOnlyReceivedRow(
+            { rowId: 1001, month: '2025-01-01' },
+            {
+              monthHeader: 'MONTH_RECEIVED_FOR_EXPORT',
+              tonnageHeader: 'TONNAGE_RECEIVED_FOR_EXPORT'
+            }
+          )
+        ]),
+        LOADS_EXPORTED: tableOf('Exported', [
+          {
+            ROW_ID: 2001,
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
+            DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
+            OSR_ID: 100,
+            BASEL_EXPORT_CODE: 'B3020',
+            WAS_THE_WASTE_REFUSED: 'No',
+            WAS_THE_WASTE_STOPPED: 'No',
+            DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: null,
+            OSR_NAME: 'Overseas Reprocessor A',
+            OSR_COUNTRY: 'Vietnam-VN',
+            CUSTOMS_CODES: '123456',
+            CONTAINER_NUMBER: 'CONT123456'
+          }
+        ])
+      },
+      createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY')
+    )
+    const { loads, loadsByReportingPeriod } = await getCheckPage(
+      env,
+      'sl-registered-only-exporter'
+    )
+
+    expect(loads.added.valid.rowIds).toEqual(['1001', '2001'])
+    expect(loads.added.invalid.count).toBe(0)
+    expect(loads.added.included.count).toBe(0)
+    expect(loads.added.excluded.count).toBe(0)
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.nonBalanceAffecting.count
+    ).toBe(2)
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
@@ -1113,10 +1116,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
     await submitAndPoll(env, 'sl-submitted-period')
 
-    const { server, organisationId, registrationId } = env
+    const { server } = env
     const response = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, 'sl-submitted-period'),
+      url: buildGetUrl('sl-submitted-period'),
       ...asOperator()
     })
     const body = JSON.parse(response.payload)

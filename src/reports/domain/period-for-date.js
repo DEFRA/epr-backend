@@ -1,8 +1,10 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { isDateInRange } from './aggregation/filter-records-by-date.js'
 import { MONTHS_PER_PERIOD } from './cadence.js'
 import { periodBounds } from './reporting-period.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Cadence} from './cadence.js' */
 
 /** Position of the year portion end in an ISO date string (YYYY-MM-DD) */
@@ -17,11 +19,11 @@ const MONTH_END = 7
  *
  * @param {string | Date} dateValue - ISO date string (YYYY-MM-DD) or Date
  * @param {string} cadence - 'monthly' or 'quarterly'
- * @returns {{ year: number, period: number }}
+ * @returns {{ year: Year, period: number }}
  */
 export const periodForDate = (dateValue, cadence) => {
   const str = toCalendarDate(dateValue)
-  const year = Number(str.slice(0, YEAR_END))
+  const year = toYear(Number(str.slice(0, YEAR_END)))
   const month = Number(str.slice(MONTH_START, MONTH_END))
   const period = Math.ceil(month / MONTHS_PER_PERIOD[cadence])
   return { year, period }
@@ -34,7 +36,7 @@ export const periodForDate = (dateValue, cadence) => {
  *
  * @param {unknown} value
  * @param {Cadence} cadence
- * @returns {{ year: number, period: number } | null}
+ * @returns {{ year: Year, period: number } | null}
  */
 export const reportedPeriodForDate = (value, cadence) => {
   if (typeof value !== 'string') {

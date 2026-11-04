@@ -3,20 +3,20 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
-  accreditationsForYear,
-  registrationYears,
-  servedRegistrations
-} from '#routes/organisations/natural-keys.js'
-import {
   accreditationPath,
+  accreditationsForYear,
+  findOrganisationAndRegistrationReadModels,
   organisationParams,
   organisationPath,
   registrationParams,
-  registrationPath
-} from '#routes/organisations/view-route.js'
+  registrationPath,
+  servedRegistrations
+} from '#routes/organisations/natural-keys.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import { toBalanceBody } from './balance-body.js'
@@ -24,6 +24,7 @@ import { wasteBalanceSchema } from './response.schema.js'
 
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
@@ -73,12 +74,21 @@ const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest & { app: Required<ResolvedRecords> }} request
+   * @param {LedgerRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const year = /** @type {number} */ (request.params.year)
-    if (!registrationYears(request.app.registration).includes(year)) {
+    const { year } = request.params
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
+    const { status } = registration
+
+    if (
+      !approvedYears(status.timeline, utcCalendarDate(new Date())).includes(
+        year
+      )
+    ) {
       throw Boom.notFound('Year not found')
     }
     const events = await readLedgerEvents(request)
@@ -104,6 +114,29 @@ const accreditedLedgerGet = {
     h.response({ events: await readLedgerEvents(request) }).code(StatusCodes.OK)
 }
 
+/** The balance of the accreditation the path resolved to. */
+const accreditationWasteBalanceGet = {
+  method: 'GET',
+  options: {
+    auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
+    tags: ['api'],
+    response: { schema: wasteBalanceSchema }
+  },
+  /**
+   * @param {ResolvedRequest} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const { organisationId, registrationId, accreditationId } = request.params
+    const balance = await request.wasteBalanceService.currentBalance({
+      organisationId,
+      registrationId,
+      accreditationId
+    })
+    return h.response(toBalanceBody(balance)).code(StatusCodes.OK)
+  }
+}
+
 /**
  * The balance of each accreditation for the year, keyed by accreditation
  * number. A registration the read model does not serve, or without exactly one
@@ -119,7 +152,7 @@ const organisationWasteBalancesGet = {
     }
   },
   /**
-   * @param {ResolvedRequest & { params: { year: number }, app: ResolvedRecords }} request
+   * @param {ResolvedRequest & { params: { year: Year }, app: ResolvedRecords }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -173,6 +206,12 @@ export const wasteBalanceRoutesByNaturalKey = [
     {
       accredited: true
     }
+  ),
+  atNaturalKeys(
+    accreditationWasteBalanceGet,
+    `${accreditationPath}/waste-balance`,
+    yearParams,
+    { accredited: true }
   ),
   atNaturalKeys(
     organisationWasteBalancesGet,

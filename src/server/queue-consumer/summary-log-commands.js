@@ -1,6 +1,6 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Joi from 'joi'
 
-import { config } from '#root/config.js'
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import {
   markAsValidationFailed,
@@ -40,12 +40,12 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /**
  * @typedef {object} ValidateCommandPayload
- * @property {string} summaryLogId
+ * @property {SummaryLogId} summaryLogId
  */
 
 /**
  * @typedef {object} SubmitCommandPayload
- * @property {string} summaryLogId
+ * @property {SummaryLogId} summaryLogId
  * @property {SubmitUser} user
  */
 
@@ -99,10 +99,7 @@ export const validateSummaryLogCommand = {
       ledgerRepository,
       reportsService,
       overseasSitesRepository,
-      summaryLogExtractor,
-      resubmissionFigureGateEnabled: config.get(
-        'featureFlags.resubmissionFigureGate'
-      )
+      summaryLogExtractor
     })
 
     await validateSummaryLog(payload.summaryLogId)

@@ -9,10 +9,11 @@ import {
 /**
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { OrganisationParams, RegistrationParams } from './view-route.js'
+ * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
  *
  * @typedef {{
  *   method: string,
@@ -21,7 +22,7 @@ import {
  * }} NaturalKeyRoute
  *
  * @typedef {RegistrationParams & {
- *   year?: number,
+ *   year?: Year,
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null
@@ -29,7 +30,9 @@ import {
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
  *
- * @typedef {{ organisation: Organisation, registration?: Registration }} ResolvedRecords
+ * @typedef {{ organisation: Organisation }} ResolvedRecords
+ *
+ * @typedef {ResolvedRecords & { registration?: Registration }} ResolvedOrginisationAndRegistration
  *
  * @typedef {{
  *   schema: Joi.Schema,
@@ -47,7 +50,7 @@ import {
 /**
  * @param {OrganisationsRepository} organisationsRepository
  * @param {OrganisationParams} params
- * @returns {Promise<ResolvedRecords>}
+ * @returns {Promise<ResolvedOrginisationAndRegistration>}
  */
 const resolveOrganisation = async (organisationsRepository, params) => ({
   organisation: await findOrganisationByNumber(
@@ -57,9 +60,11 @@ const resolveOrganisation = async (organisationsRepository, params) => ({
 })
 
 /**
+ * Throws if the path's keys don't resolve to a registration
+ *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {RegistrationParams} params
- * @returns {Promise<ResolvedRecords>}
+ * @returns {Promise<ResolvedOrginisationAndRegistration>}
  */
 const resolveRegistration = (organisationsRepository, params) =>
   findRegistrationByNumber(
@@ -69,11 +74,13 @@ const resolveRegistration = (organisationsRepository, params) =>
   )
 
 /**
- * Serves an existing route at a natural-key path. The keys resolve to the
- * stored ids the existing handler reads, so both paths behave the same. A
- * path with no registration number resolves the organisation alone. The
- * records the keys resolved to are on `request.app`, as `ResolvedRecords`, so
- * a handler need not read them again.
+ * Wraps a route at a natural-key path, resolving
+ * - {organisationNumber} to `request.params.organisationId`
+ * - {registrationNumber} (if present) to `request.params.registrationId`
+ * - {registrationNumber} + {year} to `request.params.accreditationId` if the `accredited` option is true
+ *
+ * The organisation the {organisationNumber} key resolved to is added to `request.app`, as
+ * `ResolvedRecords`, so a handler need not read it again.
  *
  * @param {NaturalKeyRoute} route
  * @param {string} path
@@ -100,17 +107,19 @@ export const atNaturalKeys = (
       })
     },
     /**
-     * @param {HapiRequest & { params: RegistrationParams & { year?: number } }} request
+     * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
      * @param {HapiResponseToolkit} h
      */
     handler: async (request, h) => {
-      const records = await resolveRecords(
+      const { organisation, registration } = await resolveRecords(
         request.organisationsRepository,
         request.params
       )
-      Object.assign(request.app, records)
 
-      const { organisation, registration } = records
+      /** @type {ResolvedRecords} */
+      const resolvedRecords = { organisation }
+      Object.assign(request.app, resolvedRecords)
+
       const ids = registration
         ? {
             organisationId: organisation.id,
@@ -119,7 +128,7 @@ export const atNaturalKeys = (
               ? findAccreditationForYear(
                   organisation,
                   registration,
-                  /** @type {number} */ (request.params.year)
+                  /** @type {Year} */ (request.params.year)
                 ).id
               : null
           }

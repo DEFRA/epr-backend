@@ -1,4 +1,5 @@
-import { dailyTimeline } from './status-timeline.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -14,15 +15,14 @@ import { dailyTimeline } from './status-timeline.js'
  *     }
  *   }
  *   name: string
- *   organisationNumber: number
+ *   organisationNumber: OrganisationNumber
  *   registeredAddress?: UkAddress
  *   registrations: Record<string, Registration>
- *   status: 'created' | 'approved' | 'active' | 'rejected'
- *   statusTimeline: StatusTimeline
+ *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   tradingName?: string
- *   users: { contactId?: string, email: string, roles: string[] }[]
+ *   users: { contactId?: string, email: string, fullName: string, roles: string[] }[]
  *   version: number
  * }} Organisation
  *
@@ -35,8 +35,8 @@ import { dailyTimeline } from './status-timeline.js'
  *   approvedPersons: Contact[]
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
- *   status: 'approved' | 'cancelled'
- *   statusTimeline: StatusTimeline
+ *   regAccStatusByDate: RegAccStatusByYear
+ *   status: Status<'approved' | 'cancelled'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   validFrom: string
@@ -67,11 +67,9 @@ import { dailyTimeline } from './status-timeline.js'
  * }} OverseasSite
  *
  * @typedef {{
- *   accreditationNumber: string
- *   prnIssuance: { signatories: Contact[], tonnageBand: string }
- *   status: 'approved' | 'suspended' | 'cancelled'
- *   statusTimeline: StatusTimeline
- *   submitterContactDetails: Contact
+ *   accreditationNumber: AccreditationNumber
+ *   prnIssuance: { tonnageBand: string }
+ *   status: Status<'approved' | 'suspended' | 'cancelled'>
  * }} AccreditationCommon
  *
  * @typedef {AccreditationCommon} ReprocessorAccreditation
@@ -109,12 +107,21 @@ import { dailyTimeline } from './status-timeline.js'
  */
 
 /**
- * Every status change, keyed by ISO 8601 datetime (ADR-0051).
+ * Every status change, oldest first, each at its ISO 8601 datetime. Nothing
+ * requires two changes to happen at different times, so changes that share a
+ * time keep the order they were recorded in.
  *
- * @typedef {Record<string, { status: string }>} StatusTimeline
+ * @typedef {{ status: string, at: string }[]} StatusTimeline
  */
 
-/** @type {readonly Organisation['status'][]} */
+/**
+ * The status today, and the timeline it is read from.
+ *
+ * @template {string} S
+ * @typedef {{ current: S, timeline: StatusTimeline }} Status
+ */
+
+/** @type {readonly Organisation['status']['current'][]} */
 export const ORGANISATION_STATUSES = Object.freeze([
   'created',
   'approved',
@@ -122,15 +129,39 @@ export const ORGANISATION_STATUSES = Object.freeze([
   'rejected'
 ])
 
-/** @type {readonly Registration['status'][]} */
+/** @type {readonly Registration['status']['current'][]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
 
-/** @type {readonly AccreditationCommon['status'][]} */
+/** @type {readonly AccreditationCommon['status']['current'][]} */
 export const ACCREDITATION_STATUSES = Object.freeze([
   'approved',
   'suspended',
   'cancelled'
 ])
+
+/**
+ * @typedef {typeof REG_ACC_STATUS[keyof typeof REG_ACC_STATUS]} RegAccStatus
+ */
+
+/**
+ * By year, the date each status starts. A status holds until the next date, or
+ * the end of the year.
+ *
+ * @typedef {Record<string, Record<string, { status: RegAccStatus }>>} RegAccStatusByYear
+ */
+
+export const REG_ACC_STATUS = Object.freeze({
+  REGISTERED_ONLY: 'registeredOnly',
+  ACCREDITED: 'accredited',
+  CANCELLED: 'cancelled'
+})
+
+/**
+ * A suspended accreditation is still accredited.
+ *
+ * @type {ReadonlySet<string>}
+ */
+export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
 
 /**
  * The status at the end of the latest day on or before `date`.
@@ -139,11 +170,6 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  * @param {string} date - ISO 8601 date
  * @returns {string | undefined}
  */
-export const statusOn = (timeline, date) => {
-  const daily = dailyTimeline(timeline)
-  const day = Object.keys(daily)
-    .filter((key) => key.localeCompare(date) <= 0)
-    .sort((a, b) => a.localeCompare(b))
-    .at(-1)
-  return day === undefined ? undefined : daily[day].status
-}
+export const statusOn = (timeline, date) =>
+  timeline.findLast(({ at }) => calendarDate(at).localeCompare(date) <= 0)
+    ?.status

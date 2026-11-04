@@ -1,13 +1,17 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import {SummaryLogFileId, SummaryLogId} from './ids.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {Object} FileUpload
- * @property {string} id
+ * @property {SummaryLogFileId} id
  * @property {string} name
  * @property {'pending'|'rejected'} [status] - Absent when the content arrived without an upload
  */
 
 /**
  * @typedef {Object} StoredFile
- * @property {string} id
+ * @property {SummaryLogFileId} id
  * @property {string} name
  * @property {'complete'} status
  * @property {string} uri - S3 URI (e.g., s3://bucket/key)
@@ -63,11 +67,14 @@
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,
  *   registrationId?: string,
- *   year?: number,
+ *   year: Year,
  *   accreditationId?: string | null,
+ *   organisationNumber?: OrganisationNumber,
+ *   registrationNumber?: RegistrationNumber,
+ *   accreditationNumber?: AccreditationNumber | null,
  *   status: SummaryLogStatus,
  *   submittedAt?: string,
- *   validatedAgainstSummaryLogId?: string,
+ *   validatedAgainstSummaryLogId?: SummaryLogId | typeof import('./status.js').NO_PRIOR_SUBMISSION,
  *   validation?: Validation
  * }} SummaryLog
  */

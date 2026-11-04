@@ -5,14 +5,16 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const SITE_ONE_ID = new ObjectId().toString()
 const SITE_TWO_ID = new ObjectId().toString()
@@ -84,8 +86,9 @@ describe('GET accreditation overseas-sites', () => {
 
   let server
 
-  const startServer = async ({ organisation, sites }) => {
+  const startServer = async ({ organisation, sites }, config = {}) => {
     server = await createTestServer({
+      config,
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
           organisation
@@ -259,6 +262,52 @@ describe('GET accreditation overseas-sites', () => {
     expect(JSON.parse(response.payload)).toStrictEqual({})
   })
 
+  it("returns only the requested registration's sites, not another registration's in the same organisation", async () => {
+    const { registration, accreditation } = buildScenario({
+      overseasSites: { '001': { overseasSiteId: SITE_ONE_ID } }
+    })
+    const otherAccreditation = buildAccreditation({
+      wasteProcessingType: 'exporter'
+    })
+    const otherRegistration = buildRegistration({
+      wasteProcessingType: 'exporter',
+      accreditationId: otherAccreditation.id,
+      overseasSites: { '002': { overseasSiteId: SITE_TWO_ID } }
+    })
+    const organisationWithTwoRegistrations = buildOrganisation({
+      registrations: [registration, otherRegistration],
+      accreditations: [accreditation, otherAccreditation]
+    })
+    await startServer({
+      organisation: organisationWithTwoRegistrations,
+      sites: [siteOne, siteTwo]
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisationWithTwoRegistrations.id,
+        registrationId: otherRegistration.id,
+        accreditationId: otherAccreditation.id
+      }),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      '002': {
+        name: 'Alpha Reprocessor',
+        country: 'France',
+        address: {
+          line1: '1 Rue de Test',
+          townOrCity: 'Paris'
+        },
+        coordinates: null,
+        validFrom: null
+      }
+    })
+  })
+
   it('401s when not authenticated', async () => {
     const { organisation, registration, accreditation } = buildScenario()
     await startServer({ organisation, sites: [siteOne, siteTwo] })
@@ -395,6 +444,9 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(response.payload).message).toBe(
+      `Accreditation with id ${otherAccreditation.id} not found for registration ${registration.id}`
+    )
   })
 
   it('rejects a malformed organisation id', async () => {
@@ -412,6 +464,61 @@ describe('GET accreditation overseas-sites', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it('reports every malformed path id at once', async () => {
+    const { organisation } = buildScenario()
+    await startServer({ organisation, sites: [] })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: 'unknownOrgId',
+        registrationId: 'someRegId',
+        accreditationId: 'someAccId'
+      }),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      '"organisationId" with value "unknownOrgId" fails to match the required pattern: /^[a-f0-9]{24}$/. ' +
+        '"registrationId" with value "someRegId" fails to match the required pattern: /^[a-f0-9]{24}$/. ' +
+        '"accreditationId" with value "someAccId" fails to match the required pattern: /^[a-f0-9]{24}$/'
+    )
+  })
+
+  describe('with the basic-auth machine credential', () => {
+    const basicAuth = { username: 'basic-auth-user', password: 'changeme' }
+    /** @param {string} credentials */
+    const asBasicAuth = (credentials) => ({
+      headers: {
+        Authorization: `Basic ${Buffer.from(credentials).toString('base64')}`
+      }
+    })
+
+    it('returns 401 with wrong credentials', async () => {
+      const { organisation, registration, accreditation } = buildScenario()
+      await startServer(
+        { organisation, sites: [siteOne, siteTwo] },
+        { basicAuth }
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: pathFor({
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          accreditationId: accreditation.id
+        }),
+        ...asBasicAuth('invalid:invalid')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Missing authentication'
+      )
+    })
   })
 
   it('returns 500 and logs the failure when a repository errors unexpectedly', async () => {

@@ -6,7 +6,7 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -22,12 +22,22 @@ import {
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
+  buildSubmitUrl,
   pollForValidation,
   createStandardMeta,
   createTestInfrastructure,
+  setupWasteBalanceIntegrationEnvironment,
+  createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
+  tableOf,
   REPROCESSED_LOADS_HEADERS,
-  createReprocessedRowValues
+  createReprocessedRowValues,
+  servedTestRegistration,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
@@ -110,7 +120,7 @@ describe('Advanced validation scenarios', () => {
 
           uploadResponse = await server.inject({
             method: 'POST',
-            url: buildPostUrl(organisationId, registrationId, summaryLogId),
+            url: buildPostUrl(summaryLogId),
             payload: createUploadPayload(
               organisationId,
               registrationId,
@@ -129,16 +139,11 @@ describe('Advanced validation scenarios', () => {
           let response
 
           beforeEach(async () => {
-            await pollForValidation(
-              server,
-              organisationId,
-              registrationId,
-              summaryLogId
-            )
+            await pollForValidation(server, summaryLogId)
 
             response = await server.inject({
               method: 'GET',
-              url: buildGetUrl(organisationId, registrationId, summaryLogId),
+              url: buildGetUrl(summaryLogId),
               ...asOperator()
             })
           })
@@ -221,7 +226,7 @@ describe('Advanced validation scenarios', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -240,16 +245,11 @@ describe('Advanced validation scenarios', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -345,7 +345,7 @@ describe('Advanced validation scenarios', () => {
 
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -355,16 +355,11 @@ describe('Advanced validation scenarios', () => {
         )
       })
 
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
+      await pollForValidation(server, summaryLogId)
 
       response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
     })
@@ -405,15 +400,16 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
+        orgId: TEST_ORGANISATION_NUMBER,
         registrations: [
-          {
+          servedTestRegistration({
             id: registrationId,
-            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmission: { id: registrationId, time: new Date() },
             submittedToRegulator: 'ea'
-          }
+          })
         ]
       })
       testOrg.id = organisationId
@@ -505,7 +501,7 @@ describe('Advanced validation scenarios', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId, { accredited: false }),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -524,16 +520,11 @@ describe('Advanced validation scenarios', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -606,14 +597,15 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
+        orgId: TEST_ORGANISATION_NUMBER,
         registrations: [
-          {
+          servedTestRegistration({
             id: registrationId,
-            registrationNumber: 'REG12345',
             material: 'aluminium',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             accreditation: null
-          }
+          })
         ]
       })
       testOrg.id = organisationId
@@ -626,7 +618,7 @@ describe('Advanced validation scenarios', () => {
         [fileId]: {
           meta: {
             REGISTRATION_NUMBER: {
-              value: 'REG12345',
+              value: TEST_REGISTRATION_NUMBER,
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
@@ -689,7 +681,7 @@ describe('Advanced validation scenarios', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId, { accredited: false }),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -708,16 +700,11 @@ describe('Advanced validation scenarios', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -807,7 +794,7 @@ describe('Advanced validation scenarios', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -826,16 +813,11 @@ describe('Advanced validation scenarios', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -897,7 +879,21 @@ describe('Advanced validation scenarios', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            /** @type {Organisation} */ (
+              buildOrganisation({
+                id: organisationId,
+                orgId: TEST_ORGANISATION_NUMBER,
+                registrations: [
+                  servedTestRegistration({
+                    id: registrationId,
+                    wasteProcessingType: 'exporter'
+                  })
+                ]
+              })
+            )
+          ])
         }
       })
     })
@@ -905,7 +901,7 @@ describe('Advanced validation scenarios', () => {
     it('should return OK with empty issues array when validation.issues is undefined', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -917,5 +913,113 @@ describe('Advanced validation scenarios', () => {
         counts: { fatal: 0, error: 0, warning: 0, total: 0 }
       })
     })
+  })
+
+  describe('registered-only received loads with invalid fields', () => {
+    it.each([
+      {
+        processingType: 'REPROCESSOR_REGISTERED_ONLY',
+        registrationType: 'reprocessor',
+        table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+        monthHeader: 'MONTH_RECEIVED_FOR_REPROCESSING',
+        tonnageHeader: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+      },
+      {
+        processingType: 'EXPORTER_REGISTERED_ONLY',
+        registrationType: 'exporter',
+        table: 'RECEIVED_LOADS_FOR_EXPORT',
+        monthHeader: 'MONTH_RECEIVED_FOR_EXPORT',
+        tonnageHeader: 'TONNAGE_RECEIVED_FOR_EXPORT'
+      }
+    ])(
+      'reports each bad cell of a $processingType row, then refuses to submit the invalid log',
+      async ({
+        processingType,
+        registrationType,
+        table,
+        monthHeader,
+        tonnageHeader
+      }) => {
+        const env = await setupWasteBalanceIntegrationEnvironment({
+          processingType: registrationType,
+          accredited: false
+        })
+        const summaryLogId = `summary-${processingType}-invalid`
+        const fileId = `file-${processingType}-invalid`
+        env.fileDataMap[fileId] = {
+          meta: createRegisteredOnlyMeta(processingType),
+          data: {
+            [table]: tableOf('Received', [
+              {
+                ...createRegisteredOnlyReceivedRow(
+                  { rowId: 1001, month: '30-06-2025' },
+                  { monthHeader, tonnageHeader }
+                ),
+                NET_WEIGHT: -1,
+                HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'invalid',
+                RECYCLABLE_PROPORTION_PERCENTAGE: 1.22,
+                [tonnageHeader]: -18.5
+              }
+            ])
+          }
+        }
+
+        await env.server.inject({
+          method: 'POST',
+          url: buildPostUrl(summaryLogId, { accredited: false }),
+          payload: createUploadPayload(
+            env.organisationId,
+            env.registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            'registered-only-invalid.xlsx'
+          )
+        })
+        await pollForValidation(env.server, summaryLogId)
+
+        const checkPage = JSON.parse(
+          (
+            await env.server.inject({
+              method: 'GET',
+              url: buildGetUrl(summaryLogId),
+              ...asOperator()
+            })
+          ).payload
+        )
+        expect(checkPage.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(
+          checkPage.validation.failures.map(
+            (
+              /** @type {{ code: string, location: { header: string } }} */ {
+                code,
+                location
+              }
+            ) => ({ code, header: location.header })
+          )
+        ).toEqual([
+          { code: 'INVALID_FORMAT', header: monthHeader },
+          { code: 'VALUE_OUT_OF_RANGE', header: 'NET_WEIGHT' },
+          {
+            code: 'INVALID_TYPE',
+            header: 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+          },
+          {
+            code: 'VALUE_OUT_OF_RANGE',
+            header: 'RECYCLABLE_PROPORTION_PERCENTAGE'
+          },
+          { code: 'VALUE_OUT_OF_RANGE', header: tonnageHeader }
+        ])
+
+        const submitResponse = await env.server.inject({
+          method: 'POST',
+          url: buildSubmitUrl(summaryLogId),
+          ...asOperator()
+        })
+        expect(submitResponse.statusCode).toBe(409)
+        expect(JSON.parse(submitResponse.payload).message).toBe(
+          'Summary log must be validated before submission. Current status: invalid'
+        )
+      }
+    )
   })
 })

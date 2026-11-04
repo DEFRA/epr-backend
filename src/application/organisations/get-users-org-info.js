@@ -6,13 +6,13 @@ import { getDefraTokenSummary } from '#common/helpers/auth/roles/helpers.js'
 
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {DefraIdTokenPayload} from '#auth/types.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {LinkedOrganisationSummary} from '#repositories/organisations/port.js' */
 
 /**
  * Retrieves organization information for a user based on their Defra ID token
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user and organization data
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<Organisation | null>} The first matching organisation or null if no match or no org ID in token
+ * @returns {Promise<LinkedOrganisationSummary | null>} The first matching organisation or null if no match or no org ID in token
  */
 export async function getOrgMatchingUsersToken(
   tokenPayload,

@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   ORGANISATION_STATUS,
@@ -9,17 +10,20 @@ import {
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   summaryLogFactory,
-  withoutYear
+  withoutAccreditationId
 } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
@@ -144,7 +148,7 @@ describe('SummaryLogsValidator integration', () => {
       storedAccreditationId
     )
     const summaryLog = legacy
-      ? withoutYear(yearScopedSummaryLog)
+      ? withoutAccreditationId(yearScopedSummaryLog)
       : yearScopedSummaryLog
     const summaryLogId = randomUUID()
 
@@ -170,7 +174,7 @@ describe('SummaryLogsValidator integration', () => {
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    await validateSummaryLog(summaryLogId).catch((err) => err)
+    await validateSummaryLog(toSummaryLogId(summaryLogId)).catch((err) => err)
 
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
@@ -412,6 +416,61 @@ describe('SummaryLogsValidator integration', () => {
           expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
         ])
       )
+    })
+
+    it('should fail validation with four fatal issues, two on PROCESSING_TYPE, when every Cover cell is null', async () => {
+      /** @param {number} row */
+      const nullCell = (row) => ({
+        value: null,
+        location: { sheet: 'Cover', row, column: 'B' }
+      })
+      const metadata = {
+        REGISTRATION_NUMBER: nullCell(1),
+        PROCESSING_TYPE: nullCell(2),
+        MATERIAL: nullCell(3),
+        TEMPLATE_VERSION: nullCell(4),
+        ACCREDITATION_NUMBER: nullCell(5)
+      }
+
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(
+        updated.summaryLog.validation.issues.map(
+          (
+            /** @type {{ severity: string, code: string, context: { location: { field: string } } }} */ {
+              severity,
+              code,
+              context
+            }
+          ) => ({ severity, code, field: context.location.field })
+        )
+      ).toEqual([
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'PROCESSING_TYPE_INVALID',
+          field: 'PROCESSING_TYPE'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'VALIDATION_FALLBACK_ERROR',
+          field: 'PROCESSING_TYPE'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'TEMPLATE_VERSION_INVALID',
+          field: 'TEMPLATE_VERSION'
+        },
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          code: 'REGISTRATION_REQUIRED',
+          field: 'REGISTRATION_NUMBER'
+        }
+      ])
     })
   })
 

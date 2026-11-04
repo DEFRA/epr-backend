@@ -4,7 +4,10 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
@@ -25,14 +28,14 @@ const createdBy = { id: 'system', name: 'backfill' }
 
 const seedMembership = async (summaryLogRowStatesRepository, summaryLogId) =>
   summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    registeredOnlyLedgerId,
+    withNumbers(registeredOnlyLedgerId),
     [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
     summaryLogId
   )
 
 const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
   createWasteBalanceService(ledgerRepository).commitSummaryLogSubmittedEvent(
-    registeredOnlyLedgerId,
+    withNumbers(registeredOnlyLedgerId),
     { summaryLogId, creditTotal: 0 },
     createdBy
   )

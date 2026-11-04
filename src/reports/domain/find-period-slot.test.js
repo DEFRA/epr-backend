@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
@@ -19,7 +20,7 @@ const periodicReports = [
   {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    year: 2026,
+    year: toYear(2026),
     reports: { [CADENCE.quarterly]: { 1: q1Slot } }
   }
 ]
@@ -28,7 +29,7 @@ describe('findPeriodSlot', () => {
   it('returns the slot for the period', () => {
     expect(
       findPeriodSlot(periodicReports, {
-        year: 2026,
+        year: toYear(2026),
         cadence: CADENCE.quarterly,
         period: 1
       })
@@ -36,9 +37,9 @@ describe('findPeriodSlot', () => {
   })
 
   it.each([
-    ['year', { year: 2025, cadence: CADENCE.quarterly, period: 1 }],
-    ['cadence', { year: 2026, cadence: CADENCE.monthly, period: 1 }],
-    ['period', { year: 2026, cadence: CADENCE.quarterly, period: 2 }]
+    ['year', { year: toYear(2025), cadence: CADENCE.quarterly, period: 1 }],
+    ['cadence', { year: toYear(2026), cadence: CADENCE.monthly, period: 1 }],
+    ['period', { year: toYear(2026), cadence: CADENCE.quarterly, period: 2 }]
   ])('returns null when the %s has no reports', (_, period) => {
     expect(findPeriodSlot(periodicReports, period)).toBeNull()
   })

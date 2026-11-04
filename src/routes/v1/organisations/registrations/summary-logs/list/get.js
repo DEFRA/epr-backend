@@ -1,60 +1,87 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { yearSchema } from '#common/validation/year-schema.js'
+import {
+  findRegistrationByNumber,
+  registrationParams,
+  registrationPath
+} from '#routes/organisations/natural-keys.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
-export const summaryLogsListPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
+const LIST_FAILURE = 'Failure listing summary logs'
 
 export const summaryLogsList = {
   method: 'GET',
-  path: summaryLogsListPath,
+  path: `${registrationPath}/summary-logs`,
   options: {
     auth: {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
+    validate: {
+      params: Joi.object(registrationParams),
+      query: Joi.object({ year: yearSchema().required() })
+    },
     response: {
       schema: summaryLogsListResponseSchema
     }
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string },
+   *   params: RegistrationParams,
+   *   query: { year: Year },
+   *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, params, logger } = request
-    const { organisationId, registrationId } = params
+    const {
+      organisationsRepository,
+      summaryLogsRepository,
+      params,
+      query,
+      logger
+    } = request
+    const { organisationNumber, registrationNumber } = params
+    const { year } = query
+
+    await findRegistrationByNumber(
+      organisationsRepository,
+      organisationNumber,
+      registrationNumber
+    )
 
     try {
-      const summaryLogs = await summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      )
+      const summaryLogs = await summaryLogsRepository.findAll({
+        organisationNumber,
+        registrationNumber,
+        year
+      })
 
       const summaryLogList = summaryLogs.map(({ id, summaryLog }) => ({
         summaryLogId: id,
         filename: summaryLog.file.name,
         uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt,
         status: summaryLog.status,
-        ...(summaryLog.year !== undefined && { year: summaryLog.year }),
-        ...(summaryLog.accreditationId !== undefined && {
-          accreditationId: summaryLog.accreditationId
-        })
+        year: summaryLog.year,
+        accreditationNumber: summaryLog.accreditationNumber ?? null
       }))
 
       logger.info({
-        message: `Summary log list retrieved: organisationId=${organisationId}, registrationId=${registrationId}, count=${summaryLogs.length}`,
+        message: `Summary log list retrieved: organisationNumber=${organisationNumber}, registrationNumber=${registrationNumber}, count=${summaryLogs.length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -65,7 +92,7 @@ export const summaryLogsList = {
     } catch (error) {
       logger.error({
         err: error,
-        message: `Failure on ${summaryLogsListPath}`,
+        message: LIST_FAILURE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -77,7 +104,7 @@ export const summaryLogsList = {
         }
       })
 
-      throw Boom.badImplementation(`Failure on ${summaryLogsListPath}`)
+      throw Boom.badImplementation(LIST_FAILURE)
     }
   }
 }

@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -8,25 +9,22 @@ import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { SummaryLogsRepository, SummaryLogWithId } from '#repositories/summary-logs/port.js' */
+/** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { ResolvedParams } from '#routes/organisations/at-natural-keys.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
-
-export const summaryLogRecordsCsvPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}/records.csv'
 
 const CSV_EXTENSION = 'csv'
 
 /**
  * The submission carrying `fileId`, or undefined when this registration never
- * submitted it. `findAllByOrgReg` also returns the failed uploads, which hold a
- * file but committed no rows.
+ * submitted it. `findAll` also returns the failed uploads, which hold a file
+ * but committed no rows.
  *
- * @param {SummaryLogWithId[]} summaryLogs
- * @param {string} fileId
- * @returns {SummaryLog | undefined}
+ * @param {KeyedSummaryLogWithId[]} summaryLogs
+ * @param {SummaryLogFileId} fileId
+ * @returns {KeyedSummaryLog | undefined}
  */
 const submittedSummaryLogForFile = (summaryLogs, fileId) =>
   summaryLogs.find(
@@ -42,7 +40,6 @@ const submittedSummaryLogForFile = (summaryLogs, fileId) =>
  */
 export const summaryLogRecordsCsv = {
   method: 'GET',
-  path: summaryLogRecordsCsvPath,
   options: {
     auth: {
       scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
@@ -51,7 +48,7 @@ export const summaryLogRecordsCsv = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: Record<string, string>,
+   *   params: ResolvedParams & { fileId: SummaryLogFileId },
    *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,
@@ -60,15 +57,21 @@ export const summaryLogRecordsCsv = {
    * @param {*} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId, fileId } = request.params
+    const {
+      organisationId,
+      registrationId,
+      organisationNumber,
+      registrationNumber,
+      fileId
+    } = request.params
 
     // Every read happens here: once the handler has returned a Readable the
     // status is already sent.
     const summaryLog = submittedSummaryLogForFile(
-      await request.summaryLogsRepository.findAllByOrgReg(
-        organisationId,
-        registrationId
-      ),
+      await request.summaryLogsRepository.findAll({
+        organisationNumber,
+        registrationNumber
+      }),
       fileId
     )
     if (!summaryLog?.submittedAt) {
@@ -106,13 +109,15 @@ export const summaryLogRecordsCsv = {
       )
       .type('text/csv; charset=utf-8')
 
-    const registrationNumber = metaText(summaryLog.meta?.REGISTRATION_NUMBER)
+    const declaredRegistrationNumber = metaText(
+      summaryLog.meta?.REGISTRATION_NUMBER
+    )
 
-    return registrationNumber
+    return declaredRegistrationNumber
       ? response.header(
           'Content-Disposition',
           buildDownloadDisposition(
-            registrationNumber,
+            declaredRegistrationNumber,
             summaryLog.submittedAt,
             CSV_EXTENSION
           )

@@ -10,9 +10,10 @@ import {
   buildAccreditation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 /**
  * What an accredited operator is accredited for, where a test needs other than
@@ -42,40 +43,50 @@ export const storedMaterial = (material) =>
     : { material, glassRecyclingProcess: null }
 
 /**
- * An approved reprocessor accredited for 2026, for plastic unless told
- * otherwise, written through the organisations fixture so the document read
- * back is one the write schema accepts.
+ * Inserts accredited operators built by the caller's builders, so they draw
+ * orgIds from the same sequence as the caller's other organisations.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
- * @param {AccreditedFor} [accreditedFor]
- * @returns {Promise<{ organisationId: string, registrationId: string }>}
+ * @param {OrganisationBuilders} builders
  */
-export const insertAccreditedOperator = async (
-  organisationsRepository,
-  regulator = REGULATOR.EA,
-  { material = MATERIAL.PLASTIC, tonnageBand, validFrom = '2026-01-01' } = {}
-) => {
-  const accreditationId = new ObjectId().toString()
-  const accredited = {
-    ...storedMaterial(material),
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    submittedToRegulator: regulator
-  }
-  const registration = buildRegistration({ accreditationId, ...accredited })
-  const accreditation = buildAccreditation({
-    id: accreditationId,
-    ...accredited
-  })
-  if (tonnageBand) {
-    accreditation.prnIssuance = { ...accreditation.prnIssuance, tonnageBand }
-  }
-  const organisation = await buildApprovedOrg(
-    organisationsRepository,
-    { registrations: [registration], accreditations: [accreditation] },
-    { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
-  )
+export const createAccreditedOperatorInserter = (builders) => {
+  const buildApprovedOrg = createApprovedOrgBuilder(builders)
 
-  return { organisationId: organisation.id, registrationId: registration.id }
+  /**
+   * An approved reprocessor accredited for 2026, for plastic unless told
+   * otherwise, written through the organisations fixture so the document read
+   * back is one the write schema accepts.
+   *
+   * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+   * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
+   * @param {AccreditedFor} [accreditedFor]
+   * @returns {Promise<{ organisationId: string, registrationId: string }>}
+   */
+  return async (
+    organisationsRepository,
+    regulator = REGULATOR.EA,
+    { material = MATERIAL.PLASTIC, tonnageBand, validFrom = '2026-01-01' } = {}
+  ) => {
+    const accreditationId = new ObjectId().toString()
+    const accredited = {
+      ...storedMaterial(material),
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      reprocessingType: REPROCESSING_TYPE.INPUT,
+      submittedToRegulator: regulator
+    }
+    const registration = buildRegistration({ accreditationId, ...accredited })
+    const accreditation = buildAccreditation({
+      id: accreditationId,
+      ...accredited
+    })
+    if (tonnageBand) {
+      accreditation.prnIssuance = { ...accreditation.prnIssuance, tonnageBand }
+    }
+    const organisation = await buildApprovedOrg(
+      organisationsRepository,
+      { registrations: [registration], accreditations: [accreditation] },
+      { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
+    )
+
+    return { organisationId: organisation.id, registrationId: registration.id }
+  }
 }

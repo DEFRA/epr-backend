@@ -5,6 +5,7 @@ import { testFindEventsByPrnIdAfterBehaviour } from './ledger-contract/findEvent
 import { testFindAllInLedgerBehaviour } from './ledger-contract/findAllInLedger.contract.js'
 import { testFindLatestSubmittedSummaryLogPerLedgerBehaviour } from './ledger-contract/findLatestSubmittedSummaryLogPerLedger.contract.js'
 import { testDeleteAllInLedgerBehaviour } from './ledger-contract/deleteAllInLedger.contract.js'
+import { testNumbersBehaviour } from './ledger-contract/numbers.contract.js'
 
 export const testLedgerRepositoryContract = (it) => {
   testAppendEventsBehaviour(it)
@@ -14,4 +15,5 @@ export const testLedgerRepositoryContract = (it) => {
   testFindAllInLedgerBehaviour(it)
   testFindLatestSubmittedSummaryLogPerLedgerBehaviour(it)
   testDeleteAllInLedgerBehaviour(it)
+  testNumbersBehaviour(it)
 }

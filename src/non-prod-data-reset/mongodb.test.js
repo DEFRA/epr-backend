@@ -11,8 +11,8 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -20,12 +20,17 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  withNumbers
+} from '#waste-records/repository/test-data.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
 import { nonProdDataResetPlugin } from './mongodb.plugin.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')
@@ -98,6 +103,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
 
     repositories: async ({ database }, use) => {
       const organisationsFactory = await createOrganisationsRepository(database)
+      const organisations = organisationsFactory()
       const prnsFactory = await createPackagingRecyclingNotesRepository(
         database,
         []
@@ -114,7 +120,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         await createMongoSummaryLogRowStatesRepository(database)
 
       await use({
-        organisations: organisationsFactory(),
+        organisations,
         prns: prnsFactory(mockLogger),
         reports: reportsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
@@ -219,7 +225,7 @@ const seedDownstreamForOrganisation = async (
   )
 
   await repositories.summaryLogRowStates.upsertSummaryLogRowStates(
-    { organisationId, registrationId, accreditationId },
+    withNumbers({ organisationId, registrationId, accreditationId }),
     [buildSummaryLogRowStateEntry()],
     `summary-log-${randomUUID()}`
   )

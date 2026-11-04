@@ -1,3 +1,5 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
 import {
@@ -9,6 +11,8 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -23,6 +27,13 @@ const { getProjectedPrnByNumber, getProjectedPrnById } =
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
 const REG_ID = 'reg-789'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisation = buildOrganisationHolding({
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID
+})
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const TONNAGE = 50
@@ -50,14 +61,8 @@ const buildPrn = (overrides = {}) => ({
   version: 3,
   registrationId: REG_ID,
   organisation: { id: ORG_ID, name: 'Test Reprocessor' },
-  accreditation: {
-    id: ACC_ID,
-    accreditationNumber: 'ACC-1',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: REGULATOR.EA
-  },
-  obligationYear: 2026,
+  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: TONNAGE,
   isExport: false,
@@ -100,7 +105,7 @@ const buildSeededLedgerRepository = () =>
       organisationId: ORG_ID,
       number: SEED_NUMBER,
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId: 'seed', creditTotal: 1000 },
+      payload: { summaryLogId: toSummaryLogFileId('seed'), creditTotal: 1000 },
       openingBalance: { amount: 0, availableAmount: 0 },
       closingBalance: { amount: 1000, availableAmount: 1000 },
       createdAt: EVENT_AT,
@@ -109,6 +114,7 @@ const buildSeededLedgerRepository = () =>
   ])()
 
 const buildOrganisationsRepository = (accreditation = {}) => ({
+  findById: async () => organisation,
   findAccreditationById: vi.fn().mockResolvedValue({
     status: 'approved',
     submittedToRegulator: REGULATOR.EA,
@@ -230,7 +236,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       providedPrn: storedPrn,
       newStatus: PRN_STATUS.ACCEPTED,
       actor: PRN_ACTOR.PRODUCER,
-      obligationYear: 2027
+      obligationYear: toYear(2027)
     })
 
     const latest = await ledgerRepository.findLatestInLedger({
@@ -245,7 +251,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     expect(latest?.payload).toEqual({
       prnId: PRN_ID,
       amount: TONNAGE,
-      obligationYear: 2027
+      obligationYear: toYear(2027)
     })
     expect(reread?.obligationYear).toBe(2027)
   })
@@ -552,7 +558,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         providedPrn: storedPrn,
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.PRODUCER,
-        obligationYear: 2027
+        obligationYear: toYear(2027)
       })
     ).rejects.toThrow('doc write failed')
 
@@ -564,7 +570,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
 
     expect(recovered).toEqual(
       expect.objectContaining({
-        obligationYear: 2027,
+        obligationYear: toYear(2027),
         lastAppliedEventNumber: APPENDED_WATERMARK,
         status: expect.objectContaining({ currentStatus: PRN_STATUS.ACCEPTED })
       })

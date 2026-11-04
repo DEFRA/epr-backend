@@ -6,14 +6,19 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
-import { validatePrnInsert, validatePrnRead } from './validation.js'
+import {
+  validatePrnInsert,
+  validatePrnNumbers,
+  validatePrnRead
+} from './validation.js'
 import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
+/** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, PrnNumbers, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 export const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -601,6 +606,73 @@ const performPersistProjection = async (
   }
 }
 
+/** @type {Record<keyof PrnNumbers, string>} */
+const NUMBER_PATHS = {
+  organisationNumber: 'organisation.organisationNumber',
+  registrationNumber: 'registration.registrationNumber'
+}
+
+/**
+ * @param {Db} db
+ * @returns {Promise<string[]>}
+ */
+const performFindIdsWithoutNumbers = async (db) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(
+      {
+        $or: Object.values(NUMBER_PATHS).map((path) => ({
+          [path]: { $exists: false }
+        }))
+      },
+      { projection: { _id: 1 } }
+    )
+    .toArray()
+  return docs.map(({ _id }) => _id.toHexString())
+}
+
+/**
+ * @param {Db} db
+ * @param {string} id
+ * @param {PrnNumbers} numbers
+ * @returns {Promise<void>}
+ */
+const performAssignNumbers = async (db, id, numbers) => {
+  const validated = validatePrnNumbers(numbers)
+  const keys = /** @type {(keyof PrnNumbers)[]} */ (Object.keys(validated))
+  const _id = ObjectId.createFromHexString(id)
+
+  const result = await db.collection(COLLECTION_NAME).updateOne(
+    {
+      _id,
+      ...Object.fromEntries(
+        keys.map((key) => [NUMBER_PATHS[key], { $exists: false }])
+      )
+    },
+    {
+      $set: Object.fromEntries(
+        keys.map((key) => [NUMBER_PATHS[key], validated[key]])
+      ),
+      $inc: { version: 1 }
+    }
+  )
+  if (result.matchedCount > 0) {
+    return
+  }
+
+  const existing = await performFindById(db, id)
+  if (!existing) {
+    throw Boom.notFound(`PRN not found: ${id}`)
+  }
+  const held = numbersHeld(existing)
+  const conflicting = keys.filter((key) => held[key] !== undefined)
+  throw Boom.conflict(
+    conflicting.length > 0
+      ? `PRN ${id} already holds ${conflicting.join(', ')}`
+      : `PRN ${id} changed while its numbers were being assigned`
+  )
+}
+
 /**
  * @param {Db} db
  * @param {Organisation['id'][]} excludeOrganisationIds
@@ -624,6 +696,8 @@ export const createPackagingRecyclingNotesRepository = async (
       performSumTonnageByAccreditation(db, params),
     updateStatus: (params) => performUpdateStatus(db, logger, params),
     updateWatermark: (params) => performUpdateWatermark(db, logger, params),
-    persistProjection: (params) => performPersistProjection(db, logger, params)
+    persistProjection: (params) => performPersistProjection(db, logger, params),
+    findIdsWithoutNumbers: () => performFindIdsWithoutNumbers(db),
+    assignNumbers: (id, numbers) => performAssignNumbers(db, id, numbers)
   })
 }

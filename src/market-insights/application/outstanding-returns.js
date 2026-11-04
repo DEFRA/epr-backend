@@ -7,6 +7,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 import { owedMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
 
 /**
@@ -80,7 +81,7 @@ export const countOutstandingReturns = (params) => {
  * @param {Object} params
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {number} params.year - the reporting year the months fall in
+ * @param {Year} params.year - the reporting year the months fall in
  * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {Date} params.now - clock reading supplied by the caller
  * @returns {Promise<OutstandingReturnsTable>}

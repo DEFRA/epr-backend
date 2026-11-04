@@ -12,6 +12,7 @@ import { encodeRow } from './stream-csv-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { SummaryLogRowState } from '#waste-records/repository/schema.js' */
 /** @import { SubmissionCsvInput } from './stream-submission-csv.js' */
@@ -42,7 +43,7 @@ const rowState = (overrides = {}) => ({
     reasons: [],
     transactionAmount: 0
   },
-  summaryLogIds: ['file-1'],
+  summaryLogIds: [toSummaryLogFileId('file-1')],
   ...overrides
 })
 

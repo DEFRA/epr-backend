@@ -2,9 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from './create-test-server.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -36,12 +38,12 @@ describe('createTestServer', () => {
       // Server should work - routes can access default repos
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations',
+        url: '/organisations',
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(200)
-      expect(JSON.parse(response.payload)).toEqual([])
+      expect(JSON.parse(response.payload).items).toEqual([])
     })
   })
 
@@ -67,7 +69,7 @@ describe('createTestServer', () => {
     })
 
     it('supports mock repositories for behaviour verification', async () => {
-      const mockOrg = { id: 'some-id', name: 'Mock Org' }
+      const mockOrg = { id: '6507f1f77bcf86cd79943901', name: 'Mock Org' }
       const mockOrganisationsRepository = {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
@@ -78,14 +80,14 @@ describe('createTestServer', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/some-id',
+        url: `/v1/organisations/${mockOrg.id}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(200)
       expect(JSON.parse(response.payload)).toEqual(mockOrg)
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
-        'some-id'
+        mockOrg.id
       )
     })
   })
@@ -122,7 +124,7 @@ describe('createTestServer', () => {
 
       await server.inject({
         method: 'GET',
-        url: '/v1/organisations',
+        url: '/organisations',
         headers: { Authorization: `Bearer ${validToken}` }
       })
 

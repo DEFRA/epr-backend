@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   ACTIVE_REPORT_STATUSES,
@@ -23,9 +24,12 @@ import {
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
   validateMarkSubmittedReportRequiringResubmissionByOperator,
+  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
+
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * @import {
@@ -36,6 +40,7 @@ import {
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
  *   Report,
+ *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
@@ -48,7 +53,7 @@ import {
  * @param {object} criteria - The unique identifiers for the report criteria.
  * @param {string} criteria.organisationId - The ID of the organization.
  * @param {string} criteria.registrationId - The ID of the registration.
- * @param {number} criteria.year - The reporting year.
+ * @param {Year} criteria.year - The reporting year.
  * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
  * @param {number} criteria.period - The specific period index.
  * @param {number} [criteria.submissionNumber] - Optional submission number; when provided narrows the match to that slot.
@@ -249,6 +254,46 @@ const findReportById = async (reports, reportId) => {
 }
 
 /**
+ * @param {Map<string, Report>} reports
+ * @returns {Promise<string[]>}
+ */
+const findIdsWithoutNumbers = async (reports) =>
+  [...reports.values()]
+    .filter(
+      ({ organisationNumber, registrationNumber, accreditationNumber }) =>
+        organisationNumber === undefined ||
+        registrationNumber === undefined ||
+        accreditationNumber === undefined
+    )
+    .map(({ id }) => id)
+
+/**
+ * @param {Map<string, Report>} reports
+ * @param {string} reportId
+ * @param {ReportNumbers} numbers
+ * @returns {Promise<void>}
+ */
+const assignNumbers = async (reports, reportId, numbers) => {
+  const validatedId = validateFindReportById(reportId)
+  const validatedNumbers = validateReportNumbers(numbers)
+  const report = reports.get(validatedId)
+  if (!report) {
+    throw Boom.notFound(`Report not found: ${validatedId}`)
+  }
+
+  const held = Object.keys(validatedNumbers).filter(
+    (key) => report[key] !== undefined
+  )
+  if (held.length > 0) {
+    throw Boom.conflict(
+      `Report ${validatedId} already holds ${held.join(', ')}`
+    )
+  }
+
+  reports.set(validatedId, { ...report, ...validatedNumbers })
+}
+
+/**
  * @param {Map<string, Object>} reports
  * @param {FindPeriodicReportsParams} params
  * @returns {Promise<PeriodicReport[]>}
@@ -294,7 +339,7 @@ const findPeriodicReportsForYear = async (reports, params) => {
  * @param {Map<string, Object>} reports
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
@@ -361,7 +406,7 @@ const markActiveReportsStaleForSummaryLog = async (
  * status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} slot
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} slot
  * @returns {boolean}
  */
 const isReportInPeriodSlot = (report, slot) =>
@@ -387,7 +432,7 @@ const isUnflaggedForPrnCancellation = (report) =>
  * slot and not yet flagged stale for a PRN cancellation.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number }} criteria
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} criteria
  * @returns {boolean}
  */
 const isActiveReportForPrnCancellationSlot = (report, criteria) =>
@@ -531,7 +576,7 @@ const markSubmittedReportsRequiringResubmission = async (
  * natural key, irrespective of status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, submissionNumber: number }} key
+ * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number, submissionNumber: number }} key
  * @returns {boolean}
  */
 const isReportAtSubmissionSlot = (report, key) =>
@@ -672,6 +717,9 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
     hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      hasReportSubmittedSince(reports, organisationId, registrationId, since)
+      hasReportSubmittedSince(reports, organisationId, registrationId, since),
+    findIdsWithoutNumbers: () => findIdsWithoutNumbers(reports),
+    assignNumbers: (reportId, numbers) =>
+      assignNumbers(reports, reportId, numbers)
   })
 }

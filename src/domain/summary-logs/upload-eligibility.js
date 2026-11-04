@@ -1,7 +1,8 @@
 import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
 
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{ eligible: true } | { eligible: false, reason: string }} UploadEligibilityResult
@@ -13,8 +14,8 @@ import { isRegistrationActiveInYear } from '#domain/organisations/registration-u
  * registration's current live link, captured when the upload completes.
  *
  * @param {{
- *   registration: Registration,
- *   year: number,
+ *   registration: Pick<Registration, 'status' | 'validFrom'>,
+ *   year: Year,
  *   now?: Date
  * }} args
  * @returns {UploadEligibilityResult}

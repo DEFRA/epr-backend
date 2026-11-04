@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -11,20 +12,27 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#routes/organisations/view-route.js'
+} from '#routes/organisations/natural-keys.js'
 import { reportsDelete } from './delete.js'
-import { reportsGet } from './get.js'
+import { reportsYearCalendar } from './get-year-calendar.js'
 import { reportsGetDetail } from './get-detail.js'
 import { reportsPatch } from './patch.js'
 import { reportsPost } from './post.js'
 import { reportsRequestResubmission } from './request-resubmission.js'
 import { reportsStatus } from './status.js'
 import { reportsUnsubmit } from './unsubmit.js'
-import { reportResourceSchema, toReportResource } from './report-resource.js'
+import {
+  REPORT_EXPANSION,
+  expandableReportResourceSchema,
+  reportResourceSchema,
+  toReportDetail,
+  toReportResource
+} from './report-resource.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { submissionNumberSchema } from './shared.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -61,13 +69,21 @@ const streams = [
 
 /**
  * @param {NaturalKeyResponse['map']} map
+ * @param {NaturalKeyResponse['schema']} [schema]
  * @returns {NaturalKeyResponse}
  */
-const respondWithReport = (map) => ({
-  schema: reportResourceSchema,
+const respondWithReport = (map, schema = reportResourceSchema) => ({
+  schema,
   failAction: reportResponseFailAction,
   map
 })
+
+/**
+ * @param {SubmissionRequest} request
+ * @param {ReportDetailBody} body
+ */
+const toResource = (request, body) =>
+  toReportResource(body, { submissionNumber: request.params.submissionNumber })
 
 /**
  * @param {SubmissionRequest} request
@@ -76,13 +92,62 @@ const respondWithReport = (map) => ({
  * @param {number} statusCode
  */
 const serveReport = (request, h, body, statusCode) =>
-  h
-    .response(
-      toReportResource(body, {
-        submissionNumber: request.params.submissionNumber
+  h.response(toResource(request, body)).code(statusCode)
+
+/**
+ * Serves the report read, expanded with `detail` when asked.
+ * @param {SubmissionRequest} request
+ * @param {HapiResponseToolkit} h
+ * @param {ResponseObject} response
+ */
+const mapRead = (request, h, response) => {
+  const body = /** @type {ReportDetailBody} */ (response.source)
+  return h
+    .response({
+      ...toResource(request, body),
+      ...(request.query.expand === REPORT_EXPANSION.detail && {
+        detail: toReportDetail(body)
       })
+    })
+    .code(response.statusCode)
+}
+
+/**
+ * The report detail read, which can be asked to expand the resource with the
+ * report as the service holds it.
+ * @type {NaturalKeyRoute}
+ */
+const expandableReportsGetDetail = {
+  ...reportsGetDetail,
+  handler: (request, h) => {
+    if (
+      request.query.expand === REPORT_EXPANSION.detail &&
+      // The route's auth admits only credentials with a scope.
+      !(
+        /** @type {string[]} */ (request.auth.credentials.scope).includes(
+          SCOPES.adminRead
+        )
+      )
+    ) {
+      throw Boom.forbidden('Expanding a report needs admin.read')
+    }
+    return reportsGetDetail.handler(
+      /** @type {Parameters<typeof reportsGetDetail.handler>[0]} */ (
+        /** @type {unknown} */ (request)
+      ),
+      /** @type {HapiResponseToolkit} */ (h)
     )
-    .code(statusCode)
+  },
+  options: {
+    ...reportsGetDetail.options,
+    validate: {
+      ...reportsGetDetail.options.validate,
+      query: Joi.object({
+        expand: Joi.string().valid(...Object.values(REPORT_EXPANSION))
+      })
+    }
+  }
+}
 
 /**
  * Serves the report detail handler's body as the report resource.
@@ -137,7 +202,7 @@ const mapCommand = async (request, h) =>
  * An accredited report covers only periods from the accreditation's start: a
  * period ending before it is not found.
  *
- * @param {ResolvedRequest & { params: { cadence: Cadence, period: number } }} request
+ * @param {ResolvedRequest & { params: { cadence: Cadence, period: number, year: Year } }} request
  */
 const assertPeriodWithinAccreditation = async (request) => {
   const { organisationId, accreditationId, year, cadence, period } =
@@ -147,11 +212,7 @@ const assertPeriodWithinAccreditation = async (request) => {
       organisationId,
       /** @type {string} */ (accreditationId)
     )
-  const { endDate } = periodBounds(
-    cadence,
-    /** @type {number} */ (year),
-    period
-  )
+  const { endDate } = periodBounds(cadence, year, period)
 
   // The read model only serves an accreditation with a validFrom.
   if (
@@ -163,7 +224,11 @@ const assertPeriodWithinAccreditation = async (request) => {
 
 /** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
 const submissionRoutes = [
-  [reportsGetDetail, '', respondWithReport(mapDetail)],
+  [
+    expandableReportsGetDetail,
+    '',
+    respondWithReport(mapRead, expandableReportResourceSchema)
+  ],
   [reportsPost, '', respondWithReport(mapCreated)],
   [reportsPatch, '', respondWithReport(mapCommand)],
   [reportsDelete, ''],
@@ -187,8 +252,8 @@ export const reportRoutesByNaturalKey = [
     )
   ),
   atNaturalKeys(
-    reportsGet,
-    `${registrationPath}/reports/calendar`,
-    registrationParams
+    reportsYearCalendar,
+    `${registrationPath}/reports/{year}/calendar`,
+    { ...registrationParams, year: yearSchema().required() }
   )
 ]

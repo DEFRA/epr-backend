@@ -4,16 +4,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-
-export const summaryLogFilePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file'
-
-export const summaryLogFileByFileIdPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}'
 
 const downloadAuth = {
   auth: {
@@ -23,24 +19,18 @@ const downloadAuth = {
 }
 
 /**
- * @param {(repository: SummaryLogsRepository, id: string, registrationNumber?: string) => Promise<{ url: string }>} sign
- * @param {(params: Record<string, string>) => string} idOf
+ * @template {string} Id
+ * @param {(params: Record<string, string>) => Id} idOf
+ * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
  * @returns {(request: HapiRequest & {
- *   params: Record<string, string>,
- *   summaryLogsRepository: SummaryLogsRepository,
- *   systemLogsRepository: SystemLogsRepository
- * }, h: Object) => Promise<Object>}
+ *   params: Record<string, string> & RegistrationParams,
+ *   summaryLogsRepository: SummaryLogsRepository
+ * }, h: HapiResponseToolkit) => Promise<HapiResponseObject>}
  */
-const serveFile = (sign, idOf) => async (request, h) => {
-  const { summaryLogsRepository, organisationsRepository, logger } = request
-  const { organisationId, registrationId } = request.params
+const serveFile = (idOf, sign) => async (request, h) => {
+  const { summaryLogsRepository, logger } = request
+  const { organisationId, registrationId, registrationNumber } = request.params
   const id = idOf(request.params)
-
-  // Names the download only, so a failed lookup costs the name, not the file.
-  const registrationNumber = await organisationsRepository
-    .findRegistrationById(organisationId, registrationId)
-    .then((registration) => registration.registrationNumber ?? undefined)
-    .catch(() => undefined)
 
   const { url } = await sign(summaryLogsRepository, id, registrationNumber)
 
@@ -64,12 +54,11 @@ const serveFile = (sign, idOf) => async (request, h) => {
 
 export const summaryLogFile = {
   method: 'GET',
-  path: summaryLogFilePath,
   options: downloadAuth,
   handler: serveFile(
+    (params) => toSummaryLogId(params.summaryLogId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrl(id, registrationNumber),
-    (params) => params.summaryLogId
+      repository.getDownloadUrl(id, registrationNumber)
   )
 }
 
@@ -79,11 +68,10 @@ export const summaryLogFile = {
  */
 export const summaryLogFileByFileId = {
   method: 'GET',
-  path: summaryLogFileByFileIdPath,
   options: downloadAuth,
   handler: serveFile(
+    (params) => toSummaryLogFileId(params.fileId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrlByFileId(id, registrationNumber),
-    (params) => params.fileId
+      repository.getDownloadUrlByFileId(id, registrationNumber)
   )
 }

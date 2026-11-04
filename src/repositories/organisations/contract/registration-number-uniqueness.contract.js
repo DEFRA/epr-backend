@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
+import { prepareOrgUpdate } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testRegistrationNumberUniquenessBehaviour = (it) => {
   describe('registration number uniqueness', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -50,6 +56,55 @@ export const testRegistrationNumberUniquenessBehaviour = (it) => {
       const result = await repository.findById(second.id)
       expect(result.registrations[0].registrationNumber).toBe('REG100007')
       expect(result.registrations[1].registrationNumber).toBeNull()
+    })
+
+    /** @param {string} number */
+    const refusalHeldElsewhere = (number) => ({
+      isBoom: true,
+      output: {
+        statusCode: 409,
+        payload: {
+          message: `Registration number ${number} is already held by another organisation`
+        }
+      }
+    })
+
+    it('refuses to insert an organisation whose registration number another organisation holds', async () => {
+      await repository.insert(organisationWithNumbers('REG100001'))
+
+      await expect(
+        repository.insert(organisationWithNumbers('REG100001'))
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100001'))
+    })
+
+    it('refuses to insert a number another organisation holds in another spelling', async () => {
+      await repository.insert(organisationWithNumbers('REG100008'))
+
+      await expect(
+        repository.insert(organisationWithNumbers(' reg100008 '))
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100008'))
+    })
+
+    it('refuses to give a registration a number another organisation holds', async () => {
+      await repository.insert(organisationWithNumbers('REG100002'))
+      const second = organisationWithNumbers()
+      await repository.insert(second)
+      const inserted = await repository.findById(second.id)
+
+      await expect(
+        repository.replace(
+          second.id,
+          1,
+          prepareOrgUpdate(inserted, {
+            registrations: [
+              {
+                ...inserted.registrations[0],
+                registrationNumber: ' reg100002 '
+              }
+            ]
+          })
+        )
+      ).rejects.toMatchObject(refusalHeldElsewhere('REG100002'))
     })
 
     it('refuses an organisation holding the same registration number twice', async () => {

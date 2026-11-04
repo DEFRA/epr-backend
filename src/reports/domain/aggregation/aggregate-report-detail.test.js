@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 
@@ -6,9 +7,10 @@ import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-dat
 import { CADENCE } from '../cadence.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const DEFAULT_SOURCE = {
-  summaryLogId: 'sl-1',
+  summaryLogId: toSummaryLogFileId('sl-1'),
   lastUploadedAt: '2026-02-10T09:00:00.000Z'
 }
 
@@ -40,7 +42,7 @@ describe('#aggregateReportDetail', () => {
   const defaultArgs = {
     operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
     cadence: CADENCE.quarterly,
-    year: 2026,
+    year: toYear(2026),
     period: 1,
     source: DEFAULT_SOURCE
   }
@@ -81,7 +83,7 @@ describe('#aggregateReportDetail', () => {
   describe('source', () => {
     it('passes the caller-resolved source through unchanged', () => {
       const source = {
-        summaryLogId: 'sl-7',
+        summaryLogId: toSummaryLogFileId('sl-7'),
         lastUploadedAt: '2026-02-15T15:09:00.000Z'
       }
 
@@ -378,7 +380,7 @@ describe('#aggregateReportDetail', () => {
     const exporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
       cadence: CADENCE.quarterly,
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       source: DEFAULT_SOURCE
     }
@@ -910,7 +912,7 @@ describe('#aggregateReportDetail', () => {
     const accreditedExporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER,
       cadence: CADENCE.monthly,
-      year: 2026,
+      year: toYear(2026),
       period: 2,
       source: DEFAULT_SOURCE
     }
@@ -1186,7 +1188,7 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
         cadence: CADENCE.monthly,
-        year: 2026,
+        year: toYear(2026),
         period: 1,
         source: DEFAULT_SOURCE
       })
@@ -1214,7 +1216,7 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail([registeredOnlyRecord], {
         operatorCategory: OPERATOR_CATEGORY.EXPORTER,
         cadence: CADENCE.monthly,
-        year: 2026,
+        year: toYear(2026),
         period: 2,
         source: DEFAULT_SOURCE
       })

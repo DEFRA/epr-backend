@@ -1,8 +1,9 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -25,7 +26,10 @@ import {
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminPackagingRecyclingNotesCancelPath } from './admin-cancel.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
 const mockCdpAuditing = vi.fn()
@@ -41,6 +45,17 @@ const prnId = '507f1f77bcf86cd799439011'
 const organisationId = '507f1f77bcf86cd799439012'
 const registrationId = '507f1f77bcf86cd799439013'
 const accreditationId = '507f1f77bcf86cd799439014'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+const organisationsRepository = createInMemoryOrganisationsRepository([
+  partialMock(
+    buildOrganisationHolding({
+      organisationId,
+      registrationId,
+      accreditationId
+    })
+  )
+])
 
 const cancelUrl = `/v1/admin/packaging-recycling-notes/${prnId}/cancel`
 
@@ -62,13 +77,13 @@ const openingBalanceEvent = (closingBalance = SEED_BALANCE) =>
 /**
  * @param {Object} [options]
  * @param {PrnStatus} [options.currentStatus]
- * @param {number} [options.accreditationYear]
+ * @param {Year} [options.accreditationYear]
  * @param {number} [options.tonnage]
  * @param {Date} [options.issuedAt]
  */
 const buildAcceptedPrn = ({
   currentStatus = PRN_STATUS.ACCEPTED,
-  accreditationYear = 2026,
+  accreditationYear = toYear(2026),
   tonnage = 500,
   issuedAt = ISSUED_AT
 } = {}) => ({
@@ -77,13 +92,10 @@ const buildAcceptedPrn = ({
   schemaVersion: 2,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: {
+  accreditation: buildAccreditationSnapshot({
     id: accreditationId,
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
+    accreditationYear
+  }),
   obligationYear: accreditationYear,
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage,
@@ -139,7 +151,7 @@ const startServer = async (
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({}),
+      organisationsRepository,
       reportsRepository: reportsRepositoryFactory
     },
     config: { featureFlags: { prnAdminCancellation: cancellationEnabled } }
@@ -168,12 +180,17 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     const body = JSON.parse(response.payload)
     expect(body.status).toBe(PRN_STATUS.CANCELLED)
     expect(body.obligationYear).toBe(2026)
+    expect(body.tonnage).toBe(500)
 
     const stored = await packagingRecyclingNotesRepository.findById(prnId)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
     expect(stored?.status.cancelled?.by).toEqual({
       id: 'test-maintainer-id',
       name: 'maintainer@example.com'
+    })
+    expect(stored?.status.accepted).toEqual({
+      at: new Date('2026-01-16T10:00:00Z'),
+      by: { id: 'producer-1', name: 'Producer Contact' }
     })
     // Cancelled directly from `accepted`, bypassing the producer-rejection path
     // (`awaiting_acceptance -> awaiting_cancellation`), so `status.rejected`
@@ -268,7 +285,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
 
-    await startServer(buildAcceptedPrn({ accreditationYear: 2026 }))
+    await startServer(buildAcceptedPrn({ accreditationYear: toYear(2026) }))
 
     const response = await server.inject({
       method: 'POST',
@@ -284,7 +301,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
 
-    await startServer(buildAcceptedPrn({ accreditationYear: 2026 }))
+    await startServer(buildAcceptedPrn({ accreditationYear: toYear(2026) }))
 
     const response = await server.inject({
       method: 'POST',
@@ -294,6 +311,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     const payload = JSON.parse(response.payload)
+    expect(payload.code).toBe('RELEVANT_YEAR_CLOSED')
     expect(payload.message).toMatch(/2026/)
     expect(payload.message).toMatch(/31 January 2027/)
 
@@ -314,7 +332,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   it('returns 500 when the accreditation year is missing (fails closed, cannot evaluate the window)', async () => {
     await startServer(
       buildAcceptedPrn({
-        accreditationYear: /** @type {number} */ (/** @type {*} */ (null))
+        accreditationYear: /** @type {Year} */ (/** @type {*} */ (null))
       })
     )
 
@@ -493,7 +511,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   describe('cancelling from awaiting_acceptance (PAE-1859)', () => {
     /** @param {Object} [options] */
     const buildAwaitingAcceptancePrn = ({
-      accreditationYear = 2026,
+      accreditationYear = toYear(2026),
       tonnage = 500,
       issuedAt = ISSUED_AT
     } = {}) => {
@@ -597,7 +615,9 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
 
-      await startServer(buildAwaitingAcceptancePrn({ accreditationYear: 2026 }))
+      await startServer(
+        buildAwaitingAcceptancePrn({ accreditationYear: toYear(2026) })
+      )
 
       const response = await server.inject({
         method: 'POST',
@@ -613,7 +633,9 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
 
-      await startServer(buildAwaitingAcceptancePrn({ accreditationYear: 2026 }))
+      await startServer(
+        buildAwaitingAcceptancePrn({ accreditationYear: toYear(2026) })
+      )
 
       const response = await server.inject({
         method: 'POST',

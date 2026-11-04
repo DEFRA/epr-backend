@@ -7,15 +7,19 @@ import {
   SUMMARY_LOG_FAILURE_STATUS,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
+import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
+import { keyedBy } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
+  validateSummaryLogKey,
+  validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -24,10 +28,28 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
 
 const LEGACY_SUBMITTING_LOCK_INDEX_NAME = 'organisationId_1_registrationId_1'
+const RETIRED_YEAR_SCOPED_ID_INDEX_NAME =
+  'organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
+const RETIRED_ID_INDEX_NAME =
+  'organisationId_1_registrationId_1_status_1_submittedAt_-1'
 const IGNORABLE_DROP_INDEX_ERRORS = new Set([
   'IndexNotFound',
   'NamespaceNotFound'
 ])
+
+/**
+ * @param {import('mongodb').Collection} collection
+ * @param {string} name
+ */
+async function dropIndexIfPresent(collection, name) {
+  try {
+    await collection.dropIndex(name)
+  } catch (error) {
+    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
+      throw error
+    }
+  }
+}
 
 /**
  * Creates the submitting lock over
@@ -38,9 +60,7 @@ const IGNORABLE_DROP_INDEX_ERRORS = new Set([
  */
 async function ensureSubmittingLockIndex(collection) {
   // Enforces at most one summary log in 'submitting' status per
-  // org/reg/year/accreditationId. A legacy document has no `year`, so it
-  // indexes as null and still collides with any other legacy document,
-  // matching today's org/reg-only behaviour until the backfill assigns one.
+  // org/reg/year/accreditationId.
   await collection.createIndex(
     { organisationId: 1, registrationId: 1, year: 1, accreditationId: 1 },
     {
@@ -50,13 +70,7 @@ async function ensureSubmittingLockIndex(collection) {
     }
   )
 
-  try {
-    await collection.dropIndex(LEGACY_SUBMITTING_LOCK_INDEX_NAME)
-  } catch (error) {
-    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
-      throw error
-    }
-  }
+  await dropIndexIfPresent(collection, LEGACY_SUBMITTING_LOCK_INDEX_NAME)
 }
 
 /**
@@ -78,25 +92,17 @@ async function ensureCollection(db) {
   // reached from the ledger is looked up that way.
   await collection.createIndex({ 'file.id': 1 })
 
-  // Optimises the year-scoped findLatestSubmittedForOrgReg query, which filters
-  // by org/reg/year/accreditationId/status and sorts by submittedAt descending
+  // Serves findLatestSubmitted and findAll. A registration holds few enough
+  // summary logs that the year and accreditation are filtered after it.
   await collection.createIndex({
-    organisationId: 1,
-    registrationId: 1,
-    year: 1,
-    accreditationId: 1,
+    organisationNumber: 1,
+    registrationNumber: 1,
     status: 1,
     submittedAt: -1
   })
 
-  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
-  // and sorts by submittedAt descending
-  await collection.createIndex({
-    organisationId: 1,
-    registrationId: 1,
-    status: 1,
-    submittedAt: -1
-  })
+  await dropIndexIfPresent(collection, RETIRED_YEAR_SCOPED_ID_INDEX_NAME)
+  await dropIndexIfPresent(collection, RETIRED_ID_INDEX_NAME)
 
   return collection
 }
@@ -152,11 +158,107 @@ const update = (db, logger) => async (id, version, updates) => {
   }
 }
 
-const findById = (db) => async (id) => {
+const WITHOUT_NUMBERS = {
+  $or: [
+    { organisationNumber: { $exists: false } },
+    { registrationNumber: { $exists: false } },
+    {
+      accreditationId: { $exists: true },
+      accreditationNumber: { $exists: false }
+    }
+  ]
+}
+
+/** @param {string} field */
+const isPresent = (field) => ({ $ne: [{ $type: field }, 'missing'] })
+
+/** The aggregation form of `holdsNumbers`. */
+const HOLDS_NUMBERS = {
+  $and: [
+    isPresent('$organisationNumber'),
+    isPresent('$registrationNumber'),
+    {
+      $or: [
+        { $not: [isPresent('$accreditationId')] },
+        isPresent('$accreditationNumber')
+      ]
+    }
+  ]
+}
+
+const findIdsWithoutNumbers = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(WITHOUT_NUMBERS, { projection: { _id: 1 } })
+    .toArray()
+  return docs.map((doc) => doc._id)
+}
+
+const assignNumbers = (db, logger) => async (id, version, numbers) => {
   const validatedId = validateId(id)
+  const validatedNumbers = validateSummaryLogNumbers(numbers)
+
+  const keys = Object.keys(validatedNumbers)
   /** @type {any} */
-  const findByIdFilter = { _id: validatedId }
-  const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
+  const filter = {
+    _id: validatedId,
+    version,
+    ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
+  }
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .updateOne(filter, { $set: validatedNumbers, $inc: { version: 1 } })
+
+  if (result.matchedCount === 0) {
+    /** @type {any} */
+    const findFilter = { _id: validatedId }
+    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    const held = keys.filter((key) => existing[key] !== undefined)
+    const conflictError = new Error(
+      `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
+    )
+    logger.error({
+      err: conflictError,
+      message: `Version conflict detected for summary log ${validatedId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+        reference: validatedId
+      }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+}
+
+/**
+ * @import { Collection, Db, Filter } from 'mongodb'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
+ *
+ * @typedef {SummaryLog & { _id: SummaryLogId, version: number }} SummaryLogDocument
+ */
+
+/**
+ * @param {Db} db
+ * @returns {Collection<SummaryLogDocument>}
+ */
+const summaryLogs = (db) =>
+  /** @type {Collection<SummaryLogDocument>} */ (db.collection(COLLECTION_NAME))
+
+/**
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogVersion | null>}
+ */
+const findOneVersion = async (db, filter) => {
+  const doc = await summaryLogs(db).findOne(filter)
   if (!doc) {
     return null
   }
@@ -164,70 +266,50 @@ const findById = (db) => async (id) => {
   return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
 }
 
+/** @param {Db} db */
+const findById = (db) => async (/** @type {SummaryLogId} */ id) =>
+  findOneVersion(db, { _id: validateId(id) })
+
+/** @param {Db} db */
+const findByFileId = (db) => async (/** @type {SummaryLogFileId} */ fileId) =>
+  findOneVersion(db, { 'file.id': validateId(fileId) })
+
 /**
- * A year/accreditation filter that also matches legacy documents, so they
- * keep counting until the backfill assigns them a scope. Omitted entirely
- * when the caller doesn't know the year, keeping the registration-wide
- * behaviour untouched.
- *
- * - No `year`: matches every year and accreditation. `{ year: null }` covers
- *   a missing key and a stored `null`, as MongoDB stores a JS `undefined`
- *   property as BSON `null`.
- * - A `year` but no `accreditationId` key: a backfilled legacy document,
- *   which matches any accreditation in its year. Year-scoped inserts always
- *   write the key (a string, or `null` for registered-only), so an absent key
- *   only ever means the document predates it.
- *
- * @param {{year?: number, accreditationId?: string | null}} yearAndAccreditation
- * @returns {any}
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogWithId | null>}
  */
-const yearFilter = ({ year, accreditationId }) =>
-  year === undefined
-    ? {}
-    : {
-        $or: [
-          { year, accreditationId },
-          { year, accreditationId: { $exists: false } },
-          { year: null }
-        ]
-      }
+const latestSubmitted = async (db, filter) => {
+  const doc = await summaryLogs(db).findOne(
+    { ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED },
+    { sort: { submittedAt: -1 } }
+  )
 
-const findLatestSubmittedForOrgReg =
-  (db) =>
-  /** @param {import('./port.js').SummaryLogScope} scope */
-  async ({ organisationId, registrationId, year, accreditationId }) => {
-    /** @type {any} */
-    const filter = {
-      organisationId,
-      registrationId,
-      status: SUMMARY_LOG_STATUS.SUBMITTED,
-      ...yearFilter({ year, accreditationId })
-    }
-
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne(filter, { sort: { submittedAt: -1 } })
-
-    if (!doc) {
-      return null
-    }
-
-    const { _id, version, ...summaryLog } = doc
-    return {
-      id: _id,
-      version,
-      summaryLog: normaliseStoredSummaryLog(summaryLog)
-    }
+  if (!doc) {
+    return null
   }
 
-const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
+  const { _id, version, ...summaryLog } = doc
+  return {
+    id: _id,
+    version,
+    summaryLog: normaliseStoredSummaryLog(summaryLog)
+  }
+}
+
+/**
+ * Submitted and failed summary logs, newest upload first.
+ *
+ * @param {Db} db
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Promise<SummaryLogWithId[]>}
+ */
+const uploads = async (db, filter) => {
+  const docs = await summaryLogs(db)
     .aggregate([
       {
         $match: {
-          organisationId,
-          registrationId,
+          ...filter,
           status: {
             $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
           }
@@ -242,7 +324,9 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
     ])
     .toArray()
 
-  return docs.map((doc) => {
+  return /** @type {(SummaryLogDocument & { _uploadedAt: string })[]} */ (
+    docs
+  ).map((doc) => {
     const { _id, version, _uploadedAt: _u, ...summaryLog } = doc
     return {
       id: _id,
@@ -251,6 +335,52 @@ const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
     }
   })
 }
+
+/**
+ * A summary log stored before its accreditation was recorded has no
+ * accreditation number, and matches every accreditation.
+ *
+ * @param {SummaryLogKey} key
+ * @returns {Filter<SummaryLogDocument>}
+ */
+const keyFilter = (key) => {
+  const { organisationNumber, registrationNumber, accreditationNumber, year } =
+    validateSummaryLogKey(key)
+  /** @type {Filter<SummaryLogDocument>[]} */
+  const clauses = []
+  if (accreditationNumber !== undefined) {
+    clauses.push({
+      $or: [
+        { accreditationNumber },
+        { accreditationNumber: { $exists: false } }
+      ]
+    })
+  }
+  if (year !== undefined) {
+    clauses.push({ year })
+  }
+  return {
+    organisationNumber,
+    registrationNumber,
+    ...(clauses.length > 0 && { $and: clauses })
+  }
+}
+
+/** @param {Db} db */
+const findLatestSubmitted =
+  (db) =>
+  /** @param {SummaryLogKey} key */
+  async (key) => {
+    const found = await latestSubmitted(db, keyFilter(key))
+    return found && keyedBy(key)(found)
+  }
+
+/** @param {Db} db */
+const findAll =
+  (db) =>
+  /** @param {SummaryLogKey} key */
+  async (key) =>
+    (await uploads(db, keyFilter(key))).map(keyedBy(key))
 
 const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
   const docs = await db
@@ -328,7 +458,12 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   const submitting = { ...submitted, version: { $add: ['$version', 1] } }
   const whenValidated = {
     $cond: [
-      { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
+      {
+        $and: [
+          { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
+          HOLDS_NUMBERS
+        ]
+      },
       { $mergeObjects: ['$$ROOT', submitting] },
       '$$ROOT'
     ]
@@ -364,6 +499,10 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 
   const { _id, version, ...summaryLog } = before
+  if (!holdsNumbers(summaryLog)) {
+    throw new Error(`Summary log ${validatedId} is missing one of its numbers`)
+  }
+
   return {
     success: true,
     summaryLog: normaliseStoredSummaryLog({ ...summaryLog, ...submitted }),
@@ -447,8 +586,11 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
-    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
-    findAllByOrgReg: findAllByOrgReg(db),
+    findByFileId: findByFileId(db),
+    findIdsWithoutNumbers: findIdsWithoutNumbers(db),
+    assignNumbers: assignNumbers(db, logger),
+    findLatestSubmitted: findLatestSubmitted(db),
+    findAll: findAll(db),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),

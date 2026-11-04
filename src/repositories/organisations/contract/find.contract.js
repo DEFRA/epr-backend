@@ -1,26 +1,28 @@
 import { beforeEach, describe, expect } from 'vitest'
-import {
-  buildOrganisation,
-  getValidDateRange,
-  prepareOrgUpdate
-} from './test-data.js'
+import { getValidDateRange, prepareOrgUpdate } from './test-data.js'
 import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
+/** @import { OrganisationBuilders } from './test-data.js' */
+
 export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -279,7 +281,7 @@ export const testFindBehaviour = (it) => {
             {
               ...inserted.registrations[0],
               status: REGISTRATION_STATUS.APPROVED,
-              registrationNumber: 'REG12345',
+              registrationNumber: `REG${org.orgId}`,
               validFrom: VALID_FROM,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
@@ -331,6 +333,24 @@ export const testFindBehaviour = (it) => {
           await repository.findAllLinkableForUser(INITIAL_USER_EMAIL)
 
         expect(result).toEqual([])
+      })
+
+      it('returns only the summary fields', async () => {
+        const matchingOrg = buildOrgWithSubmitter(INITIAL_USER_EMAIL)
+        await repository.insert(matchingOrg)
+        await approveOrg(matchingOrg)
+
+        const result =
+          await repository.findAllLinkableForUser(INITIAL_USER_EMAIL)
+
+        expect(result).toEqual([
+          {
+            id: matchingOrg.id,
+            orgId: matchingOrg.orgId,
+            companyDetails: { name: matchingOrg.companyDetails.name },
+            status: ORGANISATION_STATUS.APPROVED
+          }
+        ])
       })
 
       it('returns empty array when no organisations match criteria', async () => {

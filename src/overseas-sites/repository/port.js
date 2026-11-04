@@ -20,12 +20,6 @@
  */
 
 /**
- * @typedef {Object} FindAllParams
- * @property {string} [name] - Partial match filter on site name
- * @property {string} [country] - Exact match filter on country
- */
-
-/**
  * @typedef {Object} FindByPropertiesParams
  * @property {string} name
  * @property {string} country
@@ -39,9 +33,8 @@
  * @property {(id: string) => Promise<OverseasSite | null>} findById
  * @property {(properties: FindByPropertiesParams) => Promise<OverseasSite | null>} findByProperties
  * @property {(site: Omit<OverseasSite, 'id'>) => Promise<OverseasSite>} create
- * @property {(id: string, updates: Partial<Omit<OverseasSite, 'id' | 'createdAt'>>) => Promise<OverseasSite | null>} update
  * @property {(id: string) => Promise<OverseasSite | null>} remove
- * @property {(params?: FindAllParams) => Promise<OverseasSite[]>} findAll
+ * @property {() => Promise<OverseasSite[]>} findAll
  * @property {(ids: string[]) => Promise<OverseasSite[]>} findByIds
  */
 

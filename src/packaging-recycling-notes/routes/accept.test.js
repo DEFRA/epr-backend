@@ -1,8 +1,9 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -17,6 +18,7 @@ import {
   cognitoJwksUrl
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from './test-helpers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -31,6 +33,18 @@ const prnNumber = 'ER2600001'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 const organisationId = 'org-123'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+// The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
+// repository requires, so the organisation is handed back as it stands.
+const organisation = buildOrganisationHolding({
+  organisationId,
+  registrationId,
+  accreditationId
+})
+const organisationsRepository = () => ({
+  findById: async () => organisation
+})
 const externalApiClientId = randomUUID()
 const rpd = { id: externalApiClientId, name: 'RPD' }
 
@@ -82,7 +96,7 @@ const startServer = async (prn) => {
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({})
+      organisationsRepository
     }
   })
   return server
@@ -96,7 +110,7 @@ const startServer = async (prn) => {
  */
 const buildPrn = (
   currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE,
-  { isDecemberWaste = false, obligationYear = 2026 } = {}
+  { isDecemberWaste = false, obligationYear = toYear(2026) } = {}
 ) => ({
   id: prnId,
   schemaVersion: 2,
@@ -104,13 +118,10 @@ const buildPrn = (
   prnNumber,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: {
+  accreditation: buildAccreditationSnapshot({
     id: accreditationId,
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
+    accreditationYear: toYear(2026)
+  }),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,
@@ -255,7 +266,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     const payload = JSON.parse(response.payload)
     expect(payload.code).toBe('CONFLICT')
-    expect(payload.message).toEqual(expect.any(String))
+    expect(payload.message).toBe(
+      `No transition exists from ${currentStatus} to accepted`
+    )
     expect(Object.keys(payload)).toEqual(['code', 'message'])
   })
 

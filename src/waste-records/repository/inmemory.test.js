@@ -3,11 +3,29 @@ import { describe, it as base, expect } from 'vitest'
 import { createInMemorySummaryLogRowStatesRepository } from './inmemory.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
 import { DEFAULT_LEDGER_ID } from './test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  summaryLogRowStatesRepository: async ({}, use) => {
-    await use(createInMemorySummaryLogRowStatesRepository())
+  rowStateStorage: async ({}, use) => {
+    await use([])
+  },
+
+  summaryLogRowStatesRepository: async (
+    /** @type {*} */ { rowStateStorage },
+    use
+  ) => {
+    await use(createInMemorySummaryLogRowStatesRepository(rowStateStorage))
+  },
+
+  removeStoredNumbers: async (/** @type {*} */ { rowStateStorage }, use) => {
+    await use(async (/** @type {string[]} */ keys) => {
+      for (const doc of rowStateStorage) {
+        for (const key of keys) {
+          delete doc[key]
+        }
+      }
+    })
   }
 })
 
@@ -35,13 +53,13 @@ describe('summary-log row states repository - in-memory implementation', () => {
           reasons: [],
           transactionAmount: 10
         },
-        summaryLogIds: ['log-seed']
+        summaryLogIds: [toSummaryLogFileId('log-seed')]
       }
     ])()
 
     const committed = await repository.findWasteRecordStatesForSummaryLog(
       DEFAULT_LEDGER_ID,
-      'log-seed'
+      toSummaryLogFileId('log-seed')
     )
     expect(committed).toEqual([
       {

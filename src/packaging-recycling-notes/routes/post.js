@@ -15,20 +15,32 @@ import {
   ACCREDITATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
+import {
+  closedYearConflict,
+  closedYearRefusal
+} from '#packaging-recycling-notes/domain/closed-year.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
-import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
+import { findOrganisationAndRegistrationReadModels } from '#root/routes/organisations/natural-keys.js'
 
 /**
- * @import { CreatePrnResponse, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { Accreditation, AccreditationAddress } from '#domain/organisations/accreditation.js'
+ * @import { Actor, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue } from '#domain/organisations/model.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationContext } from '#waste-balances/domain/credited-tonnage.js'
+ * @import { AccreditationParams } from './by-natural-key.js'
  */
 
 /**
@@ -40,8 +52,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * }} PackagingRecyclingNotesCreatePayload
  */
 
-export const packagingRecyclingNotesCreatePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
+const CREATE_PRN_FAILURE = 'Failure creating a PRN'
 
 /**
  * Response-body `code` the create-draft 409 carries when tonnage exceeds the
@@ -51,23 +62,38 @@ export const packagingRecyclingNotesCreatePath =
 const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
 
 /**
+ * @typedef {{
+ *   id: string,
+ *   accreditationNumber: AccreditationNumber,
+ *   accreditationYear: Year,
+ *   material: AppliedForMaterial,
+ *   submittedToRegulator: RegulatorValue,
+ *   glassRecyclingProcess?: GlassRecyclingProcess
+ *   siteAddress?: AccreditationAddress
+ * }} SnapshotAccreditation
+ */
+
+/**
  * Build PRN data for creation
- * @param {Object} params
- * @param {{ id: string; name: string; tradingName?: string }} params.organisation
- * @param {string} params.registrationId
- * @param {Object} params.accreditation
- * @param {PackagingRecyclingNotesCreatePayload} params.payload
- * @param {{ id: string; name: string }} params.user
- * @param {boolean} params.isExport
- * @param {Date} params.now
+ * @param {Accreditation} accreditation
+ * @return {SnapshotAccreditation}
  */
 const snapshotAccreditation = (accreditation) => {
+  /**
+   * @type {SnapshotAccreditation}
+   */
   const snapshot = {
     id: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber,
+    // Only an approved accreditation has a number; the insert schema refuses a
+    // PRN snapshot without one.
+    accreditationNumber: /** @type {AccreditationNumber} */ (
+      accreditation.accreditationNumber
+    ),
     accreditationYear: deriveAccreditationYear(accreditation),
     material: accreditation.material,
-    submittedToRegulator: accreditation.submittedToRegulator
+    submittedToRegulator: /** @type {RegulatorValue} */ (
+      accreditation.submittedToRegulator
+    )
   }
 
   if (
@@ -84,9 +110,24 @@ const snapshotAccreditation = (accreditation) => {
   return snapshot
 }
 
+/**
+ * Build PRN data for creation
+ *
+ * @param {{
+ *   organisation: OrganisationSnapshot,
+ *   registrationId: string,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditation: Accreditation,
+ *   payload: PackagingRecyclingNotesCreatePayload,
+ *   user: Actor,
+ *   isExport: boolean,
+ *   now: Date
+ * }} params
+ */
 const buildPrnData = ({
   organisation,
   registrationId,
+  registrationNumber,
   accreditation,
   payload,
   user,
@@ -97,8 +138,10 @@ const buildPrnData = ({
 
   return {
     schemaVersion: 2,
+    version: 1,
     organisation,
     registrationId,
+    ...(registrationNumber && { registration: { registrationNumber } }),
     accreditation: accreditationSnapshot,
     obligationYear: accreditationSnapshot.accreditationYear,
     issuedToOrganisation: payload.issuedToOrganisation,
@@ -119,28 +162,6 @@ const buildPrnData = ({
 }
 
 /**
- * @param {PackagingRecyclingNote} prn
- * @param {{ wasteProcessingType: string }} accreditation
- * @returns {CreatePrnResponse}
- */
-const buildResponse = (prn, { wasteProcessingType }) => ({
-  id: prn.id,
-  accreditationYear: prn.accreditation.accreditationYear,
-  createdAt: prn.createdAt,
-  isDecemberWaste: prn.isDecemberWaste,
-  obligationYear: prn.obligationYear,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  material: prn.accreditation.material,
-  notes: prn.notes ?? null,
-  processToBeUsed: /** @type {string} */ (
-    getProcessCode(prn.accreditation.material)
-  ),
-  status: prn.status.currentStatus,
-  tonnage: prn.tonnage,
-  wasteProcessingType
-})
-
-/**
  * Maps an error thrown while creating a PRN to the appropriate Boom response.
  * @param {{ isBoom?: boolean, message?: string }} error
  * @param {{ error: (details: object) => void }} logger
@@ -153,7 +174,7 @@ const throwCreatePrnError = (error, logger) => {
 
   logger.error({
     err: error,
-    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    message: CREATE_PRN_FAILURE,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -165,9 +186,7 @@ const throwCreatePrnError = (error, logger) => {
     }
   })
 
-  throw Boom.badImplementation(
-    `Failure on ${packagingRecyclingNotesCreatePath}`
-  )
+  throw Boom.badImplementation(CREATE_PRN_FAILURE)
 }
 
 /**
@@ -189,11 +208,11 @@ const throwCreatePrnError = (error, logger) => {
  * pre-check and the ringfence cannot disagree.
  *
  * @param {Object} params
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
- * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.tonnage
  * @param {boolean} params.isDecemberWaste
- * @param {Object} params.accreditation
+ * @param {Accreditation} params.accreditation
  */
 const assertSufficientAvailableBalance = async ({
   ledgerRepository,
@@ -226,8 +245,62 @@ const assertSufficientAvailableBalance = async ({
 }
 
 /**
+ * @param {Accreditation} accreditation
+ * @param {Date} now
+ */
+const assertRelevantYearOpen = (accreditation, now) => {
+  const refusal = closedYearRefusal({
+    accreditationYear: deriveAccreditationYear(accreditation),
+    newStatus: PRN_STATUS.DRAFT,
+    now
+  })
+  if (refusal) {
+    throw closedYearConflict(refusal, `accreditationId=${accreditation.id}`)
+  }
+}
+
+/**
+ * The rules a draft must satisfy before it is created.
+ *
  * @param {Object} params
- * @param {Object} params.accreditation
+ * @param {Accreditation} params.accreditation
+ * @param {WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {WasteBalanceLedgerId} params.ledgerId
+ * @param {PackagingRecyclingNotesCreatePayload} params.payload
+ * @param {Date} params.now
+ */
+const assertCreatable = async ({
+  accreditation,
+  ledgerRepository,
+  ledgerId,
+  payload,
+  now
+}) => {
+  if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
+    throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
+  }
+
+  assertRelevantYearOpen(accreditation, now)
+
+  assertDecemberWasteDeclarable({
+    accreditation,
+    isDecemberWaste: payload.isDecemberWaste,
+    now,
+    config: config.get('decemberWaste')
+  })
+
+  await assertSufficientAvailableBalance({
+    ledgerRepository,
+    ledgerId,
+    tonnage: payload.tonnage,
+    isDecemberWaste: payload.isDecemberWaste,
+    accreditation
+  })
+}
+
+/**
+ * @param {Object} params
+ * @param {Accreditation} params.accreditation
  * @param {boolean} params.isDecemberWaste
  */
 const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
@@ -235,9 +308,7 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
     material: accreditation.material,
     isDecemberWaste,
     processingType: processingTypeFor(
-      /** @type {import('#waste-balances/domain/credited-tonnage.js').AccreditationContext} */ (
-        accreditation
-      )
+      /** @type {AccreditationContext} */ (accreditation)
     )
   })
 }
@@ -245,38 +316,38 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
 /**
  * @param {Object} params
  * @param {string} params.organisationId
- * @param {Object} params.companyDetails
- * @param {string} params.companyDetails.name
- * @param {string} [params.companyDetails.tradingName]
+ * @param {OrganisationNumber} [params.organisationNumber]
+ * @param {string} params.name
+ * @param {string} [params.tradingName]
  */
 const buildOrganisationSnapshot = ({
   organisationId,
-  companyDetails: { name, tradingName }
+  organisationNumber,
+  name,
+  tradingName
 }) => ({
   id: organisationId,
+  ...(organisationNumber && { organisationNumber }),
   name,
   ...(tradingName && { tradingName })
 })
 
-export const packagingRecyclingNotesCreate = {
-  method: 'POST',
-  path: packagingRecyclingNotesCreatePath,
-  options: {
-    auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      payload: packagingRecyclingNotesCreatePayloadSchema
-    }
-  },
+/**
+ * Creates a draft PRN and responds with the body that `respond` builds from it.
+ *
+ * @param {(prn: PackagingRecyclingNote) => object} respond
+ */
+export const createPrn =
+  (respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
    *   organisationsRepository: OrganisationsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   params: { organisationId: string, registrationId: string, accreditationId: string }
+   *   params: { organisationId: string, registrationId: string, accreditationId: string } & AccreditationParams
    * }} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {HapiResponseToolkit} h
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
@@ -294,44 +365,36 @@ export const packagingRecyclingNotesCreate = {
     const now = new Date()
 
     try {
-      const [accreditation, org] = await Promise.all([
-        organisationsRepository.findAccreditationById(
-          organisationId,
-          accreditationId
-        ),
-        organisationsRepository.findById(organisationId)
-      ])
+      const accreditation = await organisationsRepository.findAccreditationById(
+        organisationId,
+        accreditationId
+      )
 
-      if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
-        throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
-      }
-
-      assertDecemberWasteDeclarable({
+      await assertCreatable({
         accreditation,
-        isDecemberWaste: payload.isDecemberWaste,
-        now,
-        config: config.get('decemberWaste')
-      })
-
-      await assertSufficientAvailableBalance({
         ledgerRepository,
         ledgerId: { organisationId, registrationId, accreditationId },
-        tonnage: payload.tonnage,
-        isDecemberWaste: payload.isDecemberWaste,
-        accreditation
+        payload,
+        now
       })
 
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
+      const { organisation: readOrganisation } =
+        await findOrganisationAndRegistrationReadModels(request)
+
       const organisation = buildOrganisationSnapshot({
         organisationId,
-        companyDetails: org.companyDetails
+        organisationNumber: params.organisationNumber,
+        name: readOrganisation.name,
+        tradingName: readOrganisation.tradingName
       })
 
       const prnData = buildPrnData({
         organisation,
         registrationId,
+        registrationNumber: params.registrationNumber,
         accreditation,
         payload,
         user,
@@ -354,11 +417,22 @@ export const packagingRecyclingNotesCreate = {
         }
       })
 
-      return h
-        .response(buildResponse(prn, accreditation))
-        .code(StatusCodes.CREATED)
+      return h.response(respond(prn)).code(StatusCodes.CREATED)
     } catch (error) {
-      throwCreatePrnError(error, logger)
+      return throwCreatePrnError(
+        /** @type {{ isBoom?: boolean, message?: string }} */ (error),
+        logger
+      )
+    }
+  }
+
+export const packagingRecyclingNotesCreate = {
+  method: 'POST',
+  options: {
+    auth: getAuthConfig([SCOPES.organisationWrite]),
+    tags: ['api'],
+    validate: {
+      payload: packagingRecyclingNotesCreatePayloadSchema
     }
   }
 }

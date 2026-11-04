@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createOrganisationReadRepository } from './adapter.js'
@@ -11,6 +11,8 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
@@ -104,14 +106,17 @@ describe('organisation read repository over MongoDB repositories', () => {
       organisations: [stored]
     })
 
-    const organisation = await findOrganisation(repository, stored.orgId)
+    const organisation = await findOrganisation(
+      repository,
+      String(stored.orgId)
+    )
 
     expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
-      'statusTimeline',
-      {
-        '2026-01-01T09:00:00.000Z': { status: 'created' },
-        '2026-02-01T00:00:00.000Z': { status: 'approved' }
-      }
+      'status.timeline',
+      [
+        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', at: '2026-02-01T00:00:00.000Z' }
+      ]
     )
   })
 })

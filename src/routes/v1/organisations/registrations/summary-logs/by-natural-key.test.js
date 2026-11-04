@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -9,13 +10,19 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
+import {
+  summaryLogFactory,
+  withoutAccreditationId
+} from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { config } from '#root/config.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
@@ -25,6 +32,9 @@ import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
@@ -34,7 +44,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const accredited = accreditation()
 const registeredOnlyRegistration = reprocessor({
@@ -117,16 +127,32 @@ describe('summary-log routes by natural key', () => {
   })
 
   /**
-   * @param {object} overrides
+   * @typedef {{
+   *   registrationId: string,
+   *   accreditationId?: string | null,
+   *   [field: string]: unknown
+   * }} SeedOverrides
+   */
+
+  /**
+   * Stores a summary log under its ids and the numbers an upload stores
+   * beside them.
+   *
+   * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
    */
   const seed = async (overrides, build) => {
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
+    const { numbers } = numbersFor(partialMock(organisation), {
+      accreditationId: null,
+      ...overrides
+    })
     await summaryLogsRepository.insert(
       summaryLogId,
-      partialMock(
-        build({ organisationId: organisation.id, year: YEAR, ...overrides })
-      )
+      partialMock({
+        ...build({ organisationId: organisation.id, year: YEAR, ...overrides }),
+        ...numbers
+      })
     )
     return {
       summaryLogId,
@@ -137,7 +163,7 @@ describe('summary-log routes by natural key', () => {
   /**
    * A summary log ready to submit: validated against no prior submission.
    *
-   * @param {object} overrides
+   * @param {SeedOverrides} overrides
    */
   const seedValidated = async (overrides) => {
     const { summaryLogId, version, summaryLog } = await seed(
@@ -173,7 +199,7 @@ describe('summary-log routes by natural key', () => {
       })
 
       it('stores the summary log for the registration, year and accreditation when the upload completes', async () => {
-        const summaryLogId = randomUUID()
+        const summaryLogId = toSummaryLogId(randomUUID())
 
         const response = await server.inject({
           method: 'POST',
@@ -197,8 +223,94 @@ describe('summary-log routes by natural key', () => {
     }
   )
 
+  describe.each([
+    {
+      kind: 'registered-only',
+      accreditationId: null,
+      ledgerAccreditation: { kind: 'registeredOnly' }
+    },
+    {
+      kind: 'accredited',
+      accreditationId: accredited.id,
+      ledgerAccreditation: {
+        kind: 'accredited',
+        accreditationNumber: ACCREDITATION_NUMBER
+      }
+    }
+  ])('a $kind summary log', ({ accreditationId, ledgerAccreditation }) => {
+    it('is read with the ledger accreditation it was uploaded to, apart from its cover sheet', async () => {
+      const { summaryLogId } = await seed(
+        {
+          registrationId: accreditedRegistration.id,
+          accreditationId,
+          meta: {
+            PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT,
+            ACCREDITATION_NUMBER: 'COVER-SHEET-NUMBER'
+          }
+        },
+        summaryLogFactory.validated
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.ledgerAccreditation).toEqual(ledgerAccreditation)
+      expect(body.accreditationNumber).toBe('COVER-SHEET-NUMBER')
+    })
+  })
+
+  it.each([
+    ['holds no accreditation id', withoutAccreditationId],
+    [
+      'holds an accreditation id without its number',
+      /** @param {{ accreditationNumber?: unknown }} summaryLog */
+      ({ accreditationNumber: _n, ...rest }) => rest
+    ]
+  ])(
+    'reads a summary log that %s without a ledger accreditation',
+    async (_, unstamped) => {
+      const summaryLogId = toSummaryLogId(randomUUID())
+      const { numbers } = numbersFor(partialMock(organisation), {
+        registrationId: accreditedRegistration.id,
+        accreditationId: accredited.id
+      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        partialMock(
+          unstamped({
+            ...summaryLogFactory.validated({
+              organisationId: organisation.id,
+              registrationId: accreditedRegistration.id,
+              accreditationId: accredited.id,
+              year: YEAR,
+              meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
+            }),
+            ...numbers
+          })
+        )
+      )
+      await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).not.toHaveProperty(
+        'ledgerAccreditation'
+      )
+    }
+  )
+
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     const response = await server.inject({
       method: 'POST',
@@ -222,7 +334,7 @@ describe('summary-log routes by natural key', () => {
       },
       summaryLogFactory.submitted
     )
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     await server.inject({
       method: 'POST',
@@ -246,7 +358,9 @@ describe('summary-log routes by natural key', () => {
       })
 
     it('is read under its registration, whatever its year', async () => {
-      const summaryLogId = await seedOwn({ year: YEAR - 1 })
+      const summaryLogId = toSummaryLogId(
+        await seedOwn({ year: toYear(YEAR - 1) })
+      )
 
       const response = await server.inject({
         method: 'GET',
@@ -274,7 +388,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('is submitted, answering with its own address', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'POST',
@@ -287,7 +401,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('has its file downloaded', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'GET',
@@ -299,7 +413,7 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('has its document read', async () => {
-      const summaryLogId = await seedOwn()
+      const summaryLogId = toSummaryLogId(await seedOwn())
 
       const response = await server.inject({
         method: 'GET',
@@ -322,7 +436,7 @@ describe('summary-log routes by natural key', () => {
         { registrationId: registeredOnlyRegistration.id }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
-      const summaryLogId = await seedOwn(overrides)
+      const summaryLogId = toSummaryLogId(await seedOwn(overrides))
 
       const responses = await Promise.all(
         [
@@ -421,6 +535,49 @@ describe('summary-log routes by natural key', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+    })
+
+    it('audits the download of a file by its id', async () => {
+      vi.mocked(auditSummaryLogDownload).mockClear()
+
+      await server.inject({
+        method: 'GET',
+        url: `${files}/${fileId}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
+        summaryLogId: fileId,
+        organisationId: organisation.id,
+        registrationId: registeredOnlyRegistration.id
+      })
+    })
+
+    it('does not find a file no summary log holds', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${files}/file-unknown`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it.each([
+      ['refuses an unauthenticated caller', {}, StatusCodes.UNAUTHORIZED],
+      [
+        'refuses a caller holding neither scope',
+        asServiceMaintainer({ scope: ['standardUser'] }),
+        StatusCodes.FORBIDDEN
+      ]
+    ])('%s a file by its id', async (_, auth, statusCode) => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `${files}/${fileId}`,
+        ...auth
+      })
+
+      expect(response.statusCode).toBe(statusCode)
     })
 
     it("downloads a file's records as CSV", async () => {

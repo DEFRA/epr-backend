@@ -1,6 +1,8 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { config } from '#root/config.js'
 import {
   asOperator,
   asServiceMaintainer,
@@ -8,7 +10,7 @@ import {
 } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -29,6 +31,9 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -43,7 +48,7 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const accredited = accreditation()
 const registeredOnlyRegistration = reprocessor({
@@ -62,6 +67,13 @@ const organisation = buildOrganisation({
 })
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
+
+const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
+const otherOrganisation = buildOrganisation({
+  registrations: [
+    reprocessor({ registrationNumber: OTHER_ORGANISATION_REGISTRATION_NUMBER })
+  ]
+})
 
 const streams = [
   {
@@ -146,7 +158,8 @@ describe('report routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
+          partialMock(organisation),
+          partialMock(otherOrganisation)
         ]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -246,11 +259,95 @@ describe('report routes by natural key', () => {
         expect(body).not.toHaveProperty('createdBy')
       })
 
+      it('serves no detail unless asked to', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: submitted,
+          ...asServiceMaintainer()
+        })
+
+        expect(JSON.parse(response.payload)).not.toHaveProperty('detail')
+      })
+
+      it('expands a report with all of it but its database ids', async () => {
+        const stored = await reportsRepository.findReportById(seeded.submitted)
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=detail`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const { detail, ...resource } = JSON.parse(response.payload)
+        expect(resource).toMatchObject({ status: REPORT_STATUS.SUBMITTED })
+        const {
+          id: _id,
+          organisationId: _organisationId,
+          registrationId: _registrationId,
+          ...held
+        } = stored
+        expect(detail).toStrictEqual({
+          ...JSON.parse(JSON.stringify(held)),
+          details: expect.any(Object),
+          canRequestResubmission: expect.any(Boolean)
+        })
+        expect(detail.status.submitted.by).toHaveProperty('id')
+      })
+
+      it('expands a preview with what it was generated from', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submission(reports, periods.created)}?expand=detail`,
+          ...asServiceMaintainer()
+        })
+
+        const { detail } = JSON.parse(response.payload)
+        expect(detail).toMatchObject({
+          operatorCategory: expect.any(String),
+          diagnostics: expect.any(Object)
+        })
+        expect(detail).not.toHaveProperty('organisationId')
+        expect(detail).not.toHaveProperty('registrationId')
+      })
+
+      it('refuses the expansion to an operator', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=detail`,
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      })
+
+      it('refuses an expansion it does not offer', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: `${submitted}?expand=everything`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('expands only a read, not a command', async () => {
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `${inProgress}?expand=detail`,
+          payload: { supportingInformation: 'Updated by number' },
+          ...asOperator()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(JSON.parse(response.payload)).not.toHaveProperty('detail')
+      })
+
       it('says a stale report is stale, without ids', async () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,
           registration.id,
-          'sl-2',
+          toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
 
@@ -343,7 +440,7 @@ describe('report routes by natural key', () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
           organisation.id,
           registration.id,
-          'sl-2',
+          toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
 
@@ -436,6 +533,42 @@ describe('report routes by natural key', () => {
       })
     }
   )
+
+  it('serves the PRN figures a PATCH stored on the next GET', async () => {
+    const [, accreditedStream] = streams
+    const period = 10
+    await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId: organisation.id,
+        registrationId: accreditedRegistration.id,
+        year: YEAR,
+        cadence: 'monthly',
+        period,
+        ...COMPLETE_REPORT,
+        prn: { issuedTonnage: 100, totalRevenue: 0, freeTonnage: 10 }
+      })
+    )
+    const inProgress = submission(accreditedStream.reports, period)
+
+    const patched = await server.inject({
+      method: 'PATCH',
+      url: inProgress,
+      payload: { prnRevenue: 3000, freeTonnage: 0 },
+      ...asOperator()
+    })
+    expect(patched.statusCode).toBe(StatusCodes.OK)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: inProgress,
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const { prn } = JSON.parse(response.payload)
+    expect(prn.totalRevenue).toBe(3000)
+    expect(prn.freeTonnage).toBe(0)
+  })
 
   it('serves a registered-only report without prn', async () => {
     const [registeredOnly] = streams
@@ -562,15 +695,151 @@ describe('report routes by natural key', () => {
     )
   })
 
-  it("serves a registration's reporting calendar", async () => {
-    const response = await server.inject({
-      method: 'GET',
-      url: `${registrations}/${REGISTERED_ONLY_NUMBER}/reports/calendar`,
+  describe('year calendar', () => {
+    const calendar = (
+      /** @type {string} */ number,
+      /** @type {number} */ year = YEAR
+    ) => ({
+      method: /** @type {const} */ ('GET'),
+      url: `${registrations}/${number}/reports/${year}/calendar`,
       ...asServiceMaintainer()
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).cadence).toBe('quarterly')
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date('2027-01-02T12:00:00Z')
+      })
+      config.set('featureFlags.midYearStatusTransition', true)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      config.reset('featureFlags.midYearStatusTransition')
+    })
+
+    it('serves only the current status, in whole periods, with mid-year status transition off', async () => {
+      config.set('featureFlags.midYearStatusTransition', false)
+
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      const body = JSON.parse(response.payload)
+      expect(body).not.toHaveProperty('registeredOnly')
+      expect(body.accredited.reportingPeriods[0]).toMatchObject({
+        cadence: 'monthly',
+        period: 7,
+        startDate: '2026-07-01',
+        endDate: '2026-07-31'
+      })
+      expect(body.accredited.reportingPeriods).toHaveLength(6)
+    })
+
+    it('leaves out a stored report for a month before the accreditation began', async () => {
+      await reportsRepository.createReport(
+        buildCreateReportParams({
+          organisationId: organisation.id,
+          registrationId: accreditedRegistration.id,
+          year: YEAR,
+          cadence: 'monthly',
+          period: 3,
+          ...COMPLETE_REPORT,
+          prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 }
+        })
+      )
+
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      expect(
+        JSON.parse(response.payload).accredited.reportingPeriods.map(
+          (/** @type {{ period: number }} */ { period }) => period
+        )
+      ).toEqual([7, 8, 9, 10, 11, 12])
+    })
+
+    it('serves registered-only periods only for a registered-only registration', async () => {
+      const response = await server.inject(calendar(REGISTERED_ONLY_NUMBER))
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.year).toBe(YEAR)
+      expect(body).not.toHaveProperty('accredited')
+      expect(body).not.toHaveProperty('cadence')
+      expect(body.registeredOnly.reportingPeriods).toHaveLength(4)
+      expect(body.registeredOnly.reportingPeriods[0]).toMatchObject({
+        cadence: 'quarterly',
+        startDate: '2026-02-01'
+      })
+    })
+
+    it('splits an accredited registration at the accreditation start', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER))
+
+      const body = JSON.parse(response.payload)
+      expect(body.registeredOnly.reportingPeriods.at(-1)).toMatchObject({
+        period: 2,
+        endDate: '2026-06-30'
+      })
+      expect(body.accredited.accreditationNumber).toBe(
+        accredited.accreditationNumber
+      )
+      expect(
+        body.accredited.reportingPeriods.map(
+          (/** @type {{ period: number }} */ { period }) => period
+        )
+      ).toEqual([7, 8, 9, 10, 11, 12])
+    })
+
+    it('serves only the requested year', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
+
+      expect(JSON.parse(response.payload)).toEqual({ year: 2025 })
+    })
+
+    it('lists every submission when asked to expand them', async () => {
+      const response = await server.inject({
+        ...calendar(REGISTERED_ONLY_NUMBER),
+        url: `${calendar(REGISTERED_ONLY_NUMBER).url}?expand=submissions`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('refuses an expansion it does not offer', async () => {
+      const response = await server.inject({
+        ...calendar(REGISTERED_ONLY_NUMBER),
+        url: `${calendar(REGISTERED_ONLY_NUMBER).url}?expand=everything`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('rejects a year outside the supported range', async () => {
+      const response = await server.inject(calendar(REPROCESSOR_NUMBER, 1999))
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 404 for a registration that belongs to another organisation', async () => {
+      const underItsOwner = await server.inject({
+        ...calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER),
+        url: `/organisations/${otherOrganisation.orgId}/registrations/${OTHER_ORGANISATION_REGISTRATION_NUMBER}/reports/${YEAR}/calendar`
+      })
+      const underAnother = await server.inject(
+        calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER)
+      )
+      const registrationDoesNotExist = await server.inject(
+        calendar('made-up-reg-number')
+      )
+
+      expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
+      expect(underAnother.statusCode).toBe(StatusCodes.NOT_FOUND)
+
+      expect(JSON.parse(underAnother.payload).message).toBe(
+        'Registration not found'
+      )
+
+      expect(registrationDoesNotExist.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
   })
 
   it.each([
@@ -591,8 +860,8 @@ describe('report routes by natural key', () => {
       `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/reports/monthly/1/submissions/1`
     ],
     [
-      'the calendar of an unknown registration',
-      `${registrations}/R26XX0000000000PL/reports/calendar`
+      'the year calendar of an unknown registration',
+      `${registrations}/R26XX0000000000PL/reports/${YEAR}/calendar`
     ]
   ])('returns 404 for %s', async (_, url) => {
     const response = await server.inject({

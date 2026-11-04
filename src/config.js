@@ -360,6 +360,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORT_DATA_VALIDATION'
     },
+    midYearStatusTransition: {
+      doc: 'Feature Flag: Full support for a registration that moves from registered-only to accredited part way through a year (PAE-1598)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_MID_YEAR_STATUS_TRANSITION'
+    },
     prnAdminCancellation: {
       doc: 'Feature Flag: Allow an admin to cancel an accepted PRN/PERN (PAE-1823)',
       format: Boolean,
@@ -372,11 +378,35 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
     },
-    resubmissionFigureGate: {
-      doc: 'Feature Flag: At validation, compare each restated closed period with its latest submitted report and record only those whose reported figures changed as requiring resubmission',
+    prnNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation and registration numbers onto PRNs stored without them, rather than only reporting them',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_RESUBMISSION_FIGURE_GATE'
+      env: 'FEATURE_FLAG_PRN_NUMBERS_BACKFILL'
+    },
+    reportNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto reports stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REPORT_NUMBERS_BACKFILL'
+    },
+    ledgerEventNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto waste balance ledger events stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_LEDGER_EVENT_NUMBERS_BACKFILL'
+    },
+    rowStateNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary-log row states stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_ROW_STATE_NUMBERS_BACKFILL'
+    },
+    summaryLogNumbersBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto summary logs stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOG_NUMBERS_BACKFILL'
     }
   },
   formSubmissionOverrides: {

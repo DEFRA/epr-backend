@@ -1,14 +1,6 @@
+import Boom from '@hapi/boom'
+import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  beforeEach,
-  afterAll,
-  afterEach
-} from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -27,21 +19,37 @@ import {
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { packagingRecyclingNotesCreatePath } from './post.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  accreditation,
+  exporter,
+  granted,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-const organisationId = 'org-123'
-const registrationId = 'reg-456'
-const accreditationId = 'acc-789'
+const { buildOrganisation } = createOrganisationBuilders()
+
+/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { MockInstance } from 'vitest' */
+/** @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+
+const organisationId = new ObjectId().toString()
+const registrationId = new ObjectId().toString()
+const accreditationId = new ObjectId().toString()
+const { orgId } = buildOrganisation()
 
 const SEED_BALANCE = { amount: 500, availableAmount: 500 }
 
 /**
  * An in-memory stream seeded with one summary-log submission, opening the
- * ledgerId's ledger at the given balance so the create route's pre-check
- * resolves against it. Passing `null` leaves the ledger absent, which resolves
- * to zero available.
+ * ledger at the given balance so the create route's pre-check resolves
+ * against it. Passing `null` leaves the ledger absent, which resolves to zero
+ * available.
  *
  * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number } | null} [closingBalance]
  */
@@ -51,9 +59,9 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
       ? [
           partialMock(
             buildLedgerEvent({
+              organisationId,
               registrationId,
               accreditationId,
-              organisationId,
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -67,6 +75,27 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
       : []
   )()
 
+const outputReprocessorAccreditation = {
+  material: MATERIAL.PLASTIC,
+  glassRecyclingProcess: undefined,
+  validFrom: '2026-01-01',
+  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  reprocessingType: REPROCESSING_TYPE.OUTPUT,
+  site: { address: { line1: '1 Test St', postcode: 'SW1A 1AA' } }
+}
+
+const exporterAccreditation = {
+  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+  reprocessingType: undefined
+}
+
+/** @type {StatusHistoryEntry[]} */
+const cancelledHistory = [
+  { status: 'created', updatedAt: new Date('2025-12-01') },
+  { status: 'approved', updatedAt: new Date('2026-01-01') },
+  { status: 'cancelled', updatedAt: new Date('2026-03-01') }
+]
+
 const validPayload = {
   issuedToOrganisation: {
     id: 'producer-org-789',
@@ -76,920 +105,657 @@ const validPayload = {
   tonnage: 100
 }
 
-describe(`${packagingRecyclingNotesCreatePath} route`, () => {
+describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes', () => {
   setupAuthContext()
 
-  describe('when feature flag is enabled', () => {
-    let server
-    let packagingRecyclingNotesRepository
-    let organisationsRepository
-    let ledgerRepository
+  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  let server
+  /** @type {PackagingRecyclingNotesRepository} */
+  let packagingRecyclingNotesRepository
+  /** @type {MockInstance<PackagingRecyclingNotesRepository['create']>} */
+  let createSpy
+  /** @type {OrganisationsRepositoryFactory} */
+  let organisationsRepository
+  /** @type {WasteBalanceLedgerRepository} */
+  let ledgerRepository
+  /** @type {string} */
+  let url
+  /** @type {string} */
+  let registrationNumber
 
-    beforeAll(async () => {
-      packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
-      vi.spyOn(packagingRecyclingNotesRepository, 'create')
+  /**
+   * Starts a server serving the organisation with one accreditation, an output
+   * reprocessor's unless overridden, at the URL its natural keys name.
+   *
+   * @param {object} [overrides]
+   */
+  const useAccreditation = async (overrides = {}) => {
+    const accredited = accreditation({
+      ...outputReprocessorAccreditation,
+      id: accreditationId,
+      ...overrides
+    })
+    const registration = (
+      accredited.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+        ? exporter
+        : reprocessor
+    )({ id: registrationId, accreditationId })
+    const organisation = buildOrganisation({
+      id: organisationId,
+      orgId,
+      statusHistory: [
+        { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+      ],
+      registrations: [registration],
+      accreditations: [accredited]
+    })
+    organisationsRepository = createInMemoryOrganisationsRepository([
+      partialMock(organisation)
+    ])
 
-      organisationsRepository = {
-        findById: vi.fn(async () => ({
-          companyDetails: {
-            name: 'Test Org',
-            tradingName: 'Test Trading'
-          }
-        })),
-        findAccreditationById: vi.fn(async () => ({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          reprocessingType: REPROCESSING_TYPE.OUTPUT,
-          submittedToRegulator: 'ea',
-          site: {
-            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
-          }
-        }))
+    await server?.stop()
+    server = await createTestServer({
+      repositories: {
+        packagingRecyclingNotesRepository: () =>
+          packagingRecyclingNotesRepository,
+        organisationsRepository,
+        ledgerRepository: () => ledgerRepository
       }
+    })
+    await server.initialize()
 
-      server = await createTestServer({
-        repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository,
-          organisationsRepository: () => organisationsRepository,
-          ledgerRepository: () => ledgerRepository
+    const year = new Date(/** @type {string} */ (accredited.validFrom))
+    registrationNumber = registration.registrationNumber
+    url = `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
+  }
+
+  /** The PRN data the route first passed to the repository's create. */
+  const firstCreatedPrn = () => {
+    const call = createSpy.mock.calls[0]
+    if (!call) {
+      throw new Error('Expected the repository to have created a PRN')
+    }
+    return call[0]
+  }
+
+  beforeAll(async () => {
+    packagingRecyclingNotesRepository =
+      createInMemoryPackagingRecyclingNotesRepository()(createMockLogger())
+    createSpy = vi.spyOn(packagingRecyclingNotesRepository, 'create')
+  })
+
+  beforeEach(async () => {
+    vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
+    ledgerRepository = seedStream()
+    await useAccreditation()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
+  /**
+   * @param {object} [payload]
+   * @param {object} [auth]
+   */
+  const createPrn = (payload = validPayload, auth = asOperator()) =>
+    server.inject({ method: 'POST', url, ...auth, payload })
+
+  describe('successful requests', () => {
+    it('returns 201 with created PRN details', async () => {
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+      const body = JSON.parse(response.payload)
+      expect(body.id).toBeDefined()
+      expect(body.tonnage).toBe(validPayload.tonnage)
+      expect(body.issuedToOrganisation).toStrictEqual(
+        validPayload.issuedToOrganisation
+      )
+      expect(body.status.current).toBe(PRN_STATUS.DRAFT)
+      expect(body.createdAt).toBeDefined()
+      expect(body.processToBeUsed).toBe('R3') // plastic uses R3
+      expect(body).not.toHaveProperty('notes')
+      expect(body.isDecemberWaste).toBe(false)
+      expect(body.obligationYear).toBe(2026)
+      expect(body.issuer.registration.accreditation).toMatchObject({
+        accreditationYear: 2026,
+        material: MATERIAL.PLASTIC,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+    })
+
+    it('persists isDecemberWaste true when submitted by an output reprocessor inside the window', async () => {
+      vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: true
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      const body = JSON.parse(response.payload)
+      expect(body.isDecemberWaste).toBe(true)
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ isDecemberWaste: true })
+      )
+    })
+
+    it('persists isDecemberWaste false when submitted explicitly', async () => {
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: false
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(JSON.parse(response.payload).isDecemberWaste).toBe(false)
+    })
+
+    it('creates PRN with correct organisation and registration', async () => {
+      await createPrn()
+
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisation: expect.objectContaining({ id: organisationId }),
+          registrationId,
+          accreditation: expect.objectContaining({ id: accreditationId }),
+          obligationYear: 2026,
+          issuedToOrganisation: validPayload.issuedToOrganisation
+        })
+      )
+    })
+
+    it('stores the organisation and registration numbers beside their ids', async () => {
+      const response = await createPrn()
+
+      const stored = await packagingRecyclingNotesRepository.findById(
+        JSON.parse(response.payload).id
+      )
+      expect(stored?.organisation).toMatchObject({
+        id: organisationId,
+        organisationNumber: String(orgId)
+      })
+      expect(stored).toMatchObject({
+        registrationId,
+        registration: { registrationNumber }
+      })
+    })
+
+    it('sets obligationYear from the accreditation year', async () => {
+      vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
+      await useAccreditation({ validFrom: '2027-01-01', validTo: '2027-12-31' })
+
+      await createPrn()
+
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ obligationYear: 2027 })
+      )
+    })
+
+    it('creates PRN with draft status and history but no created operation', async () => {
+      await createPrn()
+
+      const createArg = firstCreatedPrn()
+      expect(createArg.status.currentStatus).toBe(PRN_STATUS.DRAFT)
+      expect(createArg.status).not.toHaveProperty('created')
+      expect(createArg.status.history).toStrictEqual([
+        expect.objectContaining({
+          status: PRN_STATUS.DRAFT,
+          at: expect.any(Date),
+          by: expect.objectContaining({ id: expect.any(String) })
+        })
+      ])
+    })
+
+    it('sets createdBy and updatedBy to the authenticated user', async () => {
+      const userId = 'specific-test-user-id'
+      const userName = 'Test User'
+
+      await createPrn(
+        validPayload,
+        asOperator({ id: userId, name: userName, email: 'test@example.com' })
+      )
+
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdBy: { id: userId, name: userName },
+          updatedBy: { id: userId, name: userName },
+          status: expect.objectContaining({
+            history: expect.arrayContaining([
+              expect.objectContaining({
+                by: { id: userId, name: userName }
+              })
+            ])
+          })
+        })
+      )
+    })
+
+    it('falls back to unknown when credentials have no id', async () => {
+      await createPrn(validPayload, {
+        auth: {
+          strategy: 'access-token',
+          credentials: { scope: [SCOPES.organisationWrite] }
         }
       })
 
-      await server.initialize()
-    })
-
-    beforeEach(() => {
-      ledgerRepository = seedStream()
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-      vi.clearAllMocks()
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    describe('successful requests', () => {
-      it('returns 201 with created PRN details', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdBy: expect.objectContaining({ id: 'unknown' })
         })
+      )
+    })
 
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
+    it('sets isExport to false for reprocessor', async () => {
+      await createPrn()
 
-        const body = JSON.parse(response.payload)
-        expect(body.id).toBeDefined()
-        expect(body.tonnage).toBe(validPayload.tonnage)
-        expect(body.material).toBe(MATERIAL.PLASTIC)
-        expect(body.issuedToOrganisation).toStrictEqual(
-          validPayload.issuedToOrganisation
-        )
-        expect(body.status).toBe(PRN_STATUS.DRAFT)
-        expect(body.createdAt).toBeDefined()
-        expect(body.processToBeUsed).toBe('R3') // plastic uses R3
-        expect(body.notes).toBeNull()
-        expect(body.isDecemberWaste).toBe(false)
-        expect(body.accreditationYear).toBe(2026)
-        expect(body.obligationYear).toBe(2026)
-        expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ isExport: false })
+      )
+    })
+
+    it('sets isExport to true for exporter', async () => {
+      await useAccreditation(exporterAccreditation)
+
+      await createPrn()
+
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ isExport: true })
+      )
+    })
+
+    it('snapshots glass recycling process for glass accreditations', async () => {
+      await useAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_re_melt'],
+        site: { address: { line1: '123 Glass Lane', postcode: 'GL1 2AB' } }
       })
 
-      it('persists isDecemberWaste true when submitted by an output reprocessor inside the window', async () => {
-        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+      await createPrn()
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: true }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-        const body = JSON.parse(response.payload)
-        expect(body.isDecemberWaste).toBe(true)
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({ isDecemberWaste: true })
-        )
-      })
-
-      it('persists isDecemberWaste false when submitted explicitly', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: false }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-        expect(JSON.parse(response.payload).isDecemberWaste).toBe(false)
-      })
-
-      it('creates PRN with correct organisation and registration', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            organisation: expect.objectContaining({ id: organisationId }),
-            registrationId,
-            accreditation: expect.objectContaining({ id: accreditationId }),
-            obligationYear: 2026,
-            issuedToOrganisation: validPayload.issuedToOrganisation
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accreditation: expect.objectContaining({
+            material: MATERIAL.GLASS,
+            glassRecyclingProcess: 'glass_re_melt',
+            siteAddress: { line1: '123 Glass Lane', postcode: 'GL1 2AB' }
           })
-        )
-      })
-
-      it('sets obligationYear from the accreditation year', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2027-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea',
-          site: {
-            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
-          }
         })
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({ obligationYear: 2027 })
-        )
-      })
-
-      it('creates PRN with draft status and history but no created operation', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        const createArg =
-          packagingRecyclingNotesRepository.create.mock.calls[0][0]
-        expect(createArg.status.currentStatus).toBe(PRN_STATUS.DRAFT)
-        expect(createArg.status).not.toHaveProperty('created')
-        expect(createArg.status.history).toStrictEqual([
-          expect.objectContaining({
-            status: PRN_STATUS.DRAFT,
-            at: expect.any(Date),
-            by: expect.objectContaining({ id: expect.any(String) })
-          })
-        ])
-      })
-
-      it('sets createdBy and updatedBy to the authenticated user', async () => {
-        const userId = 'specific-test-user-id'
-        const userName = 'Test User'
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator({
-            id: userId,
-            name: userName,
-            email: 'test@example.com'
-          }),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdBy: { id: userId, name: userName },
-            updatedBy: { id: userId, name: userName },
-            status: expect.objectContaining({
-              history: expect.arrayContaining([
-                expect.objectContaining({
-                  by: { id: userId, name: userName }
-                })
-              ])
-            })
-          })
-        )
-      })
-
-      it('falls back to unknown when credentials have no id', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          auth: {
-            strategy: 'access-token',
-            credentials: {
-              scope: [SCOPES.organisationWrite]
-            }
-          },
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdBy: expect.objectContaining({ id: 'unknown' })
-          })
-        )
-      })
-
-      it('sets isExport to false for reprocessor', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            isExport: false
-          })
-        )
-      })
-
-      it('sets isExport to true for exporter', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          submittedToRegulator: 'ea'
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            isExport: true
-          })
-        )
-      })
-
-      it('snapshots glass recycling process for glass accreditations', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.GLASS,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea',
-          glassRecyclingProcess: ['remelt'],
-          site: {
-            address: { line1: '123 Glass Lane', postcode: 'GL1 2AB' }
-          }
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            accreditation: expect.objectContaining({
-              material: MATERIAL.GLASS,
-              glassRecyclingProcess: 'remelt',
-              siteAddress: { line1: '123 Glass Lane', postcode: 'GL1 2AB' }
-            })
-          })
-        )
-      })
-
-      it('omits glass recycling process for non-glass accreditations', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        const createArg =
-          packagingRecyclingNotesRepository.create.mock.calls[0][0]
-        expect(createArg.accreditation).not.toHaveProperty(
-          'glassRecyclingProcess'
-        )
-      })
-
-      it('returns 500 when accreditation has no validFrom', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea'
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-      })
-
-      it('accepts registrationType on issuedToOrganisation', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            issuedToOrganisation: {
-              ...validPayload.issuedToOrganisation,
-              registrationType: 'LARGE_PRODUCER'
-            }
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-
-        const createArg =
-          packagingRecyclingNotesRepository.create.mock.calls[0][0]
-        expect(createArg.issuedToOrganisation.registrationType).toBe(
-          'LARGE_PRODUCER'
-        )
-      })
-
-      it('succeeds when issuedToOrganisation has null tradingName', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            issuedToOrganisation: {
-              id: 'producer-org-789',
-              name: 'Producer Org',
-              tradingName: null
-            }
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-
-        const createArg =
-          packagingRecyclingNotesRepository.create.mock.calls[0][0]
-        expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
-      })
-
-      it('omits notes key from stored data when no notes provided', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        const createArg =
-          packagingRecyclingNotesRepository.create.mock.calls[0][0]
-        expect(createArg).not.toHaveProperty('notes')
-      })
-
-      it('should include issuer notes when provided', async () => {
-        const notes = 'Test issuer notes'
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            notes
-          }
-        })
-
-        const body = JSON.parse(response.payload)
-        expect(body.notes).toBe(notes)
-      })
+      )
     })
 
-    describe('validation errors', () => {
-      it('returns 422 when tonnage is missing', async () => {
-        const { tonnage: _tonnage, ...payloadWithoutTonnage } = validPayload
+    it('omits glass recycling process for non-glass accreditations', async () => {
+      await createPrn()
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: payloadWithoutTonnage
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when tonnage is zero', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            tonnage: 0
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when tonnage is negative', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            tonnage: -1
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when tonnage is not an integer', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            tonnage: 10.5
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when notes exceeds 200 characters', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            notes: 'a'.repeat(201)
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when isDecemberWaste is not a boolean', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: {
-            ...validPayload,
-            isDecemberWaste: 'yes'
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
+      const createArg = firstCreatedPrn()
+      expect(createArg.accreditation).not.toHaveProperty(
+        'glassRecyclingProcess'
+      )
     })
 
-    describe('accreditation status', () => {
-      it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'cancelled',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea'
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-        expect(response.payload).toContain(
-          'Cannot create a PRN on a cancelled accreditation'
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    it('accepts registrationType on issuedToOrganisation', async () => {
+      const response = await createPrn({
+        ...validPayload,
+        issuedToOrganisation: {
+          ...validPayload.issuedToOrganisation,
+          registrationType: 'LARGE_PRODUCER'
+        }
       })
 
-      it('creates a PRN when the accreditation is suspended', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'suspended',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea',
-          site: {
-            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
-          }
-        })
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-      })
+      const createArg = firstCreatedPrn()
+      expect(createArg.issuedToOrganisation.registrationType).toBe(
+        'LARGE_PRODUCER'
+      )
     })
 
-    describe('waste balance validation', () => {
-      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
-
-      it('returns 409 and creates no draft when tonnage exceeds the available balance', async () => {
-        ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 51 }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(response.payload).toContain(
-          'Insufficient available waste balance'
-        )
-        expect(JSON.parse(response.payload).code).toBe(
-          'INSUFFICIENT_AVAILABLE_BALANCE'
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    it('succeeds when issuedToOrganisation has null tradingName', async () => {
+      const response = await createPrn({
+        ...validPayload,
+        issuedToOrganisation: {
+          id: 'producer-org-789',
+          name: 'Producer Org',
+          tradingName: null
+        }
       })
 
-      it('creates the draft when tonnage equals the available balance', async () => {
-        ledgerRepository = seedStream({ amount: 100, availableAmount: 100 })
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
 
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 100 }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalled()
-      })
-
-      it('returns 409 for an exporter (PERN) journey when tonnage exceeds the balance', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          submittedToRegulator: 'ea'
-        })
-        ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 51 }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(response.payload).toContain(
-          'Insufficient available waste balance'
-        )
-        expect(JSON.parse(response.payload).code).toBe(
-          'INSUFFICIENT_AVAILABLE_BALANCE'
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
-      })
-
-      it('returns 409 when the accreditation has no credited balance yet', async () => {
-        // A newly-approved accreditation that has submitted no summary logs has
-        // no ledger, so its available balance is zero and any tonnage exceeds it.
-        ledgerRepository = seedStream(null)
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 1 }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
-      })
-
-      it('reads the current ledger on each submission, rejecting after the balance drops', async () => {
-        // Seeded balance is 500 available (beforeEach); 200 is comfortably within it.
-        const first = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 200 }
-        })
-        expect(first.statusCode).toBe(StatusCodes.CREATED)
-
-        // A competing PRN ringfences 400 on the same ledger, dropping available
-        // to 100 — the route must re-read this, not the balance it first saw.
-        await ledgerRepository.appendEvents([
-          buildPrnCreatedEvent({
-            organisationId,
-            registrationId,
-            accreditationId,
-            number: 2,
-            payload: { prnId: 'competing-prn', amount: 400 },
-            openingBalance: { amount: 500, availableAmount: 500 },
-            closingBalance: { amount: 500, availableAmount: 100 }
-          })
-        ])
-
-        const second = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 200 }
-        })
-        expect(second.statusCode).toBe(StatusCodes.CONFLICT)
-      })
+      const createArg = firstCreatedPrn()
+      expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
     })
 
-    describe('december waste validation', () => {
-      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+    it('omits notes key from stored data when no notes provided', async () => {
+      await createPrn()
 
-      afterEach(() => {
-        vi.useRealTimers()
-      })
-
-      it('returns 409 and creates no draft when the window is closed, even for an output reprocessor', async () => {
-        vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: true }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe(
-          DECEMBER_WASTE_NOT_DECLARABLE_CODE
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
-      })
-
-      it('creates the draft for an input reprocessor declaring December inside the window', async () => {
-        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          reprocessingType: REPROCESSING_TYPE.INPUT,
-          submittedToRegulator: 'ea',
-          site: {
-            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
-          }
-        })
-        ledgerRepository = seedStream({
-          amount: 500,
-          availableAmount: 500,
-          decemberAmount: 300,
-          decemberAvailableAmount: 300
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: true }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-        expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
-      })
-
-      it('creates the draft for an exporter declaring December inside the window', async () => {
-        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          submittedToRegulator: 'ea'
-        })
-        ledgerRepository = seedStream({
-          amount: 500,
-          availableAmount: 500,
-          decemberAmount: 300,
-          decemberAvailableAmount: 300
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: true }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-        expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
-      })
-
-      it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
-        vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
-          id: accreditationId,
-          status: 'approved',
-          accreditationNumber: 'ACC-001',
-          material: MATERIAL.PLASTIC,
-          validFrom: '2026-01-01',
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          submittedToRegulator: 'ea'
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, isDecemberWaste: false }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-      })
+      const createArg = firstCreatedPrn()
+      expect(createArg).not.toHaveProperty('notes')
     })
 
-    describe('December pool routing at the create pre-check', () => {
-      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`
+    it('should include issuer notes when provided', async () => {
+      const notes = 'Test issuer notes'
 
-      const exporterAccreditation = {
-        id: accreditationId,
-        status: 'approved',
-        accreditationNumber: 'ACC-001',
-        material: MATERIAL.PLASTIC,
-        validFrom: '2026-01-01',
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        submittedToRegulator: 'ea'
-      }
+      const response = await createPrn({ ...validPayload, notes })
 
-      afterEach(() => {
-        vi.useRealTimers()
-      })
+      expect(JSON.parse(response.payload).notes).toBe(notes)
+    })
+  })
 
-      it('returns 409 when an exporter December raise exceeds the December pool, even when the total balance covers it', async () => {
-        vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
-          exporterAccreditation
-        )
-        ledgerRepository = seedStream({
-          amount: 500,
-          availableAmount: 500,
-          decemberAmount: 50,
-          decemberAvailableAmount: 50
-        })
+  describe('validation errors', () => {
+    const { tonnage: _tonnage, ...payloadWithoutTonnage } = validPayload
 
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 100, isDecemberWaste: true }
-        })
+    it.each([
+      ['tonnage is missing', payloadWithoutTonnage],
+      ['tonnage is zero', { ...validPayload, tonnage: 0 }],
+      ['tonnage is negative', { ...validPayload, tonnage: -1 }],
+      ['tonnage is not an integer', { ...validPayload, tonnage: 10.5 }],
+      [
+        'notes exceeds 200 characters',
+        { ...validPayload, notes: 'a'.repeat(201) }
+      ],
+      [
+        'isDecemberWaste is not a boolean',
+        { ...validPayload, isDecemberWaste: 'yes' }
+      ]
+    ])('returns 422 when %s', async (_, payload) => {
+      const response = await createPrn(payload)
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe(
-          'INSUFFICIENT_AVAILABLE_BALANCE'
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
-      })
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
 
-      it('reserves the December pool from a general raise, refusing above total minus December', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
-          exporterAccreditation
-        )
-        // available 500, December reserve 450 -> general cap 50
-        ledgerRepository = seedStream({
-          amount: 500,
-          availableAmount: 500,
-          decemberAmount: 450,
-          decemberAvailableAmount: 450
-        })
+  describe('accreditation status', () => {
+    it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
+      await useAccreditation({ statusHistory: cancelledHistory })
 
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 100, isDecemberWaste: false }
-        })
+      const response = await createPrn()
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe(
-          'INSUFFICIENT_AVAILABLE_BALANCE'
-        )
-        expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
-      })
-
-      it('permits a general raise up to the December-reserved cap', async () => {
-        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
-          exporterAccreditation
-        )
-        ledgerRepository = seedStream({
-          amount: 500,
-          availableAmount: 500,
-          decemberAmount: 450,
-          decemberAvailableAmount: 450
-        })
-
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          ...asOperator(),
-          payload: { ...validPayload, tonnage: 50, isDecemberWaste: false }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
-      })
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Cannot create a PRN on a cancelled accreditation'
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
     })
 
-    describe('authentication', () => {
-      it('returns 401 when not authenticated', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          payload: validPayload
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    it('creates a PRN once the accreditation is approved again', async () => {
+      await useAccreditation({
+        statusHistory: [
+          ...cancelledHistory,
+          { status: 'approved', updatedAt: new Date('2026-04-01') }
+        ]
       })
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
-    describe('error handling', () => {
-      it('re-throws Boom errors from repository', async () => {
-        const Boom = await import('@hapi/boom')
-        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
-          Boom.default.notFound('Organisation not found')
-        )
+    it('creates a PRN when the accreditation is suspended', async () => {
+      await useAccreditation({ statusHistory: granted('suspended') })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+  })
+
+  describe('relevant year', () => {
+    it('should create a PRN on the last instant of 31 January after the year', async () => {
+      vi.setSystemTime(new Date('2027-01-31T23:59:59.999Z'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('should return 409 and create no PRN once the year has closed', async () => {
+      vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe('RELEVANT_YEAR_CLOSED')
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('waste balance validation', () => {
+    it('returns 409 and creates no draft when tonnage exceeds the available balance', async () => {
+      ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
+
+      const response = await createPrn({ ...validPayload, tonnage: 51 })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(response.payload).toContain('Insufficient available waste balance')
+      expect(JSON.parse(response.payload).code).toBe(
+        'INSUFFICIENT_AVAILABLE_BALANCE'
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('creates the draft when tonnage equals the available balance', async () => {
+      ledgerRepository = seedStream({ amount: 100, availableAmount: 100 })
+
+      const response = await createPrn({ ...validPayload, tonnage: 100 })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(packagingRecyclingNotesRepository.create).toHaveBeenCalled()
+    })
+
+    it('returns 409 for an exporter (PERN) journey when tonnage exceeds the balance', async () => {
+      await useAccreditation(exporterAccreditation)
+      ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
+
+      const response = await createPrn({ ...validPayload, tonnage: 51 })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(response.payload).toContain('Insufficient available waste balance')
+      expect(JSON.parse(response.payload).code).toBe(
+        'INSUFFICIENT_AVAILABLE_BALANCE'
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('returns 409 when the accreditation has no credited balance yet', async () => {
+      // A newly-approved accreditation that has submitted no summary logs has
+      // no ledger, so its available balance is zero and any tonnage exceeds it.
+      ledgerRepository = seedStream(null)
+
+      const response = await createPrn({ ...validPayload, tonnage: 1 })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('reads the current ledger on each submission, rejecting after the balance drops', async () => {
+      // Seeded balance is 500 available (beforeEach); 200 is comfortably within it.
+      const first = await createPrn({ ...validPayload, tonnage: 200 })
+      expect(first.statusCode).toBe(StatusCodes.CREATED)
+
+      // A competing PRN ringfences 400 on the same ledger, dropping available
+      // to 100 — the route must re-read this, not the balance it first saw.
+      await ledgerRepository.appendEvents([
+        buildPrnCreatedEvent({
+          organisationId,
+          registrationId,
+          accreditationId,
+          number: 2,
+          payload: { prnId: 'competing-prn', amount: 400 },
+          openingBalance: { amount: 500, availableAmount: 500 },
+          closingBalance: { amount: 500, availableAmount: 100 }
         })
+      ])
 
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      const second = await createPrn({ ...validPayload, tonnage: 200 })
+      expect(second.statusCode).toBe(StatusCodes.CONFLICT)
+    })
+  })
+
+  describe('december waste validation', () => {
+    const decemberBalance = {
+      amount: 500,
+      availableAmount: 500,
+      decemberAmount: 300,
+      decemberAvailableAmount: 300
+    }
+
+    it('returns 409 and creates no draft when the window is closed, even for an output reprocessor', async () => {
+      vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
+
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: true
       })
 
-      it('returns 500 for unexpected errors', async () => {
-        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
-          new Error('Database connection failed')
-        )
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe(
+        DECEMBER_WASTE_NOT_DECLARABLE_CODE
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asOperator(),
-          payload: validPayload
-        })
+    it('creates the draft for an input reprocessor declaring December inside the window', async () => {
+      vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+      await useAccreditation({ reprocessingType: REPROCESSING_TYPE.INPUT })
+      ledgerRepository = seedStream(decemberBalance)
 
-        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: true
       })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
+    })
+
+    it('creates the draft for an exporter declaring December inside the window', async () => {
+      vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+      await useAccreditation(exporterAccreditation)
+      ledgerRepository = seedStream(decemberBalance)
+
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: true
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      expect(JSON.parse(response.payload).isDecemberWaste).toBe(true)
+    })
+
+    it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
+      vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
+      await useAccreditation(exporterAccreditation)
+
+      const response = await createPrn({
+        ...validPayload,
+        isDecemberWaste: false
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+  })
+
+  describe('December pool routing at the create pre-check', () => {
+    beforeEach(async () => {
+      await useAccreditation(exporterAccreditation)
+    })
+
+    it('returns 409 when an exporter December raise exceeds the December pool, even when the total balance covers it', async () => {
+      vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
+      ledgerRepository = seedStream({
+        amount: 500,
+        availableAmount: 500,
+        decemberAmount: 50,
+        decemberAvailableAmount: 50
+      })
+
+      const response = await createPrn({
+        ...validPayload,
+        tonnage: 100,
+        isDecemberWaste: true
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe(
+        'INSUFFICIENT_AVAILABLE_BALANCE'
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('reserves the December pool from a general raise, refusing above total minus December', async () => {
+      // available 500, December reserve 450 -> general cap 50
+      ledgerRepository = seedStream({
+        amount: 500,
+        availableAmount: 500,
+        decemberAmount: 450,
+        decemberAvailableAmount: 450
+      })
+
+      const response = await createPrn({
+        ...validPayload,
+        tonnage: 100,
+        isDecemberWaste: false
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe(
+        'INSUFFICIENT_AVAILABLE_BALANCE'
+      )
+      expect(packagingRecyclingNotesRepository.create).not.toHaveBeenCalled()
+    })
+
+    it('permits a general raise up to the December-reserved cap', async () => {
+      ledgerRepository = seedStream({
+        amount: 500,
+        availableAmount: 500,
+        decemberAmount: 450,
+        decemberAvailableAmount: 450
+      })
+
+      const response = await createPrn({
+        ...validPayload,
+        tonnage: 50,
+        isDecemberWaste: false
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+  })
+
+  describe('authentication', () => {
+    it('returns 401 when not authenticated', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url,
+        payload: validPayload
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+  })
+
+  describe('error handling', () => {
+    it('re-throws Boom errors from repository', async () => {
+      createSpy.mockRejectedValueOnce(Boom.notFound('Organisation not found'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 500 for unexpected errors', async () => {
+      createSpy.mockRejectedValueOnce(new Error('Database connection failed'))
+
+      const response = await createPrn()
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
   })
 })

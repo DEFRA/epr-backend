@@ -8,6 +8,7 @@ import { projectSummaryLogRowState } from '#waste-records/application/project-su
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { ledgerIdFor } from './ledger-id.js'
 
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {PeriodicReport, Report, ReportPerPeriod} from '#reports/repository/port.js' */
@@ -101,7 +102,7 @@ const aggregatePeriodFigures = (
 /**
  * sourceSummaryLogId is undefined when the report records no source at all.
  *
- * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId?: string | null }} Baseline
+ * @typedef {{ reportId: string, submissionNumber: number, sourceSummaryLogId?: SummaryLogFileId | null }} Baseline
  * @typedef {{ baseline: Baseline, changedFields: string[] } | { baseline: Baseline, cannotCompare: string }} Comparison
  */
 
@@ -114,7 +115,7 @@ const aggregatePeriodFigures = (
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @returns {Promise<FiguresContext>}
  */
-export const buildFiguresContext = async ({
+const buildFiguresContext = async ({
   registration,
   newHeadRowStates,
   overseasSitesRepository,
@@ -141,7 +142,7 @@ export const buildFiguresContext = async ({
  * @param {FiguresContext} params.context
  * @returns {Promise<Comparison>}
  */
-export const compareSubmittedReport = async ({ period, report, context }) => {
+const compareSubmittedReport = async ({ period, report, context }) => {
   const baseline = {
     reportId: report.id,
     submissionNumber: report.submissionNumber
@@ -308,11 +309,10 @@ const computePeriodsRequiringResubmission = async ({
  * A failure propagates so the queue retries the validation rather than
  * guessing a verdict.
  *
- * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId' | 'logger'> & {
+ * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
- *   summaryLog: SubmittedSummaryLog,
- *   gate: { enabled: boolean, logger: TypedLogger }
+ *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
  */
@@ -320,24 +320,15 @@ export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
   summaryLog,
-  gate,
   ...params
 }) => {
   if (!loadsByReportingPeriod) {
     return null
   }
-  // Stored rather than omitted so submit and the frontend act on the same set.
-  if (!gate.enabled) {
-    return {
-      ...loadsByReportingPeriod,
-      periodsRequiringResubmission: loadsByReportingPeriod.closedPeriods
-    }
-  }
 
   const periodsRequiringResubmission =
     await computePeriodsRequiringResubmission({
       ...params,
-      logger: gate.logger,
       closedPeriods: loadsByReportingPeriod.closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),

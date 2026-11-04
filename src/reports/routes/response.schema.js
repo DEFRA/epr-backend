@@ -42,11 +42,24 @@ const reportingPeriodSchema = Joi.object({
   report: reportListItemSchema.allow(null).required()
 })
 
-export const reportsCalendarResponseSchema = Joi.object({
-  cadence: Joi.string()
-    .valid(...Object.values(CADENCE))
-    .required(),
-  reportingPeriods: Joi.array().items(reportingPeriodSchema).required()
+const yearCalendarPeriodSchema = (cadence) =>
+  reportingPeriodSchema.keys({
+    cadence: Joi.string().valid(cadence).required()
+  })
+
+export const reportsYearCalendarResponseSchema = Joi.object({
+  year: Joi.number().integer().required(),
+  registeredOnly: Joi.object({
+    reportingPeriods: Joi.array()
+      .items(yearCalendarPeriodSchema(CADENCE.quarterly))
+      .required()
+  }),
+  accredited: Joi.object({
+    accreditationNumber: Joi.string().required(),
+    reportingPeriods: Joi.array()
+      .items(yearCalendarPeriodSchema(CADENCE.monthly))
+      .required()
+  })
 })
 
 /**

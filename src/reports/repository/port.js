@@ -2,6 +2,9 @@
  * @typedef {import('#reports/domain/report-status.js').ReportStatus} ReportStatus
  */
 
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+
 /**
  * @typedef {typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON[keyof typeof import('#reports/domain/resubmission.js').RESUBMISSION_INELIGIBLE_REASON]} ResubmissionIneligibleReason
  */
@@ -81,11 +84,11 @@
 
 /**
  * Provenance of a report: the summary log it was last (re)built from.
- * @typedef {{ summaryLogId: string | null, lastUploadedAt: string | null }} ReportSource
+ * @typedef {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string | null }} ReportSource
  */
 
 /**
- * @typedef {{ uploadedAt: string, summaryLogId: string }} StaleSummaryLogChanged
+ * @typedef {{ uploadedAt: string, summaryLogId: SummaryLogFileId }} StaleSummaryLogChanged
  */
 
 /**
@@ -103,7 +106,7 @@
  */
 
 /**
- * @typedef {{ uploadedAt: string, summaryLogId: string }} ResubmissionClosedPeriodRestated
+ * @typedef {{ uploadedAt: string, summaryLogId: SummaryLogFileId }} ResubmissionClosedPeriodRestated
  */
 
 /**
@@ -125,7 +128,7 @@
  *
  * @typedef {Object} MarkReportStaleResult
  * @property {string} reportId
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  * @property {number} submissionNumber
@@ -137,7 +140,7 @@
  * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {string} prnId
@@ -149,7 +152,7 @@
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   summaryLogId: string,
+ *   summaryLogId: SummaryLogFileId,
  *   uploadedAt: string,
  *   periods: PeriodRef[]
  * }} MarkSubmittedReportsRequiringResubmissionParams
@@ -161,7 +164,7 @@
  * Contains the fields needed to audit the resubmission-required transition.
  * @typedef {{
  *   reportId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -178,7 +181,7 @@
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -192,7 +195,7 @@
  * {@link MarkSubmittedReportRequiringResubmissionResult}.
  * @typedef {{
  *   reportId: string,
- *   year: number,
+ *   year: Year,
  *   cadence: string,
  *   period: number,
  *   submissionNumber: number,
@@ -208,7 +211,10 @@
  * @property {number} submissionNumber
  * @property {string} organisationId
  * @property {string} registrationId
- * @property {number} year
+ * @property {OrganisationNumber} [organisationNumber]
+ * @property {RegistrationNumber} [registrationNumber]
+ * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD)
@@ -297,7 +303,7 @@
  * @typedef {Object} ReportPerPeriodKey
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence
  * @property {number} period
  */
@@ -310,7 +316,7 @@
  * @typedef {Object} PeriodicReport
  * @property {string} organisationId
  * @property {string} registrationId
- * @property {number} year
+ * @property {Year} year
  * @property {{ monthly?: PeriodicReportSlots, quarterly?: PeriodicReportSlots }} reports
  */
 
@@ -318,7 +324,10 @@
  * @typedef {Object} CreateReportParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {OrganisationNumber} [organisationNumber]
+ * @property {RegistrationNumber} [registrationNumber]
+ * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
@@ -337,6 +346,12 @@
  * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
  * @property {ReportSource} source
+ */
+
+/**
+ * The numbers a report stores beside its organisation, registration and
+ * accreditation ids.
+ * @typedef {Pick<Report, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} ReportNumbers
  */
 
 /**
@@ -361,7 +376,7 @@
  * @typedef {Object} DeleteReportParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {number} year
+ * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {number} [submissionNumber]
@@ -376,7 +391,7 @@
 
 /**
  * @typedef {Object} FindPeriodicReportsForYearParams
- * @property {number} year - the reporting year
+ * @property {Year} year - the reporting year
  */
 
 /**
@@ -391,7 +406,7 @@
  *   The periodic reports of every org/registration for one reporting year, shaped
  *   as findAllPeriodicReports shapes them.
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
+ * @property {(organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.
@@ -404,7 +419,7 @@
  *   exists for the period).
  * @property {(params: MarkSubmittedReportsRequiringResubmissionParams) => Promise<MarkSubmittedReportRequiringResubmissionResult[]>} markSubmittedReportsRequiringResubmission
  *   For each given period, flags the latest submitted report as requiring resubmission,
- *   skipping any report already flagged from `summaryLogId` or built from it.
+ *   skipping any report already flagged from `summaryLogId`.
  *   Returns the per-report details for auditing.
  * @property {(params: MarkSubmittedReportRequiringResubmissionByOperatorParams) => Promise<MarkSubmittedReportRequiringResubmissionByOperatorFlaggedResult | null>} markSubmittedReportRequiringResubmissionByOperator
  *   Flags the exact report identified by `submissionNumber` as requiring
@@ -416,6 +431,13 @@
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
  *   read from the denormalised `status.submitted` slot. Used to detect a period
  *   closing during the summary log validate-to-submit window.
+ * @property {() => Promise<string[]>} findIdsWithoutNumbers
+ *   The ids of reports lacking the organisation, registration or accreditation
+ *   number. A registered-only report's null accreditation number is held.
+ * @property {(reportId: string, numbers: ReportNumbers) => Promise<void>} assignNumbers
+ *   Adds numbers to a report stored without them, refusing to overwrite a
+ *   number it already holds. Leaves the version alone, so a user editing the
+ *   report can still save it.
  */
 
 /**
@@ -424,6 +446,7 @@
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */

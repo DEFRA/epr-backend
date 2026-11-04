@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   DEFAULT_ORG_ID,
@@ -14,9 +15,11 @@ import {
 } from '#reports/domain/report-status.js'
 import {
   PREVIEW_STATUS,
+  expandableReportResourceSchema,
   reportResourceSchema,
   toReportResource
 } from './report-resource.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { PreviewBody } from './report-resource.js' */
 
@@ -40,7 +43,7 @@ const NOTHING_SENT = {
   finalDestinations: []
 }
 const SUBMITTED_SOURCE = {
-  summaryLogId: 'sl-1',
+  summaryLogId: toSummaryLogFileId('sl-1'),
   lastUploadedAt: '2026-04-01T21:22:28.351Z'
 }
 const CREATOR = { name: 'Test User', position: 'Officer' }
@@ -89,7 +92,7 @@ const createInProgress = async (overrides = {}) => {
 const preview = (overrides = {}) => ({
   operatorCategory: 'REPROCESSOR',
   cadence: 'quarterly',
-  year: 2026,
+  year: toYear(2026),
   period: 2,
   startDate: calendarDate('2026-04-01'),
   endDate: calendarDate('2026-06-30'),
@@ -415,7 +418,7 @@ describe('toReportResource', () => {
           await repository.markActiveReportsStaleForSummaryLog(
             DEFAULT_ORG_ID,
             DEFAULT_REG_ID,
-            'sl-2',
+            toSummaryLogFileId('sl-2'),
             '2026-05-01T00:00:00.000Z'
           )
         }
@@ -483,7 +486,7 @@ describe('toReportResource', () => {
           await repository.markSubmittedReportsRequiringResubmission({
             organisationId: DEFAULT_ORG_ID,
             registrationId: DEFAULT_REG_ID,
-            summaryLogId: 'sl-2',
+            summaryLogId: toSummaryLogFileId('sl-2'),
             uploadedAt: '2026-05-01T00:00:00.000Z',
             periods: [periodRef]
           })
@@ -624,7 +627,7 @@ describe('reportResourceSchema', () => {
     await repository.markActiveReportsStaleForSummaryLog(
       DEFAULT_ORG_ID,
       DEFAULT_REG_ID,
-      'sl-2',
+      toSummaryLogFileId('sl-2'),
       '2026-05-01T00:00:00.000Z'
     )
     const resource = toReportResource(await bodyOf(repository, id), {
@@ -649,6 +652,33 @@ describe('reportResourceSchema', () => {
   it('rejects a body with a key it does not list', () => {
     expect(
       reportResourceSchema.validate({ ...servedPreview, id: 'report-1' }).error
+    ).toBeDefined()
+  })
+
+  it.each(['id', 'organisationId', 'registrationId'])(
+    'rejects detail carrying the database id %s',
+    (key) => {
+      expect(
+        expandableReportResourceSchema.validate({
+          ...servedPreview,
+          detail: { [key]: 'db-id' }
+        }).error
+      ).toBeDefined()
+    }
+  )
+
+  it('accepts detail of any other shape', () => {
+    expect(
+      expandableReportResourceSchema.validate({
+        ...servedPreview,
+        detail: { schemaVersion: 1, status: { history: [] } }
+      }).error
+    ).toBeUndefined()
+  })
+
+  it('rejects detail on a resource that is not a read', () => {
+    expect(
+      reportResourceSchema.validate({ ...servedPreview, detail: {} }).error
     ).toBeDefined()
   })
 

@@ -8,10 +8,7 @@ import {
 } from './validation.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { FindAllParams, OverseasSite, OverseasSitesRepositoryFactory } from './port.js' */
-
-const escapeRegex = (string) =>
-  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+/** @import { OverseasSite, OverseasSitesRepositoryFactory } from './port.js' */
 
 const COLLECTION_NAME = 'overseas-sites'
 
@@ -76,29 +73,6 @@ const performCreate = async (db, site) => {
     ...validated,
     id: result.insertedId.toHexString()
   }
-}
-
-/**
- * @param {Db} db
- * @param {string} id
- * @param {Partial<Omit<OverseasSite, 'id' | 'createdAt'>>} updates
- * @returns {Promise<OverseasSite | null>}
- */
-const performUpdate = async (db, id, updates) => {
-  const validatedId = validateOverseasSiteId(id)
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .findOneAndUpdate(
-      { _id: ObjectId.createFromHexString(validatedId) },
-      { $set: updates },
-      { returnDocument: 'after' }
-    )
-
-  if (!result) {
-    return null
-  }
-
-  return validateOverseasSiteRead({ ...result, id: result._id.toHexString() })
 }
 
 /**
@@ -182,22 +156,10 @@ const performFindByIds = async (db, ids) => {
 
 /**
  * @param {Db} db
- * @param {FindAllParams} [params]
  * @returns {Promise<OverseasSite[]>}
  */
-const performFindAll = async (db, params) => {
-  /** @type {import('mongodb').Filter<import('mongodb').Document>} */
-  const filter = {}
-
-  if (params?.country) {
-    filter.country = params.country
-  }
-
-  if (params?.name) {
-    filter.name = { $regex: escapeRegex(params.name), $options: 'i' }
-  }
-
-  const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
+const performFindAll = async (db) => {
+  const docs = await db.collection(COLLECTION_NAME).find({}).toArray()
 
   return docs.map((doc) =>
     validateOverseasSiteRead({ ...doc, id: doc._id.toHexString() })
@@ -213,11 +175,10 @@ export const createOverseasSitesRepository = async (db) => {
 
   return () => ({
     create: (site) => performCreate(db, site),
-    findAll: (params) => performFindAll(db, params),
+    findAll: () => performFindAll(db),
     findById: (id) => performFindById(db, id),
     findByIds: (ids) => performFindByIds(db, ids),
     findByProperties: (properties) => performFindByProperties(db, properties),
-    remove: (id) => performRemove(db, id),
-    update: (id, updates) => performUpdate(db, id, updates)
+    remove: (id) => performRemove(db, id)
   })
 }

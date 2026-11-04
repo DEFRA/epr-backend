@@ -1,9 +1,10 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
 import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -20,6 +21,7 @@ import {
   setupAuthContext
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from './test-helpers.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -34,6 +36,20 @@ const prnNumber = 'ER2600001'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 const organisationId = 'org-123'
+
+const { buildOrganisationHolding } = createOrganisationBuilders()
+
+/**
+ * The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
+ * repository requires, so the organisation holding the ledger is handed back
+ * as it stands.
+ *
+ * @param {{ registrationId: string, accreditationId: string, organisationId: string }} ledgerIds
+ */
+const organisationsRepositoryHolding = (ledgerIds) => {
+  const organisation = buildOrganisationHolding(ledgerIds)
+  return () => ({ findById: async () => organisation })
+}
 const externalApiClientId = randomUUID()
 const rpd = { id: externalApiClientId, name: 'RPD' }
 
@@ -47,9 +63,7 @@ const authHeaders = {
  * It carries no `prnId`, so the read-side fold leaves the seeded PRN untouched
  * while `findBalance` still resolves a balance for the status-only append.
  */
-const openingBalanceEvent = (
-  ledgerIds = { registrationId, accreditationId, organisationId }
-) =>
+const openingBalanceEvent = (ledgerIds) =>
   buildLedgerEvent({
     ...ledgerIds,
     number: 1
@@ -72,7 +86,13 @@ let reportsRepository
  * @param {Map<string, object>} [options.reports]
  * @param {{ registrationId: string, accreditationId: string, organisationId: string }} [options.ledgerIds]
  */
-const startServer = async (prn, { reports = new Map(), ledgerIds } = {}) => {
+const startServer = async (
+  prn,
+  {
+    reports = new Map(),
+    ledgerIds = { registrationId, accreditationId, organisationId }
+  } = {}
+) => {
   ledgerRepository = createInMemoryLedgerRepository([
     partialMock(openingBalanceEvent(ledgerIds))
   ])()
@@ -92,7 +112,7 @@ const startServer = async (prn, { reports = new Map(), ledgerIds } = {}) => {
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: () => ({}),
+      organisationsRepository: organisationsRepositoryHolding(ledgerIds),
       reportsRepository: reportsRepositoryFactory
     }
   })
@@ -112,14 +132,8 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   prnNumber,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
-  accreditation: {
-    id: accreditationId,
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: MATERIAL.PLASTIC,
-    submittedToRegulator: REGULATOR.EA
-  },
-  obligationYear: 2026,
+  accreditation: buildAccreditationSnapshot({ id: accreditationId }),
+  obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
   isExport: false,
@@ -338,7 +352,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     // No in-memory adapter can simulate an infrastructure failure, so an
     // unexpected throw is injected directly to drive the handler's 500 mapping.
     ledgerRepository = createInMemoryLedgerRepository([
-      partialMock(openingBalanceEvent())
+      partialMock(
+        openingBalanceEvent({ registrationId, accreditationId, organisationId })
+      )
     ])()
     server = await createTestServer({
       config: {

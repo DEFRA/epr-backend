@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
-import { describe, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { it } from '#vite/fixtures/msw.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   createPrn as decideCreatePrn,
@@ -18,6 +18,7 @@ import {
 
 import {
   asOperator,
+  accreditationUrl,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -29,6 +30,7 @@ import {
   createExporterRowValues,
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.
@@ -39,13 +41,20 @@ import {
  * Per PAE-1003: available balance = total credits - PRN deductions
  */
 describe('Waste balance arithmetic integration tests', () => {
-  it.beforeEach(({ msw }) => {
-    msw.use(
+  const { getServer } = setupAuthContext()
+
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2025-10-01T12:00:00.000Z'))
+    getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const sharedMeta = createWasteBalanceMeta('EXPORTER')
@@ -74,7 +83,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(organisationId, registrationId, summaryLogId),
+      url: buildPostUrl(summaryLogId),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -84,26 +93,21 @@ describe('Waste balance arithmetic integration tests', () => {
       )
     })
 
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     return server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
   }
 
   const submitAndPoll = async (env, summaryLogId) => {
-    const { server, organisationId, registrationId } = env
+    const { server } = env
 
     await server.inject({
       method: 'POST',
-      url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+      url: buildSubmitUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -116,7 +120,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
       const checkResponse = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -138,6 +142,17 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   /**
+   * The numbers the stream's events are written with, from the organisation
+   * record, as a real writer reads them.
+   */
+  const ledgerNumbers = async (env) =>
+    requiredNumbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      env,
+      'ledger events'
+    )
+
+  /**
    * Debit the total balance straight on the stream, standing in for a competing
    * writer issuing a PRN these tests do not otherwise model. A real issuance
    * rules on the PRN's own status first; there is no such PRN here, so the
@@ -157,7 +172,7 @@ describe('Waste balance arithmetic integration tests', () => {
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events)
+    return append(decision.events, await ledgerNumbers(env))
   }
 
   /**
@@ -180,15 +195,15 @@ describe('Waste balance arithmetic integration tests', () => {
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events)
+    return append(decision.events, await ledgerNumbers(env))
   }
 
   const createPrn = async (env, tonnage) => {
-    const { server, organisationId, registrationId, accreditationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+      url: `${accreditationUrl}/packaging-recycling-notes`,
       ...asOperator(),
       payload: {
         issuedToOrganisation: {
@@ -204,11 +219,11 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   const transitionPrnStatus = async (env, prnId, status) => {
-    const { server, organisationId, registrationId, accreditationId } = env
+    const { server } = env
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+      url: `${accreditationUrl}/packaging-recycling-notes/${prnId}/status`,
       ...asOperator(),
       payload: { status }
     })

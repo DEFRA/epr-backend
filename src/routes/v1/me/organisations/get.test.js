@@ -1,17 +1,28 @@
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
 import { asUnscopedAdminUser } from '#test/inject-auth.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
   COMPANY_2_ID,
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
-import { it } from '#vite/fixtures/server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
+import { describe, expect, it } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe('GET /v1/me/organisations', () => {
+  setupAuthContext()
+
   let email
   let token
   beforeEach(() => {
@@ -21,9 +32,13 @@ describe('GET /v1/me/organisations', () => {
     })
   })
 
-  it('returns 403 when credentials lack organisationLinkedRead scope', async ({
-    server
-  }) => {
+  it('returns 403 when credentials lack organisationLinkedRead scope', async () => {
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: createInMemoryOrganisationsRepository([])
+      }
+    })
+
     const response = await server.inject({
       method: 'GET',
       url: '/v1/me/organisations',
@@ -33,10 +48,14 @@ describe('GET /v1/me/organisations', () => {
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
 
-  it('should return current, linked, and unlinked organisations for the user', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should return current, linked, and unlinked organisations for the user', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     const linkedAt = new Date().toISOString()
 
@@ -122,10 +141,14 @@ describe('GET /v1/me/organisations', () => {
     })
   })
 
-  it('should return null for linked when user has no linked organisation', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should return null for linked when user has no linked organisation', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     // Only unlinked organisations (no linkedDefraOrganisation)
     await buildApprovedOrg(organisationsRepository, {
@@ -167,10 +190,14 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked).toHaveLength(2)
   })
 
-  it('should return empty unlinked array when user only has linked organisation', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should return empty unlinked array when user only has linked organisation', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     const linkedAt = new Date().toISOString()
 
@@ -209,9 +236,16 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked).toEqual([])
   })
 
-  it('should return empty arrays when user has no organisations', async ({
-    server
-  }) => {
+  it('should return empty arrays when user has no organisations', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
+
+    // No organisations inserted
+
     const response = await server.inject({
       method: 'GET',
       url: '/v1/me/organisations',
@@ -231,10 +265,14 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked).toEqual([])
   })
 
-  it('should exclude organisations where user is not an initial user', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should exclude organisations where user is not an initial user', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     // Organisation where user is initial user (should be included)
     const initialUserOrg = await buildApprovedOrg(organisationsRepository, {
@@ -274,10 +312,14 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked[0].id).toBe(initialUserOrg.id)
   })
 
-  it('should exclude organisations already linked to other Defra organisations', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should exclude organisations already linked to other Defra organisations', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     const linkedAt = new Date().toISOString()
 
@@ -328,10 +370,14 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked[0].id).toBe(unlinkedOrg.id)
   })
 
-  it('should exclude organisations that are not approved', async ({
-    server
-  }) => {
-    const { organisationsRepository } = server.app
+  it('should exclude organisations that are not approved', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
 
     await buildApprovedOrg(organisationsRepository, {
       users: [
@@ -370,9 +416,14 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.unlinked).toHaveLength(1)
   })
 
-  it('should return 403 when user has no organisation in their token', async ({
-    server
-  }) => {
+  it('should return 403 when user has no organisation in their token', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
+
     // Generate token without relationships/organisations
     const tokenWithoutOrg = generateValidTokenWith({
       email,
@@ -402,9 +453,14 @@ describe('GET /v1/me/organisations', () => {
     })
   })
 
-  it('should return 403 and log org IDs when user has relationships but no currentRelationshipId', async ({
-    server
-  }) => {
+  it('should return 403 and log org IDs when user has relationships but no currentRelationshipId', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
+
     const orgId1 = randomUUID()
     const orgId2 = randomUUID()
 
@@ -440,9 +496,14 @@ describe('GET /v1/me/organisations', () => {
     })
   })
 
-  it('should return 403 and log org IDs when currentRelationshipId does not match any relationship', async ({
-    server
-  }) => {
+  it('should return 403 and log org IDs when currentRelationshipId does not match any relationship', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
+    })
+
     const orgId1 = randomUUID()
     const orgId2 = randomUUID()
     const invalidRelId = randomUUID()
@@ -481,9 +542,18 @@ describe('GET /v1/me/organisations', () => {
   })
 
   describe('system log auditing', () => {
-    it('should persist a system log when the endpoint is called', async ({
-      server
-    }) => {
+    it('should persist a system log when the endpoint is called', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        }
+      })
+
       const response = await server.inject({
         method: 'GET',
         url: '/v1/me/organisations',
@@ -492,16 +562,25 @@ describe('GET /v1/me/organisations', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
 
-      const { systemLogs } = await server.app.systemLogsRepository.find({
+      const { systemLogs } = await systemLogsRepository.find({
         subCategory: 'defra-id-reconciliation',
         limit: 10
       })
       expect(systemLogs).toHaveLength(1)
     })
 
-    it('should persist a token-validation-failed log when the token has no current organisation', async ({
-      server
-    }) => {
+    it('should persist a token-validation-failed log when the token has no current organisation', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        }
+      })
+
       const orgId1 = randomUUID()
       const orgId2 = randomUUID()
 
@@ -522,7 +601,7 @@ describe('GET /v1/me/organisations', () => {
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
 
-      const { systemLogs } = await server.app.systemLogsRepository.find({
+      const { systemLogs } = await systemLogsRepository.find({
         subCategory: 'defra-id-reconciliation',
         limit: 10
       })
@@ -543,50 +622,70 @@ describe('GET /v1/me/organisations', () => {
       })
     })
 
-    describe('when the audit call throws', () => {
-      it.override({
+    it('should still return 403 when the token is malformed and the audit call also throws', async () => {
+      const throwingSystemLogsRepository = {
+        async insert() {
+          throw new Error('DB unavailable')
+        },
+        async find() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        },
+        async findByOrganisationId() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        }
+      }
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const server = await createTestServer({
         repositories: {
-          systemLogsRepository: {
-            async insert() {
-              throw new Error('DB unavailable')
-            },
-            async find() {
-              return { systemLogs: [], hasMore: false, nextCursor: null }
-            },
-            async findByOrganisationId() {
-              return { systemLogs: [], hasMore: false, nextCursor: null }
-            }
-          }
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: throwingSystemLogsRepository
         }
       })
 
-      it('should still return 403 when the token is malformed', async ({
-        server
-      }) => {
-        const tokenWithNoCurrentOrg = generateValidTokenWith({
-          email,
-          relationships: undefined,
-          currentRelationshipId: undefined
-        })
-
-        const response = await server.inject({
-          method: 'GET',
-          url: '/v1/me/organisations',
-          headers: { Authorization: `Bearer ${tokenWithNoCurrentOrg}` }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      const tokenWithNoCurrentOrg = generateValidTokenWith({
+        email,
+        relationships: undefined,
+        currentRelationshipId: undefined
       })
 
-      it('should return 200', async ({ server }) => {
-        const response = await server.inject({
-          method: 'GET',
-          url: '/v1/me/organisations',
-          headers: { Authorization: `Bearer ${token}` }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${tokenWithNoCurrentOrg}` }
       })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    it('should return 200 even when the audit call throws', async () => {
+      const throwingSystemLogsRepository = {
+        async insert() {
+          throw new Error('DB unavailable')
+        },
+        async find() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        },
+        async findByOrganisationId() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        }
+      }
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: throwingSystemLogsRepository
+        }
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
 })

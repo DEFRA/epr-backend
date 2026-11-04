@@ -73,8 +73,8 @@
  */
 
 /**
- * What a ledger read answers with. Mirrors `wasteBalanceLedgerResponseSchema`
- * in
+ * What a ledger read answers with. Its events mirror
+ * `naturalKeyLedgerResponseSchema` in
  * `src/routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js`
  * — keep the two in sync; the schema is the runtime gate, these typedefs are
  * the check-time gate.

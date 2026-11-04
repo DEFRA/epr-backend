@@ -15,19 +15,19 @@ import {
   AccreditationStatusError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
+import { closedYearConflictFor } from '#packaging-recycling-notes/domain/closed-year.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { HapiRequest, TypedLogger } from '#common/hapi-types.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
  */
 
-export const packagingRecyclingNotesUpdateStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
+const UPDATE_STATUS_FAILURE = 'Failure updating a PRN status'
 
 const statusValues = Object.values(PRN_STATUS)
 
@@ -54,21 +54,6 @@ const updateStatusPayloadSchema = Joi.object({
 })
 
 /**
- * Build response from updated PRN
- * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
- */
-const buildResponse = (prn) => ({
-  id: prn.id,
-  prnNumber: prn.prnNumber,
-  tonnage: prn.tonnage,
-  material: prn.accreditation?.material,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  obligationYear: prn.obligationYear,
-  status: prn.status.currentStatus,
-  updatedAt: prn.updatedAt
-})
-
-/**
  * Builds the acting user from request credentials, defaulting id/name when
  * absent and only carrying email when it's actually a string.
  * @param {HapiRequest['auth']} auth
@@ -85,10 +70,10 @@ const buildUser = (auth) => {
 /**
  * Maps a status-update failure to the HTTP error it should surface as.
  * @param {*} error
- * @param {string} path
+ * @param {string} id
  * @param {TypedLogger} logger
  */
-const mapUpdateStatusError = (error, path, logger) => {
+const mapUpdateStatusError = (error, id, logger) => {
   const conflict = writeConflictRefusal(error)
   if (conflict) {
     return conflict
@@ -96,6 +81,11 @@ const mapUpdateStatusError = (error, path, logger) => {
 
   if (error instanceof AccreditationStatusError) {
     return Boom.forbidden(error.message)
+  }
+
+  const closedYear = closedYearConflictFor(error, `prnId=${id}`)
+  if (closedYear) {
+    return closedYear
   }
 
   if (
@@ -111,32 +101,24 @@ const mapUpdateStatusError = (error, path, logger) => {
 
   logger.error({
     err: error,
-    message: `Failure on ${path}`,
+    message: UPDATE_STATUS_FAILURE,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
     }
   })
 
-  return Boom.badImplementation(`Failure on ${path}`)
+  return Boom.badImplementation(UPDATE_STATUS_FAILURE)
 }
 
-export const packagingRecyclingNotesUpdateStatus = {
-  method: 'POST',
-  path: packagingRecyclingNotesUpdateStatusPath,
-  options: {
-    auth: getAuthConfig([SCOPES.organisationWrite]),
-    tags: ['api'],
-    validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required(),
-        accreditationId: Joi.string().required(),
-        id: Joi.string().hex().length(24).required()
-      }),
-      payload: updateStatusPayloadSchema
-    }
-  },
+/**
+ * Moves a PRN to a new status and responds with the body that `respond`
+ * builds from the updated PRN.
+ *
+ * @param {(prn: PackagingRecyclingNote) => object} respond
+ */
+export const updatePrnStatusHandler =
+  (respond) =>
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -145,7 +127,7 @@ export const packagingRecyclingNotesUpdateStatus = {
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (request, h) => {
+  async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       ledgerRepository,
@@ -199,13 +181,19 @@ export const packagingRecyclingNotesUpdateStatus = {
         }
       })
 
-      return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
+      return h.response(respond(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
-      throw mapUpdateStatusError(
-        error,
-        packagingRecyclingNotesUpdateStatusPath,
-        logger
-      )
+      throw mapUpdateStatusError(error, id, logger)
+    }
+  }
+
+export const packagingRecyclingNotesUpdateStatus = {
+  method: 'POST',
+  options: {
+    auth: getAuthConfig([SCOPES.organisationWrite]),
+    tags: ['api'],
+    validate: {
+      payload: updateStatusPayloadSchema
     }
   }
 }

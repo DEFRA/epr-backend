@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
@@ -6,7 +7,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildCreateReportParams,
@@ -32,6 +33,13 @@ import { summaryLogRowStatesForRegistration } from '#waste-records/application/r
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 const mockRecordDecemberWasteRows = vi.fn()
 
@@ -85,7 +93,7 @@ const buildTestOrg = (organisationId, registrationId) => {
     registrations: [
       partialMock({
         id: registrationId,
-        registrationNumber: 'REG-123',
+        registrationNumber: toRegistrationNumber('REG-123'),
         status: 'approved',
         material: 'paper',
         wasteProcessingType: 'reprocessor',
@@ -98,7 +106,7 @@ const buildTestOrg = (organisationId, registrationId) => {
     accreditations: [
       partialMock({
         id: accreditationId,
-        accreditationNumber: 'ACC-123',
+        accreditationNumber: toAccreditationNumber('ACC-123'),
         material: 'paper',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
@@ -121,30 +129,33 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {string} [options.createdAt] - immutable creation timestamp of the log
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
+ * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
  */
 const setupSubmit = async ({
   reportsRepository,
   createdAt,
   data,
-  loadsByReportingPeriod
+  loadsByReportingPeriod,
+  accreditationId = 'acc-123'
 }) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const logger = createMockLogger()
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+  const organisation = buildTestOrg(organisationId, registrationId)
   const organisationsRepository = createInMemoryOrganisationsRepository([
-    buildTestOrg(organisationId, registrationId)
+    organisation
   ])()
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
-    accreditationId: 'acc-123',
+    accreditationId,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
-  const summaryLogId = `submit-${organisationId}`
+  const summaryLogId = toSummaryLogId(`submit-${organisationId}`)
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
   // Validation writes this artefact via update, not insert, so seed it the same way.
@@ -179,6 +190,8 @@ const setupSubmit = async ({
   return {
     deps,
     summaryLogId,
+    summaryLog,
+    organisation,
     organisationId,
     registrationId,
     summaryLogsRepository
@@ -290,8 +303,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 })
 
 describe('submitSummaryLog resubmission flag source', () => {
-  const january = { year: 2025, cadence: 'monthly', period: 1 }
-  const february = { year: 2025, cadence: 'monthly', period: 2 }
+  const january = { year: toYear(2025), cadence: 'monthly', period: 1 }
+  const february = { year: toYear(2025), cadence: 'monthly', period: 2 }
 
   /**
    * Submits a log over submitted January and February reports, through the
@@ -362,6 +375,38 @@ describe('submitSummaryLog resubmission flag source', () => {
   })
 })
 
+describe('submitSummaryLog stale flagging', () => {
+  it('leaves alone an active report already built from the summary log being submitted', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const { deps, summaryLogId, summaryLog, organisationId, registrationId } =
+      await setupSubmit({
+        reportsRepository,
+        createdAt: '2099-01-01T00:00:00.000Z'
+      })
+    const { id: reportId } = await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId,
+        registrationId,
+        source: {
+          summaryLogId: summaryLog.file.id,
+          lastUploadedAt: '2099-01-01T00:00:00.000Z'
+        }
+      })
+    )
+
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+      })
+    })
+
+    const report = await reportsRepository.findReportById(reportId)
+    expect(report.stale).toBeUndefined()
+  })
+})
+
 describe('submitSummaryLog December waste metric', () => {
   it('counts rows that fall in the accreditation-year December', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
@@ -399,4 +444,47 @@ describe('submitSummaryLog December waste metric', () => {
       1
     )
   })
+})
+
+describe('submitSummaryLog row-state numbers', () => {
+  it.each([
+    { accreditationId: 'acc-123', accreditationNumber: 'ACC-123' },
+    { accreditationId: null, accreditationNumber: null }
+  ])(
+    'stores the numbers from the organisation record on each row state, accreditation $accreditationId',
+    async ({ accreditationId, accreditationNumber }) => {
+      const {
+        deps,
+        summaryLogId,
+        summaryLog,
+        organisation,
+        organisationId,
+        registrationId
+      } = await setupSubmit({
+        reportsRepository: createInMemoryReportsRepository()(),
+        accreditationId
+      })
+
+      await submitSummaryLog(summaryLogId, deps)
+
+      const rowStates =
+        await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          organisationId,
+          registrationId,
+          summaryLog.file.id
+        )
+      expect(rowStates).toEqual([
+        expect.objectContaining({
+          organisationNumber: String(organisation.orgId),
+          registrationNumber: 'REG-123',
+          accreditationNumber
+        }),
+        expect.objectContaining({
+          organisationNumber: String(organisation.orgId),
+          registrationNumber: 'REG-123',
+          accreditationNumber
+        })
+      ])
+    }
+  )
 })

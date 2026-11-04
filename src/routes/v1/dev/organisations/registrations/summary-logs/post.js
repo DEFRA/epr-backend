@@ -12,6 +12,12 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+import {
+  numbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
@@ -27,8 +33,12 @@ import {
   summaryLogContentPayloadSchema
 } from './post.schema.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
@@ -109,7 +119,7 @@ const naming = (error, summaryLogId) => {
 
 /**
  * @typedef {HapiRequest<SummaryLogContentPayload> & SummaryLogHandlerSources & {
- *   params: { organisationId: string, registrationId: string, year: number },
+ *   params: { organisationId: string, registrationId: string, year: Year },
  *   systemLogsRepository: SystemLogsRepository
  * }} SubmitRequest
  */
@@ -119,8 +129,8 @@ const naming = (error, summaryLogId) => {
  * registration's latest submission.
  *
  * @param {SubmitRequest} request
- * @param {string} summaryLogId
- * @param {number} year
+ * @param {SummaryLogId} summaryLogId
+ * @param {Year} year
  * @param {string | null} accreditationId
  */
 const insertValidatingLog = async (
@@ -129,25 +139,30 @@ const insertValidatingLog = async (
   year,
   accreditationId
 ) => {
-  const { summaryLogsRepository } = request
+  const { summaryLogsRepository, organisationsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const latestSubmitted =
-    await summaryLogsRepository.findLatestSubmittedForOrgReg({
-      organisationId,
-      registrationId,
-      year,
-      accreditationId
-    })
-  await summaryLogsRepository.insert(summaryLogId, {
+  const { numbers } = numbersFor(
+    await organisationsRepository.findById(organisationId),
+    { registrationId, accreditationId }
+  )
+  /** @type {SummaryLog} */
+  const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
-    file: { id: summaryLogId, name: 'summary-log.json' },
+    file: { id: toSummaryLogFileId(randomUUID()), name: 'summary-log.json' },
     organisationId,
     registrationId,
     year,
     accreditationId,
+    ...numbers
+  }
+  const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
+    summaryLogKeyOf(summaryLog)
+  )
+  await summaryLogsRepository.insert(summaryLogId, {
+    ...summaryLog,
     validatedAgainstSummaryLogId: latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
   })
 }
@@ -176,8 +191,6 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     summaryLogsRepository,
     summaryLog: transition.summaryLog,
     summaryLogId,
-    organisationId,
-    registrationId,
     version: transition.version
   })
   if (isStale) {
@@ -209,7 +222,7 @@ export const devSummaryLogsSubmitPath =
  * summary log declares its own template, independent of the route's params.
  *
  * @param {SummaryLogContentPayload} payload
- * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @param {Registration} registration
  * @returns {ReturnType<typeof templateForRegistration>}
  */
 const templateFor = (payload, registration) =>
@@ -217,15 +230,15 @@ const templateFor = (payload, registration) =>
     ...registration,
     accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
       ? {
-          accreditationNumber: String(
-            payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+          accreditationNumber: toAccreditationNumber(
+            String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
           )
         }
       : null
   })
 
 /**
- * @param {import('#domain/organisations/registration.js').Registration} registration
+ * @param {Registration} registration
  * @returns {string | null}
  */
 const accreditationIdFor = (registration) => {
@@ -251,14 +264,14 @@ export const devSummaryLogsSubmit = {
   },
   /**
    * @param {SubmitRequest} request
-   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { summaryLogsRepository, organisationsRepository, payload, logger } =
       request
     const { organisationId, registrationId, year } = request.params
     const user = extractUser(request)
-    const summaryLogId = randomUUID()
+    const summaryLogId = toSummaryLogId(randomUUID())
 
     const registration = await organisationsRepository.findRegistrationById(
       organisationId,

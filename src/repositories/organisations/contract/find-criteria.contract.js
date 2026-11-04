@@ -1,27 +1,39 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrgWithCriteria, buildOrgWithName } from './test-data.js'
 
-const insertNamed = async (repository, names) => {
-  for (const name of names) {
-    await repository.insert(buildOrgWithName(name))
-  }
-}
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 const namesOf = (result) => result.items.map((o) => o.companyDetails.name)
 
 export const testFindWithCriteriaBehaviour = (it) => {
   describe('find', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrgWithCriteria']} */
+    let buildOrgWithCriteria
+    /** @type {OrganisationBuilders['buildOrgWithName']} */
+    let buildOrgWithName
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrgWithCriteria = organisationBuilders.buildOrgWithCriteria
+        buildOrgWithName = organisationBuilders.buildOrgWithName
       }
     )
+
+    /**
+     * @param {import('../port.js').OrganisationsRepository} repository
+     * @param {string[]} names
+     */
+    const insertNamed = async (repository, names) => {
+      for (const name of names) {
+        await repository.insert(buildOrgWithName(name))
+      }
+    }
 
     describe('empty collection', () => {
       it('returns items=[], totalItems=0, totalPages=0', async () => {
@@ -252,39 +264,20 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(result.totalItems).toBe(1)
       })
 
-      it('finds the organisation whose document id is the orgId criterion', async () => {
+      it("finds nothing for an organisation's document id", async () => {
         const result = await repository.find({
           orgId: holder.id,
           page: 1,
           pageSize: 50
         })
 
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
-      })
-
-      it('finds the organisation holding the registration id', async () => {
-        const result = await repository.find({
-          registrationId: holder.registrations[0].id,
-          page: 1,
-          pageSize: 50
-        })
-
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
+        expect(result.items).toEqual([])
+        expect(result.totalItems).toBe(0)
       })
 
       it('finds the organisation holding the registration number', async () => {
         const result = await repository.find({
           registrationNumber: 'REG001',
-          page: 1,
-          pageSize: 50
-        })
-
-        expect(namesOf(result)).toEqual(['Holder Ltd'])
-      })
-
-      it('finds the organisation holding the accreditation id', async () => {
-        const result = await repository.find({
-          accreditationId: holder.accreditations[0].id,
           page: 1,
           pageSize: 50
         })
@@ -343,7 +336,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(mismatched.items).toEqual([])
       })
 
-      it('returns no results for an orgId that is neither a number nor a document id', async () => {
+      it('returns no results for an orgId that is not a number', async () => {
         const result = await repository.find({
           orgId: 'not-an-id',
           page: 1,
@@ -402,9 +395,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
         const result = await repository.find({
           search: '',
           orgId: '',
-          registrationId: '',
           registrationNumber: '',
-          accreditationId: '',
           accreditationNumber: '',
           page: 1,
           pageSize: 50
@@ -416,9 +407,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
       it('treats undefined criteria as absent', async () => {
         const result = await repository.find({
           orgId: undefined,
-          registrationId: undefined,
           registrationNumber: undefined,
-          accreditationId: undefined,
           accreditationNumber: undefined,
           page: 1,
           pageSize: 50
@@ -429,13 +418,12 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it('counts and pages only the organisations matching a criterion', async () => {
         for (const name of ['Shared A', 'Shared B', 'Shared C']) {
-          await repository.insert(
-            buildOrgWithCriteria({ name, accreditationNumber: 'ACC777' })
-          )
+          await repository.insert(buildOrgWithCriteria({ name }))
         }
+        await repository.insert(buildOrgWithCriteria({ name: 'Other' }))
 
         const result = await repository.find({
-          accreditationNumber: 'ACC777',
+          search: 'Shared',
           page: 2,
           pageSize: 2
         })

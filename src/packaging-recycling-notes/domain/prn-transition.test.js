@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -25,7 +26,7 @@ import { buildAccreditation } from '#repositories/organisations/contract/test-da
  * @import {LedgerBalanceSnapshot} from '#waste-balances/repository/ledger-schema.js'
  */
 
-const ACCREDITATION_YEAR = 2026
+const ACCREDITATION_YEAR = toYear(2026)
 const NOW = new Date('2026-06-01T00:00:00.000Z')
 const UPDATED_BY = { id: 'user-1', name: 'A User' }
 const PAYLOAD = { prnId: 'prn-1', amount: 10 }
@@ -136,10 +137,10 @@ describe('a transition the state machine refuses', () => {
     expect(outcome).toEqual({ error: expect.any(UnauthorisedTransitionError) })
   })
 
-  it('returns the relevant-year refusal when the cancellation window has closed', () => {
+  it('returns the closed-year refusal once the year has closed', () => {
     const outcome = decide({
-      fromStatus: PRN_STATUS.ACCEPTED,
-      newStatus: PRN_STATUS.CANCELLED,
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       now: new Date('2027-02-01T00:00:00.000Z')
     })
 

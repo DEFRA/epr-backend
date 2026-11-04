@@ -10,9 +10,10 @@ import {
   PRN_COMMAND_REJECTION
 } from '#waste-balances/domain/commands.js'
 import { PRN_STATUS, transitionRefusal, issuanceRefusal } from './model.js'
-import { cancellationRefusal } from './cancellation.js'
+import { closedYearRefusal } from './closed-year.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import {PrnStatus, PrnActor} from './model.js'
  * @import {LedgerBalanceSnapshot, LedgerEventKind, PrnAcceptedPayload} from '#waste-balances/repository/ledger-schema.js'
  * @import {BalanceEvent, PrnCommandRejection, PrnDecision} from '#waste-balances/domain/commands.js'
@@ -169,7 +170,7 @@ export class PrnLedgerRejectionError extends Error {
  */
 
 /**
- * The three rules a PRN transition must satisfy, composed. Each returns the
+ * The rules a PRN transition must satisfy, composed. Each returns the
  * refusal it found or `undefined`, so the first refusal short-circuits the rest
  * and the caller gets one answer as data. Every refusal is one of the classes
  * the routes already map, so the application throws exactly what it was handed.
@@ -179,7 +180,7 @@ export class PrnLedgerRejectionError extends Error {
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
  * @param {Accreditation} [params.accreditation]
- * @param {number} params.accreditationYear
+ * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @returns {Error | undefined}
  */
@@ -192,7 +193,7 @@ const ruleTransition = ({
   now
 }) =>
   transitionRefusal(fromStatus, newStatus, actor) ??
-  cancellationRefusal(fromStatus, newStatus, accreditationYear, now) ??
+  closedYearRefusal({ accreditationYear, fromStatus, newStatus, now }) ??
   issuanceRefusal(newStatus, accreditation)
 
 /**
@@ -200,7 +201,7 @@ const ruleTransition = ({
  * it does.
  *
  * Pure: every input is a parameter, `now` and the folded ledger balance
- * included, and nothing is read or written. It is the only place the three
+ * included, and nothing is read or written. It is the only place the
  * transition rules compose and the only place a transition's balance effect is
  * looked up, so an application that routed on the target status ahead of the
  * ruling would be answering a domain question for itself.
@@ -214,7 +215,7 @@ const ruleTransition = ({
  * @param {PrnStatus} params.newStatus
  * @param {PrnActor} params.actor
  * @param {Accreditation} [params.accreditation] - required only for issuance
- * @param {number} params.accreditationYear
+ * @param {Year} params.accreditationYear
  * @param {Date} params.now
  * @param {LedgerBalanceSnapshot | null} params.balance - `null` for a ledger with no events
  * @param {PrnAcceptedPayload} params.payload

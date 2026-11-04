@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import {
@@ -56,6 +57,30 @@ export const testInsertBehaviour = (it) => {
         expect(found).toBeTruthy()
         expect(found.summaryLog.organisationId).toBe('org-456')
         expect(found.summaryLog.registrationId).toBe('reg-789')
+      })
+
+      it('stores the numbers beside the ids', async () => {
+        const id = `contract-numbers-${randomUUID()}`
+
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({
+            organisationId: 'org-456',
+            registrationId: 'reg-789',
+            year: toYear(2026),
+            accreditationId: 'acc-123',
+            organisationNumber: '500123',
+            registrationNumber: 'R25SR500010912PL',
+            accreditationNumber: 'ACC500123'
+          })
+        )
+        const found = await repository.findById(id)
+
+        expect(found.summaryLog).toMatchObject({
+          organisationNumber: '500123',
+          registrationNumber: 'R25SR500010912PL',
+          accreditationNumber: 'ACC500123'
+        })
       })
 
       it('throws conflict error when inserting duplicate ID', async () => {
@@ -122,6 +147,15 @@ export const testInsertBehaviour = (it) => {
               summaryLogFactory.validating({ file: { name: null } })
             )
           ).rejects.toThrow(/Invalid summary log data.*name/)
+        })
+
+        it('rejects insert without a year', async () => {
+          const id = `contract-validation-${randomUUID()}`
+          const { year: _year, ...withoutYear } = summaryLogFactory.validating()
+
+          await expect(repository.insert(id, withoutYear)).rejects.toThrow(
+            /Invalid summary log data.*year/
+          )
         })
 
         it('rejects insert with missing URI when file status is complete', async () => {

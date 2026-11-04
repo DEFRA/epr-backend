@@ -1,32 +1,35 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
-import {
-  buildOrganisation,
-  buildAccreditation,
-  prepareOrgUpdate
-} from './test-data.js'
+import { buildAccreditation, prepareOrgUpdate } from './test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testFindAccreditationByIdBehaviour = (it) => {
   describe('findAccreditationById', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
     it('returns accreditation when both organisation ID and accreditation ID are valid', async () => {
       const accreditation1 = buildAccreditation({
-        accreditationNumber: 'ACC111111'
+        accreditationNumber: toAccreditationNumber('ACC111111')
       })
 
       const accreditation2 = buildAccreditation({
-        accreditationNumber: 'ACC222222',
+        accreditationNumber: toAccreditationNumber('ACC222222'),
         material: 'plastic',
         wasteProcessingType: 'reprocessor',
         glassRecyclingProcess: undefined

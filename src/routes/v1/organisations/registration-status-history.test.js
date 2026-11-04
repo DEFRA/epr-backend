@@ -2,11 +2,10 @@ import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { assertCadence } from '#reports/application/assert-cadence.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -16,6 +15,9 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -94,7 +96,7 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
     wasteProcessingType: registration.wasteProcessingType,
     reprocessingType: 'input',
     ...(accStatus !== 'created' && {
-      accreditationNumber: 'ACC123456',
+      accreditationNumber: toAccreditationNumber('ACC123456'),
       validFrom: '2024-01-01',
       validTo: '2026-12-31'
     }),
@@ -247,7 +249,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${ctx.organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${ctx.org.orgId}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -452,7 +454,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const systemLogsResponse = await server.inject({
         method: 'GET',
-        url: `/v1/system-logs/search?organisationId=${ctx.organisationId}`,
+        url: `/v1/system-logs/search?organisationNumber=${ctx.org.orgId}`,
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -766,7 +768,15 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     // these tests verify they hold for a registration granted through this
     // endpoint specifically, without re-testing the behaviours themselves.
     it('cannot create a PRN for the granted registration, because it has no accreditation to create one under', async () => {
-      const fixture = buildOrgWithRegistrationStatus('created')
+      // An approved organisation, so the PRN route finds it and the granted
+      // registration by their natural keys.
+      const fixture = {
+        ...buildOrgWithRegistrationStatus('created'),
+        statusHistory:
+          /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
+            { status: 'approved', updatedAt: new Date('2024-01-01') }
+          ])
+      }
       // buildOrgWithRegistrationStatus puts the target (reprocessor)
       // registration first and the unrelated exporter registration second.
       const registration = fixture.registrations[0]
@@ -826,7 +836,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       // create endpoint 404s before considering the payload at all.
       const createResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/v1/organisations/${fixture.id}/registrations/${registration.id}/accreditations/${new ObjectId().toHexString()}/packaging-recycling-notes`,
+        url: `/organisations/${fixture.orgId}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
         ...asOperator(),
         payload: {
           issuedToOrganisation: { id: 'org-2', name: 'Recipient Org' },
@@ -835,6 +845,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
 
       expect(createResponse.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(JSON.parse(createResponse.payload).message).toBe(
+        'Accreditation not found'
+      )
     })
 
     it('leaves the granted registration in the registered-only state that drives template selection, waste balance and cadence', async () => {
@@ -897,16 +910,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         grantedRegistration
       )
       expect(ledgerId.accreditationId).toBeNull()
-
-      // Scenario 10: reporting cadence is quarterly, not monthly, for a
-      // registration with no live accreditation
-      // (reports/application/assert-cadence.js:19-22).
-      expect(() =>
-        assertCadence('quarterly', grantedRegistration)
-      ).not.toThrow()
-      expect(() => assertCadence('monthly', grantedRegistration)).toThrow(
-        /expected 'quarterly'/
-      )
     })
   })
 

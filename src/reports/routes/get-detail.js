@@ -1,11 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import {
-  findRegistrationForReport,
-  periodParamsSchema,
-  withRegistrationDetails
-} from './shared.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -21,9 +19,6 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */
-
-export const reportsGetDetailPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
 
 /**
  * @param {HapiRequest} request
@@ -60,13 +55,9 @@ function warnIfWasteRecordsExcluded(
 
 export const reportsGetDetail = {
   method: 'GET',
-  path: reportsGetDetailPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
-    validate: {
-      params: periodParamsSchema
-    },
     response: {
       schema: reportDetailResponseSchema,
       failAction: reportResponseFailAction
@@ -103,10 +94,13 @@ export const reportsGetDetail = {
       submissionNumber
     } = params
 
-    const registration = await findRegistrationForReport(
+    const storedRegistration = await findRegistrationForReport(
       organisationsRepository,
       params
     )
+
+    const { registration } =
+      await findOrganisationAndRegistrationReadModels(request)
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
@@ -116,11 +110,16 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
-      registration,
+      registration: storedRegistration,
       year,
       cadence,
       period,
       submissionNumber,
+      requiredPeriods: requiredReportingPeriods({
+        registration,
+        year,
+        cadence
+      }),
       reportDataValidationEnabled: request.config.get(
         'featureFlags.reportDataValidation'
       )

@@ -1,5 +1,7 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
 /** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {{
@@ -99,7 +101,7 @@
 /**
  * A reprocessor's declared input/output tonnages for a single year.
  * @typedef {{
- *  year: number;
+ *  year: Year;
  *  input: YearlyMetricsInput;
  *  rawMaterialInputs: RawMaterialInput[];
  *  output: YearlyMetricsOutput;
@@ -152,7 +154,7 @@
 
 /**
  * @typedef {RegistrationBase & {
- *  registrationNumber: string;
+ *  registrationNumber: RegistrationNumber;
  *  status: Extract<RegistrationStatus, 'approved'>;
  *  validFrom: string;
  * }} RegistrationApproved
@@ -160,7 +162,7 @@
 
 /**
  * @typedef {RegistrationBase & {
- *  registrationNumber: string | null;
+ *  registrationNumber: RegistrationNumber | null;
  *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  * }} RegistrationOther
@@ -175,7 +177,7 @@
  * after approval. A cancelled registration was previously approved, so it
  * carries its registration number and validFrom.
  * @typedef {RegistrationBase & {
- *  registrationNumber: string;
+ *  registrationNumber: RegistrationNumber;
  *  status: Extract<RegistrationStatus, 'approved'|'cancelled'>;
  *  validFrom: string;
  * }} ReportableRegistration

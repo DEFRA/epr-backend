@@ -1,9 +1,10 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import {
   buildAccreditation,
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -13,6 +14,9 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accreditation-reports.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
@@ -21,7 +25,7 @@ import { diagnoseCancelledAccreditationReports } from './diagnose-cancelled-accr
 const cancelledAccreditation = (overrides = {}) =>
   buildAccreditation({
     status: 'cancelled',
-    accreditationNumber: 'A26RE000001PA',
+    accreditationNumber: toAccreditationNumber('A26RE000001PA'),
     material: 'paper',
     validFrom: '2026-01-01',
     validTo: '2026-12-31',
@@ -60,7 +64,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
     const reportKey = {
       organisationId: organisation.id,
       registrationId: registration.id,
-      year: 2026
+      year: toYear(2026)
     }
     await createAndSubmitReport(reportsRepository, {
       ...reportKey,
@@ -95,7 +99,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'monthly',
-            year: 2026,
+            year: toYear(2026),
             period: 1,
             submissionNumber: 1,
             status: 'submitted',
@@ -104,7 +108,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'monthly',
-            year: 2026,
+            year: toYear(2026),
             period: 1,
             submissionNumber: 2,
             status: 'submitted',
@@ -113,7 +117,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
           {
             registrationId: registration.id,
             cadence: 'quarterly',
-            year: 2026,
+            year: toYear(2026),
             period: 3,
             submissionNumber: 1,
             status: 'in_progress',

@@ -19,22 +19,22 @@ describe('server fixture', () => {
       await server.app.overseasSitesRepository.create(buildOverseasSite())
 
     const response = await server.inject({
-      method: 'GET',
+      method: 'DELETE',
       url: `/v1/overseas-sites/${site.id}`,
       ...asServiceMaintainer()
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
   })
 
   it('should start each test with empty repositories', async ({ server }) => {
     const response = await server.inject({
-      method: 'GET',
-      url: '/v1/overseas-sites',
+      method: 'DELETE',
+      url: unknownSiteUrl,
       ...asServiceMaintainer()
     })
 
-    expect(JSON.parse(response.payload)).toStrictEqual([])
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   it('should leave dev endpoints off by default', async ({ server }) => {
@@ -63,7 +63,7 @@ describe('server fixture', () => {
     it.override({
       repositories: {
         overseasSitesRepository: () => ({
-          findById: async () => {
+          remove: async () => {
             throw new Error('stubbed')
           }
         })
@@ -72,7 +72,7 @@ describe('server fixture', () => {
 
     it('should serve from that repository', async ({ server }) => {
       const response = await server.inject({
-        method: 'GET',
+        method: 'DELETE',
         url: unknownSiteUrl,
         ...asServiceMaintainer()
       })
@@ -87,12 +87,9 @@ describe('server fixture', () => {
     'orsImportsRepository',
     'organisationsRepository',
     'overseasSitesRepository',
-    'packagingRecyclingNotesRepository',
     'publicRegisterRepository',
     'reportsRepository',
     'summaryLogRowStatesRepository',
-    'summaryLogsRepository',
-    'systemLogsRepository',
     'uploadsRepository'
   ])(
     'should give routes the %s on server.app, so tests can seed and spy on it',

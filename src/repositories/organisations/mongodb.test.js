@@ -9,13 +9,15 @@ import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
-  buildOrganisation,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  createOrganisationBuilders
 } from './contract/test-data.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { OrganisationsRepositoryFactory } from './port.js'
@@ -71,6 +73,59 @@ describe('MongoDB organisations repository', () => {
       await expect(repository.insert(orgData)).rejects.toThrow(
         'Unexpected database error'
       )
+    })
+
+    it('converts E11000 from insert on a key other than the id to a curated Boom.conflict', async () => {
+      const dbMock = createMockDb({
+        insertOne: async () => {
+          throw createMongoError('E11000 duplicate key error', {
+            code: 11000,
+            keyPattern: { 'accreditations.accreditationNumber': 1 }
+          })
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.insert(buildOrganisation())
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining(
+              'accreditations.accreditationNumber'
+            )
+          }
+        },
+        event: { action: 'insert_organisation', reference: expect.any(String) }
+      })
+    })
+
+    it('falls back to "unknown" in the dup-key message from insert when keyPattern is absent', async () => {
+      const dbMock = createMockDb({
+        insertOne: async () => {
+          throw createMongoError('E11000 duplicate key error', { code: 11000 })
+        }
+      })
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.insert(buildOrganisation())
+      ).rejects.toMatchObject({
+        output: {
+          statusCode: 409,
+          payload: { message: expect.stringContaining('(unknown)') }
+        },
+        event: {
+          action: 'insert_organisation',
+          reason: 'fields=unknown type=Error code=11000'
+        }
+      })
     })
 
     it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
@@ -335,5 +390,80 @@ describe('MongoDB organisations repository', () => {
         expect(accreditation).not.toHaveProperty('accreditationNumber')
       }
     })
+  })
+
+  describe('unique number indexes', () => {
+    it('starts without rewriting numbers stored before the indexes', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(COLLECTION_NAME)
+      const stored = {
+        orgId: 1,
+        registrations: [
+          { id: 'r1' },
+          { id: 'r2', registrationNumber: ' reg200001 ' }
+        ],
+        accreditations: [
+          { id: 'a1' },
+          { id: 'a2', accreditationNumber: 'acc200001' }
+        ]
+      }
+      await collection.insertOne({ ...stored })
+
+      await createOrganisationsRepository(database)
+
+      const rawDoc = await collection.findOne(
+        { orgId: 1 },
+        { projection: { _id: 0 } }
+      )
+      expect(rawDoc).toStrictEqual(stored)
+    })
+
+    it('fails to start when two organisations hold one number', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db('organisations-holding-a-repeat')
+      await database.dropDatabase()
+      await database.collection(COLLECTION_NAME).insertMany([
+        { orgId: 1, registrations: [{ id: 'r1', registrationNumber: 'REG1' }] },
+        { orgId: 2, registrations: [{ id: 'r2', registrationNumber: 'REG1' }] }
+      ])
+
+      await expect(
+        createOrganisationsRepository(database)
+      ).rejects.toMatchObject({
+        code: 11000,
+        keyPattern: { 'registrations.registrationNumber': 1 }
+      })
+    })
+
+    it.for([
+      ['registrations', 'registrationNumber'],
+      ['accreditations', 'accreditationNumber']
+    ])(
+      'refuses a number in %s that another organisation holds, at the database',
+      async ([items, field], { organisationsRepository, mongoClient }) => {
+        organisationsRepository()
+        const collection = mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+        await collection.insertOne({
+          orgId: 1,
+          [items]: [{ id: 'x1' }, { id: 'x2', [field]: 'NUMBER1' }]
+        })
+        await collection.insertOne({
+          orgId: 2,
+          [items]: [{ id: 'y1' }, { id: 'y2', [field]: 'NUMBER2' }]
+        })
+
+        await expect(
+          collection.insertOne({
+            orgId: 3,
+            [items]: [{ id: 'z1', [field]: 'NUMBER1' }]
+          })
+        ).rejects.toMatchObject({ code: 11000 })
+      }
+    )
   })
 })

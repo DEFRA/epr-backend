@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -20,7 +21,7 @@ import {
   setupWasteBalanceIntegrationEnvironment
 } from './integration-test-helpers.js'
 
-const YEAR = 2025
+const YEAR = toYear(2025)
 const TABLE_HEADER_ROW = 7
 const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
 
@@ -134,12 +135,7 @@ describe('an operator accredited in July uploading their registered-only summary
         'january-to-june.xlsx'
       )
     })
-    await pollForValidation(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId
-    )
+    await pollForValidation(server, summaryLogId)
 
     const { summaryLog: validated } = await waitForVersion(
       env.summaryLogsRepository,
@@ -166,15 +162,9 @@ describe('an operator accredited in July uploading their registered-only summary
       ...asOperator()
     })
     expect(submitted.statusCode).toBe(StatusCodes.OK)
-    await pollWhileStatus(
-      server,
-      organisationId,
-      registrationId,
-      summaryLogId,
-      {
-        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
-      }
-    )
+    await pollWhileStatus(server, summaryLogId, {
+      waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+    })
 
     const submittedEvent = await env.ledgerRepository.findLatestInLedgerByKind(
       { organisationId, registrationId, accreditationId: null },

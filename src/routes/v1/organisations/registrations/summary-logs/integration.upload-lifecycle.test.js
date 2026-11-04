@@ -55,7 +55,7 @@ describe('Summary logs upload lifecycle', () => {
 
       response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
     })
@@ -80,7 +80,7 @@ describe('Summary logs upload lifecycle', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -112,16 +112,11 @@ describe('Summary logs upload lifecycle', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -167,8 +162,11 @@ describe('Summary logs upload lifecycle', () => {
           processingType: 'REPROCESSOR_INPUT',
           material: 'Paper_and_board',
           accreditationNumber: 'ACC-123',
-          year: 2025,
-          accreditationId: 'ACC-123'
+          ledgerAccreditation: {
+            kind: 'accredited',
+            accreditationNumber: 'ACC-123'
+          },
+          year: 2025
         })
       })
 
@@ -191,7 +189,7 @@ describe('Summary logs upload lifecycle', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -226,7 +224,7 @@ describe('Summary logs upload lifecycle', () => {
       beforeEach(async () => {
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })
@@ -259,7 +257,7 @@ describe('Summary logs upload lifecycle', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,

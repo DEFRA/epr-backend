@@ -2,12 +2,12 @@ import { testFindBehaviour } from './contract/find.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testUpdateBehaviour } from './contract/update.contract.js'
 import { testOptimisticConcurrency } from './contract/optimistic-concurrency.contract.js'
-import { testFindLatestSubmittedForOrgReg } from './contract/find-latest-submitted.contract.js'
 import { testTransitionToSubmittingExclusive } from './contract/transition-to-submitting-exclusive.contract.js'
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
-import { testFindAllByOrgReg } from './contract/find-all-by-org-reg.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
+import { testFindByNaturalKey } from './contract/find-by-natural-key.contract.js'
+import { testAssignNumbers } from './contract/assign-numbers.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -15,11 +15,11 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testInsertBehaviour(repositoryFactory)
     testUpdateBehaviour(repositoryFactory)
     testOptimisticConcurrency(repositoryFactory)
-    testFindLatestSubmittedForOrgReg(repositoryFactory)
     testTransitionToSubmittingExclusive(repositoryFactory)
     testExpiresAtBehaviour(repositoryFactory)
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
-    testFindAllByOrgReg(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
+    testFindByNaturalKey(repositoryFactory)
+    testAssignNumbers(repositoryFactory)
   })
 }

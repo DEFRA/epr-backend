@@ -8,6 +8,7 @@ import {
   staleReasons
 } from './stale.js'
 import { REPORT_STATUS } from './report-status.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -29,7 +30,7 @@ const buildReport = (overrides = {}) =>
 
 const buildSummaryLogChanged = (overrides = {}) => ({
   uploadedAt: '2025-01-01T00:00:00.000Z',
-  summaryLogId: 'sl-1',
+  summaryLogId: toSummaryLogFileId('sl-1'),
   ...overrides
 })
 
@@ -98,7 +99,7 @@ describe('normaliseStale', () => {
     const flat = {
       uploadedAt: '2025-01-01T00:00:00.000Z',
       reason: 'summary_log_changed',
-      summaryLogId: 'sl-1'
+      summaryLogId: toSummaryLogFileId('sl-1')
     }
 
     expect(normaliseStale(flat)).toEqual({

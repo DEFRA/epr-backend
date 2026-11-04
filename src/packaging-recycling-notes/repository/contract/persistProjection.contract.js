@@ -2,7 +2,7 @@ import assert from 'node:assert'
 import { describe, beforeEach, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
-import { buildDraftPrn } from './test-data.js'
+import { buildDraftPrn, generateTestPrnNumber } from './test-data.js'
 
 /** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
 
@@ -189,7 +189,7 @@ export const testPersistProjectionBehaviour = (it) => {
 
     describe('prnNumber uniqueness', () => {
       it('throws PrnNumberConflictError on a duplicate prnNumber', async () => {
-        const prnNumber = `ER26${Date.now().toString().slice(-5)}Z`
+        const prnNumber = generateTestPrnNumber()
         const firstCreated = await repository.create(buildDraftPrn())
         await repository.persistProjection({
           projection: buildProjection(firstCreated, { prnNumber }),
@@ -207,7 +207,7 @@ export const testPersistProjectionBehaviour = (it) => {
       })
 
       it('persists the projected prnNumber when supplied', async () => {
-        const prnNumber = `ER26${Date.now().toString().slice(-5)}A`
+        const prnNumber = generateTestPrnNumber()
         const created = await repository.create(buildDraftPrn())
 
         const persisted = await repository.persistProjection({
@@ -231,7 +231,7 @@ export const testPersistProjectionBehaviour = (it) => {
           updatedAt: at,
           updatedBy: ISSUE_USER,
           lastAppliedEventNumber: 2,
-          prnNumber: `ER26${Date.now().toString().slice(-5)}B`,
+          prnNumber: generateTestPrnNumber(),
           status: {
             currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
             currentStatusAt: at,

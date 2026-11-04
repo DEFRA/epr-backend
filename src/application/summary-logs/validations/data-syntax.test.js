@@ -14,6 +14,11 @@ import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/expo
 import { TONNAGE_RECEIVED_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-input/validators/tonnage-received-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 import { checkRequiredFields } from '#domain/summary-logs/table-schemas/shared/classify-helpers.js'
+import {
+  createDateFieldSchema,
+  createFreeTextFieldSchema,
+  createThreeDigitIdSchema
+} from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
@@ -1344,4 +1349,81 @@ describe('createDataSyntaxValidator with high issue volume', () => {
 
     expect(result.issues.getAllIssues()).toHaveLength(EXPECTED_ISSUES)
   }, 30_000)
+})
+
+describe('error codes for the shared field schemas', () => {
+  it.each([
+    {
+      joiType: 'string.max',
+      fieldSchema: createFreeTextFieldSchema(),
+      value: 'x'.repeat(101),
+      code: VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+      errorCode: VALIDATION_CODE.MUST_BE_AT_MOST_100_CHARS
+    },
+    {
+      joiType: 'any.calendarDate',
+      fieldSchema: createDateFieldSchema(),
+      value: '2024-02-30',
+      code: VALIDATION_CODE.INVALID_DATE,
+      errorCode: VALIDATION_CODE.MUST_BE_A_VALID_DATE
+    },
+    {
+      joiType: 'string.threeDigitId',
+      fieldSchema: createThreeDigitIdSchema(),
+      value: 1000,
+      code: VALIDATION_CODE.INVALID_TYPE,
+      errorCode: VALIDATION_CODE.MUST_BE_3_DIGIT_ID
+    },
+    {
+      joiType: 'string.pattern.base',
+      fieldSchema: createFreeTextFieldSchema(),
+      value: 'tab\tcharacter',
+      code: VALIDATION_CODE.INVALID_FORMAT,
+      errorCode: VALIDATION_CODE.MUST_CONTAIN_ONLY_PERMITTED_CHARACTERS
+    }
+  ])(
+    'reports a $joiType failure as $code with $errorCode',
+    ({ fieldSchema, value, code, errorCode }) => {
+      const validateDataSyntax = createDataSyntaxValidator({
+        TEST: {
+          FIELD_TABLE: {
+            requiredHeaders: ['ROW_ID', 'FIELD'],
+            rowIdField: 'ROW_ID',
+            unfilledValues: {},
+            validationSchema: Joi.object({
+              ROW_ID: Joi.number().min(1000).optional(),
+              FIELD: fieldSchema
+            })
+              .unknown(true)
+              .prefs({ abortEarly: false }),
+            classifyForWasteBalance: buildClassifyForWasteBalance(
+              ['ROW_ID', 'FIELD'],
+              {}
+            )
+          }
+        }
+      })
+
+      const result = validateDataSyntax(
+        /** @type {ParsedSummaryLog} */ ({
+          meta: {
+            PROCESSING_TYPE: { value: 'TEST', location: DEFAULT_TEST_LOCATION }
+          },
+          data: {
+            FIELD_TABLE: {
+              headers: ['ROW_ID', 'FIELD'],
+              rows: [{ rowNumber: 2, values: [1000, value] }],
+              location: DEFAULT_TEST_LOCATION
+            }
+          }
+        })
+      )
+
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      )
+      expect(fatal.code).toBe(code)
+      expect(fatal.context?.errorCode).toBe(errorCode)
+    }
+  )
 })

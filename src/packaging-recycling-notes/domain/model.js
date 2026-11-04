@@ -2,6 +2,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
@@ -183,10 +184,16 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  */
 
 /**
+ * @typedef {OrganisationNameAndId & {
+ *   organisationNumber?: import('#domain/organisations/numbers.js').OrganisationNumber;
+ * }} OrganisationSnapshot
+ */
+
+/**
  * @typedef {{
  *   id: string;
  *   accreditationNumber: string;
- *   accreditationYear: number;
+ *   accreditationYear: Year;
  *   material: import('#domain/organisations/model.js').AppliedForMaterial;
  *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
  *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
@@ -239,10 +246,11 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   version: number;
  *   lastAppliedEventNumber?: number;
  *   prnNumber?: string | null;
- *   organisation: OrganisationNameAndId;
+ *   organisation: OrganisationSnapshot;
  *   registrationId: string;
+ *   registration?: { registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
- *   obligationYear: number;
+ *   obligationYear: Year;
  *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
  *   isExport: boolean;
@@ -264,29 +272,4 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   updatedAt: Date;
  *   updatedBy: Actor | null;
  * }} PackagingRecyclingNote
- */
-
-/**
- * @typedef {{
- *   id: string;
- *   accreditationYear: number | null;
- *   createdAt: Date;
- *   isDecemberWaste: boolean;
- *   obligationYear: number;
- *   issuedToOrganisation: OrganisationNameAndId;
- *   material: string;
- *   notes: string | null;
- *   processToBeUsed: string;
- *   status: PrnStatus;
- *   tonnage: number;
- *   wasteProcessingType: string;
- * }} CreatePrnResponse
- */
-
-/**
- * @typedef {CreatePrnResponse & {
- *   issuedAt: Date | null;
- *   issuedBy: Actor | null;
- *   prnNumber: string | null;
- * }} GetPrnResponse
  */

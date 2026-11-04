@@ -1,3 +1,5 @@
+import { toYear } from '#common/helpers/dates/year.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -11,7 +13,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -29,6 +31,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const januaryToFebruary2026 = marketInsightsWasteBalancePath
   .replace('{year}', '2026')
@@ -197,14 +204,14 @@ const submit = async (repositories, rows) => {
   await buildSubmittedReport(repositories.reportsRepository, {
     organisationId: ledgerId.organisationId,
     registrationId: ledgerId.registrationId,
-    year: 2026,
+    year: toYear(2026),
     cadence: 'monthly',
     period: 1
   })
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    ledgerId,
+    withNumbers(ledgerId),
     rows,
-    summaryLogId
+    toSummaryLogFileId(summaryLogId)
   )
   await repositories.ledgerRepository.appendEvents([
     partialMock(

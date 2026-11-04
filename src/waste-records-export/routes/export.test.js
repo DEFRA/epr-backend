@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -13,7 +14,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -21,6 +22,10 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 /**
  * Vary a complete registration, so a fixture stays one however few of its
@@ -113,8 +118,7 @@ const createServerWithRepos = async ({
   overseasSites = []
 } = {}) => {
   const organisationsRepository = {
-    findAll: vi.fn().mockResolvedValue(organisations),
-    findById: vi.fn().mockResolvedValue(organisations[0])
+    findAll: vi.fn().mockResolvedValue(organisations)
   }
 
   const ledgerRepository = createInMemoryLedgerRepository(
@@ -138,18 +142,18 @@ const createServerWithRepos = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: seed.organisationId ?? 'org-1',
         registrationId: seed.registrationId ?? 'reg-1',
         accreditationId: seed.accreditationId ?? null
-      },
+      }),
       seed.rows ?? [],
-      seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID
+      toSummaryLogFileId(seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID)
     )
   }
 
   const summaryLogsRepository = {
-    findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
+    findAll: vi.fn().mockResolvedValue(summaryLogs)
   }
   const overseasSitesRepository = {
     findAll: vi.fn().mockResolvedValue(overseasSites)
@@ -206,7 +210,11 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
     it('streams a header row plus one data row for a single waste record', async () => {
       const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
+        registrations: [
+          buildRegistration({
+            registrationNumber: toRegistrationNumber('R26ER5000000002PA')
+          })
+        ]
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
@@ -215,7 +223,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
           {
             // The ledger records the submission by its file id, so the
             // document's own id is deliberately something else.
-            id: 'sl-doc-1',
+            id: toSummaryLogId('sl-doc-1'),
             version: 1,
             summaryLog: summaryLogFactory.submitted({
               file: { id: DEFAULT_SUMMARY_LOG_ID },
@@ -245,66 +253,19 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     })
   })
 
-  describe('scoped to a single registration', () => {
-    it('fetches the organisation by id and filenames the download with it', async () => {
-      const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
-      })
-      const server = await createServerWithRepos({
-        organisations: [organisation],
-        seeds: [{ rows: [receivedRowState()] }]
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `${getWasteRecordsExportPath}?organisationId=org-1&registrationId=reg-1`,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(response.headers['content-disposition']).toMatch(
-        /^attachment; filename="waste-records-org-1-.+\.csv"$/
-      )
-
-      const lines = response.payload.split('\n').filter((line) => line !== '')
-      expect(lines).toHaveLength(2)
-      expect(lines[1]).toContain('Acme Ltd')
-    })
-
-    it('excludes records for registrations other than the requested one', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          buildRegistration({ id: 'reg-1' }),
-          buildRegistration({ id: 'reg-2' })
-        ]
-      })
-      const server = await createServerWithRepos({
-        organisations: [organisation],
-        seeds: [{ rows: [receivedRowState()] }]
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `${getWasteRecordsExportPath}?organisationId=org-1&registrationId=reg-1`,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      // Only reg-1's records are fetched; reg-2 is filtered out before query.
-      const lines = response.payload.split('\n').filter((line) => line !== '')
-      expect(lines).toHaveLength(2)
-    })
-
-    it('rejects a registrationId without an organisationId', async () => {
+  describe('scoping', () => {
+    it.each([
+      ['an organisationId', 'organisationId=org-1'],
+      [
+        'an organisationId and registrationId',
+        'organisationId=org-1&registrationId=reg-1'
+      ]
+    ])('rejects %s', async (_, query) => {
       const server = await createServerWithRepos()
 
       const response = await server.inject({
         method: 'GET',
-        url: `${getWasteRecordsExportPath}?registrationId=reg-1`,
+        url: `${getWasteRecordsExportPath}?${query}`,
         ...asServiceMaintainer()
       })
 

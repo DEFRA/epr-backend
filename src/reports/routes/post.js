@@ -5,19 +5,20 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
-import { assertCadence } from '#reports/application/assert-cadence.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   extractChangedBy,
   findRegistrationForReport,
-  periodParamsSchema,
   withRegistrationDetails
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -28,10 +29,24 @@ import { reportResponseFailAction } from './response-fail-action.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { AccreditationCommon } from '#organisation-read-model/domain/model.js'
  */
 
-export const reportsPostPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}'
+export const reportsPostFailureMessage = 'Failure on report create'
+
+/**
+ * @param {TypedLogger} logger
+ * @param {string} reportId
+ */
+const logReportCreated = (logger, reportId) => {
+  logger.info({
+    message: `Report created: id=${reportId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+    }
+  })
+}
 
 /**
  * @param {TypedLogger} logger
@@ -40,7 +55,7 @@ export const reportsPostPath =
 const logUnexpectedError = (logger, error) => {
   logger.error({
     err: error,
-    message: `Failure on ${reportsPostPath}`,
+    message: reportsPostFailureMessage,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -55,13 +70,9 @@ const logUnexpectedError = (logger, error) => {
 
 export const reportsPost = {
   method: 'POST',
-  path: reportsPostPath,
   options: {
     auth: getAuthConfig([SCOPES.organisationWrite]),
     tags: ['api'],
-    validate: {
-      params: periodParamsSchema
-    },
     response: {
       schema: reportDetailResponseSchema,
       failAction: reportResponseFailAction
@@ -96,16 +107,29 @@ export const reportsPost = {
       year,
       cadence,
       period,
+      organisationNumber,
+      registrationNumber,
       submissionNumber
     } = params
 
     try {
-      const registration = await findRegistrationForReport(
+      const storedRegistration = await findRegistrationForReport(
         organisationsRepository,
         params
       )
 
-      assertCadence(cadence, registration)
+      const { registration } =
+        await findOrganisationAndRegistrationReadModels(request)
+
+      // A monthly report is for the year's accreditation, which atNaturalKeys
+      // has already found, or answered 404 for. A quarterly report is
+      // registered-only, whatever the registration's accreditation for the year.
+      const accreditationNumber =
+        cadence === CADENCE.monthly
+          ? /** @type {AccreditationCommon} */ (
+              registration.accreditations[year]
+            ).accreditationNumber
+          : null
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -115,11 +139,21 @@ export const reportsPost = {
         overseasSitesRepository,
         organisationId,
         registrationId,
-        registration,
+        numbers: {
+          registrationNumber,
+          organisationNumber,
+          accreditationNumber
+        },
+        registration: storedRegistration,
         year,
         cadence,
         period,
         submissionNumber,
+        requiredPeriods: requiredReportingPeriods({
+          registration,
+          year,
+          cadence
+        }),
         changedBy: extractChangedBy(request.auth.credentials),
         reportDataValidationEnabled: request.config.get(
           'featureFlags.reportDataValidation'
@@ -137,25 +171,19 @@ export const reportsPost = {
         createdAt: createdReport.status.created.at
       })
 
-      logger.info({
-        message: `Report created: id=${createdReport.id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        }
-      })
+      logReportCreated(logger, createdReport.id)
 
       return h
         .response(withRegistrationDetails(createdReport, registration))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
+      if (Boom.isBoom(error)) {
         throw error
       }
 
-      logUnexpectedError(logger, error)
+      logUnexpectedError(logger, /** @type {Error} */ (error))
 
-      throw Boom.badImplementation(`Failure on ${reportsPostPath}`)
+      throw Boom.badImplementation(reportsPostFailureMessage)
     }
   }
 }

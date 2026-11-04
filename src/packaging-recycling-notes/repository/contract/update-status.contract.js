@@ -1,6 +1,10 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { buildDraftPrn, buildAwaitingAuthorisationPrn } from './test-data.js'
+import {
+  buildDraftPrn,
+  buildAwaitingAuthorisationPrn,
+  generateTestPrnNumber
+} from './test-data.js'
 
 /** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
 
@@ -131,7 +135,7 @@ export const testUpdateStatusBehaviour = (it) => {
     describe('PRN number assignment', () => {
       it('sets prnNumber when provided', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const prnNumber = `ER26${Date.now().toString().slice(-5)}X`
+        const prnNumber = generateTestPrnNumber()
 
         const updated = await repository.updateStatus({
           id: created.id,
@@ -147,7 +151,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
       it('persists prnNumber so it can be retrieved', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const prnNumber = `ER26${Date.now().toString().slice(-5)}Y`
+        const prnNumber = generateTestPrnNumber()
 
         await repository.updateStatus({
           id: created.id,
@@ -349,7 +353,7 @@ export const testUpdateStatusBehaviour = (it) => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: actor,
           updatedAt: now,
-          prnNumber: `ER26${Date.now().toString().slice(-5)}Q`,
+          prnNumber: generateTestPrnNumber(),
           operation: { slot: 'issued', at: now, by: actor }
         })
 
@@ -372,7 +376,7 @@ export const testUpdateStatusBehaviour = (it) => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: now,
-          prnNumber: `ER26${Date.now().toString().slice(-5)}S`,
+          prnNumber: generateTestPrnNumber(),
           operation: { slot: 'issued', at: now, by: actor }
         })
 
@@ -414,7 +418,7 @@ export const testUpdateStatusBehaviour = (it) => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
-          prnNumber: 'ER2600001X'
+          prnNumber: generateTestPrnNumber()
         })
 
         expect(final.status.history).toHaveLength(3)

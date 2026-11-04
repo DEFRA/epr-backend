@@ -10,7 +10,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -19,8 +19,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { partialMock } from '#test/type-helpers.js'
-import { it } from '#vite/fixtures/msw.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
   asOperator,
@@ -29,8 +28,15 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation,
-  pollWhileStatus
+  pollWhileStatus,
+  servedTestAccreditation,
+  servedTestRegistration,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 describe('Repeated uploads of identical data', () => {
   let organisationId
@@ -38,11 +44,13 @@ describe('Repeated uploads of identical data', () => {
   const VALID_FROM = '2025-01-01'
   const VALID_TO = '2025-12-31'
 
-  it.beforeEach(({ msw }) => {
+  const { getServer } = setupAuthContext()
+
+  beforeEach(() => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    msw.use(
+    getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:year/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
@@ -72,10 +80,10 @@ describe('Repeated uploads of identical data', () => {
       // Set up organisation with registration
       accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
+        orgId: TEST_ORGANISATION_NUMBER,
         registrations: [
-          partialMock({
+          servedTestRegistration({
             id: registrationId,
-            registrationNumber: 'REG-12345',
             status: 'approved',
             material: 'glass',
             glassRecyclingProcess: ['glass_re_melt'],
@@ -88,9 +96,9 @@ describe('Repeated uploads of identical data', () => {
           })
         ],
         accreditations: [
-          partialMock({
+          servedTestAccreditation({
             id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
+            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
             material: 'glass',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,
@@ -112,7 +120,7 @@ describe('Repeated uploads of identical data', () => {
       // Define shared metadata and headers
       const sharedMeta = {
         REGISTRATION_NUMBER: {
-          value: 'REG-12345',
+          value: TEST_REGISTRATION_NUMBER,
           location: { sheet: 'Data', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
@@ -309,7 +317,7 @@ describe('Repeated uploads of identical data', () => {
       // === First upload: upload, validate, submit ===
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, firstSummaryLogId),
+        url: buildPostUrl(firstSummaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -319,31 +327,22 @@ describe('Repeated uploads of identical data', () => {
         )
       })
 
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        firstSummaryLogId
-      )
+      await pollForValidation(server, firstSummaryLogId)
 
       await server.inject({
         method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, firstSummaryLogId),
+        url: buildSubmitUrl(firstSummaryLogId),
         ...asOperator()
       })
 
-      await pollWhileStatus(
-        server,
-        organisationId,
-        registrationId,
-        firstSummaryLogId,
-        { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
-      )
+      await pollWhileStatus(server, firstSummaryLogId, {
+        waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+      })
 
       // === Second upload: upload the same data again ===
       secondUploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
+        url: buildPostUrl(secondSummaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -353,12 +352,7 @@ describe('Repeated uploads of identical data', () => {
         )
       })
 
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        secondSummaryLogId
-      )
+      await pollForValidation(server, secondSummaryLogId)
     })
 
     it('should accept the second upload', () => {
@@ -368,7 +362,7 @@ describe('Repeated uploads of identical data', () => {
     it('should classify all loads as unchanged on second upload', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
+        url: buildGetUrl(secondSummaryLogId),
         ...asOperator()
       })
 
@@ -410,21 +404,13 @@ describe('Repeated uploads of identical data', () => {
 
         await server.inject({
           method: 'POST',
-          url: buildSubmitUrl(
-            organisationId,
-            registrationId,
-            secondSummaryLogId
-          ),
+          url: buildSubmitUrl(secondSummaryLogId),
           ...asOperator()
         })
 
-        await pollWhileStatus(
-          server,
-          organisationId,
-          registrationId,
-          secondSummaryLogId,
-          { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
-        )
+        await pollWhileStatus(server, secondSummaryLogId, {
+          waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+        })
 
         const committedAfter = await summaryLogRowStatesForRegistration({
           ...ledgerId,

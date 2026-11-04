@@ -1,9 +1,9 @@
 export const errorCodes = {
-  cadenceMismatch: 'cadence_mismatch',
   reportIncomplete: 'report_incomplete',
   reportDataIncomplete: 'report_data_incomplete',
   invalidPeriod: 'invalid_period',
   periodNotEnded: 'period_not_ended',
+  periodNotRequired: 'period_not_required',
   reportAlreadyExists: 'report_already_exists',
   resubmissionNotPermitted: 'resubmission_not_permitted',
   reportNotSubmitted: 'report_not_submitted',

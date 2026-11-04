@@ -167,7 +167,7 @@ describe('sendEmail', () => {
   it('calls audit when notifyClient.sendEmail succeeds', async () => {
     const emailFirstFourChars = emailAddress.slice(0, 4)
     const emailLastFourChars = emailAddress.slice(-4)
-    await sendEmail(templateId, emailAddress)
+    await sendEmail(templateId, emailAddress, personalisation)
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
@@ -179,7 +179,7 @@ describe('sendEmail', () => {
         emailAddress: expect.stringMatching(
           new RegExp(`^${emailFirstFourChars}[*@]+${emailLastFourChars}$`)
         ),
-        personalisation: expect.any(Object)
+        personalisation
       }
     })
   })

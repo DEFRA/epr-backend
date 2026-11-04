@@ -1,5 +1,9 @@
-import { randomInt, randomUUID } from 'node:crypto'
+import { toYear } from '#common/helpers/dates/year.js'
+import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+
+const ACCREDITATION_YEAR = 2026
+export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 
 /** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -7,15 +11,18 @@ const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
-const TEST_PRN_RANDOM_RANGE = 100000
 const TEST_PRN_NUMBER_LENGTH = 5
 
+let lastTestPrnSequence = 0
+
 /**
- * Generates a PRN number for test data.
+ * Generates a PRN number for test data, never the same one twice in a test
+ * file, so tests sharing a database cannot trip its unique PRN number index.
  * Uses TT prefix (Test/Test) to distinguish from real PRNs ([ENSW][RX]).
  */
-function generateTestPrnNumber() {
-  return `TT26${String(randomInt(TEST_PRN_RANDOM_RANGE)).padStart(TEST_PRN_NUMBER_LENGTH, '0')}`
+export function generateTestPrnNumber() {
+  lastTestPrnSequence += 1
+  return `TT26${String(lastTestPrnSequence).padStart(TEST_PRN_NUMBER_LENGTH, '0')}`
 }
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 const CANCELLED_HISTORY_STEPS = 5
@@ -26,10 +33,10 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  * @param {Partial<AccreditationSnapshot>} [overrides]
  * @returns {AccreditationSnapshot}
  */
-export const buildAccreditation = (overrides = {}) => ({
+export const buildAccreditationSnapshot = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
-  accreditationNumber: `ACC-${Date.now()}`,
-  accreditationYear: 2026,
+  accreditationNumber: 'ACC-2026-001',
+  accreditationYear: PRN_YEAR,
   material: 'plastic',
   submittedToRegulator: 'ea',
   siteAddress: {
@@ -66,7 +73,7 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
     name: 'Test Organisation'
   },
   registrationId: accreditationId.registrationId,
-  accreditation: buildAccreditation({
+  accreditation: buildAccreditationSnapshot({
     id: /** @type {string} */ (accreditationId.accreditationId)
   }),
   ...overrides
@@ -92,8 +99,8 @@ export const buildPrn = (overrides = {}) => {
       tradingName: 'Test Trading'
     },
     registrationId: `reg-${randomUUID()}`,
-    accreditation: buildAccreditation(),
-    obligationYear: 2026,
+    accreditation: buildAccreditationSnapshot(),
+    obligationYear: PRN_YEAR,
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,
       name: 'Recipient Org',

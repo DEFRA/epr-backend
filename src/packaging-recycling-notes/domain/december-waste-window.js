@@ -5,6 +5,8 @@ import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
 import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 /**
  * The December Waste declaration window (PAE-1913): a reprocessor on output
  * may mark a PRN as December Waste from `windowStart` of the accreditation's
@@ -24,7 +26,7 @@ import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/rel
  * Whether `now` falls within the December Waste declaration window for an
  * accreditation of `relevantYear`.
  *
- * @param {number} relevantYear
+ * @param {Year} relevantYear
  * @param {Date} now
  * @param {{ windowStart: string }} config - `windowStart` as `MM-DDTHH:mm`
  * @returns {boolean}

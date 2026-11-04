@@ -11,10 +11,13 @@ import { it as mswIt } from '#vite/fixtures/msw.js'
  * `repositories` for a describe with `it.override()`.
  */
 export const it = mswIt
-  .extend('config', /** @type {CreateTestServerOptions['config']} */ ({}))
+  .extend(
+    'config',
+    /** @type {NonNullable<CreateTestServerOptions['config']>} */ ({})
+  )
   .extend(
     'repositories',
-    /** @type {CreateTestServerOptions['repositories']} */ ({})
+    /** @type {NonNullable<CreateTestServerOptions['repositories']>} */ ({})
   )
   .extend(
     'server',

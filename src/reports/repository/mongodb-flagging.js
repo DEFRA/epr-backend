@@ -1,3 +1,4 @@
+/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
@@ -16,6 +17,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -38,7 +40,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   field: string,
  *   value: object
  * }} params
- * @returns {Promise<Array<{ reportId: string, year: number, cadence: string, period: number, submissionNumber: number }>>}
+ * @returns {Promise<Array<{ reportId: string, year: Year, cadence: string, period: number, submissionNumber: number }>>}
  */
 const flagReportsByIdempotencyKey = async (
   db,
@@ -99,7 +101,7 @@ const flagReportsByIdempotencyKey = async (
  * @param {Db} db
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {string} summaryLogId
+ * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
@@ -192,7 +194,7 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
 /**
  * For each given period, flags the latest submitted report as requiring
  * resubmission. Skips a period whose latest submitted report is already flagged
- * from this `summaryLogId` or was itself built from it (retry-safe).
+ * from this `summaryLogId` (retry-safe).
  *
  * @param {Db} db
  * @param {MarkSubmittedReportsRequiringResubmissionParams} params

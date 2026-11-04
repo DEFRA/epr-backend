@@ -1,6 +1,6 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import {
-  activeAccreditationValidFrom,
   getReportableRegistrations,
   isRegistrationAccredited,
   isRegistrationActiveInYear,
@@ -9,7 +9,7 @@ import {
   accreditationsForRegistration,
   resolveMaterial
 } from './registration-utils.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -57,7 +57,7 @@ const regFixture = {
   submitterContactDetails: userFixture,
   suppliers: 'Local authority kerbside collections',
   wasteProcessingType: 'reprocessor',
-  registrationNumber: 'REG-001',
+  registrationNumber: toRegistrationNumber('REG-001'),
   samplingInspectionPlanPart1FileUploads: [],
   status: 'approved',
   validFrom: '2026-01-01'
@@ -157,48 +157,6 @@ describe('isRegistrationAccredited', () => {
 
   it('returns false when accreditation is null', () => {
     expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// activeAccreditationValidFrom
-// ---------------------------------------------------------------------------
-
-describe('activeAccreditationValidFrom', () => {
-  it.each([ACCREDITATION_STATUS.APPROVED, ACCREDITATION_STATUS.SUSPENDED])(
-    'returns validFrom when accreditation status is %s',
-    (status) => {
-      expect(
-        activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
-      ).toBe('2026-03-15')
-    }
-  )
-
-  it('returns null for an active accreditation with no validFrom', () => {
-    expect(
-      activeAccreditationValidFrom({
-        status: ACCREDITATION_STATUS.APPROVED,
-        validFrom: null
-      })
-    ).toBeNull()
-  })
-
-  it.each([
-    ACCREDITATION_STATUS.CREATED,
-    ACCREDITATION_STATUS.REJECTED,
-    ACCREDITATION_STATUS.CANCELLED
-  ])('returns null when accreditation status is %s', (status) => {
-    expect(
-      activeAccreditationValidFrom({ status, validFrom: '2026-03-15' })
-    ).toBeNull()
-  })
-
-  it('returns null when accreditation is null', () => {
-    expect(activeAccreditationValidFrom(null)).toBeNull()
-  })
-
-  it('returns null when accreditation is undefined', () => {
-    expect(activeAccreditationValidFrom(undefined)).toBeNull()
   })
 })
 
@@ -417,22 +375,21 @@ describe('accreditationsForRegistration', () => {
 
 describe('isRegistrationActiveInYear', () => {
   /**
-   * @param {Partial<Registration>} [overrides]
-   * @returns {Registration}
+   * @param {{ current?: 'approved' | 'cancelled', validFrom?: string }} [overrides]
    */
-  const buildRegistration = (overrides = {}) =>
-    /** @type {Registration} */ ({
-      status: 'approved',
-      validFrom: '2025-01-01',
-      statusHistory: [],
-      ...overrides
-    })
+  const buildRegistration = ({
+    current = 'approved',
+    validFrom = '2025-01-01'
+  } = {}) => ({
+    status: { current, timeline: [] },
+    validFrom
+  })
 
   it('is true when approved and validFrom is on or before the year ends', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2025-06-01' }),
-        2025
+        toYear(2025)
       )
     ).toBe(true)
   })
@@ -441,7 +398,7 @@ describe('isRegistrationActiveInYear', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2025-06-01' }),
-        2030
+        toYear(2030)
       )
     ).toBe(true)
   })
@@ -450,20 +407,17 @@ describe('isRegistrationActiveInYear', () => {
     expect(
       isRegistrationActiveInYear(
         buildRegistration({ validFrom: '2026-01-01' }),
-        2025
+        toYear(2025)
       )
     ).toBe(false)
   })
 
-  it.each(/** @type {const} */ (['created', 'rejected', 'cancelled']))(
-    'is false when status is %s',
-    (status) => {
-      expect(
-        isRegistrationActiveInYear(
-          buildRegistration({ status, validFrom: '2025-01-01' }),
-          2025
-        )
-      ).toBe(false)
-    }
-  )
+  it('is false when cancelled', () => {
+    expect(
+      isRegistrationActiveInYear(
+        buildRegistration({ current: 'cancelled', validFrom: '2025-01-01' }),
+        toYear(2025)
+      )
+    ).toBe(false)
+  })
 })

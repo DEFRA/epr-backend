@@ -11,6 +11,7 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 import { findSubmissionByNumber } from './submission-lookup.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
@@ -26,7 +27,7 @@ import { findSubmissionByNumber } from './submission-lookup.js'
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -61,7 +62,7 @@ export async function isLatestSubmission(
  * so it can run against a `periodicReports` list already fetched once by the
  * caller instead of each check re-fetching it.
  * @param {PeriodicReport[]} periodicReports
- * @param {number} year
+ * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
@@ -91,7 +92,7 @@ export function isLatestSubmissionOf(
  * @param {object} target
  * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
  * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {number} target.year
+ * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
@@ -126,7 +127,7 @@ export function resubmissionEligibility(periodicReports, target) {
  * @param {object} target
  * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
  * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {number} target.year
+ * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
@@ -148,7 +149,7 @@ export function canRequestResubmission(periodicReports, target) {
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {number} params.year
+ * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
  * @param {number} params.submissionNumber

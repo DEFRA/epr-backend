@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
+import { prepareOrgUpdate } from './test-data.js'
+
+/** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testAccreditationNumberUniquenessBehaviour = (it) => {
   describe('accreditation number uniqueness', () => {
     let repository
+    /** @type {OrganisationBuilders['buildOrganisation']} */
+    let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
-          organisationsRepository
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+          organisationsRepository,
+          organisationBuilders
         }
       ) => {
         repository = await organisationsRepository()
+        buildOrganisation = organisationBuilders.buildOrganisation
       }
     )
 
@@ -50,6 +56,55 @@ export const testAccreditationNumberUniquenessBehaviour = (it) => {
       const result = await repository.findById(second.id)
       expect(result.accreditations[0].accreditationNumber).toBe('ACC100007')
       expect(result.accreditations[1].accreditationNumber).toBeNull()
+    })
+
+    /** @param {string} number */
+    const refusalHeldElsewhere = (number) => ({
+      isBoom: true,
+      output: {
+        statusCode: 409,
+        payload: {
+          message: `Accreditation number ${number} is already held by another organisation`
+        }
+      }
+    })
+
+    it('refuses to insert an organisation whose accreditation number another organisation holds', async () => {
+      await repository.insert(organisationWithNumbers('ACC100001'))
+
+      await expect(
+        repository.insert(organisationWithNumbers('ACC100001'))
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100001'))
+    })
+
+    it('refuses to insert a number another organisation holds in another spelling', async () => {
+      await repository.insert(organisationWithNumbers('ACC100008'))
+
+      await expect(
+        repository.insert(organisationWithNumbers(' acc100008 '))
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100008'))
+    })
+
+    it('refuses to give an accreditation a number another organisation holds', async () => {
+      await repository.insert(organisationWithNumbers('ACC100002'))
+      const second = organisationWithNumbers()
+      await repository.insert(second)
+      const inserted = await repository.findById(second.id)
+
+      await expect(
+        repository.replace(
+          second.id,
+          1,
+          prepareOrgUpdate(inserted, {
+            accreditations: [
+              {
+                ...inserted.accreditations[0],
+                accreditationNumber: ' acc100002 '
+              }
+            ]
+          })
+        )
+      ).rejects.toMatchObject(refusalHeldElsewhere('ACC100002'))
     })
 
     it('refuses an organisation holding the same accreditation number twice', async () => {

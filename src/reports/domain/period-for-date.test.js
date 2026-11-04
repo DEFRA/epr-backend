@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { isDateInRange } from './aggregation/filter-records-by-date.js'
 import { CADENCE, MONTHS_PER_PERIOD } from './cadence.js'
@@ -76,7 +77,7 @@ describe('periodForDate', () => {
         expect(Number.isNaN(period)).toBe(true)
         expect(
           periods.some((p) =>
-            isDateInRange(date, periodBounds(cadence, 2025, p))
+            isDateInRange(date, periodBounds(cadence, toYear(2025), p))
           )
         ).toBe(false)
       }

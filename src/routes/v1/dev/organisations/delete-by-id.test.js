@@ -11,7 +11,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
     })
 
   describe('feature flag disabled', () => {
-    it.override({ config: { featureFlags: { devEndpoints: false } } })
+    it.override('config', { featureFlags: { devEndpoints: false } })
 
     it('returns 404 when devEndpoints feature flag is disabled', async ({
       server
@@ -34,10 +34,8 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       deleteByOrgId: vi.fn(async () => stubCounts)
     }
 
-    it.override({
-      config: { featureFlags: { devEndpoints: true } },
-      repositories: { nonProdDataReset }
-    })
+    it.override('config', { featureFlags: { devEndpoints: true } })
+    it.override('repositories', { nonProdDataReset })
 
     it.for([
       { description: 'non-numeric', id: 'not-a-number' },

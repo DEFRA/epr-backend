@@ -1,21 +1,47 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
-import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import {
   servesOrganisation,
   toAccreditationEntry,
-  toRegistrationEntry,
-  toStatusTimeline
+  toRegistrationEntry
 } from '#organisation-read-model/repository/adapter.js'
 
 /**
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ *
+ * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
+ *
+ * @typedef {OrganisationParams & { registrationNumber: RegistrationNumber }} RegistrationParams
  */
+
+export const organisationPath = '/organisations/{organisationNumber}'
+export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
+export const accreditationPath = `${registrationPath}/accreditations/{year}`
+
+export const organisationParams = {
+  organisationNumber: Joi.string()
+    .pattern(ORGANISATION_NUMBER_PATTERN)
+    .custom(toOrganisationNumber)
+    .required()
+}
+export const registrationParams = {
+  ...organisationParams,
+  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
+}
 
 /**
  * Finding a record needs only its key. Overseas sites and the reasons a record
@@ -32,7 +58,7 @@ const lookupContext = () => ({
  * organisation the organisation read model serves can be found.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {number} organisationNumber
+ * @param {OrganisationNumber} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export async function findOrganisationByNumber(
@@ -40,7 +66,7 @@ export async function findOrganisationByNumber(
   organisationNumber
 ) {
   const organisation =
-    await organisationsRepository.findByOrgId(organisationNumber)
+    await organisationsRepository.findByOrganisationNumber(organisationNumber)
   if (
     !organisation ||
     !servesOrganisation(organisation, lookupContext().today)
@@ -56,8 +82,8 @@ export async function findOrganisationByNumber(
  * built from the read model resolves and nothing else does.
  *
  * @param {OrganisationsRepository} organisationsRepository
- * @param {number} organisationNumber
- * @param {string} registrationNumber
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
  */
 export async function findRegistrationByNumber(
@@ -79,6 +105,46 @@ export async function findRegistrationByNumber(
   }
 
   return { organisation, registration }
+}
+
+/**
+ * The organisation and registration the natural keys name, as the read model
+ * shows them. Throws not found when the organisation does not hold the registration.
+ *
+ * @param {HapiRequest & { params: RegistrationParams }} request
+ * @returns {Promise<{ organisation: ReadModelOrganisation, registration: ReadModelRegistration }>}
+ */
+export async function findOrganisationAndRegistrationReadModels(request) {
+  const organisation = await findOrganisationReadModel(request)
+
+  const registration =
+    organisation.registrations[request.params.registrationNumber]
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
+
+  return { organisation, registration }
+}
+
+/**
+ * The organisation the natural key names, as the read model shows it.
+ * Throws not found when no organisation found for supplied `params.organisationNumber`
+ *
+ * @param {HapiRequest & { params: OrganisationParams }} request
+ * @returns {Promise<ReadModelOrganisation>}
+ */
+export async function findOrganisationReadModel({
+  organisationReadRepository,
+  params: { organisationNumber }
+}) {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
+    throw Boom.notFound('Organisation not found')
+  }
+  return organisation
 }
 
 /**
@@ -104,7 +170,7 @@ export function servedRegistrations(organisation) {
  * cannot show elsewhere in the organisation does not stop the lookup.
  *
  * @param {Organisation} organisation
- * @param {string} registrationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {Registration | null}
  */
 function servedRegistrationByNumber(organisation, registrationNumber) {
@@ -117,24 +183,11 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
 }
 
 /**
- * The years the registration was approved in, up to this year.
- *
- * @param {Registration} registration
- * @returns {number[]}
- */
-export function registrationYears(registration) {
-  return approvedYears(
-    toStatusTimeline(registration.statusHistory, registration.validFrom),
-    utcCalendarDate(new Date())
-  )
-}
-
-/**
  * A registration's accreditations for a year, by the read model's rules.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {Accreditation[]}
  */
 export function accreditationsForYear(organisation, registration, year) {
@@ -150,7 +203,7 @@ export function accreditationsForYear(organisation, registration, year) {
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
- * @param {number} year
+ * @param {Year} year
  * @returns {Accreditation}
  */
 export function findAccreditationForYear(organisation, registration, year) {

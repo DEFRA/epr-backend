@@ -5,8 +5,9 @@ import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import {
   buildDataFieldColumns,
@@ -16,8 +17,15 @@ import { encodeRow } from '#waste-records-export/application/stream-csv-export.j
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createMockLogger } from '#test/mock-logger.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
-import { summaryLogRecordsCsv, summaryLogRecordsCsvPath } from './get.js'
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -40,7 +48,8 @@ const buildRegistration = (overrides = {}) => {
     registrationNumber: 'R26ER5000000002PA',
     accreditation: null,
     overseasSites: {},
-    status: REGISTRATION_STATUS.CREATED,
+    validFrom: '2026-02-01',
+    status: REGISTRATION_STATUS.APPROVED,
     ...overrides
   }
 }
@@ -76,8 +85,8 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
 /**
  * Stand up a server whose export reads from the real in-memory row-state
  * adapter, so the route's own wiring is what is under test. The organisation
- * the mocks return is shared by reference, so a test can change it between
- * requests.
+ * the handler reads is shared by reference, so a test can change it between
+ * requests; the path's keys resolve against a copy taken at the start.
  *
  * @param {{
  *   summaryLogs?: any[],
@@ -105,55 +114,62 @@ const createServer = async ({
     accreditations,
     registrations: [registration]
   })
+  const keyedOrganisation = structuredClone(organisation)
 
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    {
+    withNumbers({
       organisationId: ORGANISATION_ID,
       registrationId: REGISTRATION_ID,
       accreditationId
-    },
+    }),
     rows,
-    FILE_ID
+    toSummaryLogFileId(FILE_ID)
   )
+
+  const summaryLogsRepository =
+    createInMemorySummaryLogsRepository()(createMockLogger())
+  for (const { id, summaryLog } of summaryLogs) {
+    await summaryLogsRepository.insert(id, {
+      ...summaryLog,
+      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      registrationNumber: registration.registrationNumber
+    })
+  }
 
   const server = await createTestServer({
     repositories: {
       organisationsRepository: () => ({
+        findByOrganisationNumber: vi.fn(() =>
+          Promise.resolve(keyedOrganisation)
+        ),
         findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
         findRegistrationById: vi.fn(findRegistrationById)
       }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
-      summaryLogsRepository: () => ({
-        findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)
-      })
+      summaryLogsRepository: () => summaryLogsRepository
     }
   })
 
-  return { server, organisation, summaryLogRowStatesRepository }
+  const { orgId } = organisation
+  const { registrationNumber } = registration
+  /** @param {string} [fileId] */
+  const urlFor = (fileId = FILE_ID) =>
+    `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
+
+  return { server, organisation, summaryLogRowStatesRepository, urlFor }
 }
 
-const urlFor = (fileId = FILE_ID) =>
-  `/v1/organisations/${ORGANISATION_ID}/registrations/${REGISTRATION_ID}/summary-logs/files/${fileId}/records.csv`
-
-describe(`GET ${summaryLogRecordsCsvPath}`, () => {
+describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/files/{fileId}/records.csv', () => {
   setupAuthContext()
 
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  it('is registered at the stated path', () => {
-    expect(summaryLogRecordsCsv.method).toBe('GET')
-    expect(summaryLogRecordsCsv.path).toBe(summaryLogRecordsCsvPath)
-    expect(summaryLogRecordsCsvPath).toBe(
-      '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/files/{fileId}/records.csv'
-    )
-  })
-
   it('streams the submission as CSV', async () => {
-    const { server } = await createServer()
+    const { server, urlFor } = await createServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -174,7 +190,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   })
 
   it('names the download by registration number and the moment of submission', async () => {
-    const { server } = await createServer()
+    const { server, urlFor } = await createServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -188,7 +204,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   })
 
   it('names the download by the registration number the submission stored, not the current one', async () => {
-    const { server } = await createServer({
+    const { server, urlFor } = await createServer({
       registration: buildRegistration({
         registrationNumber: 'R26ER5999999999PA'
       })
@@ -206,7 +222,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   })
 
   it('serves the download unnamed when the submission stored no meta', async () => {
-    const { server } = await createServer({
+    const { server, urlFor } = await createServer({
       summaryLogs: [
         {
           id: `doc-${FILE_ID}`,
@@ -239,7 +255,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   ])(
     'returns 404 and does not audit when the %s is missing',
     async (_, options) => {
-      const { server } = await createServer(options)
+      const { server, urlFor } = await createServer(options)
 
       const response = await server.inject({
         method: 'GET',
@@ -253,7 +269,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   )
 
   it('serves the same file after the organisation and other submissions change', async () => {
-    const { server, organisation, summaryLogRowStatesRepository } =
+    const { server, organisation, summaryLogRowStatesRepository, urlFor } =
       await createServer({
         accreditationId: 'acc-1',
         accreditations: [
@@ -294,18 +310,18 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     const before = await download()
 
     const [registration] = organisation.registrations
-    registration.registrationNumber = 'R26ER5999999999PA'
+    registration.registrationNumber = toRegistrationNumber('R26ER5999999999PA')
     registration.material = 'wood'
     registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
     organisation.accreditations[0].status = 'cancelled'
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
+      withNumbers({
         organisationId: ORGANISATION_ID,
         registrationId: 'reg-other',
         accreditationId: null
-      },
+      }),
       [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],
-      'file-other'
+      toSummaryLogFileId('file-other')
     )
 
     const after = await download()
@@ -319,7 +335,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
   })
 
   it('audits the download', async () => {
-    const { server } = await createServer()
+    const { server, urlFor } = await createServer()
 
     await server.inject({
       method: 'GET',
@@ -339,7 +355,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
 
   describe('when this registration never submitted that file', () => {
     it('returns 404 rather than an empty CSV', async () => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -352,7 +368,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('returns 404 for a file that was uploaded but never submitted', async () => {
-      const { server } = await createServer({
+      const { server, urlFor } = await createServer({
         summaryLogs: [
           {
             id: `doc-${FILE_ID}`,
@@ -372,7 +388,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('does not audit a download it refused', async () => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       await server.inject({
         method: 'GET',
@@ -386,7 +402,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
 
   describe('authorisation', () => {
     it('returns 401 when not authenticated', async () => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       const response = await server.inject({ method: 'GET', url: urlFor() })
 
@@ -394,7 +410,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('returns 403 when the caller holds neither scope', async () => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -409,7 +425,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
       ['summary-log.read alone', ['summary-log.read']],
       ['organisation.read alone', ['organisation.read']]
     ])('returns 403 for a caller holding %s', async (_, scope) => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       const response = await server.inject({
         method: 'GET',
@@ -421,7 +437,7 @@ describe(`GET ${summaryLogRecordsCsvPath}`, () => {
     })
 
     it('serves a caller holding both scopes and no admin scope', async () => {
-      const { server } = await createServer()
+      const { server, urlFor } = await createServer()
 
       const response = await server.inject({
         method: 'GET',

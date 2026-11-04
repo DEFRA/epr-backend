@@ -11,7 +11,4 @@
 // Route objects only: `plugins/router.js` spreads this module's values
 // straight into `server.route()`, so a path constant here crashes boot.
 export { wasteRecordsExportRoute } from './routes/export.js'
-export {
-  registrationWasteRecordsExport,
-  registrationWasteRecordsExportByNumber
-} from './routes/registration-export.js'
+export { registrationWasteRecordsExportByNumber } from './routes/registration-export.js'

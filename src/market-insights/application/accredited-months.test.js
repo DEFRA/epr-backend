@@ -5,12 +5,14 @@ import {
 } from '#domain/organisations/model.js'
 import {
   buildAccreditation,
-  buildReadOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { partialMock } from '#test/type-helpers.js'
 import { accreditedMonths } from './accredited-months.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 

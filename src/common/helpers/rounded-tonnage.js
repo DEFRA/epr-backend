@@ -3,6 +3,11 @@ import Joi from 'joi'
 import { add, roundToTwoDecimalPlaces, toDecimal } from './decimal-utils.js'
 
 /**
+ * @import { Decimal } from 'decimal.js'
+ * @import { Brand } from './brand.js'
+ */
+
+/**
  * A tonnage held to two decimal places, carried as an exact Decimal. The
  * summary-log row-state collection stores every tonnage pre-rounded
  * (ROUND_HALF_UP), so a value pulled from stored row data is a `RoundedTonnage`
@@ -13,7 +18,7 @@ import { add, roundToTwoDecimalPlaces, toDecimal } from './decimal-utils.js'
  * treated as one; construct a `RoundedTonnage` only through
  * {@link toRoundedTonnage} or {@link addTonnage}.
  *
- * @typedef {import('decimal.js').Decimal & { readonly __brand: 'RoundedTonnage' }} RoundedTonnage
+ * @typedef {Brand<Decimal, 'RoundedTonnage'>} RoundedTonnage
  */
 
 /**

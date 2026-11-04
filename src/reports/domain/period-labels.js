@@ -1,3 +1,5 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
+
 const MONTH_ABBREVIATIONS = [
   'Jan',
   'Feb',
@@ -17,7 +19,7 @@ const MONTH_ABBREVIATIONS = [
  * Formats a reporting period as a human-readable label.
  * @param {string} cadence - 'monthly' or 'quarterly'
  * @param {number} period - 1-based period number
- * @param {number} year
+ * @param {Year} year
  * @returns {string} e.g. 'Jan 2026', 'Q1 2026'
  */
 export function formatPeriodLabel(cadence, period, year) {

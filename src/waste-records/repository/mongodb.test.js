@@ -16,7 +16,12 @@ import {
   SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
-import { buildSummaryLogRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  DEFAULT_LEDGER_ID,
+  withNumbers
+} from './test-data.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -53,6 +58,18 @@ const it = mongoIt.extend({
       .deleteMany({})
     const factory = await createMongoSummaryLogRowStatesRepository(database)
     await use(factory)
+  },
+
+  removeStoredNumbers: async (/** @type {*} */ { mongoClient }, use) => {
+    await use((/** @type {string[]} */ keys) =>
+      mongoClient
+        .db(DATABASE_NAME)
+        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+        .updateMany(
+          {},
+          { $unset: Object.fromEntries(keys.map((key) => [key, ''])) }
+        )
+    )
   }
 })
 
@@ -150,7 +167,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await Promise.all(
         summaryLogIds.map((summaryLogId) =>
           repository.upsertSummaryLogRowStates(
-            DEFAULT_LEDGER_ID,
+            withNumbers(DEFAULT_LEDGER_ID),
             [entry],
             summaryLogId
           )
@@ -178,7 +195,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await Promise.all(
         Array.from({ length: CONCURRENT_WRITERS }, () =>
           repository.upsertSummaryLogRowStates(
-            DEFAULT_LEDGER_ID,
+            withNumbers(DEFAULT_LEDGER_ID),
             [entry],
             'log-1'
           )
@@ -218,9 +235,9 @@ describe('summary-log row states repository - mongodb implementation', () => {
 
       await expect(
         repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           [buildSummaryLogRowStateEntry()],
-          'log-1'
+          toSummaryLogFileId('log-1')
         )
       ).rejects.toBe(upstream)
     })
@@ -258,7 +275,7 @@ describe('write round-trip count', () => {
       )
       return countCommands(monitoredClient, () =>
         repository.upsertSummaryLogRowStates(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           entries,
           summaryLogId
         )
@@ -323,7 +340,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
       overseasSites
     )
     await repository.upsertSummaryLogRowStates(
-      DEFAULT_LEDGER_ID,
+      withNumbers(DEFAULT_LEDGER_ID),
       [entry],
       'log-1'
     )

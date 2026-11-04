@@ -1,12 +1,13 @@
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodicReport, ReportPerPeriod, ReportSummary } from '../repository/port.js'
  */
 
 /**
  * A persisted period slot indexed by "year:period", carrying its year and
  * period alongside the stored report data.
- * @typedef {ReportPerPeriod & { year: number, period: number }} IndexedSlot
+ * @typedef {ReportPerPeriod & { year: Year, period: number }} IndexedSlot
  */
 
 /**
@@ -76,7 +77,7 @@ function indexPersistedSlots(periodicReports, cadence) {
 
 /**
  * @typedef {{
- *   year: number;
+ *   year: Year;
  *   period: number;
  *   startDate: CalendarDate;
  *   endDate: CalendarDate;
@@ -101,7 +102,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   `selectSubmittedReports` without an in-flight draft in `report` masking them
  * - Periods with active drafts that aren't in the computed set are appended
  *
- * @param {Array<{year: number, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate}>} computedPeriods
+ * @param {Array<{year: Year, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate}>} computedPeriods
  * @param {PeriodicReport[]} periodicReports
  * @param {string} cadence
  * @returns {MergedPeriod[]}

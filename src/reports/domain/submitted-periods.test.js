@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from './cadence.js'
@@ -60,7 +61,7 @@ const resubmittedSlot = () =>
 const periodicReport = (year, reports) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
-  year,
+  year: toYear(year),
   reports
 })
 

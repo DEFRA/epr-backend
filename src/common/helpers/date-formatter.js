@@ -1,3 +1,5 @@
+/** @import { Brand } from './brand.js' */
+
 /**
  * Date formatting utilities using Intl.DateTimeFormat
  */
@@ -8,7 +10,7 @@
  * date for the same day and silently drops records. `formatDateISO` and
  * `calendarDate` are the only constructors.
  *
- * @typedef {string & { readonly __brand: 'CalendarDate' }} CalendarDate
+ * @typedef {Brand<string, 'CalendarDate'>} CalendarDate
  */
 
 /**

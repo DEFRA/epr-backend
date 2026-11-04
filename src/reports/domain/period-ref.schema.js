@@ -1,9 +1,8 @@
 import Joi from 'joi'
 
+import { yearSchema } from '#common/validation/year-schema.js'
 import { CADENCE } from './cadence.js'
 
-const START_YEAR = 2024
-const MAX_YEAR = 2100
 const PERIOD_START = 1
 const PERIOD_END = 12
 
@@ -13,7 +12,7 @@ const PERIOD_END = 12
  * so both validate the same shape and bounds.
  */
 export const periodRefSchema = Joi.object({
-  year: Joi.number().integer().min(START_YEAR).max(MAX_YEAR).required(),
+  year: yearSchema().required(),
   cadence: Joi.string()
     .valid(...Object.values(CADENCE))
     .required(),

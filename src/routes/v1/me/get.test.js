@@ -1,3 +1,4 @@
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   REGULATOR_ROLE,
   REGULATOR_SCOPES,
@@ -5,7 +6,7 @@ import {
 } from '#common/helpers/auth/constants.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
@@ -18,6 +19,9 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const ME_PATH = '/v1/me'
 

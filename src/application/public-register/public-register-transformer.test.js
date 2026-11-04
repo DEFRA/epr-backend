@@ -1,11 +1,12 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { transform } from './public-register-transformer.js'
 import {
   buildAccreditation,
-  buildReadOrganisation,
   buildRegistration,
-  getValidDateRange
+  getValidDateRange,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
@@ -16,6 +17,9 @@ import {
 } from '#domain/organisations/model.js'
 import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 describe('transform', () => {
   const baseAddress = {
@@ -128,7 +132,6 @@ describe('transform', () => {
         dateLastChanged: EXPECTED_DATE_LAST_CHANGED
       }
     ])
-    expect(rows[0].orgId).greaterThan(500000)
   })
 
   it('should use regulator info from registration for populating appropriate agency', async () => {
@@ -356,7 +359,7 @@ describe('transform', () => {
         buildAccreditation({
           id: accreditationId.toString(),
           status: ACCREDITATION_STATUS.CREATED,
-          accreditationNumber: 'A999999PL'
+          accreditationNumber: toAccreditationNumber('A999999PL')
         })
       ]
     })
@@ -593,7 +596,7 @@ describe('transform', () => {
     const period = {
       key: '2026:monthly:1',
       cadence: 'monthly',
-      year: 2026,
+      year: toYear(2026),
       period: 1,
       label: 'Jan Report',
       startDate: calendarDate('2026-01-01'),
@@ -612,6 +615,12 @@ describe('transform', () => {
       const { org, entries } = buildEntry(new Map([['2026:monthly:1', null]]))
       const rows = await transform([org], { periods, entries })
       expect(rows[0]['Jan Report']).toBe('')
+    })
+
+    it("returns 'N/A' for a registration with no entry", async () => {
+      const { org } = buildEntry(new Map())
+      const rows = await transform([org], { periods, entries: new Map() })
+      expect(rows[0]['Jan Report']).toBe('N/A')
     })
 
     it('returns formatted date when the period has been submitted', async () => {

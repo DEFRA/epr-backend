@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
-import { describe, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { it } from '#vite/fixtures/msw.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   LEDGER_EVENT_KIND,
@@ -17,6 +17,7 @@ import {
 
 import {
   asOperator,
+  accreditationUrl,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
@@ -81,7 +82,7 @@ const submitCredit = async (env, tonnage) => {
 
   await server.inject({
     method: 'POST',
-    url: buildPostUrl(organisationId, registrationId, summaryLogId),
+    url: buildPostUrl(summaryLogId),
     payload: createUploadPayload(
       organisationId,
       registrationId,
@@ -91,11 +92,11 @@ const submitCredit = async (env, tonnage) => {
     )
   })
 
-  await pollForValidation(server, organisationId, registrationId, summaryLogId)
+  await pollForValidation(server, summaryLogId)
 
   await server.inject({
     method: 'POST',
-    url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+    url: buildSubmitUrl(summaryLogId),
     ...asOperator()
   })
 
@@ -109,7 +110,7 @@ const submitCredit = async (env, tonnage) => {
 
     const checkResponse = await server.inject({
       method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
+      url: buildGetUrl(summaryLogId),
       ...asOperator()
     })
 
@@ -121,11 +122,11 @@ const submitCredit = async (env, tonnage) => {
 }
 
 const createPrn = async (env, tonnage) => {
-  const { server, organisationId, registrationId, accreditationId } = env
+  const { server } = env
 
   const response = await server.inject({
     method: 'POST',
-    url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+    url: `${accreditationUrl}/packaging-recycling-notes`,
     ...asOperator(),
     payload: {
       issuedToOrganisation: {
@@ -146,24 +147,31 @@ const createPrn = async (env, tonnage) => {
  * the stream event.
  */
 const raiseAs = async (env, prnId, credentials) => {
-  const { server, organisationId, registrationId, accreditationId } = env
+  const { server } = env
 
   return server.inject({
     method: 'POST',
-    url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+    url: `${accreditationUrl}/packaging-recycling-notes/${prnId}/status`,
     ...asOperator(credentials),
     payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
   })
 }
 
 describe('PRN transition actor on the waste-balance stream', () => {
-  it.beforeEach(({ msw }) => {
-    msw.use(
+  const { getServer } = setupAuthContext()
+
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2025-10-01T12:00:00.000Z'))
+    getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('carries the requesting human id, name and email onto the appended stream event', async () => {

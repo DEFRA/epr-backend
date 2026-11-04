@@ -8,13 +8,18 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  ORGANISATION_NUMBER_PATTERN,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  *
  * @typedef {{
- *   organisationId?: string,
+ *   organisationNumber?: string,
  *   userId?: string,
  *   subCategory?: string,
  *   limit?: number,
@@ -36,34 +41,56 @@ export const systemLogsGetSearch = {
     tags: ['api', 'admin'],
     validate: {
       query: Joi.object({
-        organisationId: Joi.string().optional(),
+        organisationNumber: Joi.string()
+          .trim()
+          .pattern(ORGANISATION_NUMBER_PATTERN)
+          .optional(),
         userId: Joi.string().trim().optional(),
         subCategory: Joi.string().optional(),
         limit: Joi.number().integer().min(1).optional(),
         cursor: Joi.string().hex().length(24).optional(),
         direction: Joi.string().valid('next', 'prev').optional()
       })
-        .or('organisationId', 'userId', 'subCategory')
+        .or('organisationNumber', 'userId', 'subCategory')
         .with('direction', 'cursor')
     }
   },
   /**
    * @param {HapiRequest<unknown> & {
    *   query: SystemLogsSearchQuery,
+   *   organisationsRepository: OrganisationsRepository,
    *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { systemLogsRepository, logger } = request
-    const { organisationId, userId, subCategory, limit, cursor, direction } =
-      request.query
+    const { organisationsRepository, systemLogsRepository, logger } = request
+    const {
+      organisationNumber,
+      userId,
+      subCategory,
+      limit,
+      cursor,
+      direction
+    } = request.query
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
+      // Logs record the organisation's id, which outlives a change of number
+      const organisation = organisationNumber
+        ? await organisationsRepository.findByOrganisationNumber(
+            toOrganisationNumber(organisationNumber)
+          )
+        : null
+      if (organisationNumber && !organisation) {
+        return h
+          .response({ systemLogs: [], hasNext: false, hasPrev: false })
+          .code(StatusCodes.OK)
+      }
+
       const result = await systemLogsRepository.find({
-        organisationId,
+        organisationId: organisation?.id,
         userId,
         subCategory,
         limit: effectiveLimit,

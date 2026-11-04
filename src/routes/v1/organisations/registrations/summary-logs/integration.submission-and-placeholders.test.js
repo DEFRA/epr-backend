@@ -13,7 +13,7 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildReadOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -26,8 +26,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { partialMock } from '#test/type-helpers.js'
-import { it } from '#vite/fixtures/msw.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
 
@@ -40,8 +39,15 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
-  pollForValidation
+  pollForValidation,
+  servedTestAccreditation,
+  servedTestRegistration,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 describe('Submission and placeholder tests', () => {
   let organisationId
@@ -49,11 +55,13 @@ describe('Submission and placeholder tests', () => {
   const VALID_FROM = '2025-01-01'
   const VALID_TO = '2025-12-31'
 
-  it.beforeEach(({ msw }) => {
+  const { getServer } = setupAuthContext()
+
+  beforeEach(() => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    msw.use(
+    getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
@@ -82,10 +90,10 @@ describe('Submission and placeholder tests', () => {
 
       accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
+        orgId: TEST_ORGANISATION_NUMBER,
         registrations: [
-          partialMock({
+          servedTestRegistration({
             id: registrationId,
-            registrationNumber: 'REG-12345',
             status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
@@ -96,9 +104,9 @@ describe('Submission and placeholder tests', () => {
           })
         ],
         accreditations: [
-          partialMock({
+          servedTestAccreditation({
             id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
+            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,
@@ -119,7 +127,7 @@ describe('Submission and placeholder tests', () => {
 
       const sharedMeta = {
         REGISTRATION_NUMBER: {
-          value: 'REG-12345',
+          value: TEST_REGISTRATION_NUMBER,
           location: { sheet: 'Data', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
@@ -425,7 +433,7 @@ describe('Submission and placeholder tests', () => {
 
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -435,16 +443,11 @@ describe('Submission and placeholder tests', () => {
         )
       })
 
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
+      await pollForValidation(server, summaryLogId)
 
       submitResponse = await server.inject({
         method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
+        url: buildSubmitUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -460,7 +463,7 @@ describe('Submission and placeholder tests', () => {
 
         const checkResponse = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
 
@@ -491,7 +494,7 @@ describe('Submission and placeholder tests', () => {
     it('should update summary log status to SUBMITTED', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -503,7 +506,7 @@ describe('Submission and placeholder tests', () => {
     it('should include accreditation number in response after submission', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(summaryLogId),
         ...asOperator()
       })
 
@@ -515,7 +518,7 @@ describe('Submission and placeholder tests', () => {
     it('should allow a service maintainer to download the submitted file', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
+        url: `${buildGetUrl(summaryLogId)}/file`,
         ...asServiceMaintainer()
       })
 
@@ -526,7 +529,7 @@ describe('Submission and placeholder tests', () => {
     it('should classify loads as added, adjusted, and unchanged on second upload', async () => {
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
+        url: buildPostUrl(secondSummaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
@@ -535,16 +538,11 @@ describe('Submission and placeholder tests', () => {
           secondFilename
         )
       })
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        secondSummaryLogId
-      )
+      await pollForValidation(server, secondSummaryLogId)
 
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
+        url: buildGetUrl(secondSummaryLogId),
         ...asOperator()
       })
 
@@ -745,10 +743,10 @@ describe('Submission and placeholder tests', () => {
 
       const accreditationId = 'acc-placeholder-test'
       const testOrg = buildReadOrganisation({
+        orgId: TEST_ORGANISATION_NUMBER,
         registrations: [
-          partialMock({
+          servedTestRegistration({
             id: registrationId,
-            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
@@ -757,9 +755,9 @@ describe('Submission and placeholder tests', () => {
           })
         ],
         accreditations: [
-          partialMock({
+          servedTestAccreditation({
             id: accreditationId,
-            accreditationNumber: 'ACC-PLACEHOLDER-001',
+            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
@@ -825,7 +823,7 @@ describe('Submission and placeholder tests', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(summaryLogId),
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -860,16 +858,11 @@ describe('Submission and placeholder tests', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(
-          server,
-          organisationId,
-          registrationId,
-          summaryLogId
-        )
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(summaryLogId),
           ...asOperator()
         })
       })

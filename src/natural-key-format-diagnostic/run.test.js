@@ -1,13 +1,15 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { runNaturalKeyFormatDiagnostic } from './run.js'
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */

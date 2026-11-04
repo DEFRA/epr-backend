@@ -1,3 +1,4 @@
+/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -441,7 +442,7 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 
 /**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
- * @param {string} summaryLogId
+ * @param {SummaryLogId} summaryLogId
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -493,7 +494,7 @@ const recordValidationMetrics = async ({
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
  * @param {SummaryLog} params.summaryLog
- * @param {string} params.summaryLogId
+ * @param {SummaryLogId} params.summaryLogId
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {number} params.version
  */
@@ -576,7 +577,7 @@ const classifyAndPersistResult = async ({
   reportsService,
   organisationsRepository,
   overseasSitesRepository,
-  resubmissionGate
+  logger
 }) => {
   const periodicReports = await fetchPeriodicReports({
     registration,
@@ -624,7 +625,7 @@ const classifyAndPersistResult = async ({
       reportsService,
       overseasSitesRepository,
       summaryLogRowStatesRepository,
-      gate: resubmissionGate
+      logger
     }),
     meta,
     status,
@@ -646,10 +647,9 @@ const classifyAndPersistResult = async ({
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
  *   overseasSitesRepository: OverseasSitesRepository,
- *   summaryLogExtractor: SummaryLogExtractor,
- *   resubmissionFigureGateEnabled?: boolean
+ *   summaryLogExtractor: SummaryLogExtractor
  * }} params
- * @returns {(summaryLogId: string) => Promise<void>}
+ * @returns {(summaryLogId: SummaryLogId) => Promise<void>}
  */
 export const createSummaryLogsValidator = ({
   logger,
@@ -659,11 +659,9 @@ export const createSummaryLogsValidator = ({
   ledgerRepository,
   reportsService,
   overseasSitesRepository,
-  summaryLogExtractor,
-  resubmissionFigureGateEnabled = false
+  summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
-  const resubmissionGate = { enabled: resubmissionFigureGateEnabled, logger }
 
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
@@ -732,7 +730,7 @@ export const createSummaryLogsValidator = ({
       reportsService,
       organisationsRepository,
       overseasSitesRepository,
-      resubmissionGate
+      logger
     })
 
     logger.info({

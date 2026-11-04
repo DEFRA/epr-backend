@@ -1,3 +1,4 @@
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
@@ -5,12 +6,16 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { getReportSubmissionsPath } from './submissions.js'
+
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`GET ${getReportSubmissionsPath}`, () => {
   setupAuthContext()
@@ -68,14 +73,18 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository()
     const organisationsRepository = organisationsRepositoryFactory()
-    const org = await buildApprovedOrg(organisationsRepository)
+    const year = currentUtcYear()
+    const org = await buildApprovedOrg(organisationsRepository, undefined, {
+      VALID_FROM: `${year}-01-01`,
+      VALID_TO: `${year}-12-31`
+    })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
     await buildSubmittedReport(reportsRepository, {
       organisationId: org.id,
       registrationId: org.registrations[0].id,
-      year: new Date().getUTCFullYear(),
+      year,
       cadence: 'monthly',
       period: 1,
       prn: {
