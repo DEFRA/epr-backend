@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
@@ -10,6 +11,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -203,22 +205,28 @@ export function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  /** @type {RegistrationCommon} */
-  const common = {
-    applicationContactDetails: toContact(applicationContactDetails),
-    approvedPersons: registration.approvedPersons.map(toContact),
-    material: resolveMaterial(registration),
-    status: { current: status, timeline },
-    submittedToRegulator: { code: registration.submittedToRegulator },
-    submitterContactDetails: toContact(registration.submitterContactDetails),
-    validFrom
-  }
   const accreditations = keyedRecords(
     accreditationsForRegistration(registration, organisation),
     (accreditation) => toAccreditationEntry(accreditation, context),
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
+  const registrationStatus = { current: status, timeline }
+
+  /** @type {RegistrationCommon} */
+  const common = {
+    applicationContactDetails: toContact(applicationContactDetails),
+    approvedPersons: registration.approvedPersons.map(toContact),
+    material: resolveMaterial(registration),
+    regAccStatusByDate: regAccStatusByYear(
+      { status: registrationStatus, accreditations },
+      calendarDate(today)
+    ),
+    status: registrationStatus,
+    submittedToRegulator: { code: registration.submittedToRegulator },
+    submitterContactDetails: toContact(registration.submitterContactDetails),
+    validFrom
+  }
 
   const converted =
     registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER

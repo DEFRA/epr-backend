@@ -35,6 +35,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   approvedPersons: Contact[]
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
+ *   regAccStatusByDate: RegAccStatusByYear
  *   status: Status<'approved' | 'cancelled'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
@@ -137,6 +138,23 @@ export const ACCREDITATION_STATUSES = Object.freeze([
   'suspended',
   'cancelled'
 ])
+
+/**
+ * @typedef {typeof REG_ACC_STATUS[keyof typeof REG_ACC_STATUS]} RegAccStatus
+ */
+
+/**
+ * By year, the date each status starts. A status holds until the next date, or
+ * the end of the year.
+ *
+ * @typedef {Record<string, Record<string, { status: RegAccStatus }>>} RegAccStatusByYear
+ */
+
+export const REG_ACC_STATUS = Object.freeze({
+  REGISTERED_ONLY: 'registeredOnly',
+  ACCREDITED: 'accredited',
+  CANCELLED: 'cancelled'
+})
 
 /**
  * A suspended accreditation is still accredited.

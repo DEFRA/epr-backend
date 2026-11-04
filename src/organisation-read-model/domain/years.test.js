@@ -1,6 +1,11 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { partialMock } from '#test/type-helpers.js'
-import { organisationInYear, organisationYears } from './years.js'
+import {
+  organisationInYear,
+  organisationYears,
+  regAccStatusByYear
+} from './years.js'
 
 const registration = (timeline) => partialMock({ status: { timeline } })
 
@@ -10,6 +15,14 @@ const organisationOf = (...timelines) =>
       timelines.map((timeline, index) => [`R${index}`, registration(timeline)])
     )
   })
+
+const approvedFrom = (date, accreditations = {}) => ({
+  status: {
+    current: /** @type {const} */ ('approved'),
+    timeline: [{ status: 'approved', at: date }]
+  },
+  accreditations
+})
 
 const NOW = new Date('2027-03-15T10:00:00.000Z')
 
@@ -101,16 +114,13 @@ describe('organisationInYear', () => {
         timeline: [{ status: 'active', at: '2024-01-01T00:00:00.000Z' }]
       },
       ...overrides,
-      registrations
+      registrations: Object.fromEntries(
+        Object.entries(registrations).map(([number, registration]) => [
+          number,
+          { regAccStatusByDate: {}, ...registration }
+        ])
+      )
     })
-
-  const approvedFrom = (date, accreditations = {}) => ({
-    status: {
-      current: 'approved',
-      timeline: [{ status: 'approved', at: date }]
-    },
-    accreditations
-  })
 
   it('keeps a registration approved in the year with only that year’s accreditation', () => {
     const organisation = organisationWith({
@@ -129,6 +139,25 @@ describe('organisationInYear', () => {
     expect(registrations.R1.accreditations).toStrictEqual({
       2026: accreditation('A26')
     })
+  })
+
+  it('keeps only that year’s status dates', () => {
+    const y2025 = { '2025-02-01': { status: 'registeredOnly' } }
+    const y2026 = { '2026-01-01': { status: 'registeredOnly' } }
+    const organisation = organisationWith({
+      R1: {
+        ...approvedFrom('2025-02-01'),
+        regAccStatusByDate: { 2025: y2025, 2026: y2026 }
+      }
+    })
+
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2026),
+      NOW
+    )
+
+    expect(registrations.R1.regAccStatusByDate).toStrictEqual({ 2026: y2026 })
   })
 
   it('serves no accreditations when the year has none', () => {
@@ -315,5 +344,62 @@ describe('organisationInYear', () => {
     const { name } = organisationInYear(organisation, toYear(2026), NOW)
 
     expect(name).toBe('ACME ltd')
+  })
+})
+
+describe('regAccStatusByYear', () => {
+  const TODAY = calendarDate('2026-11-03')
+  const registeredOnly = { status: 'registeredOnly' }
+  const accredited = { status: 'accredited' }
+
+  it('covers each year from approval up to today', () => {
+    expect(
+      regAccStatusByYear(partialMock(approvedFrom('2025-06-02')), TODAY)
+    ).toEqual({
+      2025: { '2025-06-02': registeredOnly },
+      2026: { '2026-01-01': registeredOnly }
+    })
+  })
+
+  it('leaves out a year spent wholly cancelled', () => {
+    const timeline = [
+      { status: 'approved', at: '2024-06-02' },
+      { status: 'cancelled', at: '2024-09-01' },
+      { status: 'approved', at: '2026-03-01' }
+    ]
+
+    expect(
+      Object.keys(
+        regAccStatusByYear(
+          partialMock({ ...registration(timeline), accreditations: {} }),
+          TODAY
+        )
+      )
+    ).toEqual(['2024', '2026'])
+  })
+
+  it('includes a later year the registration holds an accreditation for', () => {
+    expect(
+      regAccStatusByYear(
+        partialMock(
+          approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+        ),
+        TODAY
+      )
+    ).toEqual({
+      2026: { '2026-06-02': registeredOnly },
+      2027: { '2027-01-01': accredited }
+    })
+  })
+
+  it('is empty for a registration never approved', () => {
+    const timeline = [{ status: 'created', at: '2026-06-02' }]
+
+    expect(
+      regAccStatusByYear(
+        partialMock({ ...registration(timeline), accreditations: {} }),
+        TODAY
+      )
+    ).toEqual({})
   })
 })
