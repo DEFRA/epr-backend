@@ -14,8 +14,9 @@ import {
 } from './update-status-based-on-upload.js'
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
-/** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { AccreditationCommon } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -24,9 +25,39 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /**
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
+ *
+ * @typedef {HapiRequest<UploadCompletedPayload> & {
+ *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogsWorker: SummaryLogsCommandExecutor
+ * }} UploadCompletedRequest
  */
 
 const FAILURE_MESSAGE = 'Failure completing summary log upload'
+
+/**
+ * A registered-only upload has no accreditation number, whatever the
+ * registration's accreditation for the year.
+ *
+ * @param {UploadCompletedRequest} request
+ * @returns {Promise<RequiredNumbers>}
+ */
+const numbersFromPath = async (request) => {
+  const { organisationNumber, registrationNumber, year, accreditationId } =
+    request.params
+  const { registration } =
+    await findOrganisationAndRegistrationReadModels(request)
+
+  return {
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber:
+      accreditationId === null
+        ? null
+        : /** @type {AccreditationCommon} */ (registration.accreditations[year])
+            .accreditationNumber
+  }
+}
 
 /**
  * The callback for an upload, under the address it was started at. The path
@@ -41,12 +72,8 @@ export const summaryLogsUploadCompletedYear = {
     }
   },
   /**
-   * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
-   *   summaryLogsRepository: SummaryLogsRepository,
-   *   summaryLogsWorker: SummaryLogsCommandExecutor
-   * }} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {UploadCompletedRequest} request
+   * @param {HapiResponseToolkit} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
@@ -61,26 +88,12 @@ export const summaryLogsUploadCompletedYear = {
       summaryLogId,
       organisationId,
       registrationId,
-      organisationNumber,
-      registrationNumber,
       year,
       accreditationId
     } = params
     const { summaryLogUpload } = payload.form
 
     try {
-      const { registration } =
-        await findOrganisationAndRegistrationReadModels(request)
-
-      // A registered-only upload has no accreditation number, whatever the
-      // registration's accreditation for the year.
-      const accreditationNumber =
-        accreditationId === null
-          ? null
-          : /** @type {AccreditationCommon} */ (
-              registration.accreditations[year]
-            ).accreditationNumber
-
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,
@@ -91,11 +104,7 @@ export const summaryLogsUploadCompletedYear = {
           registrationId,
           year,
           accreditationId,
-          numbers: {
-            organisationNumber,
-            registrationNumber,
-            accreditationNumber
-          }
+          numbers: await numbersFromPath(request)
         }
       )
 
@@ -118,12 +127,12 @@ export const summaryLogsUploadCompletedYear = {
 
       return h.response().code(StatusCodes.ACCEPTED)
     } catch (error) {
-      if (error.isBoom) {
+      if (Boom.isBoom(error)) {
         throw error
       }
 
       logger.error({
-        err: error,
+        err: /** @type {Error} */ (error),
         message: FAILURE_MESSAGE,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
