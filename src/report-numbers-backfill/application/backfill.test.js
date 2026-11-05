@@ -76,6 +76,8 @@ const organisation = buildOrganisation({
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 describe('backfillReportNumbers', () => {
+  /** @type {Map<string, Object>} */
+  let reportsStore
   /** @type {ReportsRepository} */
   let reportsRepository
   /** @type {SystemLogsRepository} */
@@ -94,7 +96,8 @@ describe('backfillReportNumbers', () => {
 
   beforeEach(() => {
     logger = createMockLogger()
-    reportsRepository = createInMemoryReportsRepository()()
+    reportsStore = new Map()
+    reportsRepository = createInMemoryReportsRepository(reportsStore)()
     systemLogsRepository = createSystemLogsRepository()(logger)
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
@@ -113,17 +116,21 @@ describe('backfillReportNumbers', () => {
       { isDryRun }
     )
 
-  const createReport = async (overrides = {}) =>
-    (
-      await reportsRepository.createReport(
-        buildCreateReportParams({
-          organisationId,
-          registrationId,
-          year: YEAR,
-          ...overrides
-        })
-      )
-    ).id
+  // Reports created before numbers were stored hold no accreditation number,
+  // which createReport no longer allows.
+  const createReport = async (overrides = {}) => {
+    const { id } = await reportsRepository.createReport(
+      buildCreateReportParams({
+        organisationId,
+        registrationId,
+        year: YEAR,
+        ...overrides
+      })
+    )
+    const { accreditationNumber: _forgotten, ...report } = reportsStore.get(id)
+    reportsStore.set(id, report)
+    return id
+  }
 
   /** @param {string} id */
   const stored = (id) => reportsRepository.findReportById(id)

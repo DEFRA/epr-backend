@@ -16,6 +16,7 @@ import {
 import Boom from '@hapi/boom'
 import {
   validateCreateReport,
+  validateAccreditationNumberForCadence,
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindPeriodicReportsForYear,
@@ -289,6 +290,7 @@ const assignNumbers = async (reports, reportId, numbers) => {
       `Report ${validatedId} already holds ${held.join(', ')}`
     )
   }
+  validateAccreditationNumberForCadence(report.cadence, validatedNumbers)
 
   reports.set(validatedId, { ...report, ...validatedNumbers })
 }

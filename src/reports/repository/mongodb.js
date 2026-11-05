@@ -3,6 +3,8 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
+  cadencesAccepting,
+  validateAccreditationNumberForCadence,
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
@@ -290,7 +292,12 @@ const performAssignNumbers = async (db, reportId, numbers) => {
   const result = await reportsCollection(db).updateOne(
     {
       id: validatedId,
-      ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
+      ...Object.fromEntries(keys.map((key) => [key, { $exists: false }])),
+      ...('accreditationNumber' in validatedNumbers && {
+        cadence: {
+          $in: cadencesAccepting(validatedNumbers.accreditationNumber)
+        }
+      })
     },
     { $set: validatedNumbers }
   )
@@ -306,6 +313,9 @@ const performAssignNumbers = async (db, reportId, numbers) => {
     throw Boom.notFound(`Report not found: ${validatedId}`)
   }
   const held = keys.filter((key) => existing[key] !== undefined)
+  if (held.length === 0) {
+    validateAccreditationNumberForCadence(existing.cadence, validatedNumbers)
+  }
   throw Boom.conflict(`Report ${validatedId} already holds ${held.join(', ')}`)
 }
 

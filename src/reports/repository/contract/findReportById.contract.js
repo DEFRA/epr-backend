@@ -42,6 +42,7 @@ export const testFindReportByIdBehaviour = (it) => {
         submissionNumber: 1,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
+        accreditationNumber: expect.any(String),
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: DEFAULT_REPORT_PERIOD,

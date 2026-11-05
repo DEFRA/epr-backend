@@ -285,7 +285,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       registrationId: env.registrationId,
       numbers: numbersFor(
         await env.organisationsRepository.findById(env.organisationId),
-        { registrationId: env.registrationId }
+        {
+          registrationId: env.registrationId,
+          accreditationId:
+            cadence === 'monthly' ? registration.accreditationId : null
+        }
       ).numbers,
       registration,
       year,

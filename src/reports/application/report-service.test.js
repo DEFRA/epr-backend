@@ -29,6 +29,7 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -145,7 +146,8 @@ const defaultParams = () => {
     registrationId: registration.id,
     numbers: {
       organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      accreditationNumber: toAccreditationNumber('A24ER5000000001PL')
     },
     registration,
     year: toYear(2024),
@@ -291,6 +293,7 @@ describe('report-service', () => {
       await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
+        accreditationNumber: params.numbers.accreditationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -346,6 +349,7 @@ describe('report-service', () => {
       const baseReport = {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
+        accreditationNumber: params.numbers.accreditationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -524,6 +528,7 @@ describe('report-service', () => {
         await reportsRepository.createReport({
           organisationId: params.organisationId,
           registrationId: params.registrationId,
+          accreditationNumber: params.numbers.accreditationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -571,6 +576,7 @@ describe('report-service', () => {
     const baseReportFields = (params, changedBy) => ({
       organisationId: params.organisationId,
       registrationId: params.registrationId,
+      accreditationNumber: params.numbers.accreditationNumber,
       year: toYear(2024),
       cadence: 'monthly',
       period: 1,

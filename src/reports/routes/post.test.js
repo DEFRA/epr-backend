@@ -326,6 +326,29 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(created.accreditationNumber).toBeDefined()
   })
 
+  it('returns 404 and stores nothing for an accreditation without an accreditation number', async () => {
+    const created = await createServer(registeredOnlyReprocessor, {
+      accredited: true,
+      accreditationOverrides: { accreditationNumber: null }
+    })
+
+    const response = await created.post()
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(response.payload).message).toBe('Accreditation not found')
+    expect(
+      await fetchReportBySubmissionNumber(
+        created.reportsRepositoryFactory(),
+        created.organisationId,
+        created.registrationId,
+        YEAR,
+        'monthly',
+        MONTH,
+        1
+      )
+    ).toBeNull()
+  })
+
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
     const created = await createServer(registeredOnlyReprocessor)
 
@@ -693,6 +716,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     ) => ({
       organisationId,
       registrationId,
+      accreditationNumber: null,
       year: YEAR,
       cadence: 'quarterly',
       period: QUARTER,
