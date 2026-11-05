@@ -99,6 +99,7 @@ async function ensureCollections(db) {
 
   await col.createIndex({ id: 1 }, { unique: true })
   await col.createIndex({ organisationId: 1, registrationId: 1 })
+  await col.createIndex({ organisationNumber: 1, registrationNumber: 1 })
   await col.createIndex(
     {
       organisationId: 1,
