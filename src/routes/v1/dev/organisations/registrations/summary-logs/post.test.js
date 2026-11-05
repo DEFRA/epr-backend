@@ -280,6 +280,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     async ({ held, number }) => {
       const env = await createEnvironment()
       const { organisationsRepository } = env
+      const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
       const findById = organisationsRepository.findById
       vi.spyOn(organisationsRepository, 'findById').mockImplementation(
         async (id) => {
@@ -295,9 +296,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-      expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual(
-        []
-      )
+      expect(insert).not.toHaveBeenCalled()
     }
   )
 
