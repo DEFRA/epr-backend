@@ -16,16 +16,6 @@ const it = base.extend({
     use
   ) => {
     await use(createInMemorySummaryLogRowStatesRepository(rowStateStorage))
-  },
-
-  removeStoredNumbers: async (/** @type {*} */ { rowStateStorage }, use) => {
-    await use(async (/** @type {string[]} */ keys) => {
-      for (const doc of rowStateStorage) {
-        for (const key of keys) {
-          delete doc[key]
-        }
-      }
-    })
   }
 })
 

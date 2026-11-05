@@ -93,18 +93,6 @@ export const summaryLogInsertSchema = Joi.object({
   })
 }).messages(commonMessages)
 
-export const summaryLogNumbersSchema = Joi.object(numbersSchema)
-  .min(1)
-  .custom((numbers, helpers) =>
-    Object.values(numbers).includes(undefined)
-      ? helpers.error('object.undefinedNumber')
-      : numbers
-  )
-  .messages({
-    'object.min': 'numbers must contain at least one number',
-    'object.undefinedNumber': 'a number must not be undefined'
-  })
-
 export const summaryLogKeySchema = Joi.object({
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
