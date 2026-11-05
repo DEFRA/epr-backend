@@ -14,6 +14,10 @@ import {
   REGISTRATION_STATUSES,
   REG_ACC_STATUS
 } from '#organisation-read-model/domain/model.js'
+import {
+  isoDateTime,
+  statusSchema
+} from '#organisation-read-model/domain/schema.js'
 
 /*
  * Routes validate responses with `stripUnknown`, so these schemas also decide
@@ -31,10 +35,6 @@ const yearKey = Joi.string().pattern(/^\d{4}$/)
 const orsIdKey = Joi.string().pattern(/^\d{3}$/)
 
 const isoDate = isoDateString()
-
-const isoDateTime = Joi.string()
-  .isoDate()
-  .pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
 
 const overseasSiteViewSchema = Joi.object({
   address: Joi.object({
@@ -64,29 +64,6 @@ const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
 const accreditedOverseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
   .required()
-
-const statusTimelineSchema = Joi.array()
-  .items(
-    Joi.object({
-      at: isoDateTime.required(),
-      status: Joi.string().required()
-    })
-  )
-  .description(
-    'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
-  )
-  .required()
-
-/**
- * @param {readonly string[]} statuses
- */
-const statusSchema = (statuses) =>
-  Joi.object({
-    current: Joi.string()
-      .valid(...statuses)
-      .required(),
-    timeline: statusTimelineSchema
-  }).required()
 
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
