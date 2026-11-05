@@ -13,7 +13,9 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf,
+  uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -100,7 +102,8 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
       ]
     })
     const registration = buildRegistration({
-      accreditationId: accreditation.id
+      accreditationId: accreditation.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const organisation = buildOrganisation({
       registrations: [registration],
@@ -111,6 +114,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     const reportId = await createAndSubmitReport(reportsRepository, {
       organisationId: organisation.id,
       registrationId: registration.id,
+      ...reportKeyOf(organisation, registration),
       year: toYear(2026),
       cadence: 'monthly',
       period: 3
@@ -178,7 +182,8 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
       ]
     })
     const registration = buildRegistration({
-      accreditationId: accreditation.id
+      accreditationId: accreditation.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const organisation = buildOrganisation({
       registrations: [registration],
@@ -188,7 +193,8 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     await reportsRepositoryFactory().createReport(
       buildCreateReportParams({
         organisationId: organisation.id,
-        registrationId: registration.id
+        registrationId: registration.id,
+        ...reportKeyOf(organisation, registration)
       })
     )
 

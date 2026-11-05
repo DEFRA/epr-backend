@@ -16,7 +16,9 @@ import {
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
@@ -55,6 +57,8 @@ export const testCreateReportBehaviour = (it) => {
         submissionNumber: 1,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         accreditationNumber: expect.any(String),
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
@@ -224,6 +228,16 @@ export const testCreateReportBehaviour = (it) => {
         repository.createReport(buildCreateReportParams({ cadence: 'weekly' }))
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
+
+    for (const number of ['organisationNumber', 'registrationNumber']) {
+      it(`refuses a report without its ${number}, which no read could find`, async () => {
+        await expect(
+          repository.createReport(
+            buildCreateReportParams({ [number]: undefined })
+          )
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+      })
+    }
 
     it('throws on missing required fields', async () => {
       await expect(

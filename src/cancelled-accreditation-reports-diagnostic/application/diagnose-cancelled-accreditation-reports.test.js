@@ -9,7 +9,9 @@ import {
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf,
+  uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -58,7 +60,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
   it('describes a cancelled accreditation with every report of its registration', async () => {
     const accreditation = cancelledAccreditation()
     const registration = buildRegistration({
-      accreditationId: accreditation.id
+      accreditationId: accreditation.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const organisation = buildOrganisation({
       registrations: [registration],
@@ -67,6 +70,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
     const reportKey = {
       organisationId: organisation.id,
       registrationId: registration.id,
+      ...reportKeyOf(organisation, registration),
       year: toYear(2026)
     }
     await createAndSubmitReport(reportsRepository, {
@@ -134,7 +138,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
   it('orders reports by year, cadence, period and submission', async () => {
     const accreditation = cancelledAccreditation()
     const registration = buildRegistration({
-      accreditationId: accreditation.id
+      accreditationId: accreditation.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const organisation = buildOrganisation({
       registrations: [registration],
@@ -142,7 +147,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
     })
     const base = {
       organisationId: organisation.id,
-      registrationId: registration.id
+      registrationId: registration.id,
+      ...reportKeyOf(organisation, registration)
     }
     /** @type {[number, Cadence, number][]} */
     const reports = [
@@ -240,14 +246,32 @@ describe('diagnoseCancelledAccreditationReports', () => {
     ])
   })
 
+  it('lists no reports for a linked registration that was never given a number', async () => {
+    const accreditation = cancelledAccreditation()
+    const registration = buildRegistration({
+      accreditationId: accreditation.id,
+      registrationNumber: null
+    })
+    const organisation = buildOrganisation({
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+
+    const { rows } = await diagnose([organisation])
+
+    expect(rows).toMatchObject([{ linkedRegistrations: 1, reports: [] }])
+  })
+
   it('leaves out accreditations that are not cancelled and reports of other registrations', async () => {
     const cancelled = cancelledAccreditation()
     const approved = buildAccreditation({ status: 'approved' })
     const cancelledRegistration = buildRegistration({
-      accreditationId: cancelled.id
+      accreditationId: cancelled.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const approvedRegistration = buildRegistration({
-      accreditationId: approved.id
+      accreditationId: approved.id,
+      registrationNumber: uniqueRegistrationNumber()
     })
     const organisation = buildOrganisation({
       registrations: [cancelledRegistration, approvedRegistration],
@@ -256,7 +280,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
     await reportsRepository.createReport(
       buildCreateReportParams({
         organisationId: organisation.id,
-        registrationId: approvedRegistration.id
+        registrationId: approvedRegistration.id,
+        ...reportKeyOf(organisation, approvedRegistration)
       })
     )
 
@@ -275,8 +300,14 @@ describe('diagnoseCancelledAccreditationReports', () => {
   it('totals the reports across every cancelled accreditation', async () => {
     const first = cancelledAccreditation()
     const second = cancelledAccreditation()
-    const firstRegistration = buildRegistration({ accreditationId: first.id })
-    const secondRegistration = buildRegistration({ accreditationId: second.id })
+    const firstRegistration = buildRegistration({
+      accreditationId: first.id,
+      registrationNumber: uniqueRegistrationNumber()
+    })
+    const secondRegistration = buildRegistration({
+      accreditationId: second.id,
+      registrationNumber: uniqueRegistrationNumber()
+    })
     const organisation = buildOrganisation({
       registrations: [firstRegistration, secondRegistration],
       accreditations: [first, second]
@@ -285,7 +316,8 @@ describe('diagnoseCancelledAccreditationReports', () => {
       await reportsRepository.createReport(
         buildCreateReportParams({
           organisationId: organisation.id,
-          registrationId: registration.id
+          registrationId: registration.id,
+          ...reportKeyOf(organisation, registration)
         })
       )
     }

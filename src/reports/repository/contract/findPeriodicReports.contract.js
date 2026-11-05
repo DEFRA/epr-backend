@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
@@ -7,13 +6,22 @@ import {
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
-  DEFAULT_REPORT_YEAR
+  DEFAULT_REPORT_YEAR,
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
 } from './test-data.js'
+
+const DEFAULT_KEY = {
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER
+}
 
 export const testFindPeriodicReportsBehaviour = (it) => {
   describe('findPeriodicReports', () => {
@@ -30,10 +38,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
     )
 
     it('returns empty array when no reports exist for org/reg', async () => {
-      const result = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
+      const result = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toEqual([])
     })
@@ -42,8 +47,8 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const result = await repository.findPeriodicReports({
-        organisationId: new ObjectId().toString(),
-        registrationId: DEFAULT_REG_ID
+        organisationNumber: uniqueOrganisationNumber(),
+        registrationNumber: DEFAULT_REG_NUMBER
       })
 
       expect(result).toEqual([])
@@ -53,8 +58,8 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const result = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: new ObjectId().toString()
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: uniqueRegistrationNumber()
       })
 
       expect(result).toEqual([])
@@ -65,10 +70,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      const [result] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
+      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
@@ -102,10 +104,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams({ period: MONTHLY_PERIODS.February })
       )
 
-      const [result] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
+      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
@@ -156,10 +155,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         })
       )
 
-      const [result] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
+      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
@@ -195,7 +191,9 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
     it('throws on missing required params', async () => {
       await expect(
-        repository.findPeriodicReports({ organisationId: DEFAULT_ORG_ID })
+        repository.findPeriodicReports({
+          organisationNumber: DEFAULT_ORG_NUMBER
+        })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
   })

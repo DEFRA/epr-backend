@@ -402,7 +402,8 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const minted = beforeTransitionToSubmitting(env, () =>
       createAndSubmitReport(env.server.app.reportsRepository, {
         organisationId: env.organisationId,
-        registrationId: env.registrationId
+        registrationId: env.registrationId,
+        ...env.reportKey
       })
     )
 

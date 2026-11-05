@@ -9,7 +9,9 @@ import {
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
@@ -281,8 +283,8 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
     it('surfaces resubmissionRequired on the latest submitted report', async () => {
       await createAndSubmitReport(repository)
       await repository.markSubmittedReportsRequiringResubmission({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         summaryLogId: 'sl-resub',
         uploadedAt: '2026-06-01T12:00:00.000Z',
         periods: [

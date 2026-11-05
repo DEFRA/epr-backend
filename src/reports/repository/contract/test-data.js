@@ -1,8 +1,12 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
@@ -13,6 +17,31 @@ import {
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
+
+const MAX_TEST_ORGANISATION_NUMBER = 1_000_000_000_000
+
+/** An organisation number no other test uses. */
+export const uniqueOrganisationNumber = () =>
+  toOrganisationNumber(String(randomInt(1, MAX_TEST_ORGANISATION_NUMBER)))
+
+/** A registration number no other test uses. */
+export const uniqueRegistrationNumber = () =>
+  toRegistrationNumber(`R${randomUUID()}`)
+
+export const DEFAULT_ORG_NUMBER = uniqueOrganisationNumber()
+export const DEFAULT_REG_NUMBER = uniqueRegistrationNumber()
+
+/**
+ * The numbers a report for a test organisation's registration is stored under.
+ * @param {{ orgId: number }} organisation
+ * @param {{ registrationNumber?: string | null }} registration
+ */
+export const reportKeyOf = (organisation, registration) => ({
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(
+    /** @type {string} */ (registration.registrationNumber)
+  )
+})
 export const DEFAULT_REPORT_START_DATE = calendarDate('2024-01-01')
 export const DEFAULT_REPORT_END_DATE = calendarDate('2024-01-31')
 export const DEFAULT_REPORT_DUE_DATE = calendarDate('2024-02-15')
@@ -77,6 +106,8 @@ export const buildCreateReportParams = (overrides = {}) =>
   /** @type {import('../port.js').CreateReportParams} */ ({
     organisationId: DEFAULT_ORG_ID,
     registrationId: DEFAULT_REG_ID,
+    organisationNumber: DEFAULT_ORG_NUMBER,
+    registrationNumber: DEFAULT_REG_NUMBER,
     accreditationNumber:
       (overrides.cadence ?? 'monthly') === 'monthly'
         ? toAccreditationNumber('A24ER5000000001PL')

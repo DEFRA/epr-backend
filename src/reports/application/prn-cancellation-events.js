@@ -7,7 +7,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { periodForDate } from '#reports/domain/period-for-date.js'
 
 /**
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { RegistrationKey, ReportsRepository } from '#reports/repository/port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
 
@@ -17,7 +17,7 @@ import { periodForDate } from '#reports/domain/period-for-date.js'
  *   systemLogsRepository: SystemLogsRepository
  * }} PrnCancelledRepositories
  *
- * @typedef {{
+ * @typedef {RegistrationKey & {
  *   organisationId: string,
  *   registrationId: string,
  *   prnId: string,
@@ -42,7 +42,14 @@ import { periodForDate } from '#reports/domain/period-for-date.js'
  */
 export const createOnPrnCancelled =
   ({ reportsRepository, systemLogsRepository }) =>
-  async ({ organisationId, registrationId, prnId, issuedAt }) => {
+  async ({
+    organisationId,
+    registrationId,
+    organisationNumber,
+    registrationNumber,
+    prnId,
+    issuedAt
+  }) => {
     const { year, period } = periodForDate(issuedAt, CADENCE.monthly)
     const issuedPeriod = { year, cadence: CADENCE.monthly, period }
 
@@ -54,8 +61,8 @@ export const createOnPrnCancelled =
 
     const reportsMarkedStale =
       await reportsRepository.markActiveReportsStaleForPrnCancellation({
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         ...issuedPeriod,
         prnId,
         occurredAt

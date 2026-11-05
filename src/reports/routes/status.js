@@ -70,8 +70,7 @@ export const reportsStatus = {
       findRegistrationForReport(organisationsRepository, params),
       fetchReportBySubmissionNumber(
         reportsRepository,
-        organisationId,
-        registrationId,
+        params,
         year,
         cadence,
         period,

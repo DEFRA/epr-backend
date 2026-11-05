@@ -18,6 +18,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -99,22 +100,22 @@ const flagReportsByIdempotencyKey = async (
  * flagged stale by an earlier upload (first trigger wins; the audit trail records every occurrence).
  *
  * @param {Db} db
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
 export const performMarkActiveReportsStaleForSummaryLog = async (
   db,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   summaryLogId,
   uploadedAt
 ) => {
   validateMarkActiveReportsStale({
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     summaryLogId,
     uploadedAt
   })
@@ -123,13 +124,13 @@ export const performMarkActiveReportsStaleForSummaryLog = async (
 
   const flagged = await flagReportsByIdempotencyKey(db, {
     selectFilter: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
       'source.summaryLogId': { $ne: summaryLogId },
       'stale.summaryLogChanged': { $exists: false }
     },
-    readScope: { organisationId, registrationId },
+    readScope: { organisationNumber, registrationNumber },
     idempotencyKeyField: 'summaryLogId',
     idempotencyKeyValue: summaryLogId,
     field: 'stale.summaryLogChanged',
@@ -157,8 +158,8 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
   params
 ) => {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -167,18 +168,15 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
   } = validateMarkActiveReportsStaleForPrnCancellation(params)
 
   const prnCancelled = { occurredAt, prnId }
+  const slot = { organisationNumber, registrationNumber, year, cadence, period }
 
   const flagged = await flagReportsByIdempotencyKey(db, {
     selectFilter: {
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period,
+      ...slot,
       'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
       'stale.prnCancelled': { $exists: false }
     },
-    readScope: { organisationId, registrationId, year, cadence, period },
+    readScope: slot,
     idempotencyKeyField: 'prnId',
     idempotencyKeyValue: prnId,
     field: 'stale.prnCancelled',
@@ -202,11 +200,11 @@ export const performMarkActiveReportsStaleForPrnCancellation = async (
  */
 export const performMarkSubmittedReportsRequiringResubmission = async (
   db,
-  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
+  { organisationNumber, registrationNumber, summaryLogId, uploadedAt, periods }
 ) => {
   validateMarkSubmittedReportsRequiringResubmission({
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     summaryLogId,
     uploadedAt,
     periods
@@ -221,8 +219,8 @@ export const performMarkSubmittedReportsRequiringResubmission = async (
   const submitted = await reportsCollection(db)
     .find(
       {
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         'status.currentStatus': REPORT_STATUS.SUBMITTED,
         $or: periods.map(({ year, cadence, period }) => ({
           year,
@@ -279,8 +277,8 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
   params
 ) => {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -293,8 +291,8 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
 
   const doc = await reportsCollection(db).findOneAndUpdate(
     {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
