@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -174,6 +175,9 @@ describe('PRN routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
         packagingRecyclingNotesRepository: prnRepositoryFactory,

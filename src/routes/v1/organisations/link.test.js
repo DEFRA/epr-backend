@@ -9,8 +9,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -25,8 +24,6 @@ import {
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
-
-/** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
@@ -107,6 +104,8 @@ describe('POST /organisations/{organisationNumber}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -544,13 +543,9 @@ describe('POST /organisations/{organisationNumber}/link', () => {
             createInMemoryOrganisationsRepository([])
           unreadableOrganisationsRepository = organisationsRepositoryFactory()
 
-          const readable = createOrganisationReadRepository({
-            organisationsRepository: unreadableOrganisationsRepository,
-            overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
-            logger: /** @type {TypedLogger} */ (
-              /** @type {unknown} */ ({ warn: () => {} })
-            )
-          })
+          const readable = organisationReadRepositoryOver(
+            unreadableOrganisationsRepository
+          )
 
           // The organisation reads as it stands, but never as linked.
           /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */

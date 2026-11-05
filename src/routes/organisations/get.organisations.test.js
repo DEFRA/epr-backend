@@ -8,6 +8,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asRegulator, asSupport } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   body,
   createAccreditedOrganisationBuilder
@@ -36,7 +37,11 @@ describe('GET /organisations', () => {
           [acme, beta].map((organisation) => partialMock(organisation))
         ),
         overseasSitesRepository:
-          createInMemoryOverseasSitesRepository(overseasSites)
+          createInMemoryOverseasSitesRepository(overseasSites),
+        organisationReadRepository: await organisationReadRepositoryOf(
+          [acme, beta],
+          { overseasSites }
+        )
       }
     })
   })

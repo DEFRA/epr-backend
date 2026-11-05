@@ -1,4 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -157,6 +158,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
         ledgerRepository,

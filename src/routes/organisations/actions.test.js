@@ -14,6 +14,7 @@ import {
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
@@ -54,6 +55,8 @@ describe('organisation actions by organisation number', () => {
                 : repository.findById(id, minimumVersion)
           }
         },
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })

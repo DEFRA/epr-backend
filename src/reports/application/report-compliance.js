@@ -5,7 +5,7 @@ import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/to-read-model.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 /** @param {string} message */
