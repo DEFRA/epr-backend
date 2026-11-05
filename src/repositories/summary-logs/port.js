@@ -26,8 +26,8 @@
 
 /**
  * @typedef {Object} SummaryLogStats
- * @property {string} organisationId - Organisation ID
- * @property {string} registrationId - Registration ID
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Date|null} lastSuccessful - Date of last submitted log
  * @property {Date|null} lastFailed - Date of last failed log
  * @property {number} successfulCount - Count of submitted logs
@@ -67,7 +67,7 @@
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
- * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
+ * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
  * @property {(logId: SummaryLogId) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: SummaryLogId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
  * @property {(fileId: SummaryLogFileId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
