@@ -1,7 +1,11 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
@@ -12,6 +16,44 @@ import {
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
+
+/** An organisation number no other test uses. */
+export const uniqueOrganisationNumber = () =>
+  toOrganisationNumber(String(randomInt(1, 2 ** 47)))
+
+/** A registration number no other test uses. */
+export const uniqueRegistrationNumber = () =>
+  toRegistrationNumber(`R${randomUUID()}`)
+
+export const DEFAULT_ORG_NUMBER = uniqueOrganisationNumber()
+export const DEFAULT_REG_NUMBER = uniqueRegistrationNumber()
+
+/**
+ * Create params for a report stored before the numbers backfill: no
+ * organisation or registration number unless `overrides` gives one.
+ * @param {ReturnType<typeof buildCreateReportParams>} params
+ * @param {object} [overrides]
+ */
+export const withoutReportNumbers = (
+  {
+    organisationNumber: _organisationNumber,
+    registrationNumber: _registrationNumber,
+    ...params
+  },
+  overrides = {}
+) => ({ ...params, ...overrides })
+
+/**
+ * The numbers a report for a test organisation's registration is stored under.
+ * @param {{ orgId: number }} organisation
+ * @param {{ registrationNumber?: string | null }} registration
+ */
+export const reportKeyOf = (organisation, registration) => ({
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(
+    /** @type {string} */ (registration.registrationNumber)
+  )
+})
 export const DEFAULT_REPORT_START_DATE = calendarDate('2024-01-01')
 export const DEFAULT_REPORT_END_DATE = calendarDate('2024-01-31')
 export const DEFAULT_REPORT_DUE_DATE = calendarDate('2024-02-15')
@@ -69,6 +111,8 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
 export const buildCreateReportParams = (overrides = {}) => ({
   organisationId: DEFAULT_ORG_ID,
   registrationId: DEFAULT_REG_ID,
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,

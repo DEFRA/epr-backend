@@ -140,13 +140,15 @@ const createPrnRepo = (initialData = []) =>
 const defaultParams = () => {
   const organisationId = new ObjectId().toString()
   const registration = buildRegistration()
+  const key = {
+    organisationNumber: toOrganisationNumber('500123'),
+    registrationNumber: toRegistrationNumber('R25SR500010912PL')
+  }
   return {
     organisationId,
     registrationId: registration.id,
-    numbers: {
-      organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
-    },
+    key,
+    numbers: { ...key, accreditationNumber: null },
     registration,
     year: toYear(2024),
     cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
@@ -291,6 +293,7 @@ describe('report-service', () => {
       await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
+        ...params.key,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -346,6 +349,7 @@ describe('report-service', () => {
       const baseReport = {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
+        ...params.key,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -524,6 +528,7 @@ describe('report-service', () => {
         await reportsRepository.createReport({
           organisationId: params.organisationId,
           registrationId: params.registrationId,
+          ...params.key,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -571,6 +576,7 @@ describe('report-service', () => {
     const baseReportFields = (params, changedBy) => ({
       organisationId: params.organisationId,
       registrationId: params.registrationId,
+      ...params.key,
       year: toYear(2024),
       cadence: 'monthly',
       period: 1,
@@ -611,8 +617,7 @@ describe('report-service', () => {
 
       const result = await fetchReportBySubmissionNumber(
         reportsRepository,
-        params.organisationId,
-        params.registrationId,
+        params.key,
         toYear(2024),
         'monthly',
         1,
@@ -699,10 +704,7 @@ describe('report-service', () => {
         code: 'period_not_required'
       })
       expect(
-        await reportsRepository.findPeriodicReports({
-          organisationId: params.organisationId,
-          registrationId: params.registrationId
-        })
+        await reportsRepository.findPeriodicReports(params.key)
       ).toStrictEqual([])
     })
 
@@ -876,14 +878,14 @@ describe('createReportsService', () => {
     const service = createReportsService(reportsRepository)
 
     const result = await service.hasReportSubmittedSince(
-      'org-1',
-      'reg-1',
+      toOrganisationNumber('500123'),
+      toRegistrationNumber('R25SR500010912PL'),
       '2026-07-01T00:00:00.000Z'
     )
 
     expect(reportsRepository.hasReportSubmittedSince).toHaveBeenCalledWith(
-      'org-1',
-      'reg-1',
+      '500123',
+      'R25SR500010912PL',
       '2026-07-01T00:00:00.000Z'
     )
     expect(result).toBe(true)
@@ -899,7 +901,10 @@ describe('createReportsService', () => {
     })
     const service = createReportsService(reportsRepository)
 
-    const params = { organisationId: 'org-1', registrationId: 'reg-1' }
+    const params = {
+      organisationNumber: toOrganisationNumber('500123'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+    }
     const result = await service.findPeriodicReports(params)
 
     expect(reportsRepository.findPeriodicReports).toHaveBeenCalledWith(params)

@@ -16,7 +16,7 @@ import {
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, ReportNumbers } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, RegistrationKey, ReportNumbers } from './port.js'
  */
 
 /**
@@ -147,8 +147,8 @@ export const validateFindReportById = (reportId) => {
 }
 
 /**
- * @param {{ organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string }} params
- * @returns {{ organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string }}
+ * @param {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }} params
+ * @returns {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }}
  */
 export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {

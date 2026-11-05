@@ -110,6 +110,7 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
+      key: params,
       registration: storedRegistration,
       year,
       cadence,

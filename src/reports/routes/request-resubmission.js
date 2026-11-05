@@ -29,6 +29,8 @@ export const reportsRequestResubmission = {
     const {
       organisationId,
       registrationId,
+      organisationNumber,
+      registrationNumber,
       cadence,
       year,
       period,
@@ -37,8 +39,8 @@ export const reportsRequestResubmission = {
 
     const result = await requestOperatorResubmission({
       reportsRepository,
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

@@ -15,7 +15,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import {
   REPORT_STATUS,
@@ -67,6 +68,9 @@ const organisation = buildOrganisation({
 })
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
+
+/** @param {{ registrationNumber?: string }} registration */
+const numbersOf = (registration) => reportKeyOf(organisation, registration)
 
 const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
 const otherOrganisation = buildOrganisation({
@@ -136,6 +140,7 @@ describe('report routes by natural key', () => {
       const forPeriod = (period) => ({
         organisationId: organisation.id,
         registrationId: registration.id,
+        ...numbersOf(registration),
         year: YEAR,
         cadence,
         period
@@ -206,8 +211,7 @@ describe('report routes by natural key', () => {
         }
         const report = await fetchReportBySubmissionNumber(
           reportsRepository,
-          organisation.id,
-          registration.id,
+          numbersOf(registration),
           YEAR,
           /** @type {Cadence} */ (cadence),
           periods.created,
@@ -345,8 +349,8 @@ describe('report routes by natural key', () => {
 
       it('says a stale report is stale, without ids', async () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
-          organisation.id,
-          registration.id,
+          numbersOf(registration).organisationNumber,
+          numbersOf(registration).registrationNumber,
           toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
@@ -438,8 +442,8 @@ describe('report routes by natural key', () => {
 
       it('refuses to change a stale report, as on /v1', async () => {
         await reportsRepository.markActiveReportsStaleForSummaryLog(
-          organisation.id,
-          registration.id,
+          numbersOf(registration).organisationNumber,
+          numbersOf(registration).registrationNumber,
           toSummaryLogFileId('sl-2'),
           '2026-05-01T00:00:00.000Z'
         )
@@ -541,6 +545,7 @@ describe('report routes by natural key', () => {
       buildCreateReportParams({
         organisationId: organisation.id,
         registrationId: accreditedRegistration.id,
+        ...numbersOf(accreditedRegistration),
         year: YEAR,
         cadence: 'monthly',
         period,
@@ -598,6 +603,7 @@ describe('report routes by natural key', () => {
         buildCreateReportParams({
           organisationId: organisation.id,
           registrationId: registration.id,
+          ...numbersOf(registration),
           year: YEAR,
           cadence: 'quarterly',
           period: 1,
@@ -615,8 +621,7 @@ describe('report routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.CREATED)
       const report = await fetchReportBySubmissionNumber(
         reportsRepository,
-        organisation.id,
-        accreditedRegistration.id,
+        numbersOf(accreditedRegistration),
         YEAR,
         'quarterly',
         1,
@@ -739,6 +744,7 @@ describe('report routes by natural key', () => {
         buildCreateReportParams({
           organisationId: organisation.id,
           registrationId: accreditedRegistration.id,
+          ...numbersOf(accreditedRegistration),
           year: YEAR,
           cadence: 'monthly',
           period: 3,

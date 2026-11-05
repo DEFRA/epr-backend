@@ -159,6 +159,11 @@ const numbersSchema = {
   accreditationNumber: Joi.string().allow(null).optional()
 }
 
+const registrationKeySchema = {
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required()
+}
+
 export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
@@ -238,10 +243,7 @@ export const updateReportStatusSchema = Joi.object({
   })
 })
 
-export const findPeriodicReportsSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA
-})
+export const findPeriodicReportsSchema = Joi.object(registrationKeySchema)
 
 export const findPeriodicReportsForYearSchema = Joi.object({
   year: YEAR_SCHEMA
@@ -252,15 +254,13 @@ export const findReportByIdSchema = Joi.string()
   .required()
 
 export const markActiveReportsStaleSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
 })
 
 export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
@@ -269,8 +269,7 @@ export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
 })
 
 export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required(),
   periods: Joi.array().items(periodRefSchema).required()
@@ -278,8 +277,7 @@ export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
 
 export const markSubmittedReportRequiringResubmissionByOperatorSchema =
   Joi.object({
-    organisationId: MONGO_ID_SCHEMA,
-    registrationId: MONGO_ID_SCHEMA,
+    ...registrationKeySchema,
     year: YEAR_SCHEMA,
     cadence: cadenceSchema,
     period: periodSchema,

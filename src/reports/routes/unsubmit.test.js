@@ -10,7 +10,8 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import {
   buildCreateReportParams,
   createAndSubmitReport,
-  DEFAULT_CHANGED_BY
+  DEFAULT_CHANGED_BY,
+  reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
@@ -19,6 +20,7 @@ import * as reportAudit from '#reports/application/audit.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
@@ -31,6 +33,8 @@ const YEAR = toYear(2026)
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   year: Year,
  *   cadence: string,
  *   period: number
@@ -53,6 +57,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const reportId = await seed(reportsRepository, {
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       year: YEAR,
       cadence: 'quarterly',
       period: 1
@@ -71,6 +76,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       reportId: /** @type {string} */ (reportId),
       reportsRepository,
       /** @param {number} [submissionNumber] */
@@ -276,7 +282,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           await createAndSubmitReport(reportsRepository, period)
           await reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
             {
-              ...period,
+              organisationNumber: period.organisationNumber,
+              registrationNumber: period.registrationNumber,
+              year: period.year,
+              cadence: period.cadence,
+              period: period.period,
               submissionNumber: 1,
               requestedBy: DEFAULT_CHANGED_BY,
               requestedAt: new Date().toISOString()

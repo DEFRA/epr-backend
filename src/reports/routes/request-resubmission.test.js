@@ -9,7 +9,8 @@ import { partialMock } from '#test/type-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
@@ -17,6 +18,7 @@ import * as reportAudit from '#reports/application/audit.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
@@ -29,6 +31,8 @@ const YEAR = toYear(2026)
  * @typedef {{
  *   organisationId: string,
  *   registrationId: string,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   year: Year,
  *   cadence: string,
  *   period: number
@@ -51,6 +55,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const reportId = await seed(reportsRepository, {
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       year: YEAR,
       cadence: 'quarterly',
       period: 1
@@ -69,6 +74,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       reportId,
       reportsRepository,
       url: `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/1/request-resubmission`

@@ -13,7 +13,8 @@ import { findSubmissionByNumber } from './submission-lookup.js'
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 
 /**
@@ -25,8 +26,7 @@ import { findSubmissionByNumber } from './submission-lookup.js'
  * report cannot be unsubmitted while a later resubmission draft is in progress.
  * The caller separately requires the target to be submitted.
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {RegistrationKey} key
  * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
@@ -35,16 +35,15 @@ import { findSubmissionByNumber } from './submission-lookup.js'
  */
 export async function isLatestSubmission(
   reportsRepository,
-  organisationId,
-  registrationId,
+  { organisationNumber, registrationNumber },
   year,
   cadence,
   period,
   submissionNumber
 ) {
   const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
+    organisationNumber,
+    registrationNumber
   })
   return isLatestSubmissionOf(
     periodicReports,
@@ -147,8 +146,8 @@ export function canRequestResubmission(periodicReports, target) {
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {OrganisationNumber} params.organisationNumber
+ * @param {RegistrationNumber} params.registrationNumber
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -158,8 +157,8 @@ export function canRequestResubmission(periodicReports, target) {
  */
 export async function requestOperatorResubmission({
   reportsRepository,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   year,
   cadence,
   period,
@@ -180,8 +179,8 @@ export async function requestOperatorResubmission({
     )
 
   const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
+    organisationNumber,
+    registrationNumber
   })
 
   const target = findSubmissionByNumber(
@@ -213,8 +212,8 @@ export async function requestOperatorResubmission({
 
   const result =
     await reportsRepository.markSubmittedReportRequiringResubmissionByOperator({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

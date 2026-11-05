@@ -24,6 +24,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -849,6 +850,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     overseasSitesRepository,
     organisationId,
     registrationId,
+    reportKey: reportKeyOf(testOrg, testOrg.registrations[0]),
     accreditationId,
     accredited,
     fileDataMap,

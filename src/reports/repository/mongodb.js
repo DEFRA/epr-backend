@@ -14,7 +14,6 @@ import {
 } from './validation.js'
 import {
   transformToPeriodicReports,
-  groupAsPeriodicReports,
   mapReport,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
@@ -40,6 +39,7 @@ import {
  *   UpdateReportStatusParams
  * } from './port.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -349,15 +349,18 @@ const performDeleteReport = async (db, params) => {
  * @returns {Promise<PeriodicReport[]>}
  */
 const performFindPeriodicReports = async (db, params) => {
-  const { organisationId, registrationId } = validateFindPeriodicReports(params)
+  const { organisationNumber, registrationNumber } =
+    validateFindPeriodicReports(params)
 
   const docs = await reportsCollection(db)
     .find(
-      { organisationId, registrationId },
+      { organisationNumber, registrationNumber },
       {
         projection: {
           _id: 0,
           id: 1,
+          organisationId: 1,
+          registrationId: 1,
           submissionNumber: 1,
           year: 1,
           cadence: 1,
@@ -374,11 +377,7 @@ const performFindPeriodicReports = async (db, params) => {
     )
     .toArray()
 
-  return groupAsPeriodicReports(
-    organisationId,
-    registrationId,
-    docs.map(withBareDates)
-  )
+  return transformToPeriodicReports(docs.map(withBareDates))
 }
 
 /**
@@ -455,15 +454,15 @@ const performFindPeriodicReportsForYear = async (db, params) => {
  * is directly indexable.
  *
  * @param {Db} db
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {string} since - ISO timestamp
  * @returns {Promise<boolean>}
  */
 const performHasReportSubmittedSince = async (
   db,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   since
 ) => {
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
@@ -471,8 +470,8 @@ const performHasReportSubmittedSince = async (
   // codebase relies on throughout).
   const match = await reportsCollection(db).findOne(
     {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       'status.submitted.at': { $gt: since }
     },
     { projection: { _id: 1 } }
@@ -500,15 +499,15 @@ export const createReportsRepository = async (db) => {
       performFindPeriodicReportsForYear(db, params),
     findReportById: (reportId) => performFindReportById(db, reportId),
     markActiveReportsStaleForSummaryLog: (
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       summaryLogId,
       uploadedAt
     ) =>
       performMarkActiveReportsStaleForSummaryLog(
         db,
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId,
         uploadedAt
       ),
@@ -518,8 +517,13 @@ export const createReportsRepository = async (db) => {
       performMarkSubmittedReportsRequiringResubmission(db, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
-    hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      performHasReportSubmittedSince(db, organisationId, registrationId, since),
+    hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
+      performHasReportSubmittedSince(
+        db,
+        organisationNumber,
+        registrationNumber,
+        since
+      ),
     findIdsWithoutNumbers: () => performFindIdsWithoutNumbers(db),
     assignNumbers: (reportId, numbers) =>
       performAssignNumbers(db, reportId, numbers)

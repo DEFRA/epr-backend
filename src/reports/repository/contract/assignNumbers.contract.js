@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { buildCreateReportParams } from './test-data.js'
+import { buildCreateReportParams, withoutReportNumbers } from './test-data.js'
 
 const numbers = {
   organisationNumber: '500123',
@@ -23,7 +23,11 @@ export const testAssignNumbersBehaviour = (it) => {
     )
 
     const createReport = async (overrides = {}) =>
-      (await repository.createReport(buildCreateReportParams(overrides))).id
+      (
+        await repository.createReport(
+          withoutReportNumbers(buildCreateReportParams(), overrides)
+        )
+      ).id
 
     describe('findIdsWithoutNumbers', () => {
       it('lists a report without an organisation number', async () => {

@@ -3,7 +3,9 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_CHANGED_BY
@@ -90,6 +92,8 @@ describe('onPrnCancelled', () => {
     await onPrnCancelled({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
       issuedAt: ISSUED_AT_IN_PERIOD,
       reportsRepository: reportsRepositoryFactory(),
@@ -122,6 +126,8 @@ describe('onPrnCancelled', () => {
     await onPrnCancelled({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
       issuedAt: ISSUED_AT_IN_PERIOD,
       reportsRepository: reportsRepositoryFactory(),
@@ -154,6 +160,8 @@ describe('onPrnCancelled', () => {
     await onPrnCancelled({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
       issuedAt: ISSUED_AT_IN_PERIOD,
       reportsRepository: reportsRepositoryFactory(),
@@ -169,6 +177,8 @@ describe('onPrnCancelled', () => {
     await onPrnCancelled({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
       issuedAt: ISSUED_AT_IN_PERIOD,
       reportsRepository: createInMemoryReportsRepository()(),

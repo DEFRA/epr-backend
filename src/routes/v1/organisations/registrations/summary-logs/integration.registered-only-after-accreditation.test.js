@@ -99,6 +99,7 @@ describe('an operator accredited in July uploading their registered-only summary
     await createAndSubmitReport(env.reportsRepository, {
       organisationId,
       registrationId,
+      ...env.reportKey,
       year: YEAR,
       cadence: CADENCE.quarterly,
       period: QUARTERLY_PERIODS.Q1,

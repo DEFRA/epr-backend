@@ -4,8 +4,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID,
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
@@ -46,8 +46,8 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
 
     const callMark = (overrides = {}) =>
       repository.markSubmittedReportsRequiringResubmission({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         summaryLogId: SL_ID,
         uploadedAt: UPLOADED_AT,
         periods: [period(MONTHLY_PERIODS.January)],
@@ -144,8 +144,8 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
     it('throws validation error for invalid input', async () => {
       await expect(
         repository.markSubmittedReportsRequiringResubmission({
-          organisationId: '',
-          registrationId: '',
+          organisationNumber: '',
+          registrationNumber: '',
           summaryLogId: '',
           uploadedAt: '',
           periods: []

@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  withoutReportNumbers
+} from '#reports/repository/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -116,12 +119,14 @@ describe('backfillReportNumbers', () => {
   const createReport = async (overrides = {}) =>
     (
       await reportsRepository.createReport(
-        buildCreateReportParams({
-          organisationId,
-          registrationId,
-          year: YEAR,
-          ...overrides
-        })
+        withoutReportNumbers(
+          buildCreateReportParams({
+            organisationId,
+            registrationId,
+            year: YEAR
+          }),
+          overrides
+        )
       )
     ).id
 

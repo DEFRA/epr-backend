@@ -19,7 +19,6 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -283,10 +282,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers: numbersFor(
-        await env.organisationsRepository.findById(env.organisationId),
-        { registrationId: env.registrationId }
-      ).numbers,
+      numbers: env.reportKey,
       registration,
       year,
       cadence,
@@ -1066,8 +1062,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-second')
     await requestOperatorResubmission({
       reportsRepository: env.reportsRepository,
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
+      ...env.reportKey,
       ...JANUARY_2025,
       submissionNumber: 1,
       requestedBy: CHANGED_BY
