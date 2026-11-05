@@ -102,8 +102,8 @@ export const loadsByReportingPeriodSchema = Joi.object({
       'Deprecated: use periodsRequiringResubmission. Every closed period this upload added or adjusted loads in, including those whose reported figures did not change.'
     )
     .meta({ deprecated: true }),
-  // No default: absent means not computed (a log validated before the field
-  // existed). A default [] would read as nothing to resubmit.
+  // No default: the frontend still reads an absent field as not computed and
+  // falls back on closed-period counts.
   periodsRequiringResubmission: Joi.array().items(periodRefSchema)
 })
 
