@@ -7,12 +7,18 @@ import {
   regAccStatusByYear
 } from './years.js'
 
-const registration = (timeline) => partialMock({ status: { timeline } })
+const registration = (timeline, accreditations = {}) =>
+  partialMock({ status: { timeline }, accreditations })
 
-const organisationOf = (...timelines) =>
+const organisationOf = (...registrations) =>
   partialMock({
     registrations: Object.fromEntries(
-      timelines.map((timeline, index) => [`R${index}`, registration(timeline)])
+      registrations.map((timelineOrRegistration, index) => [
+        `R${index}`,
+        Array.isArray(timelineOrRegistration)
+          ? registration(timelineOrRegistration)
+          : timelineOrRegistration
+      ])
     )
   })
 
@@ -97,6 +103,32 @@ describe('organisationYears', () => {
     expect(organisationYears(partialMock({ registrations: {} }), NOW)).toEqual(
       []
     )
+  })
+
+  it('should list a later year a registration approved today holds an accreditation for', () => {
+    const organisation = organisationOf(
+      registration([{ status: 'approved', at: '2026-02-01T00:00:00.000Z' }], {
+        2028: {}
+      })
+    )
+
+    expect(organisationYears(organisation, NOW)).toStrictEqual([
+      2028, 2027, 2026
+    ])
+  })
+
+  it('should not list a later year for a registration cancelled today', () => {
+    const organisation = organisationOf(
+      registration(
+        [
+          { status: 'approved', at: '2026-02-01T00:00:00.000Z' },
+          { status: 'cancelled', at: '2027-02-01T00:00:00.000Z' }
+        ],
+        { 2028: {} }
+      )
+    )
+
+    expect(organisationYears(organisation, NOW)).toStrictEqual([2027, 2026])
   })
 })
 

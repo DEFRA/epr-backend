@@ -1,5 +1,10 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { utcYearOf, yearEndOrToday } from '#common/helpers/dates/year.js'
+import {
+  isFutureYear,
+  utcYearOf,
+  yearEndOrToday
+} from '#common/helpers/dates/year.js'
+import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { statusOn } from './model.js'
 import { regAccStatusByDate } from './reg-acc-status-by-date.js'
 import { approvedYears } from './status-timeline.js'
@@ -10,8 +15,31 @@ import { approvedYears } from './status-timeline.js'
 /** @import { RegAccStatusSource } from './reg-acc-status-by-date.js' */
 
 /**
+ * @param {Registration} registration
+ * @param {CalendarDate} today
+ */
+const isApprovedOn = (registration, today) =>
+  statusOn(registration.status.timeline, today) === REGISTRATION_STATUS.APPROVED
+
+/**
+ * Later years a registration approved today holds an accreditation for.
+ *
+ * @param {Registration} registration
+ * @param {CalendarDate} today
+ * @param {Date} now
+ * @returns {Year[]}
+ */
+const futureAccreditedYears = (registration, today, now) =>
+  isApprovedOn(registration, today)
+    ? Object.keys(registration.accreditations)
+        .map(utcYearOf)
+        .filter((year) => isFutureYear(year, now))
+    : []
+
+/**
  * The calendar years in which the organisation held an approved registration,
- * newest first, up to and including the current year.
+ * newest first, up to and including the current year, and any later year a
+ * registration approved today holds an accreditation for.
  *
  * @param {Organisation} organisation
  * @param {Date} now
@@ -20,7 +48,10 @@ import { approvedYears } from './status-timeline.js'
 export const organisationYears = (organisation, now) => {
   const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
-    ({ status }) => approvedYears(status.timeline, today)
+    (registration) => [
+      ...approvedYears(registration.status.timeline, today),
+      ...futureAccreditedYears(registration, today, now)
+    ]
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
