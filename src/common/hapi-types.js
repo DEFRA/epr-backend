@@ -5,6 +5,7 @@
  * @import {LockManager} from 'mongo-locks'
  * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
+ * @import {FutureAccreditationsRepository} from '#future-accreditations/repository/port.js'
  * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
  * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
  * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
@@ -72,6 +73,7 @@
  *  logger: TypedLogger,
  *  organisationsRepository: OrganisationsRepository,
  *  organisationReadRepository: OrganisationReadRepository,
+ *  futureAccreditationsRepository: FutureAccreditationsRepository,
  *  systemLogsRepository: SystemLogsRepository,
  *  ledgerRepository: WasteBalanceLedgerRepository,
  *  wasteBalanceService: WasteBalanceService,
@@ -133,6 +135,7 @@
  *
  * @typedef {{
  *   formSubmissionsRepository: FormSubmissionsRepository,
+ *   futureAccreditationsRepository: FutureAccreditationsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   nonProdDataReset: NonProdDataReset,
  *   organisationReadRepository: OrganisationReadRepository,

@@ -23,6 +23,7 @@ import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
+import { createInMemoryFutureAccreditationsRepositoryPlugin } from '#future-accreditations/repository/inmemory.plugin.js'
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
@@ -162,6 +163,10 @@ const repositoryConfigs = [
   {
     name: 'organisationReadRepository',
     createDefault: () => organisationReadRepositoryPlugin
+  },
+  {
+    name: 'futureAccreditationsRepository',
+    createDefault: createInMemoryFutureAccreditationsRepositoryPlugin
   }
 ]
 
