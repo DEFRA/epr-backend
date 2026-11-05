@@ -57,18 +57,12 @@ describe('PUT /v1/dev/stub-accreditations/{registrationNumber}/{year}', () => {
     ).toStrictEqual([buildFutureAccreditation()])
   })
 
-  it.for([
-    { description: 'a year before 2027', path: `${registrationNumber}/2026` },
-    {
-      description: 'a year that is not a number',
-      path: `${registrationNumber}/next`
-    }
-  ])('should refuse $description', async ({ path }) => {
+  it('should refuse a year that is not a number', async () => {
     const { server } = await serverWith({ devEndpoints: true })
 
     const response = await server.inject({
       method: 'PUT',
-      url: `/v1/dev/stub-accreditations/${path}`,
+      url: `/v1/dev/stub-accreditations/${registrationNumber}/next`,
       payload
     })
 

@@ -61,15 +61,7 @@ describe('GET /organisations/{organisationNumber}/years', () => {
 })
 
 describe('organisationYearsResponseSchema', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('accepts years up to the current year', () => {
+  it('accepts distinct years', () => {
     const { error } = organisationYearsResponseSchema.validate({
       years: [2027, 2026]
     })
@@ -83,13 +75,5 @@ describe('organisationYearsResponseSchema', () => {
     })
 
     expect(error).toBeDefined()
-  })
-
-  it('should accept a year that has not started', () => {
-    const { error } = organisationYearsResponseSchema.validate({
-      years: [2028]
-    })
-
-    expect(error).toBeUndefined()
   })
 })

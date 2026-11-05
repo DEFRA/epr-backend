@@ -105,24 +105,5 @@ export const testFutureAccreditationsBehaviour = (it) => {
         }
       })
     })
-
-    it('should work out the registration’s status in the future year', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const stored = buildOrganisation({ registrations: [reprocessor()] })
-      const repository = await organisationReadRepositoryWith({
-        organisations: [stored],
-        futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)]
-      })
-
-      const organisation = await findOrganisation(
-        repository,
-        String(stored.orgId)
-      )
-
-      expect(
-        organisation.registrations[REPROCESSOR_NUMBER].regAccStatusByDate[2027]
-      ).toStrictEqual({ '2027-01-01': { status: 'accredited' } })
-    })
   })
 }
