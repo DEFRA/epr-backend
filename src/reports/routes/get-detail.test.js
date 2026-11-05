@@ -829,9 +829,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
           year: YEAR,
           cadence: 'quarterly',
           period: 1,
-          startDate: '2026-01-01',
-          endDate: '2026-03-31',
-          dueDate: '2026-04-20',
+          startDate: calendarDate('2026-01-01'),
+          endDate: calendarDate('2026-03-31'),
+          dueDate: calendarDate('2026-04-20'),
           ...overrides
         })
       )

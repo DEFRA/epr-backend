@@ -1,3 +1,5 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -248,7 +250,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
     })
 
     it('returns separate documents for the same org/registration across different years', async () => {
-      const NEXT_YEAR = DEFAULT_REPORT_YEAR + 1
+      const NEXT_YEAR = toYear(DEFAULT_REPORT_YEAR + 1)
 
       await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
@@ -257,9 +259,9 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams({
           period: MONTHLY_PERIODS.January,
           year: NEXT_YEAR,
-          startDate: `${NEXT_YEAR}-01-01`,
-          endDate: `${NEXT_YEAR}-01-31`,
-          dueDate: `${NEXT_YEAR}-02-15`
+          startDate: calendarDate(`${NEXT_YEAR}-01-01`),
+          endDate: calendarDate(`${NEXT_YEAR}-01-31`),
+          dueDate: calendarDate(`${NEXT_YEAR}-02-15`)
         })
       )
 

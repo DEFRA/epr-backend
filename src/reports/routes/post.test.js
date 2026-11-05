@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -319,6 +320,28 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditationNumber: null
     })
     expect(created.accreditationNumber).toBeDefined()
+  })
+
+  it('returns 404 and stores nothing for an accreditation without an accreditation number', async () => {
+    const created = await createServer(registeredOnlyReprocessor, {
+      accredited: true,
+      accreditationOverrides: { accreditationNumber: null }
+    })
+
+    const response = await created.post()
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(JSON.parse(response.payload).message).toBe('Accreditation not found')
+    expect(
+      await fetchReportBySubmissionNumber(
+        created.reportsRepositoryFactory(),
+        created,
+        YEAR,
+        'monthly',
+        MONTH,
+        1
+      )
+    ).toBeNull()
   })
 
   it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
@@ -693,8 +716,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId,
       organisationNumber,
       registrationNumber,
+      accreditationNumber: null,
       year: YEAR,
-      cadence: 'quarterly',
+      cadence: CADENCE.quarterly,
       period: QUARTER,
       startDate: calendarDate('2026-01-01'),
       endDate: calendarDate('2026-03-31'),

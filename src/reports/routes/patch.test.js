@@ -1,3 +1,5 @@
+import { toYear } from '#common/helpers/dates/year.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -22,11 +24,11 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const STREAMS = {
-  registeredOnly: { cadence: 'quarterly', period: 1 },
-  accredited: { cadence: 'monthly', period: 7 }
+  registeredOnly: { cadence: CADENCE.quarterly, period: 1 },
+  accredited: { cadence: CADENCE.monthly, period: 7 }
 }
 
 const UNENTERED_RECYCLING_ACTIVITY = {

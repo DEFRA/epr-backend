@@ -1,6 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -252,6 +253,7 @@ describe('resubmission-service', () => {
         registrationId: params.registrationId,
         organisationNumber: params.organisationNumber,
         registrationNumber: params.registrationNumber,
+        accreditationNumber: toAccreditationNumber('A24ER5000000001PL'),
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,

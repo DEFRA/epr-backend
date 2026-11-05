@@ -1,3 +1,4 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { describe, expect, it } from 'vitest'
 import { buildCreateReportParams } from './contract/test-data.js'
 import { validateCreateReport } from './validation.js'
@@ -5,9 +6,9 @@ import { validateCreateReport } from './validation.js'
 describe('validateCreateReport', () => {
   it('accepts bare YYYY-MM-DD startDate/endDate/dueDate unchanged', () => {
     const params = buildCreateReportParams({
-      startDate: '2024-01-01',
-      endDate: '2024-01-31',
-      dueDate: '2024-02-15'
+      startDate: calendarDate('2024-01-01'),
+      endDate: calendarDate('2024-01-31'),
+      dueDate: calendarDate('2024-02-15')
     })
 
     const validated = validateCreateReport(params)

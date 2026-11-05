@@ -3,6 +3,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { randomInt, randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -95,37 +96,48 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
   return id
 }
 
-export const buildCreateReportParams = (overrides = {}) => ({
-  organisationId: DEFAULT_ORG_ID,
-  registrationId: DEFAULT_REG_ID,
-  organisationNumber: DEFAULT_ORG_NUMBER,
-  registrationNumber: DEFAULT_REG_NUMBER,
-  year: DEFAULT_REPORT_YEAR,
-  cadence: 'monthly',
-  period: DEFAULT_REPORT_PERIOD,
-  submissionNumber: 1,
-  startDate: DEFAULT_REPORT_START_DATE,
-  endDate: DEFAULT_REPORT_END_DATE,
-  dueDate: DEFAULT_REPORT_DUE_DATE,
-  material: MATERIAL.PLASTIC,
-  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  changedBy: buildUserSummary(),
-  source: {
-    summaryLogId: toSummaryLogFileId('sl-1'),
-    lastUploadedAt: '2026-04-01T21:22:28.351Z'
-  },
-  prn: null,
-  recyclingActivity: {
-    suppliers: [],
-    totalTonnageReceived: 0,
-    tonnageRecycled: null,
-    tonnageNotRecycled: null
-  },
-  wasteSent: {
-    tonnageSentToReprocessor: 0,
-    tonnageSentToExporter: 0,
-    tonnageSentToAnotherSite: 0,
-    finalDestinations: []
-  },
-  ...overrides
-})
+/**
+ * Each override is checked on its own, so a contract test can still pair a
+ * cadence with the wrong accreditation number for the repository to refuse.
+ * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
+ * @returns {import('../port.js').CreateReportParams}
+ */
+export const buildCreateReportParams = (overrides = {}) =>
+  /** @type {import('../port.js').CreateReportParams} */ ({
+    organisationId: DEFAULT_ORG_ID,
+    registrationId: DEFAULT_REG_ID,
+    organisationNumber: DEFAULT_ORG_NUMBER,
+    registrationNumber: DEFAULT_REG_NUMBER,
+    accreditationNumber:
+      (overrides.cadence ?? 'monthly') === 'monthly'
+        ? toAccreditationNumber('A24ER5000000001PL')
+        : null,
+    year: DEFAULT_REPORT_YEAR,
+    cadence: 'monthly',
+    period: DEFAULT_REPORT_PERIOD,
+    submissionNumber: 1,
+    startDate: DEFAULT_REPORT_START_DATE,
+    endDate: DEFAULT_REPORT_END_DATE,
+    dueDate: DEFAULT_REPORT_DUE_DATE,
+    material: MATERIAL.PLASTIC,
+    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    changedBy: buildUserSummary(),
+    source: {
+      summaryLogId: toSummaryLogFileId('sl-1'),
+      lastUploadedAt: '2026-04-01T21:22:28.351Z'
+    },
+    prn: null,
+    recyclingActivity: {
+      suppliers: [],
+      totalTonnageReceived: 0,
+      tonnageRecycled: null,
+      tonnageNotRecycled: null
+    },
+    wasteSent: {
+      tonnageSentToReprocessor: 0,
+      tonnageSentToExporter: 0,
+      tonnageSentToAnotherSite: 0,
+      finalDestinations: []
+    },
+    ...overrides
+  })

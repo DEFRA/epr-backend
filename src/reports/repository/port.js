@@ -317,14 +317,16 @@
  */
 
 /**
- * @typedef {Object} CreateReportParams
+ * @typedef {CreateReportBase & CadenceAccreditation} CreateReportParams
+ */
+
+/**
+ * @typedef {Object} CreateReportBase
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
- * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
  * @property {Year} year
- * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
@@ -436,6 +438,7 @@
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
+ * @import { CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */
 

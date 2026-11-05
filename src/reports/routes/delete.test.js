@@ -1,3 +1,6 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -20,7 +23,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 describe('DELETE /organisations/{organisationNumber}/registrations/{registrationNumber}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}', () => {
   setupAuthContext()
@@ -39,11 +42,11 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
             registrationId: registration.id,
             ...reportKeyOf(org, registration),
             year: YEAR,
-            cadence: 'quarterly',
+            cadence: CADENCE.quarterly,
             period: 1,
-            startDate: '2026-01-01',
-            endDate: '2026-03-31',
-            dueDate: '2026-04-20'
+            startDate: calendarDate('2026-01-01'),
+            endDate: calendarDate('2026-03-31'),
+            dueDate: calendarDate('2026-04-20')
           })
         )
       : undefined

@@ -158,11 +158,17 @@ const registrationKeySchema = {
   registrationNumber: Joi.string().required()
 }
 
+const accreditationNumberForCadence = Joi.when('cadence', {
+  is: CADENCE.monthly,
+  then: Joi.string().required(),
+  otherwise: Joi.valid(null).required()
+})
+
 export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
   ...registrationKeySchema,
-  accreditationNumber: Joi.string().allow(null).optional(),
+  accreditationNumber: accreditationNumberForCadence,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,

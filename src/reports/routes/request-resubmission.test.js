@@ -34,7 +34,7 @@ const YEAR = toYear(2026)
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   year: Year,
- *   cadence: string,
+ *   cadence: 'quarterly',
  *   period: number
  * }} Period
  */

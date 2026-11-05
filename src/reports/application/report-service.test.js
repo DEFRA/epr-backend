@@ -29,11 +29,15 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+
+const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
 
 /**
  * @import { Registration } from '#domain/organisations/registration.js'
@@ -148,12 +152,14 @@ const defaultParams = () => {
     organisationId,
     registrationId: registration.id,
     key,
-    numbers: { ...key, accreditationNumber: null },
+    numbers: key,
     registration,
     year: toYear(2024),
-    cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
-      'monthly'
-    ),
+    cadence: CADENCE.monthly,
+    cadenceAccreditation: {
+      cadence: CADENCE.monthly,
+      accreditationNumber: ACCREDITATION_NUMBER
+    },
     period: 1,
     submissionNumber: 1,
     requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2024)),
@@ -294,6 +300,7 @@ describe('report-service', () => {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
         ...params.key,
+        accreditationNumber: ACCREDITATION_NUMBER,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -350,8 +357,9 @@ describe('report-service', () => {
         organisationId: params.organisationId,
         registrationId: params.registrationId,
         ...params.key,
+        accreditationNumber: ACCREDITATION_NUMBER,
         year: toYear(2024),
-        cadence: 'monthly',
+        cadence: CADENCE.monthly,
         period: 1,
         startDate: calendarDate('2024-01-01'),
         endDate: calendarDate('2024-01-31'),
@@ -529,6 +537,7 @@ describe('report-service', () => {
           organisationId: params.organisationId,
           registrationId: params.registrationId,
           ...params.key,
+          accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -577,8 +586,9 @@ describe('report-service', () => {
       organisationId: params.organisationId,
       registrationId: params.registrationId,
       ...params.key,
+      accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2024),
-      cadence: 'monthly',
+      cadence: CADENCE.monthly,
       period: 1,
       startDate: calendarDate('2024-01-01'),
       endDate: calendarDate('2024-01-31'),

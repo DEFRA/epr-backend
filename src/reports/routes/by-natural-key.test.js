@@ -1,3 +1,4 @@
+import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -83,7 +84,7 @@ const streams = [
   {
     stream: 'registered-only',
     registration: registeredOnlyRegistration,
-    cadence: 'quarterly',
+    cadence: CADENCE.quarterly,
     periods: { inProgress: 1, submitted: 2, created: 3 },
     seeded: { inProgress: '', submitted: '' },
     prn: null,
@@ -92,7 +93,7 @@ const streams = [
   {
     stream: 'accredited',
     registration: accreditedRegistration,
-    cadence: 'monthly',
+    cadence: CADENCE.monthly,
     periods: { inProgress: 7, submitted: 8, created: 9 },
     seeded: { inProgress: '', submitted: '' },
     prn: { issuedTonnage: 0, totalRevenue: 0, freeTonnage: 0 },
