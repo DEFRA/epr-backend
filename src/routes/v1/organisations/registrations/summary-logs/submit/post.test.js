@@ -383,37 +383,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(mockAuditSummaryLogSubmit).not.toHaveBeenCalled()
   })
 
-  it('returns 500 and leaves the log validated when it is missing its numbers', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
-    const summaryLogId = randomUUID()
-
-    await summaryLogsRepository.insert(
-      summaryLogId,
-      summaryLogFactory.validated({ organisationId, registrationId })
-    )
-    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
-
-    const response = await server.inject({
-      method: 'POST',
-      url: submitUrl(summaryLogId),
-      ...asOperator()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith(
-      expect.objectContaining({
-        err: new Error(
-          `Summary log ${summaryLogId} is missing one of its numbers`
-        ),
-        message: 'Failure submitting summary log'
-      })
-    )
-
-    const stored = await summaryLogsRepository.findById(summaryLogId)
-    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-    expect(summaryLogsWorker.submit).not.toHaveBeenCalled()
-  })
-
   it('returns 500 and logs the failure when the submission worker throws a non-Boom error', async () => {
     const { organisationId, registrationId, submitUrl } = servedRegistration()
     const summaryLogId = randomUUID()

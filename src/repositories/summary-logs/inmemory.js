@@ -7,7 +7,6 @@ import {
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
-import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { keyedBy } from './natural-keys.js'
 import {
@@ -298,19 +297,22 @@ const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
   return signDownload(holdingFile(staleCache, validatedId), validatedId)
 }
 
-// A missing accreditation id indexes as null in MongoDB's lock index.
-const sameAccreditationId = (a, b) => (a ?? null) === (b ?? null)
+// A missing accreditation number indexes as null in MongoDB's lock index.
+const sameAccreditationNumber = (a, b) => (a ?? null) === (b ?? null)
 
 /**
  * Whether `candidate` collides with `subject` for the submitting-lock check:
- * same org/reg, already submitting, and the same year and accreditation.
+ * same registration, already submitting, and the same year and accreditation.
  */
 const collidesOnSubmittingLock = (candidate, subject) =>
-  candidate.organisationId === subject.organisationId &&
-  candidate.registrationId === subject.registrationId &&
+  candidate.organisationNumber === subject.organisationNumber &&
+  candidate.registrationNumber === subject.registrationNumber &&
   candidate.status === 'submitting' &&
   candidate.year === subject.year &&
-  sameAccreditationId(candidate.accreditationId, subject.accreditationId)
+  sameAccreditationNumber(
+    candidate.accreditationNumber,
+    subject.accreditationNumber
+  )
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
@@ -329,13 +331,7 @@ const transitionToSubmittingExclusive =
       )
     }
 
-    if (!holdsNumbers(existing.summaryLog)) {
-      throw new Error(
-        `Summary log ${validatedId} is missing one of its numbers`
-      )
-    }
-
-    // Pre-check: is another log for the same org/reg/year/accreditationId
+    // Pre-check: is another log for the same registration/year/accreditation
     // already submitting? Read from storage (strong consistency) - in
     // single-threaded JS, true race conditions can't occur like they can in
     // MongoDB with network I/O interleaving.

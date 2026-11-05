@@ -286,14 +286,24 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
   it('answers with a conflict when another submission for the registration is in progress', async () => {
     const env = await createEnvironment()
+    const ids = {
+      registrationId: env.registrationId,
+      accreditationId: env.accreditationId
+    }
+    const { numbers } = numbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      ids
+    )
     await env.summaryLogsRepository.insert(
       toSummaryLogId('another-submission'),
-      summaryLogFactory.submitting({
-        organisationId: env.organisationId,
-        registrationId: env.registrationId,
-        year: ACCREDITED_YEAR,
-        accreditationId: env.accreditationId
-      })
+      {
+        ...summaryLogFactory.submitting({
+          organisationId: env.organisationId,
+          year: ACCREDITED_YEAR,
+          ...ids
+        }),
+        ...numbers
+      }
     )
 
     const response = await submit(

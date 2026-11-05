@@ -85,9 +85,9 @@ export const testFindByNaturalKey = (it) => {
     const insert = async (summaryLog, registration = stored) => {
       const id = new ObjectId().toString()
       await repo.insert(toSummaryLogId(id), {
+        ...summaryLog,
         ...registration.ids,
-        ...registration.key,
-        ...summaryLog
+        ...registration.key
       })
       return id
     }
@@ -103,10 +103,7 @@ export const testFindByNaturalKey = (it) => {
     describe('refusing a key without its numbers', () => {
       for (const missing of ['organisationNumber', 'registrationNumber']) {
         it(`refuses a key with no ${missing}`, async () => {
-          await insert({
-            ...summaryLogFactory.submitted(registeredOnly),
-            [missing]: undefined
-          })
+          await insert(summaryLogFactory.submitted(registeredOnly))
           const key = { ...stored.key, [missing]: undefined }
 
           await expect(
