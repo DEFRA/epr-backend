@@ -9,7 +9,7 @@ import {
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
-  buildAccreditationId,
+  buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
@@ -57,7 +57,7 @@ const seedDriftingPrn = async (/** @type {*} */ database) => {
   const factory = await createPackagingRecyclingNotesRepository(database, [])
   const repo = factory(logger)
   await ensureLedgerCollection(database)
-  const ids = buildAccreditationId()
+  const ids = buildAccreditationKeys()
   const created = await repo.create(
     buildAwaitingAcceptancePrn({
       ...underAccreditation(ids),

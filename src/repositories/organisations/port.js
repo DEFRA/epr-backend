@@ -69,7 +69,7 @@
  * @property {(organisationNumber: OrganisationNumber, version: number, users: CollatedUser[]) => Promise<void>} replaceUsers - Replace the organisation's users with `users`, which must be the full list. Throws 409 when the stored version is not `version`
  * @property {() => Promise<Organisation[]>} findAll
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
- * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
+ * @property {(organisationNumbers: OrganisationNumber[]) => Promise<Organisation[]>} findByOrganisationNumbers - Find the organisations holding these numbers
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<LinkedOrganisationSummary|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(accreditationNumber: AccreditationNumber) => Promise<boolean>} isAccreditationNumberInUse - Whether any accreditation in any organisation holds this number, regardless of the accreditation's status

@@ -7,7 +7,7 @@ import {
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from './mongodb.js'
 import {
-  buildAccreditationId,
+  buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from './contract/test-data.js'
@@ -90,7 +90,7 @@ describe('createDriftQuery', () => {
     // with no event past it; `drifter` advances the shared partition to slot 5.
     // A naive watermark < partition-max test would wrongly flag `level` (5 > 2);
     // the per-PRN test must not, because slot 5 belongs to `drifter`.
-    const ids = buildAccreditationId()
+    const ids = buildAccreditationKeys()
     const level = await prnRepository.create(
       buildAwaitingAcceptancePrn({
         ...underAccreditation(ids),
