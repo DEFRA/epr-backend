@@ -15,12 +15,11 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
@@ -29,7 +28,8 @@ import { numbersFor } from '#domain/organisations/numbers.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
- *   accreditationId: string | null
+ *   accreditationId: string | null,
+ *   numbers: RequiredNumbers
  * }} UploadLocation
  */
 
@@ -97,23 +97,16 @@ const validatedAgainstSummaryLogIdFor = async (
 
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {UploadLocation} location
  */
 const insertNewSummaryLog = async (
   summaryLogsRepository,
-  organisationsRepository,
   summaryLogId,
   upload,
-  { organisationId, registrationId, year, accreditationId }
+  { organisationId, registrationId, year, accreditationId, numbers }
 ) => {
-  const { numbers } = numbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId }
-  )
-
   /** @type {SummaryLog} */
   const summaryLog = {
     ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
@@ -135,7 +128,6 @@ const insertNewSummaryLog = async (
 
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
@@ -144,7 +136,6 @@ const insertNewSummaryLog = async (
  */
 export const updateStatusBasedOnUpload = async (
   summaryLogsRepository,
-  organisationsRepository,
   summaryLogId,
   upload,
   logger,
@@ -186,7 +177,6 @@ export const updateStatusBasedOnUpload = async (
   } else {
     await insertNewSummaryLog(
       summaryLogsRepository,
-      organisationsRepository,
       summaryLogId,
       upload,
       location

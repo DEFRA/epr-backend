@@ -7,6 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   formatS3Info,
   updateStatusBasedOnUpload
@@ -16,8 +17,9 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditationCommon } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
@@ -40,9 +42,8 @@ export const summaryLogsUploadCompletedYear = {
   },
   /**
    * @param {HapiRequest<UploadCompletedPayload> & {
-   *   params: { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
    *   summaryLogsRepository: SummaryLogsRepository,
-   *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -50,7 +51,6 @@ export const summaryLogsUploadCompletedYear = {
   handler: async (request, h) => {
     const {
       summaryLogsRepository,
-      organisationsRepository,
       summaryLogsWorker,
       payload,
       params,
@@ -61,19 +61,42 @@ export const summaryLogsUploadCompletedYear = {
       summaryLogId,
       organisationId,
       registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       accreditationId
     } = params
     const { summaryLogUpload } = payload.form
 
     try {
+      const { registration } =
+        await findOrganisationAndRegistrationReadModels(request)
+
+      // A registered-only upload has no accreditation number, whatever the
+      // registration's accreditation for the year.
+      const accreditationNumber =
+        accreditationId === null
+          ? null
+          : /** @type {AccreditationCommon} */ (
+              registration.accreditations[year]
+            ).accreditationNumber
+
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
-        organisationsRepository,
         summaryLogId,
         summaryLogUpload,
         logger,
-        { organisationId, registrationId, year, accreditationId }
+        {
+          organisationId,
+          registrationId,
+          year,
+          accreditationId,
+          numbers: {
+            organisationNumber,
+            registrationNumber,
+            accreditationNumber
+          }
+        }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })
