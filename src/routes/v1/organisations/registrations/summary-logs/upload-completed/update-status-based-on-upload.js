@@ -15,12 +15,11 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { SummaryLog, SummaryLogFile } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
@@ -29,24 +28,35 @@ import { numbersFor } from '#domain/organisations/numbers.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
- *   accreditationId: string | null
+ *   accreditationId: string | null,
+ *   numbers: RequiredNumbers
  * }} UploadLocation
  */
 
+/**
+ * @param {SummaryLogUpload} upload
+ * @param {SummaryLogFile} [existingFile]
+ * @returns {SummaryLogFile}
+ */
 export const buildFileData = (upload, existingFile) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
 
-  const fileData = existingFile
-    ? { ...existingFile, id: fileId, name: filename, status: fileStatus }
-    : { id: fileId, name: filename, status: fileStatus }
+  const fileData = { ...existingFile, id: fileId, name: filename }
 
   if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-    fileData.uri = `s3://${s3Bucket}/${s3Key}`
+    return { ...fileData, status: fileStatus, uri: `s3://${s3Bucket}/${s3Key}` }
   }
 
-  return fileData
+  return { ...fileData, status: fileStatus }
 }
 
+/**
+ * @param {SummaryLogUpload} upload
+ * @param {SummaryLogFile | undefined} existingFile
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @returns {Omit<SummaryLog, 'year'>}
+ */
 const buildSummaryLogData = (
   upload,
   existingFile,
@@ -97,23 +107,16 @@ const validatedAgainstSummaryLogIdFor = async (
 
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {UploadLocation} location
  */
 const insertNewSummaryLog = async (
   summaryLogsRepository,
-  organisationsRepository,
   summaryLogId,
   upload,
-  { organisationId, registrationId, year, accreditationId }
+  { organisationId, registrationId, year, accreditationId, numbers }
 ) => {
-  const { numbers } = numbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId }
-  )
-
   /** @type {SummaryLog} */
   const summaryLog = {
     ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
@@ -135,7 +138,6 @@ const insertNewSummaryLog = async (
 
 /**
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
@@ -144,7 +146,6 @@ const insertNewSummaryLog = async (
  */
 export const updateStatusBasedOnUpload = async (
   summaryLogsRepository,
-  organisationsRepository,
   summaryLogId,
   upload,
   logger,
@@ -158,7 +159,8 @@ export const updateStatusBasedOnUpload = async (
     const { version, summaryLog } = existing
     try {
       transitionStatus(summaryLog, newStatus)
-    } catch (error) {
+    } catch (caught) {
+      const error = /** @type {Error} */ (caught)
       logger.error({
         message: error.message,
         event: {
@@ -186,7 +188,6 @@ export const updateStatusBasedOnUpload = async (
   } else {
     await insertNewSummaryLog(
       summaryLogsRepository,
-      organisationsRepository,
       summaryLogId,
       upload,
       location
@@ -196,6 +197,10 @@ export const updateStatusBasedOnUpload = async (
   return newStatus
 }
 
+/**
+ * @param {SummaryLogUpload} upload
+ * @returns {string}
+ */
 export const formatS3Info = (upload) =>
   upload.fileStatus === UPLOAD_STATUS.COMPLETE &&
   upload.s3Bucket &&
