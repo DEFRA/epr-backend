@@ -2,8 +2,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID,
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR,
   DEFAULT_REPORT_PERIOD
 } from './test-data.js'
@@ -12,8 +12,8 @@ const PRN_ID = 'prn-id-000000000000000000000001'
 const OCCURRED_AT = '2026-06-01T12:00:00.000Z'
 
 const DEFAULT_PARAMS = {
-  organisationId: DEFAULT_ORG_ID,
-  registrationId: DEFAULT_REG_ID,
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
@@ -129,8 +129,8 @@ export const testMarkActiveReportsStaleForPrnCancellationBehaviour = (it) => {
         buildCreateReportParams()
       )
       await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         'sl-new',
         '2026-05-01T00:00:00.000Z'
       )
@@ -153,8 +153,8 @@ export const testMarkActiveReportsStaleForPrnCancellationBehaviour = (it) => {
     it('throws validation error for invalid input', async () => {
       await expect(
         repository.markActiveReportsStaleForPrnCancellation({
-          organisationId: '',
-          registrationId: '',
+          organisationNumber: '',
+          registrationNumber: '',
           year: DEFAULT_REPORT_YEAR,
           cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD,

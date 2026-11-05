@@ -3,8 +3,8 @@ import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID,
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR,
   DEFAULT_REPORT_PERIOD
 } from './test-data.js'
@@ -16,8 +16,8 @@ import {
 const REQUESTED_AT = '2026-06-01T12:00:00.000Z'
 
 const DEFAULT_PARAMS = {
-  organisationId: DEFAULT_ORG_ID,
-  registrationId: DEFAULT_REG_ID,
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
@@ -112,8 +112,8 @@ export const testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour = (
     it('does not clobber an existing resubmissionRequired.closedPeriodRestated flag', async () => {
       const reportId = await createAndSubmitReport(repository)
       await repository.markSubmittedReportsRequiringResubmission({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         summaryLogId: 'sl-restated',
         uploadedAt: '2026-05-01T00:00:00.000Z',
         periods: [
@@ -145,8 +145,8 @@ export const testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour = (
     it('throws validation error for invalid input', async () => {
       await expect(
         repository.markSubmittedReportRequiringResubmissionByOperator({
-          organisationId: '',
-          registrationId: '',
+          organisationNumber: '',
+          registrationNumber: '',
           year: DEFAULT_REPORT_YEAR,
           cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD,

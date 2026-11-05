@@ -1,3 +1,5 @@
+import { toYear } from '#common/helpers/dates/year.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -6,7 +8,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
   accreditation,
@@ -19,11 +24,11 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 const STREAMS = {
-  registeredOnly: { cadence: 'quarterly', period: 1 },
-  accredited: { cadence: 'monthly', period: 7 }
+  registeredOnly: { cadence: CADENCE.quarterly, period: 1 },
+  accredited: { cadence: CADENCE.monthly, period: 7 }
 }
 
 const UNENTERED_RECYCLING_ACTIVITY = {
@@ -82,6 +87,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       buildCreateReportParams({
         organisationId: org.id,
         registrationId: registration.id,
+        ...reportKeyOf(org, registration),
         year: YEAR,
         cadence,
         period,
@@ -107,6 +113,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     return {
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       reportId: createdReport.id,
       reportsRepository,
       /**
@@ -592,12 +599,16 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
 
   describe('when report is stale', () => {
     it('returns 409 with summary_log_changed code', async () => {
-      const { organisationId, registrationId, reportsRepository, patchReport } =
-        await createServer()
+      const {
+        organisationNumber,
+        registrationNumber,
+        reportsRepository,
+        patchReport
+      } = await createServer()
 
       await reportsRepository.markActiveReportsStaleForSummaryLog(
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         toSummaryLogFileId('sl-new'),
         new Date().toISOString()
       )

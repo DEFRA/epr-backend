@@ -3,7 +3,9 @@ import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_YEAR
 } from './test-data.js'
@@ -59,8 +61,8 @@ export const testDeleteReportBehaviour = (it) => {
       await repository.deleteReport(buildDeleteParams({ submissionNumber }))
 
       const result = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER
       })
       expect(result).toEqual([])
     })

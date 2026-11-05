@@ -16,9 +16,9 @@ import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: number,
- *   cadence: string,
+ *   cadence: import('#reports/domain/cadence.js').Cadence,
  *   period: number
- * } & Partial<import('#reports/repository/port.js').CreateReportParams>} params
+ * } & Partial<import('#reports/repository/port.js').CreateReportBase>} params
  */
 export async function seedInFlightResubmission(reportsRepository, params) {
   const { organisationId, registrationId, year, cadence, period, ...content } =
