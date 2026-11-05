@@ -356,9 +356,54 @@ describe('organisationInYear', () => {
     expect(status.current).toBe('active')
   })
 
-  it('serves no registrations for a year that has not started', () => {
+  it('should carry a registration approved today into a later year with that year’s accreditation', () => {
+    const organisation = organisationWith({
+      R1: approvedFrom('2025-02-01', {
+        2027: accreditation('A27'),
+        2028: accreditation('A28')
+      })
+    })
+
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2028),
+      NOW
+    )
+
+    expect([
+      registrations.R1.status.current,
+      registrations.R1.accreditations
+    ]).toStrictEqual(['approved', { 2028: accreditation('A28') }])
+  })
+
+  it('should serve a carried registration without an accreditation as registered only', () => {
     const organisation = organisationWith({
       R1: approvedFrom('2025-02-01')
+    })
+
+    const { registrations } = organisationInYear(
+      organisation,
+      toYear(2028),
+      NOW
+    )
+
+    expect(registrations.R1.regAccStatusByDate).toStrictEqual({
+      2028: { '2028-01-01': { status: 'registeredOnly' } }
+    })
+  })
+
+  it('should not carry a registration cancelled today into a later year', () => {
+    const organisation = organisationWith({
+      R1: {
+        status: {
+          current: 'cancelled',
+          timeline: [
+            { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
+            { status: 'cancelled', at: '2027-02-01T00:00:00.000Z' }
+          ]
+        },
+        accreditations: { 2028: accreditation('A28') }
+      }
     })
 
     const { registrations } = organisationInYear(

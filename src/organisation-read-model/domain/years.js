@@ -64,10 +64,34 @@ const accreditationIn = (accreditations, year) =>
   Object.hasOwn(accreditations, year) ? { [year]: accreditations[year] } : {}
 
 /**
+ * A later year has not happened yet, so a registration approved today is
+ * taken to carry into it.
+ *
+ * @param {Registration} registration
+ * @param {Year} year
+ * @param {CalendarDate} today
+ * @param {Date} now
+ */
+const isRegisteredIn = (registration, year, today, now) =>
+  isFutureYear(year, now)
+    ? isApprovedOn(registration, today)
+    : approvedYears(registration.status.timeline, today).includes(year)
+
+/**
+ * @param {Registration} registration
+ * @param {Year} year
+ * @param {Date} now
+ */
+const regAccStatusIn = (registration, year, now) =>
+  isFutureYear(year, now)
+    ? regAccStatusByDate(registration, year)
+    : registration.regAccStatusByDate[year]
+
+/**
  * The organisation as it stood in `year`: registrations approved at any point
- * in it, each with only that year's accreditation and status dates.
- * Organisation and registration statuses are those at the end of the year, or
- * today while the year is current.
+ * in it, or approved today for a later year, each with only that year's
+ * accreditation and status dates. Organisation and registration statuses are
+ * those at the end of the year, or today while the year is current or later.
  *
  * @param {Organisation} organisation
  * @param {Year} year
@@ -78,8 +102,8 @@ export const organisationInYear = (organisation, year, now) => {
   const today = utcCalendarDate(now)
   const day = yearEndOrToday(year, today)
   const registrations = Object.entries(organisation.registrations)
-    .filter(([, { status }]) =>
-      approvedYears(status.timeline, today).includes(year)
+    .filter(([, registration]) =>
+      isRegisteredIn(registration, year, today, now)
     )
     .map(([number, registration]) => [
       number,
@@ -90,7 +114,9 @@ export const organisationInYear = (organisation, year, now) => {
           current: statusOn(registration.status.timeline, day)
         },
         accreditations: accreditationIn(registration.accreditations, year),
-        regAccStatusByDate: { [year]: registration.regAccStatusByDate[year] }
+        regAccStatusByDate: {
+          [year]: regAccStatusIn(registration, year, now)
+        }
       }
     ])
 
