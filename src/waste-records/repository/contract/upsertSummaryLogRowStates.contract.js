@@ -6,6 +6,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  registrationNumbersOf,
   withNumbers
 } from '../test-data.js'
 
@@ -98,8 +99,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         expect(second.summaryLogIds).toEqual(['log-1', 'log-2'])
         expect(
           await repository.findRowHistory(
-            'org-1',
-            'reg-1',
+            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
             'row-1',
             WASTE_RECORD_TYPE.RECEIVED
           )
@@ -119,8 +119,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         const history = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
           'row-1',
           WASTE_RECORD_TYPE.RECEIVED
         )
@@ -153,8 +152,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(
           await repository.findRowHistory(
-            'org-1',
-            'reg-1',
+            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
             'row-1',
             WASTE_RECORD_TYPE.RECEIVED
           )
@@ -179,8 +177,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(
           await repository.findRowHistory(
-            'org-1',
-            'reg-1',
+            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
             'row-1',
             WASTE_RECORD_TYPE.RECEIVED
           )
@@ -211,8 +208,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         expect(a3.summaryLogIds).toEqual(['log-1', 'log-3'])
 
         const history = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
           'row-1',
           WASTE_RECORD_TYPE.RECEIVED
         )
@@ -297,8 +293,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         expect(state.summaryLogIds).toEqual(['log-1'])
         expect(
           await repository.findRowHistory(
-            'org-1',
-            'reg-1',
+            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
             'row-1',
             WASTE_RECORD_TYPE.RECEIVED
           )
@@ -348,8 +343,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         const [stored] = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
           'row-1',
           WASTE_RECORD_TYPE.RECEIVED
         )
@@ -384,8 +378,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         returned.summaryLogIds.push('log-injected')
 
         const [stored] = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
           'row-1',
           WASTE_RECORD_TYPE.RECEIVED
         )

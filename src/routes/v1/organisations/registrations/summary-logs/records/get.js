@@ -85,8 +85,8 @@ export const summaryLogRecordsCsv = {
         registrationId
       ),
       request.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         fileId
       )
     ])

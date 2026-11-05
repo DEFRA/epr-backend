@@ -19,6 +19,7 @@ import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  registrationNumbersOf,
   withNumbers
 } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -81,16 +82,35 @@ describe('ensureSummaryLogRowStatesCollection', () => {
     })
   })
 
-  it('creates the row-history index', async (/** @type {*} */ {
+  it('creates the row-history index by organisation and registration number', async (/** @type {*} */ {
     summaryLogRowStatesCollection
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'row_history')).toEqual({
-      organisationId: 1,
-      registrationId: 1,
+    expect(indexKeyFor(indexes, 'row_history_by_number')).toEqual({
+      organisationNumber: 1,
+      registrationNumber: 1,
       rowId: 1,
       wasteRecordType: 1
     })
+  })
+
+  it('drops the retired row-history index by id', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const collection = database.collection(
+      SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
+    )
+    await collection.createIndex(
+      { organisationId: 1, registrationId: 1, rowId: 1, wasteRecordType: 1 },
+      { name: 'row_history' }
+    )
+
+    await ensureSummaryLogRowStatesCollection(database)
+
+    expect(indexKeyFor(await collection.indexes(), 'row_history')).toBe(
+      undefined
+    )
   })
 
   it('creates a unique summary-log-row-state identity index', async (/** @type {*} */ {
@@ -163,8 +183,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       )
 
       const history = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )
@@ -191,8 +210,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       )
 
       const history = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )
@@ -211,6 +229,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
+        dropIndex: () => Promise.resolve(),
         bulkWrite: () => Promise.reject(upstream),
         find: () => ({ toArray: () => Promise.resolve([]) })
       }

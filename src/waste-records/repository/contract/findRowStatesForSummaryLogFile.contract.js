@@ -3,6 +3,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  registrationNumbersOf,
   withNumbers
 } from '../test-data.js'
 
@@ -25,8 +26,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
      */
     const find = (fileId, ledgerId = DEFAULT_LEDGER_ID) =>
       repository.findRowStatesForSummaryLogFile(
-        ledgerId.organisationId,
-        ledgerId.registrationId,
+        ...registrationNumbersOf(ledgerId),
         fileId
       )
 

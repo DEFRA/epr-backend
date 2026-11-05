@@ -32,6 +32,7 @@
  */
 
 /** @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
@@ -60,13 +61,13 @@
  *   different ledger identity matches nothing. The storage id, the
  *   `summaryLogIds` membership and the ledger identity the caller supplied stay
  *   behind the port.
- * @property {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
+ * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the
  *   summary log document's id. Spans every ledger partition of the
  *   registration, so a caller that does not know the accreditation reads it
  *   back off the rows.
- * @property {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
+ * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
  *   Return every state document for the given row identity.
  * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of

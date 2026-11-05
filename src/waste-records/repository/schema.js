@@ -28,24 +28,17 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/** @import { AccreditationNumber, Numbers, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * The numbers a row state is written with beside its ledger identity's ids. A
+ * The numbers a row state holds beside its ledger identity's ids. A
  * registered-only row state's accreditation number is `null`.
  *
  * @typedef {{
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   accreditationNumber: AccreditationNumber | null
- * }} RowStateNumbersOnInsert
- */
-
-/**
- * The numbers a stored row state holds. One stored before the numbers were
- * written beside the ids holds only those the backfill has added.
- *
- * @typedef {Numbers} RowStateNumbers
+ * }} RowStateNumbers
  */
 
 /**
@@ -82,7 +75,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * identity and its numbers, a row entry's content + classification, and the
  * membership of submissions that produced this exact state.
  *
- * @typedef {RowStateFields & RowStateNumbersOnInsert} SummaryLogRowStateInsert
+ * @typedef {RowStateFields & RowStateNumbers} SummaryLogRowStateInsert
  */
 
 /**
@@ -107,9 +100,13 @@ const classificationSchema = Joi.object({
 })
 
 const numbersKeys = {
-  organisationNumber: Joi.string(),
-  registrationNumber: Joi.string(),
-  accreditationNumber: Joi.string().allow(null)
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.when('accreditationId', {
+    is: null,
+    then: Joi.valid(null).required(),
+    otherwise: Joi.string().required()
+  })
 }
 
 const rowStateBaseSchema = Joi.object({
@@ -126,21 +123,10 @@ const rowStateBaseSchema = Joi.object({
   summaryLogIds: Joi.array().items(Joi.string().required()).min(1).required()
 })
 
-export const summaryLogRowStateInsertSchema = rowStateBaseSchema.keys({
-  organisationNumber: numbersKeys.organisationNumber.required(),
-  registrationNumber: numbersKeys.registrationNumber.required(),
-  accreditationNumber: Joi.when('accreditationId', {
-    is: null,
-    then: Joi.valid(null).required(),
-    otherwise: Joi.string().required()
-  })
-})
+export const summaryLogRowStateInsertSchema =
+  rowStateBaseSchema.keys(numbersKeys)
 
 export const summaryLogRowStateReadSchema = rowStateBaseSchema.keys({
   ...numbersKeys,
   id: Joi.string().required()
 })
-
-export const ROW_STATE_NUMBER_KEYS = /** @type {(keyof RowStateNumbers)[]} */ (
-  Object.keys(numbersKeys)
-)
