@@ -11,16 +11,17 @@ import { approvedYears } from './status-timeline.js'
 
 /**
  * The calendar years in which the organisation held an approved registration,
- * newest first, up to and including the current year.
+ * newest first, up to and including the latest open year.
  *
  * @param {Organisation} organisation
  * @param {Date} now
+ * @param {Year} latestOpenYear
  * @returns {Year[]}
  */
-export const organisationYears = (organisation, now) => {
+export const organisationYears = (organisation, now, latestOpenYear) => {
   const today = utcCalendarDate(now)
   const years = Object.values(organisation.registrations).flatMap(
-    ({ status }) => approvedYears(status.timeline, today)
+    ({ status }) => approvedYears(status.timeline, today, latestOpenYear)
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
@@ -41,14 +42,15 @@ const accreditationIn = (accreditations, year) =>
  * @param {Organisation} organisation
  * @param {Year} year
  * @param {Date} now
+ * @param {Year} latestOpenYear
  * @returns {Organisation}
  */
-export const organisationInYear = (organisation, year, now) => {
+export const organisationInYear = (organisation, year, now, latestOpenYear) => {
   const today = utcCalendarDate(now)
   const day = yearEndOrToday(year, today)
   const registrations = Object.entries(organisation.registrations)
     .filter(([, { status }]) =>
-      approvedYears(status.timeline, today).includes(year)
+      approvedYears(status.timeline, today, latestOpenYear).includes(year)
     )
     .map(([number, registration]) => [
       number,
@@ -86,7 +88,7 @@ export const organisationInYear = (organisation, year, now) => {
  */
 export const regAccStatusByYear = (registration, today) => {
   const years = [
-    ...approvedYears(registration.status.timeline, today),
+    ...approvedYears(registration.status.timeline, today, utcYearOf(today)),
     ...Object.keys(registration.accreditations).map(utcYearOf)
   ]
 

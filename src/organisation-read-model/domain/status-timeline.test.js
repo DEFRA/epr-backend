@@ -1,4 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   approvedYears,
   dailyTimeline,
@@ -64,7 +65,9 @@ describe('approvedYears', () => {
   it('lists every year from approval to today while it stays approved', () => {
     const timeline = [{ status: 'approved', at: '2026-02-01T00:00:00.000Z' }]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([2026, 2027, 2028])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([
+      2026, 2027, 2028
+    ])
   })
 
   it('leaves out the year a cancellation starts on 1 January', () => {
@@ -73,7 +76,7 @@ describe('approvedYears', () => {
       { status: 'cancelled', at: '2026-01-01T00:00:00.000Z' }
     ]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([2025])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([2025])
   })
 
   it('skips the years between a cancellation and a reinstatement', () => {
@@ -83,7 +86,9 @@ describe('approvedYears', () => {
       { status: 'approved', at: '2027-06-01T00:00:00.000Z' }
     ]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([2024, 2027, 2028])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([
+      2024, 2027, 2028
+    ])
   })
 
   it('lists a year once when it holds more than one approved range', () => {
@@ -93,7 +98,9 @@ describe('approvedYears', () => {
       { status: 'approved', at: '2025-09-01T00:00:00.000Z' }
     ]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([2025, 2026, 2027, 2028])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([
+      2025, 2026, 2027, 2028
+    ])
   })
 
   it('reads a day with several changes by its last one', () => {
@@ -104,12 +111,26 @@ describe('approvedYears', () => {
       { status: 'cancelled', at: '2026-01-01T15:00:00.000Z' }
     ]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([2025])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([2025])
+  })
+
+  it('holds the latest status to the end of the latest open year', () => {
+    const timeline = [{ status: 'approved', at: '2027-02-01T00:00:00.000Z' }]
+
+    expect(approvedYears(timeline, TODAY, toYear(2029))).toEqual([
+      2027, 2028, 2029
+    ])
+  })
+
+  it('ignores entries after today, even in the latest open year', () => {
+    const timeline = [{ status: 'approved', at: '2029-01-01T00:00:00.000Z' }]
+
+    expect(approvedYears(timeline, TODAY, toYear(2029))).toEqual([])
   })
 
   it('lists nothing when never approved', () => {
     const timeline = [{ status: 'cancelled', at: '2026-02-01T00:00:00.000Z' }]
 
-    expect(approvedYears(timeline, TODAY)).toEqual([])
+    expect(approvedYears(timeline, TODAY, toYear(2028))).toEqual([])
   })
 })

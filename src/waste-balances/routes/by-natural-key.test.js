@@ -1,5 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -192,6 +194,29 @@ describe('ledger and waste balance routes by natural key', () => {
       const response = await get(registeredOnlyLedger(2099))
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    describe('for next year', () => {
+      const nextYear = currentUtcYear() + 1
+
+      afterEach(() => {
+        config.reset('latestOpenYear')
+      })
+
+      it('serves its events while it is open', async () => {
+        config.set('latestOpenYear', 'next')
+
+        const response = await get(registeredOnlyLedger(nextYear))
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(body(response)).toEqual({ events: [] })
+      })
+
+      it('returns 404 while it is closed', async () => {
+        const response = await get(registeredOnlyLedger(nextYear))
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
     })
 
     it('returns 404 for an unknown registration number', async () => {

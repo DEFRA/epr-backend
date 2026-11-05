@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   currentUtcYear,
-  isFutureYear,
   nextYear,
   toYear,
   utcYearOf,
@@ -84,21 +83,5 @@ describe('yearEndOrToday', () => {
 
   it('is today while the year is running', () => {
     expect(yearEndOrToday(toYear(2026), today)).toBe('2026-06-15')
-  })
-})
-
-describe('isFutureYear', () => {
-  const now = new Date('2026-06-15T00:00:00.000Z')
-
-  it('is true for a year later than now', () => {
-    expect(isFutureYear(toYear(2027), now)).toBe(true)
-  })
-
-  it('is false for the current year', () => {
-    expect(isFutureYear(toYear(2026), now)).toBe(false)
-  })
-
-  it('is false for a past year', () => {
-    expect(isFutureYear(toYear(2025), now)).toBe(false)
   })
 })

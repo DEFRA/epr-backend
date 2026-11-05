@@ -1,6 +1,10 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { dayBefore } from '#common/helpers/dates/calendar-day.js'
-import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
+import {
+  utcYearOf,
+  yearBounds,
+  yearsFromTo
+} from '#common/helpers/dates/year.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -36,13 +40,14 @@ const datesUpTo = (daily, today) =>
 
 /**
  * A status holds until the day before the next one starts; the latest status
- * holds until today.
+ * holds until `latestEnd`.
  *
  * @param {CalendarDate | undefined} nextDate
- * @param {CalendarDate} today
+ * @param {CalendarDate} latestEnd
  * @returns {CalendarDate}
  */
-const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
+const rangeEnd = (nextDate, latestEnd) =>
+  nextDate ? dayBefore(nextDate) : latestEnd
 
 /**
  * The status at the end of each UTC day with a change.
@@ -60,9 +65,10 @@ export const dailyTimeline = (timeline) =>
  *
  * @param {StatusTimeline} timeline
  * @param {CalendarDate} today
+ * @param {CalendarDate} [latestEnd]
  * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
-export const statusRanges = (timeline, today) => {
+export const statusRanges = (timeline, today, latestEnd = today) => {
   const daily = dailyTimeline(timeline)
   const dates = datesUpTo(daily, today)
 
@@ -71,7 +77,7 @@ export const statusRanges = (timeline, today) => {
 
   for (let i = 0; i < dates.length; i++) {
     const from = dates[i]
-    const to = rangeEnd(dates[i + 1], today)
+    const to = rangeEnd(dates[i + 1], latestEnd)
     const { status } = daily[from]
 
     ranges[status] ??= []
@@ -87,9 +93,11 @@ export const statusRanges = (timeline, today) => {
  *
  * @param {StatusTimeline} timeline
  * @param {CalendarDate} today
+ * @param {Year} latestOpenYear
  * @returns {Year[]}
  */
-export const approvedYears = (timeline, today) => {
-  const approvedRanges = statusRanges(timeline, today).approved ?? []
+export const approvedYears = (timeline, today, latestOpenYear) => {
+  const { end } = yearBounds(latestOpenYear)
+  const approvedRanges = statusRanges(timeline, today, end).approved ?? []
   return [...new Set(approvedRanges.flatMap(yearsIn))]
 }

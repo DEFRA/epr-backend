@@ -1,4 +1,3 @@
-import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -16,16 +15,16 @@ import { isRegistrationActiveInYear } from '#domain/organisations/registration-u
  * @param {{
  *   registration: Pick<Registration, 'status' | 'validFrom'>,
  *   year: Year,
- *   now?: Date
+ *   latestOpenYear: Year
  * }} args
  * @returns {UploadEligibilityResult}
  */
 export function checkSummaryLogUploadEligibility({
   registration,
   year,
-  now = new Date()
+  latestOpenYear
 }) {
-  if (isFutureYear(year, now)) {
+  if (year > latestOpenYear) {
     return { eligible: false, reason: `${year} has not started yet` }
   }
 

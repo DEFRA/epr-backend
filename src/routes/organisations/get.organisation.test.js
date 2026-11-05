@@ -8,6 +8,7 @@ import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
+import { config } from '#root/config.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -563,6 +564,43 @@ describe('GET /organisations/{organisationNumber}', () => {
         'approved'
       )
       expect(in2026.registrations).toEqual({})
+    })
+
+    describe('for next year', () => {
+      const withNextYearAccreditation = () => {
+        const accredited = accreditation({
+          validFrom: '2028-01-01',
+          validTo: '2028-12-31'
+        })
+        return buildOrganisation({
+          registrations: [reprocessor({ accreditationId: accredited.id })],
+          accreditations: [accredited]
+        })
+      }
+
+      afterEach(() => {
+        config.reset('latestOpenYear')
+      })
+
+      it('serves its registrations and accreditations while it is open', async () => {
+        config.set('latestOpenYear', 'next')
+        const organisation = withNextYearAccreditation()
+        await serve(organisation)
+
+        const response = await get(urlFor(organisation, 2028))
+
+        const registration = body(response).registrations[REPROCESSOR_NUMBER]
+        expect(Object.keys(registration.accreditations)).toEqual(['2028'])
+      })
+
+      it('serves no registrations while it is closed', async () => {
+        const organisation = withNextYearAccreditation()
+        await serve(organisation)
+
+        const response = await get(urlFor(organisation, 2028))
+
+        expect(body(response).registrations).toEqual({})
+      })
     })
 
     it('rejects a year outside the supported range', async () => {

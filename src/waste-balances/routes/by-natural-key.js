@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
@@ -83,11 +84,14 @@ const registeredOnlyLedgerGet = {
     const { registration } =
       await findOrganisationAndRegistrationReadModels(request)
     const { status } = registration
+    const now = new Date()
 
     if (
-      !approvedYears(status.timeline, utcCalendarDate(new Date())).includes(
-        year
-      )
+      !approvedYears(
+        status.timeline,
+        utcCalendarDate(now),
+        latestOpenYear(now)
+      ).includes(year)
     ) {
       throw Boom.notFound('Year not found')
     }

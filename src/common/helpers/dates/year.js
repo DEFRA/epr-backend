@@ -77,14 +77,3 @@ export function yearEndOrToday(year, today) {
   const { end } = yearBounds(year)
   return end.localeCompare(today) < 0 ? end : today
 }
-
-/**
- * Whether `year` is later than the current calendar year — a year that
- * hasn't started yet, so nothing can be valid for it.
- * @param {Year} year
- * @param {Date} [now]
- * @returns {boolean}
- */
-export function isFutureYear(year, now = new Date()) {
-  return year > currentUtcYear(now)
-}

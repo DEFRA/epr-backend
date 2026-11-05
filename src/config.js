@@ -509,6 +509,12 @@ const baseConfig = {
       env: 'BASIC_AUTH_PASSWORD'
     }
   },
+  latestOpenYear: {
+    doc: 'The latest year the service serves: "current" for the current UTC year, or "next" for the year after it, so a lower environment can serve next year\'s data early. Refused in prod.',
+    format: ['current', 'next'],
+    default: 'current',
+    env: 'LATEST_OPEN_YEAR'
+  },
   decemberWaste: {
     windowStart: {
       doc: 'Recurring annual start (inclusive) of the December Waste declaration window, as MM-DDTHH:mm in UK local time (Europe/London), for the accreditation relevant year. The window always closes 31 January the year after relevantYear.',
@@ -519,9 +525,23 @@ const baseConfig = {
   }
 }
 
+/**
+ * @param {ReturnType<typeof getConfig>} cfg
+ */
+function validateConfig(cfg) {
+  cfg.validate({ allowed: 'strict' })
+
+  if (
+    cfg.get('cdpEnvironment') === 'prod' &&
+    cfg.get('latestOpenYear') !== 'current'
+  ) {
+    throw new Error('latestOpenYear must be "current" in prod')
+  }
+}
+
 const config = convict(baseConfig)
 
-config.validate({ allowed: 'strict' })
+validateConfig(config)
 
 function getConfig(overrides = {}) {
   const cfg = convict(baseConfig)
@@ -531,4 +551,10 @@ function getConfig(overrides = {}) {
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
-export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
+export {
+  config,
+  getConfig,
+  isLocalEnvironment,
+  isProductionEnvironment,
+  validateConfig
+}
