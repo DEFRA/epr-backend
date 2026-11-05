@@ -17,9 +17,11 @@ import {
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
 
+const MAX_TEST_ORGANISATION_NUMBER = 1_000_000_000_000
+
 /** An organisation number no other test uses. */
 export const uniqueOrganisationNumber = () =>
-  toOrganisationNumber(String(randomInt(1, 2 ** 47)))
+  toOrganisationNumber(String(randomInt(1, MAX_TEST_ORGANISATION_NUMBER)))
 
 /** A registration number no other test uses. */
 export const uniqueRegistrationNumber = () =>

@@ -126,11 +126,13 @@ export const diagnoseCancelledAccreditationReports = async (
       )
       // A registration without a number was never approved, so has no reports.
       const periodicReports = await Promise.all(
-        registrations.map(({ registrationNumber }) =>
-          registrationNumber
-            ? findPeriodicReports({ organisationNumber, registrationNumber })
-            : []
-        )
+        registrations
+          .flatMap(({ registrationNumber }) =>
+            registrationNumber ? [registrationNumber] : []
+          )
+          .map((registrationNumber) =>
+            findPeriodicReports({ organisationNumber, registrationNumber })
+          )
       )
 
       rows.push({

@@ -401,14 +401,17 @@ async function getAggregatedReportDetail({
  */
 async function assertReportCreationAllowed({
   reportsRepository,
-  key,
+  key: { organisationNumber, registrationNumber },
   year,
   cadence,
   period,
   submissionNumber,
   requiredPeriods
 }) {
-  const periodicReports = await reportsRepository.findPeriodicReports(key)
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationNumber,
+    registrationNumber
+  })
 
   assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
   assertNoExistingReport(
@@ -519,10 +522,7 @@ export async function createReportForPeriod({
 
   await assertReportCreationAllowed({
     reportsRepository,
-    key: {
-      organisationNumber: numbers.organisationNumber,
-      registrationNumber: numbers.registrationNumber
-    },
+    key: numbers,
     year,
     cadence,
     period,
