@@ -17,11 +17,12 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { FutureAccreditation, FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
@@ -30,7 +31,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {{
- *   futureAccreditationsByRegistration: Map<string, Record<string, AccreditationCommon>>
+ *   futureAccreditationsByRegistration: Map<RegistrationNumber, Record<string, AccreditationCommon>>
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: string
@@ -42,14 +43,10 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * @returns {AccreditationCommon}
  */
 const toAccreditationCommon = ({
-  accreditationNumber,
-  prnIssuance,
-  status
-}) => ({
-  accreditationNumber,
-  prnIssuance,
-  status
-})
+  registrationNumber: _registrationNumber,
+  year: _year,
+  ...accreditation
+}) => accreditation
 
 /**
  * Each registration's future accreditations, keyed by year.
