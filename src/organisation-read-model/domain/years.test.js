@@ -356,7 +356,7 @@ describe('organisationInYear', () => {
     expect(status.current).toBe('active')
   })
 
-  it('should carry a registration approved today into a later year with that year’s accreditation', () => {
+  it("should carry a registration approved today into a later year with that year's accreditation", () => {
     const organisation = organisationWith({
       R1: approvedFrom('2025-02-01', {
         2027: accreditation('A27'),

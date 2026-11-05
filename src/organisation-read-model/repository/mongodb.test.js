@@ -67,9 +67,9 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
         const futureAccreditationsRepository = (
           await createMongoFutureAccreditationsRepository(database)
         )()
-        for (const futureAccreditation of futureAccreditations) {
-          await futureAccreditationsRepository.upsert(futureAccreditation)
-        }
+        await Promise.all(
+          futureAccreditations.map(futureAccreditationsRepository.upsert)
+        )
         for (const organisation of organisations) {
           await database
             .collection('epr-organisations')
