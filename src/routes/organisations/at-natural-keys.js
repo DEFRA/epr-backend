@@ -27,7 +27,7 @@ import {
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null,
- *   accreditationNumber: AccreditationNumber | null
+ *   accreditationNumber?: AccreditationNumber | null
  * }} ResolvedParams
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
@@ -136,7 +136,9 @@ export const atNaturalKeys = (
             organisationId: organisation.id,
             registrationId: registration.id,
             accreditationId: accreditation?.id ?? null,
-            accreditationNumber: accreditation?.accreditationNumber ?? null
+            ...(accreditation && {
+              accreditationNumber: accreditation.accreditationNumber
+            })
           }
         : { organisationId: organisation.id }
 

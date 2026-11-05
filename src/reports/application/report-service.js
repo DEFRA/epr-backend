@@ -181,7 +181,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {RegistrationKey} params.key
  * @param {Registration} params.registration
  * @param {Year} params.year
- * @param {Cadence} params.cadence
+ * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
@@ -199,12 +199,13 @@ export async function fetchOrGenerateReportForPeriod({
   key: { organisationNumber, registrationNumber },
   registration,
   year,
-  cadence,
+  cadenceAccreditation,
   period,
   submissionNumber,
   requiredPeriods,
   reportDataValidationEnabled
 }) {
+  const { cadence } = cadenceAccreditation
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
     registrationNumber
@@ -247,7 +248,7 @@ export async function fetchOrGenerateReportForPeriod({
     numbers: { organisationNumber, registrationNumber },
     registration,
     year,
-    cadence,
+    cadenceAccreditation,
     period,
     wasteRecordStates,
     latestSubmission
@@ -333,7 +334,7 @@ async function readSubmissionRowStates({
  * @param {RegistrationKey} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
- * @param {Cadence} params.cadence
+ * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
  * @param {Awaited<ReturnType<typeof latestSubmittedSummaryLog>>} params.latestSubmission
@@ -346,7 +347,7 @@ async function getAggregatedReportDetail({
   numbers,
   registration,
   year,
-  cadence,
+  cadenceAccreditation: { cadence, accreditationNumber },
   period,
   wasteRecordStates,
   latestSubmission
@@ -370,7 +371,7 @@ async function getAggregatedReportDetail({
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
     organisationNumber: numbers.organisationNumber,
     registrationNumber: numbers.registrationNumber,
-    accreditation: registration.accreditation,
+    accreditationNumber,
     startDate: aggregatedReportDetail.startDate,
     endDate: aggregatedReportDetail.endDate
   })
@@ -550,7 +551,7 @@ export async function createReportForPeriod({
     numbers,
     registration,
     year,
-    cadence: cadenceAccreditation.cadence,
+    cadenceAccreditation,
     period,
     wasteRecordStates,
     latestSubmission

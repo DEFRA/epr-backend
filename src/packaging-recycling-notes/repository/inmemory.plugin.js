@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
@@ -144,9 +145,10 @@ const performFindByAccreditation =
   async ({ organisationNumber, registrationNumber, accreditationNumber }) => {
     const results = []
     for (const prn of storage.values()) {
+      const held = numbersHeld(prn)
       if (
-        prn.organisation?.organisationNumber === organisationNumber &&
-        prn.registration?.registrationNumber === registrationNumber &&
+        held.organisationNumber === organisationNumber &&
+        held.registrationNumber === registrationNumber &&
         prn.accreditation?.accreditationNumber === accreditationNumber &&
         prn.status?.currentStatus !== PRN_STATUS.DELETED
       ) {

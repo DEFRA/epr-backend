@@ -121,9 +121,13 @@ const servedStatuses = Object.values(PRN_STATUS).filter(
  * @param {AccreditationNumbers} numbers
  * @returns {prn is PackagingRecyclingNote}
  */
-const isServedUnder = (prn, { organisationNumber, accreditationNumber }) =>
+const isServedUnder = (
+  prn,
+  { organisationNumber, registrationNumber, accreditationNumber }
+) =>
   prn !== null &&
   prn.organisation.organisationNumber === organisationNumber &&
+  prn.registration?.registrationNumber === registrationNumber &&
   prn.accreditation.accreditationNumber === accreditationNumber &&
   prn.status.currentStatus !== PRN_STATUS.DELETED
 

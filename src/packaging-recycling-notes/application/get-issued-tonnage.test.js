@@ -24,7 +24,7 @@ const ACCREDITATION = buildAccreditationKeys()
 const defaultParams = {
   organisationNumber: ACCREDITATION.organisationNumber,
   registrationNumber: ACCREDITATION.registrationNumber,
-  accreditation: { accreditationNumber: ACCREDITATION.accreditationNumber },
+  accreditationNumber: ACCREDITATION.accreditationNumber,
   startDate: PERIOD_START,
   endDate: PERIOD_END
 }
@@ -117,31 +117,13 @@ async function cancelPrn(repo, id) {
 }
 
 describe('getIssuedTonnage', () => {
-  it('returns null when the accreditation is absent', async () => {
+  it('returns null when there is no accreditation number', async () => {
     const result = await getIssuedTonnage(createRepo(), {
       ...defaultParams,
-      accreditation: undefined
+      accreditationNumber: null
     })
 
     expect(result).toBeNull()
-  })
-
-  it('returns null when the accreditation is null', async () => {
-    const result = await getIssuedTonnage(createRepo(), {
-      ...defaultParams,
-      accreditation: null
-    })
-
-    expect(result).toBeNull()
-  })
-
-  it('returns issuedTonnage of 0 for an accreditation with no number, which can have issued no PRN', async () => {
-    const result = await getIssuedTonnage(createRepo(), {
-      ...defaultParams,
-      accreditation: { accreditationNumber: null }
-    })
-
-    expect(result).toEqual({ issuedTonnage: 0 })
   })
 
   it('returns issuedTonnage for qualifying PRNs', async () => {

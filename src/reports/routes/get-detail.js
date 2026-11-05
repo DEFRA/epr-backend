@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { requiredReportingPeriods } from '#reports/application/report-calendar.js'
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { findRegistrationForReport, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
@@ -113,7 +114,10 @@ export const reportsGetDetail = {
       key: params,
       registration: storedRegistration,
       year,
-      cadence,
+      cadenceAccreditation: cadenceAccreditationFor(
+        cadence,
+        registration.accreditations[year]?.accreditationNumber
+      ),
       period,
       submissionNumber,
       requiredPeriods: requiredReportingPeriods({
