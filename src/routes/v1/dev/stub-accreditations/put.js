@@ -40,10 +40,13 @@ export const devStubAccreditationPut = {
    */
   handler: async (request, h) => {
     const { registrationNumber, year } = request.params
+    const { accreditationNumber, prnIssuance, status } = request.payload
     const stored = await request.futureAccreditationsRepository.upsert({
-      ...request.payload,
       registrationNumber,
-      year
+      year,
+      accreditationNumber,
+      prnIssuance,
+      status
     })
     return h.response(stored).code(StatusCodes.OK)
   }
