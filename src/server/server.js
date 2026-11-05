@@ -140,10 +140,10 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
+    mongoFutureAccreditationsRepositoryPlugin,
     organisationReadRepositoryPlugin,
     orsImportsRepositoryPlugin,
-    mongoSummaryLogRowStatesRepositoryPlugin,
-    mongoFutureAccreditationsRepositoryPlugin
+    mongoSummaryLogRowStatesRepositoryPlugin
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)

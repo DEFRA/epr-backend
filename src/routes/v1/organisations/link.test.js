@@ -9,6 +9,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/adapter.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -545,6 +546,8 @@ describe('POST /organisations/{organisationNumber}/link', () => {
           unreadableOrganisationsRepository = organisationsRepositoryFactory()
 
           const readable = createOrganisationReadRepository({
+            futureAccreditationsRepository:
+              createInMemoryFutureAccreditationsRepository()(),
             organisationsRepository: unreadableOrganisationsRepository,
             overseasSitesRepository: createInMemoryOverseasSitesRepository()(),
             logger: /** @type {TypedLogger} */ (

@@ -19,6 +19,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { FutureAccreditation, FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
@@ -29,6 +30,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {{
+ *   futureAccreditationsByRegistration: Map<string, Record<string, AccreditationCommon>>
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: string
@@ -36,7 +38,40 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
+ * @param {FutureAccreditation} futureAccreditation
+ * @returns {AccreditationCommon}
+ */
+const toAccreditationCommon = ({
+  accreditationNumber,
+  prnIssuance,
+  status
+}) => ({
+  accreditationNumber,
+  prnIssuance,
+  status
+})
+
+/**
+ * Each registration's future accreditations, keyed by year.
+ *
+ * @param {FutureAccreditation[]} futureAccreditations
+ * @returns {Context['futureAccreditationsByRegistration']}
+ */
+const byRegistrationAndYear = (futureAccreditations) =>
+  new Map(
+    [...Map.groupBy(futureAccreditations, (a) => a.registrationNumber)].map(
+      ([registrationNumber, held]) => [
+        registrationNumber,
+        Object.fromEntries(
+          held.map((a) => [String(a.year), toAccreditationCommon(a)])
+        )
+      ]
+    )
+  )
+
+/**
  * @param {{
+ *   futureAccreditationsRepository: FutureAccreditationsRepository
  *   organisationsRepository: OrganisationsRepository
  *   overseasSitesRepository: OverseasSitesRepository
  *   logger: TypedLogger
@@ -44,6 +79,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * @returns {OrganisationReadRepository}
  */
 export const createOrganisationReadRepository = ({
+  futureAccreditationsRepository,
   organisationsRepository,
   overseasSitesRepository,
   logger
@@ -53,17 +89,28 @@ export const createOrganisationReadRepository = ({
    * @returns {Promise<Organisation[]>}
    */
   const toOrganisations = async (stored) => {
-    const siteIds = stored.flatMap(({ registrations }) =>
-      registrations.flatMap((registration) =>
-        Object.values(registration.overseasSites ?? {}).map(
-          ({ overseasSiteId }) => overseasSiteId
-        )
+    const storedRegistrations = stored.flatMap(
+      ({ registrations }) => registrations
+    )
+    const siteIds = storedRegistrations.flatMap((registration) =>
+      Object.values(registration.overseasSites ?? {}).map(
+        ({ overseasSiteId }) => overseasSiteId
       )
     )
-    const sites = await overseasSitesRepository.findByIds(siteIds)
+    const registrationNumbers = storedRegistrations.flatMap(
+      ({ registrationNumber }) => registrationNumber ?? []
+    )
+    const [sites, futureAccreditations] = await Promise.all([
+      overseasSitesRepository.findByIds(siteIds),
+      futureAccreditationsRepository.findByRegistrationNumbers(
+        registrationNumbers
+      )
+    ])
 
     /** @type {Context} */
     const context = {
+      futureAccreditationsByRegistration:
+        byRegistrationAndYear(futureAccreditations),
       onDrop: (message) => logger.warn({ message }),
       overseasSitesById: new Map(sites.map((site) => [site.id, site])),
       today: new Date().toISOString().slice(0, 10)
@@ -205,12 +252,15 @@ export function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  const accreditations = keyedRecords(
-    accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
-    `Registration ${registrationNumber} accreditation year`,
-    onDrop
-  )
+  const accreditations = {
+    ...keyedRecords(
+      accreditationsForRegistration(registration, organisation),
+      (accreditation) => toAccreditationEntry(accreditation, context),
+      `Registration ${registrationNumber} accreditation year`,
+      onDrop
+    ),
+    ...context.futureAccreditationsByRegistration.get(registrationNumber)
+  }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
@@ -255,6 +305,7 @@ export function toReadModelRegistration(
     { ...registration, overseasSites: {} },
     organisation,
     {
+      futureAccreditationsByRegistration: new Map(),
       onDrop,
       overseasSitesById: new Map(),
       today: new Date().toISOString().slice(0, 10)

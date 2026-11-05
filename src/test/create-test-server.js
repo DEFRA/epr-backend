@@ -161,12 +161,12 @@ const repositoryConfigs = [
     createDefault: createInMemoryOrsImportsRepositoryPlugin
   },
   {
-    name: 'organisationReadRepository',
-    createDefault: () => organisationReadRepositoryPlugin
-  },
-  {
     name: 'futureAccreditationsRepository',
     createDefault: createInMemoryFutureAccreditationsRepositoryPlugin
+  },
+  {
+    name: 'organisationReadRepository',
+    createDefault: () => organisationReadRepositoryPlugin
   }
 ]
 

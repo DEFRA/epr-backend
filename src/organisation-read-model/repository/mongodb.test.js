@@ -1,5 +1,9 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
+import {
+  FUTURE_ACCREDITATIONS_COLLECTION_NAME,
+  createMongoFutureAccreditationsRepository
+} from '#future-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
@@ -49,13 +53,23 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection('epr-organisations').deleteMany({})
       await database.collection('overseas-sites').deleteMany({})
+      await database
+        .collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
 
       /** @type {OrganisationReadRepositoryWith} */
       const organisationReadRepositoryWith = async ({
         organisations,
         overseasSites = [],
+        futureAccreditations = [],
         logger = { warn: () => {} }
       }) => {
+        const futureAccreditationsRepository = (
+          await createMongoFutureAccreditationsRepository(database)
+        )()
+        for (const futureAccreditation of futureAccreditations) {
+          await futureAccreditationsRepository.upsert(futureAccreditation)
+        }
         for (const organisation of organisations) {
           await database
             .collection('epr-organisations')
@@ -74,6 +88,7 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)
           )(),
+          futureAccreditationsRepository,
           logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger))
         })
       }
