@@ -1,13 +1,15 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
   generateTestPrnNumber
 } from './contract/test-data.js'
-import { createPackagingRecyclingNotesRepository } from './mongodb.js'
+import {
+  COLLECTION_NAME,
+  createPackagingRecyclingNotesRepository
+} from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
 
@@ -148,35 +150,6 @@ describe('MongoDB packaging recycling notes repository', () => {
       ).rejects.toThrow('Connection timeout')
     })
 
-    it('conflicts when a PRN changes between assigning its numbers and reading it back', async ({
-      mongoClient
-    }) => {
-      const database = /** @type {MongoClient} */ (mongoClient).db(
-        DATABASE_NAME
-      )
-      const created = await (
-        await createPackagingRecyclingNotesRepository(database, [])
-      )(stubLogger()).create(buildAwaitingAuthorisationPrn())
-      const updateLost = asDb({
-        collection: (/** @type {string} */ name) =>
-          Object.assign(Object.create(database.collection(name)), {
-            updateOne: async () => ({ matchedCount: 0 })
-          })
-      })
-      const repository = (
-        await createPackagingRecyclingNotesRepository(updateLost, [])
-      )(stubLogger())
-
-      await expect(
-        repository.assignNumbers(created.id, {
-          organisationNumber: toOrganisationNumber('500123')
-        })
-      ).rejects.toMatchObject({
-        message: `PRN ${created.id} changed while its numbers were being assigned`,
-        output: { statusCode: 409 }
-      })
-    })
-
     it('throws PrnNumberConflictError on duplicate key error for prnNumber', async () => {
       const hexId = '123456789012345678901234'
       const prnNumber = 'ER2612345'
@@ -217,6 +190,23 @@ describe('MongoDB packaging recycling notes repository', () => {
           prnNumber
         })
       ).rejects.toThrow(PrnNumberConflictError)
+    })
+  })
+
+  it('indexes the numbers that find the PRNs of an accreditation', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const db = mongoClient.db(DATABASE_NAME)
+    await createPackagingRecyclingNotesRepository(db, [])
+
+    const indexes = await db.collection(COLLECTION_NAME).indexes()
+
+    expect(
+      indexes.find(({ name }) => name === 'accreditationNumbers')?.key
+    ).toStrictEqual({
+      'organisation.organisationNumber': 1,
+      'registration.registrationNumber': 1,
+      'accreditation.accreditationNumber': 1
     })
   })
 

@@ -1,3 +1,8 @@
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
 import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { StatusCodes } from 'http-status-codes'
@@ -34,6 +39,7 @@ import {
   buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   reprocessor
@@ -62,11 +68,15 @@ const organisation = buildOrganisation({
 const ownIds = {
   organisationId: organisation.id,
   registrationId: registration.id,
-  accreditationId: accredited.id
+  accreditationId: accredited.id,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: registration.registrationNumber,
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
 const otherIds = {
   ...ownIds,
-  accreditationId: new ObjectId().toString()
+  accreditationId: new ObjectId().toString(),
+  accreditationNumber: toAccreditationNumber('A26ER9999999999PA')
 }
 
 const fullSiteAddress = {
@@ -106,11 +116,13 @@ const exported = {
     ...underAccreditation(ownIds),
     organisation: {
       id: ownIds.organisationId,
+      organisationNumber: ownIds.organisationNumber,
       name: 'Test Organisation',
       tradingName: 'Test Trading'
     },
     accreditation: buildAccreditationSnapshot({
       id: ownIds.accreditationId,
+      accreditationNumber: ownIds.accreditationNumber,
       material: 'glass',
       glassRecyclingProcess: 'glass_re_melt',
       siteAddress: undefined
@@ -126,6 +138,15 @@ const deleted = {
 const elsewhere = {
   id: new ObjectId().toString(),
   ...buildAwaitingAcceptancePrn(underAccreditation(otherIds))
+}
+const underOtherRegistration = {
+  id: new ObjectId().toString(),
+  ...buildAwaitingAcceptancePrn(
+    underAccreditation({
+      ...ownIds,
+      registrationNumber: toRegistrationNumber('R26ER9999999999PA')
+    })
+  )
 }
 
 /** @param {{ payload: string }} response */
@@ -157,7 +178,8 @@ describe('PRN routes by natural key', () => {
         issued,
         exported,
         deleted,
-        elsewhere
+        elsewhere,
+        underOtherRegistration
       ])
     packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
     ledgerRepository = createInMemoryLedgerRepository([
@@ -487,6 +509,7 @@ describe('PRN routes by natural key', () => {
 
     it.each([
       ['of another accreditation', elsewhere.id],
+      ['of another registration', underOtherRegistration.id],
       ['that was deleted', deleted.id],
       ['that does not exist', new ObjectId().toString()]
     ])('is not found for a PRN %s', async (_, prnId) => {
@@ -656,18 +679,21 @@ describe('PRN routes by natural key', () => {
       })
     })
 
-    it("is not found for another accreditation's PRN", async () => {
+    it.each([
+      ['another accreditation', elsewhere.id],
+      ['another registration', underOtherRegistration.id]
+    ])("is not found for %s's PRN", async (_, prnId) => {
       await startServer()
 
       const response = await server.inject({
         method: 'POST',
-        url: `${prns}/${elsewhere.id}/cancel`,
+        url: `${prns}/${prnId}/cancel`,
         ...asServiceMaintainerWrite()
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       expect(
-        (await packagingRecyclingNotesRepository.findById(elsewhere.id))?.status
+        (await packagingRecyclingNotesRepository.findById(prnId))?.status
           .currentStatus
       ).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     })

@@ -10,7 +10,7 @@ import {
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import {
-  buildAccreditationId,
+  buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
@@ -94,7 +94,7 @@ const it = mongoIt.extend({
  * lags the ledger. Returns the created (read-shaped) PRN.
  */
 const seedDriftingPrn = async (prnRepository, ledgerCollection) => {
-  const ids = buildAccreditationId()
+  const ids = buildAccreditationKeys()
   const created = await prnRepository.create(
     buildAwaitingAcceptancePrn({
       ...underAccreditation(ids),
@@ -119,7 +119,7 @@ const seedDriftingPrn = async (prnRepository, ledgerCollection) => {
  * population option A retires. Returns the created PRN.
  */
 const seedBenignDriftingPrn = async (prnRepository, ledgerCollection) => {
-  const ids = buildAccreditationId()
+  const ids = buildAccreditationKeys()
   const created = await prnRepository.create(
     buildCancelledPrn(underAccreditation(ids))
   )
@@ -195,7 +195,7 @@ describe('reconcileStalePrnProjections', () => {
     service,
     findDrifting
   }) => {
-    const ids = buildAccreditationId()
+    const ids = buildAccreditationKeys()
     const created = await prnRepository.create(
       buildAwaitingAcceptancePrn({
         ...underAccreditation(ids),
@@ -258,7 +258,7 @@ describe('reconcileStalePrnProjections', () => {
     // A benign skip, counted towards nothing. `findDrifting` is stubbed to flag
     // the level PRN because that heal-in-window race cannot be produced reliably
     // against real Mongo; the read and catch-up below run for real.
-    const ids = buildAccreditationId()
+    const ids = buildAccreditationKeys()
     const created = await prnRepository.create(
       buildAwaitingAcceptancePrn({
         ...underAccreditation(ids),
@@ -302,7 +302,7 @@ describe('reconcileStalePrnProjections', () => {
     // A document with the join keys and an unapplied event is flagged as
     // drifting, but fails the read schema. It must fail only itself, not abort
     // the sweep over the good PRN alongside it.
-    const badIds = buildAccreditationId()
+    const badIds = buildAccreditationKeys()
     const { insertedId } = await prnCollection.insertOne(
       /** @type {*} */ ({
         registrationId: badIds.registrationId,
@@ -340,7 +340,7 @@ describe('reconcileStalePrnProjections', () => {
     service,
     findDrifting
   }) => {
-    const ids = buildAccreditationId()
+    const ids = buildAccreditationKeys()
     const created = await prnRepository.create(
       buildAwaitingAcceptancePrn({
         ...underAccreditation(ids),
@@ -580,7 +580,7 @@ describe('reconcileStalePrnProjections', () => {
     service,
     findDrifting
   }) => {
-    const ids = buildAccreditationId()
+    const ids = buildAccreditationKeys()
     // Awaiting authorisation: created but never issued, so it carries no PRN
     // number and no watermark. An issuance it never applied leaves it adrift.
     const created = await prnRepository.create(

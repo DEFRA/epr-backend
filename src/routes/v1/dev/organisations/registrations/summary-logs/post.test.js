@@ -272,6 +272,34 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
+  it.each([
+    { held: 'registrations', number: 'registrationNumber' },
+    { held: 'accreditations', number: 'accreditationNumber' }
+  ])(
+    'refuses a summary log, storing nothing, when the $number is missing',
+    async ({ held, number }) => {
+      const env = await createEnvironment()
+      const { organisationsRepository } = env
+      const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
+      const findById = organisationsRepository.findById
+      vi.spyOn(organisationsRepository, 'findById').mockImplementation(
+        async (id) => {
+          const organisation = /** @type {*} */ (await findById(id))
+          delete organisation[held][0][number]
+          return organisation
+        }
+      )
+
+      const response = await submit(
+        env,
+        payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      expect(insert).not.toHaveBeenCalled()
+    }
+  )
+
   it('returns 422 for an invalid year', async () => {
     const env = await createEnvironment()
 
@@ -489,6 +517,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
   it('answers not found for an unknown registration before writing anything', async () => {
     const env = await createEnvironment()
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
 
     const response = await env.server.inject({
       method: 'POST',
@@ -502,8 +531,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    // A summary log stored under an unknown registration can hold no number.
-    expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual([])
+    expect(insert).not.toHaveBeenCalled()
   })
 
   it('rejects a payload that names the template, since it is inferred from the registration', async () => {

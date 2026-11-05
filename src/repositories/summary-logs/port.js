@@ -1,7 +1,7 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {SummaryLogKey, SummaryLogNumbers} from '#domain/summary-logs/numbers.js' */
+/** @import {SummaryLogKey} from '#domain/summary-logs/numbers.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 
 /**
@@ -26,8 +26,8 @@
 
 /**
  * @typedef {Object} SummaryLogStats
- * @property {string} organisationId - Organisation ID
- * @property {string} registrationId - Registration ID
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Date|null} lastSuccessful - Date of last submitted log
  * @property {Date|null} lastFailed - Date of last failed log
  * @property {number} successfulCount - Count of submitted logs
@@ -65,11 +65,9 @@
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
- * @property {() => Promise<SummaryLogId[]>} findIdsWithoutNumbers - ids of summary logs lacking a number beside one of their ids
- * @property {(id: SummaryLogId, version: number, numbers: SummaryLogNumbers) => Promise<void>} assignNumbers - adds numbers to a summary log stored without them
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
- * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
+ * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
  * @property {(logId: SummaryLogId) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: SummaryLogId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
  * @property {(fileId: SummaryLogFileId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId

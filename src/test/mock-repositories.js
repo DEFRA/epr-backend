@@ -21,7 +21,7 @@ export const createMockOrganisationsRepository = (overrides = {}) => ({
   replace: vi.fn(),
   findAll: vi.fn(),
   find: vi.fn(),
-  findByIds: vi.fn(),
+  findByOrganisationNumbers: vi.fn(),
   findById: vi.fn(),
   findByLinkedDefraOrgId: vi.fn(),
   linkDefraOrganisation: vi.fn(),
@@ -51,11 +51,9 @@ export const createMockSummaryLogsRepository = (overrides = {}) => ({
   update: vi.fn(),
   findById: vi.fn(),
   findByFileId: vi.fn(),
-  findIdsWithoutNumbers: vi.fn(),
-  assignNumbers: vi.fn(),
   findLatestSubmitted: vi.fn(),
   findAll: vi.fn(),
-  findAllSummaryLogStatsByRegistrationId: vi.fn(),
+  findAllSummaryLogStatsByRegistration: vi.fn(),
   transitionToSubmittingExclusive: vi.fn(),
   getDownloadUrl: vi.fn(),
   getDownloadUrlByFileId: vi.fn(),
@@ -117,8 +115,6 @@ export const createMockPackagingRecyclingNotesRepository = (
   updateStatus: vi.fn(),
   updateWatermark: vi.fn(),
   persistProjection: vi.fn(),
-  findIdsWithoutNumbers: vi.fn(),
-  assignNumbers: vi.fn(),
   ...overrides
 })
 

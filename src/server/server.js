@@ -48,10 +48,6 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
-import { runSummaryLogNumbersBackfill } from '#summary-log-numbers-backfill/run.js'
-import { runPrnNumbersBackfill } from '#prn-numbers-backfill/run.js'
-import { runRowStateNumbersBackfill } from '#row-state-numbers-backfill/run.js'
-import { runLedgerEventNumbersBackfill } from '#ledger-event-numbers-backfill/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -229,14 +225,9 @@ async function createServer(options = {}) {
     )
     void runFormsDataMigration(startedServer)
     void runOrganisationValidationSweep(startedServer)
-    void runReconcileStalePrnProjections(startedServer).then(() =>
-      runPrnNumbersBackfill(startedServer)
-    )
+    void runReconcileStalePrnProjections(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
-    void runSummaryLogNumbersBackfill(startedServer)
-    void runRowStateNumbersBackfill(startedServer)
-    void runLedgerEventNumbersBackfill(startedServer)
   })
 
   return server

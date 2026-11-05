@@ -4,10 +4,9 @@ import { testUpdateBehaviour } from './contract/update.contract.js'
 import { testOptimisticConcurrency } from './contract/optimistic-concurrency.contract.js'
 import { testTransitionToSubmittingExclusive } from './contract/transition-to-submitting-exclusive.contract.js'
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
-import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
+import { testFindAllSummaryLogStatsByRegistration } from './contract/find-all-stats.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 import { testFindByNaturalKey } from './contract/find-by-natural-key.contract.js'
-import { testAssignNumbers } from './contract/assign-numbers.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -17,9 +16,8 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testOptimisticConcurrency(repositoryFactory)
     testTransitionToSubmittingExclusive(repositoryFactory)
     testExpiresAtBehaviour(repositoryFactory)
-    testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
+    testFindAllSummaryLogStatsByRegistration(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
     testFindByNaturalKey(repositoryFactory)
-    testAssignNumbers(repositoryFactory)
   })
 }

@@ -3,6 +3,7 @@ import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
 import {
+  buildAccreditationKeys,
   buildPrn,
   underAccreditation
 } from '../repository/contract/test-data.js'
@@ -18,14 +19,12 @@ const PERIOD_END = '2025-12-31'
 const IN_PERIOD = new Date('2025-06-15T12:00:00Z')
 const ACTOR = { id: 'u', name: 'U' }
 
-const ACCREDITATION = {
-  organisationId: 'org-123',
-  registrationId: 'reg-123',
-  accreditationId: 'acc-123'
-}
+const ACCREDITATION = buildAccreditationKeys()
 
 const defaultParams = {
-  ...ACCREDITATION,
+  organisationNumber: ACCREDITATION.organisationNumber,
+  registrationNumber: ACCREDITATION.registrationNumber,
+  accreditationNumber: ACCREDITATION.accreditationNumber,
   startDate: PERIOD_START,
   endDate: PERIOD_END
 }
@@ -118,19 +117,10 @@ async function cancelPrn(repo, id) {
 }
 
 describe('getIssuedTonnage', () => {
-  it('returns null when accreditationId is absent', async () => {
+  it('returns null when there is no accreditation number', async () => {
     const result = await getIssuedTonnage(createRepo(), {
       ...defaultParams,
-      accreditationId: undefined
-    })
-
-    expect(result).toBeNull()
-  })
-
-  it('returns null when accreditationId is null', async () => {
-    const result = await getIssuedTonnage(createRepo(), {
-      ...defaultParams,
-      accreditationId: null
+      accreditationNumber: null
     })
 
     expect(result).toBeNull()
