@@ -51,7 +51,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *
  * @typedef {RegistrationParams & { year: Year }} AccreditationParams
- * @typedef {{ organisationId: string, registrationId: string, accreditationId: string }} AccreditationIds
+ * @typedef {import('#packaging-recycling-notes/repository/port.js').AccreditationNumbers} AccreditationNumbers
  * @typedef {AccreditationParams & { prnId: string }} PrnParams
  *
  * @typedef {HapiRequest & {
@@ -118,13 +118,17 @@ const servedStatuses = Object.values(PRN_STATUS).filter(
  * no one.
  *
  * @param {PackagingRecyclingNote | null} prn
- * @param {AccreditationIds} ids
+ * @param {AccreditationNumbers} numbers
  * @returns {prn is PackagingRecyclingNote}
  */
-const isServedUnder = (prn, { organisationId, accreditationId }) =>
+const isServedUnder = (
+  prn,
+  { organisationNumber, registrationNumber, accreditationNumber }
+) =>
   prn !== null &&
-  prn.organisation.id === organisationId &&
-  prn.accreditation.id === accreditationId &&
+  prn.organisation.organisationNumber === organisationNumber &&
+  prn.registration?.registrationNumber === registrationNumber &&
+  prn.accreditation.accreditationNumber === accreditationNumber &&
   prn.status.currentStatus !== PRN_STATUS.DELETED
 
 const issuedStatuses = [
@@ -345,19 +349,20 @@ const prnsList = {
    * caught up to the ledger, and the filters are applied in memory.
    *
    * @param {PrnRequest & {
-   *   params: AccreditationParams & AccreditationIds,
+   *   params: AccreditationParams & AccreditationNumbers,
    *   query: { statuses?: PrnStatus[], prnNumber?: string }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId, accreditationId } = request.params
+    const { organisationNumber, registrationNumber, accreditationNumber } =
+      request.params
     const { statuses, prnNumber } = request.query
     const stored =
       await request.packagingRecyclingNotesRepository.findByAccreditation({
-        organisationId,
-        registrationId,
-        accreditationId
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber
       })
     const service = createWasteBalanceService(request.ledgerRepository)
     const prns = await Promise.all(
@@ -387,7 +392,7 @@ const prnGet = {
     response: { schema: prnSchema }
   },
   /**
-   * @param {PrnRequest & { params: PrnParams & AccreditationIds }} request
+   * @param {PrnRequest & { params: PrnParams & AccreditationNumbers }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -457,7 +462,7 @@ const declaringResponse = (route, schema) => ({
  * proved to be the accreditation's own.
  *
  * @param {Parameters<ReturnType<typeof cancelPrnHandler>>[0] & {
- *   params: RegistrationParams & AccreditationIds
+ *   params: AccreditationNumbers
  * }} request
  * @param {HapiResponseToolkit} h
  */
