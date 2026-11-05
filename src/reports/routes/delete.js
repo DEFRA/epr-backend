@@ -57,8 +57,8 @@ export const reportsDelete = {
     const previous = await reportsRepository.findReportById(report.id)
 
     await reportsRepository.deleteReport({
-      organisationId,
-      registrationId,
+      organisationNumber: params.organisationNumber,
+      registrationNumber: params.registrationNumber,
       year,
       cadence,
       period,

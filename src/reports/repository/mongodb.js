@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
@@ -42,6 +43,15 @@ import {
  */
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+const ONE_PER_SUBMISSION_INDEX_NAME = 'reports_one_per_submission_by_number'
+const ONE_ACTIVE_DRAFT_INDEX_NAME =
+  'reports_one_active_draft_per_period_by_number'
+const RETIRED_ID_INDEX_NAMES = [
+  'organisationId_1_registrationId_1',
+  'organisationId_1_registrationId_1_year_1_cadence_1_period_1_submissionNumber_1',
+  'reports_one_active_draft_per_period'
+]
 
 /**
  * Converts the calendar-date fields of a stored document to the bare dates the
@@ -98,21 +108,26 @@ async function ensureCollections(db) {
   const col = reportsCollection(db)
 
   await col.createIndex({ id: 1 }, { unique: true })
-  await col.createIndex({ organisationId: 1, registrationId: 1 })
   await col.createIndex({ organisationNumber: 1, registrationNumber: 1 })
   await col.createIndex(
     {
-      organisationId: 1,
-      registrationId: 1,
+      organisationNumber: 1,
+      registrationNumber: 1,
       year: 1,
       cadence: 1,
       period: 1,
       submissionNumber: 1
     },
-    { unique: true }
+    { unique: true, name: ONE_PER_SUBMISSION_INDEX_NAME }
   )
   await col.createIndex(
-    { organisationId: 1, registrationId: 1, year: 1, cadence: 1, period: 1 },
+    {
+      organisationNumber: 1,
+      registrationNumber: 1,
+      year: 1,
+      cadence: 1,
+      period: 1
+    },
     {
       unique: true,
       partialFilterExpression: {
@@ -120,9 +135,14 @@ async function ensureCollections(db) {
           $in: [REPORT_STATUS.IN_PROGRESS, REPORT_STATUS.READY_TO_SUBMIT]
         }
       },
-      name: 'reports_one_active_draft_per_period'
+      name: ONE_ACTIVE_DRAFT_INDEX_NAME
     }
   )
+
+  // Created first, so the slots are never left without a unique index.
+  for (const name of RETIRED_ID_INDEX_NAMES) {
+    await dropIndexIfPresent(col, name)
+  }
 }
 
 /**
@@ -265,8 +285,8 @@ const performFindReportById = async (db, reportId) => {
 const performDeleteReport = async (db, params) => {
   const validated = validateDeleteReportParams(params)
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -274,8 +294,8 @@ const performDeleteReport = async (db, params) => {
   } = validated
 
   const result = await reportsCollection(db).findOneAndDelete({
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
+import { randomUUID } from 'node:crypto'
 import { createReportsRepository } from './mongodb.js'
 import { testReportsRepositoryContract } from './port.contract.js'
 import { buildCreateReportParams } from '#root/reports/repository/contract/test-data.js'
@@ -144,6 +145,57 @@ describe('MongoDB reports repository', () => {
         dueDate: '2024-02-21'
       })
     })
+  })
+
+  it('keeps one report per slot by number, and drops the id indexes it replaces', /** @param {ReportsFixtures} fixture */ async ({
+    mongoClient
+  }) => {
+    const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+    const collection = database.collection('reports')
+    await collection.createIndex({ organisationId: 1, registrationId: 1 })
+    await collection.createIndex(
+      {
+        organisationId: 1,
+        registrationId: 1,
+        year: 1,
+        cadence: 1,
+        period: 1,
+        submissionNumber: 1
+      },
+      { unique: true }
+    )
+    await collection.createIndex(
+      { organisationId: 1, registrationId: 1, year: 1, cadence: 1, period: 1 },
+      { unique: true, name: 'reports_one_active_draft_per_period' }
+    )
+
+    await createReportsRepository(database)
+
+    const indexes = await collection.indexes()
+    expect(
+      indexes.filter(({ unique }) => unique).map(({ key }) => key)
+    ).toStrictEqual([
+      { id: 1 },
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        year: 1,
+        cadence: 1,
+        period: 1,
+        submissionNumber: 1
+      },
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        year: 1,
+        cadence: 1,
+        period: 1
+      }
+    ])
+    expect(indexes.map(({ key }) => key)).not.toContainEqual(
+      expect.objectContaining({ organisationId: 1 })
+    )
+    await database.dropDatabase()
   })
 
   describe('MongoDB-specific error handling', () => {
