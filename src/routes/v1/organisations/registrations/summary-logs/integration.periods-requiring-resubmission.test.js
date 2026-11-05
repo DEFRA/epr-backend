@@ -664,8 +664,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       const env = await setupWithJanuaryAndFebruarySubmitted(46063)
       const [storedRow] =
         await env.summaryLogRowStatesRepository.findRowHistory(
-          env.organisationId,
-          env.registrationId,
+          env.reportKey.organisationNumber,
+          env.reportKey.registrationNumber,
           '1001',
           WASTE_RECORD_TYPE.EXPORTED
         )

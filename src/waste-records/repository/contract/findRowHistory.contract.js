@@ -5,6 +5,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  registrationNumbersOf,
   withNumbers
 } from '../test-data.js'
 
@@ -19,8 +20,7 @@ export const testFindRowHistoryBehaviour = (it) => {
     it('returns an empty list for a row that has never committed', async () => {
       expect(
         await repository.findRowHistory(
-          'org-1',
-          'reg-1',
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
           'row-1',
           WASTE_RECORD_TYPE.RECEIVED
         )
@@ -45,8 +45,7 @@ export const testFindRowHistoryBehaviour = (it) => {
       )
 
       const history = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )
@@ -64,8 +63,7 @@ export const testFindRowHistoryBehaviour = (it) => {
       )
 
       const history = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )
@@ -88,8 +86,7 @@ export const testFindRowHistoryBehaviour = (it) => {
       )
 
       const received = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )
@@ -118,8 +115,7 @@ export const testFindRowHistoryBehaviour = (it) => {
       )
 
       const history = await repository.findRowHistory(
-        'org-1',
-        'reg-1',
+        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
         'row-1',
         WASTE_RECORD_TYPE.RECEIVED
       )

@@ -154,8 +154,8 @@ describe('syncFromSummaryLog', () => {
 
     const [rowState] =
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-        'org-1',
-        'reg-1',
+        '500001',
+        'REG-1',
         fileId
       )
     expect(rowState).toMatchObject({
@@ -178,8 +178,8 @@ describe('syncFromSummaryLog', () => {
 
     const [rowState] =
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-        'org-1',
-        'reg-1',
+        '500001',
+        'REG-1',
         fileId
       )
     expect(rowState).toMatchObject({
@@ -211,8 +211,8 @@ describe('syncFromSummaryLog', () => {
     )
     expect(
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-        'org-1',
-        'reg-1',
+        '500001',
+        'REG-1',
         fileId
       )
     ).toEqual([])
