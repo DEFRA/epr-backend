@@ -153,18 +153,20 @@ describe('row state validation', () => {
       expect(result.id).toBe('state-1')
     })
 
-    it('accepts a row state stored without the numbers', () => {
+    it('refuses a row state stored without its numbers', () => {
       const {
         organisationNumber: _organisationNumber,
         registrationNumber: _registrationNumber,
         accreditationNumber: _accreditationNumber,
         ...storedWithoutNumbers
       } = buildSummaryLogRowState()
-      const result = validateSummaryLogRowStateRead({
-        id: 'state-1',
-        ...storedWithoutNumbers
-      })
-      expect(result).not.toHaveProperty('organisationNumber')
+
+      expect(() =>
+        validateSummaryLogRowStateRead({
+          id: 'state-1',
+          ...storedWithoutNumbers
+        })
+      ).toThrow(/"organisationNumber" is required/)
     })
 
     it('throws Boom.badImplementation for invalid input', () => {
