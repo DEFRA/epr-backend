@@ -111,6 +111,15 @@ async function ensureCollection(db) {
 
   await ensureStatusDateIndex(collection)
 
+  await collection.createIndex(
+    {
+      'organisation.organisationNumber': 1,
+      'registration.registrationNumber': 1,
+      'accreditation.accreditationNumber': 1
+    },
+    { name: 'accreditationNumbers' }
+  )
+
   return collection
 }
 
@@ -167,19 +176,19 @@ const performCreate = async (db, prn) => {
 
 /**
  * @param {Db} db
- * @param {import('./port.js').AccreditationId} accreditationId
+ * @param {import('./port.js').AccreditationNumbers} accreditation
  * @returns {Promise<PackagingRecyclingNote[]>}
  */
 const performFindByAccreditation = async (
   db,
-  { organisationId, registrationId, accreditationId }
+  { organisationNumber, registrationNumber, accreditationNumber }
 ) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
-      'organisation.id': organisationId,
-      registrationId,
-      'accreditation.id': accreditationId,
+      'organisation.organisationNumber': organisationNumber,
+      'registration.registrationNumber': registrationNumber,
+      'accreditation.accreditationNumber': accreditationNumber,
       'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })
     .toArray()
@@ -614,8 +623,8 @@ export const createPackagingRecyclingNotesRepository = async (
 
   return (/** @type {TypedLogger} */ logger) => ({
     create: (prn) => performCreate(db, prn),
-    findByAccreditation: (accreditationId) =>
-      performFindByAccreditation(db, accreditationId),
+    findByAccreditation: (accreditation) =>
+      performFindByAccreditation(db, accreditation),
     findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),

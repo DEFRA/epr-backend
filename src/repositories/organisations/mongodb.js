@@ -367,23 +367,18 @@ const performFindAllLinked =
     return docs.map(toLinkedOrganisationSummary)
   }
 
-const performFindByIds = (db) => async (ids) => {
-  if (!ids || ids.length === 0) {
-    return []
+/**
+ * @returns {import('./port.js').OrganisationsRepository['findByOrganisationNumbers']}
+ */
+const performFindByOrganisationNumbers =
+  (db) => async (organisationNumbers) => {
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .find({ orgId: { $in: organisationNumbers.map(storedOrgId) } })
+      .toArray()
+
+    return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
   }
-
-  const objectIds = ids.map((id) => {
-    const validatedId = validateId(id)
-    return ObjectId.createFromHexString(validatedId)
-  })
-
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find({ _id: { $in: objectIds } })
-    .toArray()
-
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
 
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
@@ -574,7 +569,7 @@ export const createOrganisationsRepository = async (
       findAll: performFindAll(db),
       find: performFind(db),
       findAllLinked: performFindAllLinked(db),
-      findByIds: performFindByIds(db),
+      findByOrganisationNumbers: performFindByOrganisationNumbers(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       isAccreditationNumberInUse: performIsAccreditationNumberInUse(db),
