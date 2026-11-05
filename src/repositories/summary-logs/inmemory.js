@@ -235,15 +235,15 @@ const findAll =
   async (key) =>
     uploads(staleCache, matchesKey(key)).map(keyedBy(key))
 
-const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
+const findAllSummaryLogStatsByRegistration = (staleCache) => async () => {
   const statsMap = Array.from(staleCache.values()).reduce(
     (acc, { summaryLog: doc }) => {
-      const { organisationId, registrationId, status } = doc
-      const key = `${organisationId}:${registrationId}`
+      const { organisationNumber, registrationNumber, status } = doc
+      const key = `${organisationNumber}:${registrationNumber}`
 
       const group = acc.get(key) || {
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         lastSuccessful: null,
         lastFailed: null,
         successfulCount: 0,
@@ -388,8 +388,8 @@ export const createInMemorySummaryLogsRepository = () => {
     findByFileId: findByFileId(staleCache),
     findLatestSubmitted: findLatestSubmitted(staleCache),
     findAll: findAll(staleCache),
-    findAllSummaryLogStatsByRegistrationId:
-      findAllSummaryLogStatsByRegistrationId(staleCache),
+    findAllSummaryLogStatsByRegistration:
+      findAllSummaryLogStatsByRegistration(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,
       staleCache

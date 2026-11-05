@@ -344,18 +344,16 @@ const performFindAllLinked =
     return matches.map(toLinkedOrganisationSummary)
   }
 
-const performFindByIds = (staleCache) => async (ids) => {
-  if (!ids || ids.length === 0) {
-    return []
+/**
+ * @returns {import('./port.js').OrganisationsRepository['findByOrganisationNumbers']}
+ */
+const performFindByOrganisationNumbers =
+  (staleCache) => async (organisationNumbers) => {
+    const orgIds = new Set(organisationNumbers.map(storedOrgId))
+    return structuredClone(staleCache)
+      .filter((org) => orgIds.has(org.orgId))
+      .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
   }
-
-  const validIds = ids.map((id) => validateId(id))
-
-  const idSet = new Set(validIds)
-  return structuredClone(staleCache)
-    .filter((org) => idSet.has(org._id))
-    .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
-}
 
 const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   const found = staleCache.find(
@@ -556,7 +554,7 @@ export const createInMemoryOrganisationsRepository = (
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,
-      findByIds: performFindByIds(staleCache),
+      findByOrganisationNumbers: performFindByOrganisationNumbers(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       isAccreditationNumberInUse: performIsAccreditationNumberInUse(staleCache),
       isRegistrationNumberInUse: performIsRegistrationNumberInUse(staleCache),
