@@ -69,6 +69,17 @@ describe('PUT /v1/dev/stub-accreditations/{registrationNumber}/{year}', () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
+  it('should refuse a request without an accreditation', async () => {
+    const { server } = await serverWith({ devEndpoints: true })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/dev/stub-accreditations/${registrationNumber}/${year}`
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
   it('should refuse an accreditation the stub cannot hold', async () => {
     const { server } = await serverWith({ devEndpoints: true })
 

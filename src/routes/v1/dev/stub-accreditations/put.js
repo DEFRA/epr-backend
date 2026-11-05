@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { accreditationCommonSchema } from '#organisation-read-model/domain/schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -27,7 +28,10 @@ export const devStubAccreditationPut = {
   options: {
     auth: false,
     tags: ['api'],
-    validate: { params: stubAccreditationParams }
+    validate: {
+      params: stubAccreditationParams,
+      payload: accreditationCommonSchema.required()
+    }
   },
 
   /**
@@ -36,13 +40,10 @@ export const devStubAccreditationPut = {
    */
   handler: async (request, h) => {
     const { registrationNumber, year } = request.params
-    const { accreditationNumber, prnIssuance, status } = request.payload
     const stored = await request.futureAccreditationsRepository.upsert({
+      ...request.payload,
       registrationNumber,
-      year,
-      accreditationNumber,
-      prnIssuance,
-      status
+      year
     })
     return h.response(stored).code(StatusCodes.OK)
   }
