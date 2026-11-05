@@ -16,6 +16,12 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * Reads the organisations collection directly, the same way the organisations
  * repository does, and serves what it finds in the read model's shape.
  *
+ * It shares the organisations repository's reads through the
+ * `#repositories/organisations/mongodb-find.js` import while both read
+ * `epr-organisations`, so a change to that repository's find changes this one
+ * too. Once the read model has its own collection, that import is the place
+ * to separate them.
+ *
  * `find` filters and counts the stored organisations, then puts the page into
  * the read model's shape. An organisation the model leaves out still counts
  * towards `totalItems`, so its page comes back short.

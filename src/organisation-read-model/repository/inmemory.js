@@ -13,6 +13,12 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * Holds organisations as the organisations repository returns them, and
  * serves them in the read model's shape, as the MongoDB adapter does.
  *
+ * It shares the in-memory organisations repository's search through the
+ * `#repositories/organisations/inmemory-find.js` import, as the MongoDB
+ * adapter shares that repository's reads, so a change to that search changes
+ * this one too. Once the read model has its own collection, that import is
+ * the place to separate them.
+ *
  * `find` filters and counts the stored organisations, then puts the page into
  * the read model's shape. An organisation the model leaves out still counts
  * towards `totalItems`, so its page comes back short.

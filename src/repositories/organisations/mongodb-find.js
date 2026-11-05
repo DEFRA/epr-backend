@@ -61,7 +61,7 @@ export const findOneAtMinimumVersion = async (
     }
 
     if (!isLastRetry) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs)) // NOSONAR: javascript:S9382 - each retry must wait for the one before it
     }
   }
 
@@ -90,10 +90,9 @@ const buildOrgIdFilter = (value) => {
 }
 
 /**
- * Builds the MongoDB filter for a find query. The in-memory organisations
- * repository has its own equivalent; the shared criteria semantics live in
- * helpers.js and the find contract tests hold the two implementations to the
- * same behaviour.
+ * Builds the MongoDB filter for a find query. The in-memory equivalent is in
+ * inmemory-find.js; the shared criteria semantics live in helpers.js and the
+ * find contract tests hold the two implementations to the same behaviour.
  *
  * @param {SearchCriteria} criteria
  * @returns {object} - a filter matching organisations satisfying every criterion

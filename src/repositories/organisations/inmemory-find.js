@@ -75,20 +75,18 @@ const buildFindMatcher = (criteria) => {
 }
 
 /**
+ * Orders names by their UTF-8 bytes, as MongoDB sorts strings when no
+ * collation is set, so both adapters give pages in the same order.
+ *
  * @param {Searchable} one
  * @param {Searchable} other
+ * @returns {number}
  */
-const byCompanyName = (one, other) => {
-  const oneName = one.companyDetails.name
-  const otherName = other.companyDetails.name
-  if (oneName < otherName) {
-    return -1
-  }
-  if (oneName > otherName) {
-    return 1
-  }
-  return 0
-}
+const byCompanyName = (one, other) =>
+  Buffer.compare(
+    Buffer.from(one.companyDetails.name),
+    Buffer.from(other.companyDetails.name)
+  )
 
 /**
  * The organisations matching every criterion, sorted by name, a page at a

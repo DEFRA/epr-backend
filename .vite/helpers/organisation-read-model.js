@@ -2,6 +2,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
@@ -10,6 +11,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
  * @typedef {{
  *   overseasSites?: object[]
  *   overseasSitesRepository?: Pick<OverseasSitesRepository, 'findByIds'>
+ *   logger?: Pick<TypedLogger, 'warn'>
  * }} ReadModelOptions
  */
 
@@ -18,14 +20,15 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
  */
 const dependenciesFor = ({
   overseasSites = [],
-  overseasSitesRepository
+  overseasSitesRepository,
+  logger = { warn: () => {} }
 } = {}) => ({
   overseasSitesRepository:
     overseasSitesRepository ??
     createInMemoryOverseasSitesRepository(
       /** @type {any[]} */ (overseasSites)
     )(),
-  logger: { warn: () => {} }
+  logger
 })
 
 /**

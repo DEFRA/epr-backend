@@ -1,16 +1,13 @@
 import { test } from 'vitest'
 
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { mapDocumentWithCurrentStatuses } from '#repositories/organisations/helpers.js'
-import { createInMemoryOrganisationReadRepository } from './inmemory.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
 
 /**
- * The contract gives organisations as they are stored, so they are read back
- * as the organisations repository returns them before this repository holds
- * them.
+ * Seeds organisations as route tests do, through the in-memory organisations
+ * repository, so they are held as that repository stores and returns them.
  */
 const it = /** @type {OrganisationReadRepositoryContractIt} */ (
   test.extend({
@@ -20,18 +17,14 @@ const it = /** @type {OrganisationReadRepositoryContractIt} */ (
       const organisationReadRepositoryWith = async ({
         organisations,
         overseasSites = [],
-        logger = { warn: () => {} }
+        logger
       }) =>
-        createInMemoryOrganisationReadRepository(
-          organisations.map((/** @type {any} */ { id, ...rest }) =>
-            mapDocumentWithCurrentStatuses({ _id: id, ...rest })
-          )
-        )({
-          overseasSitesRepository: createInMemoryOverseasSitesRepository(
-            /** @type {any[]} */ (overseasSites)
-          )(),
-          logger
-        })
+        (
+          await organisationReadRepositoryOf(organisations, {
+            overseasSites,
+            logger
+          })
+        )()
       await use(organisationReadRepositoryWith)
     }
   })
