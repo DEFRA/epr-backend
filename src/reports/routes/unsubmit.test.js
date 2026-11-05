@@ -32,7 +32,7 @@ const YEAR = toYear(2026)
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
- *   cadence: string,
+ *   cadence: 'quarterly',
  *   period: number
  * }} Period
  */

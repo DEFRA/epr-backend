@@ -1,5 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { CADENCE, MONTHS_PER_PERIOD } from './cadence.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  CADENCE,
+  MONTHS_PER_PERIOD,
+  cadenceAccreditationFor
+} from './cadence.js'
+
+const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5000000001PA')
+
+describe('cadenceAccreditationFor', () => {
+  it('reports monthly for the accreditation', () => {
+    expect(
+      cadenceAccreditationFor(CADENCE.monthly, ACCREDITATION_NUMBER)
+    ).toStrictEqual({
+      cadence: CADENCE.monthly,
+      accreditationNumber: ACCREDITATION_NUMBER
+    })
+  })
+
+  it('reports quarterly as registered-only, whatever the accreditation', () => {
+    expect(
+      cadenceAccreditationFor(CADENCE.quarterly, ACCREDITATION_NUMBER)
+    ).toStrictEqual({ cadence: CADENCE.quarterly, accreditationNumber: null })
+  })
+
+  it('refuses a monthly report without an accreditation number', () => {
+    for (const missing of [null, undefined]) {
+      expect(() => cadenceAccreditationFor(CADENCE.monthly, missing)).toThrow(
+        'A monthly report needs an accreditation number'
+      )
+    }
+  })
+})
 
 describe('CADENCE', () => {
   it('has monthly and quarterly values', () => {

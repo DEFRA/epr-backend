@@ -9,6 +9,11 @@ import {
 } from '#reports/domain/period-labels.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
   DEFAULT_REG_ID,
@@ -95,9 +100,9 @@ export const testCreateReportBehaviour = (it) => {
     it('stores the organisation, registration and accreditation numbers beside their ids', async () => {
       const { id } = await repository.createReport(
         buildCreateReportParams({
-          organisationNumber: '500123',
-          registrationNumber: 'R25SR500010912PL',
-          accreditationNumber: 'A26ER5000000001PA'
+          organisationNumber: toOrganisationNumber('500123'),
+          registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+          accreditationNumber: toAccreditationNumber('A26ER5000000001PA')
         })
       )
 
@@ -124,10 +129,10 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
-    for (const [description, accreditationNumber] of [
+    for (const [description, accreditationNumber] of /** @type {const} */ ([
       ['without an', undefined],
       ['with a null', null]
-    ]) {
+    ])) {
       it(`refuses an accredited report ${description} accreditation number`, async () => {
         await expect(
           repository.createReport(
@@ -143,7 +148,8 @@ export const testCreateReportBehaviour = (it) => {
           buildCreateReportParams({
             cadence: 'quarterly',
             period: QUARTERLY_PERIODS.Q1,
-            accreditationNumber: 'A26ER5000000001PA'
+            // @ts-expect-error a registered-only report has no accreditation number
+            accreditationNumber: toAccreditationNumber('A26ER5000000001PA')
           })
         )
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
@@ -214,6 +220,7 @@ export const testCreateReportBehaviour = (it) => {
 
     it('throws on invalid cadence', async () => {
       await expect(
+        // @ts-expect-error reports are monthly or quarterly
         repository.createReport(buildCreateReportParams({ cadence: 'weekly' }))
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })

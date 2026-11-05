@@ -13,6 +13,7 @@ import {
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
@@ -275,6 +276,15 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env.registrationId
     )
 
+    const { accreditationNumber, ...numbers } = numbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      {
+        registrationId: env.registrationId,
+        accreditationId:
+          cadence === 'monthly' ? registration.accreditationId : null
+      }
+    ).numbers
+
     return createReportForPeriod({
       reportsRepository: env.reportsRepository,
       ledgerRepository: env.ledgerRepository,
@@ -283,17 +293,13 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers: numbersFor(
-        await env.organisationsRepository.findById(env.organisationId),
-        {
-          registrationId: env.registrationId,
-          accreditationId:
-            cadence === 'monthly' ? registration.accreditationId : null
-        }
-      ).numbers,
+      numbers,
       registration,
       year,
-      cadence,
+      cadenceAccreditation: cadenceAccreditationFor(
+        cadence,
+        accreditationNumber
+      ),
       period,
       submissionNumber,
       requiredPeriods: generateAllPeriodsForYear(cadence, year),
