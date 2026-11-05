@@ -10,7 +10,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
   accreditation,
@@ -103,6 +106,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           buildCreateReportParams({
             organisationId: org.id,
             registrationId: registration.id,
+            ...reportKeyOf(org, registration),
             year: YEAR,
             ...stream,
             ...COMPLETE_MANUAL_FIELDS,
@@ -131,6 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
       url,
@@ -526,12 +531,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('when report is stale', () => {
     it('returns 409 with summary_log_changed code', async () => {
-      const { postStatus, reportsRepository, organisationId, registrationId } =
-        await createServer()
+      const {
+        postStatus,
+        reportsRepository,
+        organisationNumber,
+        registrationNumber
+      } = await createServer()
 
       await reportsRepository.markActiveReportsStaleForSummaryLog(
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         toSummaryLogFileId('sl-new'),
         new Date().toISOString()
       )

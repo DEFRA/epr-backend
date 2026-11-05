@@ -23,6 +23,7 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditationSnapshot,
@@ -193,8 +194,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
-      organisationNumber: String(org.orgId),
-      registrationNumber: registration.registrationNumber,
+      ...reportKeyOf(org, registration),
       accreditationNumber: accreditationRecord?.accreditationNumber,
       reportsRepositoryFactory,
       url,
@@ -216,14 +216,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {Awaited<ReturnType<typeof createServer>>} created
    * @param {number} [submissionNumber]
    */
-  const storedQuarterlyReport = (
-    { reportsRepositoryFactory, organisationId, registrationId },
-    submissionNumber = 1
-  ) =>
+  const storedQuarterlyReport = (created, submissionNumber = 1) =>
     fetchReportBySubmissionNumber(
-      reportsRepositoryFactory(),
-      organisationId,
-      registrationId,
+      created.reportsRepositoryFactory(),
+      created,
       YEAR,
       'quarterly',
       QUARTER,
@@ -298,8 +294,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(
       await fetchReportBySubmissionNumber(
         created.reportsRepositoryFactory(),
-        created.organisationId,
-        created.registrationId,
+        created,
         YEAR,
         'monthly',
         MONTH,
@@ -340,8 +335,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(
       await fetchReportBySubmissionNumber(
         created.reportsRepositoryFactory(),
-        created.organisationId,
-        created.registrationId,
+        created,
         YEAR,
         'monthly',
         MONTH,
@@ -453,8 +447,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(
       await fetchReportBySubmissionNumber(
         created.reportsRepositoryFactory(),
-        created.organisationId,
-        created.registrationId,
+        created,
         toYear(2025),
         'quarterly',
         QUARTER,
@@ -711,12 +704,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
 
     const buildSubmission = (
-      organisationId,
-      registrationId,
+      {
+        organisationId,
+        registrationId,
+        organisationNumber,
+        registrationNumber
+      },
       submissionNumber
     ) => ({
       organisationId,
       registrationId,
+      organisationNumber,
+      registrationNumber,
       accreditationNumber: null,
       year: YEAR,
       cadence: CADENCE.quarterly,
@@ -765,21 +764,21 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
     }
 
-    const flagPeriod = (repo, organisationId, registrationId) =>
+    const flagPeriod = (repo, { organisationNumber, registrationNumber }) =>
       repo.markSubmittedReportsRequiringResubmission({
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId: 'sl-2',
         uploadedAt: '2026-06-01T12:00:00.000Z',
         periods: [{ year: YEAR, cadence: 'quarterly', period: QUARTER }]
       })
 
     const setup = async () => {
-      const { organisationId, registrationId, reportsRepositoryFactory, post } =
-        await createServer({ wasteProcessingType: 'exporter' })
+      const { reportsRepositoryFactory, post, ...ids } = await createServer({
+        wasteProcessingType: 'exporter'
+      })
       return {
-        organisationId,
-        registrationId,
+        ids,
         repo: reportsRepositoryFactory(),
         /** @param {number} submissionNumber */
         postSubmission: (submissionNumber) => post({ submissionNumber })
@@ -787,14 +786,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     }
 
     it('creates submission 2 when submission 1 is submitted and flagged', async () => {
-      const { organisationId, registrationId, repo, postSubmission } =
-        await setup()
+      const { ids, repo, postSubmission } = await setup()
 
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      const { id } = await repo.createReport(buildSubmission(ids, 1))
       await submitReport(repo, id)
-      await flagPeriod(repo, organisationId, registrationId)
+      await flagPeriod(repo, ids)
 
       const response = await postSubmission(2)
 
@@ -803,18 +799,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('creates submission 2 of a flagged period the registration no longer owes', async () => {
-      const { organisationId, registrationId, reportsRepositoryFactory, post } =
-        await createServer({
-          wasteProcessingType: 'exporter',
-          validFrom: '2026-04-01'
-        })
+      const { reportsRepositoryFactory, post, ...ids } = await createServer({
+        wasteProcessingType: 'exporter',
+        validFrom: '2026-04-01'
+      })
       const repo = reportsRepositoryFactory()
 
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      const { id } = await repo.createReport(buildSubmission(ids, 1))
       await submitReport(repo, id)
-      await flagPeriod(repo, organisationId, registrationId)
+      await flagPeriod(repo, ids)
 
       const response = await post({ submissionNumber: 2 })
 
@@ -822,12 +815,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is submitted but not flagged', async () => {
-      const { organisationId, registrationId, repo, postSubmission } =
-        await setup()
+      const { ids, repo, postSubmission } = await setup()
 
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      const { id } = await repo.createReport(buildSubmission(ids, 1))
       await submitReport(repo, id)
 
       const response = await postSubmission(2)
@@ -839,12 +829,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('rejects submission 2 with 409 resubmission_not_permitted when submission 1 is still in progress', async () => {
-      const { organisationId, registrationId, repo, postSubmission } =
-        await setup()
+      const { ids, repo, postSubmission } = await setup()
 
-      await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      await repo.createReport(buildSubmission(ids, 1))
 
       const response = await postSubmission(2)
 
@@ -866,17 +853,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('rejects submission 3 when submission 2 is not yet submitted', async () => {
-      const { organisationId, registrationId, repo, postSubmission } =
-        await setup()
+      const { ids, repo, postSubmission } = await setup()
 
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      const { id } = await repo.createReport(buildSubmission(ids, 1))
       await submitReport(repo, id)
-      await flagPeriod(repo, organisationId, registrationId)
-      await repo.createReport(
-        buildSubmission(organisationId, registrationId, 2)
-      )
+      await flagPeriod(repo, ids)
+      await repo.createReport(buildSubmission(ids, 2))
 
       const response = await postSubmission(3)
 
@@ -887,16 +869,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('returns report_already_exists when a submission 2 already exists, even with the flag off', async () => {
-      const { organisationId, registrationId, repo, postSubmission } =
-        await setup()
+      const { ids, repo, postSubmission } = await setup()
 
-      const { id } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 1)
-      )
+      const { id } = await repo.createReport(buildSubmission(ids, 1))
       await submitReport(repo, id)
-      await flagPeriod(repo, organisationId, registrationId)
+      await flagPeriod(repo, ids)
       const { id: existingDraftId } = await repo.createReport(
-        buildSubmission(organisationId, registrationId, 2)
+        buildSubmission(ids, 2)
       )
 
       const response = await postSubmission(2)

@@ -9,7 +9,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
@@ -37,6 +40,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
           buildCreateReportParams({
             organisationId: org.id,
             registrationId: registration.id,
+            ...reportKeyOf(org, registration),
             year: YEAR,
             cadence: CADENCE.quarterly,
             period: 1,
@@ -62,6 +66,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      key: reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
       /** @param {string} [cadence] */
@@ -76,21 +81,13 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
   describe('successful deletion', () => {
     it('returns 204 and removes report from period slot', async () => {
-      const {
-        organisationId,
-        registrationId,
-        reportsRepository,
-        deleteReport
-      } = await createServer()
+      const { key, reportsRepository, deleteReport } = await createServer()
 
       const response = await deleteReport()
 
       expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-      const periodicReports = await reportsRepository.findPeriodicReports({
-        organisationId,
-        registrationId
-      })
+      const periodicReports = await reportsRepository.findPeriodicReports(key)
       expect(periodicReports).toEqual([])
     })
 

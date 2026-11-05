@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createInMemoryReportsRepository } from './inmemory.js'
 
 /** @import { CreateReportParams, ReportsRepository } from './port.js' */
@@ -14,6 +18,8 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5000000001PA')
 const REPORT = {
   organisationId: '6650a1b2c3d4e5f6a7b8c9d0',
   registrationId: '6650a1b2c3d4e5f6a7b8c9d1',
+  organisationNumber: toOrganisationNumber('500123'),
+  registrationNumber: toRegistrationNumber('R26ER5000000001PA'),
   year: toYear(2026),
   period: 1,
   startDate: calendarDate('2026-01-01'),

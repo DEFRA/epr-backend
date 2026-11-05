@@ -11,7 +11,8 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
@@ -147,10 +148,12 @@ const setupSubmit = async ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     organisation
   ])()
+  const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
+    ...reportKey,
     accreditationId,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
@@ -194,6 +197,7 @@ const setupSubmit = async ({
     organisation,
     organisationId,
     registrationId,
+    reportKey,
     summaryLogsRepository
   }
 }
@@ -206,6 +210,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
+      reportKey,
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
@@ -216,7 +221,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     // its SUBMITTED status.history entry is stamped "now", well after 2024.
     await createAndSubmitReport(reportsRepository, {
       organisationId,
-      registrationId
+      registrationId,
+      ...reportKey
     })
 
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
@@ -240,13 +246,14 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
+      reportKey,
       summaryLogsRepository
     } = await setupSubmit({ reportsRepository })
 
     // An open (never-submitted) report exists for the registration: the guard
     // reacts only to SUBMITTED closures, so submission must still proceed.
     await reportsRepository.createReport(
-      buildCreateReportParams({ organisationId, registrationId })
+      buildCreateReportParams({ organisationId, registrationId, ...reportKey })
     )
 
     await submitSummaryLog(summaryLogId, deps)
@@ -280,6 +287,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       organisationId,
       registrationId,
+      reportKey,
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
@@ -288,7 +296,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await createAndSubmitReport(reportsRepository, {
       organisationId,
-      registrationId
+      registrationId,
+      ...reportKey
     })
 
     await submitSummaryLog(summaryLogId, deps)
@@ -316,7 +325,7 @@ describe('submitSummaryLog resubmission flag source', () => {
     loadsByReportingPeriod
   ) => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, organisationId, registrationId } =
+    const { deps, summaryLogId, organisationId, registrationId, reportKey } =
       await setupSubmit({
         reportsRepository,
         // After any real submission, so the staleness guard does not fire.
@@ -328,6 +337,7 @@ describe('submitSummaryLog resubmission flag source', () => {
       createAndSubmitReport(reportsRepository, {
         organisationId,
         registrationId,
+        ...reportKey,
         year,
         period
       })
@@ -378,15 +388,22 @@ describe('submitSummaryLog resubmission flag source', () => {
 describe('submitSummaryLog stale flagging', () => {
   it('leaves alone an active report already built from the summary log being submitted', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, summaryLog, organisationId, registrationId } =
-      await setupSubmit({
-        reportsRepository,
-        createdAt: '2099-01-01T00:00:00.000Z'
-      })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog,
+      organisationId,
+      registrationId,
+      reportKey
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2099-01-01T00:00:00.000Z'
+    })
     const { id: reportId } = await reportsRepository.createReport(
       buildCreateReportParams({
         organisationId,
         registrationId,
+        ...reportKey,
         source: {
           summaryLogId: summaryLog.file.id,
           lastUploadedAt: '2099-01-01T00:00:00.000Z'

@@ -276,7 +276,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env.registrationId
     )
 
-    const { accreditationNumber, ...numbers } = numbersFor(
+    const { accreditationNumber } = numbersFor(
       await env.organisationsRepository.findById(env.organisationId),
       {
         registrationId: env.registrationId,
@@ -293,7 +293,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers,
+      numbers: env.reportKey,
       registration,
       year,
       cadenceAccreditation: cadenceAccreditationFor(
@@ -1076,8 +1076,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-second')
     await requestOperatorResubmission({
       reportsRepository: env.reportsRepository,
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
+      ...env.reportKey,
       ...JANUARY_2025,
       submissionNumber: 1,
       requestedBy: CHANGED_BY

@@ -146,6 +146,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
+      ...env.reportKey,
       year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
@@ -158,6 +159,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     createAndSubmitReport(env.reportsRepository, {
       organisationId: env.organisationId,
       registrationId: env.registrationId,
+      ...env.reportKey,
       year: toYear(2025),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.February,
@@ -962,6 +964,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     await createAndSubmitReport(env.reportsRepository, {
       organisationId,
       registrationId,
+      ...env.reportKey,
       year: toYear(2025),
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,

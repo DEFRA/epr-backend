@@ -384,12 +384,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PRN_NUMBERS_BACKFILL'
     },
-    reportNumbersBackfill: {
-      doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto reports stored without them, rather than only reporting them',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REPORT_NUMBERS_BACKFILL'
-    },
     ledgerEventNumbersBackfill: {
       doc: 'Feature Flag: Let the startup backfill write the organisation, registration and accreditation numbers onto waste balance ledger events stored without them, rather than only reporting them',
       format: Boolean,

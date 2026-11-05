@@ -8,7 +8,7 @@ import {
 
 /**
  * @import { PeriodRef } from '#reports/domain/period-key.js'
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { RegistrationKey, ReportsRepository } from '#reports/repository/port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
 
@@ -18,7 +18,7 @@ import {
  *   systemLogsRepository: SystemLogsRepository
  * }} SummaryLogUploadedRepositories
  *
- * @typedef {{
+ * @typedef {RegistrationKey & {
  *   organisationId: string,
  *   registrationId: string,
  *   summaryLogId: SummaryLogFileId,
@@ -44,6 +44,8 @@ export const createOnSummaryLogUploaded =
   async ({
     organisationId,
     registrationId,
+    organisationNumber,
+    registrationNumber,
     summaryLogId,
     periodsRequiringResubmission = []
   }) => {
@@ -55,8 +57,8 @@ export const createOnSummaryLogUploaded =
 
     const reportsMarkedStale =
       await reportsRepository.markActiveReportsStaleForSummaryLog(
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId,
         uploadedAt
       )
@@ -81,8 +83,8 @@ export const createOnSummaryLogUploaded =
 
     const reportsRequiringResubmission =
       await reportsRepository.markSubmittedReportsRequiringResubmission({
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId,
         uploadedAt,
         periods: periodsRequiringResubmission

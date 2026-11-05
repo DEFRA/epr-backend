@@ -9,7 +9,9 @@ import {
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   createAndSubmitReport,
-  buildCreateReportParams
+  buildCreateReportParams,
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
 import {
   isLatestSubmission,
@@ -56,12 +58,19 @@ const buildRegistration = (overrides = {}) => {
   )
 }
 
+const KEY = {
+  organisationNumber: uniqueOrganisationNumber(),
+  registrationNumber: uniqueRegistrationNumber()
+}
+
 const defaultParams = () => {
   const organisationId = new ObjectId().toString()
   const registration = buildRegistration()
   return {
     organisationId,
     registrationId: registration.id,
+    organisationNumber: uniqueOrganisationNumber(),
+    registrationNumber: uniqueRegistrationNumber(),
     registration,
     year: toYear(2024),
     cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
@@ -89,8 +98,7 @@ describe('resubmission-service', () => {
     it('returns false when the period has no reports at all', async () => {
       const result = await isLatestSubmission(
         stubRepository([]),
-        'org-1',
-        'reg-1',
+        KEY,
         toYear(2024),
         'monthly',
         1,
@@ -106,8 +114,7 @@ describe('resubmission-service', () => {
 
       const result = await isLatestSubmission(
         stubRepository(slotWith(draft, [submitted])),
-        'org-1',
-        'reg-1',
+        KEY,
         toYear(2024),
         'monthly',
         1,
@@ -244,6 +251,8 @@ describe('resubmission-service', () => {
       const { id: reportId } = await reportsRepository.createReport({
         organisationId: params.organisationId,
         registrationId: params.registrationId,
+        organisationNumber: params.organisationNumber,
+        registrationNumber: params.registrationNumber,
         accreditationNumber: toAccreditationNumber('A24ER5000000001PL'),
         year: toYear(2024),
         cadence: 'monthly',
@@ -291,8 +300,8 @@ describe('resubmission-service', () => {
 
       const result = await requestOperatorResubmission({
         reportsRepository,
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
+        organisationNumber: params.organisationNumber,
+        registrationNumber: params.registrationNumber,
         year: toYear(2024),
         cadence: 'monthly',
         period: 1,
@@ -319,8 +328,8 @@ describe('resubmission-service', () => {
       await expect(
         requestOperatorResubmission({
           reportsRepository,
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -335,16 +344,16 @@ describe('resubmission-service', () => {
       const params = defaultParams()
       await reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: params.organisationId,
-          registrationId: params.registrationId
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber
         })
       )
 
       await expect(
         requestOperatorResubmission({
           reportsRepository,
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -358,14 +367,14 @@ describe('resubmission-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
       await createAndSubmitReport(reportsRepository, {
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
+        organisationNumber: params.organisationNumber,
+        registrationNumber: params.registrationNumber,
         submissionNumber: 1
       })
       await reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber,
           submissionNumber: 2
         })
       )
@@ -373,8 +382,8 @@ describe('resubmission-service', () => {
       await expect(
         requestOperatorResubmission({
           reportsRepository,
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber,
           year: toYear(2024),
           cadence: 'monthly',
           period: 1,
@@ -388,15 +397,15 @@ describe('resubmission-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
       await createAndSubmitReport(reportsRepository, {
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
+        organisationNumber: params.organisationNumber,
+        registrationNumber: params.registrationNumber,
         submissionNumber: 1
       })
 
       const requestParams = {
         reportsRepository,
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
+        organisationNumber: params.organisationNumber,
+        registrationNumber: params.registrationNumber,
         year: toYear(2024),
         cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
           'monthly'
