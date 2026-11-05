@@ -58,18 +58,6 @@ const it = mongoIt.extend({
       .deleteMany({})
     const factory = await createMongoSummaryLogRowStatesRepository(database)
     await use(factory)
-  },
-
-  removeStoredNumbers: async (/** @type {*} */ { mongoClient }, use) => {
-    await use((/** @type {string[]} */ keys) =>
-      mongoClient
-        .db(DATABASE_NAME)
-        .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-        .updateMany(
-          {},
-          { $unset: Object.fromEntries(keys.map((key) => [key, ''])) }
-        )
-    )
   }
 })
 

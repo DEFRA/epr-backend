@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 
 import {
   ledgerEventInsertSchema,
-  ledgerEventNumbersSchema,
   ledgerEventReadSchema
 } from './ledger-schema.js'
 
@@ -37,22 +36,6 @@ export const validateLedgerEventRead = (data) => {
     throw Boom.badImplementation(
       `Invalid ledger event for organisation ${data.organisationId} registration ${data.registrationId} accreditation ${data.accreditationId} number ${data.number}: ${details}`
     )
-  }
-
-  return value
-}
-
-/**
- * @returns {import('./ledger-schema.js').LedgerEventNumbers}
- */
-export const validateLedgerEventNumbers = (data) => {
-  const { error, value } = ledgerEventNumbersSchema.validate(data, {
-    abortEarly: false
-  })
-
-  if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid ledger event numbers: ${details}`)
   }
 
   return value

@@ -277,8 +277,3 @@ export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys({
 })
 
 export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(numbersKeys)
-
-export const ledgerEventNumbersSchema = Joi.object(numbersKeys)
-
-export const LEDGER_EVENT_NUMBER_KEYS =
-  /** @type {(keyof LedgerEventNumbers)[]} */ (Object.keys(numbersKeys))
