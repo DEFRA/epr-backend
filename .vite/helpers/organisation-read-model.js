@@ -1,10 +1,10 @@
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { toReadModelOrganisations } from '#organisation-read-model/repository/to-read-model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {{
@@ -14,50 +14,38 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
  */
 
 /**
- * The organisations as the read model shows them, given in the shape tests
- * build them for the organisations repository. Each one is stored and read
- * back first, so its current statuses are derived as they are in production.
- *
- * @param {object[]} organisations
  * @param {ReadModelOptions} [options]
- * @returns {Promise<Organisation[]>}
  */
-export const toReadModel = async (
-  organisations,
-  { overseasSites = [], overseasSitesRepository } = {}
-) => {
-  const stored = await createInMemoryOrganisationsRepository(
-    /** @type {any[]} */ (organisations)
-  )().findAll()
-  return toReadModelOrganisations(stored, {
-    overseasSitesRepository:
-      overseasSitesRepository ??
-      createInMemoryOverseasSitesRepository(
-        /** @type {any[]} */ (overseasSites)
-      )(),
-    logger: { warn: () => {} }
-  })
-}
+const dependenciesFor = ({
+  overseasSites = [],
+  overseasSitesRepository
+} = {}) => ({
+  overseasSitesRepository:
+    overseasSitesRepository ??
+    createInMemoryOverseasSitesRepository(
+      /** @type {any[]} */ (overseasSites)
+    )(),
+  logger: { warn: () => {} }
+})
 
 /**
- * An in-memory organisation read repository holding, in the read model's
- * shape, what `organisationsRepository` holds now. Later writes to it are not
- * seen.
+ * An in-memory organisation read repository holding what
+ * `organisationsRepository` holds now, for a test server's
+ * `organisationReadRepository`. Later writes to it are not seen.
  *
- * @param {Pick<import('#repositories/organisations/port.js').OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
  * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
+ * @returns {Promise<() => OrganisationReadRepository>}
  */
 export const organisationReadRepositoryFrom = async (
   organisationsRepository,
-  { overseasSitesRepository } = {}
-) =>
-  createInMemoryOrganisationReadRepository(
-    await toReadModelOrganisations(await organisationsRepository.findAll(), {
-      overseasSitesRepository:
-        overseasSitesRepository ?? createInMemoryOverseasSitesRepository()(),
-      logger: { warn: () => {} }
-    })
-  )
+  options
+) => {
+  const repository = createInMemoryOrganisationReadRepository(
+    await organisationsRepository.findAll()
+  )(dependenciesFor(options))
+  return () => repository
+}
 
 /**
  * An organisation read repository that takes a fresh snapshot of
@@ -67,44 +55,44 @@ export const organisationReadRepositoryFrom = async (
  * The organisations repository is read through `findByOrganisationNumber`, so
  * a read for `minimumVersion` waits for the write to land as it does there.
  *
- * @param {Pick<import('#repositories/organisations/port.js').OrganisationsRepository, 'findAll' | 'findByOrganisationNumber'>} organisationsRepository
+ * @param {Pick<OrganisationsRepository, 'findAll' | 'findByOrganisationNumber'>} organisationsRepository
  * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
- * @returns {import('#organisation-read-model/repository/port.js').OrganisationReadRepository}
+ * @returns {OrganisationReadRepository}
  */
 export const organisationReadRepositoryOver = (
   organisationsRepository,
-  { overseasSitesRepository } = {}
+  options
 ) => ({
   findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
     const stored = await organisationsRepository.findByOrganisationNumber(
       organisationNumber,
       minimumVersion
     )
-    const readModel = await toReadModelOrganisations(stored ? [stored] : [], {
-      overseasSitesRepository:
-        overseasSitesRepository ?? createInMemoryOverseasSitesRepository()(),
-      logger: { warn: () => {} }
-    })
-    return createInMemoryOrganisationReadRepository(
-      readModel
-    )().findByOrganisationNumber(organisationNumber, minimumVersion)
+    return createInMemoryOrganisationReadRepository(stored ? [stored] : [])(
+      dependenciesFor(options)
+    ).findByOrganisationNumber(organisationNumber, minimumVersion)
   },
   find: async (params) =>
     (
-      await organisationReadRepositoryFrom(organisationsRepository, {
-        overseasSitesRepository
-      })
+      await organisationReadRepositoryFrom(organisationsRepository, options)
     )().find(params)
 })
 
 /**
- * An in-memory organisation read repository holding `organisations` in the
- * read model's shape, for a test server's `organisationReadRepository`.
+ * An in-memory organisation read repository holding `organisations`, given in
+ * the shape tests build them for the organisations repository, for a test
+ * server's `organisationReadRepository`. Each one is stored and read back
+ * first, so its current statuses are derived as they are in production.
  *
  * @param {object[]} organisations
  * @param {ReadModelOptions} [options]
+ * @returns {Promise<() => OrganisationReadRepository>}
  */
-export const organisationReadRepositoryOf = async (organisations, options) =>
-  createInMemoryOrganisationReadRepository(
-    await toReadModel(organisations, options)
-  )
+export const organisationReadRepositoryOf = async (organisations, options) => {
+  const repository = createInMemoryOrganisationReadRepository(
+    await createInMemoryOrganisationsRepository(
+      /** @type {any[]} */ (organisations)
+    )().findAll()
+  )(dependenciesFor(options))
+  return () => repository
+}

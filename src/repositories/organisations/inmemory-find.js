@@ -1,0 +1,113 @@
+import {
+  anchoredPattern,
+  escapeRegex,
+  normaliseCriteria,
+  parseOrgIdCriterion
+} from './helpers.js'
+
+/** @import { FindParams, SearchCriteria } from './port.js' */
+
+/**
+ * How organisations are searched in memory. The in-memory organisations
+ * repository and the in-memory organisation read repository both search
+ * organisations as they are stored, and share this search so they find the
+ * same ones.
+ */
+
+/**
+ * The fields a search reads. Stored documents and the organisations the
+ * repository returns both have them.
+ *
+ * @typedef {{
+ *   orgId: number
+ *   companyDetails: { name: string }
+ *   registrations: Array<{ registrationNumber?: string | null }>
+ *   accreditations: Array<{ accreditationNumber?: string | null }>
+ * }} Searchable
+ */
+
+/**
+ * @param {string} value
+ * @returns {(candidate: string | null | undefined) => boolean}
+ */
+const anchoredMatcher = (value) => {
+  const pattern = new RegExp(anchoredPattern(value), 'i')
+  return (candidate) => pattern.test(candidate ?? '')
+}
+
+/**
+ * The in-memory equivalent of the MongoDB find filter in mongodb-find.js. The
+ * shared criteria semantics live in helpers.js and the find contract tests
+ * hold the two implementations to the same behaviour.
+ *
+ * @param {SearchCriteria} criteria
+ * @returns {(org: Searchable) => boolean} - true when the organisation
+ *   satisfies every criterion
+ */
+const buildFindMatcher = (criteria) => {
+  const { search, orgId, registrationNumber, accreditationNumber } =
+    normaliseCriteria(criteria)
+
+  /** @type {Array<(org: Searchable) => boolean>} */
+  const checks = []
+  if (search !== '') {
+    const pattern = new RegExp(escapeRegex(search), 'i')
+    checks.push((org) => pattern.test(org.companyDetails.name))
+  }
+  if (orgId !== '') {
+    const wantedOrgId = parseOrgIdCriterion(orgId)
+    checks.push((org) => org.orgId === wantedOrgId)
+  }
+  if (registrationNumber !== '') {
+    const matchesNumber = anchoredMatcher(registrationNumber)
+    checks.push((org) =>
+      org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
+    )
+  }
+  if (accreditationNumber !== '') {
+    const matchesNumber = anchoredMatcher(accreditationNumber)
+    checks.push((org) =>
+      org.accreditations.some((acc) => matchesNumber(acc.accreditationNumber))
+    )
+  }
+
+  return (org) => checks.every((check) => check(org))
+}
+
+/**
+ * @param {Searchable} one
+ * @param {Searchable} other
+ */
+const byCompanyName = (one, other) => {
+  const oneName = one.companyDetails.name
+  const otherName = other.companyDetails.name
+  if (oneName < otherName) {
+    return -1
+  }
+  if (oneName > otherName) {
+    return 1
+  }
+  return 0
+}
+
+/**
+ * The organisations matching every criterion, sorted by name, a page at a
+ * time. The items are copies, so changing them changes nothing stored.
+ *
+ * @template {Searchable} T
+ * @param {T[]} organisations
+ * @param {FindParams} params
+ * @returns {{ items: T[], page: number, pageSize: number, totalItems: number, totalPages: number }}
+ */
+export const findPage = (organisations, { page, pageSize, ...criteria }) => {
+  const matches = organisations
+    .filter(buildFindMatcher(criteria))
+    .toSorted(byCompanyName)
+
+  const totalItems = matches.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const start = (page - 1) * pageSize
+  const items = structuredClone(matches.slice(start, start + pageSize))
+
+  return { items, page, pageSize, totalItems, totalPages }
+}

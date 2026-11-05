@@ -1,22 +1,30 @@
 import { registerDependency } from '#plugins/register-dependency.js'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
+/** @import { HapiServer } from '#common/hapi-types.js' */
 
 /**
- * @param {Organisation[]} [initialOrganisations]
- * @returns {import('@hapi/hapi').Plugin<void>}
+ * Reads exporters' sites through `server.app.overseasSitesRepository`, so it
+ * must register before this plugin.
+ *
+ * @param {StoredOrganisation[]} [initialOrganisations]
  */
 export function createInMemoryOrganisationReadRepositoryPlugin(
   initialOrganisations
 ) {
-  const repository =
-    createInMemoryOrganisationReadRepository(initialOrganisations)()
+  const createRepository =
+    createInMemoryOrganisationReadRepository(initialOrganisations)
 
   return {
     name: 'organisationReadRepository',
+    dependencies: ['overseasSitesRepository'],
+    /** @param {import('@hapi/hapi').Server & HapiServer} server */
     register: (server) => {
-      registerDependency(server, 'organisationReadRepository', () => repository)
+      const overseasSitesRepository = server.app.overseasSitesRepository
+      registerDependency(server, 'organisationReadRepository', ({ logger }) =>
+        createRepository({ overseasSitesRepository, logger })
+      )
     }
   }
 }

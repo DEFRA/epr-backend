@@ -1,115 +1,61 @@
 import Boom from '@hapi/boom'
 
-import {
-  anchoredPattern,
-  escapeRegex,
-  normaliseCriteria,
-  parseOrgIdCriterion
-} from '#repositories/organisations/helpers.js'
+import { storedOrgId } from '#repositories/organisations/helpers.js'
+import { findPage } from '#repositories/organisations/inmemory-find.js'
+import { toReadModelOrganisations } from './to-read-model.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { FindParams, OrganisationReadRepository } from './port.js' */
-
-/**
- * @param {string} value
- * @returns {(candidate: string | null | undefined) => boolean}
- */
-const anchoredMatcher = (value) => {
-  const pattern = new RegExp(anchoredPattern(value), 'i')
-  return (candidate) => typeof candidate === 'string' && pattern.test(candidate)
-}
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
+/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OrganisationReadRepository } from './port.js' */
 
 /**
- * @param {Omit<FindParams, 'page' | 'pageSize'>} criteria
- * @returns {(organisation: Organisation) => boolean} - whether the organisation satisfies every criterion
- */
-const buildFindMatcher = ({ organisationNumber, ...criteria }) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria({ ...criteria, orgId: organisationNumber })
-
-  /** @type {Array<(organisation: Organisation) => boolean>} */
-  const checks = []
-  if (search !== '') {
-    const pattern = new RegExp(escapeRegex(search), 'i')
-    checks.push(({ name }) => pattern.test(name))
-  }
-  if (orgId !== '') {
-    const wanted = parseOrgIdCriterion(orgId)
-    checks.push(({ organisationNumber: number }) => Number(number) === wanted)
-  }
-  if (registrationNumber !== '') {
-    const matchesNumber = anchoredMatcher(registrationNumber)
-    checks.push(({ registrations }) =>
-      Object.keys(registrations).some(matchesNumber)
-    )
-  }
-  if (accreditationNumber !== '') {
-    const matchesNumber = anchoredMatcher(accreditationNumber)
-    checks.push(({ registrations }) =>
-      Object.values(registrations).some(({ accreditations }) =>
-        Object.values(accreditations).some((accreditation) =>
-          matchesNumber(accreditation.accreditationNumber)
-        )
-      )
-    )
-  }
-
-  return (organisation) => checks.every((check) => check(organisation))
-}
-
-/**
- * @param {Organisation} one
- * @param {Organisation} other
- */
-const byName = (one, other) => {
-  if (one.name < other.name) {
-    return -1
-  }
-  if (one.name > other.name) {
-    return 1
-  }
-  return 0
-}
-
-/**
- * Serves organisations already in the read model's shape. Nothing writes to
- * it, so a version below `minimumVersion` can never arrive.
+ * Holds organisations as the organisations repository returns them, and
+ * serves them in the read model's shape, as the MongoDB adapter does.
  *
- * @param {Organisation[]} [organisations]
- * @returns {() => OrganisationReadRepository}
+ * `find` filters and counts the stored organisations, then puts the page into
+ * the read model's shape. An organisation the model leaves out still counts
+ * towards `totalItems`, so its page comes back short.
+ *
+ * Nothing writes to it, so a version below `minimumVersion` can never arrive.
+ *
+ * @param {StoredOrganisation[]} [organisations]
+ * @returns {(dependencies: {
+ *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
+ *   logger: Pick<TypedLogger, 'warn'>
+ * }) => OrganisationReadRepository}
  */
 export const createInMemoryOrganisationReadRepository = (
   organisations = []
 ) => {
   const stored = structuredClone(organisations)
 
-  return () => ({
+  return (dependencies) => ({
     findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-      const organisation = stored.find(
-        (candidate) => candidate.organisationNumber === organisationNumber
+      const found = stored.find(
+        ({ orgId }) => orgId === storedOrgId(organisationNumber)
       )
-      if (!organisation) {
+      if (!found) {
         return null
       }
-      if (
-        minimumVersion !== undefined &&
-        organisation.version < minimumVersion
-      ) {
+      if (minimumVersion !== undefined && found.version < minimumVersion) {
         throw Boom.internal('Consistency timeout waiting for minimum version')
       }
-      return structuredClone(organisation)
+      const [organisation] = await toReadModelOrganisations(
+        [structuredClone(found)],
+        dependencies
+      )
+      return organisation ?? null
     },
 
-    find: async ({ page, pageSize, ...criteria }) => {
-      const matches = stored.filter(buildFindMatcher(criteria)).toSorted(byName)
-      const start = (page - 1) * pageSize
-
+    find: async ({ organisationNumber, ...params }) => {
+      const { items, ...page } = findPage(stored, {
+        ...params,
+        orgId: organisationNumber
+      })
       return {
-        items: structuredClone(matches.slice(start, start + pageSize)),
-        page,
-        pageSize,
-        totalItems: matches.length,
-        totalPages: Math.ceil(matches.length / pageSize)
+        ...page,
+        items: await toReadModelOrganisations(items, dependencies)
       }
     }
   })
