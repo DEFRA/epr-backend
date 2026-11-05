@@ -16,7 +16,7 @@ export const OTHER_REGISTRATION_NUMBER =
  */
 export const buildFutureAccreditation = (overrides = {}) => ({
   registrationNumber: REGISTRATION_NUMBER,
-  year: toYear(2027),
+  year: toYear(2027), // NOSONAR: javascript:S109 - fixture year, the first one the stub accepts
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
