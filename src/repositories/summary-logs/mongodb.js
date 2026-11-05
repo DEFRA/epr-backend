@@ -19,7 +19,6 @@ import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogKey,
-  validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -158,17 +157,6 @@ const update = (db, logger) => async (id, version, updates) => {
   }
 }
 
-const WITHOUT_NUMBERS = {
-  $or: [
-    { organisationNumber: { $exists: false } },
-    { registrationNumber: { $exists: false } },
-    {
-      accreditationId: { $exists: true },
-      accreditationNumber: { $exists: false }
-    }
-  ]
-}
-
 /** @param {string} field */
 const isPresent = (field) => ({ $ne: [{ $type: field }, 'missing'] })
 
@@ -184,55 +172,6 @@ const HOLDS_NUMBERS = {
       ]
     }
   ]
-}
-
-const findIdsWithoutNumbers = (db) => async () => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find(WITHOUT_NUMBERS, { projection: { _id: 1 } })
-    .toArray()
-  return docs.map((doc) => doc._id)
-}
-
-const assignNumbers = (db, logger) => async (id, version, numbers) => {
-  const validatedId = validateId(id)
-  const validatedNumbers = validateSummaryLogNumbers(numbers)
-
-  const keys = Object.keys(validatedNumbers)
-  /** @type {any} */
-  const filter = {
-    _id: validatedId,
-    version,
-    ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
-  }
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .updateOne(filter, { $set: validatedNumbers, $inc: { version: 1 } })
-
-  if (result.matchedCount === 0) {
-    /** @type {any} */
-    const findFilter = { _id: validatedId }
-    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
-
-    if (!existing) {
-      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-    }
-
-    const held = keys.filter((key) => existing[key] !== undefined)
-    const conflictError = new Error(
-      `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
-    )
-    logger.error({
-      err: conflictError,
-      message: `Version conflict detected for summary log ${validatedId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.DB,
-        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-        reference: validatedId
-      }
-    })
-    throw Boom.conflict(conflictError.message)
-  }
 }
 
 /**
@@ -587,8 +526,6 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     update: update(db, logger),
     findById: findById(db),
     findByFileId: findByFileId(db),
-    findIdsWithoutNumbers: findIdsWithoutNumbers(db),
-    assignNumbers: assignNumbers(db, logger),
     findLatestSubmitted: findLatestSubmitted(db),
     findAll: findAll(db),
     findAllSummaryLogStatsByRegistrationId:

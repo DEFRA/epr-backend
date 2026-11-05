@@ -1,7 +1,6 @@
 import Boom from '@hapi/boom'
 
 import {
-  rowStateNumbersSchema,
   summaryLogRowStateInsertSchema,
   summaryLogRowStateReadSchema
 } from './schema.js'
@@ -33,22 +32,6 @@ export const validateSummaryLogRowStateRead = (data) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badImplementation(`Invalid row state ${data.id}: ${details}`)
-  }
-
-  return value
-}
-
-/**
- * @returns {import('./schema.js').RowStateNumbers}
- */
-export const validateRowStateNumbers = (data) => {
-  const { error, value } = rowStateNumbersSchema.validate(data, {
-    abortEarly: false
-  })
-
-  if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid row state numbers: ${details}`)
   }
 
   return value

@@ -1,4 +1,3 @@
-import { testAssignNumbersBehaviour } from './contract/assign-numbers.contract.js'
 import { testCreateBehaviour } from './contract/create.contract.js'
 import { testDataIsolation } from './contract/data-isolation.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
@@ -24,6 +23,5 @@ export const testPackagingRecyclingNotesRepositoryContract = (
     testUpdateWatermarkBehaviour(repositoryFactory)
     testPrnNumberUniqueness(repositoryFactory)
     testSumTonnageByAccreditationBehaviour(repositoryFactory)
-    testAssignNumbersBehaviour(repositoryFactory)
   })
 }
