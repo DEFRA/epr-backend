@@ -23,7 +23,6 @@ import {
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
   validateMarkSubmittedReportRequiringResubmissionByOperator,
-  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -41,7 +40,6 @@ import {
  *   PeriodicReport,
  *   RegistrationKey,
  *   Report,
- *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
@@ -265,46 +263,6 @@ const isForRegistration = (
 ) =>
   report.organisationNumber === organisationNumber &&
   report.registrationNumber === registrationNumber
-
-/**
- * @param {Map<string, Report>} reports
- * @returns {Promise<string[]>}
- */
-const findIdsWithoutNumbers = async (reports) =>
-  [...reports.values()]
-    .filter(
-      ({ organisationNumber, registrationNumber, accreditationNumber }) =>
-        organisationNumber === undefined ||
-        registrationNumber === undefined ||
-        accreditationNumber === undefined
-    )
-    .map(({ id }) => id)
-
-/**
- * @param {Map<string, Report>} reports
- * @param {string} reportId
- * @param {ReportNumbers} numbers
- * @returns {Promise<void>}
- */
-const assignNumbers = async (reports, reportId, numbers) => {
-  const validatedId = validateFindReportById(reportId)
-  const validatedNumbers = validateReportNumbers(numbers)
-  const report = reports.get(validatedId)
-  if (!report) {
-    throw Boom.notFound(`Report not found: ${validatedId}`)
-  }
-
-  const held = Object.keys(validatedNumbers).filter(
-    (key) => report[key] !== undefined
-  )
-  if (held.length > 0) {
-    throw Boom.conflict(
-      `Report ${validatedId} already holds ${held.join(', ')}`
-    )
-  }
-
-  reports.set(validatedId, { ...report, ...validatedNumbers })
-}
 
 /**
  * @param {Map<string, Object>} reports
@@ -716,9 +674,6 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
         organisationNumber,
         registrationNumber,
         since
-      ),
-    findIdsWithoutNumbers: () => findIdsWithoutNumbers(reports),
-    assignNumbers: (reportId, numbers) =>
-      assignNumbers(reports, reportId, numbers)
+      )
   })
 }

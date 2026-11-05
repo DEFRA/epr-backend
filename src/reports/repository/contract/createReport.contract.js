@@ -189,6 +189,16 @@ export const testCreateReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
+    for (const number of ['organisationNumber', 'registrationNumber']) {
+      it(`refuses a report without its ${number}, which no read could find`, async () => {
+        await expect(
+          repository.createReport(
+            buildCreateReportParams({ [number]: undefined })
+          )
+        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+      })
+    }
+
     it('throws on missing required fields', async () => {
       await expect(
         repository.createReport({ organisationId: DEFAULT_ORG_ID })

@@ -31,21 +31,6 @@ export const DEFAULT_ORG_NUMBER = uniqueOrganisationNumber()
 export const DEFAULT_REG_NUMBER = uniqueRegistrationNumber()
 
 /**
- * Create params for a report stored before the numbers backfill: no
- * organisation or registration number unless `overrides` gives one.
- * @param {ReturnType<typeof buildCreateReportParams>} params
- * @param {object} [overrides]
- */
-export const withoutReportNumbers = (
-  {
-    organisationNumber: _organisationNumber,
-    registrationNumber: _registrationNumber,
-    ...params
-  },
-  overrides = {}
-) => ({ ...params, ...overrides })
-
-/**
  * The numbers a report for a test organisation's registration is stored under.
  * @param {{ orgId: number }} organisation
  * @param {{ registrationNumber?: string | null }} registration
