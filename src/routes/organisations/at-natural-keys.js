@@ -10,6 +10,7 @@ import {
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
@@ -25,7 +26,8 @@ import {
  *   year?: Year,
  *   organisationId: string,
  *   registrationId: string,
- *   accreditationId: string | null
+ *   accreditationId: string | null,
+ *   accreditationNumber?: AccreditationNumber | null
  * }} ResolvedParams
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
@@ -77,7 +79,8 @@ const resolveRegistration = (organisationsRepository, params) =>
  * Wraps a route at a natural-key path, resolving
  * - {organisationNumber} to `request.params.organisationId`
  * - {registrationNumber} (if present) to `request.params.registrationId`
- * - {registrationNumber} + {year} to `request.params.accreditationId` if the `accredited` option is true
+ * - {registrationNumber} + {year} to `request.params.accreditationId` and
+ *   `request.params.accreditationNumber` if the `accredited` option is true
  *
  * The organisation the {organisationNumber} key resolved to is added to `request.app`, as
  * `ResolvedRecords`, so a handler need not read it again.
@@ -120,17 +123,22 @@ export const atNaturalKeys = (
       const resolvedRecords = { organisation }
       Object.assign(request.app, resolvedRecords)
 
+      const accreditation =
+        registration && accredited
+          ? findAccreditationForYear(
+              organisation,
+              registration,
+              /** @type {Year} */ (request.params.year)
+            )
+          : null
       const ids = registration
         ? {
             organisationId: organisation.id,
             registrationId: registration.id,
-            accreditationId: accredited
-              ? findAccreditationForYear(
-                  organisation,
-                  registration,
-                  /** @type {Year} */ (request.params.year)
-                ).id
-              : null
+            accreditationId: accreditation?.id ?? null,
+            ...(accreditation && {
+              accreditationNumber: accreditation.accreditationNumber
+            })
           }
         : { organisationId: organisation.id }
 

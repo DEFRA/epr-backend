@@ -6,7 +6,10 @@ import {
   buildAwaitingAuthorisationPrn,
   generateTestPrnNumber
 } from './contract/test-data.js'
-import { createPackagingRecyclingNotesRepository } from './mongodb.js'
+import {
+  COLLECTION_NAME,
+  createPackagingRecyclingNotesRepository
+} from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
 
@@ -187,6 +190,23 @@ describe('MongoDB packaging recycling notes repository', () => {
           prnNumber
         })
       ).rejects.toThrow(PrnNumberConflictError)
+    })
+  })
+
+  it('indexes the numbers that find the PRNs of an accreditation', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const db = mongoClient.db(DATABASE_NAME)
+    await createPackagingRecyclingNotesRepository(db, [])
+
+    const indexes = await db.collection(COLLECTION_NAME).indexes()
+
+    expect(
+      indexes.find(({ name }) => name === 'accreditationNumbers')?.key
+    ).toStrictEqual({
+      'organisation.organisationNumber': 1,
+      'registration.registrationNumber': 1,
+      'accreditation.accreditationNumber': 1
     })
   })
 
