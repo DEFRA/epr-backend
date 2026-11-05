@@ -1,5 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { toYear } from '#common/helpers/dates/year.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { buildFutureAccreditation } from '#future-accreditations/repository/contract/test-data.js'
 import {
   accreditation,
   reprocessor
@@ -563,6 +566,31 @@ describe('GET /organisations/{organisationNumber}', () => {
         'approved'
       )
       expect(in2026.registrations).toEqual({})
+    })
+
+    it('should serve registrations approved today in a later year, with any stub accreditation for it', async () => {
+      const organisation = buildAccreditedOrganisation()
+      await serve(organisation, [
+        buildFutureAccreditation({
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2028)
+        })
+      ])
+
+      const response = await get(urlFor(organisation, 2028))
+
+      const { registrations } = body(response)
+      expect({
+        [REPROCESSOR_NUMBER]: Object.keys(
+          registrations[REPROCESSOR_NUMBER].accreditations
+        ),
+        [EXPORTER_NUMBER]: Object.keys(
+          registrations[EXPORTER_NUMBER].accreditations
+        )
+      }).toStrictEqual({
+        [REPROCESSOR_NUMBER]: ['2028'],
+        [EXPORTER_NUMBER]: []
+      })
     })
 
     it('rejects a year outside the supported range', async () => {

@@ -10,12 +10,14 @@ import {
   pendingOverseasSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 
+/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 export {
@@ -114,10 +116,17 @@ export const useViewServer = () => {
 
   /**
    * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
+   * @param {FutureAccreditation[]} [futureAccreditations]
    */
-  const start = async (organisationsRepository) => {
+  const start = async (organisationsRepository, futureAccreditations = []) => {
+    const futureAccreditationsRepository =
+      createInMemoryFutureAccreditationsRepository()()
+    await Promise.all(
+      futureAccreditations.map(futureAccreditationsRepository.upsert)
+    )
     server = await createTestServer({
       repositories: {
+        futureAccreditationsRepository,
         organisationsRepository,
         overseasSitesRepository:
           createInMemoryOverseasSitesRepository(overseasSites)
@@ -128,9 +137,13 @@ export const useViewServer = () => {
   /**
    * Seeds the organisation as given, without repository validation.
    * @param {object} organisation
+   * @param {FutureAccreditation[]} [futureAccreditations]
    */
-  const serve = (organisation) =>
-    start(createInMemoryOrganisationsRepository([partialMock(organisation)]))
+  const serve = (organisation, futureAccreditations) =>
+    start(
+      createInMemoryOrganisationsRepository([partialMock(organisation)]),
+      futureAccreditations
+    )
 
   /**
    * Stores the organisation through the repository, as production writes it.
