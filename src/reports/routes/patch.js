@@ -153,21 +153,13 @@ export const reportsPatch = {
    */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
-    const {
-      organisationId,
-      registrationId,
-      cadence,
-      year,
-      period,
-      submissionNumber
-    } = params
+    const { cadence, year, period, submissionNumber } = params
 
     const [registration, report] = await Promise.all([
       findRegistrationForReport(organisationsRepository, params),
       fetchReportBySubmissionNumber(
         reportsRepository,
-        organisationId,
-        registrationId,
+        params,
         year,
         cadence,
         period,

@@ -42,8 +42,6 @@ describe('mock-repositories', () => {
         'update',
         'findById',
         'findByFileId',
-        'findIdsWithoutNumbers',
-        'assignNumbers',
         'findLatestSubmitted',
         'findAll',
         'findAllSummaryLogStatsByRegistration',
@@ -82,9 +80,7 @@ describe('mock-repositories', () => {
         'sumTonnageByAccreditation',
         'updateStatus',
         'updateWatermark',
-        'persistProjection',
-        'findIdsWithoutNumbers',
-        'assignNumbers'
+        'persistProjection'
       ]
     },
     createMockOverseasSitesRepository: {

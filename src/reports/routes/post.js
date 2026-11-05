@@ -18,7 +18,7 @@ import {
 } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
-import { CADENCE } from '#reports/domain/cadence.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -29,7 +29,6 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
- * @import { AccreditationCommon } from '#organisation-read-model/domain/model.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
@@ -121,15 +120,12 @@ export const reportsPost = {
       const { registration } =
         await findOrganisationAndRegistrationReadModels(request)
 
-      // A monthly report is for the year's accreditation, which atNaturalKeys
-      // has already found, or answered 404 for. A quarterly report is
-      // registered-only, whatever the registration's accreditation for the year.
-      const accreditationNumber =
-        cadence === CADENCE.monthly
-          ? /** @type {AccreditationCommon} */ (
-              registration.accreditations[year]
-            ).accreditationNumber
-          : null
+      // atNaturalKeys has already answered 404 for a monthly report whose
+      // registration holds no accreditation for the year.
+      const cadenceAccreditation = cadenceAccreditationFor(
+        cadence,
+        registration.accreditations[year]?.accreditationNumber
+      )
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
@@ -141,12 +137,11 @@ export const reportsPost = {
         registrationId,
         numbers: {
           registrationNumber,
-          organisationNumber,
-          accreditationNumber
+          organisationNumber
         },
         registration: storedRegistration,
         year,
-        cadence,
+        cadenceAccreditation,
         period,
         submissionNumber,
         requiredPeriods: requiredReportingPeriods({

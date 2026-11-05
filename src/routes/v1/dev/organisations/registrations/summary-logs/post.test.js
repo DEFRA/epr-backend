@@ -431,7 +431,8 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const minted = beforeTransitionToSubmitting(env, () =>
       createAndSubmitReport(env.server.app.reportsRepository, {
         organisationId: env.organisationId,
-        registrationId: env.registrationId
+        registrationId: env.registrationId,
+        ...env.reportKey
       })
     )
 
@@ -517,6 +518,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
   it('answers not found for an unknown registration before writing anything', async () => {
     const env = await createEnvironment()
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
 
     const response = await env.server.inject({
       method: 'POST',
@@ -530,8 +532,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    // A summary log stored under an unknown registration can hold no number.
-    expect(await env.summaryLogsRepository.findIdsWithoutNumbers()).toEqual([])
+    expect(insert).not.toHaveBeenCalled()
   })
 
   it('rejects a payload that names the template, since it is inferred from the registration', async () => {

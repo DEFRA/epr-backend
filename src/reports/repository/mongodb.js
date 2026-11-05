@@ -8,13 +8,11 @@ import {
   validateFindPeriodicReports,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
-  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
 import {
   transformToPeriodicReports,
-  groupAsPeriodicReports,
   mapReport,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
@@ -34,12 +32,12 @@ import {
  *   FindPeriodicReportsParams,
  *   PeriodicReport,
  *   Report,
- *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -101,6 +99,7 @@ async function ensureCollections(db) {
 
   await col.createIndex({ id: 1 }, { unique: true })
   await col.createIndex({ organisationId: 1, registrationId: 1 })
+  await col.createIndex({ organisationNumber: 1, registrationNumber: 1 })
   await col.createIndex(
     {
       organisationId: 1,
@@ -257,59 +256,6 @@ const performFindReportById = async (db, reportId) => {
 }
 
 /**
- * @param {Db} db
- * @returns {Promise<string[]>}
- */
-const performFindIdsWithoutNumbers = async (db) => {
-  const docs = await reportsCollection(db)
-    .find(
-      {
-        $or: [
-          { organisationNumber: { $exists: false } },
-          { registrationNumber: { $exists: false } },
-          { accreditationNumber: { $exists: false } }
-        ]
-      },
-      { projection: { _id: 0, id: 1 } }
-    )
-    .toArray()
-  return docs.map(({ id }) => id)
-}
-
-/**
- * @param {Db} db
- * @param {string} reportId
- * @param {ReportNumbers} numbers
- * @returns {Promise<void>}
- */
-const performAssignNumbers = async (db, reportId, numbers) => {
-  const validatedId = validateFindReportById(reportId)
-  const validatedNumbers = validateReportNumbers(numbers)
-  const keys = Object.keys(validatedNumbers)
-
-  const result = await reportsCollection(db).updateOne(
-    {
-      id: validatedId,
-      ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
-    },
-    { $set: validatedNumbers }
-  )
-  if (result.matchedCount > 0) {
-    return
-  }
-
-  const existing = await reportsCollection(db).findOne(
-    { id: validatedId },
-    { projection: { _id: 0 } }
-  )
-  if (!existing) {
-    throw Boom.notFound(`Report not found: ${validatedId}`)
-  }
-  const held = keys.filter((key) => existing[key] !== undefined)
-  throw Boom.conflict(`Report ${validatedId} already holds ${held.join(', ')}`)
-}
-
-/**
  * Hard-deletes the report identified by the given period slot and submissionNumber.
  *
  * @param {Db} db
@@ -349,15 +295,18 @@ const performDeleteReport = async (db, params) => {
  * @returns {Promise<PeriodicReport[]>}
  */
 const performFindPeriodicReports = async (db, params) => {
-  const { organisationId, registrationId } = validateFindPeriodicReports(params)
+  const { organisationNumber, registrationNumber } =
+    validateFindPeriodicReports(params)
 
   const docs = await reportsCollection(db)
     .find(
-      { organisationId, registrationId },
+      { organisationNumber, registrationNumber },
       {
         projection: {
           _id: 0,
           id: 1,
+          organisationId: 1,
+          registrationId: 1,
           submissionNumber: 1,
           year: 1,
           cadence: 1,
@@ -374,11 +323,7 @@ const performFindPeriodicReports = async (db, params) => {
     )
     .toArray()
 
-  return groupAsPeriodicReports(
-    organisationId,
-    registrationId,
-    docs.map(withBareDates)
-  )
+  return transformToPeriodicReports(docs.map(withBareDates))
 }
 
 /**
@@ -455,15 +400,15 @@ const performFindPeriodicReportsForYear = async (db, params) => {
  * is directly indexable.
  *
  * @param {Db} db
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {string} since - ISO timestamp
  * @returns {Promise<boolean>}
  */
 const performHasReportSubmittedSince = async (
   db,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   since
 ) => {
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
@@ -471,8 +416,8 @@ const performHasReportSubmittedSince = async (
   // codebase relies on throughout).
   const match = await reportsCollection(db).findOne(
     {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       'status.submitted.at': { $gt: since }
     },
     { projection: { _id: 1 } }
@@ -500,15 +445,15 @@ export const createReportsRepository = async (db) => {
       performFindPeriodicReportsForYear(db, params),
     findReportById: (reportId) => performFindReportById(db, reportId),
     markActiveReportsStaleForSummaryLog: (
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       summaryLogId,
       uploadedAt
     ) =>
       performMarkActiveReportsStaleForSummaryLog(
         db,
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId,
         uploadedAt
       ),
@@ -518,10 +463,12 @@ export const createReportsRepository = async (db) => {
       performMarkSubmittedReportsRequiringResubmission(db, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
-    hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      performHasReportSubmittedSince(db, organisationId, registrationId, since),
-    findIdsWithoutNumbers: () => performFindIdsWithoutNumbers(db),
-    assignNumbers: (reportId, numbers) =>
-      performAssignNumbers(db, reportId, numbers)
+    hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
+      performHasReportSubmittedSince(
+        db,
+        organisationNumber,
+        registrationNumber,
+        since
+      )
   })
 }

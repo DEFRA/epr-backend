@@ -1,6 +1,7 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -120,13 +121,18 @@ export const diagnoseCancelledAccreditationReports = async (
       const registrations = organisation.registrations.filter(
         ({ accreditationId }) => accreditationId === accreditation.id
       )
+      const organisationNumber = toOrganisationNumber(
+        String(organisation.orgId)
+      )
+      // A registration without a number was never approved, so has no reports.
       const periodicReports = await Promise.all(
-        registrations.map(({ id }) =>
-          findPeriodicReports({
-            organisationId: organisation.id,
-            registrationId: id
-          })
-        )
+        registrations
+          .flatMap(({ registrationNumber }) =>
+            registrationNumber ? [registrationNumber] : []
+          )
+          .map((registrationNumber) =>
+            findPeriodicReports({ organisationNumber, registrationNumber })
+          )
       )
 
       rows.push({

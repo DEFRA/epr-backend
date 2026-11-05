@@ -1,8 +1,8 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID,
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_YEAR,
   buildCreateReportParams,
@@ -416,16 +416,16 @@ describe('toReportResource', () => {
         const { repository, id } = await createInProgress()
         if (summaryLogChanged) {
           await repository.markActiveReportsStaleForSummaryLog(
-            DEFAULT_ORG_ID,
-            DEFAULT_REG_ID,
+            DEFAULT_ORG_NUMBER,
+            DEFAULT_REG_NUMBER,
             toSummaryLogFileId('sl-2'),
             '2026-05-01T00:00:00.000Z'
           )
         }
         if (prnCancelled) {
           await repository.markActiveReportsStaleForPrnCancellation({
-            organisationId: DEFAULT_ORG_ID,
-            registrationId: DEFAULT_REG_ID,
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            registrationNumber: DEFAULT_REG_NUMBER,
             year: DEFAULT_REPORT_YEAR,
             cadence: 'monthly',
             period: DEFAULT_REPORT_PERIOD,
@@ -484,8 +484,8 @@ describe('toReportResource', () => {
         }
         if (restated) {
           await repository.markSubmittedReportsRequiringResubmission({
-            organisationId: DEFAULT_ORG_ID,
-            registrationId: DEFAULT_REG_ID,
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            registrationNumber: DEFAULT_REG_NUMBER,
             summaryLogId: toSummaryLogFileId('sl-2'),
             uploadedAt: '2026-05-01T00:00:00.000Z',
             periods: [periodRef]
@@ -493,8 +493,8 @@ describe('toReportResource', () => {
         }
         if (operatorRequested) {
           await repository.markSubmittedReportRequiringResubmissionByOperator({
-            organisationId: DEFAULT_ORG_ID,
-            registrationId: DEFAULT_REG_ID,
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            registrationNumber: DEFAULT_REG_NUMBER,
             ...periodRef,
             submissionNumber: 1,
             requestedBy: CHANGED_BY,
@@ -591,8 +591,8 @@ describe('reportResourceSchema', () => {
       supportingInformation: 'Notes'
     })
     await repository.markSubmittedReportRequiringResubmissionByOperator({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
       year: DEFAULT_REPORT_YEAR,
       cadence: 'monthly',
       period: DEFAULT_REPORT_PERIOD,
@@ -625,8 +625,8 @@ describe('reportResourceSchema', () => {
   it('accepts a stale stored report', async () => {
     const { repository, id } = await createInProgress()
     await repository.markActiveReportsStaleForSummaryLog(
-      DEFAULT_ORG_ID,
-      DEFAULT_REG_ID,
+      DEFAULT_ORG_NUMBER,
+      DEFAULT_REG_NUMBER,
       toSummaryLogFileId('sl-2'),
       '2026-05-01T00:00:00.000Z'
     )

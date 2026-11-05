@@ -27,12 +27,7 @@ import { createHash } from 'node:crypto'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
  */
 
-/**
- * @typedef {import('./port.js').LedgerLackingNumbers} LedgerLackingNumbers
- */
-
 import {
-  validateRowStateNumbers,
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
@@ -417,102 +412,6 @@ const performFindDistinctDataKeys = (collection) => async () => {
   return docs.map((doc) => /** @type {string} */ (doc._id))
 }
 
-const LACKING_A_NUMBER = {
-  $or: ROW_STATE_NUMBER_KEYS.map((key) => ({ [key]: { $exists: false } }))
-}
-
-/**
- * @param {Collection} collection
- * @returns {() => Promise<LedgerLackingNumbers[]>}
- */
-const performFindLedgerIdsWithoutNumbers = (collection) => async () => {
-  const groups = await collection
-    .aggregate([
-      { $match: LACKING_A_NUMBER },
-      {
-        $group: {
-          _id: {
-            organisationId: '$organisationId',
-            registrationId: '$registrationId',
-            accreditationId: '$accreditationId'
-          },
-          documents: { $sum: 1 },
-          ...Object.fromEntries(
-            ROW_STATE_NUMBER_KEYS.map((key) => [
-              key,
-              { $max: { $eq: [{ $type: `$${key}` }, 'missing'] } }
-            ])
-          )
-        }
-      }
-    ])
-    .toArray()
-  return groups.map((group) => ({
-    ledgerId: /** @type {WasteBalanceLedgerId} */ (group._id),
-    documents: group.documents,
-    lacking: ROW_STATE_NUMBER_KEYS.filter((key) => group[key])
-  }))
-}
-
-/**
- * @param {WasteBalanceLedgerId} ledgerId
- * @param {RowStateNumbers} given
- */
-const lackingGivenNumbersFilter = (ledgerId, given) => ({
-  organisationId: ledgerId.organisationId,
-  registrationId: ledgerId.registrationId,
-  accreditationId: ledgerId.accreditationId,
-  $or: Object.keys(given).map((key) => ({ [key]: { $exists: false } }))
-})
-
-/**
- * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
- */
-const performCountRowStatesLacking =
-  (collection) => async (ledgerId, numbers) => {
-    const given = numbersHeldBy(validateRowStateNumbers(numbers))
-    if (Object.keys(given).length === 0) {
-      return 0
-    }
-    return collection.countDocuments(lackingGivenNumbersFilter(ledgerId, given))
-  }
-
-/**
- * One update over every row state of the ledger, each number set only where
- * the row state lacks it.
- *
- * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>}
- */
-const performAssignNumbers = (collection) => async (ledgerId, numbers) => {
-  const given = numbersHeldBy(validateRowStateNumbers(numbers))
-  if (Object.keys(given).length === 0) {
-    return 0
-  }
-
-  const { modifiedCount } = await collection.updateMany(
-    lackingGivenNumbersFilter(ledgerId, given),
-    [
-      {
-        $set: Object.fromEntries(
-          Object.entries(given).map(([key, value]) => [
-            key,
-            {
-              $cond: [
-                { $eq: [{ $type: `$${key}` }, 'missing'] },
-                { $literal: value },
-                `$${key}`
-              ]
-            }
-          ])
-        )
-      }
-    ]
-  )
-  return modifiedCount
-}
-
 /**
  * Creates a MongoDB-backed summary-log row state repository.
  *
@@ -531,9 +430,6 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     findRowHistory: performFindRowHistory(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection),
-    findLedgerIdsWithoutNumbers: performFindLedgerIdsWithoutNumbers(collection),
-    countRowStatesLacking: performCountRowStatesLacking(collection),
-    assignNumbers: performAssignNumbers(collection)
+    findDistinctDataKeys: performFindDistinctDataKeys(collection)
   })
 }

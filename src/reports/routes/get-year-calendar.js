@@ -27,14 +27,14 @@ export const reportsYearCalendar = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId, year } = request.params
+    const { organisationNumber, registrationNumber, year } = request.params
 
     const { registration } =
       await findOrganisationAndRegistrationReadModels(request)
 
     const storedReports = await request.reportsRepository.findPeriodicReports({
-      organisationId,
-      registrationId
+      organisationNumber,
+      registrationNumber
     })
 
     const calendar = yearCalendar({

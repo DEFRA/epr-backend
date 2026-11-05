@@ -27,7 +27,9 @@ import {
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_START_DATE
 } from '#reports/repository/contract/test-data.js'
 import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
@@ -834,8 +836,13 @@ describe('updatePrnStatus', () => {
       const issuedAt = new Date(`${DEFAULT_REPORT_START_DATE}T00:00:00.000Z`)
       const prnRepository = createInMemoryPackagingRecyclingNotesRepository([
         buildPrn({
-          organisation: { id: DEFAULT_ORG_ID, name: 'Test Reprocessor' },
+          organisation: {
+            id: DEFAULT_ORG_ID,
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            name: 'Test Reprocessor'
+          },
           registrationId: DEFAULT_REG_ID,
+          registration: { registrationNumber: DEFAULT_REG_NUMBER },
           status: {
             currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
             issued: { at: issuedAt, by: USER },

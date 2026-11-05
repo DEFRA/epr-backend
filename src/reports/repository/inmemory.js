@@ -7,7 +7,6 @@ import {
 import { periodKey } from '#reports/domain/period-key.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {
-  groupAsPeriodicReports,
   latestSubmissionPerPeriod,
   mapReport,
   prepareCreateReportParams,
@@ -24,12 +23,12 @@ import {
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
   validateMarkSubmittedReportRequiringResubmissionByOperator,
-  validateReportNumbers,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @import {
@@ -39,8 +38,8 @@ import {
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
+ *   RegistrationKey,
  *   Report,
- *   ReportNumbers,
  *   ReportsRepositoryFactory,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
@@ -254,44 +253,16 @@ const findReportById = async (reports, reportId) => {
 }
 
 /**
- * @param {Map<string, Report>} reports
- * @returns {Promise<string[]>}
+ * @param {Object} report
+ * @param {RegistrationKey} key
+ * @returns {boolean}
  */
-const findIdsWithoutNumbers = async (reports) =>
-  [...reports.values()]
-    .filter(
-      ({ organisationNumber, registrationNumber, accreditationNumber }) =>
-        organisationNumber === undefined ||
-        registrationNumber === undefined ||
-        accreditationNumber === undefined
-    )
-    .map(({ id }) => id)
-
-/**
- * @param {Map<string, Report>} reports
- * @param {string} reportId
- * @param {ReportNumbers} numbers
- * @returns {Promise<void>}
- */
-const assignNumbers = async (reports, reportId, numbers) => {
-  const validatedId = validateFindReportById(reportId)
-  const validatedNumbers = validateReportNumbers(numbers)
-  const report = reports.get(validatedId)
-  if (!report) {
-    throw Boom.notFound(`Report not found: ${validatedId}`)
-  }
-
-  const held = Object.keys(validatedNumbers).filter(
-    (key) => report[key] !== undefined
-  )
-  if (held.length > 0) {
-    throw Boom.conflict(
-      `Report ${validatedId} already holds ${held.join(', ')}`
-    )
-  }
-
-  reports.set(validatedId, { ...report, ...validatedNumbers })
-}
+const isForRegistration = (
+  report,
+  { organisationNumber, registrationNumber }
+) =>
+  report.organisationNumber === organisationNumber &&
+  report.registrationNumber === registrationNumber
 
 /**
  * @param {Map<string, Object>} reports
@@ -299,16 +270,13 @@ const assignNumbers = async (reports, reportId, numbers) => {
  * @returns {Promise<PeriodicReport[]>}
  */
 const findPeriodicReports = async (reports, params) => {
-  const { organisationId, registrationId } = validateFindPeriodicReports(params)
+  const key = validateFindPeriodicReports(params)
 
-  const matching = [...reports.values()].filter(
-    (r) =>
-      r.organisationId === organisationId && r.registrationId === registrationId
+  const matching = [...reports.values()].filter((r) =>
+    isForRegistration(r, key)
   )
 
-  return structuredClone(
-    groupAsPeriodicReports(organisationId, registrationId, matching)
-  )
+  return structuredClone(transformToPeriodicReports(matching))
 }
 
 /**
@@ -337,34 +305,34 @@ const findPeriodicReportsForYear = async (reports, params) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {SummaryLogFileId} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
 const markActiveReportsStaleForSummaryLog = async (
   reports,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   summaryLogId,
   uploadedAt
 ) => {
   validateMarkActiveReportsStale({
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     summaryLogId,
     uploadedAt
   })
 
+  const key = { organisationNumber, registrationNumber }
   const summaryLogChanged = { uploadedAt, summaryLogId }
 
   let modifiedCount = 0
 
   for (const [id, report] of reports) {
     if (
-      report.organisationId === organisationId &&
-      report.registrationId === registrationId &&
+      isForRegistration(report, key) &&
       ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
       !report.stale?.summaryLogChanged &&
       report.source?.summaryLogId !== summaryLogId
@@ -385,8 +353,7 @@ const markActiveReportsStaleForSummaryLog = async (
   return [...reports.values()]
     .filter(
       (r) =>
-        r.organisationId === organisationId &&
-        r.registrationId === registrationId &&
+        isForRegistration(r, key) &&
         r.stale?.summaryLogChanged?.summaryLogId === summaryLogId
     )
     .map((r) =>
@@ -406,12 +373,11 @@ const markActiveReportsStaleForSummaryLog = async (
  * status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} slot
+ * @param {RegistrationKey & { year: Year, cadence: string, period: number }} slot
  * @returns {boolean}
  */
 const isReportInPeriodSlot = (report, slot) =>
-  report.organisationId === slot.organisationId &&
-  report.registrationId === slot.registrationId &&
+  isForRegistration(report, slot) &&
   report.year === slot.year &&
   report.cadence === slot.cadence &&
   report.period === slot.period
@@ -432,7 +398,7 @@ const isUnflaggedForPrnCancellation = (report) =>
  * slot and not yet flagged stale for a PRN cancellation.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number }} criteria
+ * @param {RegistrationKey & { year: Year, cadence: string, period: number }} criteria
  * @returns {boolean}
  */
 const isActiveReportForPrnCancellationSlot = (report, criteria) =>
@@ -452,8 +418,8 @@ const isActiveReportForPrnCancellationSlot = (report, criteria) =>
  */
 const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -462,19 +428,12 @@ const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
   } = validateMarkActiveReportsStaleForPrnCancellation(params)
 
   const prnCancelled = { occurredAt, prnId }
+  const slot = { organisationNumber, registrationNumber, year, cadence, period }
 
   let modifiedCount = 0
 
   for (const [id, report] of reports) {
-    if (
-      isActiveReportForPrnCancellationSlot(report, {
-        organisationId,
-        registrationId,
-        year,
-        cadence,
-        period
-      })
-    ) {
+    if (isActiveReportForPrnCancellationSlot(report, slot)) {
       reports.set(id, {
         ...report,
         stale: { ...report.stale, prnCancelled },
@@ -491,12 +450,7 @@ const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
   return [...reports.values()]
     .filter(
       (r) =>
-        r.organisationId === organisationId &&
-        r.registrationId === registrationId &&
-        r.year === year &&
-        r.cadence === cadence &&
-        r.period === period &&
-        r.stale?.prnCancelled?.prnId === prnId
+        isReportInPeriodSlot(r, slot) && r.stale?.prnCancelled?.prnId === prnId
     )
     .map((r) =>
       structuredClone({
@@ -517,11 +471,11 @@ const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
  */
 const markSubmittedReportsRequiringResubmission = async (
   reports,
-  { organisationId, registrationId, summaryLogId, uploadedAt, periods }
+  { organisationNumber, registrationNumber, summaryLogId, uploadedAt, periods }
 ) => {
   validateMarkSubmittedReportsRequiringResubmission({
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     summaryLogId,
     uploadedAt,
     periods
@@ -537,8 +491,7 @@ const markSubmittedReportsRequiringResubmission = async (
 
   const submitted = /** @type {Report[]} */ ([...reports.values()]).filter(
     (r) =>
-      r.organisationId === organisationId &&
-      r.registrationId === registrationId &&
+      isForRegistration(r, { organisationNumber, registrationNumber }) &&
       r.status.currentStatus === REPORT_STATUS.SUBMITTED &&
       wantedPeriods.has(periodKey(r))
   )
@@ -576,7 +529,7 @@ const markSubmittedReportsRequiringResubmission = async (
  * natural key, irrespective of status.
  *
  * @param {Object} report
- * @param {{ organisationId: string, registrationId: string, year: Year, cadence: string, period: number, submissionNumber: number }} key
+ * @param {RegistrationKey & { year: Year, cadence: string, period: number, submissionNumber: number }} key
  * @returns {boolean}
  */
 const isReportAtSubmissionSlot = (report, key) =>
@@ -597,8 +550,8 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
   params
 ) => {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -608,8 +561,8 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
   } = validateMarkSubmittedReportRequiringResubmissionByOperator(params)
 
   const naturalKey = {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -655,15 +608,15 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
  * the denormalised `status.submitted` slot is the single submission instant.
  *
  * @param {Map<string, Object>} reports
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {string} since - ISO timestamp
  * @returns {Promise<boolean>}
  */
 const hasReportSubmittedSince = async (
   reports,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   since
 ) =>
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so a
@@ -671,8 +624,7 @@ const hasReportSubmittedSince = async (
   // relies on throughout).
   [...reports.values()].some(
     (report) =>
-      report.organisationId === organisationId &&
-      report.registrationId === registrationId &&
+      isForRegistration(report, { organisationNumber, registrationNumber }) &&
       report.status.submitted?.at > since
   )
 
@@ -698,15 +650,15 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findPeriodicReportsForYear: (params) =>
       findPeriodicReportsForYear(reports, params),
     markActiveReportsStaleForSummaryLog: (
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       summaryLogId,
       uploadedAt
     ) =>
       markActiveReportsStaleForSummaryLog(
         reports,
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         summaryLogId,
         uploadedAt
       ),
@@ -716,10 +668,12 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
       markSubmittedReportsRequiringResubmission(reports, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
-    hasReportSubmittedSince: (organisationId, registrationId, since) =>
-      hasReportSubmittedSince(reports, organisationId, registrationId, since),
-    findIdsWithoutNumbers: () => findIdsWithoutNumbers(reports),
-    assignNumbers: (reportId, numbers) =>
-      assignNumbers(reports, reportId, numbers)
+    hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
+      hasReportSubmittedSince(
+        reports,
+        organisationNumber,
+        registrationNumber,
+        since
+      )
   })
 }

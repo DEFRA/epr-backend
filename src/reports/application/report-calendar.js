@@ -1,3 +1,4 @@
+import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
 import { statusRanges } from '#organisation-read-model/domain/status-timeline.js'
@@ -62,8 +63,8 @@ const onePerPeriod = (periods) => {
 /**
  * The reporting obligations a year has, by status. With mid-year status
  * transition on, each kind covers the days that status applied, so a period can
- * be part of a quarter or month. Otherwise only the current status's kind has
- * them, over the days that status applied, in whole periods, as reports are
+ * be part of a quarter or month. Otherwise a cancelled registration has none,
+ * and only the current status's kind has them, in whole periods, as reports are
  * made today.
  *
  * @param {Registration} registration
@@ -74,6 +75,9 @@ const reportingWindowsFor = (registration, year) => {
   const windows = registrationStatusWindows(registration, year)
   if (config.get('featureFlags.midYearStatusTransition')) {
     return { ...windows, wholePeriods: false }
+  }
+  if (registration.status.current === REGISTRATION_STATUS.CANCELLED) {
+    return { registeredOnly: [], accredited: [], wholePeriods: true }
   }
   return HELD_ACCREDITATION_STATUSES.has(
     registration.accreditations[year]?.status.current

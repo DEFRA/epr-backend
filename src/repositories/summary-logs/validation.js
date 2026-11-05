@@ -6,7 +6,6 @@ import {
   idSchema,
   summaryLogInsertSchema,
   summaryLogKeySchema,
-  summaryLogNumbersSchema,
   summaryLogUpdateSchema
 } from './schema.js'
 
@@ -48,19 +47,6 @@ export const validateSummaryLogUpdate = (updates) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badData(`Invalid update data: ${details}`)
-  }
-
-  return value
-}
-
-export const validateSummaryLogNumbers = (numbers) => {
-  const { error, value } = summaryLogNumbersSchema.validate(numbers, {
-    abortEarly: false
-  })
-
-  if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid numbers: ${details}`)
   }
 
   return value

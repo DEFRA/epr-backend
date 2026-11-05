@@ -51,8 +51,6 @@ export const createMockSummaryLogsRepository = (overrides = {}) => ({
   update: vi.fn(),
   findById: vi.fn(),
   findByFileId: vi.fn(),
-  findIdsWithoutNumbers: vi.fn(),
-  assignNumbers: vi.fn(),
   findLatestSubmitted: vi.fn(),
   findAll: vi.fn(),
   findAllSummaryLogStatsByRegistration: vi.fn(),
@@ -117,8 +115,6 @@ export const createMockPackagingRecyclingNotesRepository = (
   updateStatus: vi.fn(),
   updateWatermark: vi.fn(),
   persistProjection: vi.fn(),
-  findIdsWithoutNumbers: vi.fn(),
-  assignNumbers: vi.fn(),
   ...overrides
 })
 

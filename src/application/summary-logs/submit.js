@@ -14,6 +14,7 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { SummaryLogExtractor } from '#domain/summary-logs/extractor/port.js'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
@@ -44,11 +45,14 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
 /**
  * A summary log that has reached SUBMITTING status: validation has linked it to a
- * registration and stamped its creation time, so these fields are always present.
+ * registration and stamped its creation time, and it cannot reach SUBMITTING
+ * without its numbers, so these fields are always present.
  * @typedef {SummaryLog & {
  *   createdAt: string
  *   organisationId: string
  *   registrationId: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationNumber: RegistrationNumber
  * }} SubmittableSummaryLog
  */
 
@@ -70,8 +74,8 @@ const assertNoReportSubmittedSinceCreation = async (
 ) => {
   const reportSubmittedSinceCreation =
     await reportsService.hasReportSubmittedSince(
-      summaryLog.organisationId,
-      summaryLog.registrationId,
+      summaryLog.organisationNumber,
+      summaryLog.registrationNumber,
       summaryLog.createdAt
     )
 
@@ -148,6 +152,8 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   await onSummaryLogUploaded({
     organisationId: summaryLog.organisationId,
     registrationId: summaryLog.registrationId,
+    organisationNumber: summaryLog.organisationNumber,
+    registrationNumber: summaryLog.registrationNumber,
     summaryLogId: fileId,
     periodsRequiringResubmission:
       summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??

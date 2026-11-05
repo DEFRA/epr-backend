@@ -11,29 +11,12 @@ import {
   markActiveReportsStaleSchema,
   markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema,
-  markSubmittedReportRequiringResubmissionByOperatorSchema,
-  reportNumbersSchema
+  markSubmittedReportRequiringResubmissionByOperatorSchema
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, ReportNumbers } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, RegistrationKey } from './port.js'
  */
-
-/**
- * @param {ReportNumbers} numbers
- * @returns {ReportNumbers}
- */
-export const validateReportNumbers = (numbers) => {
-  const { error, value } = reportNumbersSchema.validate(numbers, {
-    abortEarly: false
-  })
-
-  if (error) {
-    throw Boom.badRequest(error.message)
-  }
-
-  return value
-}
 
 /**
  * @param {import('./port.js').CreateReportParams} params
@@ -147,8 +130,8 @@ export const validateFindReportById = (reportId) => {
 }
 
 /**
- * @param {{ organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string }} params
- * @returns {{ organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string }}
+ * @param {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }} params
+ * @returns {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }}
  */
 export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {

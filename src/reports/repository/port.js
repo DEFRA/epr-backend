@@ -138,8 +138,8 @@
 /**
  * Parameters for {@link ReportsRepository.markActiveReportsStaleForPrnCancellation}.
  * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Year} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
@@ -149,9 +149,7 @@
 
 /**
  * Parameters for {@link ReportsRepository.markSubmittedReportsRequiringResubmission}.
- * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
+ * @typedef {RegistrationKey & {
  *   summaryLogId: SummaryLogFileId,
  *   uploadedAt: string,
  *   periods: PeriodRef[]
@@ -178,9 +176,7 @@
  * Unlike the batch, summary-log-triggered method above, this targets exactly
  * one report (identified by its natural key including `submissionNumber`),
  * since an operator's request has no summary log to key a batch off.
- * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
+ * @typedef {RegistrationKey & {
  *   year: Year,
  *   cadence: string,
  *   period: number,
@@ -321,14 +317,16 @@
  */
 
 /**
- * @typedef {Object} CreateReportParams
+ * @typedef {CreateReportBase & CadenceAccreditation} CreateReportParams
+ */
+
+/**
+ * @typedef {Object} CreateReportBase
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {OrganisationNumber} [organisationNumber]
- * @property {RegistrationNumber} [registrationNumber]
- * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Year} year
- * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
@@ -346,12 +344,6 @@
  * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
  * @property {ReportSource} source
- */
-
-/**
- * The numbers a report stores beside its organisation, registration and
- * accreditation ids.
- * @typedef {Pick<Report, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} ReportNumbers
  */
 
 /**
@@ -384,9 +376,14 @@
  */
 
 /**
- * @typedef {Object} FindPeriodicReportsParams
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
+ * The numbers naming the registration a report belongs to.
+ * @typedef {Object} RegistrationKey
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
+ */
+
+/**
+ * @typedef {RegistrationKey} FindPeriodicReportsParams
  */
 
 /**
@@ -406,7 +403,7 @@
  *   The periodic reports of every org/registration for one reporting year, shaped
  *   as findAllPeriodicReports shapes them.
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationId: string, registrationId: string, summaryLogId: SummaryLogFileId, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
+ * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, summaryLogId: SummaryLogFileId, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
  *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.
@@ -426,18 +423,11 @@
  *   resubmission at the operator's own request, conditional on it still
  *   being `submitted` and not already flagged this way. Returns `null` when
  *   the write matched nothing.
- * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
  *   Returns true when any report for the org/reg was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
  *   read from the denormalised `status.submitted` slot. Used to detect a period
  *   closing during the summary log validate-to-submit window.
- * @property {() => Promise<string[]>} findIdsWithoutNumbers
- *   The ids of reports lacking the organisation, registration or accreditation
- *   number. A registered-only report's null accreditation number is held.
- * @property {(reportId: string, numbers: ReportNumbers) => Promise<void>} assignNumbers
- *   Adds numbers to a report stored without them, refusing to overwrite a
- *   number it already holds. Leaves the version alone, so a user editing the
- *   report can still save it.
  */
 
 /**
@@ -448,6 +438,7 @@
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { PeriodRef } from '#reports/domain/period-key.js'
+ * @import { CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { FinalDestination, Supplier } from '#reports/domain/aggregation/aggregate-report-detail.js'
  */
 
