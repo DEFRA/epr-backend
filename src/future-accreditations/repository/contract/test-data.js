@@ -3,6 +3,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { FUTURE_ACCREDITATIONS_FROM_YEAR } from '#organisation-read-model/domain/model.js'
 
 /** @import { FutureAccreditation } from '../port.js' */
 
@@ -16,7 +17,7 @@ export const OTHER_REGISTRATION_NUMBER =
  */
 export const buildFutureAccreditation = (overrides = {}) => ({
   registrationNumber: REGISTRATION_NUMBER,
-  year: toYear(2027), // NOSONAR: javascript:S109 - fixture year, the first one the stub accepts
+  year: toYear(FUTURE_ACCREDITATIONS_FROM_YEAR),
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
