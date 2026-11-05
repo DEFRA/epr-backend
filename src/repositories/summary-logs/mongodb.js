@@ -11,6 +11,7 @@ import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
@@ -31,24 +32,6 @@ const RETIRED_YEAR_SCOPED_ID_INDEX_NAME =
   'organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
 const RETIRED_ID_INDEX_NAME =
   'organisationId_1_registrationId_1_status_1_submittedAt_-1'
-const IGNORABLE_DROP_INDEX_ERRORS = new Set([
-  'IndexNotFound',
-  'NamespaceNotFound'
-])
-
-/**
- * @param {import('mongodb').Collection} collection
- * @param {string} name
- */
-async function dropIndexIfPresent(collection, name) {
-  try {
-    await collection.dropIndex(name)
-  } catch (error) {
-    if (!IGNORABLE_DROP_INDEX_ERRORS.has(error.codeName)) {
-      throw error
-    }
-  }
-}
 
 /**
  * Creates the submitting lock over

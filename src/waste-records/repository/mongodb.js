@@ -20,20 +20,21 @@ import { createHash } from 'node:crypto'
  */
 
 /**
- * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
- */
-
-/**
  * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
  */
 
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
-import { ROW_STATE_NUMBER_KEYS } from './schema.js'
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
+
+const ROW_HISTORY_INDEX_NAME = 'row_history_by_number'
+const RETIRED_ROW_HISTORY_INDEX_NAME = 'row_history'
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
@@ -58,13 +59,14 @@ export async function ensureSummaryLogRowStatesCollection(db) {
 
   await collection.createIndex(
     {
-      organisationId: 1,
-      registrationId: 1,
+      organisationNumber: 1,
+      registrationNumber: 1,
       rowId: 1,
       wasteRecordType: 1
     },
-    { name: 'row_history' }
+    { name: ROW_HISTORY_INDEX_NAME }
   )
+  await dropIndexIfPresent(collection, RETIRED_ROW_HISTORY_INDEX_NAME)
 
   await collection.createIndex(
     {
@@ -173,17 +175,6 @@ const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
 })
 
 /**
- * @param {RowStateNumbers} numbers
- * @returns {RowStateNumbers}
- */
-const numbersHeldBy = (numbers) =>
-  Object.fromEntries(
-    ROW_STATE_NUMBER_KEYS.filter((key) => numbers[key] !== undefined).map(
-      (key) => [key, numbers[key]]
-    )
-  )
-
-/**
  * @param {SummaryLogRowStateInsert} candidate
  * @param {string} contentHash
  * @param {SummaryLogFileId} summaryLogId
@@ -195,7 +186,9 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
-        ...numbersHeldBy(candidate),
+        organisationNumber: candidate.organisationNumber,
+        registrationNumber: candidate.registrationNumber,
+        accreditationNumber: candidate.accreditationNumber,
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -316,12 +309,12 @@ const performFindWasteRecordStatesForSummaryLog =
  * prefix.
  *
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
+ * @returns {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowStatesForSummaryLogFile =
-  (collection) => async (organisationId, registrationId, fileId) => {
+  (collection) => async (organisationNumber, registrationNumber, fileId) => {
     const docs = await collection
-      .find({ organisationId, registrationId, summaryLogIds: fileId })
+      .find({ organisationNumber, registrationNumber, summaryLogIds: fileId })
       .sort({ _id: 1 })
       .toArray()
     return docs.map(toSummaryLogRowState)
@@ -329,13 +322,13 @@ const performFindRowStatesForSummaryLogFile =
 
 /**
  * @param {Collection} collection
- * @returns {(organisationId: string, registrationId: string, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>}
+ * @returns {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>}
  */
 const performFindRowHistory =
   (collection) =>
-  async (organisationId, registrationId, rowId, wasteRecordType) => {
+  async (organisationNumber, registrationNumber, rowId, wasteRecordType) => {
     const docs = await collection
-      .find({ organisationId, registrationId, rowId, wasteRecordType })
+      .find({ organisationNumber, registrationNumber, rowId, wasteRecordType })
       .sort({ _id: 1 })
       .toArray()
     return docs.map(toSummaryLogRowState)

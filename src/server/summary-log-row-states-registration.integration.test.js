@@ -66,7 +66,7 @@ describe('summary-log-row-states repository registration', () => {
     )
 
     expect(indexesByName).toHaveProperty('summary_log_membership')
-    expect(indexesByName).toHaveProperty('row_history')
+    expect(indexesByName).toHaveProperty('row_history_by_number')
     expect(indexesByName.summary_log_row_state_identity.unique).toBe(true)
 
     const documentCount = await server.db
