@@ -304,7 +304,7 @@ const findAll =
   async (key) =>
     (await uploads(db, keyFilter(key))).map(keyedBy(key))
 
-const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
+const findAllSummaryLogStatsByRegistration = (db) => async () => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .aggregate([
@@ -318,8 +318,8 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
       {
         $group: {
           _id: {
-            organisationId: '$organisationId',
-            registrationId: '$registrationId'
+            organisationNumber: '$organisationNumber',
+            registrationNumber: '$registrationNumber'
           },
           lastSuccessful: {
             $max: {
@@ -355,8 +355,8 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
     .toArray()
 
   return docs.map((doc) => ({
-    organisationId: doc._id.organisationId,
-    registrationId: doc._id.registrationId,
+    organisationNumber: doc._id.organisationNumber,
+    registrationNumber: doc._id.registrationNumber,
     lastSuccessful: doc.lastSuccessful ? new Date(doc.lastSuccessful) : null,
     lastFailed: doc.lastFailed ? new Date(doc.lastFailed) : null,
     successfulCount: doc.successfulCount,
@@ -511,8 +511,8 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     findByFileId: findByFileId(db),
     findLatestSubmitted: findLatestSubmitted(db),
     findAll: findAll(db),
-    findAllSummaryLogStatsByRegistrationId:
-      findAllSummaryLogStatsByRegistrationId(db),
+    findAllSummaryLogStatsByRegistration:
+      findAllSummaryLogStatsByRegistration(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),
     getDownloadUrl: getDownloadUrl(
       db,

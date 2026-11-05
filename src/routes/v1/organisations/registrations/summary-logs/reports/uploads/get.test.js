@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
@@ -55,6 +56,8 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
         summaryLogFactory.submitted({
           organisationId: org.id,
           registrationId: registration.id,
+          organisationNumber: toOrganisationNumber(String(org.orgId)),
+          registrationNumber: registration.registrationNumber,
           submittedAt
         })
       )
@@ -93,7 +96,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   describe('error scenarios', () => {
     it('returns 500 when summary log report generation fails', async () => {
       const errorSpy = vi
-        .spyOn(summaryLogsRepository, 'findAllSummaryLogStatsByRegistrationId')
+        .spyOn(summaryLogsRepository, 'findAllSummaryLogStatsByRegistration')
         .mockRejectedValue(new Error('Simulated Database Failure'))
 
       const response = await server.inject({

@@ -18,7 +18,7 @@ describe('mock-repositories', () => {
         'replace',
         'findAll',
         'find',
-        'findByIds',
+        'findByOrganisationNumbers',
         'findById',
         'findByLinkedDefraOrgId',
         'linkDefraOrganisation',
@@ -44,7 +44,7 @@ describe('mock-repositories', () => {
         'findByFileId',
         'findLatestSubmitted',
         'findAll',
-        'findAllSummaryLogStatsByRegistrationId',
+        'findAllSummaryLogStatsByRegistration',
         'transitionToSubmittingExclusive',
         'getDownloadUrl',
         'getDownloadUrlByFileId'
