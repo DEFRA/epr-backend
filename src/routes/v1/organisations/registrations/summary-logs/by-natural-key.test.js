@@ -516,11 +516,11 @@ describe('summary-log routes by natural key', () => {
     const nextYearUploads = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${currentUtcYear() + 1}`
 
     afterEach(() => {
-      config.reset('latestOpenYear')
+      config.reset('openNextYear')
     })
 
     it('starts the upload while next year is open', async () => {
-      config.set('latestOpenYear', 'next')
+      config.set('openNextYear', true)
 
       const response = await server.inject({
         method: 'POST',

@@ -200,11 +200,11 @@ describe('ledger and waste balance routes by natural key', () => {
       const nextYear = currentUtcYear() + 1
 
       afterEach(() => {
-        config.reset('latestOpenYear')
+        config.reset('openNextYear')
       })
 
       it('serves its events while it is open', async () => {
-        config.set('latestOpenYear', 'next')
+        config.set('openNextYear', true)
 
         const response = await get(registeredOnlyLedger(nextYear))
 

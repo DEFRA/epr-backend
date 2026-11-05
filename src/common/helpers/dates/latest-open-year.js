@@ -11,5 +11,5 @@ import { currentUtcYear, nextYear } from './year.js'
  */
 export function latestOpenYear(now = new Date()) {
   const current = currentUtcYear(now)
-  return config.get('latestOpenYear') === 'next' ? nextYear(current) : current
+  return config.get('openNextYear') ? nextYear(current) : current
 }

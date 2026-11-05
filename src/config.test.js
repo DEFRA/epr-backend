@@ -64,23 +64,23 @@ describe('config', () => {
 
 describe('#validateConfig', () => {
   it('opens only the current year by default', () => {
-    expect(config.get('latestOpenYear')).toBe('current')
+    expect(config.get('openNextYear')).toBe(false)
   })
 
   it.each(['local', 'dev', 'test', 'perf-test', 'ext-test'])(
     'lets %s open the next year',
     (cdpEnvironment) => {
-      const cfg = getConfig({ cdpEnvironment, latestOpenYear: 'next' })
+      const cfg = getConfig({ cdpEnvironment, openNextYear: true })
 
       expect(() => validateConfig(cfg)).not.toThrow()
     }
   )
 
   it('refuses to open the next year in prod', () => {
-    const cfg = getConfig({ cdpEnvironment: 'prod', latestOpenYear: 'next' })
+    const cfg = getConfig({ cdpEnvironment: 'prod', openNextYear: true })
 
     expect(() => validateConfig(cfg)).toThrow(
-      'latestOpenYear must be "current" in prod'
+      'openNextYear must not be set in prod'
     )
   })
 })

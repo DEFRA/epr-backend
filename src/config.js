@@ -509,11 +509,11 @@ const baseConfig = {
       env: 'BASIC_AUTH_PASSWORD'
     }
   },
-  latestOpenYear: {
-    doc: 'The latest year the service serves: "current" for the current UTC year, or "next" for the year after it, so a lower environment can serve next year\'s data early. Refused in prod.',
-    format: ['current', 'next'],
-    default: 'current',
-    env: 'LATEST_OPEN_YEAR'
+  openNextYear: {
+    doc: 'Serve next year as well as this one, so data for it can be checked before it starts. Refused in prod',
+    format: Boolean,
+    default: false,
+    env: 'OPEN_NEXT_YEAR'
   },
   decemberWaste: {
     windowStart: {
@@ -531,11 +531,8 @@ const baseConfig = {
 function validateConfig(cfg) {
   cfg.validate({ allowed: 'strict' })
 
-  if (
-    cfg.get('cdpEnvironment') === 'prod' &&
-    cfg.get('latestOpenYear') !== 'current'
-  ) {
-    throw new Error('latestOpenYear must be "current" in prod')
+  if (cfg.get('cdpEnvironment') === 'prod' && cfg.get('openNextYear')) {
+    throw new Error('openNextYear must not be set in prod')
   }
 }
 

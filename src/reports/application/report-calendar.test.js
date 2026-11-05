@@ -1,5 +1,5 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -40,7 +40,8 @@ const withRegAccStatus = (fields) => {
     ...registration,
     regAccStatusByDate: regAccStatusByYear(
       registration,
-      utcCalendarDate(AFTER_YEAR_END)
+      utcCalendarDate(AFTER_YEAR_END),
+      utcYearOf(AFTER_YEAR_END)
     )
   }
 }

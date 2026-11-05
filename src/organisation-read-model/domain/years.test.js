@@ -396,12 +396,17 @@ describe('organisationInYear', () => {
 
 describe('regAccStatusByYear', () => {
   const TODAY = calendarDate('2026-11-03')
+  const TODAY_YEAR = toYear(2026)
   const registeredOnly = { status: 'registeredOnly' }
   const accredited = { status: 'accredited' }
 
   it('covers each year from approval up to today', () => {
     expect(
-      regAccStatusByYear(partialMock(approvedFrom('2025-06-02')), TODAY)
+      regAccStatusByYear(
+        partialMock(approvedFrom('2025-06-02')),
+        TODAY,
+        TODAY_YEAR
+      )
     ).toEqual({
       2025: { '2025-06-02': registeredOnly },
       2026: { '2026-01-01': registeredOnly }
@@ -419,7 +424,8 @@ describe('regAccStatusByYear', () => {
       Object.keys(
         regAccStatusByYear(
           partialMock({ ...registration(timeline), accreditations: {} }),
-          TODAY
+          TODAY,
+          TODAY_YEAR
         )
       )
     ).toEqual(['2024', '2026'])
@@ -431,7 +437,8 @@ describe('regAccStatusByYear', () => {
         partialMock(
           approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
         ),
-        TODAY
+        TODAY,
+        TODAY_YEAR
       )
     ).toEqual({
       2026: { '2026-06-02': registeredOnly },
@@ -445,7 +452,8 @@ describe('regAccStatusByYear', () => {
     expect(
       regAccStatusByYear(
         partialMock({ ...registration(timeline), accreditations: {} }),
-        TODAY
+        TODAY,
+        TODAY_YEAR
       )
     ).toEqual({})
   })

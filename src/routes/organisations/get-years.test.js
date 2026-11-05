@@ -28,7 +28,7 @@ describe('GET /organisations/{organisationNumber}/years', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    config.reset('latestOpenYear')
+    config.reset('openNextYear')
   })
 
   it('lists the years the organisation held approved registrations', async () => {
@@ -39,7 +39,7 @@ describe('GET /organisations/{organisationNumber}/years', () => {
   })
 
   it('lists the next year while it is open', async () => {
-    config.set('latestOpenYear', 'next')
+    config.set('openNextYear', true)
 
     const response = await get(`/organisations/${organisation.orgId}/years`)
 
@@ -60,7 +60,7 @@ describe('organisationYearsResponseSchema', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    config.reset('latestOpenYear')
+    config.reset('openNextYear')
   })
 
   it('accepts years up to the current year', () => {
@@ -88,7 +88,7 @@ describe('organisationYearsResponseSchema', () => {
   })
 
   it('accepts the next year while it is open', () => {
-    config.set('latestOpenYear', 'next')
+    config.set('openNextYear', true)
 
     const { error } = organisationYearsResponseSchema.validate({
       years: [2028]

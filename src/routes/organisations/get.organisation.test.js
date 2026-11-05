@@ -372,6 +372,10 @@ describe('GET /organisations/{organisationNumber}', () => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
     })
 
+    afterEach(() => {
+      config.reset('openNextYear')
+    })
+
     it('serves every year the registration was approved in', async () => {
       const organisation = buildOrganisation({
         registrations: [
@@ -385,6 +389,22 @@ describe('GET /organisations/{organisationNumber}', () => {
       expect(await regAccStatusOf(organisation)).toEqual({
         2026: { '2026-02-01': { status: 'registeredOnly' } },
         2027: { '2027-01-01': { status: 'registeredOnly' } }
+      })
+    })
+
+    it('serves next year while it is open', async () => {
+      config.set('openNextYear', true)
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            validFrom: '2026-02-01',
+            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
+          })
+        ]
+      })
+
+      expect(await regAccStatusOf(organisation, '?year=2028')).toEqual({
+        2028: { '2028-01-01': { status: 'registeredOnly' } }
       })
     })
 
@@ -579,11 +599,11 @@ describe('GET /organisations/{organisationNumber}', () => {
       }
 
       afterEach(() => {
-        config.reset('latestOpenYear')
+        config.reset('openNextYear')
       })
 
       it('serves its registrations and accreditations while it is open', async () => {
-        config.set('latestOpenYear', 'next')
+        config.set('openNextYear', true)
         const organisation = withNextYearAccreditation()
         await serve(organisation)
 
