@@ -382,7 +382,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
-  it('persists closedPeriods for a closed-period load even while the feature is off', async () => {
+  it('returns the closed periods an upload touched', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const env = await setupWasteBalanceIntegrationEnvironment({
@@ -392,8 +392,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
     await closeJanuary2026(env)
 
-    // The flag is off (default) at validate time, but closedPeriods must still
-    // be persisted so it survives to submit time when the flag flips on.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-closed-refs',
