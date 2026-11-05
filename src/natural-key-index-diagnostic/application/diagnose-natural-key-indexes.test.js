@@ -50,16 +50,13 @@ describe('diagnoseNaturalKeyIndexes', () => {
       { organisationId: 'o1', registrationId: 'r1', ...NUMBERS },
       { organisationId: 'o1', registrationId: 'r1', ...NUMBERS }
     ])
-    await database.collection('summary-log-row-states').insertOne({})
-
     expect(await diagnoseNaturalKeyIndexes(database)).toStrictEqual({
       summaryLogs: 2,
       submittingSummaryLogsWithoutNumbers: 0,
       validatedSummaryLogsWithoutNumbers: 0,
       reports: 2,
       reportsWithoutNumbers: 0,
-      sharedReportNumbers: [],
-      rowStates: 1
+      sharedReportNumbers: []
     })
   })
 

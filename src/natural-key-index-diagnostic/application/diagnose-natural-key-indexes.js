@@ -1,5 +1,4 @@
 import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
-import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @import { Db } from 'mongodb' */
@@ -24,8 +23,7 @@ const REPORTS_COLLECTION_NAME = 'reports'
  *   validatedSummaryLogsWithoutNumbers: number,
  *   reports: number,
  *   reportsWithoutNumbers: number,
- *   sharedReportNumbers: SharedReportNumbers[],
- *   rowStates: number
+ *   sharedReportNumbers: SharedReportNumbers[]
  * }} NaturalKeyIndexDiagnosis
  */
 
@@ -80,8 +78,8 @@ const findSharedReportNumbers = async (db) => {
 
 /**
  * Reads whether the stored data allows the indexes moving onto the numbers to
- * be built at startup: the submitting lock on summary logs, the unique report
- * indexes, and the row-state history index. It writes nothing.
+ * be built at startup: the submitting lock on summary logs and the unique
+ * report indexes. It writes nothing.
  *
  * @param {Db} db
  * @returns {Promise<NaturalKeyIndexDiagnosis>}
@@ -95,8 +93,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     validatedSummaryLogsWithoutNumbers,
     reportCount,
     reportsWithoutNumbers,
-    sharedReportNumbers,
-    rowStates
+    sharedReportNumbers
   ] = await Promise.all([
     db.collection(SUMMARY_LOGS_COLLECTION_NAME).estimatedDocumentCount(),
     countSummaryLogsWithoutNumbers(db, SUMMARY_LOG_STATUS.SUBMITTING),
@@ -108,10 +105,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
         { registrationNumber: { $exists: false } }
       ]
     }),
-    findSharedReportNumbers(db),
-    db
-      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-      .estimatedDocumentCount()
+    findSharedReportNumbers(db)
   ])
 
   return {
@@ -120,7 +114,6 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     validatedSummaryLogsWithoutNumbers,
     reports: reportCount,
     reportsWithoutNumbers,
-    sharedReportNumbers,
-    rowStates
+    sharedReportNumbers
   }
 }

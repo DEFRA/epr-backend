@@ -40,8 +40,7 @@ const runDiagnostic = async (server) => {
       `validatedSummaryLogsWithoutNumbers=${diagnosis.validatedSummaryLogsWithoutNumbers}`,
       `reports=${diagnosis.reports}`,
       `reportsWithoutNumbers=${diagnosis.reportsWithoutNumbers}`,
-      `sharedReportNumbers=${diagnosis.sharedReportNumbers.length}`,
-      `rowStates=${diagnosis.rowStates}`
+      `sharedReportNumbers=${diagnosis.sharedReportNumbers.length}`
     ].join(' ')
   })
 }

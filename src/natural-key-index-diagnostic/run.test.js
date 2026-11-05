@@ -23,8 +23,7 @@ const CLEAR = {
   validatedSummaryLogsWithoutNumbers: 0,
   reports: 20,
   reportsWithoutNumbers: 0,
-  sharedReportNumbers: [],
-  rowStates: 30
+  sharedReportNumbers: []
 }
 
 describe('runNaturalKeyIndexDiagnostic', () => {
@@ -71,7 +70,7 @@ describe('runNaturalKeyIndexDiagnostic', () => {
       [
         {
           message:
-            'Natural key index diagnostic: summaryLogs=10 submittingSummaryLogsWithoutNumbers=0 validatedSummaryLogsWithoutNumbers=0 reports=20 reportsWithoutNumbers=0 sharedReportNumbers=0 rowStates=30'
+            'Natural key index diagnostic: summaryLogs=10 submittingSummaryLogsWithoutNumbers=0 validatedSummaryLogsWithoutNumbers=0 reports=20 reportsWithoutNumbers=0 sharedReportNumbers=0'
         }
       ]
     ])
