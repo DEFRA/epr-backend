@@ -1,3 +1,5 @@
+import { validateFutureAccreditation } from './validation.js'
+
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FutureAccreditation, FutureAccreditationsRepositoryFactory } from './port.js' */
 
@@ -36,13 +38,14 @@ export const createMongoFutureAccreditationsRepository = async (db) => {
         .toArray(),
 
     upsert: async (accreditation) => {
-      const { registrationNumber, year } = accreditation
+      const validated = validateFutureAccreditation(accreditation)
+      const { registrationNumber, year } = validated
       await collection.replaceOne(
         { registrationNumber, year },
-        { ...accreditation },
+        { ...validated },
         { upsert: true }
       )
-      return accreditation
+      return validated
     },
 
     remove: (registrationNumber, year) =>

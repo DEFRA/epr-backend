@@ -1,3 +1,5 @@
+import { validateFutureAccreditation } from './validation.js'
+
 /** @import { FutureAccreditation, FutureAccreditationsRepositoryFactory } from './port.js' */
 
 /**
@@ -27,8 +29,9 @@ export const createInMemoryFutureAccreditationsRepository = () => {
         .map((accreditation) => structuredClone(accreditation)),
 
     upsert: async (accreditation) => {
-      storage.set(keyOf(accreditation), structuredClone(accreditation))
-      return structuredClone(accreditation)
+      const validated = validateFutureAccreditation(accreditation)
+      storage.set(keyOf(validated), structuredClone(validated))
+      return structuredClone(validated)
     },
 
     remove: async (registrationNumber, year) => {

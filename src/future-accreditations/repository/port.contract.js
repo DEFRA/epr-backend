@@ -3,6 +3,7 @@ import { describe } from 'vitest'
 import { testFindByRegistrationNumbersBehaviour } from './contract/find-by-registration-numbers.contract.js'
 import { testRemoveBehaviour } from './contract/remove.contract.js'
 import { testUpsertBehaviour } from './contract/upsert.contract.js'
+import { testValidationBehaviour } from './contract/validation.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { FutureAccreditationsRepository } from './port.js' */
@@ -17,5 +18,6 @@ export const testFutureAccreditationsRepositoryContract = (it) => {
     testUpsertBehaviour(it)
     testFindByRegistrationNumbersBehaviour(it)
     testRemoveBehaviour(it)
+    testValidationBehaviour(it)
   })
 }

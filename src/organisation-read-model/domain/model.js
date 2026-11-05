@@ -157,6 +157,12 @@ export const REG_ACC_STATUS = Object.freeze({
 })
 
 /**
+ * The first year whose accreditations come from the future accreditations
+ * source rather than the REEX database.
+ */
+export const FUTURE_ACCREDITATIONS_FROM_YEAR = 2027
+
+/**
  * A suspended accreditation is still accredited.
  *
  * @type {ReadonlySet<string>}
