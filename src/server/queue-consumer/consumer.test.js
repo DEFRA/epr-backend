@@ -17,7 +17,9 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createReportsService } from '#reports/application/report-service.js'
 import {
   DEFAULT_ORG_ID,
+  DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
+  DEFAULT_REG_NUMBER,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -1177,6 +1179,8 @@ describe('createCommandQueueConsumer', () => {
             summaryLogFactory.submitting({
               organisationId: DEFAULT_ORG_ID,
               registrationId: DEFAULT_REG_ID,
+              organisationNumber: DEFAULT_ORG_NUMBER,
+              registrationNumber: DEFAULT_REG_NUMBER,
               createdAt,
               meta: {}
             })

@@ -31,22 +31,7 @@
  * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/**
- * @typedef {import('./schema.js').RowStateNumbers} RowStateNumbers
- */
-
 /** @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-
-/**
- * A ledger holding row states that lack a number: how many do, and which
- * numbers any of them lacks.
- *
- * @typedef {{
- *   ledgerId: WasteBalanceLedgerId,
- *   documents: number,
- *   lacking: (keyof RowStateNumbers)[]
- * }} LedgerLackingNumbers
- */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
@@ -90,17 +75,6 @@
  *   Return the union of every key observed on `data` across every state
  *   document in the collection. Used by the CSV export to compose its dynamic
  *   header without materialising any document into memory.
- * @property {() => Promise<LedgerLackingNumbers[]>} findLedgerIdsWithoutNumbers
- *   Each ledger identity holding row states that lack the organisation,
- *   registration or accreditation number, with how many do and which numbers
- *   they lack, in the order organisation, registration, accreditation. A
- *   registered-only row state's null accreditation number is held.
- * @property {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>} countRowStatesLacking
- *   How many of the ledger's row states lack one of the numbers given: the
- *   row states `assignNumbers` would change.
- * @property {(ledgerId: WasteBalanceLedgerId, numbers: RowStateNumbers) => Promise<number>} assignNumbers
- *   Adds to each of the ledger's row states the numbers it lacks, keeping any
- *   it already holds, and returns how many row states it changed.
  */
 
 /**

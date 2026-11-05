@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { ObjectId } from 'mongodb'
-import { buildCreateReportParams, createAndSubmitReport } from './test-data.js'
+import {
+  buildCreateReportParams,
+  createAndSubmitReport,
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
+} from './test-data.js'
 
 /** @import { ReportsRepositoryFactory } from '../port.js' */
 
@@ -12,21 +16,21 @@ const AFTER = '2100-01-01T00:00:00.000Z'
 export const testHasReportSubmittedSinceBehaviour = (it) => {
   describe('hasReportSubmittedSince', () => {
     let repository
-    let organisationId
-    let registrationId
+    let organisationNumber
+    let registrationNumber
 
     beforeEach(
       /** @param {ReportsFixture} fixture */ async ({ reportsRepository }) => {
         repository = reportsRepository()
-        organisationId = new ObjectId().toString()
-        registrationId = new ObjectId().toString()
+        organisationNumber = uniqueOrganisationNumber()
+        registrationNumber = uniqueRegistrationNumber()
       }
     )
 
     it('returns true when the timestamp is before the submission instant', async () => {
       const reportId = await createAndSubmitReport(repository, {
-        organisationId,
-        registrationId
+        organisationNumber,
+        registrationNumber
       })
       const { status } = await repository.findReportById(reportId)
       const oneMsBefore = new Date(
@@ -36,8 +40,8 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       // Well before the submission.
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           BEFORE
         )
       ).toBe(true)
@@ -45,8 +49,8 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       // One millisecond before: still strictly after -> matches (lower boundary).
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           oneMsBefore
         )
       ).toBe(true)
@@ -54,8 +58,8 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
     it('returns false when the timestamp is at or after the submission instant', async () => {
       const reportId = await createAndSubmitReport(repository, {
-        organisationId,
-        registrationId
+        organisationNumber,
+        registrationNumber
       })
       const { status } = await repository.findReportById(reportId)
       const submittedAt = status.submitted.at
@@ -63,8 +67,8 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       // Exactly at the submission instant: not strictly after (strict >).
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           submittedAt
         )
       ).toBe(false)
@@ -72,8 +76,8 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       // Well after the submission.
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           AFTER
         )
       ).toBe(false)
@@ -81,13 +85,13 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
     it('returns false when the only report is not submitted', async () => {
       await repository.createReport(
-        buildCreateReportParams({ organisationId, registrationId })
+        buildCreateReportParams({ organisationNumber, registrationNumber })
       )
 
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           BEFORE
         )
       ).toBe(false)
@@ -95,14 +99,14 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
     it('ignores submitted reports belonging to a different registration', async () => {
       await createAndSubmitReport(repository, {
-        organisationId,
-        registrationId: new ObjectId().toString()
+        organisationNumber,
+        registrationNumber: uniqueRegistrationNumber()
       })
 
       expect(
         await repository.hasReportSubmittedSince(
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           BEFORE
         )
       ).toBe(false)

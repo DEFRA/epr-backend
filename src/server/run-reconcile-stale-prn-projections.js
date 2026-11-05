@@ -13,7 +13,7 @@ import { config } from '../config.js'
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { DriftReport } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js' */
 
-export const LOCK_NAME = 'reconcile-stale-prn-projections'
+const LOCK_NAME = 'reconcile-stale-prn-projections'
 
 /** @param {DriftReport} report */
 const formatReport = (report) =>

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER
 } from './test-data.js'
 
 const SL_ID = 'sl-id-new-000000000000000000000001'
@@ -30,8 +30,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
 
       const reportsMarkedStale =
         await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_ID,
-          DEFAULT_REG_ID,
+          DEFAULT_ORG_NUMBER,
+          DEFAULT_REG_NUMBER,
           SL_ID,
           UPLOADED_AT
         )
@@ -55,8 +55,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
     it('returns [] when no active reports exist', async () => {
       const reportsMarkedStale =
         await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_ID,
-          DEFAULT_REG_ID,
+          DEFAULT_ORG_NUMBER,
+          DEFAULT_REG_NUMBER,
           SL_ID,
           UPLOADED_AT
         )
@@ -69,8 +69,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
 
       const reportsMarkedStale =
         await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_ID,
-          DEFAULT_REG_ID,
+          DEFAULT_ORG_NUMBER,
+          DEFAULT_REG_NUMBER,
           SL_ID,
           UPLOADED_AT
         )
@@ -84,16 +84,16 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const first = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         SL_ID,
         UPLOADED_AT
       )
       expect(first).toHaveLength(1)
 
       const second = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         SL_ID,
         UPLOADED_AT
       )
@@ -106,16 +106,16 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       )
 
       const first = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         SL_ID,
         UPLOADED_AT
       )
       expect(first).toHaveLength(1)
 
       const second = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         'sl-id-new-000000000000000000000002',
         '2026-06-02T12:00:00.000Z'
       )
@@ -134,8 +134,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
 
       const reportsMarkedStale =
         await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_ID,
-          DEFAULT_REG_ID,
+          DEFAULT_ORG_NUMBER,
+          DEFAULT_REG_NUMBER,
           'sl-1',
           UPLOADED_AT
         )
@@ -148,8 +148,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
         buildCreateReportParams()
       )
       await repository.markActiveReportsStaleForPrnCancellation({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         year: 2024,
         cadence: 'monthly',
         period: 1,
@@ -158,8 +158,8 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       })
 
       await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_ID,
-        DEFAULT_REG_ID,
+        DEFAULT_ORG_NUMBER,
+        DEFAULT_REG_NUMBER,
         SL_ID,
         UPLOADED_AT
       )

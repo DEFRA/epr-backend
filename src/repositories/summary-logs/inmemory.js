@@ -14,7 +14,6 @@ import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogKey,
-  validateSummaryLogNumbers,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -78,50 +77,6 @@ const update =
       summaryLog: structuredClone({
         ...existing.summaryLog,
         ...validatedUpdates
-      })
-    })
-    scheduleStaleCacheSync(storage, staleCache)
-  }
-
-const findIdsWithoutNumbers = (storage) => async () =>
-  [...storage]
-    .filter(([, { summaryLog }]) => !holdsNumbers(summaryLog))
-    .map(([id]) => id)
-
-const assignNumbers =
-  (storage, staleCache, logger) => async (id, version, numbers) => {
-    const validatedId = validateId(id)
-    const validatedNumbers = validateSummaryLogNumbers(numbers)
-    const existing = storage.get(validatedId)
-
-    if (!existing) {
-      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-    }
-
-    const held = Object.keys(validatedNumbers).filter(
-      (key) => existing.summaryLog[key] !== undefined
-    )
-    if (existing.version !== version || held.length > 0) {
-      const conflictError = new Error(
-        `Version conflict: attempted to assign numbers with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
-      )
-      logger.error({
-        err: conflictError,
-        message: `Version conflict detected for summary log ${validatedId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: validatedId
-        }
-      })
-      throw Boom.conflict(conflictError.message)
-    }
-
-    storage.set(validatedId, {
-      version: existing.version + 1,
-      summaryLog: structuredClone({
-        ...existing.summaryLog,
-        ...validatedNumbers
       })
     })
     scheduleStaleCacheSync(storage, staleCache)
@@ -431,8 +386,6 @@ export const createInMemorySummaryLogsRepository = () => {
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     findByFileId: findByFileId(staleCache),
-    findIdsWithoutNumbers: findIdsWithoutNumbers(storage),
-    assignNumbers: assignNumbers(storage, staleCache, logger),
     findLatestSubmitted: findLatestSubmitted(staleCache),
     findAll: findAll(staleCache),
     findAllSummaryLogStatsByRegistrationId:

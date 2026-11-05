@@ -13,13 +13,14 @@ import {
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -275,6 +276,15 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env.registrationId
     )
 
+    const { accreditationNumber } = numbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      {
+        registrationId: env.registrationId,
+        accreditationId:
+          cadence === 'monthly' ? registration.accreditationId : null
+      }
+    ).numbers
+
     return createReportForPeriod({
       reportsRepository: env.reportsRepository,
       ledgerRepository: env.ledgerRepository,
@@ -283,14 +293,13 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       overseasSitesRepository: env.overseasSitesRepository,
       organisationId: env.organisationId,
       registrationId: env.registrationId,
-      numbers: requiredNumbersFor(
-        await env.organisationsRepository.findById(env.organisationId),
-        { registrationId: env.registrationId, accreditationId: null },
-        'the report'
-      ),
+      numbers: env.reportKey,
       registration,
       year,
-      cadence,
+      cadenceAccreditation: cadenceAccreditationFor(
+        cadence,
+        accreditationNumber
+      ),
       period,
       submissionNumber,
       requiredPeriods: generateAllPeriodsForYear(cadence, year),
@@ -1067,8 +1076,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-second')
     await requestOperatorResubmission({
       reportsRepository: env.reportsRepository,
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
+      ...env.reportKey,
       ...JANUARY_2025,
       submissionNumber: 1,
       requestedBy: CHANGED_BY

@@ -35,8 +35,7 @@ export const reportsDelete = {
 
     const report = await fetchReportBySubmissionNumber(
       reportsRepository,
-      organisationId,
-      registrationId,
+      params,
       year,
       cadence,
       period,

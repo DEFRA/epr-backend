@@ -41,8 +41,7 @@ export const reportsUnsubmit = {
 
     const report = await fetchReportBySubmissionNumber(
       reportsRepository,
-      organisationId,
-      registrationId,
+      params,
       year,
       cadence,
       period,
@@ -75,8 +74,7 @@ export const reportsUnsubmit = {
     // it from the admin submission history (PAE-1657).
     const isLatest = await isLatestSubmission(
       reportsRepository,
-      organisationId,
-      registrationId,
+      params,
       year,
       cadence,
       period,

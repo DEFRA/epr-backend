@@ -1,3 +1,6 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -6,7 +9,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
@@ -17,7 +23,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 describe('DELETE /organisations/{organisationNumber}/registrations/{registrationNumber}/reports/{year}/{cadence}/{period}/submissions/{submissionNumber}', () => {
   setupAuthContext()
@@ -34,12 +40,13 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
           buildCreateReportParams({
             organisationId: org.id,
             registrationId: registration.id,
+            ...reportKeyOf(org, registration),
             year: YEAR,
-            cadence: 'quarterly',
+            cadence: CADENCE.quarterly,
             period: 1,
-            startDate: '2026-01-01',
-            endDate: '2026-03-31',
-            dueDate: '2026-04-20'
+            startDate: calendarDate('2026-01-01'),
+            endDate: calendarDate('2026-03-31'),
+            dueDate: calendarDate('2026-04-20')
           })
         )
       : undefined
@@ -59,6 +66,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      key: reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
       /** @param {string} [cadence] */
@@ -73,21 +81,13 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
   describe('successful deletion', () => {
     it('returns 204 and removes report from period slot', async () => {
-      const {
-        organisationId,
-        registrationId,
-        reportsRepository,
-        deleteReport
-      } = await createServer()
+      const { key, reportsRepository, deleteReport } = await createServer()
 
       const response = await deleteReport()
 
       expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-      const periodicReports = await reportsRepository.findPeriodicReports({
-        organisationId,
-        registrationId
-      })
+      const periodicReports = await reportsRepository.findPeriodicReports(key)
       expect(periodicReports).toEqual([])
     })
 

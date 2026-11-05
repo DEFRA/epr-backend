@@ -22,20 +22,14 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
- * @import { RequiredNumbers } from '#domain/organisations/numbers.js'
  * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
- * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
- * @import { PeriodicReport } from '#reports/repository/port.js'
- */
-
-/**
- * The numbers of the registration a report is for.
- *
- * @typedef {Pick<RequiredNumbers, 'organisationNumber' | 'registrationNumber'>} RegistrationNumbers
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 
 /**
@@ -44,8 +38,8 @@ import {
  * service rather than the repository port directly. See PAE-1686.
  *
  * @typedef {object} ReportsService
- * @property {(organisationId: string, registrationId: string, since: string) => Promise<boolean>} hasReportSubmittedSince
- * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(params: RegistrationKey) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
 
@@ -54,10 +48,10 @@ import {
  * @returns {ReportsService}
  */
 export const createReportsService = (reportsRepository) => ({
-  hasReportSubmittedSince: (organisationId, registrationId, since) =>
+  hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
     reportsRepository.hasReportSubmittedSince(
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       since
     ),
 
@@ -70,8 +64,7 @@ export const createReportsService = (reportsRepository) => ({
 /**
  * Looks up a stored report for a specific period and submission number.
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {RegistrationKey} key
  * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
@@ -80,16 +73,15 @@ export const createReportsService = (reportsRepository) => ({
  */
 export async function fetchReportBySubmissionNumber(
   reportsRepository,
-  organisationId,
-  registrationId,
+  { organisationNumber, registrationNumber },
   year,
   cadence,
   period,
   submissionNumber
 ) {
   const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
+    organisationNumber,
+    registrationNumber
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
@@ -186,7 +178,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {RegistrationNumbers} params.numbers
+ * @param {RegistrationKey} params.key
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -204,7 +196,7 @@ export async function fetchOrGenerateReportForPeriod({
   overseasSitesRepository,
   organisationId,
   registrationId,
-  numbers,
+  key: { organisationNumber, registrationNumber },
   registration,
   year,
   cadence,
@@ -214,8 +206,8 @@ export async function fetchOrGenerateReportForPeriod({
   reportDataValidationEnabled
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
+    organisationNumber,
+    registrationNumber
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
@@ -252,7 +244,7 @@ export async function fetchOrGenerateReportForPeriod({
     packagingRecyclingNotesRepository,
     overseasSitesRepository,
     operatorCategory,
-    numbers,
+    numbers: { organisationNumber, registrationNumber },
     registration,
     year,
     cadence,
@@ -338,7 +330,7 @@ async function readSubmissionRowStates({
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {OperatorCategory} params.operatorCategory
- * @param {RegistrationNumbers} params.numbers
+ * @param {RegistrationKey} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -396,8 +388,7 @@ async function getAggregatedReportDetail({
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {RegistrationKey} params.key
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -407,8 +398,7 @@ async function getAggregatedReportDetail({
  */
 async function assertReportCreationAllowed({
   reportsRepository,
-  organisationId,
-  registrationId,
+  key: { organisationNumber, registrationNumber },
   year,
   cadence,
   period,
@@ -416,8 +406,8 @@ async function assertReportCreationAllowed({
   requiredPeriods
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
-    organisationId,
-    registrationId
+    organisationNumber,
+    registrationNumber
   })
 
   assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
@@ -492,10 +482,10 @@ function summariseIncompleteDataIfEnabled(
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {RequiredNumbers} params.numbers
+ * @param {RegistrationKey} params.numbers
  * @param {Registration} params.registration
  * @param {Year} params.year
- * @param {Cadence} params.cadence
+ * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
  * @param {number} params.submissionNumber
  * @param {GeneratedPeriod[]} params.requiredPeriods - the ended periods of the cadence the registration owes a report for in the year
@@ -514,7 +504,7 @@ export async function createReportForPeriod({
   numbers,
   registration,
   year,
-  cadence,
+  cadenceAccreditation,
   period,
   submissionNumber,
   requiredPeriods,
@@ -522,17 +512,16 @@ export async function createReportForPeriod({
   reportDataValidationEnabled
 }) {
   const { startDate, endDate, dueDate } = getValidatedPeriodInfo(
-    cadence,
+    cadenceAccreditation.cadence,
     year,
     period
   )
 
   await assertReportCreationAllowed({
     reportsRepository,
-    organisationId,
-    registrationId,
+    key: numbers,
     year,
-    cadence,
+    cadence: cadenceAccreditation.cadence,
     period,
     submissionNumber,
     requiredPeriods
@@ -561,7 +550,7 @@ export async function createReportForPeriod({
     numbers,
     registration,
     year,
-    cadence,
+    cadence: cadenceAccreditation.cadence,
     period,
     wasteRecordStates,
     latestSubmission
@@ -571,8 +560,8 @@ export async function createReportForPeriod({
     organisationId,
     registrationId,
     ...numbers,
+    ...cadenceAccreditation,
     year,
-    cadence,
     period,
     startDate,
     endDate,

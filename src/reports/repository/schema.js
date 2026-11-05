@@ -153,16 +153,22 @@ export const reportDataFieldsSchema = {
   supportingInformation: Joi.string().optional()
 }
 
-const numbersSchema = {
-  organisationNumber: Joi.string().optional(),
-  registrationNumber: Joi.string().optional(),
-  accreditationNumber: Joi.string().allow(null).optional()
+const registrationKeySchema = {
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required()
 }
+
+const accreditationNumberForCadence = Joi.when('cadence', {
+  is: CADENCE.monthly,
+  then: Joi.string().required(),
+  otherwise: Joi.valid(null).required()
+})
 
 export const createReportSchema = Joi.object({
   organisationId: MONGO_ID_SCHEMA,
   registrationId: MONGO_ID_SCHEMA,
-  ...numbersSchema,
+  ...registrationKeySchema,
+  accreditationNumber: accreditationNumberForCadence,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
@@ -180,16 +186,6 @@ export const createReportSchema = Joi.object({
   changedBy: userSummarySchema,
   ...reportDataFieldsSchema
 })
-
-export const reportNumbersSchema = Joi.object(numbersSchema)
-  .min(1)
-  .custom((numbers, helpers) =>
-    Object.values(numbers).includes(undefined)
-      ? helpers.error('object.undefinedNumber')
-      : numbers
-  )
-  .messages({ 'object.undefinedNumber': 'a number must not be undefined' })
-  .required()
 
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
@@ -238,10 +234,7 @@ export const updateReportStatusSchema = Joi.object({
   })
 })
 
-export const findPeriodicReportsSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA
-})
+export const findPeriodicReportsSchema = Joi.object(registrationKeySchema)
 
 export const findPeriodicReportsForYearSchema = Joi.object({
   year: YEAR_SCHEMA
@@ -252,15 +245,13 @@ export const findReportByIdSchema = Joi.string()
   .required()
 
 export const markActiveReportsStaleSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
 })
 
 export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
@@ -269,8 +260,7 @@ export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
 })
 
 export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required(),
   periods: Joi.array().items(periodRefSchema).required()
@@ -278,8 +268,7 @@ export const markSubmittedReportsRequiringResubmissionSchema = Joi.object({
 
 export const markSubmittedReportRequiringResubmissionByOperatorSchema =
   Joi.object({
-    organisationId: MONGO_ID_SCHEMA,
-    registrationId: MONGO_ID_SCHEMA,
+    ...registrationKeySchema,
     year: YEAR_SCHEMA,
     cadence: cadenceSchema,
     period: periodSchema,

@@ -1,3 +1,5 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -17,7 +19,7 @@ import {
 
 const ALT_ORG_ID = new ObjectId().toString()
 const ALT_REG_ID = new ObjectId().toString()
-const NEXT_YEAR = DEFAULT_REPORT_YEAR + 1
+const NEXT_YEAR = toYear(DEFAULT_REPORT_YEAR + 1)
 
 const TONNAGE_OVERRIDES = {
   recyclingActivity: {
@@ -54,9 +56,9 @@ const TONNAGE_OVERRIDES = {
 const nextYearReport = (overrides = {}) =>
   buildCreateReportParams({
     year: NEXT_YEAR,
-    startDate: `${NEXT_YEAR}-01-01`,
-    endDate: `${NEXT_YEAR}-01-31`,
-    dueDate: `${NEXT_YEAR}-02-15`,
+    startDate: calendarDate(`${NEXT_YEAR}-01-01`),
+    endDate: calendarDate(`${NEXT_YEAR}-01-31`),
+    dueDate: calendarDate(`${NEXT_YEAR}-02-15`),
     ...overrides
   })
 

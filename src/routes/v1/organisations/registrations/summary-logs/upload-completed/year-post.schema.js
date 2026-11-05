@@ -8,7 +8,7 @@ import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
  * @typedef {Object} SummaryLogUpload
  * @property {SummaryLogFileId} fileId
  * @property {string} filename
- * @property {string} fileStatus
+ * @property {'complete' | 'rejected' | 'pending'} fileStatus
  * @property {string} [s3Bucket]
  * @property {string} [s3Key]
  * @property {boolean} [hasError]

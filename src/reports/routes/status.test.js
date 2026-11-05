@@ -1,3 +1,6 @@
+import { CADENCE } from '#reports/domain/cadence.js'
+/** @import { Cadence } from '#reports/domain/cadence.js' */
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -7,7 +10,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
   accreditation,
@@ -25,7 +31,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
 }))
 
-const YEAR = 2026
+const YEAR = toYear(2026)
 
 // Populated enough for any operator category to pass the completeness check.
 const COMPLETE_MANUAL_FIELDS = {
@@ -62,8 +68,8 @@ const INCOMPLETE_PRN = {
   }
 }
 
-const REGISTERED_ONLY = { cadence: 'quarterly', period: 1 }
-const ACCREDITED = { cadence: 'monthly', period: 7 }
+const REGISTERED_ONLY = { cadence: CADENCE.quarterly, period: 1 }
+const ACCREDITED = { cadence: CADENCE.monthly, period: 7 }
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/.../submissions/{submissionNumber}/status', () => {
   setupAuthContext()
@@ -72,7 +78,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {{
    *   reportOverrides?: object,
    *   accreditationStatus?: AccreditationStatus,
-   *   stream?: { cadence: string, period: number },
+   *   stream?: { cadence: Cadence, period: number },
    *   withReport?: boolean
    * }} [options]
    */
@@ -100,6 +106,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           buildCreateReportParams({
             organisationId: org.id,
             registrationId: registration.id,
+            ...reportKeyOf(org, registration),
             year: YEAR,
             ...stream,
             ...COMPLETE_MANUAL_FIELDS,
@@ -128,6 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       server,
       organisationId: org.id,
       registrationId: registration.id,
+      ...reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
       url,
@@ -523,12 +531,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('when report is stale', () => {
     it('returns 409 with summary_log_changed code', async () => {
-      const { postStatus, reportsRepository, organisationId, registrationId } =
-        await createServer()
+      const {
+        postStatus,
+        reportsRepository,
+        organisationNumber,
+        registrationNumber
+      } = await createServer()
 
       await reportsRepository.markActiveReportsStaleForSummaryLog(
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         toSummaryLogFileId('sl-new'),
         new Date().toISOString()
       )

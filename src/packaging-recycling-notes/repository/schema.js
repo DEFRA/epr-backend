@@ -89,19 +89,6 @@ const statusSchema = Joi.object({
   history: Joi.array().items(statusHistoryItemSchema).min(1).required()
 })
 
-export const prnNumbersSchema = Joi.object({
-  organisationNumber: Joi.string(),
-  registrationNumber: Joi.string()
-})
-  .min(1)
-  .custom((numbers, helpers) =>
-    Object.values(numbers).includes(undefined)
-      ? helpers.error('object.undefinedNumber')
-      : numbers
-  )
-  .messages({ 'object.undefinedNumber': 'a number must not be undefined' })
-  .required()
-
 export const prnInsertSchema = Joi.object({
   schemaVersion: Joi.number().integer().valid(2).required(),
   version: Joi.number().integer().min(1).default(1),

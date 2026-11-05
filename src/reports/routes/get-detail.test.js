@@ -20,7 +20,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  createAndSubmitReport
+  createAndSubmitReport,
+  reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import {
   accreditation,
@@ -154,6 +155,7 @@ const createServer = async ({
     server,
     organisationId: org.id,
     registrationId: registration.id,
+    key: reportKeyOf(org, registration),
     reportsRepository: reportsRepositoryFactory(),
     quarterly: (period = 1, { year = YEAR, submissionNumber = 1 } = {}) =>
       `${registrationPath}/reports/${year}/quarterly/${period}/submissions/${submissionNumber}`,
@@ -816,19 +818,20 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
      * @param {object} [overrides]
      */
     const storeReport = (
-      { reportsRepository, organisationId, registrationId },
+      { reportsRepository, organisationId, registrationId, key },
       overrides = {}
     ) =>
       reportsRepository.createReport(
         buildCreateReportParams({
           organisationId,
           registrationId,
+          ...key,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,
-          startDate: '2026-01-01',
-          endDate: '2026-03-31',
-          dueDate: '2026-04-20',
+          startDate: calendarDate('2026-01-01'),
+          endDate: calendarDate('2026-03-31'),
+          dueDate: calendarDate('2026-04-20'),
           ...overrides
         })
       )
@@ -838,12 +841,13 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
      * @param {object} [overrides]
      */
     const submitReport = (
-      { reportsRepository, organisationId, registrationId },
+      { reportsRepository, organisationId, registrationId, key },
       overrides = {}
     ) =>
       createAndSubmitReport(reportsRepository, {
         organisationId,
         registrationId,
+        ...key,
         year: YEAR,
         cadence: 'quarterly',
         period: 1,
@@ -946,8 +950,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const uploadedAt = new Date().toISOString()
       await context.reportsRepository.markActiveReportsStaleForSummaryLog(
-        context.organisationId,
-        context.registrationId,
+        context.key.organisationNumber,
+        context.key.registrationNumber,
         toSummaryLogFileId('sl-new'),
         uploadedAt
       )
@@ -972,8 +976,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const prnId = new ObjectId().toString()
       const occurredAt = new Date().toISOString()
       await context.reportsRepository.markActiveReportsStaleForPrnCancellation({
-        organisationId: context.organisationId,
-        registrationId: context.registrationId,
+        ...context.key,
         year: YEAR,
         cadence: 'quarterly',
         period: 1,
@@ -998,16 +1001,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const uploadedAt = new Date().toISOString()
       await context.reportsRepository.markActiveReportsStaleForSummaryLog(
-        context.organisationId,
-        context.registrationId,
+        context.key.organisationNumber,
+        context.key.registrationNumber,
         toSummaryLogFileId('sl-new'),
         uploadedAt
       )
 
       const occurredAt = new Date().toISOString()
       await context.reportsRepository.markActiveReportsStaleForPrnCancellation({
-        organisationId: context.organisationId,
-        registrationId: context.registrationId,
+        ...context.key,
         year: YEAR,
         cadence: 'quarterly',
         period: 1,
@@ -1057,8 +1059,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         await submitReport(context)
         await context.reportsRepository.markSubmittedReportRequiringResubmissionByOperator(
           {
-            organisationId: context.organisationId,
-            registrationId: context.registrationId,
+            ...context.key,
             year: YEAR,
             cadence: 'quarterly',
             period: 1,

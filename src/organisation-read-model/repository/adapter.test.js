@@ -1,14 +1,17 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
-import { reprocessor } from './contract/organisation-read-test-helpers.js'
+import {
+  exporter,
+  reprocessor
+} from './contract/organisation-read-test-helpers.js'
 import { toReadModelRegistration } from './adapter.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
 describe('toReadModelRegistration', () => {
   /**
-   * @param {ReturnType<typeof reprocessor>} registration
+   * @param {ReturnType<typeof reprocessor | typeof exporter>} registration
    */
   const stored = async (registration) => {
     const organisation = buildOrganisation({ registrations: [registration] })
@@ -32,5 +35,15 @@ describe('toReadModelRegistration', () => {
     )
 
     expect(toReadModelRegistration(organisation, registration)).toBeNull()
+  })
+
+  it('shows an exporter without its overseas sites, reporting no drop for them', async () => {
+    const { organisation, registration } = await stored(exporter())
+    const onDrop = vi.fn()
+
+    expect(
+      toReadModelRegistration(organisation, registration, onDrop)
+    ).toMatchObject({ overseasSites: {} })
+    expect(onDrop).not.toHaveBeenCalled()
   })
 })

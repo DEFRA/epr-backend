@@ -394,6 +394,50 @@ describe('yearCalendar with mid-year status transition off', () => {
     ])
   })
 
+  it('lists nothing for a cancelled registration, whatever its accreditation', () => {
+    const registration = withRegAccStatus({
+      status: {
+        current: 'cancelled',
+        timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
+      },
+      accreditations: {
+        2026: {
+          accreditationNumber: 'ACC-2026',
+          status: { current: 'approved', timeline: [approvedOn('2026-01-01')] }
+        }
+      }
+    })
+
+    expect(calendar({ registration })).toEqual({ year: 2026 })
+  })
+
+  it('lists nothing for a cancelled registered-only registration', () => {
+    const registration = withRegAccStatus({
+      status: {
+        current: 'cancelled',
+        timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
+      },
+      accreditations: {}
+    })
+
+    expect(calendar({ registration })).toEqual({ year: 2026 })
+  })
+
+  it('lists whole accredited months again once a cancelled accreditation is reinstated', () => {
+    const result = calendar({
+      registration: registeredSinceLastYear([
+        approvedOn('2026-01-01'),
+        cancelledOn('2026-07-10'),
+        approvedOn('2026-08-03')
+      ])
+    })
+
+    expect(result).not.toHaveProperty('registeredOnly')
+    expect(periodNumbers(result.accredited?.reportingPeriods)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+    ])
+  })
+
   it('lists whole quarters from the one a registration was approved in', () => {
     const registration = withRegAccStatus({
       status: { timeline: [approvedOn('2026-05-15')] },
@@ -487,10 +531,8 @@ describe('reportingPeriodsByKind', () => {
         [storedMarch]
       )
 
-      expect(result.accredited.map(({ period }) => period)).toEqual([3])
-      expect(result.registeredOnly.map(({ period }) => period)).toEqual([
-        1, 3, 4
-      ])
+      expect(periodNumbers(result.accredited)).toEqual([3])
+      expect(periodNumbers(result.registeredOnly)).toEqual([1, 3, 4])
     })
 
     it('lists only the current kind, in whole periods', () => {

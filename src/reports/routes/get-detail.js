@@ -88,8 +88,6 @@ export const reportsGetDetail = {
     const {
       organisationId,
       registrationId,
-      organisationNumber,
-      registrationNumber,
       year,
       cadence,
       period,
@@ -112,7 +110,7 @@ export const reportsGetDetail = {
       overseasSitesRepository,
       organisationId,
       registrationId,
-      numbers: { organisationNumber, registrationNumber },
+      key: params,
       registration: storedRegistration,
       year,
       cadence,

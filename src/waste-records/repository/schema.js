@@ -141,8 +141,6 @@ export const summaryLogRowStateReadSchema = rowStateBaseSchema.keys({
   id: Joi.string().required()
 })
 
-export const rowStateNumbersSchema = Joi.object(numbersKeys)
-
 export const ROW_STATE_NUMBER_KEYS = /** @type {(keyof RowStateNumbers)[]} */ (
   Object.keys(numbersKeys)
 )
