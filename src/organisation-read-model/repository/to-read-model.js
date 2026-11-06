@@ -19,7 +19,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -29,7 +29,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {{
- *   futureAccreditationsByRegistration: Map<RegistrationNumber, Record<string, AccreditationCommon>>
+ *   externalAccreditationsByRegistration: Map<RegistrationNumber, Record<string, AccreditationCommon>>
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: string
@@ -37,7 +37,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
- * @param {FutureAccreditation} futureAccreditation
+ * @param {ExternalAccreditation} externalAccreditation
  * @returns {AccreditationCommon}
  */
 const toAccreditationCommon = ({
@@ -47,14 +47,14 @@ const toAccreditationCommon = ({
 }) => accreditation
 
 /**
- * Each registration's future accreditations, keyed by year.
+ * Each registration's external accreditations, keyed by year.
  *
- * @param {FutureAccreditation[]} futureAccreditations
- * @returns {Context['futureAccreditationsByRegistration']}
+ * @param {ExternalAccreditation[]} externalAccreditations
+ * @returns {Context['externalAccreditationsByRegistration']}
  */
-const byRegistrationAndYear = (futureAccreditations) =>
+const byRegistrationAndYear = (externalAccreditations) =>
   new Map(
-    [...Map.groupBy(futureAccreditations, (a) => a.registrationNumber)].map(
+    [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
       ([registrationNumber, held]) => [
         registrationNumber,
         Object.fromEntries(
@@ -76,12 +76,12 @@ export const registrationNumbersOf = (stored) =>
   )
 
 /**
- * The stored organisations as the read model shows them, with the future
+ * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
  * cannot represent is left out and reported through `logger.warn`.
  *
  * @param {StoredOrganisation[]} stored
- * @param {FutureAccreditation[]} futureAccreditations
+ * @param {ExternalAccreditation[]} externalAccreditations
  * @param {{
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
@@ -90,7 +90,7 @@ export const registrationNumbersOf = (stored) =>
  */
 export async function toReadModelOrganisations(
   stored,
-  futureAccreditations,
+  externalAccreditations,
   { overseasSitesRepository, logger }
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
@@ -104,8 +104,9 @@ export async function toReadModelOrganisations(
 
   /** @type {Context} */
   const context = {
-    futureAccreditationsByRegistration:
-      byRegistrationAndYear(futureAccreditations),
+    externalAccreditationsByRegistration: byRegistrationAndYear(
+      externalAccreditations
+    ),
     onDrop: (message) => logger.warn({ message }),
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: new Date().toISOString().slice(0, 10)
@@ -230,16 +231,16 @@ export function toRegistrationEntry(registration, organisation, context) {
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
-  const futureAccreditations =
-    context.futureAccreditationsByRegistration.get(registrationNumber) ?? {}
-  for (const year of Object.keys(futureAccreditations)) {
+  const externalAccreditations =
+    context.externalAccreditationsByRegistration.get(registrationNumber) ?? {}
+  for (const year of Object.keys(externalAccreditations)) {
     if (Object.hasOwn(storedAccreditations, year)) {
       onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} is held as a future accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
     }
   }
-  const accreditations = { ...storedAccreditations, ...futureAccreditations }
+  const accreditations = { ...storedAccreditations, ...externalAccreditations }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
@@ -284,7 +285,7 @@ export function toReadModelRegistration(
     { ...registration, overseasSites: {} },
     organisation,
     {
-      futureAccreditationsByRegistration: new Map(),
+      externalAccreditationsByRegistration: new Map(),
       onDrop,
       overseasSitesById: new Map(),
       today: new Date().toISOString().slice(0, 10)

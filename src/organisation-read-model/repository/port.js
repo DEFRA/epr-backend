@@ -3,13 +3,12 @@
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * A registration's accreditation for a year the REEX database does not hold
- * accreditations for.
+ * A registration's accreditation for a year, held outside the REEX database.
  *
  * @typedef {AccreditationCommon & {
  *   registrationNumber: RegistrationNumber
  *   year: Year
- * }} FutureAccreditation
+ * }} ExternalAccreditation
  */
 
 /**

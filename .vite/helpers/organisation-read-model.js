@@ -3,14 +3,14 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {{
- *   futureAccreditations?: FutureAccreditation[]
+ *   externalAccreditations?: ExternalAccreditation[]
  *   overseasSites?: object[]
  *   overseasSitesRepository?: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger?: Pick<TypedLogger, 'warn'>
@@ -39,7 +39,7 @@ const dependenciesFor = ({
  * `organisationReadRepository`. Later writes to it are not seen.
  *
  * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
- * @param {Pick<ReadModelOptions, 'futureAccreditations' | 'overseasSitesRepository'>} [options]
+ * @param {Pick<ReadModelOptions, 'externalAccreditations' | 'overseasSitesRepository'>} [options]
  * @returns {Promise<() => OrganisationReadRepository>}
  */
 export const organisationReadRepositoryFrom = async (
@@ -48,7 +48,7 @@ export const organisationReadRepositoryFrom = async (
 ) => {
   const repository = createInMemoryOrganisationReadRepository(
     await organisationsRepository.findAll(),
-    options?.futureAccreditations
+    options?.externalAccreditations
   )(dependenciesFor(options))
   return () => repository
 }
@@ -99,7 +99,7 @@ export const organisationReadRepositoryOf = async (organisations, options) => {
     await createInMemoryOrganisationsRepository(
       /** @type {any[]} */ (organisations)
     )().findAll(),
-    options?.futureAccreditations
+    options?.externalAccreditations
   )(dependenciesFor(options))
   return () => repository
 }

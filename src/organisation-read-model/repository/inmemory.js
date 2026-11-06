@@ -6,13 +6,13 @@ import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
  * Holds organisations as the organisations repository returns them, and the
- * future accreditations held for their registrations, and serves them in the
+ * external accreditations held for their registrations, and serves them in the
  * read model's shape, as the MongoDB adapter does.
  *
  * It shares the in-memory organisations repository's search through the
@@ -28,7 +28,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * Nothing writes to it, so a version below `minimumVersion` can never arrive.
  *
  * @param {StoredOrganisation[]} [organisations]
- * @param {FutureAccreditation[]} [futureAccreditations]
+ * @param {ExternalAccreditation[]} [externalAccreditations]
  * @returns {(dependencies: {
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
@@ -36,10 +36,10 @@ import { toReadModelOrganisations } from './to-read-model.js'
  */
 export const createInMemoryOrganisationReadRepository = (
   organisations = [],
-  futureAccreditations = []
+  externalAccreditations = []
 ) => {
   const stored = structuredClone(organisations)
-  const future = structuredClone(futureAccreditations)
+  const external = structuredClone(externalAccreditations)
 
   return (dependencies) => ({
     findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
@@ -54,7 +54,7 @@ export const createInMemoryOrganisationReadRepository = (
       }
       const [organisation] = await toReadModelOrganisations(
         [structuredClone(found)],
-        structuredClone(future),
+        structuredClone(external),
         dependencies
       )
       return organisation ?? null

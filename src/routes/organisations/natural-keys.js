@@ -48,7 +48,7 @@ export const registrationParams = {
  * is not served matter to the view alone.
  */
 const lookupContext = () => ({
-  futureAccreditationsByRegistration: new Map(),
+  externalAccreditationsByRegistration: new Map(),
   onDrop: () => {},
   overseasSitesById: new Map(),
   today: new Date().toISOString().slice(0, 10)

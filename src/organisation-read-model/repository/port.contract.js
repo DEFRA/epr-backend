@@ -1,19 +1,19 @@
 import { testDroppedRecordsBehaviour } from './contract/dropped-records.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
-import { testFutureAccreditationsBehaviour } from './contract/future-accreditations.contract.js'
+import { testExternalAccreditationsBehaviour } from './contract/external-accreditations.contract.js'
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
-/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
- * Stores the organisations, overseas sites and future accreditations, and
+ * Stores the organisations, overseas sites and external accreditations, and
  * returns a repository that reads them.
  *
  * @typedef {(data: {
- *   futureAccreditations?: FutureAccreditation[]
+ *   externalAccreditations?: ExternalAccreditation[]
  *   logger?: { warn: (...args: any[]) => void }
  *   organisations: object[]
  *   overseasSites?: object[]
@@ -33,6 +33,6 @@ export const testOrganisationReadRepositoryContract = (it) => {
     testFindBehaviour(it)
     testStatusTimelineBehaviour(it)
     testDroppedRecordsBehaviour(it)
-    testFutureAccreditationsBehaviour(it)
+    testExternalAccreditationsBehaviour(it)
   })
 }

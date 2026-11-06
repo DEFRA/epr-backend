@@ -4,15 +4,15 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { FutureAccreditation } from '../port.js' */
+/** @import { ExternalAccreditation } from '../port.js' */
 
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
 
 /**
- * @param {Partial<FutureAccreditation>} [overrides]
- * @returns {FutureAccreditation}
+ * @param {Partial<ExternalAccreditation>} [overrides]
+ * @returns {ExternalAccreditation}
  */
-export const buildFutureAccreditation = (overrides = {}) => ({
+export const buildExternalAccreditation = (overrides = {}) => ({
   registrationNumber: REGISTRATION_NUMBER,
   year: toYear(2027),
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),

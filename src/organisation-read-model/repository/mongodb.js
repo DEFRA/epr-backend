@@ -14,18 +14,18 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { FutureAccreditation, OrganisationReadRepository } from './port.js' */
+/** @import { ExternalAccreditation, OrganisationReadRepository } from './port.js' */
 
-export const FUTURE_ACCREDITATIONS_COLLECTION_NAME = 'stub-accreditations'
+export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
 
 /**
  * @param {Db} db
  * @param {StoredOrganisation[]} stored
- * @returns {Promise<FutureAccreditation[]>}
+ * @returns {Promise<ExternalAccreditation[]>}
  */
-const findFutureAccreditations = (db, stored) =>
-  /** @type {Collection<FutureAccreditation>} */ (
-    db.collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
+const findExternalAccreditations = (db, stored) =>
+  /** @type {Collection<ExternalAccreditation>} */ (
+    db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
   )
     .find(
       { registrationNumber: { $in: registrationNumbersOf(stored) } },
@@ -34,7 +34,7 @@ const findFutureAccreditations = (db, stored) =>
     .toArray()
 
 /**
- * Reads the organisations and future accreditations collections directly, and
+ * Reads the organisations and external accreditations collections directly, and
  * serves what it finds in the read model's shape.
  *
  * It shares the organisations repository's reads through the
@@ -78,7 +78,7 @@ export const createOrganisationReadRepository = (
       }
       const [organisation] = await toReadModelOrganisations(
         [stored],
-        await findFutureAccreditations(db, [stored]),
+        await findExternalAccreditations(db, [stored]),
         dependencies
       )
       return organisation ?? null

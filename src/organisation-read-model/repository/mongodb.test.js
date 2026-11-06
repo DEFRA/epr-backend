@@ -4,7 +4,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import {
-  FUTURE_ACCREDITATIONS_COLLECTION_NAME,
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
   createOrganisationReadRepository
 } from './mongodb.js'
 import {
@@ -52,14 +52,14 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
       await database.collection('epr-organisations').deleteMany({})
       await database.collection('overseas-sites').deleteMany({})
       await database
-        .collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
         .deleteMany({})
 
       /** @type {OrganisationReadRepositoryWith} */
       const organisationReadRepositoryWith = async ({
         organisations,
         overseasSites = [],
-        futureAccreditations = [],
+        externalAccreditations = [],
         logger = { warn: () => {} }
       }) => {
         for (const organisation of organisations) {
@@ -72,10 +72,10 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
             .collection('overseas-sites')
             .insertOne(toDocument(site))
         }
-        for (const futureAccreditation of futureAccreditations) {
+        for (const externalAccreditation of externalAccreditations) {
           await database
-            .collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
-            .insertOne({ ...futureAccreditation })
+            .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+            .insertOne({ ...externalAccreditation })
         }
 
         return createOrganisationReadRepository(database)({
