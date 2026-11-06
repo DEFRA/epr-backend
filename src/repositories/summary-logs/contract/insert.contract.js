@@ -158,6 +158,63 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
+        it('rejects insert without the organisation and registration numbers', async () => {
+          const id = `contract-validation-${randomUUID()}`
+          const {
+            organisationNumber: _o,
+            registrationNumber: _r,
+            ...withoutNumbers
+          } = summaryLogFactory.validating()
+
+          await expect(repository.insert(id, withoutNumbers)).rejects.toThrow(
+            /Invalid summary log data.*"organisationNumber" is required.*"registrationNumber" is required/
+          )
+        })
+
+        it('rejects an accredited insert without an accreditation number', async () => {
+          const id = `contract-validation-${randomUUID()}`
+
+          await expect(
+            repository.insert(
+              id,
+              summaryLogFactory.validating({
+                accreditationId: 'acc-1',
+                accreditationNumber: null
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid summary log data.*"accreditationNumber" must be a string/
+          )
+        })
+
+        it('rejects an accreditation number on a registered-only insert', async () => {
+          const id = `contract-validation-${randomUUID()}`
+
+          await expect(
+            repository.insert(
+              id,
+              summaryLogFactory.validating({
+                accreditationId: null,
+                accreditationNumber: 'ACC-1'
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid summary log data.*"accreditationNumber" must be one of \[null\]/
+          )
+        })
+
+        it('rejects an accreditation number without an accreditation id', async () => {
+          const id = `contract-validation-${randomUUID()}`
+          const { accreditationId: _a, ...withoutAccreditationId } =
+            summaryLogFactory.validating({ accreditationNumber: 'ACC-1' })
+
+          await expect(
+            repository.insert(id, withoutAccreditationId)
+          ).rejects.toThrow(
+            /Invalid summary log data.*"accreditationNumber" is not allowed/
+          )
+        })
+
         it('rejects insert with missing URI when file status is complete', async () => {
           const id = `contract-validation-${randomUUID()}`
           await expect(

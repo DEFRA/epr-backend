@@ -55,10 +55,18 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
+// A summary log stored before accreditations were recorded holds no
+// accreditation id, and so no accreditation number.
 const numbersSchema = {
-  organisationNumber: Joi.string().optional(),
-  registrationNumber: Joi.string().optional(),
-  accreditationNumber: Joi.string().allow(null).optional()
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.when('accreditationId', {
+    switch: [
+      { is: Joi.valid(null).required(), then: Joi.valid(null).required() },
+      { is: Joi.string().required(), then: Joi.string().required() }
+    ],
+    otherwise: Joi.forbidden()
+  })
 }
 
 export const summaryLogInsertSchema = Joi.object({

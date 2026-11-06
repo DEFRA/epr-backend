@@ -7,7 +7,6 @@ import {
   SUMMARY_LOG_FAILURE_STATUS,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
-import { holdsNumbers } from '#domain/summary-logs/numbers.js'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
@@ -25,26 +24,33 @@ import {
 
 export const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock'
+const SUBMITTING_LOCK_INDEX_NAME = 'summary_log_submitting_lock_by_number'
 
-const LEGACY_SUBMITTING_LOCK_INDEX_NAME = 'organisationId_1_registrationId_1'
+const RETIRED_SUBMITTING_LOCK_INDEX_NAMES = [
+  'organisationId_1_registrationId_1',
+  'summary_log_submitting_lock'
+]
 const RETIRED_YEAR_SCOPED_ID_INDEX_NAME =
   'organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1'
 const RETIRED_ID_INDEX_NAME =
   'organisationId_1_registrationId_1_status_1_submittedAt_-1'
 
 /**
- * Creates the submitting lock over
- * `organisationId, registrationId, year, accreditationId`, then drops the
- * pre-year-scoping lock by name. Creating first leaves no window without a lock.
+ * Creates the submitting lock, then drops the locks it replaces. Creating
+ * first leaves no window without a lock.
  *
  * @param {import('mongodb').Collection} collection
  */
 async function ensureSubmittingLockIndex(collection) {
-  // Enforces at most one summary log in 'submitting' status per
-  // org/reg/year/accreditationId.
+  // At most one submitting summary log per registration, year and
+  // accreditation.
   await collection.createIndex(
-    { organisationId: 1, registrationId: 1, year: 1, accreditationId: 1 },
+    {
+      organisationNumber: 1,
+      registrationNumber: 1,
+      year: 1,
+      accreditationNumber: 1
+    },
     {
       name: SUBMITTING_LOCK_INDEX_NAME,
       unique: true,
@@ -52,7 +58,11 @@ async function ensureSubmittingLockIndex(collection) {
     }
   )
 
-  await dropIndexIfPresent(collection, LEGACY_SUBMITTING_LOCK_INDEX_NAME)
+  await Promise.all(
+    RETIRED_SUBMITTING_LOCK_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
+  )
 }
 
 /**
@@ -138,23 +148,6 @@ const update = (db, logger) => async (id, version, updates) => {
     })
     throw Boom.conflict(conflictError.message)
   }
-}
-
-/** @param {string} field */
-const isPresent = (field) => ({ $ne: [{ $type: field }, 'missing'] })
-
-/** The aggregation form of `holdsNumbers`. */
-const HOLDS_NUMBERS = {
-  $and: [
-    isPresent('$organisationNumber'),
-    isPresent('$registrationNumber'),
-    {
-      $or: [
-        { $not: [isPresent('$accreditationId')] },
-        isPresent('$accreditationNumber')
-      ]
-    }
-  ]
 }
 
 /**
@@ -380,12 +373,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   const submitting = { ...submitted, version: { $add: ['$version', 1] } }
   const whenValidated = {
     $cond: [
-      {
-        $and: [
-          { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
-          HOLDS_NUMBERS
-        ]
-      },
+      { $eq: ['$status', SUMMARY_LOG_STATUS.VALIDATED] },
       { $mergeObjects: ['$$ROOT', submitting] },
       '$$ROOT'
     ]
@@ -401,9 +389,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
         returnDocument: 'before'
       })
   } catch (error) {
-    // The unique partial index on (organisationId, registrationId, year,
-    // accreditationId) where status='submitting' refuses a second submitting
-    // document per org/reg/year/accreditation
+    // The submitting lock refuses a second submitting summary log
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       return { success: false }
     }
@@ -421,9 +407,6 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 
   const { _id, version, ...summaryLog } = before
-  if (!holdsNumbers(summaryLog)) {
-    throw new Error(`Summary log ${validatedId} is missing one of its numbers`)
-  }
 
   return {
     success: true,
