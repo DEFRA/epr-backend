@@ -1,4 +1,8 @@
 import Boom from '@hapi/boom'
+import {
+  organisationReadRepositoryOf,
+  organisationReadRepositoryFrom
+} from '#vite/helpers/organisation-read-model.js'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -67,6 +71,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationsRepository: createInMemoryOrganisationsRepository([
+            organisation
+          ]),
+          organisationReadRepository: await organisationReadRepositoryOf([
             organisation
           ]),
           uploadsRepository
@@ -183,6 +190,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationsRepository: organisationsRepositoryFactory,
+          organisationReadRepository:
+            await organisationReadRepositoryFrom(repository),
           uploadsRepository: createInMemoryUploadsRepository()
         }
       })

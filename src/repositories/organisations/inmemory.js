@@ -9,13 +9,9 @@ import {
 } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
-  anchoredPattern,
   createInitialStatusHistory,
   duplicateKeyConflict,
-  escapeRegex,
   mapDocumentWithCurrentStatuses,
-  normaliseCriteria,
-  parseOrgIdCriterion,
   prepareForReplace,
   storedOrgId,
   UNIQUE_NUMBER_FIELDS,
@@ -27,6 +23,7 @@ import {
   performReplaceUsers,
   performUnlinkDefraOrganisation
 } from './inmemory.targeted-updates.js'
+import { findPage } from './inmemory-find.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -234,82 +231,13 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
-/**
- * @param {string} value
- * @returns {(candidate: string | null | undefined) => boolean}
- */
-const anchoredMatcher = (value) => {
-  const pattern = new RegExp(anchoredPattern(value), 'i')
-  return (candidate) => pattern.test(candidate ?? '')
-}
-
-/**
- * The in-memory equivalent of the MongoDB adapter's find filter, applied to
- * raw stored documents — so `_id` rather than `id`. The shared criteria
- * semantics live in helpers.js and the find contract tests hold the two
- * implementations to the same behaviour.
- *
- * @param {import('./port.js').SearchCriteria} criteria
- * @returns {(org: import('./helpers.js').StoredOrganisation) => boolean} - true when
- *   the organisation satisfies every criterion
- */
-const buildFindMatcher = (criteria) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria(criteria)
-
-  /** @type {Array<(org: import('./helpers.js').StoredOrganisation) => boolean>} */
-  const checks = []
-  if (search !== '') {
-    const pattern = new RegExp(escapeRegex(search), 'i')
-    checks.push((org) => pattern.test(org.companyDetails.name))
-  }
-  if (orgId !== '') {
-    const wantedOrgId = parseOrgIdCriterion(orgId)
-    checks.push((org) => org.orgId === wantedOrgId)
-  }
-  if (registrationNumber !== '') {
-    const matchesNumber = anchoredMatcher(registrationNumber)
-    checks.push((org) =>
-      org.registrations.some((reg) => matchesNumber(reg.registrationNumber))
-    )
-  }
-  if (accreditationNumber !== '') {
-    const matchesNumber = anchoredMatcher(accreditationNumber)
-    checks.push((org) =>
-      org.accreditations.some((acc) => matchesNumber(acc.accreditationNumber))
-    )
-  }
-
-  return (org) => checks.every((check) => check(org))
-}
-
 const performFind =
-  (staleCache) =>
-  async (/** @type {FindParams} */ { page, pageSize, ...criteria }) => {
-    const matches = structuredClone(staleCache).filter(
-      buildFindMatcher(criteria)
-    )
-
-    matches.sort((a, b) => {
-      const aName = a.companyDetails.name
-      const bName = b.companyDetails.name
-      if (aName < bName) {
-        return -1
-      }
-      if (aName > bName) {
-        return 1
-      }
-      return 0
-    })
-
-    const totalItems = matches.length
-    const totalPages = Math.ceil(totalItems / pageSize)
-    const start = (page - 1) * pageSize
-    const items = matches
-      .slice(start, start + pageSize)
-      .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
-
-    return { items, page, pageSize, totalItems, totalPages }
+  (staleCache) => async (/** @type {FindParams} */ params) => {
+    const { items, ...page } = findPage(staleCache, params)
+    return {
+      ...page,
+      items: items.map((org) => mapDocumentWithCurrentStatuses(org))
+    }
   }
 
 /** @returns {import('./port.js').OrganisationSummary} */

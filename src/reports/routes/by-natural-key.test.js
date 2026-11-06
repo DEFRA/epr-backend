@@ -1,4 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -164,6 +165,10 @@ describe('report routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation),
+          partialMock(otherOrganisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(otherOrganisation)
         ]),

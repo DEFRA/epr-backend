@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -108,6 +109,9 @@ describe('summary-log routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
         summaryLogsRepository: () => summaryLogsRepository,

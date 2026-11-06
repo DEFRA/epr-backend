@@ -15,7 +15,7 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#organisation-read-model/repository/adapter.js'
+import { toReadModelRegistration } from '#organisation-read-model/repository/to-read-model.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 /** @param {string} message */

@@ -1,4 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
+import {
+  organisationReadRepositoryOf,
+  organisationReadRepositoryFrom
+} from '#vite/helpers/organisation-read-model.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
@@ -131,6 +135,10 @@ describe('ledger and waste balance routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation),
+          partialMock(sharedNumberOrganisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(sharedNumberOrganisation)
         ]),
@@ -509,7 +517,11 @@ const buildAccessServer = async () => {
     })
   )
   const server = await createTestServer({
-    repositories: { organisationsRepository: organisationsRepositoryFactory }
+    repositories: {
+      organisationsRepository: organisationsRepositoryFactory,
+      organisationReadRepository:
+        await organisationReadRepositoryFrom(repository)
+    }
   })
   return { server, own, other }
 }
@@ -681,6 +693,9 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
     const server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
         ledgerRepository

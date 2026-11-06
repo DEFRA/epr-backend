@@ -26,6 +26,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -424,6 +425,8 @@ describe('Submission and placeholder tests', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
           organisationsRepository: () => organisationsRepository,
+          organisationReadRepository: () =>
+            organisationReadRepositoryOver(organisationsRepository),
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -814,7 +817,9 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          organisationReadRepository: () =>
+            organisationReadRepositoryOver(organisationsRepository)
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
