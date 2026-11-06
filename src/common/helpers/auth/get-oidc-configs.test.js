@@ -1,5 +1,5 @@
-import { vi, describe, test, expect, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { vi } from 'vitest'
 
 import { getOidcConfigs } from './get-oidc-configs.js'
 import {
@@ -10,15 +10,13 @@ import {
   defraIdMockOidcWellKnownResponse,
   defraIdMockWellKnownUrl
 } from '#vite/helpers/mock-defra-id-oidc.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/msw.js'
 
 describe('#getOidcConfigs', () => {
-  const { getServer } = setupAuthContext()
-
   let entraIdWellKnownSpy
   let defraIdWellKnownSpy
 
-  beforeEach(() => {
+  it.beforeEach(({ msw }) => {
     entraIdWellKnownSpy = vi.fn(() =>
       HttpResponse.json(entraIdMockOidcWellKnownResponse)
     )
@@ -26,14 +24,14 @@ describe('#getOidcConfigs', () => {
       HttpResponse.json(defraIdMockOidcWellKnownResponse)
     )
 
-    getServer().use(
+    msw.use(
       http.get(entraIdMockWellKnownUrl, entraIdWellKnownSpy),
       http.get(defraIdMockWellKnownUrl, defraIdWellKnownSpy)
     )
   })
 
   describe('on successful fetch', () => {
-    test('returns both OIDC configs when fetch succeeds', async () => {
+    it('returns both OIDC configs when fetch succeeds', async () => {
       const result = await getOidcConfigs()
 
       expect(result).toEqual({
@@ -42,7 +40,7 @@ describe('#getOidcConfigs', () => {
       })
     })
 
-    test('calls both OIDC well-known endpoints once', async () => {
+    it('calls both OIDC well-known endpoints once', async () => {
       await getOidcConfigs()
 
       expect(entraIdWellKnownSpy).toHaveBeenCalledTimes(1)
@@ -51,14 +49,14 @@ describe('#getOidcConfigs', () => {
   })
 
   describe('concurrent fetching', () => {
-    test('calls each endpoint once when using Promise.all', async () => {
+    it('calls each endpoint once when using Promise.all', async () => {
       await getOidcConfigs()
 
       expect(entraIdWellKnownSpy).toHaveBeenCalledTimes(1)
       expect(defraIdWellKnownSpy).toHaveBeenCalledTimes(1)
     })
 
-    test('calls endpoints multiple times when invoked multiple times', async () => {
+    it('calls endpoints multiple times when invoked multiple times', async () => {
       await Promise.all([getOidcConfigs(), getOidcConfigs(), getOidcConfigs()])
 
       expect(entraIdWellKnownSpy).toHaveBeenCalledTimes(3)
