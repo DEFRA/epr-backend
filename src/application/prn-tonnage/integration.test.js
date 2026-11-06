@@ -21,6 +21,11 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -42,9 +47,16 @@ const approvedStatusHistory = [
 const ledgerId = {
   organisationId,
   registrationId,
-  accreditationId: accId
+  accreditationId: accId,
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber('REG-1'),
+  accreditationNumber: toAccreditationNumber('ACC-1')
 }
-const otherLedgerId = { ...ledgerId, accreditationId: 'another-accreditation' }
+const otherLedgerId = {
+  ...ledgerId,
+  accreditationId: 'another-accreditation',
+  accreditationNumber: toAccreditationNumber('ACC-ANOTHER')
+}
 
 /** @param {PrnStatus} currentStatus */
 const withStatus = (currentStatus) => ({

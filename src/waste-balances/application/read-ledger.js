@@ -1,5 +1,5 @@
 /**
- * @import { LedgerEvent, LedgerBalanceSnapshot, LedgerEventKind, LedgerUserSummary, PrnPayload, SummaryLogSubmittedPayload, WasteBalanceLedgerId } from '../repository/ledger-schema.js'
+ * @import { LedgerEvent, LedgerBalanceSnapshot, LedgerEventKind, LedgerUserSummary, NumberedLedgerId, PrnPayload, RegistrationOrAccreditationId, SummaryLogSubmittedPayload } from '../repository/ledger-schema.js'
  * @import { WasteBalanceLedgerRepository } from '../repository/ledger-port.js'
  */
 
@@ -80,7 +80,7 @@
  * the check-time gate.
  *
  * @typedef {Object} LedgerResource
- * @property {WasteBalanceLedgerId} ledger
+ * @property {RegistrationOrAccreditationId} ledger
  * @property {LedgerEventResource[]} events
  */
 
@@ -89,12 +89,12 @@
  * notes are not among them, so a ledger states null for every event of one.
  *
  * @typedef {Object} LedgerNoteReader
- * @property {(params: WasteBalanceLedgerId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
+ * @property {(params: RegistrationOrAccreditationId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
 
 /**
- * @param {WasteBalanceLedgerId} ledgerId
- * @returns {WasteBalanceLedgerId}
+ * @param {NumberedLedgerId} ledgerId
+ * @returns {RegistrationOrAccreditationId}
  */
 const toLedger = ({ organisationId, registrationId, accreditationId }) => ({
   organisationId,
@@ -142,12 +142,12 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
  * @param {LedgerNoteReader} noteReader
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {NumberedLedgerId} ledgerId
  * @param {LedgerEvent[]} events
  * @returns {Promise<Map<string, string | null>>}
  */
 const noteNumbersById = async (noteReader, ledgerId, events) => {
-  const { accreditationId } = ledgerId
+  const { organisationId, registrationId, accreditationId } = ledgerId
 
   if (accreditationId === null) {
     return new Map()
@@ -162,7 +162,8 @@ const noteNumbersById = async (noteReader, ledgerId, events) => {
   }
 
   const notes = await noteReader.findByIds({
-    ...ledgerId,
+    organisationId,
+    registrationId,
     accreditationId,
     ids: noteIds
   })
@@ -219,7 +220,7 @@ const toEventResource = (event, noteNumbers) => {
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {LedgerNoteReader} noteReader
- * @param {WasteBalanceLedgerId} ledgerId - The registration or accreditation
+ * @param {NumberedLedgerId} ledgerId - The registration or accreditation
  *   whose ledger is read.
  * @returns {Promise<LedgerResource>}
  */

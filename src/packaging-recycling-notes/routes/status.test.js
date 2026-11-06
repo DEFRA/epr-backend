@@ -1,8 +1,12 @@
 import {
   TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
@@ -17,6 +21,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   granted,
@@ -49,6 +54,15 @@ const accreditationId = new ObjectId().toString()
 const prnId = '507f1f77bcf86cd799439011'
 
 const { orgId } = buildOrganisation()
+// The ledger under test, numbered as the served organisation numbers it.
+const LEDGER = {
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+}
 const prns = `/organisations/${orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
 /**
@@ -91,9 +105,7 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
       ? [
           partialMock(
             buildLedgerEvent({
-              registrationId,
-              accreditationId,
-              organisationId,
+              ...LEDGER,
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -113,13 +125,14 @@ const createMockPrn = (overrides = {}) => ({
   schemaVersion: 2,
   organisation: {
     id: organisationId,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: LEDGER.organisationNumber,
     name: 'Test Organisation'
   },
   registrationId,
-  registration: TEST_REGISTRATION,
+  registration: { registrationNumber: LEDGER.registrationNumber },
   accreditation: buildAccreditationSnapshot({
     id: accreditationId,
+    accreditationNumber: LEDGER.accreditationNumber,
     submittedToRegulator: REGULATOR.EA
   }),
   obligationYear: toYear(2026),
@@ -577,11 +590,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await ledgerRepository.findAllInLedger({
-          organisationId,
-          registrationId,
-          accreditationId
-        })
+        const events = await ledgerRepository.findAllInLedger(LEDGER)
         expect(events.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
         expect(events.at(-1)?.createdBy).toEqual(
           expect.objectContaining({ id: userId, name: userName })
@@ -605,11 +614,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        const events = await ledgerRepository.findAllInLedger({
-          organisationId,
-          registrationId,
-          accreditationId
-        })
+        const events = await ledgerRepository.findAllInLedger(LEDGER)
         expect(events.at(-1)?.createdBy).toEqual(
           expect.objectContaining({ id: 'unknown', name: 'unknown' })
         )
@@ -669,9 +674,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       it('returns 409 when another writer takes the ledger slot first', async () => {
         ledgerRepository.appendEvents = vi.fn().mockRejectedValue(
           new LedgerSlotConflictError({
-            organisationId,
-            registrationId,
-            accreditationId,
+            ...LEDGER,
             number: 2
           })
         )
@@ -1017,11 +1020,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        const events = await ledgerRepository.findAllInLedger({
-          organisationId,
-          registrationId,
-          accreditationId
-        })
+        const events = await ledgerRepository.findAllInLedger(LEDGER)
         expect(events).toHaveLength(1)
         expect(events[0]?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       })
@@ -1042,12 +1041,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         }
       }
 
-      const ledgerEvents = () =>
-        ledgerRepository.findAllInLedger({
-          organisationId,
-          registrationId,
-          accreditationId
-        })
+      const ledgerEvents = () => ledgerRepository.findAllInLedger(LEDGER)
 
       it('refuses a draft to draft self-transition', async () => {
         const { statusCode, body } = await transitionTo(PRN_STATUS.DRAFT)
@@ -1176,7 +1170,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               }
             })
           ])(createMockLogger())
-        const ledgerId = { organisationId, registrationId, accreditationId }
+        const ledgerId = LEDGER
         const issuance = { prnId, amount: 100 }
         ledgerRepository = createInMemoryLedgerRepository([
           partialMock(

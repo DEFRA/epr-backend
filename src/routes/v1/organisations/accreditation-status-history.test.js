@@ -22,7 +22,10 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  requiredNumbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -1180,6 +1183,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
+            ...requiredNumbersFor(
+              partialMock(fixture),
+              { registrationId: registration.id, accreditationId },
+              'the test ledger'
+            ),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },
@@ -1288,6 +1296,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
+            ...requiredNumbersFor(
+              partialMock(fixture),
+              { registrationId: registration.id, accreditationId },
+              'the test ledger'
+            ),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },

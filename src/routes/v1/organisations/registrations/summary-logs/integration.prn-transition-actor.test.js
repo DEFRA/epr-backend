@@ -26,10 +26,10 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
   createExporterRowValues,
-  EXPORTER_HEADERS
+  EXPORTER_HEADERS,
+  ledgerIdOf
 } from './integration-test-helpers.js'
 
-const LEDGER_ACCREDITATION_ID = 'ACC-123'
 const POLL_INTERVAL_MS = 50
 const MAX_POLL_ATTEMPTS = 20
 
@@ -176,7 +176,7 @@ describe('PRN transition actor on the waste-balance stream', () => {
 
   it('carries the requesting human id, name and email onto the appended stream event', async () => {
     const env = await setupLedgerEnv()
-    const { ledgerRepository, organisationId, registrationId } = env
+    const { ledgerRepository } = env
 
     await submitCredit(env, 300)
 
@@ -188,11 +188,9 @@ describe('PRN transition actor on the waste-balance stream', () => {
     })
     expect(response.statusCode).toBe(200)
 
-    const latest = await ledgerRepository.findLatestInLedger({
-      organisationId,
-      registrationId,
-      accreditationId: LEDGER_ACCREDITATION_ID
-    })
+    const latest = await ledgerRepository.findLatestInLedger(
+      await ledgerIdOf(env)
+    )
     assert(latest)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
     // A general raise now records its pool explicitly (PAE-1977).

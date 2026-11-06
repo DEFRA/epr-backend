@@ -16,6 +16,7 @@
  * @typedef {import('./ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  */
 
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
 import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 import {
@@ -27,11 +28,18 @@ export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
-const INDEX_NAME_SLOT = 'partition_number'
+const INDEX_NAME_SLOT = 'ledger_slot_by_number'
+
+const RETIRED_INDEX_NAMES = [
+  'partition_number',
+  'partition_kind_latest',
+  'prn_watermark_catchup'
+]
 
 /**
  * Ensures the ledger collection exists with the indexes required by the
- * event-sourced ledger design.
+ * event-sourced ledger design. The number-keyed indexes are built before the
+ * id-keyed ones they replace are dropped, so a slot is never unguarded.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -43,28 +51,32 @@ export async function ensureLedgerCollection(db) {
   const collection = db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
 
   await collection.createIndex(
-    { registrationId: 1, accreditationId: 1, number: 1 },
+    { registrationNumber: 1, accreditationNumber: 1, number: 1 },
     { name: INDEX_NAME_SLOT, unique: true }
   )
 
   await collection.createIndex(
-    { registrationId: 1, accreditationId: 1, kind: 1, number: -1 },
-    { name: 'partition_kind_latest' }
+    { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
+    { name: 'ledger_kind_latest_by_number' }
   )
 
   await collection.createIndex(
     {
-      registrationId: 1,
-      accreditationId: 1,
+      registrationNumber: 1,
+      accreditationNumber: 1,
       'payload.prnId': 1,
       number: 1
     },
-    { name: 'prn_watermark_catchup' }
+    { name: 'prn_watermark_catchup_by_number' }
   )
 
   await collection.createIndex(
     { kind: 1, number: -1 },
     { name: 'kind_number_report' }
+  )
+
+  await Promise.all(
+    RETIRED_INDEX_NAMES.map((name) => dropIndexIfPresent(collection, name))
   )
 
   return collection
@@ -123,16 +135,18 @@ const findDuplicateKeyWriteError = (error) => {
 /**
  * The filter selecting exactly the events of one ledger. Every per-ledger read
  * builds its filter from this, so no such read can name a ledger by less than
- * its whole id. The cross-ledger reporting query
- * (`findLatestSubmittedSummaryLogPerLedger`) is the deliberate exception: it
- * scans across partitions rather than filtering to one.
+ * its whole id.
  *
  * @param {WasteBalanceLedgerId} ledgerId
  */
-const ledgerFilter = ({ organisationId, registrationId, accreditationId }) => ({
-  organisationId,
-  registrationId,
-  accreditationId
+const ledgerFilter = ({
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) => ({
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
 })
 
 /**
@@ -213,7 +227,10 @@ const performFindLatestSubmittedSummaryLogPerLedger =
             _id: {
               organisationId: '$organisationId',
               registrationId: '$registrationId',
-              accreditationId: '$accreditationId'
+              accreditationId: '$accreditationId',
+              organisationNumber: '$organisationNumber',
+              registrationNumber: '$registrationNumber',
+              accreditationNumber: '$accreditationNumber'
             },
             summaryLogId: { $first: '$payload.summaryLogId' }
           }

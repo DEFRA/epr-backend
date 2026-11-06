@@ -8,7 +8,11 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
-  TEST_ORGANISATION_NUMBER,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
   buildAccreditationSnapshot,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
@@ -51,6 +55,15 @@ const organisation = buildOrganisationHolding({
   registrationId: REG_ID,
   accreditationId: ACC_ID
 })
+// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+}
 const TONNAGE = 50
 const STARTING_TOTAL = 1000
 const POST_DEDUCTION_AVAILABLE = 950
@@ -60,11 +73,15 @@ const PRN_BASE = {
   id: PRN_ID,
   organisation: {
     id: ORG_ID,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  registration: { registrationNumber: LEDGER.registrationNumber },
+  accreditation: buildAccreditationSnapshot({
+    id: ACC_ID,
+    accreditationNumber: LEDGER.accreditationNumber
+  }),
   tonnage: TONNAGE
 }
 
@@ -104,9 +121,7 @@ const setupRepositories = async ({ prnSeed, balanceSeed }) => {
   const ledgerRepository = createInMemoryLedgerRepository()()
   await ledgerRepository.appendEvents([
     buildLedgerEvent({
-      registrationId: REG_ID,
-      accreditationId: ACC_ID,
-      organisationId: ORG_ID,
+      ...LEDGER,
       number: 1,
       closingBalance: {
         amount: balanceSeed.amount,

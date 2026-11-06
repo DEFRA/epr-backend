@@ -28,9 +28,9 @@ export const testNumbersBehaviour = (it) => {
       ])
 
       expect(event).toMatchObject({ ...LEDGER_ID, ...NUMBERS })
-      expect(await repository.findLatestInLedger(LEDGER_ID)).toMatchObject(
-        NUMBERS
-      )
+      expect(
+        await repository.findLatestInLedger({ ...LEDGER_ID, ...NUMBERS })
+      ).toMatchObject(NUMBERS)
     })
 
     it('stores a null accreditation number for a registered-only ledger', async () => {

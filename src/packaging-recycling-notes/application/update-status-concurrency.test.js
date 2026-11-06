@@ -14,7 +14,11 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
-  TEST_ORGANISATION_NUMBER,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
   buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
@@ -64,6 +68,15 @@ const organisation = buildOrganisationHolding({
   registrationId: REG_ID,
   accreditationId: ACC_ID
 })
+// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+}
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
 const ISSUED_AMOUNT = 950
@@ -74,11 +87,15 @@ const PRN_BASE = {
   registrationId: REG_ID,
   organisation: {
     id: ORG_ID,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
-  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  registration: { registrationNumber: LEDGER.registrationNumber },
+  accreditation: buildAccreditationSnapshot({
+    id: ACC_ID,
+    accreditationNumber: LEDGER.accreditationNumber
+  }),
   tonnage: TONNAGE
 }
 
@@ -133,9 +150,7 @@ const buildBalanceSeed = (overrides = {}) => ({
 const seedClosingBalance = (ledgerRepository, balanceSeed) =>
   ledgerRepository.appendEvents([
     buildLedgerEvent({
-      registrationId: REG_ID,
-      accreditationId: ACC_ID,
-      organisationId: ORG_ID,
+      ...LEDGER,
       number: 1,
       closingBalance: {
         amount: balanceSeed.amount,
@@ -235,11 +250,7 @@ const expectOneCommittedTransition = async (
 ) => {
   expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
 
-  const latest = await ledgerRepository.findLatestInLedger({
-    organisationId: ORG_ID,
-    registrationId: REG_ID,
-    accreditationId: ACC_ID
-  })
+  const latest = await ledgerRepository.findLatestInLedger(LEDGER)
   expect(latest?.number).toBe(COMMITTED_EVENT_NUMBER)
 
   const prn = await prnRepository.findById(PRN_ID)
@@ -440,9 +451,7 @@ describe('updatePrnStatus concurrency', () => {
     // awaiting_cancellation while the credit is banked.
     await ledgerRepository.appendEvents([
       buildPrnCancelledAfterIssueEvent({
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
-        organisationId: ORG_ID,
+        ...LEDGER,
         number: 2,
         payload: { prnId: PRN_ID, amount: TONNAGE },
         openingBalance: {
@@ -473,11 +482,7 @@ describe('updatePrnStatus concurrency', () => {
       })
     ).rejects.toBeInstanceOf(StatusConflictError)
 
-    const latest = await ledgerRepository.findLatestInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const latest = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(latest?.number).toBe(2)
     expect(latest?.closingBalance).toEqual({
       amount: ISSUED_AMOUNT + TONNAGE,
@@ -516,13 +521,9 @@ describe('updatePrnStatus concurrency', () => {
 
     const stored = await prnRepository.findById(PRN_ID)
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
-    expect(
-      await ledgerRepository.findLatestInLedger({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID
-      })
-    ).toMatchObject({ number: 1 })
+    expect(await ledgerRepository.findLatestInLedger(LEDGER)).toMatchObject({
+      number: 1
+    })
   })
 
   it('commits a cancellation the stream permits but the unprojected document does not', async () => {
@@ -542,9 +543,7 @@ describe('updatePrnStatus concurrency', () => {
     // awaiting_cancellation — a status the signatory may cancel from.
     await ledgerRepository.appendEvents([
       buildPrnRejectedEvent({
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
-        organisationId: ORG_ID,
+        ...LEDGER,
         number: 2,
         payload: { prnId: PRN_ID, amount: TONNAGE },
         openingBalance: {
@@ -578,11 +577,7 @@ describe('updatePrnStatus concurrency', () => {
     // over by the cancellation that followed it.
     expect(cancelled.status.rejected).toBeDefined()
 
-    const latest = await ledgerRepository.findLatestInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const latest = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(latest?.number).toBe(3)
     expect(latest?.closingBalance).toEqual({
       amount: ISSUED_AMOUNT + TONNAGE,
@@ -609,9 +604,7 @@ describe('updatePrnStatus concurrency', () => {
     const racingLedger = withCompetingWriteDuringFold(
       ledgerRepository,
       buildPrnAcceptedEvent({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
+        ...LEDGER,
         number: 2,
         payload: { prnId: PRN_ID, amount: TONNAGE },
         openingBalance: {
@@ -643,11 +636,7 @@ describe('updatePrnStatus concurrency', () => {
     ).rejects.toBeInstanceOf(StatusConflictError)
 
     // A second acceptance would have taken slot 3 with every guard satisfied.
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(2)
     expect(all[1].kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
   })
@@ -669,9 +658,7 @@ describe('updatePrnStatus concurrency', () => {
     // real status is not.
     await ledgerRepository.appendEvents([
       buildPrnCreatedEvent({
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
-        organisationId: ORG_ID,
+        ...LEDGER,
         number: 2,
         payload: { prnId: PRN_ID, amount: TONNAGE },
         openingBalance: {
@@ -723,13 +710,7 @@ describe('updatePrnStatus concurrency', () => {
         /** @type {Parameters<typeof committedLedger.appendEvents>[0]} */ events
       ) => {
         const appended = await committedLedger.appendEvents(events)
-        reads.push(
-          await readLedger(committedLedger, prnRepository, {
-            organisationId: ORG_ID,
-            registrationId: REG_ID,
-            accreditationId: ACC_ID
-          })
-        )
+        reads.push(await readLedger(committedLedger, prnRepository, LEDGER))
         return appended
       }
     }
@@ -799,11 +780,7 @@ describe('updatePrnStatus concurrency', () => {
       PRN_STATUS.AWAITING_ACCEPTANCE
     )
 
-    const events = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const events = await ledgerRepository.findAllInLedger(LEDGER)
     expect(
       events.filter((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
     ).toHaveLength(1)
@@ -829,11 +806,7 @@ describe('updatePrnStatus concurrency', () => {
     expect(reissued.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     expect(reissued.prnNumber).toBe(notes[refusedIndex]?.prnNumber)
 
-    const afterRetry = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const afterRetry = await ledgerRepository.findAllInLedger(LEDGER)
     expect(
       afterRetry.filter((event) => event.kind === LEDGER_EVENT_KIND.PRN_ISSUED)
     ).toHaveLength(2)

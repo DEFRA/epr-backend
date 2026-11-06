@@ -3,6 +3,7 @@ import {
   TEST_REGISTRATION,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -47,6 +48,14 @@ const organisationId = 'org-123'
 
 const { buildOrganisationHolding } = createOrganisationBuilders()
 
+// The numbers the PRN fixtures carry, which the organisation and the ledger
+// share with them.
+const PRN_NUMBERS = {
+  organisationNumber: TEST_ORGANISATION_NUMBER,
+  registrationNumber: TEST_REGISTRATION.registrationNumber,
+  accreditationNumber: toAccreditationNumber('ACC-2026-001')
+}
+
 /**
  * The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
  * repository requires, so the organisation holding the ledger is handed back
@@ -55,7 +64,10 @@ const { buildOrganisationHolding } = createOrganisationBuilders()
  * @param {{ registrationId: string, accreditationId: string, organisationId: string }} ledgerIds
  */
 const organisationsRepositoryHolding = (ledgerIds) => {
-  const organisation = buildOrganisationHolding(ledgerIds)
+  const organisation = buildOrganisationHolding({
+    ...ledgerIds,
+    ...PRN_NUMBERS
+  })
   return () => ({ findById: async () => organisation })
 }
 const externalApiClientId = randomUUID()
@@ -74,6 +86,7 @@ const authHeaders = {
 const openingBalanceEvent = (ledgerIds) =>
   buildLedgerEvent({
     ...ledgerIds,
+    ...PRN_NUMBERS,
     number: 1
   })
 
@@ -232,11 +245,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.rejected?.by).toEqual(rpd)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger({
-      organisationId: testOrgId,
-      registrationId: testRegId,
-      accreditationId: testAccId
-    })
+    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_NUMBERS)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Rejection is balance-neutral: the closing balance matches the opening one.

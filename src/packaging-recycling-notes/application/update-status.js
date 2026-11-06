@@ -28,7 +28,8 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
- * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
 
@@ -88,7 +89,7 @@ export const FOLLOW_RAISE_POOL_STATUSES = new Set([
  * loaded inside phase 1, after the balance is read for update.
  *
  * @typedef {{
- *   ledgerId: WasteBalanceLedgerId & { accreditationId: string },
+ *   ledgerId: NumberedLedgerId & { accreditationId: string, accreditationNumber: AccreditationNumber },
  *   prnRepository: PackagingRecyclingNotesRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   service: WasteBalanceService,
@@ -113,7 +114,7 @@ export async function updatePrnStatus(request) {
   const { prnEvents, logger, newStatus } = request
 
   const { updatedPrn, fromStatus } = await applyPrnTransition(
-    buildTransitionContext(request)
+    await buildTransitionContext(request)
   )
 
   await prnMetrics.recordStatusTransition({
@@ -142,13 +143,14 @@ export async function updatePrnStatus(request) {
 
 /**
  * Assembles the `PrnTransitionContext` the three phases run on. This is the one
- * place the caller's three loose ids become a `ledgerId`; everything downstream
- * takes it whole.
+ * place the caller's three loose ids become a `ledgerId`, with the numbers the
+ * organisation record gives them; everything downstream takes it whole.
+ * Refuses, before anything is read for update, when the record lacks a number.
  *
  * @param {UpdatePrnStatusRequest} request
- * @returns {PrnTransitionContext}
+ * @returns {Promise<PrnTransitionContext>}
  */
-function buildTransitionContext({
+async function buildTransitionContext({
   prnRepository,
   ledgerRepository,
   organisationsRepository,
@@ -164,6 +166,12 @@ function buildTransitionContext({
   obligationYear,
   providedPrn
 }) {
+  const numbers = requiredNumbersFor(
+    await organisationsRepository.findById(organisationId),
+    { registrationId, accreditationId },
+    'ledger events'
+  )
+
   return {
     prnRepository,
     organisationsRepository,
@@ -172,7 +180,16 @@ function buildTransitionContext({
     providedPrn,
     newStatus,
     actor,
-    ledgerId: { organisationId, registrationId, accreditationId },
+    ledgerId: {
+      organisationId,
+      registrationId,
+      accreditationId,
+      ...numbers,
+      // An accreditation id is given a number, never null.
+      accreditationNumber: /** @type {AccreditationNumber} */ (
+        numbers.accreditationNumber
+      )
+    },
     user,
     now: updatedAt ?? new Date(),
     id,
@@ -228,12 +245,6 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  const ledgerNumbers = requiredNumbersFor(
-    await ctx.organisationsRepository.findById(ledgerId.organisationId),
-    ledgerId,
-    'ledger events'
-  )
-
   // The note takes its number before the event announcing it, so a read landing
   // between the two never sees an issuance with no number.
   const numbered = issuance
@@ -243,7 +254,7 @@ async function applyPrnTransition(ctx) {
       })
     : prn
 
-  const events = await append(outcome.balanceEvents, ledgerNumbers)
+  const events = await append(outcome.balanceEvents)
 
   return {
     updatedPrn: await persistProjectedPrn(ctx, {
@@ -349,7 +360,7 @@ async function resolveTransitionPool(
  * general.
  *
  * @param {WasteBalanceService} service
- * @param {WasteBalanceLedgerId & { accreditationId: string }} ledgerId
+ * @param {NumberedLedgerId & { accreditationNumber: AccreditationNumber }} ledgerId
  * @param {string} prnId
  * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').Pool | undefined>}
  */

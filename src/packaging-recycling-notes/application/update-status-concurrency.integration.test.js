@@ -10,7 +10,11 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
-  TEST_ORGANISATION_NUMBER,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
@@ -38,6 +42,15 @@ const organisation = buildOrganisationHolding({
   registrationId: REG_ID,
   accreditationId: ACC_ID
 })
+// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+}
 const TONNAGE = 5
 const OPENING = 386.62
 
@@ -171,9 +184,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     // acceptance, so cancelling it credits the tonnage back exactly once.
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
+        ...LEDGER,
         number: 1,
         kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
         payload: { prnId: 'seed', amount: TONNAGE },
@@ -185,11 +196,15 @@ describe('PRN status concurrency against real MongoDB', () => {
       buildAcceptedPrn({
         organisation: {
           id: ORG_ID,
-          organisationNumber: TEST_ORGANISATION_NUMBER,
+          organisationNumber: LEDGER.organisationNumber,
           name: 'Test Reprocessor'
         },
         registrationId: REG_ID,
-        accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+        registration: { registrationNumber: LEDGER.registrationNumber },
+        accreditation: buildAccreditationSnapshot({
+          id: ACC_ID,
+          accreditationNumber: LEDGER.accreditationNumber
+        }),
         tonnage: TONNAGE
       })
     )
@@ -215,11 +230,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     })
 
   const cancellationEvents = async () => {
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     return all.filter(
       (event) => event.kind === LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
     )
@@ -249,11 +260,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     await first
 
     expect(await cancellationEvents()).toHaveLength(1)
-    const balance = await ledgerRepository.findLatestInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const balance = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(balance?.closingBalance).toEqual({
       amount: OPENING + TONNAGE,
       availableAmount: OPENING + TONNAGE

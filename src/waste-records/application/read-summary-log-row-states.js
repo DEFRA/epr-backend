@@ -71,11 +71,15 @@ export const wasteRecordStatesForHead = async (
 export const latestSubmittedSummaryLogRowStates = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationId,
-  registrationId,
-  accreditationId
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
 }) => {
-  const ledgerId = { organisationId, registrationId, accreditationId }
+  const ledgerId = {
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
+  }
 
   const summaryLog = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
 
