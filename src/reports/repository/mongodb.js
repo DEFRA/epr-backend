@@ -140,9 +140,9 @@ async function ensureCollections(db) {
   )
 
   // Created first, so the slots are never left without a unique index.
-  for (const name of RETIRED_ID_INDEX_NAMES) {
-    await dropIndexIfPresent(col, name)
-  }
+  await Promise.all(
+    RETIRED_ID_INDEX_NAMES.map((name) => dropIndexIfPresent(col, name))
+  )
 }
 
 /**
