@@ -93,11 +93,15 @@ describe('In-memory summary logs repository', () => {
         summaryLogFactory.validating()
       )
 
-      // year/accreditationId are set once at insert time and forbidden on
-      // update, so they're excluded here even though the factory sets them.
+      // The year, accreditation and numbers are set once at insert time and
+      // forbidden on update, so they're excluded here even though the factory
+      // sets them.
       const {
         year: _y,
         accreditationId: _a,
+        organisationNumber: _o,
+        registrationNumber: _r,
+        accreditationNumber: _n,
         ...updates
       } = summaryLogFactory.validated({
         file: { name: 'updated.xlsx' }

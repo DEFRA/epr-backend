@@ -11,7 +11,7 @@ import {
   servesOrganisation,
   toAccreditationEntry,
   toRegistrationEntry
-} from '#organisation-read-model/repository/adapter.js'
+} from '#organisation-read-model/repository/to-read-model.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'

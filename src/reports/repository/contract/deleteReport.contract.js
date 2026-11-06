@@ -2,17 +2,15 @@ import { beforeEach, describe, expect } from 'vitest'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
 const buildDeleteParams = (overrides = {}) => ({
-  organisationId: DEFAULT_ORG_ID,
-  registrationId: DEFAULT_REG_ID,
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
@@ -90,6 +88,24 @@ export const testDeleteReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })
 
+    it('throws notFound for the same slot under another registration number', async () => {
+      const { submissionNumber } = await repository.createReport(
+        buildCreateReportParams({
+          cadence: 'monthly',
+          period: DEFAULT_REPORT_PERIOD
+        })
+      )
+
+      await expect(
+        repository.deleteReport(
+          buildDeleteParams({
+            submissionNumber,
+            registrationNumber: 'R25SR500099999PL'
+          })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
+    })
+
     it('throws notFound when submissionNumber does not match', async () => {
       await repository.createReport(
         buildCreateReportParams({
@@ -105,7 +121,7 @@ export const testDeleteReportBehaviour = (it) => {
 
     it('throws badRequest on missing required params', async () => {
       await expect(
-        repository.deleteReport({ organisationId: DEFAULT_ORG_ID })
+        repository.deleteReport({ organisationNumber: DEFAULT_ORG_NUMBER })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
   })

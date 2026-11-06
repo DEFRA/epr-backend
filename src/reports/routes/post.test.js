@@ -1,4 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -27,8 +28,10 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditationSnapshot,
-  buildAwaitingAcceptancePrn
+  buildAwaitingAcceptancePrn,
+  underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -50,6 +53,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
@@ -121,7 +125,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {SummaryLogRowStateEntry[]} [options.rows]
    * @param {boolean} [options.accredited] - Report through the accreditation (monthly cadence).
    * @param {object} [options.accreditationOverrides]
-   * @param {(ids: { organisationId: string, registrationId: string, accreditationId: string }) => PackagingRecyclingNote[]} [options.prns]
+   * @param {(keys: import('#packaging-recycling-notes/repository/contract/test-data.js').AccreditationKeys) => PackagingRecyclingNote[]} [options.prns]
    */
   const createServer = async (
     registrationOverrides = {},
@@ -159,6 +163,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         organisationsRepository: createInMemoryOrganisationsRepository([
           partialMock(org)
         ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
+          partialMock(org)
+        ]),
         ledgerRepository,
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory,
@@ -167,7 +174,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             prns({
               organisationId: org.id,
               registrationId: registration.id,
-              accreditationId: /** @type {string} */ (accreditationRecord?.id)
+              accreditationId: /** @type {string} */ (accreditationRecord?.id),
+              organisationNumber: toOrganisationNumber(String(org.orgId)),
+              registrationNumber: /** @type {RegistrationNumber} */ (
+                registration.registrationNumber
+              ),
+              accreditationNumber: /** @type {AccreditationNumber} */ (
+                accreditationRecord?.accreditationNumber
+              )
             })
           )
       },
@@ -367,15 +381,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   it('allows re-creating the first submission after the initial draft is deleted', async () => {
     const created = await createServer(registeredOnlyReprocessor)
-    const { organisationId, registrationId, reportsRepositoryFactory } = created
+    const { organisationNumber, registrationNumber, reportsRepositoryFactory } =
+      created
 
     const first = await created.post()
     expect(first.statusCode).toBe(StatusCodes.CREATED)
     const firstId = (await storedQuarterlyReport(created))?.id
 
     await reportsRepositoryFactory().deleteReport({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year: YEAR,
       cadence: 'quarterly',
       period: QUARTER,
@@ -666,13 +681,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const { post } = await createServer(registeredOnlyReprocessor, {
       accredited: true,
-      prns: ({ organisationId, registrationId, accreditationId }) => [
+      prns: (keys) => [
         {
           ...buildAwaitingAcceptancePrn({
-            organisation: { id: organisationId, name: 'Test Organisation' },
-            registrationId,
+            ...underAccreditation(keys),
             accreditation: buildAccreditationSnapshot({
-              id: accreditationId,
+              id: keys.accreditationId,
+              accreditationNumber: keys.accreditationNumber,
               accreditationYear: YEAR,
               material: 'glass',
               glassRecyclingProcess: 'glass_re_melt'

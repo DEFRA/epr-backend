@@ -6,6 +6,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  registrationNumbersOf,
   withNumbers
 } from '../test-data.js'
 
@@ -22,6 +23,26 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
     beforeEach((/** @type {*} */ { summaryLogRowStatesRepository }) => {
       repository = summaryLogRowStatesRepository()
     })
+
+    /**
+     * The distinct state documents the default ledger's submissions hold, in
+     * the order they were stored.
+     *
+     * @param {...string} summaryLogIds
+     */
+    const storedStates = async (...summaryLogIds) => {
+      const byId = new Map()
+      for (const summaryLogId of summaryLogIds) {
+        const states = await repository.findRowStatesForSummaryLogFile(
+          ...registrationNumbersOf(DEFAULT_LEDGER_ID),
+          summaryLogId
+        )
+        for (const state of states) {
+          byId.set(state.id, state)
+        }
+      }
+      return [...byId.values()]
+    }
 
     it('inserts a new state document for a previously unseen row', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
@@ -96,14 +117,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(second.id).toBe(first.id)
         expect(second.summaryLogIds).toEqual(['log-1', 'log-2'])
-        expect(
-          await repository.findRowHistory(
-            'org-1',
-            'reg-1',
-            'row-1',
-            WASTE_RECORD_TYPE.RECEIVED
-          )
-        ).toHaveLength(1)
+        expect(await storedStates('log-1', 'log-2')).toHaveLength(1)
       })
 
       it('inserts a new document when only the row data changes', async () => {
@@ -118,12 +132,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-2'
         )
 
-        const history = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
-          'row-1',
-          WASTE_RECORD_TYPE.RECEIVED
-        )
+        const history = await storedStates('log-1', 'log-2')
         expect(history).toHaveLength(2)
         expect(history.map((s) => s.summaryLogIds)).toEqual([
           ['log-1'],
@@ -151,14 +160,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-2'
         )
 
-        expect(
-          await repository.findRowHistory(
-            'org-1',
-            'reg-1',
-            'row-1',
-            WASTE_RECORD_TYPE.RECEIVED
-          )
-        ).toHaveLength(2)
+        expect(await storedStates('log-1', 'log-2')).toHaveLength(2)
       })
 
       it('inserts a new document when only the classification changes', async () => {
@@ -177,14 +179,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-2'
         )
 
-        expect(
-          await repository.findRowHistory(
-            'org-1',
-            'reg-1',
-            'row-1',
-            WASTE_RECORD_TYPE.RECEIVED
-          )
-        ).toHaveLength(2)
+        expect(await storedStates('log-1', 'log-2')).toHaveLength(2)
       })
 
       it('reuses the original document when a row reverts A→B→A', async () => {
@@ -210,12 +205,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         expect(a3.id).toBe(a1.id)
         expect(a3.summaryLogIds).toEqual(['log-1', 'log-3'])
 
-        const history = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
-          'row-1',
-          WASTE_RECORD_TYPE.RECEIVED
-        )
+        const history = await storedStates('log-1', 'log-2', 'log-3')
         expect(history).toHaveLength(2)
       })
 
@@ -295,14 +285,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         expect(state.summaryLogIds).toEqual(['log-1'])
-        expect(
-          await repository.findRowHistory(
-            'org-1',
-            'reg-1',
-            'row-1',
-            WASTE_RECORD_TYPE.RECEIVED
-          )
-        ).toHaveLength(1)
+        expect(await storedStates('log-1')).toHaveLength(1)
       })
     })
 
@@ -347,12 +330,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           'log-2'
         )
 
-        const [stored] = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
-          'row-1',
-          WASTE_RECORD_TYPE.RECEIVED
-        )
+        const [stored] = await storedStates('log-1', 'log-2')
         expect(stored.data).toEqual(first.data)
         expect(stored.classification).toEqual(first.classification)
       })
@@ -383,12 +361,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         returned.data.tonnage = 999
         returned.summaryLogIds.push('log-injected')
 
-        const [stored] = await repository.findRowHistory(
-          'org-1',
-          'reg-1',
-          'row-1',
-          WASTE_RECORD_TYPE.RECEIVED
-        )
+        const [stored] = await storedStates('log-1')
         expect(stored.data.tonnage).toBe(10)
         expect(stored.summaryLogIds).toEqual(['log-1'])
       })

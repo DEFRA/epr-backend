@@ -2,7 +2,7 @@ import { describe, it as base, expect } from 'vitest'
 
 import { createInMemorySummaryLogRowStatesRepository } from './inmemory.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
-import { DEFAULT_LEDGER_ID } from './test-data.js'
+import { DEFAULT_LEDGER_ID, withNumbers } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const it = base.extend({
@@ -24,16 +24,13 @@ describe('summary-log row states repository - in-memory implementation', () => {
     const repository = createInMemorySummaryLogRowStatesRepository()()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
-    expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
   it('seeds storage from the provided initial state documents', async () => {
     const repository = createInMemorySummaryLogRowStatesRepository([
       {
         id: 'seed-1',
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
+        ...withNumbers(DEFAULT_LEDGER_ID),
         wasteRecordType: 'received',
         rowId: 'row-1',
         processingType: 'REPROCESSOR_INPUT',

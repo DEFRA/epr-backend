@@ -5,7 +5,7 @@ import {
   exporter,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
-import { toReadModelRegistration } from './adapter.js'
+import { toReadModelRegistration } from './to-read-model.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

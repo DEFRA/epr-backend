@@ -10,6 +10,10 @@ import {
 } from '../domain/csv-columns.js'
 import { encodeRow } from './stream-csv-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -34,6 +38,9 @@ const rowState = (overrides = {}) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null,
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('REG-001'),
+  accreditationNumber: null,
   rowId: '1001',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,

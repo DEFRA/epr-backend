@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -108,6 +109,9 @@ describe('summary-log routes by natural key', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(organisation)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
         summaryLogsRepository: () => summaryLogsRepository,
@@ -264,50 +268,40 @@ describe('summary-log routes by natural key', () => {
     })
   })
 
-  it.each([
-    ['holds no accreditation id', withoutAccreditationId],
-    [
-      'holds an accreditation id without its number',
-      /** @param {{ accreditationNumber?: unknown }} summaryLog */
-      ({ accreditationNumber: _n, ...rest }) => rest
-    ]
-  ])(
-    'reads a summary log that %s without a ledger accreditation',
-    async (_, unstamped) => {
-      const summaryLogId = toSummaryLogId(randomUUID())
-      const { numbers } = numbersFor(partialMock(organisation), {
-        registrationId: accreditedRegistration.id,
-        accreditationId: accredited.id
-      })
-      await summaryLogsRepository.insert(
-        summaryLogId,
-        partialMock(
-          unstamped({
-            ...summaryLogFactory.validated({
-              organisationId: organisation.id,
-              registrationId: accreditedRegistration.id,
-              accreditationId: accredited.id,
-              year: YEAR,
-              meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
-            }),
-            ...numbers
-          })
-        )
+  it('reads a summary log that holds no accreditation id without a ledger accreditation', async () => {
+    const summaryLogId = toSummaryLogId(randomUUID())
+    const { numbers } = numbersFor(partialMock(organisation), {
+      registrationId: accreditedRegistration.id,
+      accreditationId: accredited.id
+    })
+    await summaryLogsRepository.insert(
+      summaryLogId,
+      partialMock(
+        withoutAccreditationId({
+          ...summaryLogFactory.validated({
+            organisationId: organisation.id,
+            registrationId: accreditedRegistration.id,
+            accreditationId: accredited.id,
+            year: YEAR,
+            meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
+          }),
+          ...numbers
+        })
       )
-      await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    )
+    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
 
-      const response = await server.inject({
-        method: 'GET',
-        url: `${summaryLogs}/${summaryLogId}`,
-        ...asOperator()
-      })
+    const response = await server.inject({
+      method: 'GET',
+      url: `${summaryLogs}/${summaryLogId}`,
+      ...asOperator()
+    })
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(JSON.parse(response.payload)).not.toHaveProperty(
-        'ledgerAccreditation'
-      )
-    }
-  )
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).not.toHaveProperty(
+      'ledgerAccreditation'
+    )
+  })
 
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())

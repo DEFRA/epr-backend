@@ -11,6 +11,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import {
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
+} from '#reports/repository/contract/test-data.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -100,6 +104,8 @@ const submitJanuaryTwice = async (repositories) => {
   )
   const january = {
     ...operator,
+    organisationNumber: uniqueOrganisationNumber(),
+    registrationNumber: uniqueRegistrationNumber(),
     year: toYear(2026),
     cadence: CADENCE.monthly,
     period: 1
@@ -238,6 +244,8 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
     )
     await buildSubmittedReport(server.repositories.reportsRepository, {
       ...welsh,
+      organisationNumber: uniqueOrganisationNumber(),
+      registrationNumber: uniqueRegistrationNumber(),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,

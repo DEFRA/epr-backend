@@ -158,5 +158,121 @@ export const testFindBehaviour = (it) => {
         )
       })
     })
+
+    it('finds an organisation by the whole of one of its registration numbers, ignoring case', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const repository = await organisationReadRepositoryWith({
+        organisations: [
+          named('Acme Recycling'),
+          named('Beta Recycling', {
+            registrations: [reprocessor({ registrationNumber: 'R26ER777PL' })]
+          })
+        ]
+      })
+
+      const whole = await repository.find({
+        registrationNumber: 'r26er777pl',
+        page: 1,
+        pageSize: 10
+      })
+      const part = await repository.find({
+        registrationNumber: 'R26ER777',
+        page: 1,
+        pageSize: 10
+      })
+
+      expect(whole.items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+      expect(part.items).toEqual([])
+    })
+
+    it('finds an organisation by the whole of one of its accreditation numbers, ignoring case', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const granted2026 = accreditation()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [
+          named('Acme Recycling'),
+          named('Beta Recycling', {
+            registrations: [reprocessor({ accreditationId: granted2026.id })],
+            accreditations: [granted2026]
+          })
+        ]
+      })
+
+      const { items } = await repository.find({
+        accreditationNumber: ACCREDITATION_NUMBER.toLowerCase(),
+        page: 1,
+        pageSize: 10
+      })
+
+      expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+    })
+
+    /*
+     * Searching and counting use the organisations as they are stored, before
+     * the read model leaves anything out, so a database can do both. What the
+     * model leaves out still matches a search and still counts.
+     */
+    describe('searches and counts organisations as they are stored', () => {
+      it('counts an organisation the model leaves out, so its page comes back short', async ({
+        organisationReadRepositoryWith
+      }) => {
+        const notYet = named('Acme Recycling', {
+          statusHistory: [
+            { status: 'created', updatedAt: new Date('2999-01-01T09:00:00Z') }
+          ]
+        })
+        const repository = await organisationReadRepositoryWith({
+          organisations: [notYet, named('Beta Recycling')]
+        })
+
+        const page = await repository.find({ page: 1, pageSize: 10 })
+
+        expect(page).toMatchObject({ totalItems: 2, totalPages: 1 })
+        expect(page.items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+      })
+
+      it('finds an organisation by a registration the model leaves out, and serves it without that registration', async ({
+        organisationReadRepositoryWith
+      }) => {
+        const repository = await organisationReadRepositoryWith({
+          organisations: [
+            named('Acme Recycling', {
+              registrations: [reprocessor(), exporter({ validFrom: null })]
+            })
+          ]
+        })
+
+        const { items } = await repository.find({
+          registrationNumber: EXPORTER_NUMBER,
+          page: 1,
+          pageSize: 10
+        })
+
+        expect(items).toHaveLength(1)
+        expect(Object.keys(items[0].registrations)).toEqual([
+          REPROCESSOR_NUMBER
+        ])
+      })
+
+      it('finds an organisation by an accreditation that none of its registrations holds', async ({
+        organisationReadRepositoryWith
+      }) => {
+        const repository = await organisationReadRepositoryWith({
+          organisations: [
+            named('Acme Recycling', { accreditations: [accreditation()] })
+          ]
+        })
+
+        const { items } = await repository.find({
+          accreditationNumber: ACCREDITATION_NUMBER,
+          page: 1,
+          pageSize: 10
+        })
+
+        expect(items.map(({ name }) => name)).toEqual(['Acme Recycling'])
+      })
+    })
   })
 }

@@ -1,29 +1,34 @@
 import { registerDependency } from '#plugins/register-dependency.js'
-import { createOrganisationReadRepository } from './adapter.js'
+import { createOrganisationReadRepository } from './mongodb.js'
 
+/** @import { Db } from 'mongodb' */
 /** @import { FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
- * Reads through `server.app.organisationsRepository`,
- * `server.app.overseasSitesRepository` and
- * `server.app.futureAccreditationsRepository`, so all three must register
- * before this plugin.
+ * @typedef {Object} OrganisationReadRepositoryPluginOptions
+ * @property {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistency] - Eventual consistency retry configuration
+ */
+
+/**
+ * Reads exporters' sites through `server.app.overseasSitesRepository` and
+ * future accreditations through `server.app.futureAccreditationsRepository`,
+ * so both must register before this plugin.
  */
 export const organisationReadRepositoryPlugin = {
   name: 'organisationReadRepository',
   version: '1.0.0',
   dependencies: [
-    'organisationsRepository',
+    'mongodb',
     'overseasSitesRepository',
     'futureAccreditationsRepository'
   ],
 
-  register: (server) => {
-    const organisationsRepository = /** @type {OrganisationsRepository} */ (
-      server.app.organisationsRepository
-    )
+  /**
+   * @param {import('@hapi/hapi').Server & { db: Db }} server
+   * @param {OrganisationReadRepositoryPluginOptions} [options]
+   */
+  register: (server, options = {}) => {
     const overseasSitesRepository = /** @type {OverseasSitesRepository} */ (
       server.app.overseasSitesRepository
     )
@@ -31,10 +36,13 @@ export const organisationReadRepositoryPlugin = {
       /** @type {FutureAccreditationsRepository} */ (
         server.app.futureAccreditationsRepository
       )
+    const createRepository = createOrganisationReadRepository(
+      server.db,
+      options.eventualConsistency
+    )
     registerDependency(server, 'organisationReadRepository', ({ logger }) =>
-      createOrganisationReadRepository({
+      createRepository({
         futureAccreditationsRepository,
-        organisationsRepository,
         overseasSitesRepository,
         logger
       })

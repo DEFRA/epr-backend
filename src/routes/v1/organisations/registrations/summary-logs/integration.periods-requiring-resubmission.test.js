@@ -662,16 +662,19 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     it('flags the repatriation month once a stored non-date is corrected', async () => {
       const env = await setupWithJanuaryAndFebruarySubmitted(46063)
-      const [storedRow] =
-        await env.summaryLogRowStatesRepository.findRowHistory(
-          env.organisationId,
-          env.registrationId,
-          '1001',
-          WASTE_RECORD_TYPE.EXPORTED
+      const storedRow = (
+        await env.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          env.reportKey.organisationNumber,
+          env.reportKey.registrationNumber,
+          toSummaryLogFileId('file-first')
         )
-      expect(storedRow.data.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED).toBe(
-        46063
+      ).find(
+        ({ rowId, wasteRecordType }) =>
+          rowId === '1001' && wasteRecordType === WASTE_RECORD_TYPE.EXPORTED
       )
+      expect(storedRow).toMatchObject({
+        data: { DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: 46063 }
+      })
 
       const loadsByReportingPeriod = await uploadAndValidate(
         env,

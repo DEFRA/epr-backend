@@ -1,14 +1,14 @@
 import { test } from 'vitest'
 
-import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationReadRepository } from './adapter.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
-/** @import { TypedLogger } from '#common/hapi-types.js' */
 
+/**
+ * Seeds organisations as route tests do, through the in-memory organisations
+ * repository, so they are held as that repository stores and returns them.
+ */
 const it = /** @type {OrganisationReadRepositoryContractIt} */ (
   test.extend({
     // eslint-disable-next-line no-empty-pattern
@@ -18,29 +18,20 @@ const it = /** @type {OrganisationReadRepositoryContractIt} */ (
         organisations,
         overseasSites = [],
         futureAccreditations = [],
-        logger = { warn: () => {} }
-      }) => {
-        const futureAccreditationsRepository =
-          createInMemoryFutureAccreditationsRepository()()
-        await Promise.all(
-          futureAccreditations.map(futureAccreditationsRepository.upsert)
-        )
-        return createOrganisationReadRepository({
-          organisationsRepository: createInMemoryOrganisationsRepository(
-            /** @type {any[]} */ (organisations)
-          )(),
-          overseasSitesRepository: createInMemoryOverseasSitesRepository(
-            /** @type {any[]} */ (overseasSites)
-          )(),
-          futureAccreditationsRepository,
-          logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger))
-        })
-      }
+        logger
+      }) =>
+        (
+          await organisationReadRepositoryOf(organisations, {
+            futureAccreditations,
+            overseasSites,
+            logger
+          })
+        )()
       await use(organisationReadRepositoryWith)
     }
   })
 )
 
-describe('organisation read repository over in-memory repositories', () => {
+describe('in-memory organisation read repository', () => {
   testOrganisationReadRepositoryContract(it)
 })

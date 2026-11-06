@@ -119,11 +119,15 @@ const createServer = async ({
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers({
-      organisationId: ORGANISATION_ID,
-      registrationId: REGISTRATION_ID,
-      accreditationId
-    }),
+    {
+      ...withNumbers({
+        organisationId: ORGANISATION_ID,
+        registrationId: REGISTRATION_ID,
+        accreditationId
+      }),
+      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      registrationNumber: registration.registrationNumber
+    },
     rows,
     toSummaryLogFileId(FILE_ID)
   )

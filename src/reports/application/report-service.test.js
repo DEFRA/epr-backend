@@ -1,6 +1,7 @@
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
+import { partialMock } from '#test/type-helpers.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   REPORT_STATUS,
@@ -155,7 +156,6 @@ const defaultParams = () => {
     numbers: key,
     registration,
     year: toYear(2024),
-    cadence: CADENCE.monthly,
     cadenceAccreditation: {
       cadence: CADENCE.monthly,
       accreditationNumber: ACCREDITATION_NUMBER
@@ -787,14 +787,19 @@ describe('report-service', () => {
       const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
+      /** @param {ReturnType<typeof defaultParams>} params */
       const accreditationOf = ({
         organisationId,
         registrationId,
-        registration
+        numbers,
+        registration,
+        cadenceAccreditation
       }) => ({
         organisationId,
         registrationId,
-        accreditationId: registration.accreditationId
+        accreditationId: registration.accreditationId,
+        ...numbers,
+        accreditationNumber: cadenceAccreditation.accreditationNumber
       })
 
       const buildIssuedPrn = (accreditation, tonnage) =>
@@ -817,8 +822,15 @@ describe('report-service', () => {
 
       it('is null for non-accredited operator', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
-        const params = defaultParams()
-        params.registration = buildRegistration({ accreditationId: undefined })
+        const params = {
+          ...defaultParams(),
+          registration: buildRegistration({ accreditationId: undefined }),
+          cadenceAccreditation: {
+            cadence: CADENCE.quarterly,
+            accreditationNumber: null
+          },
+          requiredPeriods: generateAllPeriodsForYear('quarterly', toYear(2024))
+        }
         const { ledgerRepository, summaryLogRowStatesRepository } =
           await seedState(params, [buildReceivedEntry()])
         const prnRepo = createPrnRepo()
@@ -874,6 +886,46 @@ describe('report-service', () => {
         })
 
         expect(report.prn?.issuedTonnage).toBe(50)
+      })
+
+      it("counts the PRNs of the report's accreditation, not the registration's current one", async () => {
+        const reportsRepository = createInMemoryReportsRepository()()
+        const currentAccreditationNumber =
+          toAccreditationNumber('A25ER5000000002PL')
+        const params = {
+          ...defaultParams(),
+          registration: buildRegistration({
+            accreditation: partialMock({
+              status: 'approved',
+              accreditationNumber: currentAccreditationNumber
+            })
+          })
+        }
+        const { ledgerRepository, summaryLogRowStatesRepository } =
+          await seedState(params, [buildReceivedEntry()])
+        const prnRepo = createPrnRepo()
+
+        await prnRepo.create(buildIssuedPrn(accreditationOf(params), 30))
+        await prnRepo.create(
+          buildIssuedPrn(
+            {
+              ...accreditationOf(params),
+              accreditationNumber: currentAccreditationNumber
+            },
+            40
+          )
+        )
+
+        const report = await createReportForPeriod({
+          reportsRepository,
+          ledgerRepository,
+          summaryLogRowStatesRepository,
+          packagingRecyclingNotesRepository: prnRepo,
+          ...params,
+          changedBy
+        })
+
+        expect(report.prn?.issuedTonnage).toBe(30)
       })
     })
   })

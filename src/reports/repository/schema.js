@@ -211,8 +211,7 @@ export const updateReportSchema = Joi.object({
 })
 
 export const deleteReportParamsSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
+  ...registrationKeySchema,
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,

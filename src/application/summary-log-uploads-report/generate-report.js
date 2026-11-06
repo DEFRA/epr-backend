@@ -1,6 +1,7 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 import {
   capitalize,
@@ -9,6 +10,7 @@ import {
   uppercaseString
 } from '#common/helpers/formatters.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -17,12 +19,12 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
 /**
- * @param {string} organisationId - Organisation ID
- * @param {string} registrationId - Registration ID
- * @returns {string} Composite key in format "orgId:regId"
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
+ * @returns {string}
  */
-function buildLookupKey(organisationId, registrationId) {
-  return `${organisationId}:${registrationId}`
+function buildLookupKey(organisationNumber, registrationNumber) {
+  return `${organisationNumber}:${registrationNumber}`
 }
 
 /**
@@ -72,28 +74,37 @@ function buildRegistrationLookup(organisations) {
     organisations
       .filter((org) => !isTestOrg(org))
       .flatMap((org) =>
-        org.registrations.map((registration) => {
+        org.registrations.flatMap((registration) => {
+          const { registrationNumber } = registration
+          if (!registrationNumber) {
+            return []
+          }
           const accreditation = getLinkedAccreditation(
             registration,
             org.accreditations
           )
           return [
-            buildLookupKey(org.id, registration.id),
-            {
-              appropriateAgency: uppercaseString(
-                registration.submittedToRegulator
+            [
+              buildLookupKey(
+                toOrganisationNumber(String(org.orgId)),
+                registrationNumber
               ),
-              type: capitalize(registration.wasteProcessingType),
-              businessName: org.companyDetails.name,
-              orgId: org.orgId,
-              registrationNumber: registration.registrationNumber || '',
-              accreditationNumber: accreditation?.accreditationNumber || '',
-              reprocessingSite: formatAddress(registration.site?.address),
-              packagingWasteCategory: formatMaterial(
-                registration.material,
-                registration.glassRecyclingProcess
-              )
-            }
+              {
+                appropriateAgency: uppercaseString(
+                  registration.submittedToRegulator
+                ),
+                type: capitalize(registration.wasteProcessingType),
+                businessName: org.companyDetails.name,
+                orgId: org.orgId,
+                registrationNumber,
+                accreditationNumber: accreditation?.accreditationNumber || '',
+                reprocessingSite: formatAddress(registration.site?.address),
+                packagingWasteCategory: formatMaterial(
+                  registration.material,
+                  registration.glassRecyclingProcess
+                )
+              }
+            ]
           ]
         })
       )
@@ -108,8 +119,8 @@ function buildRegistrationLookup(organisations) {
 function processBatch(batch, registrationLookup) {
   return batch.flatMap((summaryLogStats) => {
     const key = buildLookupKey(
-      summaryLogStats.organisationId,
-      summaryLogStats.registrationId
+      summaryLogStats.organisationNumber,
+      summaryLogStats.registrationNumber
     )
     const formattedInfo = registrationLookup.get(key)
     return formattedInfo ? [transformRow(formattedInfo, summaryLogStats)] : []
@@ -145,19 +156,20 @@ export async function generateSummaryLogUploadsReport(
   logger.info({ message: 'Summary log uploads report generation started' })
 
   const summaryLogsStatsList =
-    await summaryLogsRepo.findAllSummaryLogStatsByRegistrationId()
+    await summaryLogsRepo.findAllSummaryLogStatsByRegistration()
   logger.info({
     message: `Retrieved stats for ${summaryLogsStatsList.length} registrations from repository`
   })
 
-  const organisationIds = [
-    ...new Set(summaryLogsStatsList.map((stats) => stats.organisationId))
+  const organisationNumbers = [
+    ...new Set(summaryLogsStatsList.map((stats) => stats.organisationNumber))
   ]
   logger.info({
-    message: `Found ${organisationIds.length} organisations with summary log uploads`
+    message: `Found ${organisationNumbers.length} organisations with summary log uploads`
   })
 
-  const organisations = await organisationRepo.findByIds(organisationIds)
+  const organisations =
+    await organisationRepo.findByOrganisationNumbers(organisationNumbers)
   logger.info({
     message: `Retrieved ${organisations.length} organisations from repository`
   })

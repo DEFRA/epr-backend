@@ -15,7 +15,7 @@ import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import {
-  numbersFor,
+  requiredNumbersFor,
   toAccreditationNumber
 } from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
@@ -142,9 +142,10 @@ const insertValidatingLog = async (
   const { summaryLogsRepository, organisationsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const { numbers } = numbersFor(
+  const numbers = requiredNumbersFor(
     await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId }
+    { registrationId, accreditationId },
+    'summary logs'
   )
   /** @type {SummaryLog} */
   const summaryLog = {

@@ -10,12 +10,12 @@ import {
   pendingOverseasSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
 /** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
@@ -118,18 +118,20 @@ export const useViewServer = () => {
    * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
    * @param {FutureAccreditation[]} [futureAccreditations]
    */
-  const start = async (organisationsRepository, futureAccreditations = []) => {
-    const futureAccreditationsRepository =
-      createInMemoryFutureAccreditationsRepository()()
-    await Promise.all(
-      futureAccreditations.map(futureAccreditationsRepository.upsert)
-    )
+  const start = async (organisationsRepository, futureAccreditations) => {
+    const overseasSitesRepository =
+      createInMemoryOverseasSitesRepository(overseasSites)
     server = await createTestServer({
       repositories: {
-        futureAccreditationsRepository,
         organisationsRepository,
-        overseasSitesRepository:
-          createInMemoryOverseasSitesRepository(overseasSites)
+        overseasSitesRepository,
+        organisationReadRepository: await organisationReadRepositoryFrom(
+          organisationsRepository(),
+          {
+            futureAccreditations,
+            overseasSitesRepository: overseasSitesRepository()
+          }
+        )
       }
     })
   }

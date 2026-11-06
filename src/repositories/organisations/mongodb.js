@@ -6,13 +6,10 @@ import {
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
-  anchoredPattern,
   createInitialStatusHistory,
   duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
-  normaliseCriteria,
-  parseOrgIdCriterion,
   prepareForReplace,
   storedOrgId,
   UNIQUE_NUMBER_FIELDS,
@@ -26,13 +23,18 @@ import {
   performReplaceUsers,
   performUnlinkDefraOrganisation
 } from './mongodb.targeted-updates.js'
+import {
+  COLLECTION_NAME,
+  DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
+  DEFAULT_MAX_CONSISTENCY_RETRIES,
+  findOneAtMinimumVersion,
+  findPage
+} from './mongodb-find.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Collection, Db, Document, Filter } from 'mongodb' */
+/** @import { Collection, Db } from 'mongodb' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 /** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
-const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 /**
  * Ensures the collection exists with required indexes.
@@ -66,9 +68,6 @@ async function ensureCollection(db) {
 
   return collection
 }
-// Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
-const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
-const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
 
 const performInsert = (db) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
@@ -172,50 +171,6 @@ const performReplace = (db) => async (id, version, updates) => {
   }
 }
 
-/**
- * Reads the one organisation `filter` matches, retrying until its version is
- * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
- * null when no organisation matches, and throws 500 when the version never
- * arrives.
- *
- * @param {Db} db
- * @param {number} maxRetries
- * @param {number} retryDelayMs
- * @param {Filter<Document>} filter
- * @param {number} [minimumVersion]
- * @returns {Promise<Organisation | null>}
- */
-const findOneAtMinimumVersion = async (
-  db,
-  maxRetries,
-  retryDelayMs,
-  filter,
-  minimumVersion
-) => {
-  for (let i = 0; i < maxRetries; i++) {
-    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-
-    const isLastRetry = i === maxRetries - 1
-
-    if (doc) {
-      if (minimumVersion === undefined || doc.version >= minimumVersion) {
-        return mapDocumentWithCurrentStatuses(doc)
-      }
-      // Document exists but version too low - will retry
-    } else if (minimumVersion === undefined || isLastRetry) {
-      return null
-    } else {
-      // Document not found but have retries left - will retry
-    }
-
-    if (!isLastRetry) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
-    }
-  }
-
-  throw Boom.internal('Consistency timeout waiting for minimum version')
-}
-
 const performFindById =
   (db, maxRetries, retryDelayMs) => async (id, minimumVersion) => {
     // Validate early and normalize invalid IDs to not found.
@@ -241,84 +196,8 @@ const performFindAll = (db) => async () => {
   const docs = await db.collection(COLLECTION_NAME).find().toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
-
-/** Matches no organisation, used when a criterion cannot be parsed. */
-const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
-
-/**
- * @param {string} value
- * @returns {{ $regex: string, $options: string }} - anchored, case-insensitive
- */
-const anchoredCaseInsensitive = (value) => ({
-  $regex: anchoredPattern(value),
-  $options: 'i'
-})
-
-/**
- * @param {string} value
- * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
- */
-const buildOrgIdFilter = (value) => {
-  const orgId = parseOrgIdCriterion(value)
-  return orgId === null ? UNSATISFIABLE_FILTER : { orgId }
-}
-
-/**
- * Builds the MongoDB filter for a find query. The in-memory adapter has its
- * own equivalent; the shared criteria semantics live in helpers.js and the
- * find contract tests hold the two implementations to the same behaviour.
- *
- * @param {import('./port.js').SearchCriteria} criteria
- * @returns {object} - a filter matching organisations satisfying every criterion
- */
-const buildFindFilter = (criteria) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria(criteria)
-
-  const conditions = []
-  if (search !== '') {
-    conditions.push({
-      'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
-    })
-  }
-  if (orgId !== '') {
-    conditions.push(buildOrgIdFilter(orgId))
-  }
-  if (registrationNumber !== '') {
-    conditions.push({
-      'registrations.registrationNumber':
-        anchoredCaseInsensitive(registrationNumber)
-    })
-  }
-  if (accreditationNumber !== '') {
-    conditions.push({
-      'accreditations.accreditationNumber':
-        anchoredCaseInsensitive(accreditationNumber)
-    })
-  }
-
-  return conditions.length === 0 ? {} : { $and: conditions }
-}
-
-const performFind =
-  (db) =>
-  async (/** @type {FindParams} */ { page, pageSize, ...criteria }) => {
-    const filter = buildFindFilter(criteria)
-
-    const collection = db.collection(COLLECTION_NAME)
-    const totalItems = await collection.countDocuments(filter)
-    const docs = await collection
-      .find(filter)
-      .sort({ 'companyDetails.name': 1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .toArray()
-
-    const items = docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-    const totalPages = Math.ceil(totalItems / pageSize)
-
-    return { items, page, pageSize, totalItems, totalPages }
-  }
+const performFind = (db) => (/** @type {FindParams} */ params) =>
+  findPage(db, params)
 
 const ORG_SUMMARY_PROJECTION = {
   orgId: 1,
@@ -367,23 +246,18 @@ const performFindAllLinked =
     return docs.map(toLinkedOrganisationSummary)
   }
 
-const performFindByIds = (db) => async (ids) => {
-  if (!ids || ids.length === 0) {
-    return []
+/**
+ * @returns {import('./port.js').OrganisationsRepository['findByOrganisationNumbers']}
+ */
+const performFindByOrganisationNumbers =
+  (db) => async (organisationNumbers) => {
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .find({ orgId: { $in: organisationNumbers.map(storedOrgId) } })
+      .toArray()
+
+    return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
   }
-
-  const objectIds = ids.map((id) => {
-    const validatedId = validateId(id)
-    return ObjectId.createFromHexString(validatedId)
-  })
-
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find({ _id: { $in: objectIds } })
-    .toArray()
-
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
 
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
@@ -574,7 +448,7 @@ export const createOrganisationsRepository = async (
       findAll: performFindAll(db),
       find: performFind(db),
       findAllLinked: performFindAllLinked(db),
-      findByIds: performFindByIds(db),
+      findByOrganisationNumbers: performFindByOrganisationNumbers(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       isAccreditationNumberInUse: performIsAccreditationNumberInUse(db),

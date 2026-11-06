@@ -470,24 +470,18 @@ describe('submitSummaryLog row-state numbers', () => {
   ])(
     'stores the numbers from the organisation record on each row state, accreditation $accreditationId',
     async ({ accreditationId, accreditationNumber }) => {
-      const {
-        deps,
-        summaryLogId,
-        summaryLog,
-        organisation,
-        organisationId,
-        registrationId
-      } = await setupSubmit({
-        reportsRepository: createInMemoryReportsRepository()(),
-        accreditationId
-      })
+      const { deps, summaryLogId, summaryLog, organisation, reportKey } =
+        await setupSubmit({
+          reportsRepository: createInMemoryReportsRepository()(),
+          accreditationId
+        })
 
       await submitSummaryLog(summaryLogId, deps)
 
       const rowStates =
         await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-          organisationId,
-          registrationId,
+          reportKey.organisationNumber,
+          reportKey.registrationNumber,
           summaryLog.file.id
         )
       expect(rowStates).toEqual([

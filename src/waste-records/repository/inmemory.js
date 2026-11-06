@@ -32,6 +32,8 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
  */
 
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+
 /**
  * @param {SummaryLogRowState} doc
  * @param {WasteBalanceLedgerId} ledgerId
@@ -77,48 +79,23 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {SummaryLogFileId} fileId
  * @returns {SummaryLogRowState[]}
  */
 const rowStatesForSummaryLogFile = (
   storage,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   fileId
 ) =>
   structuredClone(
     storage.filter(
       (doc) =>
-        doc.organisationId === organisationId &&
-        doc.registrationId === registrationId &&
+        doc.organisationNumber === organisationNumber &&
+        doc.registrationNumber === registrationNumber &&
         doc.summaryLogIds.includes(fileId)
-    )
-  )
-
-/**
- * @param {SummaryLogRowState[]} storage
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} rowId
- * @param {string} wasteRecordType
- * @returns {SummaryLogRowState[]}
- */
-const rowHistory = (
-  storage,
-  organisationId,
-  registrationId,
-  rowId,
-  wasteRecordType
-) =>
-  structuredClone(
-    storage.filter(
-      (doc) =>
-        doc.organisationId === organisationId &&
-        doc.registrationId === registrationId &&
-        doc.rowId === rowId &&
-        doc.wasteRecordType === wasteRecordType
     )
   )
 
@@ -230,30 +207,21 @@ const repositoryOver = (storage) => ({
     ),
 
   /**
-   * @param {string} organisationId
-   * @param {string} registrationId
+   * @param {OrganisationNumber} organisationNumber
+   * @param {RegistrationNumber} registrationNumber
    * @param {SummaryLogFileId} fileId
    */
   findRowStatesForSummaryLogFile: async (
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     fileId
   ) =>
-    rowStatesForSummaryLogFile(storage, organisationId, registrationId, fileId),
-
-  /**
-   * @param {string} organisationId
-   * @param {string} registrationId
-   * @param {string} rowId
-   * @param {string} wasteRecordType
-   */
-  findRowHistory: async (
-    organisationId,
-    registrationId,
-    rowId,
-    wasteRecordType
-  ) =>
-    rowHistory(storage, organisationId, registrationId, rowId, wasteRecordType),
+    rowStatesForSummaryLogFile(
+      storage,
+      organisationNumber,
+      registrationNumber,
+      fileId
+    ),
 
   /**
    * @param {SummaryLogFileId[]} summaryLogIds
