@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
@@ -140,6 +141,9 @@ const createServer = async ({
   const server = await createTestServer({
     repositories: {
       organisationsRepository: createInMemoryOrganisationsRepository([
+        partialMock(org)
+      ]),
+      organisationReadRepository: await organisationReadRepositoryOf([
         partialMock(org)
       ]),
       ledgerRepository,

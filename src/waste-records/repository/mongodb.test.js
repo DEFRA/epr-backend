@@ -82,19 +82,7 @@ describe('ensureSummaryLogRowStatesCollection', () => {
     })
   })
 
-  it('creates the row-history index by organisation and registration number', async (/** @type {*} */ {
-    summaryLogRowStatesCollection
-  }) => {
-    const indexes = await summaryLogRowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'row_history_by_number')).toEqual({
-      organisationNumber: 1,
-      registrationNumber: 1,
-      rowId: 1,
-      wasteRecordType: 1
-    })
-  })
-
-  it('drops the retired row-history index by id', async (/** @type {*} */ {
+  it('drops the row-history indexes, which no read uses', async (/** @type {*} */ {
     mongoClient
   }) => {
     const database = mongoClient.db(DATABASE_NAME)
@@ -105,12 +93,21 @@ describe('ensureSummaryLogRowStatesCollection', () => {
       { organisationId: 1, registrationId: 1, rowId: 1, wasteRecordType: 1 },
       { name: 'row_history' }
     )
+    await collection.createIndex(
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        rowId: 1,
+        wasteRecordType: 1
+      },
+      { name: 'row_history_by_number' }
+    )
 
     await ensureSummaryLogRowStatesCollection(database)
 
-    expect(indexKeyFor(await collection.indexes(), 'row_history')).toBe(
-      undefined
-    )
+    const names = (await collection.indexes()).map(({ name }) => name)
+    expect(names).not.toContain('row_history')
+    expect(names).not.toContain('row_history_by_number')
   })
 
   it('creates a unique summary-log-row-state identity index', async (/** @type {*} */ {
@@ -152,7 +149,6 @@ describe('summary-log row states repository - mongodb implementation', () => {
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
-    expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
   describe('row-state repository contract', () => {
@@ -182,13 +178,19 @@ describe('summary-log row states repository - mongodb implementation', () => {
         )
       )
 
-      const history = await repository.findRowHistory(
-        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
-        'row-1',
-        WASTE_RECORD_TYPE.RECEIVED
+      const [first, ...rest] = await Promise.all(
+        summaryLogIds.map((summaryLogId) =>
+          repository.findRowStatesForSummaryLogFile(
+            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
+            summaryLogId
+          )
+        )
       )
-      expect(history).toHaveLength(1)
-      expect([...history[0].summaryLogIds].sort()).toEqual(
+      expect(first).toHaveLength(1)
+      expect(rest.flat().map(({ id }) => id)).toEqual(
+        rest.map(() => first[0].id)
+      )
+      expect([...first[0].summaryLogIds].sort()).toEqual(
         [...summaryLogIds].sort()
       )
     })
@@ -209,10 +211,9 @@ describe('summary-log row states repository - mongodb implementation', () => {
         )
       )
 
-      const history = await repository.findRowHistory(
+      const history = await repository.findRowStatesForSummaryLogFile(
         ...registrationNumbersOf(DEFAULT_LEDGER_ID),
-        'row-1',
-        WASTE_RECORD_TYPE.RECEIVED
+        'log-1'
       )
       expect(history).toHaveLength(1)
       expect(history[0].summaryLogIds).toEqual(['log-1'])

@@ -24,7 +24,6 @@ describe('summary-log row states repository - in-memory implementation', () => {
     const repository = createInMemorySummaryLogRowStatesRepository()()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
-    expect(repository.findRowHistory).toBeTypeOf('function')
   })
 
   it('seeds storage from the provided initial state documents', async () => {

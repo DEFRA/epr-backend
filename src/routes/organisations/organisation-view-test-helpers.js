@@ -15,6 +15,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
@@ -116,11 +117,16 @@ export const useViewServer = () => {
    * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
    */
   const start = async (organisationsRepository) => {
+    const overseasSitesRepository =
+      createInMemoryOverseasSitesRepository(overseasSites)
     server = await createTestServer({
       repositories: {
         organisationsRepository,
-        overseasSitesRepository:
-          createInMemoryOverseasSitesRepository(overseasSites)
+        overseasSitesRepository,
+        organisationReadRepository: await organisationReadRepositoryFrom(
+          organisationsRepository(),
+          { overseasSitesRepository: overseasSitesRepository() }
+        )
       }
     })
   }

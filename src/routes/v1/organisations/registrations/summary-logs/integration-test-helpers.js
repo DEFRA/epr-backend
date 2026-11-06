@@ -28,6 +28,7 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -682,6 +683,10 @@ export const createTestInfrastructure = async (
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
       organisationsRepository: () => organisationsRepository,
+      organisationReadRepository: () =>
+        organisationReadRepositoryOver(organisationsRepository, {
+          overseasSitesRepository
+        }),
       uploadsRepository
     },
     workers: {
@@ -830,7 +835,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       wasteBalanceService: () => wasteBalanceService,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
-      organisationsRepository: () => organisationsRepository
+      organisationsRepository: () => organisationsRepository,
+      organisationReadRepository: () =>
+        organisationReadRepositoryOver(organisationsRepository, {
+          overseasSitesRepository
+        })
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({

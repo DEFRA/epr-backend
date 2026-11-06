@@ -2,9 +2,8 @@ import { MongoClient, ObjectId } from 'mongodb'
 
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { createOrganisationReadRepository } from './adapter.js'
+import { createOrganisationReadRepository } from './mongodb.js'
 import {
   REPROCESSOR_NUMBER,
   findOrganisation,
@@ -67,10 +66,7 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
             .insertOne(toDocument(site))
         }
 
-        return createOrganisationReadRepository({
-          organisationsRepository: (
-            await createOrganisationsRepository(database)
-          )(),
+        return createOrganisationReadRepository(database)({
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)
           )(),
