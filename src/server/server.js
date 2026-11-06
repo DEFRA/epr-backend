@@ -48,6 +48,7 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
+import { runNaturalKeyIndexDiagnostic } from '#natural-key-index-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -225,6 +226,7 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
+    void runNaturalKeyIndexDiagnostic(startedServer)
   })
 
   return server

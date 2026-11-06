@@ -101,31 +101,6 @@ const rowStatesForSummaryLogFile = (
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @param {string} rowId
- * @param {string} wasteRecordType
- * @returns {SummaryLogRowState[]}
- */
-const rowHistory = (
-  storage,
-  organisationNumber,
-  registrationNumber,
-  rowId,
-  wasteRecordType
-) =>
-  structuredClone(
-    storage.filter(
-      (doc) =>
-        doc.organisationNumber === organisationNumber &&
-        doc.registrationNumber === registrationNumber &&
-        doc.rowId === rowId &&
-        doc.wasteRecordType === wasteRecordType
-    )
-  )
-
-/**
- * @param {SummaryLogRowState[]} storage
  * @param {SummaryLogFileId[]} summaryLogIds
  * @returns {Generator<import('./port.js').SubmittedRowState>}
  */
@@ -246,26 +221,6 @@ const repositoryOver = (storage) => ({
       organisationNumber,
       registrationNumber,
       fileId
-    ),
-
-  /**
-   * @param {OrganisationNumber} organisationNumber
-   * @param {RegistrationNumber} registrationNumber
-   * @param {string} rowId
-   * @param {string} wasteRecordType
-   */
-  findRowHistory: async (
-    organisationNumber,
-    registrationNumber,
-    rowId,
-    wasteRecordType
-  ) =>
-    rowHistory(
-      storage,
-      organisationNumber,
-      registrationNumber,
-      rowId,
-      wasteRecordType
     ),
 
   /**
