@@ -1,4 +1,6 @@
 import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
+import { COLLECTION_NAME as PRNS_COLLECTION_NAME } from '#packaging-recycling-notes/repository/mongodb.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @import { Db } from 'mongodb' */
@@ -23,9 +25,38 @@ const REPORTS_COLLECTION_NAME = 'reports'
  *   validatedSummaryLogsWithoutNumbers: number,
  *   reports: number,
  *   reportsWithoutNumbers: number,
- *   sharedReportNumbers: SharedReportNumbers[]
+ *   sharedReportNumbers: SharedReportNumbers[],
+ *   prns: number,
+ *   prnsWithoutNumbers: number,
+ *   ledgerEvents: number,
+ *   ledgerEventsWithoutNumbers: number
  * }} NaturalKeyIndexDiagnosis
  */
+
+const PRN_LACKING_A_NUMBER = {
+  $or: [
+    { 'organisation.organisationNumber': { $not: { $type: 'string' } } },
+    { 'registration.registrationNumber': { $not: { $type: 'string' } } },
+    { 'accreditation.accreditationNumber': { $not: { $type: 'string' } } }
+  ]
+}
+
+// A registered-only ledger's accreditation number is null; an accredited one's
+// is a string.
+const LEDGER_EVENT_LACKING_A_NUMBER = {
+  $or: [
+    { organisationNumber: { $not: { $type: 'string' } } },
+    { registrationNumber: { $not: { $type: 'string' } } },
+    {
+      accreditationId: { $type: 'string' },
+      accreditationNumber: { $not: { $type: 'string' } }
+    },
+    {
+      accreditationId: { $type: 'null' },
+      accreditationNumber: { $not: { $type: 'null' } }
+    }
+  ]
+}
 
 const LACKING_A_NUMBER = {
   $or: [
@@ -78,14 +109,17 @@ const findSharedReportNumbers = async (db) => {
 
 /**
  * Reads whether the stored data allows the indexes moving onto the numbers to
- * be built at startup: the submitting lock on summary logs and the unique
- * report indexes. It writes nothing.
+ * be built at startup (the submitting lock on summary logs and the unique
+ * report indexes), and whether every PRN and ledger event would pass a read
+ * requiring its numbers. It writes nothing.
  *
  * @param {Db} db
  * @returns {Promise<NaturalKeyIndexDiagnosis>}
  */
 export const diagnoseNaturalKeyIndexes = async (db) => {
   const reports = db.collection(REPORTS_COLLECTION_NAME)
+  const prnCollection = db.collection(PRNS_COLLECTION_NAME)
+  const ledger = db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
 
   const [
     summaryLogs,
@@ -93,7 +127,11 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     validatedSummaryLogsWithoutNumbers,
     reportCount,
     reportsWithoutNumbers,
-    sharedReportNumbers
+    sharedReportNumbers,
+    prns,
+    prnsWithoutNumbers,
+    ledgerEvents,
+    ledgerEventsWithoutNumbers
   ] = await Promise.all([
     db.collection(SUMMARY_LOGS_COLLECTION_NAME).estimatedDocumentCount(),
     countSummaryLogsWithoutNumbers(db, SUMMARY_LOG_STATUS.SUBMITTING),
@@ -105,7 +143,11 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
         { registrationNumber: { $exists: false } }
       ]
     }),
-    findSharedReportNumbers(db)
+    findSharedReportNumbers(db),
+    prnCollection.estimatedDocumentCount(),
+    prnCollection.countDocuments(PRN_LACKING_A_NUMBER),
+    ledger.estimatedDocumentCount(),
+    ledger.countDocuments(LEDGER_EVENT_LACKING_A_NUMBER)
   ])
 
   return {
@@ -114,6 +156,10 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     validatedSummaryLogsWithoutNumbers,
     reports: reportCount,
     reportsWithoutNumbers,
-    sharedReportNumbers
+    sharedReportNumbers,
+    prns,
+    prnsWithoutNumbers,
+    ledgerEvents,
+    ledgerEventsWithoutNumbers
   }
 }
