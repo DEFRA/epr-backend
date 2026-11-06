@@ -11,7 +11,17 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 const ACCREDITATION_YEAR = 2026
 export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 
-/** @import { AccreditationSnapshot } from '#packaging-recycling-notes/domain/model.js' */
+/** @import { AccreditationSnapshot, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
+
+/**
+ * What a test may override on a built PRN. The organisation's number may be
+ * left out; the builder supplies one.
+ *
+ * @typedef {Partial<Omit<PackagingRecyclingNote, 'organisation'>> & {
+ *   organisation?: Omit<OrganisationSnapshot, 'organisationNumber'> &
+ *     Partial<Pick<OrganisationSnapshot, 'organisationNumber'>>
+ * }} PrnOverrides
+ */
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
@@ -52,6 +62,22 @@ export const buildAccreditationSnapshot = (overrides = {}) => ({
   ...overrides
 })
 
+/** The organisation number of a PRN fixture that needs no particular one. */
+export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500123')
+
+/** The registration of a PRN fixture that needs no particular one. */
+export const TEST_REGISTRATION = {
+  registrationNumber: toRegistrationNumber('R26ER5001230456PA')
+}
+
+const uniqueNumber = () => randomInt(100_000_000, 1_000_000_000)
+
+const uniqueOrganisationNumber = () =>
+  toOrganisationNumber(String(uniqueNumber()))
+
+const uniqueRegistrationNumber = () =>
+  toRegistrationNumber(`R26ER${uniqueNumber()}PA`)
+
 /**
  * @typedef {import('../port.js').AccreditationId & import('../port.js').AccreditationNumbers} AccreditationKeys
  */
@@ -66,7 +92,7 @@ export const buildAccreditationSnapshot = (overrides = {}) => ({
  * @returns {AccreditationKeys}
  */
 export const buildAccreditationKeys = (overrides = {}) => {
-  const unique = randomInt(100_000_000, 1_000_000_000)
+  const unique = uniqueNumber()
   return {
     organisationId: new ObjectId().toHexString(),
     registrationId: new ObjectId().toHexString(),
@@ -83,7 +109,7 @@ export const buildAccreditationKeys = (overrides = {}) => {
  * carries agree with the accreditation identity a reader names it by.
  *
  * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & Partial<import('#domain/organisations/numbers.js').Numbers>} accreditationId
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} [overrides]
+ * @param {PrnOverrides} [overrides]
  */
 export const underAccreditation = (accreditationId, overrides = {}) => ({
   organisation: {
@@ -110,22 +136,35 @@ export const underAccreditation = (accreditationId, overrides = {}) => ({
  * Builds a valid PRN for testing with sensible defaults.
  * All required fields are populated, with optional overrides.
  *
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  * @returns {Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>}
  */
 export const buildPrn = (overrides = {}) => {
   const now = new Date()
-  const { status: statusOverrides, ...rest } = overrides
+  const {
+    status: statusOverrides,
+    organisation: organisationOverride,
+    ...rest
+  } = overrides
+  const organisationNumber = uniqueOrganisationNumber()
 
   return {
     schemaVersion: 2,
     version: 1,
-    organisation: {
-      id: `org-${randomUUID()}`,
-      name: 'Test Organisation',
-      tradingName: 'Test Trading'
-    },
+    organisation: organisationOverride
+      ? {
+          ...organisationOverride,
+          organisationNumber:
+            organisationOverride.organisationNumber ?? organisationNumber
+        }
+      : {
+          id: `org-${randomUUID()}`,
+          organisationNumber,
+          name: 'Test Organisation',
+          tradingName: 'Test Trading'
+        },
     registrationId: `reg-${randomUUID()}`,
+    registration: { registrationNumber: uniqueRegistrationNumber() },
     accreditation: buildAccreditationSnapshot(),
     obligationYear: PRN_YEAR,
     issuedToOrganisation: {
@@ -158,7 +197,7 @@ export const buildPrn = (overrides = {}) => {
 
 /**
  * Builds a PRN in draft status.
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  */
 export const buildDraftPrn = (overrides = {}) => {
   const now = new Date()
@@ -181,7 +220,7 @@ export const buildDraftPrn = (overrides = {}) => {
 
 /**
  * Builds a PRN in awaiting_authorisation status.
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  */
 export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
   const now = new Date()
@@ -213,7 +252,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
 
 /**
  * Builds a PRN in awaiting_acceptance status (issued, with PRN number).
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  */
 export const buildAwaitingAcceptancePrn = (overrides = {}) => {
   const now = new Date()
@@ -259,7 +298,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
 
 /**
  * Builds a PRN in cancelled status (full lifecycle: issued → rejected by RPD → cancelled).
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  */
 export const buildCancelledPrn = (overrides = {}) => {
   const now = new Date()
@@ -318,7 +357,7 @@ export const buildCancelledPrn = (overrides = {}) => {
 
 /**
  * Builds a PRN in deleted status.
- * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ * @param {PrnOverrides} overrides
  */
 export const buildDeletedPrn = (overrides = {}) => {
   const now = new Date()

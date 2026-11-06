@@ -10,6 +10,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
+  TEST_ORGANISATION_NUMBER,
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
@@ -182,7 +183,11 @@ describe('PRN status concurrency against real MongoDB', () => {
 
     const { id } = await prnRepositoryFactory(createMockLogger()).create(
       buildAcceptedPrn({
-        organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+        organisation: {
+          id: ORG_ID,
+          organisationNumber: TEST_ORGANISATION_NUMBER,
+          name: 'Test Reprocessor'
+        },
         registrationId: REG_ID,
         accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
         tonnage: TONNAGE

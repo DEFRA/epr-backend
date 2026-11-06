@@ -164,7 +164,7 @@ describe('ledger event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
-  it('accepts an event written without the numbers', () => {
+  it('rejects an event written without the numbers', () => {
     const {
       organisationNumber: _organisationNumber,
       registrationNumber: _registrationNumber,
@@ -172,7 +172,11 @@ describe('ledger event insert schema', () => {
       ...withoutNumbers
     } = buildLedgerEvent()
     const { error } = validate(withoutNumbers)
-    expect(error).toBeUndefined()
+    expect(error?.details.map(({ path }) => path[0])).toEqual([
+      'organisationNumber',
+      'registrationNumber',
+      'accreditationNumber'
+    ])
   })
 
   it('rejects an accreditation number on a registered-only event', () => {
@@ -288,15 +292,15 @@ describe('ledger event validation', () => {
       expect(validateLedgerEventRead(event)).toEqual(event)
     })
 
-    it('accepts an event stored without the numbers', () => {
+    it('refuses an event stored without the numbers', () => {
       const {
         organisationNumber: _organisationNumber,
         registrationNumber: _registrationNumber,
         accreditationNumber: _accreditationNumber,
         ...storedWithoutNumbers
       } = buildLedgerEvent()
-      expect(validateLedgerEventRead(storedWithoutNumbers)).toEqual(
-        storedWithoutNumbers
+      expect(() => validateLedgerEventRead(storedWithoutNumbers)).toThrow(
+        '"organisationNumber" is required'
       )
     })
 

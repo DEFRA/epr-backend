@@ -116,15 +116,6 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
- * The numbers a PRN stores beside its organisation and registration ids.
- *
- * @typedef {{
- *   organisationNumber?: import('#domain/organisations/numbers.js').OrganisationNumber,
- *   registrationNumber?: import('#domain/organisations/numbers.js').RegistrationNumber
- * }} PrnNumbers
- */
-
-/**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber

@@ -18,8 +18,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
-import { numbersHeld } from '#packaging-recycling-notes/domain/numbers.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
@@ -31,7 +30,6 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
- * @typedef {import('#reports/repository/port.js').RegistrationKey} RegistrationKey
  */
 
 /**
@@ -230,9 +228,10 @@ async function applyPrnTransition(ctx) {
     }
   }
 
-  const { numbers: ledgerNumbers } = numbersFor(
+  const ledgerNumbers = requiredNumbersFor(
     await ctx.organisationsRepository.findById(ledgerId.organisationId),
-    ledgerId
+    ledgerId,
+    'ledger events'
   )
 
   // The note takes its number before the event announcing it, so a read landing
@@ -527,13 +526,11 @@ async function notifyPrnCancelled(prnEvents, newStatus, updatedPrn) {
       updatedPrn.status.issued
     )
 
-  // Every PRN holds its numbers since the numbers backfill.
-  const numbers = /** @type {RegistrationKey} */ (numbersHeld(updatedPrn))
-
   await prnEvents.onCancelled({
     organisationId: updatedPrn.organisation.id,
     registrationId: updatedPrn.registrationId,
-    ...numbers,
+    organisationNumber: updatedPrn.organisation.organisationNumber,
+    registrationNumber: updatedPrn.registration.registrationNumber,
     prnId: updatedPrn.id,
     issuedAt: new Date(issued.at).toISOString()
   })

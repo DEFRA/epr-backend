@@ -19,7 +19,7 @@ const organisationNameAndIdSchema = Joi.object({
 })
 
 const organisationSnapshotSchema = organisationNameAndIdSchema.keys({
-  organisationNumber: Joi.string().optional()
+  organisationNumber: Joi.string().required()
 })
 
 const siteAddressSchema = Joi.object({
@@ -98,7 +98,7 @@ export const prnInsertSchema = Joi.object({
   registrationId: Joi.string().required(),
   registration: Joi.object({
     registrationNumber: Joi.string().required()
-  }).optional(),
+  }).required(),
   accreditation: Joi.when('isExport', {
     is: true,
     then: accreditationSchema.required(),

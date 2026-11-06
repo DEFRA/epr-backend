@@ -15,7 +15,11 @@ import {
   POOL
 } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -36,6 +40,7 @@ import { createOnPrnCancelled } from '#reports/application/prn-cancellation-even
 import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -67,7 +72,12 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   version: 1,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  registration: TEST_REGISTRATION,
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    name: 'Test Reprocessor'
+  },
   accreditation: buildAccreditationSnapshot({
     id: ACC_ID,
     accreditationNumber: 'ACC-1'
@@ -103,9 +113,11 @@ const buildOpeningBalanceEvent = ({
   decemberAmount,
   decemberAvailableAmount
 }) => ({
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationId: ORG_ID,
+  ...withNumbers({
+    registrationId: REG_ID,
+    accreditationId: ACC_ID,
+    organisationId: ORG_ID
+  }),
   number: 1,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: {
@@ -150,9 +162,11 @@ const buildPrnLedgerEvent = ({
   pool,
   amount = 100
 }) => ({
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationId: ORG_ID,
+  ...withNumbers({
+    registrationId: REG_ID,
+    accreditationId: ACC_ID,
+    organisationId: ORG_ID
+  }),
   number,
   kind,
   payload: { prnId: PRN_ID, amount, ...(pool !== undefined && { pool }) },
@@ -363,7 +377,7 @@ describe('updatePrnStatus', () => {
       })
     })
 
-    it('writes the event without a number its organisation record does not give', async () => {
+    it('refuses the change, appending nothing, when the organisation record gives no accreditation number', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -373,22 +387,20 @@ describe('updatePrnStatus', () => {
         accreditation: { accreditationNumber: null }
       })
 
-      await callUpdate({
-        ...repositories,
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        actor: PRN_ACTOR.REPROCESSOR_EXPORTER
-      })
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
+        })
+      ).rejects.toThrow('Cannot store ledger events without their numbers')
 
       const latest = await repositories.ledgerRepository.findLatestInLedger({
         organisationId: ORG_ID,
         registrationId: REG_ID,
         accreditationId: ACC_ID
       })
-      expect(latest).toMatchObject({
-        kind: LEDGER_EVENT_KIND.PRN_CREATED,
-        registrationNumber: 'R26SR500000789PL'
-      })
-      expect(latest).not.toHaveProperty('accreditationNumber')
+      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
     })
 
     // Tonnage is validated positive at the route and in the PRN schema, so a
@@ -676,7 +688,7 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow()
     })
 
-    it('issues the PRN when the organisation record gives no registration number', async () => {
+    it('refuses to issue, numbering nothing, when the organisation record gives no registration number', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           status: {
@@ -688,24 +700,19 @@ describe('updatePrnStatus', () => {
         registrationNumber: null
       })
 
-      await callUpdate({
-        ...repositories,
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        actor: PRN_ACTOR.SIGNATORY
-      })
+      await expect(
+        callUpdate({
+          ...repositories,
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY
+        })
+      ).rejects.toThrow('Cannot store ledger events without their numbers')
 
       const stored = await repositories.prnRepository.findById(PRN_ID)
-      expect(stored?.prnNumber).toBeDefined()
-      const latest = await repositories.ledgerRepository.findLatestInLedger({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID
-      })
-      expect(latest).toMatchObject({
-        kind: LEDGER_EVENT_KIND.PRN_ISSUED,
-        accreditationNumber: 'ACC-1'
-      })
-      expect(latest).not.toHaveProperty('registrationNumber')
+      expect(stored?.prnNumber).toBeUndefined()
+      expect(stored?.status.currentStatus).toBe(
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
     })
   })
 
@@ -852,9 +859,11 @@ describe('updatePrnStatus', () => {
       ])(createMockLogger())
       const ledgerRepository = createInMemoryLedgerRepository([
         {
-          registrationId: DEFAULT_REG_ID,
-          accreditationId: ACC_ID,
-          organisationId: DEFAULT_ORG_ID,
+          ...withNumbers({
+            registrationId: DEFAULT_REG_ID,
+            accreditationId: ACC_ID,
+            organisationId: DEFAULT_ORG_ID
+          }),
           number: 1,
           kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
           payload: {

@@ -1,4 +1,9 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
@@ -60,7 +65,12 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   version: 3,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  registration: TEST_REGISTRATION,
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    name: 'Test Reprocessor'
+  },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
@@ -100,9 +110,11 @@ const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
 const buildSeededLedgerRepository = () =>
   createInMemoryLedgerRepository([
     {
-      registrationId: REG_ID,
-      accreditationId: ACC_ID,
-      organisationId: ORG_ID,
+      ...withNumbers({
+        registrationId: REG_ID,
+        accreditationId: ACC_ID,
+        organisationId: ORG_ID
+      }),
       number: SEED_NUMBER,
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId: toSummaryLogFileId('seed'), creditTotal: 1000 },

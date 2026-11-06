@@ -141,7 +141,7 @@ const buildPrnData = ({
     version: 1,
     organisation,
     registrationId,
-    ...(registrationNumber && { registration: { registrationNumber } }),
+    registration: { registrationNumber },
     accreditation: accreditationSnapshot,
     obligationYear: accreditationSnapshot.accreditationYear,
     issuedToOrganisation: payload.issuedToOrganisation,
@@ -316,7 +316,7 @@ const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
 /**
  * @param {Object} params
  * @param {string} params.organisationId
- * @param {OrganisationNumber} [params.organisationNumber]
+ * @param {OrganisationNumber} params.organisationNumber
  * @param {string} params.name
  * @param {string} [params.tradingName]
  */
@@ -327,7 +327,7 @@ const buildOrganisationSnapshot = ({
   tradingName
 }) => ({
   id: organisationId,
-  ...(organisationNumber && { organisationNumber }),
+  organisationNumber,
   name,
   ...(tradingName && { tradingName })
 })

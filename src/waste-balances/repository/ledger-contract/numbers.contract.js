@@ -8,12 +8,6 @@ const NUMBERS = Object.freeze({
   accreditationNumber: 'ACC-1'
 })
 
-const ALL_NUMBERS = [
-  'organisationNumber',
-  'registrationNumber',
-  'accreditationNumber'
-]
-
 const LEDGER_ID = Object.freeze(buildLedgerId())
 
 const REGISTERED_ONLY_LEDGER_ID = Object.freeze(
@@ -23,47 +17,10 @@ const REGISTERED_ONLY_LEDGER_ID = Object.freeze(
 export const testNumbersBehaviour = (it) => {
   describe('numbers', () => {
     let repository
-    /** @type {(keys: string[]) => Promise<unknown>} */
-    let removeStoredNumbers
 
-    beforeEach(
-      async (
-        /** @type {*} */ { ledgerRepository, removeStoredNumbers: remove }
-      ) => {
-        repository = await ledgerRepository()
-        removeStoredNumbers = remove
-      }
-    )
-
-    /**
-     * Events as stored before the numbers were written beside the ids.
-     *
-     * @param {*} ledgerId
-     * @param {number} count
-     * @param {string[]} [missing]
-     */
-    const storeWithout = async (ledgerId, count, missing = ALL_NUMBERS) => {
-      await appendTo(ledgerId, count)
-      await removeStoredNumbers(missing)
-    }
-
-    /**
-     * @param {*} ledgerId
-     * @param {number} count
-     * @param {object} [overrides]
-     */
-    const appendTo = async (ledgerId, count, overrides = {}) => {
-      const head = (await repository.findLatestInLedger(ledgerId))?.number ?? 0
-      await repository.appendEvents(
-        Array.from({ length: count }, (_, index) =>
-          buildLedgerEvent({
-            ...ledgerId,
-            number: head + index + 1,
-            ...overrides
-          })
-        )
-      )
-    }
+    beforeEach(async (/** @type {*} */ { ledgerRepository }) => {
+      repository = await ledgerRepository()
+    })
 
     it('stores the numbers it is given beside the ids', async () => {
       const [event] = await repository.appendEvents([
@@ -77,7 +34,9 @@ export const testNumbersBehaviour = (it) => {
     })
 
     it('stores a null accreditation number for a registered-only ledger', async () => {
-      await appendTo(REGISTERED_ONLY_LEDGER_ID, 1)
+      await repository.appendEvents([
+        buildLedgerEvent({ ...REGISTERED_ONLY_LEDGER_ID })
+      ])
 
       expect(
         (await repository.findLatestInLedger(REGISTERED_ONLY_LEDGER_ID))
@@ -85,31 +44,35 @@ export const testNumbersBehaviour = (it) => {
       ).toBeNull()
     })
 
-    it('stores an event without the numbers it is written without', async () => {
+    it('refuses an event without its organisation and registration numbers, storing nothing', async () => {
       const {
         organisationNumber: _organisationNumber,
         registrationNumber: _registrationNumber,
         ...withoutNumbers
       } = buildLedgerEvent()
 
-      await repository.appendEvents([withoutNumbers])
+      await expect(repository.appendEvents([withoutNumbers])).rejects.toThrow(
+        'Invalid ledger event data: "organisationNumber" is required; "registrationNumber" is required'
+      )
+      expect(await repository.findLatestInLedger(LEDGER_ID)).toBeNull()
+    })
 
-      const event = await repository.findLatestInLedger(withoutNumbers)
-      expect(event).not.toHaveProperty('organisationNumber')
-      expect(event).not.toHaveProperty('registrationNumber')
-      expect(event).toHaveProperty(
-        'accreditationNumber',
-        withoutNumbers.accreditationNumber
+    it('refuses an accredited event without its accreditation number', async () => {
+      const { accreditationNumber: _accreditationNumber, ...withoutNumber } =
+        buildLedgerEvent()
+
+      await expect(repository.appendEvents([withoutNumber])).rejects.toThrow(
+        'Invalid ledger event data: "accreditationNumber" is required'
       )
     })
 
-    it('reads back an event stored without the numbers', async () => {
-      await storeWithout(LEDGER_ID, 1)
+    it('refuses a registered-only event without its null accreditation number', async () => {
+      const { accreditationNumber: _accreditationNumber, ...withoutNumber } =
+        buildLedgerEvent({ ...REGISTERED_ONLY_LEDGER_ID })
 
-      const event = await repository.findLatestInLedger(LEDGER_ID)
-      for (const key of ALL_NUMBERS) {
-        expect(event).not.toHaveProperty(key)
-      }
+      await expect(repository.appendEvents([withoutNumber])).rejects.toThrow(
+        'Invalid ledger event data: "accreditationNumber" is required'
+      )
     })
   })
 }
