@@ -67,11 +67,7 @@ export const createInMemoryOrganisationReadRepository = (
       })
       return {
         ...page,
-        items: await toReadModelOrganisations(
-          items,
-          structuredClone(future),
-          dependencies
-        )
+        items: await toReadModelOrganisations(items, [], dependencies)
       }
     }
   })

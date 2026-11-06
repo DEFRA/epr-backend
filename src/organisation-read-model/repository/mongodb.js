@@ -92,11 +92,7 @@ export const createOrganisationReadRepository = (
       })
       return {
         ...page,
-        items: await toReadModelOrganisations(
-          items,
-          await findFutureAccreditations(db, items),
-          dependencies
-        )
+        items: await toReadModelOrganisations(items, [], dependencies)
       }
     }
   })

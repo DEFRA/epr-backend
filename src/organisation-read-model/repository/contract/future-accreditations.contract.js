@@ -230,5 +230,25 @@ export const testFutureAccreditationsBehaviour = (it) => {
         }
       })
     })
+
+    it('serves only stored accreditations from find, which does not read future ones yet', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = accreditedIn2026()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)]
+      })
+
+      const { items } = await repository.find({
+        organisationNumber: String(stored.orgId),
+        page: 1,
+        pageSize: 10
+      })
+
+      expect(
+        items[0].registrations[REPROCESSOR_NUMBER].accreditations
+      ).toStrictEqual({ 2026: storedAccreditation2026 })
+    })
   })
 }
