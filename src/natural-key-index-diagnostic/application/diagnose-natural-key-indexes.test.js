@@ -28,6 +28,17 @@ const summaryLog = (fields) => ({
   ...fields
 })
 
+/** @param {Record<string, unknown>} [fields] */
+const prn = (fields) => ({
+  organisation: { id: 'o1', organisationNumber: '500001' },
+  registration: { registrationNumber: 'R1' },
+  accreditation: { id: 'acc-1', accreditationNumber: 'A1' },
+  ...fields
+})
+
+/** @param {Record<string, unknown>} fields */
+const ledgerEvent = (fields) => ({ ...NUMBERS, ...fields })
+
 /**
  * A document with `field` absent, as one stored before it was written.
  *
@@ -50,13 +61,68 @@ describe('diagnoseNaturalKeyIndexes', () => {
       { organisationId: 'o1', registrationId: 'r1', ...NUMBERS },
       { organisationId: 'o1', registrationId: 'r1', ...NUMBERS }
     ])
+    await database.collection('packaging-recycling-notes').insertOne(prn())
+    await database
+      .collection('waste-balance-events')
+      .insertMany([
+        ledgerEvent({ accreditationId: 'acc-1', accreditationNumber: 'A1' }),
+        ledgerEvent({ accreditationId: null, accreditationNumber: null })
+      ])
+
     expect(await diagnoseNaturalKeyIndexes(database)).toStrictEqual({
       summaryLogs: 2,
       submittingSummaryLogsWithoutNumbers: 0,
       validatedSummaryLogsWithoutNumbers: 0,
       reports: 2,
       reportsWithoutNumbers: 0,
-      sharedReportNumbers: []
+      sharedReportNumbers: [],
+      prns: 1,
+      prnsWithoutNumbers: 0,
+      ledgerEvents: 2,
+      ledgerEventsWithoutNumbers: 0
+    })
+  })
+
+  it('counts PRNs lacking any of their numbers', async ({ database }) => {
+    await database
+      .collection('packaging-recycling-notes')
+      .insertMany([
+        prn(),
+        prn({ organisation: { id: 'o1' } }),
+        prn({ registration: {} }),
+        without('registration', prn()),
+        prn({ accreditation: { id: 'acc-1' } })
+      ])
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis).toMatchObject({ prns: 5, prnsWithoutNumbers: 4 })
+  })
+
+  it('counts ledger events lacking a number their ledger needs', async ({
+    database
+  }) => {
+    await database
+      .collection('waste-balance-events')
+      .insertMany([
+        ledgerEvent({ accreditationId: 'acc-1', accreditationNumber: 'A1' }),
+        without(
+          'organisationNumber',
+          ledgerEvent({ accreditationId: 'acc-1', accreditationNumber: 'A1' })
+        ),
+        without(
+          'registrationNumber',
+          ledgerEvent({ accreditationId: 'acc-1', accreditationNumber: 'A1' })
+        ),
+        ledgerEvent({ accreditationId: 'acc-1', accreditationNumber: null }),
+        ledgerEvent({ accreditationId: null })
+      ])
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis).toMatchObject({
+      ledgerEvents: 5,
+      ledgerEventsWithoutNumbers: 4
     })
   })
 

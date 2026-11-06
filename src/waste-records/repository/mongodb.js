@@ -56,9 +56,11 @@ export async function ensureSummaryLogRowStatesCollection(db) {
     { name: 'summary_log_membership' }
   )
 
-  for (const name of RETIRED_ROW_HISTORY_INDEX_NAMES) {
-    await dropIndexIfPresent(collection, name)
-  }
+  await Promise.all(
+    RETIRED_ROW_HISTORY_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
+  )
 
   await collection.createIndex(
     {
