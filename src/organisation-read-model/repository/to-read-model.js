@@ -19,9 +19,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationReadRepository } from './port.js' */
 
 /**
  * @typedef {(message: string) => void} OnDrop
@@ -36,64 +34,38 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
+ * The stored organisations as the read model shows them. An organisation the
+ * model cannot represent is left out and reported through `logger.warn`.
+ *
+ * @param {StoredOrganisation[]} stored
  * @param {{
- *   organisationsRepository: OrganisationsRepository
- *   overseasSitesRepository: OverseasSitesRepository
- *   logger: TypedLogger
+ *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
+ *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
- * @returns {OrganisationReadRepository}
+ * @returns {Promise<Organisation[]>}
  */
-export const createOrganisationReadRepository = ({
-  organisationsRepository,
-  overseasSitesRepository,
-  logger
-}) => {
-  /**
-   * @param {StoredOrganisation[]} stored
-   * @returns {Promise<Organisation[]>}
-   */
-  const toOrganisations = async (stored) => {
-    const siteIds = stored.flatMap(({ registrations }) =>
-      registrations.flatMap((registration) =>
-        Object.values(registration.overseasSites ?? {}).map(
-          ({ overseasSiteId }) => overseasSiteId
-        )
+export async function toReadModelOrganisations(
+  stored,
+  { overseasSitesRepository, logger }
+) {
+  const siteIds = stored.flatMap(({ registrations }) =>
+    registrations.flatMap((registration) =>
+      Object.values(registration.overseasSites ?? {}).map(
+        ({ overseasSiteId }) => overseasSiteId
       )
     )
-    const sites = await overseasSitesRepository.findByIds(siteIds)
+  )
+  const sites = await overseasSitesRepository.findByIds(siteIds)
 
-    /** @type {Context} */
-    const context = {
-      onDrop: (message) => logger.warn({ message }),
-      overseasSitesById: new Map(sites.map((site) => [site.id, site])),
-      today: new Date().toISOString().slice(0, 10)
-    }
-    return stored
-      .map((organisation) => toOrganisation(organisation, context))
-      .filter((organisation) => organisation !== null)
+  /** @type {Context} */
+  const context = {
+    onDrop: (message) => logger.warn({ message }),
+    overseasSitesById: new Map(sites.map((site) => [site.id, site])),
+    today: new Date().toISOString().slice(0, 10)
   }
-
-  return {
-    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-      const stored = await organisationsRepository.findByOrganisationNumber(
-        organisationNumber,
-        minimumVersion
-      )
-      if (!stored) {
-        return null
-      }
-      const [organisation] = await toOrganisations([stored])
-      return organisation ?? null
-    },
-
-    find: async ({ organisationNumber, ...params }) => {
-      const { items, ...page } = await organisationsRepository.find({
-        ...params,
-        orgId: organisationNumber
-      })
-      return { ...page, items: await toOrganisations(items) }
-    }
-  }
+  return stored
+    .map((organisation) => toOrganisation(organisation, context))
+    .filter((organisation) => organisation !== null)
 }
 
 /**

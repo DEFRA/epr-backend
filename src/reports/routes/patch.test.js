@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
@@ -99,6 +100,9 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     const server = await createTestServer({
       repositories: {
         organisationsRepository: createInMemoryOrganisationsRepository([
+          partialMock(org)
+        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
         reportsRepository: reportsRepositoryFactory
