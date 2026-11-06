@@ -38,6 +38,7 @@ const runDiagnostic = async (server) => {
       `summaryLogs=${diagnosis.summaryLogs}`,
       `submittingSummaryLogsWithoutNumbers=${diagnosis.submittingSummaryLogsWithoutNumbers}`,
       `validatedSummaryLogsWithoutNumbers=${diagnosis.validatedSummaryLogsWithoutNumbers}`,
+      `submittingLockClashes=${diagnosis.submittingLockClashes}`,
       `reports=${diagnosis.reports}`,
       `reportsWithoutNumbers=${diagnosis.reportsWithoutNumbers}`,
       `sharedReportNumbers=${diagnosis.sharedReportNumbers.length}`,

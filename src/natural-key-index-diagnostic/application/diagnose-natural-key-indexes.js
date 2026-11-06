@@ -23,6 +23,7 @@ const REPORTS_COLLECTION_NAME = 'reports'
  *   summaryLogs: number,
  *   submittingSummaryLogsWithoutNumbers: number,
  *   validatedSummaryLogsWithoutNumbers: number,
+ *   submittingLockClashes: number,
  *   reports: number,
  *   reportsWithoutNumbers: number,
  *   sharedReportNumbers: SharedReportNumbers[],
@@ -58,12 +59,13 @@ const LEDGER_EVENT_LACKING_A_NUMBER = {
   ]
 }
 
+// Mirrors holdsNumbers: a registered-only log needs accreditationNumber too.
 const LACKING_A_NUMBER = {
   $or: [
     { organisationNumber: { $exists: false } },
     { registrationNumber: { $exists: false } },
     {
-      accreditationId: { $type: 'string' },
+      accreditationId: { $exists: true },
       accreditationNumber: { $exists: false }
     }
   ]
@@ -77,6 +79,36 @@ const countSummaryLogsWithoutNumbers = (db, status) =>
   db
     .collection(SUMMARY_LOGS_COLLECTION_NAME)
     .countDocuments({ status, ...LACKING_A_NUMBER })
+
+/**
+ * Groups of submitting summary logs that would clash on the unique submitting
+ * lock keyed on the numbers.
+ *
+ * @param {Db} db
+ * @returns {Promise<number>}
+ */
+const countSubmittingLockClashes = async (db) => {
+  const clashes = await db
+    .collection(SUMMARY_LOGS_COLLECTION_NAME)
+    .aggregate([
+      { $match: { status: SUMMARY_LOG_STATUS.SUBMITTING } },
+      {
+        $group: {
+          _id: {
+            organisationNumber: '$organisationNumber',
+            registrationNumber: '$registrationNumber',
+            year: '$year',
+            accreditationNumber: '$accreditationNumber'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $match: { count: { $gt: 1 } } }
+    ])
+    .toArray()
+
+  return clashes.length
+}
 
 /**
  * @param {Db} db
@@ -125,6 +157,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     summaryLogs,
     submittingSummaryLogsWithoutNumbers,
     validatedSummaryLogsWithoutNumbers,
+    submittingLockClashes,
     reportCount,
     reportsWithoutNumbers,
     sharedReportNumbers,
@@ -136,6 +169,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     db.collection(SUMMARY_LOGS_COLLECTION_NAME).estimatedDocumentCount(),
     countSummaryLogsWithoutNumbers(db, SUMMARY_LOG_STATUS.SUBMITTING),
     countSummaryLogsWithoutNumbers(db, SUMMARY_LOG_STATUS.VALIDATED),
+    countSubmittingLockClashes(db),
     reports.estimatedDocumentCount(),
     reports.countDocuments({
       $or: [
@@ -154,6 +188,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     summaryLogs,
     submittingSummaryLogsWithoutNumbers,
     validatedSummaryLogsWithoutNumbers,
+    submittingLockClashes,
     reports: reportCount,
     reportsWithoutNumbers,
     sharedReportNumbers,

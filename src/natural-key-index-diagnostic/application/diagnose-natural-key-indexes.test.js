@@ -24,7 +24,9 @@ const NUMBERS = { organisationNumber: '500001', registrationNumber: 'R1' }
 /** @param {Record<string, unknown>} fields */
 const summaryLog = (fields) => ({
   ...NUMBERS,
+  year: 2026,
   accreditationId: null,
+  accreditationNumber: null,
   ...fields
 })
 
@@ -73,6 +75,7 @@ describe('diagnoseNaturalKeyIndexes', () => {
       summaryLogs: 2,
       submittingSummaryLogsWithoutNumbers: 0,
       validatedSummaryLogsWithoutNumbers: 0,
+      submittingLockClashes: 0,
       reports: 2,
       reportsWithoutNumbers: 0,
       sharedReportNumbers: [],
@@ -156,6 +159,37 @@ describe('diagnoseNaturalKeyIndexes', () => {
     const diagnosis = await diagnoseNaturalKeyIndexes(database)
 
     expect(diagnosis.submittingSummaryLogsWithoutNumbers).toBe(1)
+  })
+
+  it('counts a registered-only summary log without its null accreditation number', async ({
+    database
+  }) => {
+    await database
+      .collection('summary-logs')
+      .insertOne(
+        without('accreditationNumber', summaryLog({ status: 'submitting' }))
+      )
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis.submittingSummaryLogsWithoutNumbers).toBe(1)
+  })
+
+  it('counts submitting summary logs that would share one submitting lock', async ({
+    database
+  }) => {
+    await database
+      .collection('summary-logs')
+      .insertMany([
+        summaryLog({ status: 'submitting', organisationId: 'o1' }),
+        summaryLog({ status: 'submitting', organisationId: 'o2' }),
+        summaryLog({ status: 'submitting', year: 2025 }),
+        summaryLog({ status: 'validated' })
+      ])
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis.submittingLockClashes).toBe(1)
   })
 
   it('counts reports lacking a number, and names numbers shared by more than one id pair', async ({
