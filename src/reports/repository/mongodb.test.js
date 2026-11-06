@@ -147,6 +147,32 @@ describe('MongoDB reports repository', () => {
     })
   })
 
+  it('builds its unique indexes over reports stored before they carried numbers', /** @param {ReportsFixtures} fixture */ async ({
+    mongoClient
+  }) => {
+    const database = mongoClient.db(`${DATABASE_NAME}-${randomUUID()}`)
+    const unnumberedReport = (/** @type {string} */ id) => ({
+      id,
+      organisationId: '507f1f77bcf86cd799439011',
+      registrationId: '507f1f77bcf86cd799439012',
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      submissionNumber: 1,
+      status: { currentStatus: 'in_progress' }
+    })
+    await database
+      .collection('reports')
+      .insertMany([
+        unnumberedReport(randomUUID()),
+        unnumberedReport(randomUUID())
+      ])
+
+    await expect(createReportsRepository(database)).resolves.toBeDefined()
+
+    await database.dropDatabase()
+  })
+
   it('keeps one report per slot by number, and drops the id indexes it replaces', /** @param {ReportsFixtures} fixture */ async ({
     mongoClient
   }) => {

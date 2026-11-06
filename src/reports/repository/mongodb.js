@@ -53,6 +53,12 @@ const RETIRED_ID_INDEX_NAMES = [
   'reports_one_active_draft_per_period'
 ]
 
+// Reports stored before they carried numbers stay out of the unique indexes.
+const NUMBERED = {
+  organisationNumber: { $type: 'string' },
+  registrationNumber: { $type: 'string' }
+}
+
 /**
  * Converts the calendar-date fields of a stored document to the bare dates the
  * port promises. Reports persisted before the bare-date schema fix carry a full
@@ -118,7 +124,11 @@ async function ensureCollections(db) {
       period: 1,
       submissionNumber: 1
     },
-    { unique: true, name: ONE_PER_SUBMISSION_INDEX_NAME }
+    {
+      unique: true,
+      partialFilterExpression: NUMBERED,
+      name: ONE_PER_SUBMISSION_INDEX_NAME
+    }
   )
   await col.createIndex(
     {
@@ -131,6 +141,7 @@ async function ensureCollections(db) {
     {
       unique: true,
       partialFilterExpression: {
+        ...NUMBERED,
         'status.currentStatus': {
           $in: [REPORT_STATUS.IN_PROGRESS, REPORT_STATUS.READY_TO_SUBMIT]
         }
