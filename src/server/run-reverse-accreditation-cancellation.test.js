@@ -34,67 +34,63 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
   createSystemLogsRepository: vi.fn()
 }))
 
-const ORGANISATION_NUMBER = 500064
 const ACCREDITATION_NUMBER = 'A26EX5000640122PL'
-const HISTORY_MISMATCH =
-  'status history does not end approved, suspended, cancelled with the last two on 2026-10-19'
+const SKIPPED_MESSAGE = {
+  message: `Skipping accreditation cancellation reversal: accreditationNumber=${ACCREDITATION_NUMBER} not found or already reversed`
+}
 
+// The accreditation's status history in production.
 const CREATED = {
   status: 'created',
-  updatedAt: new Date('2026-01-10T09:00:00Z')
+  updatedAt: new Date('2025-12-30T11:43:44.248Z')
 }
 const APPROVED = {
   status: 'approved',
-  updatedAt: new Date('2026-02-01T09:00:00Z')
+  updatedAt: new Date('2026-01-08T09:59:33.397Z')
 }
 const SUSPENDED = {
   status: 'suspended',
-  updatedAt: new Date('2026-10-19T09:30:00Z')
+  updatedAt: new Date('2026-10-19T10:37:26.074Z')
 }
 const CANCELLED = {
   status: 'cancelled',
-  updatedAt: new Date('2026-10-19T14:00:00Z')
+  updatedAt: new Date('2026-10-19T10:37:32.973Z')
 }
-const REVERSIBLE_HISTORY = [CREATED, APPROVED, SUSPENDED, CANCELLED]
+const PRODUCTION_HISTORY = [CREATED, APPROVED, SUSPENDED, CANCELLED]
 
 /**
  * @param {{
  *   accreditationHistory?: Array<{ status: string, updatedAt: Date }>,
- *   accreditationOverrides?: object,
- *   registrationStatus?: string,
- *   linked?: boolean,
+ *   accreditationNumber?: string,
  *   orgId?: number
  * }} [options]
  */
 const buildTargetOrganisation = ({
-  accreditationHistory = REVERSIBLE_HISTORY,
-  accreditationOverrides = {},
-  registrationStatus = 'approved',
-  linked = true,
-  orgId = ORGANISATION_NUMBER
+  accreditationHistory = PRODUCTION_HISTORY,
+  accreditationNumber = ACCREDITATION_NUMBER,
+  orgId = 500064
 } = {}) => {
   const accreditationId = new ObjectId().toString()
   return buildOrganisation({
     orgId,
     registrations: [
       buildRegistration({
-        ...(linked && { accreditationId }),
+        accreditationId,
         reprocessingType: 'input',
         registrationNumber: 'R26EX5000640122PL',
         validFrom: '2026-01-01',
-        statusHistory: [CREATED, { ...APPROVED, status: registrationStatus }]
+        statusHistory: [CREATED, APPROVED]
       })
     ],
     accreditations: [
       buildAccreditation({
         id: accreditationId,
         reprocessingType: 'input',
-        accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+        accreditationNumber: toAccreditationNumber(accreditationNumber),
         validFrom: '2026-01-01',
         validTo: '2026-12-31',
         // @ts-expect-error fixture statuses are plain strings
-        statusHistory: accreditationHistory,
-        ...accreditationOverrides
+        statusHistory: accreditationHistory
       }),
       buildAccreditation()
     ]
@@ -108,25 +104,15 @@ describe('runReverseAccreditationCancellation', () => {
   let systemLogsRepository
 
   const seedWith = (organisations) => {
-    const organisationsFactory =
-      createInMemoryOrganisationsRepository(organisations)
-    const systemLogsFactory = createInMemorySystemLogsRepository()
-    organisationsRepository = organisationsFactory()
-    systemLogsRepository = systemLogsFactory(logger)
+    organisationsRepository =
+      createInMemoryOrganisationsRepository(organisations)()
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
     vi.mocked(createOrganisationsRepository).mockResolvedValue(
       () => organisationsRepository
     )
     vi.mocked(createSystemLogsRepository).mockResolvedValue(
       () => systemLogsRepository
     )
-  }
-
-  const storedAccreditation = async (organisation, minimumVersion) => {
-    const stored = await organisationsRepository.findById(
-      organisation.id,
-      minimumVersion
-    )
-    return stored.accreditations[0]
   }
 
   const storedSystemLogs = async () => {
@@ -144,30 +130,19 @@ describe('runReverseAccreditationCancellation', () => {
     }
   })
 
-  describe('when the accreditation was suspended and cancelled on 19/10/2026', () => {
+  describe('on the first run', () => {
     it('removes the suspended and cancelled entries so the accreditation is approved again', async () => {
       const organisation = buildTargetOrganisation()
       seedWith([organisation])
 
       await runReverseAccreditationCancellation(mockServer)
 
-      const accreditation = await storedAccreditation(organisation, 2)
-      expect(accreditation.status).toBe('approved')
-      expect(accreditation.statusHistory).toEqual([CREATED, APPROVED])
-    })
-
-    it('leaves the validity window and accreditation number as they were', async () => {
-      const organisation = buildTargetOrganisation()
-      seedWith([organisation])
-
-      await runReverseAccreditationCancellation(mockServer)
-
-      const accreditation = await storedAccreditation(organisation, 2)
-      expect(accreditation).toMatchObject({
-        accreditationNumber: ACCREDITATION_NUMBER,
-        validFrom: '2026-01-01',
-        validTo: '2026-12-31'
-      })
+      const stored = await organisationsRepository.findById(organisation.id, 2)
+      expect(stored.accreditations[0].status).toBe('approved')
+      expect(stored.accreditations[0].statusHistory).toEqual([
+        CREATED,
+        APPROVED
+      ])
     })
 
     it("leaves the organisation's other accreditations untouched", async () => {
@@ -223,138 +198,54 @@ describe('runReverseAccreditationCancellation', () => {
         })
       )
     })
-
-    it('reads the dates in UK time, so a suspension late on 18/10 UTC counts as 19/10', async () => {
-      const organisation = buildTargetOrganisation({
-        accreditationHistory: [
-          CREATED,
-          APPROVED,
-          { ...SUSPENDED, updatedAt: new Date('2026-10-18T23:30:00Z') },
-          CANCELLED
-        ]
-      })
-      seedWith([organisation])
-
-      await runReverseAccreditationCancellation(mockServer)
-
-      const accreditation = await storedAccreditation(organisation, 2)
-      expect(accreditation.status).toBe('approved')
-    })
-
-    it('changes nothing more when it runs again', async () => {
-      const organisation = buildTargetOrganisation()
-      seedWith([organisation])
-
-      await runReverseAccreditationCancellation(mockServer)
-      await runReverseAccreditationCancellation(mockServer)
-
-      const stored = await organisationsRepository.findById(organisation.id, 2)
-      expect(stored.version).toBe(2)
-      expect(stored.accreditations[0].statusHistory).toEqual([
-        CREATED,
-        APPROVED
-      ])
-      expect(await storedSystemLogs()).toHaveLength(1)
-    })
   })
 
-  describe('when the record does not match exactly', () => {
-    it.each([
-      {
-        scenario: 'the organisation does not exist',
-        organisation: () => buildTargetOrganisation({ orgId: 500065 }),
-        reason: 'organisation not found'
-      },
-      {
-        scenario: 'the organisation has no accreditation with that number',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationOverrides: {
-              accreditationNumber: toAccreditationNumber('A26EX0000000000PL')
-            }
-          }),
-        reason: 'accreditation not found on organisation'
-      },
-      {
-        scenario: 'the accreditation is not cancelled',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationHistory: [CREATED, APPROVED]
-          }),
-        reason: HISTORY_MISMATCH
-      },
-      {
-        scenario: 'the cancellation went straight from approved',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationHistory: [CREATED, APPROVED, CANCELLED]
-          }),
-        reason: HISTORY_MISMATCH
-      },
-      {
-        scenario: 'the cancellation was on 20/10 in UK time',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationHistory: [
-              CREATED,
-              APPROVED,
-              SUSPENDED,
-              { ...CANCELLED, updatedAt: new Date('2026-10-19T23:30:00Z') }
-            ]
-          }),
-        reason: HISTORY_MISMATCH
-      },
-      {
-        scenario: 'the suspension was on an earlier day',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationHistory: [
-              CREATED,
-              APPROVED,
-              { ...SUSPENDED, updatedAt: new Date('2026-10-01T09:00:00Z') },
-              CANCELLED
-            ]
-          }),
-        reason: HISTORY_MISMATCH
-      },
-      {
-        scenario: 'the accreditation has no validity window',
-        organisation: () =>
-          buildTargetOrganisation({
-            accreditationOverrides: { validFrom: null, validTo: null }
-          }),
-        reason: 'accreditation has no validity window'
-      },
-      {
-        scenario: 'the linked registration is cancelled',
-        organisation: () =>
-          buildTargetOrganisation({ registrationStatus: 'cancelled' }),
-        reason: 'linked registration is not approved'
-      },
-      {
-        scenario: 'no registration is linked to the accreditation',
-        organisation: () => buildTargetOrganisation({ linked: false }),
-        reason: 'linked registration is not approved'
-      }
-    ])(
-      'changes nothing and says why when $scenario',
-      async ({ organisation: build, reason }) => {
-        const organisation = build()
-        seedWith([organisation])
+  it('changes nothing when it runs again', async () => {
+    const organisation = buildTargetOrganisation()
+    seedWith([organisation])
 
-        await runReverseAccreditationCancellation(mockServer)
+    await runReverseAccreditationCancellation(mockServer)
+    await runReverseAccreditationCancellation(mockServer)
 
-        const stored = await organisationsRepository.findById(organisation.id)
-        expect(stored.version).toBe(1)
-        expect(stored.accreditations[0].statusHistory).toEqual(
-          organisation.accreditations[0].statusHistory
-        )
-        expect(await storedSystemLogs()).toEqual([])
-        expect(logger.info).toHaveBeenCalledWith({
-          message: `Skipping accreditation cancellation reversal: organisationNumber=500064 accreditationNumber=A26EX5000640122PL reason="${reason}"`
+    const stored = await organisationsRepository.findById(organisation.id, 2)
+    expect(stored.version).toBe(2)
+    expect(stored.accreditations[0].statusHistory).toEqual([CREATED, APPROVED])
+    expect(await storedSystemLogs()).toHaveLength(1)
+    expect(logger.info).toHaveBeenCalledWith(SKIPPED_MESSAGE)
+  })
+
+  it.each([
+    {
+      scenario: 'the organisation does not exist',
+      organisation: () => buildTargetOrganisation({ orgId: 500065 })
+    },
+    {
+      scenario: 'the organisation has no accreditation with that number',
+      organisation: () =>
+        buildTargetOrganisation({ accreditationNumber: 'A26EX0000000000PL' })
+    },
+    {
+      scenario: 'the last two entries are not the expected ones',
+      organisation: () =>
+        buildTargetOrganisation({
+          accreditationHistory: [
+            CREATED,
+            APPROVED,
+            SUSPENDED,
+            { ...CANCELLED, updatedAt: new Date('2026-10-19T10:37:33.000Z') }
+          ]
         })
-      }
-    )
+    }
+  ])('changes nothing when $scenario', async ({ organisation: build }) => {
+    const organisation = build()
+    seedWith([organisation])
+
+    await runReverseAccreditationCancellation(mockServer)
+
+    const stored = await organisationsRepository.findById(organisation.id)
+    expect(stored.version).toBe(1)
+    expect(await storedSystemLogs()).toEqual([])
+    expect(logger.info).toHaveBeenCalledWith(SKIPPED_MESSAGE)
   })
 
   describe('locking', () => {

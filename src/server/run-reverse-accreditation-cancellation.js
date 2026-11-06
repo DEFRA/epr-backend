@@ -1,86 +1,37 @@
+import { isDeepStrictEqual } from 'node:util'
+
 import { logger } from '#common/helpers/logging/logger.js'
-import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { auditReverseAccreditationCancellation } from '#auditing/reverse-accreditation-cancellation.js'
-import {
-  ACCREDITATION_STATUS,
-  REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
 const LOCK_NAME = 'reverse-accreditation-cancellation'
 const ORGANISATION_NUMBER = toOrganisationNumber('500064')
 const ACCREDITATION_NUMBER = 'A26EX5000640122PL'
-const REVERSED_DATE = '2026-10-19'
 const REASON = 'Court order reversing the cancellation of 19/10/2026'
-const REMOVED_STATUSES = [
-  ACCREDITATION_STATUS.SUSPENDED,
-  ACCREDITATION_STATUS.CANCELLED
+const ENTRIES_TO_REMOVE = [
+  { status: 'suspended', updatedAt: '2026-10-19T10:37:26.074Z' },
+  { status: 'cancelled', updatedAt: '2026-10-19T10:37:32.973Z' }
 ]
-const EXPECTED_TAIL = [ACCREDITATION_STATUS.APPROVED, ...REMOVED_STATUSES]
-
-/**
- * @param {Date | string} updatedAt
- * @returns {string} YYYY-MM-DD in UK time
- */
-const ukDateOf = (updatedAt) =>
-  new Date(updatedAt).toLocaleDateString('en-CA', { timeZone: UK_TIME_ZONE })
 
 /**
  * @param {Accreditation} accreditation
  * @returns {boolean}
  */
-const historyEndsInReversibleCancellation = ({ statusHistory }) => {
-  const tail = statusHistory.slice(-EXPECTED_TAIL.length)
-  return (
-    tail.length === EXPECTED_TAIL.length &&
-    tail.every(({ status }, index) => status === EXPECTED_TAIL[index]) &&
-    tail
-      .slice(1)
-      .every(({ updatedAt }) => ukDateOf(updatedAt) === REVERSED_DATE)
+const endsWithEntriesToRemove = ({ statusHistory }) =>
+  isDeepStrictEqual(
+    statusHistory
+      .slice(-ENTRIES_TO_REMOVE.length)
+      .map(({ status, updatedAt }) => ({
+        status,
+        updatedAt: new Date(updatedAt).toISOString()
+      })),
+    ENTRIES_TO_REMOVE
   )
-}
-
-/**
- * @param {Organisation | null} organisation
- * @returns {{ organisation: Organisation, accreditation: Accreditation } | { skipReason: string }}
- */
-const findTarget = (organisation) => {
-  if (!organisation) {
-    return { skipReason: 'organisation not found' }
-  }
-
-  const accreditation = organisation.accreditations.find(
-    ({ accreditationNumber }) => accreditationNumber === ACCREDITATION_NUMBER
-  )
-  if (!accreditation) {
-    return { skipReason: 'accreditation not found on organisation' }
-  }
-
-  if (!historyEndsInReversibleCancellation(accreditation)) {
-    return {
-      skipReason: `status history does not end approved, suspended, cancelled with the last two on ${REVERSED_DATE}`
-    }
-  }
-
-  if (!accreditation.validFrom || !accreditation.validTo) {
-    return { skipReason: 'accreditation has no validity window' }
-  }
-
-  const registration = organisation.registrations.find(
-    ({ accreditationId }) => accreditationId === accreditation.id
-  )
-  if (registration?.status !== REGISTRATION_STATUS.APPROVED) {
-    return { skipReason: 'linked registration is not approved' }
-  }
-
-  return { organisation, accreditation }
-}
 
 /**
  * @param {StartedServer} server
@@ -93,17 +44,23 @@ const reverseCancellation = async (server) => {
     logger
   )
 
-  const target = findTarget(
+  const organisation =
     await organisationsRepository.findByOrganisationNumber(ORGANISATION_NUMBER)
+  const accreditation = organisation?.accreditations.find(
+    ({ accreditationNumber }) => accreditationNumber === ACCREDITATION_NUMBER
   )
-  if ('skipReason' in target) {
+
+  if (
+    !organisation ||
+    !accreditation ||
+    !endsWithEntriesToRemove(accreditation)
+  ) {
     logger.info({
-      message: `Skipping accreditation cancellation reversal: organisationNumber=${ORGANISATION_NUMBER} accreditationNumber=${ACCREDITATION_NUMBER} reason="${target.skipReason}"`
+      message: `Skipping accreditation cancellation reversal: accreditationNumber=${ACCREDITATION_NUMBER} not found or already reversed`
     })
     return
   }
 
-  const { organisation, accreditation } = target
   const { id, version, ...orgFields } = organisation
 
   // The status is passed unchanged so replace() keeps the supplied history
@@ -114,7 +71,7 @@ const reverseCancellation = async (server) => {
       acc.id === accreditation.id
         ? {
             ...acc,
-            statusHistory: acc.statusHistory.slice(0, -REMOVED_STATUSES.length)
+            statusHistory: acc.statusHistory.slice(0, -ENTRIES_TO_REMOVE.length)
           }
         : acc
     )
@@ -137,8 +94,7 @@ const reverseCancellation = async (server) => {
 /**
  * One-off startup migration (PAE-2223): removes the suspended and cancelled
  * status history entries of 19/10/2026 from accreditation A26EX5000640122PL,
- * returning it to approved. Does nothing unless the history matches exactly,
- * so it is safe to run on every start until removed.
+ * returning it to approved. Once they are gone it does nothing.
  *
  * @param {StartedServer} server
  */
