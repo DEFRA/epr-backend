@@ -1,8 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { toYear } from '#common/helpers/dates/year.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import {
   accreditation,
   reprocessor
@@ -148,23 +145,6 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.status.timeline).toEqual(approvedThenCancelledTimeline)
-  })
-
-  it('serves an external accreditation beside the stored ones', async () => {
-    const organisation = buildAccreditedOrganisation()
-    const external = buildExternalAccreditation({
-      registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-      year: toYear(2027)
-    })
-    await serve(organisation, [external])
-
-    const response = await get(`/organisations/${organisation.orgId}`)
-
-    const { accreditations } = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(Object.keys(accreditations)).toStrictEqual(['2026', '2027'])
-    expect(accreditations[2027].accreditationNumber).toBe(
-      external.accreditationNumber
-    )
   })
 
   it('serves every one of several status changes on one day with its time', async () => {

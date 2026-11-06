@@ -39,7 +39,7 @@ const dependenciesFor = ({
  * `organisationReadRepository`. Later writes to it are not seen.
  *
  * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
- * @param {Pick<ReadModelOptions, 'externalAccreditations' | 'overseasSitesRepository'>} [options]
+ * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
  * @returns {Promise<() => OrganisationReadRepository>}
  */
 export const organisationReadRepositoryFrom = async (
@@ -47,8 +47,7 @@ export const organisationReadRepositoryFrom = async (
   options
 ) => {
   const repository = createInMemoryOrganisationReadRepository(
-    await organisationsRepository.findAll(),
-    options?.externalAccreditations
+    await organisationsRepository.findAll()
   )(dependenciesFor(options))
   return () => repository
 }

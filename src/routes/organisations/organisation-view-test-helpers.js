@@ -17,7 +17,6 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 export {
@@ -116,9 +115,8 @@ export const useViewServer = () => {
 
   /**
    * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
-   * @param {ExternalAccreditation[]} [externalAccreditations]
    */
-  const start = async (organisationsRepository, externalAccreditations) => {
+  const start = async (organisationsRepository) => {
     const overseasSitesRepository =
       createInMemoryOverseasSitesRepository(overseasSites)
     server = await createTestServer({
@@ -127,10 +125,7 @@ export const useViewServer = () => {
         overseasSitesRepository,
         organisationReadRepository: await organisationReadRepositoryFrom(
           organisationsRepository(),
-          {
-            externalAccreditations,
-            overseasSitesRepository: overseasSitesRepository()
-          }
+          { overseasSitesRepository: overseasSitesRepository() }
         )
       }
     })
@@ -139,13 +134,9 @@ export const useViewServer = () => {
   /**
    * Seeds the organisation as given, without repository validation.
    * @param {object} organisation
-   * @param {ExternalAccreditation[]} [externalAccreditations]
    */
-  const serve = (organisation, externalAccreditations) =>
-    start(
-      createInMemoryOrganisationsRepository([partialMock(organisation)]),
-      externalAccreditations
-    )
+  const serve = (organisation) =>
+    start(createInMemoryOrganisationsRepository([partialMock(organisation)]))
 
   /**
    * Stores the organisation through the repository, as production writes it.
