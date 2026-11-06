@@ -58,9 +58,11 @@ async function ensureSubmittingLockIndex(collection) {
     }
   )
 
-  for (const name of RETIRED_SUBMITTING_LOCK_INDEX_NAMES) {
-    await dropIndexIfPresent(collection, name)
-  }
+  await Promise.all(
+    RETIRED_SUBMITTING_LOCK_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
+  )
 }
 
 /**
