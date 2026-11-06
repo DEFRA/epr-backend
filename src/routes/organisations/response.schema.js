@@ -6,6 +6,7 @@ import {
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import {
   ACCREDITATION_STATUSES,
@@ -202,6 +203,10 @@ export const organisationListResponseSchema = Joi.object({
   totalPages: Joi.number().required()
 })
 
+const servedYear = yearSchema().custom((year, helpers) =>
+  isFutureYear(year) ? helpers.error('any.invalid') : year
+)
+
 export const organisationYearsResponseSchema = Joi.object({
-  years: Joi.array().items(yearSchema()).unique().required()
+  years: Joi.array().items(servedYear).unique().required()
 })

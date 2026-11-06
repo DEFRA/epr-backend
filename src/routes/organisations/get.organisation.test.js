@@ -150,6 +150,23 @@ describe('GET /organisations/{organisationNumber}', () => {
     expect(registration.status.timeline).toEqual(approvedThenCancelledTimeline)
   })
 
+  it('serves a future accreditation beside the stored ones', async () => {
+    const organisation = buildAccreditedOrganisation()
+    const future = buildFutureAccreditation({
+      registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+      year: toYear(2027)
+    })
+    await serve(organisation, [future])
+
+    const response = await get(`/organisations/${organisation.orgId}`)
+
+    const { accreditations } = body(response).registrations[REPROCESSOR_NUMBER]
+    expect(Object.keys(accreditations)).toStrictEqual(['2026', '2027'])
+    expect(accreditations[2027].accreditationNumber).toBe(
+      future.accreditationNumber
+    )
+  })
+
   it('serves every one of several status changes on one day with its time', async () => {
     const organisation = reinstatedThenCancelledOnNewYearsDay()
     await serve(organisation)
@@ -566,31 +583,6 @@ describe('GET /organisations/{organisationNumber}', () => {
         'approved'
       )
       expect(in2026.registrations).toEqual({})
-    })
-
-    it('should serve registrations approved today in a later year, with any stub accreditation for it', async () => {
-      const organisation = buildAccreditedOrganisation()
-      await serve(organisation, [
-        buildFutureAccreditation({
-          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          year: toYear(2028)
-        })
-      ])
-
-      const response = await get(urlFor(organisation, 2028))
-
-      const { registrations } = body(response)
-      expect({
-        [REPROCESSOR_NUMBER]: Object.keys(
-          registrations[REPROCESSOR_NUMBER].accreditations
-        ),
-        [EXPORTER_NUMBER]: Object.keys(
-          registrations[EXPORTER_NUMBER].accreditations
-        )
-      }).toStrictEqual({
-        [REPROCESSOR_NUMBER]: ['2028'],
-        [EXPORTER_NUMBER]: []
-      })
     })
 
     it('rejects a year outside the supported range', async () => {

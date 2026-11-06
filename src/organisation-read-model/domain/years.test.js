@@ -7,18 +7,12 @@ import {
   regAccStatusByYear
 } from './years.js'
 
-const registration = (timeline, accreditations = {}) =>
-  partialMock({ status: { timeline }, accreditations })
+const registration = (timeline) => partialMock({ status: { timeline } })
 
-const organisationOf = (...registrations) =>
+const organisationOf = (...timelines) =>
   partialMock({
     registrations: Object.fromEntries(
-      registrations.map((timelineOrRegistration, index) => [
-        `R${index}`,
-        Array.isArray(timelineOrRegistration)
-          ? registration(timelineOrRegistration)
-          : timelineOrRegistration
-      ])
+      timelines.map((timeline, index) => [`R${index}`, registration(timeline)])
     )
   })
 
@@ -103,32 +97,6 @@ describe('organisationYears', () => {
     expect(organisationYears(partialMock({ registrations: {} }), NOW)).toEqual(
       []
     )
-  })
-
-  it('should list a later year a registration approved today holds an accreditation for', () => {
-    const organisation = organisationOf(
-      registration([{ status: 'approved', at: '2026-02-01T00:00:00.000Z' }], {
-        2028: {}
-      })
-    )
-
-    expect(organisationYears(organisation, NOW)).toStrictEqual([
-      2028, 2027, 2026
-    ])
-  })
-
-  it('should not list a later year for a registration cancelled today', () => {
-    const organisation = organisationOf(
-      registration(
-        [
-          { status: 'approved', at: '2026-02-01T00:00:00.000Z' },
-          { status: 'cancelled', at: '2027-02-01T00:00:00.000Z' }
-        ],
-        { 2028: {} }
-      )
-    )
-
-    expect(organisationYears(organisation, NOW)).toStrictEqual([2027, 2026])
   })
 })
 
@@ -356,54 +324,9 @@ describe('organisationInYear', () => {
     expect(status.current).toBe('active')
   })
 
-  it("should carry a registration approved today into a later year with that year's accreditation", () => {
-    const organisation = organisationWith({
-      R1: approvedFrom('2025-02-01', {
-        2027: accreditation('A27'),
-        2028: accreditation('A28')
-      })
-    })
-
-    const { registrations } = organisationInYear(
-      organisation,
-      toYear(2028),
-      NOW
-    )
-
-    expect([
-      registrations.R1.status.current,
-      registrations.R1.accreditations
-    ]).toStrictEqual(['approved', { 2028: accreditation('A28') }])
-  })
-
-  it('should serve a carried registration without an accreditation as registered only', () => {
+  it('serves no registrations for a year that has not started', () => {
     const organisation = organisationWith({
       R1: approvedFrom('2025-02-01')
-    })
-
-    const { registrations } = organisationInYear(
-      organisation,
-      toYear(2028),
-      NOW
-    )
-
-    expect(registrations.R1.regAccStatusByDate).toStrictEqual({
-      2028: { '2028-01-01': { status: 'registeredOnly' } }
-    })
-  })
-
-  it('should not carry a registration cancelled today into a later year', () => {
-    const organisation = organisationWith({
-      R1: {
-        status: {
-          current: 'cancelled',
-          timeline: [
-            { status: 'approved', at: '2025-02-01T00:00:00.000Z' },
-            { status: 'cancelled', at: '2027-02-01T00:00:00.000Z' }
-          ]
-        },
-        accreditations: { 2028: accreditation('A28') }
-      }
     })
 
     const { registrations } = organisationInYear(
