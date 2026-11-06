@@ -3,11 +3,10 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { FUTURE_ACCREDITATIONS_FROM_YEAR } from '#organisation-read-model/domain/model.js'
 
 /** @import { FutureAccreditation } from '../port.js' */
 
-export const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
+const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
 
 /**
  * @param {Partial<FutureAccreditation>} [overrides]
@@ -15,7 +14,7 @@ export const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
  */
 export const buildFutureAccreditation = (overrides = {}) => ({
   registrationNumber: REGISTRATION_NUMBER,
-  year: toYear(FUTURE_ACCREDITATIONS_FROM_YEAR),
+  year: toYear(2027),
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {

@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildFutureAccreditation } from '#future-accreditations/repository/contract/test-data.js'
+import { buildFutureAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,

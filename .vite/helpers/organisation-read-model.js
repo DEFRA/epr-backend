@@ -3,7 +3,7 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */

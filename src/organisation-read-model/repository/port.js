@@ -1,5 +1,16 @@
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { AccreditationCommon, Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+
+/**
+ * A registration's accreditation for a year the REEX database does not hold
+ * accreditations for.
+ *
+ * @typedef {AccreditationCommon & {
+ *   registrationNumber: RegistrationNumber
+ *   year: Year
+ * }} FutureAccreditation
+ */
 
 /**
  * Every criterion that carries a value narrows the results, and an empty

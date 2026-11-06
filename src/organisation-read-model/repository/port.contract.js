@@ -5,7 +5,7 @@ import { testFutureAccreditationsBehaviour } from './contract/future-accreditati
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
-/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**

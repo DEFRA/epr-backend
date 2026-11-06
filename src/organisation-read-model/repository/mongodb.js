@@ -1,4 +1,3 @@
-import { FUTURE_ACCREDITATIONS_COLLECTION_NAME } from '#future-accreditations/repository/mongodb.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import {
   DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
@@ -14,9 +13,10 @@ import {
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationReadRepository } from './port.js' */
+/** @import { FutureAccreditation, OrganisationReadRepository } from './port.js' */
+
+export const FUTURE_ACCREDITATIONS_COLLECTION_NAME = 'stub-accreditations'
 
 /**
  * @param {Db} db
@@ -34,9 +34,8 @@ const findFutureAccreditations = (db, stored) =>
     .toArray()
 
 /**
- * Reads the organisations and future accreditations collections directly, the
- * same way their repositories do, and serves what it finds in the read model's
- * shape.
+ * Reads the organisations and future accreditations collections directly, and
+ * serves what it finds in the read model's shape.
  *
  * It shares the organisations repository's reads through the
  * `#repositories/organisations/mongodb-find.js` import while both read

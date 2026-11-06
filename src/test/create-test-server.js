@@ -20,7 +20,6 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
-import { createMockFutureAccreditationsRepository } from '#test/mock-repositories.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
@@ -159,14 +158,6 @@ const repositoryConfigs = [
   {
     name: 'orsImportsRepository',
     createDefault: createInMemoryOrsImportsRepositoryPlugin
-  },
-  {
-    name: 'futureAccreditationsRepository',
-    createDefault: () =>
-      createRepositoryPlugin(
-        'futureAccreditationsRepository',
-        createMockFutureAccreditationsRepository()
-      )
   },
   {
     name: 'organisationReadRepository',

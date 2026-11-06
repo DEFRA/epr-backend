@@ -6,7 +6,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 

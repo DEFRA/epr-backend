@@ -13,7 +13,6 @@ import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-com
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
-import { mongoFutureAccreditationsRepositoryPlugin } from '#future-accreditations/repository/mongodb.plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
@@ -137,7 +136,6 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    mongoFutureAccreditationsRepositoryPlugin,
     {
       plugin: organisationReadRepositoryPlugin,
       options: { eventualConsistency }

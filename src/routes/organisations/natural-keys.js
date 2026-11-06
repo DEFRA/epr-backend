@@ -38,12 +38,9 @@ export const organisationParams = {
     .custom(toOrganisationNumber)
     .required()
 }
-export const registrationNumberParam = Joi.string()
-  .custom(toRegistrationNumber)
-  .required()
 export const registrationParams = {
   ...organisationParams,
-  registrationNumber: registrationNumberParam
+  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
 }
 
 /**

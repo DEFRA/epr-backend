@@ -6,7 +6,6 @@ import { vi } from 'vitest'
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {FutureAccreditationsRepository} from '#future-accreditations/repository/port.js' */
 
 /**
  * Builds a fully-typed OrganisationsRepository mock with every method as a
@@ -133,18 +132,5 @@ export const createMockOverseasSitesRepository = (overrides = {}) => ({
   remove: vi.fn(),
   findAll: vi.fn(),
   findByIds: vi.fn(),
-  ...overrides
-})
-
-/**
- * Builds a fully-typed FutureAccreditationsRepository mock with every method
- * as a vi.fn(). Pass `overrides` to stub specific methods for a test.
- *
- * @param {Partial<FutureAccreditationsRepository>} [overrides]
- * @returns {FutureAccreditationsRepository}
- */
-export const createMockFutureAccreditationsRepository = (overrides = {}) => ({
-  upsert: vi.fn(),
-  remove: vi.fn(),
   ...overrides
 })

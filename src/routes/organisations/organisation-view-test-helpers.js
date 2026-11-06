@@ -17,7 +17,7 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
-/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 export {

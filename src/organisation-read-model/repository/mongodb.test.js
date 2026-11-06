@@ -1,10 +1,12 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
-import { FUTURE_ACCREDITATIONS_COLLECTION_NAME } from '#future-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { createOrganisationReadRepository } from './mongodb.js'
+import {
+  FUTURE_ACCREDITATIONS_COLLECTION_NAME,
+  createOrganisationReadRepository
+} from './mongodb.js'
 import {
   REPROCESSOR_NUMBER,
   findOrganisation,

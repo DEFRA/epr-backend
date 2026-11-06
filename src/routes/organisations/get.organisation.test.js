@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildFutureAccreditation } from '#future-accreditations/repository/contract/test-data.js'
+import { buildFutureAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import {
   accreditation,
   reprocessor
