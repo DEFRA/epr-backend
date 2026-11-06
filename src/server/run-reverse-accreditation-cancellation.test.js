@@ -198,6 +198,23 @@ describe('runReverseAccreditationCancellation', () => {
         })
       )
     })
+
+    it('matches on the day, not the exact time', async () => {
+      const organisation = buildTargetOrganisation({
+        accreditationHistory: [
+          CREATED,
+          APPROVED,
+          { ...SUSPENDED, updatedAt: new Date('2026-10-19T08:00:00.000Z') },
+          { ...CANCELLED, updatedAt: new Date('2026-10-19T16:00:00.000Z') }
+        ]
+      })
+      seedWith([organisation])
+
+      await runReverseAccreditationCancellation(mockServer)
+
+      const stored = await organisationsRepository.findById(organisation.id, 2)
+      expect(stored.accreditations[0].status).toBe('approved')
+    })
   })
 
   it('changes nothing when it runs again', async () => {
@@ -225,15 +242,22 @@ describe('runReverseAccreditationCancellation', () => {
         buildTargetOrganisation({ accreditationNumber: 'A26EX0000000000PL' })
     },
     {
-      scenario: 'the last two entries are not the expected ones',
+      scenario: 'the cancellation is on a different day',
       organisation: () =>
         buildTargetOrganisation({
           accreditationHistory: [
             CREATED,
             APPROVED,
             SUSPENDED,
-            { ...CANCELLED, updatedAt: new Date('2026-10-19T10:37:33.000Z') }
+            { ...CANCELLED, updatedAt: new Date('2026-10-20T10:37:32.973Z') }
           ]
+        })
+    },
+    {
+      scenario: 'the last two entries are not suspended then cancelled',
+      organisation: () =>
+        buildTargetOrganisation({
+          accreditationHistory: [CREATED, APPROVED, CANCELLED, SUSPENDED]
         })
     }
   ])('changes nothing when $scenario', async ({ organisation: build }) => {

@@ -14,8 +14,8 @@ const ORGANISATION_NUMBER = toOrganisationNumber('500064')
 const ACCREDITATION_NUMBER = 'A26EX5000640122PL'
 const REASON = 'Court order reversing the cancellation of 19/10/2026'
 const ENTRIES_TO_REMOVE = [
-  { status: 'suspended', updatedAt: '2026-10-19T10:37:26.074Z' },
-  { status: 'cancelled', updatedAt: '2026-10-19T10:37:32.973Z' }
+  { status: 'suspended', date: '2026-10-19' },
+  { status: 'cancelled', date: '2026-10-19' }
 ]
 
 /**
@@ -28,7 +28,7 @@ const endsWithEntriesToRemove = ({ statusHistory }) =>
       .slice(-ENTRIES_TO_REMOVE.length)
       .map(({ status, updatedAt }) => ({
         status,
-        updatedAt: new Date(updatedAt).toISOString()
+        date: new Date(updatedAt).toISOString().slice(0, 10)
       })),
     ENTRIES_TO_REMOVE
   )
