@@ -381,15 +381,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   it('allows re-creating the first submission after the initial draft is deleted', async () => {
     const created = await createServer(registeredOnlyReprocessor)
-    const { organisationId, registrationId, reportsRepositoryFactory } = created
+    const { organisationNumber, registrationNumber, reportsRepositoryFactory } =
+      created
 
     const first = await created.post()
     expect(first.statusCode).toBe(StatusCodes.CREATED)
     const firstId = (await storedQuarterlyReport(created))?.id
 
     await reportsRepositoryFactory().deleteReport({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year: YEAR,
       cadence: 'quarterly',
       period: QUARTER,

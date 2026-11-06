@@ -6,6 +6,12 @@ import {
 } from '#domain/summary-logs/status.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 
@@ -44,6 +50,32 @@ export const buildRejectedFile = (overrides = {}) => {
 const DEFAULT_SUBMITTED_AT = '2024-01-01T00:00:00.000Z'
 const DEFAULT_CREATED_AT = '2024-01-01T00:00:00.000Z'
 
+/** @param {string} [id] */
+const numberFor = (id) => `number-of-${id ?? randomUUID()}`
+
+/**
+ * Gives a summary log the numbers it is stored with, derived from its ids so
+ * that summary logs under different ids never share a submitting lock.
+ *
+ * @template {{ organisationId?: string, registrationId?: string, accreditationId?: string | null }} T
+ * @param {T} summaryLog
+ */
+const withDefaultNumbers = (summaryLog) => ({
+  organisationNumber: /** @type {OrganisationNumber} */ (
+    numberFor(summaryLog.organisationId)
+  ),
+  registrationNumber: toRegistrationNumber(
+    numberFor(summaryLog.registrationId)
+  ),
+  ...(summaryLog.accreditationId !== undefined && {
+    accreditationNumber:
+      summaryLog.accreditationId === null
+        ? null
+        : toAccreditationNumber(numberFor(summaryLog.accreditationId))
+  }),
+  ...summaryLog
+})
+
 /**
  * Creates a factory function for a given status with default values.
  * The factory merges overrides with defaults, handling nested file objects.
@@ -61,7 +93,7 @@ const createFactory = (status, getDefaults = () => ({})) => {
         ? { ...defaults.file, ...fileOverrides }
         : (fileOverrides ?? defaults.file)
 
-    return {
+    return withDefaultNumbers({
       status,
       expiresAt: calculateExpiresAt(status),
       createdAt: DEFAULT_CREATED_AT,
@@ -70,21 +102,25 @@ const createFactory = (status, getDefaults = () => ({})) => {
       ...defaults,
       ...(file && { file }),
       ...rest
-    }
+    })
   }
 }
 
 /**
- * Strips `accreditationId` from a factory-built summary log, so the key is
- * absent, as on a backfilled pre-migration document. Setting it to
+ * Strips `accreditationId` and its number from a factory-built summary log,
+ * so both keys are absent, as on a pre-migration document. Setting them to
  * `undefined` instead would not do this: MongoDB stores an `undefined`
  * object property as BSON `null`, not as an absent field.
  *
- * @template {{accreditationId?: string | null}} T
+ * @template {{accreditationId?: string | null, accreditationNumber?: string | null}} T
  * @param {T} summaryLog
- * @returns {Omit<T, 'accreditationId'>}
+ * @returns {Omit<T, 'accreditationId' | 'accreditationNumber'>}
  */
-export const withoutAccreditationId = ({ accreditationId: _a, ...rest }) => rest
+export const withoutAccreditationId = ({
+  accreditationId: _a,
+  accreditationNumber: _n,
+  ...rest
+}) => rest
 
 export const summaryLogFactory = {
   /**
@@ -145,7 +181,7 @@ export const summaryLogFactory = {
       ? { ...buildFile(), ...fileOverrides }
       : buildFile()
 
-    return {
+    return withDefaultNumbers({
       status: SUMMARY_LOG_STATUS.SUBMITTED,
       expiresAt: null,
       file,
@@ -154,7 +190,7 @@ export const summaryLogFactory = {
       year: currentUtcYear(),
       accreditationId: null,
       ...rest
-    }
+    })
   },
 
   /**
