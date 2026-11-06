@@ -1,5 +1,6 @@
 import Joi from 'joi'
-import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
+import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
+import { MATERIAL } from '#domain/organisations/model.js'
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 
 const prnTonnageRowSchema = Joi.object({
@@ -13,9 +14,7 @@ const prnTonnageRowSchema = Joi.object({
   material: Joi.string()
     .valid(...Object.values(MATERIAL))
     .required(),
-  tonnageBand: Joi.string()
-    .valid(...Object.values(TONNAGE_BAND))
-    .required(),
+  tonnageBand: tonnageBandSchema.required(),
   wasteBalance: Joi.number().required(),
   availableWasteBalance: Joi.number().required(),
   awaitingAuthorisationTonnage: Joi.number().required(),

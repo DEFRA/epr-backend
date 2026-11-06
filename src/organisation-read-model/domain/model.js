@@ -1,4 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
+/** @import { TonnageBand } from '#domain/organisations/model.js' */
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
@@ -68,7 +69,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *
  * @typedef {{
  *   accreditationNumber: AccreditationNumber
- *   prnIssuance: { tonnageBand: string }
+ *   prnIssuance: { tonnageBand: TonnageBand }
  *   status: Status<'approved' | 'suspended' | 'cancelled'>
  * }} AccreditationCommon
  *

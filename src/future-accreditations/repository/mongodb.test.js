@@ -123,6 +123,22 @@ describe('mongodb future accreditations repository', () => {
 
       expect(await held()).toStrictEqual([buildFutureAccreditation()])
     })
+
+    it('should hold the accreditation number trimmed and upper-cased, as organisations hold it', async ({
+      futureAccreditationsRepository,
+      held
+    }) => {
+      const { accreditationNumber } = buildFutureAccreditation()
+      await futureAccreditationsRepository.upsert(
+        buildFutureAccreditation({
+          accreditationNumber: toAccreditationNumber(
+            ` ${accreditationNumber.toLowerCase()} `
+          )
+        })
+      )
+
+      expect(await held()).toStrictEqual([buildFutureAccreditation()])
+    })
   })
 
   describe('remove', () => {
@@ -181,6 +197,15 @@ describe('mongodb future accreditations repository', () => {
         })
       },
       {
+        description: 'an unknown status in its timeline',
+        accreditation: buildFutureAccreditation({
+          status: {
+            current: 'approved',
+            timeline: [{ status: 'banana', at: '2027-01-01T00:00:00.000Z' }]
+          }
+        })
+      },
+      {
         description: 'an unknown status',
         accreditation: buildFutureAccreditation({
           status: {
@@ -192,7 +217,7 @@ describe('mongodb future accreditations repository', () => {
       {
         description: 'an unknown tonnage band',
         accreditation: buildFutureAccreditation({
-          prnIssuance: { tonnageBand: 'lots' }
+          prnIssuance: { tonnageBand: /** @type {any} */ ('lots') }
         })
       }
     ])(
