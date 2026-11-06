@@ -132,7 +132,6 @@ const buildSeededLedgerRepository = () =>
   ])()
 
 const buildOrganisationsRepository = (accreditation = {}) => ({
-  findById: async () => organisation,
   findAccreditationById: vi.fn().mockResolvedValue({
     status: 'approved',
     submittedToRegulator: REGULATOR.EA,

@@ -18,7 +18,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
 
@@ -143,9 +143,7 @@ export async function updatePrnStatus(request) {
 
 /**
  * Assembles the `PrnTransitionContext` the three phases run on. This is the one
- * place the caller's three loose ids become a `ledgerId`, with the numbers the
- * organisation record gives them; everything downstream takes it whole.
- * Refuses, before anything is read for update, when the record lacks a number.
+ * place the caller's three loose ids become a `ledgerId`, numbered from the PRN.
  *
  * @param {UpdatePrnStatusRequest} request
  * @returns {Promise<PrnTransitionContext>}
@@ -166,11 +164,14 @@ async function buildTransitionContext({
   obligationYear,
   providedPrn
 }) {
-  const numbers = requiredNumbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId },
-    'ledger events'
-  )
+  const stored = providedPrn ?? (await prnRepository.findById(id))
+
+  if (
+    stored?.organisation.id !== organisationId ||
+    stored?.accreditation.id !== accreditationId
+  ) {
+    throw Boom.notFound(`PRN not found: ${id}`)
+  }
 
   return {
     prnRepository,
@@ -184,11 +185,7 @@ async function buildTransitionContext({
       organisationId,
       registrationId,
       accreditationId,
-      ...numbers,
-      // An accreditation id is given a number, never null.
-      accreditationNumber: /** @type {AccreditationNumber} */ (
-        numbers.accreditationNumber
-      )
+      ...prnLedgerId(stored)
     },
     user,
     now: updatedAt ?? new Date(),
@@ -381,27 +378,18 @@ async function readRaisePool(service, ledgerId, prnId) {
 }
 
 /**
- * The PRN the transition rules against: the stored document, asserted to belong
- * to the caller's organisation and accreditation, brought current by folding on
- * the stream events it has not yet seen.
- *
- * It runs inside phase 1 rather than ahead of the transition so that no read it
- * makes predates the head the transition's events will land on. That costs a
- * wasted fold when the PRN turns out not to exist or not to belong to the
- * caller, which is the price of the hazard being unstateable.
+ * The PRN the transition rules against, re-read after the balance so no read
+ * predates the head, and brought current by folding on the events it has not
+ * yet seen.
  *
  * @param {PrnTransitionContext} ctx
  * @returns {Promise<PackagingRecyclingNote>}
  */
-async function loadPrn({ prnRepository, service, ledgerId, id, providedPrn }) {
-  const stored = providedPrn ?? (await prnRepository.findById(id))
-
-  if (
-    stored?.organisation.id !== ledgerId.organisationId ||
-    stored?.accreditation.id !== ledgerId.accreditationId
-  ) {
-    throw Boom.notFound(`PRN not found: ${id}`)
-  }
+async function loadPrn({ prnRepository, service, id, providedPrn }) {
+  // Found by buildTransitionContext; PRNs are never removed.
+  const stored = /** @type {PackagingRecyclingNote} */ (
+    providedPrn ?? (await prnRepository.findById(id))
+  )
 
   return catchUpPrnProjection(stored, service)
 }

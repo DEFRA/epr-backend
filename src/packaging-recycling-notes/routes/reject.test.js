@@ -83,10 +83,10 @@ const authHeaders = {
  * It carries no `prnId`, so the read-side fold leaves the seeded PRN untouched
  * while `findBalance` still resolves a balance for the status-only append.
  */
-const openingBalanceEvent = (ledgerIds) =>
+const openingBalanceEvent = (ledgerIds, ledgerNumbers) =>
   buildLedgerEvent({
     ...ledgerIds,
-    ...PRN_NUMBERS,
+    ...ledgerNumbers,
     number: 1
   })
 
@@ -106,16 +106,18 @@ let reportsRepository
  * @param {Object} [options]
  * @param {Map<string, object>} [options.reports]
  * @param {{ registrationId: string, accreditationId: string, organisationId: string }} [options.ledgerIds]
+ * @param {typeof PRN_NUMBERS} [options.ledgerNumbers]
  */
 const startServer = async (
   prn,
   {
     reports = new Map(),
-    ledgerIds = { registrationId, accreditationId, organisationId }
+    ledgerIds = { registrationId, accreditationId, organisationId },
+    ledgerNumbers = PRN_NUMBERS
   } = {}
 ) => {
   ledgerRepository = createInMemoryLedgerRepository([
-    partialMock(openingBalanceEvent(ledgerIds))
+    partialMock(openingBalanceEvent(ledgerIds, ledgerNumbers))
   ])()
   const prnRepositoryFactory = createInMemoryPackagingRecyclingNotesRepository(
     prn ? [prn] : []
@@ -305,6 +307,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         registrationId: staleTestRegId,
         accreditationId: staleTestAccId,
         organisationId: staleTestOrgId
+      },
+      ledgerNumbers: {
+        ...PRN_NUMBERS,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER
       }
     })
 

@@ -136,18 +136,20 @@ const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  * @param {string} prnId
  */
-const prnsRepositoryAwaitingAuthorisation = (
-  { id, registrations: [registration] },
-  prnId
-) =>
-  createInMemoryPackagingRecyclingNotesRepository([
+const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) => {
+  const [registration] = organisation.registrations
+  const ids = {
+    registrationId: registration.id,
+    accreditationId: /** @type {string} */ (registration.accreditationId)
+  }
+  return createInMemoryPackagingRecyclingNotesRepository([
     /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
       id: prnId,
       ...buildAwaitingAuthorisationPrn(
         underAccreditation({
-          organisationId: id,
-          registrationId: registration.id,
-          accreditationId: /** @type {string} */ (registration.accreditationId)
+          organisationId: organisation.id,
+          ...ids,
+          ...requiredNumbersFor(organisation, ids, 'the test PRN')
         })
       )
     })
@@ -160,6 +162,7 @@ const prnsRepositoryAwaitingAuthorisation = (
     fatal: vi.fn(),
     child: vi.fn()
   })
+}
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }

@@ -215,9 +215,7 @@ describe('PRN status concurrency against real MongoDB', () => {
     updatePrnStatus({
       prnRepository: repositoryFactory(createMockLogger()),
       ledgerRepository,
-      organisationsRepository: /** @type {*} */ ({
-        findById: async () => organisation
-      }),
+      organisationsRepository: /** @type {*} */ ({}),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: createMockLogger(),
       id: prnId,

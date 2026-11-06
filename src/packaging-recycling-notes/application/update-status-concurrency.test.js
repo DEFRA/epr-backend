@@ -209,7 +209,6 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
     organisationsRepository:
       /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
         /** @type {unknown} */ ({
-          findById: async () => organisation,
           findAccreditationById: async () => ({
             status,
             submittedToRegulator: REGULATOR.EA
@@ -222,7 +221,6 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
 const buildOrganisationsRepository = () =>
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
     /** @type {unknown} */ ({
-      findById: async () => organisation,
       findAccreditationById: vi.fn().mockResolvedValue({
         status: ACCREDITATION_STATUS.APPROVED,
         submittedToRegulator: REGULATOR.EA

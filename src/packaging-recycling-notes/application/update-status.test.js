@@ -190,7 +190,7 @@ const buildPrnLedgerEvent = ({
  * @param {boolean} [options.withAccreditation]
  * @param {string} [options.organisationId]
  * @param {string} [options.registrationId]
- * @param {string | null} [options.registrationNumber]
+ * @param {string} [options.registrationNumber]
  * @param {string} [options.organisationNumber]
  */
 const buildOrgWithAccreditation = ({
@@ -243,7 +243,6 @@ const buildOrgWithAccreditation = ({
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} [options.ledgerEvents] - raw ledger events to seed, taking precedence over `balance` (for a raised-then-cancelled sequence)
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
- * @param {string | null} [options.registrationNumber]
  */
 const seedRepositories = ({
   prn,
@@ -251,8 +250,7 @@ const seedRepositories = ({
   balance,
   ledgerEvents,
   accreditation,
-  withAccreditation = true,
-  registrationNumber
+  withAccreditation = true
 } = {}) => {
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
     prns ?? (prn ? [prn] : [])
@@ -264,8 +262,7 @@ const seedRepositories = ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildOrgWithAccreditation({
       accreditation,
-      withAccreditation,
-      registrationNumber
+      withAccreditation
     })
   ])()
   return {
@@ -362,7 +359,7 @@ describe('updatePrnStatus', () => {
   })
 
   describe('the waste-balance write boundary', () => {
-    it('writes the event with the numbers its organisation record gives', async () => {
+    it('writes the event with the numbers the PRN carries', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -377,38 +374,13 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER
       })
 
-      const organisation =
-        await repositories.organisationsRepository.findById(ORG_ID)
       expect(
         await repositories.ledgerRepository.findLatestInLedger(LEDGER)
       ).toMatchObject({
-        organisationNumber: String(organisation.orgId),
-        registrationNumber: LEDGER.registrationNumber,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: TEST_REGISTRATION.registrationNumber,
         accreditationNumber: 'ACC-1'
       })
-    })
-
-    it('refuses the change, appending nothing, when the organisation record gives no accreditation number', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          tonnage: 100,
-          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        accreditation: { accreditationNumber: null }
-      })
-
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
-        })
-      ).rejects.toThrow('Cannot store ledger events without their numbers')
-
-      const latest =
-        await repositories.ledgerRepository.findLatestInLedger(LEDGER)
-      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
     })
 
     // Tonnage is validated positive at the route and in the PRN schema, so a
@@ -694,33 +666,6 @@ describe('updatePrnStatus', () => {
           actor: PRN_ACTOR.SIGNATORY
         })
       ).rejects.toThrow()
-    })
-
-    it('refuses to issue, numbering nothing, when the organisation record gives no registration number', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        registrationNumber: null
-      })
-
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.SIGNATORY
-        })
-      ).rejects.toThrow('Cannot store ledger events without their numbers')
-
-      const stored = await repositories.prnRepository.findById(PRN_ID)
-      expect(stored?.prnNumber).toBeUndefined()
-      expect(stored?.status.currentStatus).toBe(
-        PRN_STATUS.AWAITING_AUTHORISATION
-      )
     })
   })
 
