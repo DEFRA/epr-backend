@@ -45,6 +45,7 @@ import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consume
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
+import { runReverseAccreditationCancellation } from '#server/run-reverse-accreditation-cancellation.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
@@ -224,6 +225,7 @@ async function createServer(options = {}) {
     void runFormsDataMigration(startedServer)
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
+    void runReverseAccreditationCancellation(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
     void runNaturalKeyIndexDiagnostic(startedServer)
