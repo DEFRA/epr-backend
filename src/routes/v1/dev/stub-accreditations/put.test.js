@@ -88,4 +88,25 @@ describe('PUT /v1/dev/stub-accreditations/{registrationNumber}/{year}', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
+
+  it('should refuse a status change not timed as a UTC date-time', async () => {
+    const { server, futureAccreditationsRepository } = await serverWith({
+      devEndpoints: true
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/dev/stub-accreditations/${registrationNumber}/${year}`,
+      payload: {
+        ...payload,
+        status: {
+          current: 'approved',
+          timeline: [{ status: 'approved', at: '2027' }]
+        }
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(futureAccreditationsRepository.upsert).not.toHaveBeenCalled()
+  })
 })

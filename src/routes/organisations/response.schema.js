@@ -7,16 +7,14 @@ import {
 import { materialSchema } from '#common/validation/material-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
+import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
   REG_ACC_STATUS
 } from '#organisation-read-model/domain/model.js'
-import {
-  isoDateTime,
-  statusSchema
-} from '#organisation-read-model/domain/schema.js'
+import { statusSchema } from '#organisation-read-model/domain/schema.js'
 
 /*
  * Routes validate responses with `stripUnknown`, so these schemas also decide
@@ -153,7 +151,7 @@ export const linkedDefraOrganisationViewSchema = Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required()
   }).required(),
-  linkedAt: isoDateTime.required(),
+  linkedAt: isoDateTimeString().required(),
   linkedBy: Joi.object({ email: Joi.string().required() }).required()
 })
 
