@@ -14,7 +14,9 @@ import {
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
-  DEFAULT_REPORT_YEAR
+  DEFAULT_REPORT_YEAR,
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
 } from './test-data.js'
 
 const ALT_ORG_ID = new ObjectId().toString()
@@ -149,7 +151,9 @@ export const testFindPeriodicReportsForYearBehaviour = (it) => {
       await repository.createReport(
         buildCreateReportParams({
           organisationId: ALT_ORG_ID,
-          registrationId: ALT_REG_ID
+          registrationId: ALT_REG_ID,
+          organisationNumber: uniqueOrganisationNumber(),
+          registrationNumber: uniqueRegistrationNumber()
         })
       )
       await repository.createReport(nextYearReport())

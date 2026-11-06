@@ -8,7 +8,11 @@ import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import {
+  buildCreateReportParams,
+  uniqueOrganisationNumber,
+  uniqueRegistrationNumber
+} from '#reports/repository/contract/test-data.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
@@ -203,6 +207,8 @@ const seedDownstreamForOrganisation = async (
     buildCreateReportParams({
       organisationId,
       registrationId,
+      organisationNumber: uniqueOrganisationNumber(),
+      registrationNumber: uniqueRegistrationNumber(),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January
     })
