@@ -8,6 +8,8 @@ import { generateKeyPairSync } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   PRN_YEAR,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 
@@ -96,9 +98,11 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   prnNumber,
   organisation: {
     id: 'org-123',
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Organisation'
   },
   registrationId: 'reg-456',
+  registration: TEST_REGISTRATION,
   accreditation: buildAccreditationSnapshot({ id: 'acc-789' }),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {

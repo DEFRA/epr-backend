@@ -2,7 +2,7 @@
 import Joi from 'joi'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Numbers, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 export const LEDGER_EVENT_KIND = Object.freeze({
   SUMMARY_LOG_SUBMITTED: 'summary-log-submitted',
@@ -139,11 +139,10 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The numbers an event holds beside its ledger id's ids: those its organisation
- * record gave when it was written, or that the backfill has added since. A
- * registered-only ledger's accreditation number is `null`.
+ * The numbers an event holds beside its ledger id's ids. A registered-only
+ * ledger's accreditation number is `null`.
  *
- * @typedef {Numbers} LedgerEventNumbers
+ * @typedef {RequiredNumbers} LedgerEventNumbers
  */
 
 /**
@@ -186,8 +185,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written, which for an event stored before the numbers is the numbers the
- * backfill has added.
+ * written.
  *
  * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEvent
  */
@@ -222,9 +220,13 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
 })
 
 const numbersKeys = {
-  organisationNumber: Joi.string(),
-  registrationNumber: Joi.string(),
-  accreditationNumber: Joi.string().allow(null)
+  organisationNumber: Joi.string().required(),
+  registrationNumber: Joi.string().required(),
+  accreditationNumber: Joi.when('accreditationId', {
+    is: null,
+    then: Joi.valid(null).required(),
+    otherwise: Joi.string().required()
+  })
 }
 
 const ledgerEventBaseSchema = Joi.object({
@@ -267,13 +269,6 @@ const ledgerEventBaseSchema = Joi.object({
   return value
 })
 
-export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys({
-  ...numbersKeys,
-  accreditationNumber: Joi.when('accreditationId', {
-    is: null,
-    then: Joi.valid(null),
-    otherwise: Joi.string()
-  })
-})
+export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys(numbersKeys)
 
 export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(numbersKeys)

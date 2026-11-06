@@ -14,6 +14,7 @@ import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import {
+  TEST_ORGANISATION_NUMBER,
   buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
@@ -73,6 +74,7 @@ const PRN_BASE = {
   registrationId: REG_ID,
   organisation: {
     id: ORG_ID,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },

@@ -1,4 +1,8 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -15,6 +19,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
@@ -72,7 +77,12 @@ const buildPrn = (currentStatus) => ({
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  registration: TEST_REGISTRATION,
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    name: 'Test Reprocessor'
+  },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
@@ -93,9 +103,11 @@ const buildPrn = (currentStatus) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number) => ({
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationId: ORG_ID,
+  ...withNumbers({
+    registrationId: REG_ID,
+    accreditationId: ACC_ID,
+    organisationId: ORG_ID
+  }),
   number,
   kind,
   payload: { prnId: PRN_ID, amount: 50 },

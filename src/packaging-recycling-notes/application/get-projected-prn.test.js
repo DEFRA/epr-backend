@@ -1,4 +1,9 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
@@ -45,7 +50,12 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
-  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  registration: TEST_REGISTRATION,
+  organisation: {
+    id: ORG_ID,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    name: 'Test Reprocessor'
+  },
   accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
@@ -72,9 +82,11 @@ const buildPrn = (overrides = {}) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationId: ORG_ID,
+  ...withNumbers({
+    registrationId: REG_ID,
+    accreditationId: ACC_ID,
+    organisationId: ORG_ID
+  }),
   number,
   kind,
   payload: { prnId: PRN_ID, amount: 50 },

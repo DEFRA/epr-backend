@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest'
 
 import { mapToExternalPrn } from './external-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -30,10 +34,12 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   prnNumber: 'ER2600001',
   organisation: {
     id: 'org-123',
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Reprocessor Ltd',
     tradingName: 'Reprocessor Trading'
   },
   registrationId: 'reg-456',
+  registration: TEST_REGISTRATION,
   accreditation: {
     id: 'acc-789',
     accreditationNumber: 'A26ER1075628626-PL',
@@ -244,7 +250,11 @@ describe('mapToExternalPrn', () => {
 
   it('omits tradingName when not present on organisations', () => {
     const prn = buildAwaitingAcceptancePrn({
-      organisation: { id: 'org-123', name: 'Reprocessor Ltd' },
+      organisation: {
+        id: 'org-123',
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        name: 'Reprocessor Ltd'
+      },
       issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Corp' }
     })
 
