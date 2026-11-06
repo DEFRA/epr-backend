@@ -1,9 +1,6 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
-import {
-  FUTURE_ACCREDITATIONS_COLLECTION_NAME,
-  createMongoFutureAccreditationsRepository
-} from '#future-accreditations/repository/mongodb.js'
+import { FUTURE_ACCREDITATIONS_COLLECTION_NAME } from '#future-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
@@ -63,12 +60,6 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
         futureAccreditations = [],
         logger = { warn: () => {} }
       }) => {
-        const futureAccreditationsRepository = (
-          await createMongoFutureAccreditationsRepository(database)
-        )()
-        await Promise.all(
-          futureAccreditations.map(futureAccreditationsRepository.upsert)
-        )
         for (const organisation of organisations) {
           await database
             .collection('epr-organisations')
@@ -79,12 +70,16 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
             .collection('overseas-sites')
             .insertOne(toDocument(site))
         }
+        for (const futureAccreditation of futureAccreditations) {
+          await database
+            .collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
+            .insertOne({ ...futureAccreditation })
+        }
 
         return createOrganisationReadRepository(database)({
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)
           )(),
-          futureAccreditationsRepository,
           logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger))
         })
       }

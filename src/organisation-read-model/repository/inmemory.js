@@ -6,13 +6,14 @@ import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
- * Holds organisations as the organisations repository returns them, and
- * serves them in the read model's shape, as the MongoDB adapter does.
+ * Holds organisations as the organisations repository returns them, and the
+ * future accreditations held for their registrations, and serves them in the
+ * read model's shape, as the MongoDB adapter does.
  *
  * It shares the in-memory organisations repository's search through the
  * `#repositories/organisations/inmemory-find.js` import, as the MongoDB
@@ -27,16 +28,18 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * Nothing writes to it, so a version below `minimumVersion` can never arrive.
  *
  * @param {StoredOrganisation[]} [organisations]
+ * @param {FutureAccreditation[]} [futureAccreditations]
  * @returns {(dependencies: {
- *   futureAccreditationsRepository: Pick<FutureAccreditationsRepository, 'findByRegistrationNumbers'>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
 export const createInMemoryOrganisationReadRepository = (
-  organisations = []
+  organisations = [],
+  futureAccreditations = []
 ) => {
   const stored = structuredClone(organisations)
+  const future = structuredClone(futureAccreditations)
 
   return (dependencies) => ({
     findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
@@ -51,6 +54,7 @@ export const createInMemoryOrganisationReadRepository = (
       }
       const [organisation] = await toReadModelOrganisations(
         [structuredClone(found)],
+        structuredClone(future),
         dependencies
       )
       return organisation ?? null
@@ -63,7 +67,11 @@ export const createInMemoryOrganisationReadRepository = (
       })
       return {
         ...page,
-        items: await toReadModelOrganisations(items, dependencies)
+        items: await toReadModelOrganisations(
+          items,
+          structuredClone(future),
+          dependencies
+        )
       }
     }
   })

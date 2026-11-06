@@ -5,9 +5,8 @@ import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 /** @import { HapiServer } from '#common/hapi-types.js' */
 
 /**
- * Reads exporters' sites through `server.app.overseasSitesRepository` and
- * future accreditations through `server.app.futureAccreditationsRepository`,
- * so both must register before this plugin.
+ * Reads exporters' sites through `server.app.overseasSitesRepository`, so it
+ * must register before this plugin.
  *
  * @param {StoredOrganisation[]} [initialOrganisations]
  */
@@ -19,18 +18,12 @@ export function createInMemoryOrganisationReadRepositoryPlugin(
 
   return {
     name: 'organisationReadRepository',
-    dependencies: ['overseasSitesRepository', 'futureAccreditationsRepository'],
+    dependencies: ['overseasSitesRepository'],
     /** @param {import('@hapi/hapi').Server & HapiServer} server */
     register: (server) => {
       const overseasSitesRepository = server.app.overseasSitesRepository
-      const futureAccreditationsRepository =
-        server.app.futureAccreditationsRepository
       registerDependency(server, 'organisationReadRepository', ({ logger }) =>
-        createRepository({
-          futureAccreditationsRepository,
-          overseasSitesRepository,
-          logger
-        })
+        createRepository({ overseasSitesRepository, logger })
       )
     }
   }

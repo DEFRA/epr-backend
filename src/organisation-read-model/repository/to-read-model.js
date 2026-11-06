@@ -19,7 +19,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { FutureAccreditation, FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
+/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -65,12 +65,24 @@ const byRegistrationAndYear = (futureAccreditations) =>
   )
 
 /**
- * The stored organisations as the read model shows them. An organisation the
- * model cannot represent is left out and reported through `logger.warn`.
+ * The registration numbers granted across the stored organisations.
  *
  * @param {StoredOrganisation[]} stored
+ * @returns {RegistrationNumber[]}
+ */
+export const registrationNumbersOf = (stored) =>
+  stored.flatMap(({ registrations }) =>
+    registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
+  )
+
+/**
+ * The stored organisations as the read model shows them, with the future
+ * accreditations held for their registrations. An organisation the model
+ * cannot represent is left out and reported through `logger.warn`.
+ *
+ * @param {StoredOrganisation[]} stored
+ * @param {FutureAccreditation[]} futureAccreditations
  * @param {{
- *   futureAccreditationsRepository: Pick<FutureAccreditationsRepository, 'findByRegistrationNumbers'>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
@@ -78,25 +90,17 @@ const byRegistrationAndYear = (futureAccreditations) =>
  */
 export async function toReadModelOrganisations(
   stored,
-  { futureAccreditationsRepository, overseasSitesRepository, logger }
+  futureAccreditations,
+  { overseasSitesRepository, logger }
 ) {
-  const storedRegistrations = stored.flatMap(
-    ({ registrations }) => registrations
-  )
-  const siteIds = storedRegistrations.flatMap((registration) =>
-    Object.values(registration.overseasSites ?? {}).map(
-      ({ overseasSiteId }) => overseasSiteId
+  const siteIds = stored.flatMap(({ registrations }) =>
+    registrations.flatMap((registration) =>
+      Object.values(registration.overseasSites ?? {}).map(
+        ({ overseasSiteId }) => overseasSiteId
+      )
     )
   )
-  const registrationNumbers = storedRegistrations.flatMap(
-    ({ registrationNumber }) => registrationNumber ?? []
-  )
-  const [sites, futureAccreditations] = await Promise.all([
-    overseasSitesRepository.findByIds(siteIds),
-    futureAccreditationsRepository.findByRegistrationNumbers(
-      registrationNumbers
-    )
-  ])
+  const sites = await overseasSitesRepository.findByIds(siteIds)
 
   /** @type {Context} */
   const context = {

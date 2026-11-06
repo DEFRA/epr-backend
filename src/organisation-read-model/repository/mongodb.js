@@ -1,3 +1,4 @@
+import { FUTURE_ACCREDITATIONS_COLLECTION_NAME } from '#future-accreditations/repository/mongodb.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import {
   DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
@@ -5,17 +6,37 @@ import {
   findOneAtMinimumVersion,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
-import { toReadModelOrganisations } from './to-read-model.js'
+import {
+  registrationNumbersOf,
+  toReadModelOrganisations
+} from './to-read-model.js'
 
-/** @import { Db } from 'mongodb' */
+/** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { FutureAccreditationsRepository } from '#future-accreditations/repository/port.js' */
+/** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
+/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
- * Reads the organisations collection directly, the same way the organisations
- * repository does, and serves what it finds in the read model's shape.
+ * @param {Db} db
+ * @param {StoredOrganisation[]} stored
+ * @returns {Promise<FutureAccreditation[]>}
+ */
+const findFutureAccreditations = (db, stored) =>
+  /** @type {Collection<FutureAccreditation>} */ (
+    db.collection(FUTURE_ACCREDITATIONS_COLLECTION_NAME)
+  )
+    .find(
+      { registrationNumber: { $in: registrationNumbersOf(stored) } },
+      { projection: { _id: 0 } }
+    )
+    .toArray()
+
+/**
+ * Reads the organisations and future accreditations collections directly, the
+ * same way their repositories do, and serves what it finds in the read model's
+ * shape.
  *
  * It shares the organisations repository's reads through the
  * `#repositories/organisations/mongodb-find.js` import while both read
@@ -30,7 +51,6 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * @param {Db} db
  * @param {{ maxRetries?: number, retryDelayMs?: number }} [eventualConsistencyConfig]
  * @returns {(dependencies: {
- *   futureAccreditationsRepository: Pick<FutureAccreditationsRepository, 'findByRegistrationNumbers'>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
@@ -59,6 +79,7 @@ export const createOrganisationReadRepository = (
       }
       const [organisation] = await toReadModelOrganisations(
         [stored],
+        await findFutureAccreditations(db, [stored]),
         dependencies
       )
       return organisation ?? null
@@ -71,7 +92,11 @@ export const createOrganisationReadRepository = (
       })
       return {
         ...page,
-        items: await toReadModelOrganisations(items, dependencies)
+        items: await toReadModelOrganisations(
+          items,
+          await findFutureAccreditations(db, items),
+          dependencies
+        )
       }
     }
   })

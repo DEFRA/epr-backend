@@ -1,4 +1,3 @@
-import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -21,27 +20,18 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 /**
  * @param {ReadModelOptions} [options]
  */
-const dependenciesFor = async ({
-  futureAccreditations = [],
+const dependenciesFor = ({
   overseasSites = [],
   overseasSitesRepository,
   logger = { warn: () => {} }
-} = {}) => {
-  const futureAccreditationsRepository =
-    createInMemoryFutureAccreditationsRepository()()
-  await Promise.all(
-    futureAccreditations.map(futureAccreditationsRepository.upsert)
-  )
-  return {
-    futureAccreditationsRepository,
-    overseasSitesRepository:
-      overseasSitesRepository ??
-      createInMemoryOverseasSitesRepository(
-        /** @type {any[]} */ (overseasSites)
-      )(),
-    logger
-  }
-}
+} = {}) => ({
+  overseasSitesRepository:
+    overseasSitesRepository ??
+    createInMemoryOverseasSitesRepository(
+      /** @type {any[]} */ (overseasSites)
+    )(),
+  logger
+})
 
 /**
  * An in-memory organisation read repository holding what
@@ -57,8 +47,9 @@ export const organisationReadRepositoryFrom = async (
   options
 ) => {
   const repository = createInMemoryOrganisationReadRepository(
-    await organisationsRepository.findAll()
-  )(await dependenciesFor(options))
+    await organisationsRepository.findAll(),
+    options?.futureAccreditations
+  )(dependenciesFor(options))
   return () => repository
 }
 
@@ -71,7 +62,7 @@ export const organisationReadRepositoryFrom = async (
  * a read for `minimumVersion` waits for the write to land as it does there.
  *
  * @param {Pick<OrganisationsRepository, 'findAll' | 'findByOrganisationNumber'>} organisationsRepository
- * @param {Pick<ReadModelOptions, 'futureAccreditations' | 'overseasSitesRepository'>} [options]
+ * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
  * @returns {OrganisationReadRepository}
  */
 export const organisationReadRepositoryOver = (
@@ -84,7 +75,7 @@ export const organisationReadRepositoryOver = (
       minimumVersion
     )
     return createInMemoryOrganisationReadRepository(stored ? [stored] : [])(
-      await dependenciesFor(options)
+      dependenciesFor(options)
     ).findByOrganisationNumber(organisationNumber, minimumVersion)
   },
   find: async (params) =>
@@ -107,7 +98,8 @@ export const organisationReadRepositoryOf = async (organisations, options) => {
   const repository = createInMemoryOrganisationReadRepository(
     await createInMemoryOrganisationsRepository(
       /** @type {any[]} */ (organisations)
-    )().findAll()
-  )(await dependenciesFor(options))
+    )().findAll(),
+    options?.futureAccreditations
+  )(dependenciesFor(options))
   return () => repository
 }
