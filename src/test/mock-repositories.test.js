@@ -6,7 +6,8 @@ import {
   createMockSystemLogsRepository,
   createMockFormSubmissionsRepository,
   createMockPackagingRecyclingNotesRepository,
-  createMockOverseasSitesRepository
+  createMockOverseasSitesRepository,
+  createMockFutureAccreditationsRepository
 } from '#test/mock-repositories.js'
 
 describe('mock-repositories', () => {
@@ -93,6 +94,10 @@ describe('mock-repositories', () => {
         'findAll',
         'findByIds'
       ]
+    },
+    createMockFutureAccreditationsRepository: {
+      build: createMockFutureAccreditationsRepository,
+      methods: ['upsert', 'remove']
     }
   }
 

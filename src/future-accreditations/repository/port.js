@@ -14,7 +14,6 @@
 
 /**
  * @typedef {{
- *   findByRegistrationNumbers: (registrationNumbers: RegistrationNumber[]) => Promise<FutureAccreditation[]>
  *   remove: (registrationNumber: RegistrationNumber, year: Year) => Promise<FutureAccreditation | null>
  *   upsert: (accreditation: FutureAccreditation) => Promise<FutureAccreditation>
  * }} FutureAccreditationsRepository

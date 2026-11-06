@@ -8,8 +8,6 @@ import { FUTURE_ACCREDITATIONS_FROM_YEAR } from '#organisation-read-model/domain
 /** @import { FutureAccreditation } from '../port.js' */
 
 export const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
-export const OTHER_REGISTRATION_NUMBER =
-  toRegistrationNumber('R26ER5000560000PL')
 
 /**
  * @param {Partial<FutureAccreditation>} [overrides]

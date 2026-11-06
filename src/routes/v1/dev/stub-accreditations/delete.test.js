@@ -5,16 +5,23 @@ import {
   REGISTRATION_NUMBER,
   buildFutureAccreditation
 } from '#future-accreditations/repository/contract/test-data.js'
-import { createInMemoryFutureAccreditationsRepository } from '#future-accreditations/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockFutureAccreditationsRepository } from '#test/mock-repositories.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
+/** @import { FutureAccreditation } from '#future-accreditations/repository/port.js' */
 
 const url = `/v1/dev/stub-accreditations/${REGISTRATION_NUMBER}/2027`
 
-/** @param {{ devEndpoints: boolean }} featureFlags */
-const serverWith = async (featureFlags) => {
+/**
+ * @param {{ devEndpoints: boolean }} featureFlags
+ * @param {FutureAccreditation | null} [held]
+ */
+const serverWith = async (featureFlags, held = null) => {
   const futureAccreditationsRepository =
-    createInMemoryFutureAccreditationsRepository()()
+    createMockFutureAccreditationsRepository({
+      remove: vi.fn().mockResolvedValue(held)
+    })
   const server = await createTestServer({
     config: { featureFlags },
     repositories: { futureAccreditationsRepository }
@@ -34,20 +41,19 @@ describe('DELETE /v1/dev/stub-accreditations/{registrationNumber}/{year}', () =>
   })
 
   it('should remove the accreditation for the registration and year', async () => {
-    const { server, futureAccreditationsRepository } = await serverWith({
-      devEndpoints: true
-    })
-    await futureAccreditationsRepository.upsert(buildFutureAccreditation())
+    const { server, futureAccreditationsRepository } = await serverWith(
+      { devEndpoints: true },
+      buildFutureAccreditation()
+    )
 
     const response = await server.inject({ method: 'DELETE', url })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(response.result).toStrictEqual(buildFutureAccreditation())
-    expect(
-      await futureAccreditationsRepository.findByRegistrationNumbers([
-        REGISTRATION_NUMBER
-      ])
-    ).toStrictEqual([])
+    expect(futureAccreditationsRepository.remove).toHaveBeenCalledWith(
+      REGISTRATION_NUMBER,
+      2027
+    )
   })
 
   it('should not find an accreditation that is not held', async () => {

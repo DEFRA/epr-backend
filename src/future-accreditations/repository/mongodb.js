@@ -31,12 +31,6 @@ export const createMongoFutureAccreditationsRepository = async (db) => {
   const collection = await ensureCollection(db)
 
   return () => ({
-    findByRegistrationNumbers: (registrationNumbers) =>
-      collection
-        .find({ registrationNumber: { $in: registrationNumbers } }, withoutId)
-        .sort({ registrationNumber: 1, year: 1 })
-        .toArray(),
-
     upsert: async (accreditation) => {
       const validated = validateFutureAccreditation(accreditation)
       const { registrationNumber, year } = validated
