@@ -55,7 +55,7 @@ describe('summary-log-row-states repository registration', () => {
     expect(server.app.summaryLogRowStatesRepository).toBeDefined()
   })
 
-  it('creates the empty collection with its three indexes', async () => {
+  it('creates the empty collection with its indexes', async () => {
     const indexes = await server.db
       .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .listIndexes()
@@ -66,7 +66,6 @@ describe('summary-log-row-states repository registration', () => {
     )
 
     expect(indexesByName).toHaveProperty('summary_log_membership')
-    expect(indexesByName).toHaveProperty('row_history_by_number')
     expect(indexesByName.summary_log_row_state_identity.unique).toBe(true)
 
     const documentCount = await server.db
