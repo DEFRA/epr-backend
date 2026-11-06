@@ -4,9 +4,11 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildFutureAccreditation } from '#future-accreditations/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
+  ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
+  approvedTimeline,
   exporter,
   findOrganisation,
   overseasSites,
@@ -23,13 +25,37 @@ const futureAccreditationOf = (registrationNumber) =>
     registrationNumber: toRegistrationNumber(registrationNumber)
   })
 
+const futureAccreditation2027 = {
+  accreditationNumber: 'A27ER5000560000AL',
+  prnIssuance: { tonnageBand: 'up_to_500' },
+  status: {
+    current: 'approved',
+    timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+  }
+}
+
+const storedAccreditation2026 = {
+  accreditationNumber: ACCREDITATION_NUMBER,
+  prnIssuance: { tonnageBand: 'over_10000' },
+  status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
+}
+
+/** A reprocessor holding a stored 2026 accreditation. */
+const accreditedIn2026 = () => {
+  const granted2026 = accreditation()
+  return buildOrganisation({
+    registrations: [reprocessor({ accreditationId: granted2026.id })],
+    accreditations: [granted2026]
+  })
+}
+
 /** @param {OrganisationReadRepositoryContractIt} it */
 export const testFutureAccreditationsBehaviour = (it) => {
-  describe('future accreditations', () => {
-    it('should serve a future accreditation for a year the registration holds none', async ({
+  describe('stored and future accreditations together', () => {
+    it("serves a registration's stored and future accreditations side by side, each by its year", async ({
       organisationReadRepositoryWith
     }) => {
-      const stored = buildOrganisation({ registrations: [reprocessor()] })
+      const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
         futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)]
@@ -43,28 +69,15 @@ export const testFutureAccreditationsBehaviour = (it) => {
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations
       ).toStrictEqual({
-        2027: {
-          accreditationNumber: 'A27ER5000560000AL',
-          prnIssuance: { tonnageBand: 'up_to_500' },
-          status: {
-            current: 'approved',
-            timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
-          }
-        }
+        2026: storedAccreditation2026,
+        2027: futureAccreditation2027
       })
     })
 
-    it('should serve the future accreditation over a stored one for the same year', async ({
+    it('dates the status of each year from the accreditation held for it', async ({
       organisationReadRepositoryWith
     }) => {
-      const stored2027 = accreditation({
-        validFrom: '2027-01-01',
-        validTo: '2027-12-31'
-      })
-      const stored = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: stored2027.id })],
-        accreditations: [stored2027]
-      })
+      const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
         futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)]
@@ -76,12 +89,124 @@ export const testFutureAccreditationsBehaviour = (it) => {
       )
 
       expect(
-        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
-          .accreditationNumber
-      ).toBe('A27ER5000560000AL')
+        organisation.registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+      ).toStrictEqual({
+        2026: {
+          '2026-02-01': { status: 'registeredOnly' },
+          '2026-07-01': { status: 'accredited' }
+        },
+        2027: { '2027-01-01': { status: 'accredited' } }
+      })
     })
 
-    it("should list the registration's overseas sites on an exporter's future accreditation", async ({
+    it('serves the future accreditation for a year both hold, and logs the stored one it drops', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored2027 = accreditation({
+        validFrom: '2027-01-01',
+        validTo: '2027-12-31'
+      })
+      const stored = buildOrganisation({
+        registrations: [reprocessor({ accreditationId: stored2027.id })],
+        accreditations: [stored2027]
+      })
+      const logger = { warn: vi.fn() }
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)],
+        logger
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations
+      ).toStrictEqual({ 2027: futureAccreditation2027 })
+      expect(logger.warn).toHaveBeenCalledWith({
+        message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 is held as a future accreditation, so stored accreditation ${ACCREDITATION_NUMBER} is dropped`
+      })
+    })
+
+    it('gives a future accreditation only to the registration with its number', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation({
+        registrations: [reprocessor(), exporter()]
+      })
+      const other = buildOrganisation({
+        registrations: [
+          reprocessor({ registrationNumber: 'R26ER5001189999PL' })
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored, other],
+        futureAccreditations: [futureAccreditationOf(REPROCESSOR_NUMBER)]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+      const otherOrganisation = await findOrganisation(
+        repository,
+        String(other.orgId)
+      )
+
+      expect(
+        organisation.registrations[EXPORTER_NUMBER].accreditations
+      ).toStrictEqual({})
+      expect(
+        otherOrganisation.registrations.R26ER5001189999PL.accreditations
+      ).toStrictEqual({})
+    })
+
+    it('serves nothing for a future accreditation whose registration no organisation holds', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation({ registrations: [reprocessor()] })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        futureAccreditations: [futureAccreditationOf('R26ER5001189999PL')]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+
+      expect(Object.keys(organisation.registrations)).toEqual([
+        REPROCESSOR_NUMBER
+      ])
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations
+      ).toStrictEqual({})
+    })
+
+    it('leaves out a registration the model drops, even when it holds a future accreditation', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation({
+        registrations: [reprocessor(), exporter({ validFrom: null })]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        futureAccreditations: [futureAccreditationOf(EXPORTER_NUMBER)]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+
+      expect(Object.keys(organisation.registrations)).toEqual([
+        REPROCESSOR_NUMBER
+      ])
+    })
+
+    it("lists the registration's overseas sites on an exporter's future accreditation", async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({ registrations: [exporter()] })

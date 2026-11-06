@@ -220,15 +220,22 @@ export function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  const accreditations = {
-    ...keyedRecords(
-      accreditationsForRegistration(registration, organisation),
-      (accreditation) => toAccreditationEntry(accreditation, context),
-      `Registration ${registrationNumber} accreditation year`,
-      onDrop
-    ),
-    ...context.futureAccreditationsByRegistration.get(registrationNumber)
+  const storedAccreditations = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
+    `Registration ${registrationNumber} accreditation year`,
+    onDrop
+  )
+  const futureAccreditations =
+    context.futureAccreditationsByRegistration.get(registrationNumber) ?? {}
+  for (const year of Object.keys(futureAccreditations)) {
+    if (Object.hasOwn(storedAccreditations, year)) {
+      onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} is held as a future accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+      )
+    }
   }
+  const accreditations = { ...storedAccreditations, ...futureAccreditations }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
