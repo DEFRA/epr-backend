@@ -1,10 +1,10 @@
 import Joi from 'joi'
+import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   ACCREDITATION_STATUS,
   REGULATOR,
-  TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
@@ -39,14 +39,7 @@ const prnIncomeBusinessPlanSchema = Joi.object({
 
 const REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN = 7
 const prnIssuanceSchema = Joi.object({
-  tonnageBand: Joi.string()
-    .valid(
-      TONNAGE_BAND.UP_TO_500,
-      TONNAGE_BAND.UP_TO_5000,
-      TONNAGE_BAND.UP_TO_10000,
-      TONNAGE_BAND.OVER_10000
-    )
-    .required(),
+  tonnageBand: tonnageBandSchema.required(),
   signatories: Joi.array().items(userSchema).required().min(1),
   incomeBusinessPlan: Joi.array()
     .items(prnIncomeBusinessPlanSchema)
