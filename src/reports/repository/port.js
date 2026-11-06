@@ -365,14 +365,13 @@
  */
 
 /**
- * @typedef {Object} DeleteReportParams
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {Year} year
- * @property {string} cadence - 'monthly' or 'quarterly'
- * @property {number} period
- * @property {number} [submissionNumber]
- * @property {UserSummary} changedBy
+ * @typedef {RegistrationKey & {
+ *   year: Year,
+ *   cadence: string,
+ *   period: number,
+ *   submissionNumber?: number,
+ *   changedBy: UserSummary
+ * }} DeleteReportParams
  */
 
 /**

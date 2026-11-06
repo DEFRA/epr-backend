@@ -7,7 +7,8 @@ const IGNORABLE_DROP_INDEX_ERRORS = new Set([
  * Drops a retired index by name, doing nothing if it or its collection is
  * already gone.
  *
- * @param {import('mongodb').Collection} collection
+ * @template {import('mongodb').Document} T
+ * @param {import('mongodb').Collection<T>} collection
  * @param {string} name
  */
 export async function dropIndexIfPresent(collection, name) {

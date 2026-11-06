@@ -151,7 +151,7 @@ describe('MongoDB summary logs repository', () => {
   })
 
   describe('legacy index migration', () => {
-    it('creates the year-scoped lock before dropping the pre-year-scoping lock', async () => {
+    it('creates the submitting lock on the numbers before dropping the locks it replaces', async () => {
       const calls = []
       const createdIndexes = []
 
@@ -169,20 +169,21 @@ describe('MongoDB summary logs repository', () => {
 
       expect(calls.filter((c) => c.startsWith('drop:'))).toEqual([
         'drop:organisationId_1_registrationId_1',
+        'drop:summary_log_submitting_lock',
         'drop:organisationId_1_registrationId_1_year_1_accreditationId_1_status_1_submittedAt_-1',
         'drop:organisationId_1_registrationId_1_status_1_submittedAt_-1'
       ])
-      expect(calls.indexOf('create:summary_log_submitting_lock')).toBeLessThan(
-        calls.indexOf('drop:organisationId_1_registrationId_1')
-      )
+      expect(
+        calls.indexOf('create:summary_log_submitting_lock_by_number')
+      ).toBeLessThan(calls.indexOf('drop:organisationId_1_registrationId_1'))
       const lockIndex = createdIndexes.find(
-        (idx) => idx.options.name === 'summary_log_submitting_lock'
+        (idx) => idx.options.name === 'summary_log_submitting_lock_by_number'
       )
       expect(lockIndex.fields).toStrictEqual({
-        organisationId: 1,
-        registrationId: 1,
+        organisationNumber: 1,
+        registrationNumber: 1,
         year: 1,
-        accreditationId: 1
+        accreditationNumber: 1
       })
     })
 

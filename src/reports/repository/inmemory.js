@@ -50,8 +50,8 @@ import {
  * Finds the active (non-submitted) report matching a specific period criteria.
  * @param {Map<string, Report>} reports - A Map where values are report objects.
  * @param {object} criteria - The unique identifiers for the report criteria.
- * @param {string} criteria.organisationId - The ID of the organization.
- * @param {string} criteria.registrationId - The ID of the registration.
+ * @param {OrganisationNumber} criteria.organisationNumber
+ * @param {RegistrationNumber} criteria.registrationNumber
  * @param {Year} criteria.year - The reporting year.
  * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
  * @param {number} criteria.period - The specific period index.
@@ -76,8 +76,8 @@ const findActiveBySlot = (reports, criteria) => {
 const createReport = async (reports, params) => {
   const validated = validateCreateReport(params)
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -98,8 +98,8 @@ const createReport = async (reports, params) => {
 
   // Mirror compound unique index: no active report for this exact submission slot
   const existingSlot = findActiveBySlot(reports, {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -111,8 +111,8 @@ const createReport = async (reports, params) => {
 
   // Mirror partial unique index: no active draft for this period slot regardless of submissionNumber
   const activeDraft = findActiveBySlot(reports, {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period
@@ -211,8 +211,8 @@ const updateReportStatus = async (reports, params) => {
 const deleteReport = async (reports, params) => {
   const validated = validateDeleteReportParams(params)
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -221,8 +221,8 @@ const deleteReport = async (reports, params) => {
 
   const report = [...reports.values()].find(
     (r) =>
-      r.organisationId === organisationId &&
-      r.registrationId === registrationId &&
+      r.organisationNumber === organisationNumber &&
+      r.registrationNumber === registrationNumber &&
       r.year === year &&
       r.cadence === cadence &&
       r.period === period &&
