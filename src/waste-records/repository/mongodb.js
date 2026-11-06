@@ -33,15 +33,14 @@ import {
 
 export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
-const ROW_HISTORY_INDEX_NAME = 'row_history_by_number'
-const RETIRED_ROW_HISTORY_INDEX_NAME = 'row_history'
+const RETIRED_ROW_HISTORY_INDEX_NAMES = ['row_history', 'row_history_by_number']
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
  * summary-log row state design: a multikey index on `summaryLogIds` for the
- * committed-state membership query, a row-identity index for row history, and a
- * unique index on the summary-log-row-state identity (ledger identity + content hash)
- * that makes the content-addressed dedup atomic under concurrent writers.
+ * committed-state membership query, and a unique index on the
+ * summary-log-row-state identity (ledger identity + content hash) that makes
+ * the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -57,16 +56,11 @@ export async function ensureSummaryLogRowStatesCollection(db) {
     { name: 'summary_log_membership' }
   )
 
-  await collection.createIndex(
-    {
-      organisationNumber: 1,
-      registrationNumber: 1,
-      rowId: 1,
-      wasteRecordType: 1
-    },
-    { name: ROW_HISTORY_INDEX_NAME }
+  await Promise.all(
+    RETIRED_ROW_HISTORY_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
   )
-  await dropIndexIfPresent(collection, RETIRED_ROW_HISTORY_INDEX_NAME)
 
   await collection.createIndex(
     {
@@ -321,20 +315,6 @@ const performFindRowStatesForSummaryLogFile =
   }
 
 /**
- * @param {Collection} collection
- * @returns {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>}
- */
-const performFindRowHistory =
-  (collection) =>
-  async (organisationNumber, registrationNumber, rowId, wasteRecordType) => {
-    const docs = await collection
-      .find({ organisationNumber, registrationNumber, rowId, wasteRecordType })
-      .sort({ _id: 1 })
-      .toArray()
-    return docs.map(toSummaryLogRowState)
-  }
-
-/**
  * The saving is skipping `validateSummaryLogRowStateRead`: a projected document
  * has nothing to validate against the read schema.
  */
@@ -420,7 +400,6 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
       performFindWasteRecordStatesForSummaryLog(collection),
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
-    findRowHistory: performFindRowHistory(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection),
     findDistinctDataKeys: performFindDistinctDataKeys(collection)

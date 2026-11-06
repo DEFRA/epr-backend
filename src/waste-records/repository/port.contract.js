@@ -1,7 +1,6 @@
 import { testUpsertSummaryLogRowStatesBehaviour } from './contract/upsertSummaryLogRowStates.contract.js'
 import { testFindWasteRecordStatesForSummaryLogBehaviour } from './contract/findWasteRecordStatesForSummaryLog.contract.js'
 import { testFindRowStatesForSummaryLogFileBehaviour } from './contract/findRowStatesForSummaryLogFile.contract.js'
-import { testFindRowHistoryBehaviour } from './contract/findRowHistory.contract.js'
 import { testStreamRowStatesForSummaryLogsBehaviour } from './contract/streamRowStatesForSummaryLogs.contract.js'
 import { testFindDistinctDataKeysBehaviour } from './contract/findDistinctDataKeys.contract.js'
 import { testNumbersBehaviour } from './contract/numbers.contract.js'
@@ -10,7 +9,6 @@ export const testSummaryLogRowStatesRepositoryContract = (it) => {
   testUpsertSummaryLogRowStatesBehaviour(it)
   testFindWasteRecordStatesForSummaryLogBehaviour(it)
   testFindRowStatesForSummaryLogFileBehaviour(it)
-  testFindRowHistoryBehaviour(it)
   testStreamRowStatesForSummaryLogsBehaviour(it)
   testFindDistinctDataKeysBehaviour(it)
   testNumbersBehaviour(it)

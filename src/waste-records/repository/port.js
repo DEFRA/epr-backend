@@ -67,8 +67,6 @@
  *   summary log document's id. Spans every ledger partition of the
  *   registration, so a caller that does not know the accreditation reads it
  *   back off the rows.
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, rowId: string, wasteRecordType: string) => Promise<SummaryLogRowState[]>} findRowHistory
- *   Return every state document for the given row identity.
  * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of
  *   `summaryLogIds`, at most once however many of them it holds.

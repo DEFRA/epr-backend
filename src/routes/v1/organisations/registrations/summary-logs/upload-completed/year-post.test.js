@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
 import { StatusCodes } from 'http-status-codes'
 
@@ -87,7 +88,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationsRepository: () => organisationsRepository
+        organisationsRepository: () => organisationsRepository,
+        organisationReadRepository: await organisationReadRepositoryFrom(
+          organisationsRepository
+        )
       },
       workers: {
         summaryLogsWorker
@@ -172,7 +176,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedServer = await createTestServer({
         repositories: {
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
-          organisationsRepository: () => accreditedOrganisationsRepository
+          organisationsRepository: () => accreditedOrganisationsRepository,
+          organisationReadRepository: await organisationReadRepositoryFrom(
+            accreditedOrganisationsRepository
+          )
         },
         workers: {
           summaryLogsWorker: { validate: vi.fn() }
@@ -378,7 +385,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               throw insertError
             }
           }),
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          organisationReadRepository: await organisationReadRepositoryFrom(
+            organisationsRepository
+          )
         },
         workers: {
           summaryLogsWorker: { validate: vi.fn() }

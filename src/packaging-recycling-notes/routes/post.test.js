@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
@@ -159,6 +160,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,
         organisationsRepository,
+        organisationReadRepository: await organisationReadRepositoryOf([
+          organisation
+        ]),
         ledgerRepository: () => ledgerRepository
       }
     })
