@@ -1,4 +1,5 @@
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -51,14 +52,19 @@ const registrationId = '507f1f77bcf86cd799439013'
 const accreditationId = '507f1f77bcf86cd799439014'
 
 const { buildOrganisationHolding } = createOrganisationBuilders()
+// The ledger under test, numbered as the organisation record and the PRN number
+// it.
+const LEDGER = {
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
+  accreditationNumber: toAccreditationNumber('ACC-2026-001')
+}
+
 const organisationsRepository = createInMemoryOrganisationsRepository([
-  partialMock(
-    buildOrganisationHolding({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
-  )
+  partialMock(buildOrganisationHolding(LEDGER))
 ])
 
 const cancelUrl = `/v1/admin/packaging-recycling-notes/${prnId}/cancel`
@@ -69,9 +75,7 @@ const ISSUED_AT = new Date('2026-01-15T10:00:00Z')
 /** @param {{ amount: number, availableAmount: number }} closingBalance */
 const openingBalanceEvent = (closingBalance = SEED_BALANCE) =>
   buildLedgerEvent({
-    registrationId,
-    accreditationId,
-    organisationId,
+    ...LEDGER,
     number: 1,
     payload: { summaryLogId: 'log-1', creditTotal: closingBalance.amount },
     openingBalance: { amount: 0, availableAmount: 0 },
@@ -103,6 +107,7 @@ const buildAcceptedPrn = ({
   registration: { registrationNumber: DEFAULT_REG_NUMBER },
   accreditation: buildAccreditationSnapshot({
     id: accreditationId,
+    accreditationNumber: LEDGER.accreditationNumber,
     accreditationYear
   }),
   obligationYear: accreditationYear,
@@ -207,11 +212,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     // `rejectedAt` for a PRN that was never rejected.
     expect(stored?.status.rejected).toBeUndefined()
 
-    const latestEvent = await ledgerRepository.findLatestInLedger({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
+    const latestEvent = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
     expect(latestEvent.payload).toEqual({ prnId, amount: 500 })
     expect(latestEvent.closingBalance).toEqual({
@@ -328,11 +329,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     expect(stored?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
 
     await expect(
-      ledgerRepository.findLatestInLedger({
-        organisationId,
-        registrationId,
-        accreditationId
-      })
+      ledgerRepository.findLatestInLedger(LEDGER)
     ).resolves.toMatchObject({ kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED })
 
     vi.useRealTimers()
@@ -423,9 +420,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     await ledgerRepository.appendEvents([
       partialMock(
         buildPrnCancelledAfterIssueEvent({
-          organisationId,
-          registrationId,
-          accreditationId,
+          ...LEDGER,
           number: 2,
           payload: { prnId, amount: 500 }
         })
@@ -439,11 +434,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(2)
   })
 
@@ -452,9 +443,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
 
     ledgerRepository.appendEvents = vi.fn().mockRejectedValue(
       new LedgerSlotConflictError({
-        organisationId,
-        registrationId,
-        accreditationId,
+        ...LEDGER,
         number: 2
       })
     )
@@ -556,11 +545,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       expect(stored?.status.accepted).toBeUndefined()
       expect(stored?.status.rejected).toBeUndefined()
 
-      const latestEvent = await ledgerRepository.findLatestInLedger({
-        organisationId,
-        registrationId,
-        accreditationId
-      })
+      const latestEvent = await ledgerRepository.findLatestInLedger(LEDGER)
       expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
       expect(latestEvent.closingBalance).toEqual({
         amount: SEED_BALANCE.amount + 500,
@@ -681,11 +666,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
     })
     expect(second.statusCode).toBe(StatusCodes.CONFLICT)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
+    const latestEvent = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
     expect(latestEvent.closingBalance).toEqual({
       amount: SEED_BALANCE.amount + 500,

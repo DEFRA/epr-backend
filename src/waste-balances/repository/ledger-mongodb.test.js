@@ -88,40 +88,74 @@ describe('ensureLedgerCollection', () => {
   })
 
   describe('indexes', () => {
-    it('creates the partition_number compound unique index', async (/** @type {*} */ {
+    it('creates the ledger slot unique index on the numbers', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'partition_number')).toEqual({
-        registrationId: 1,
-        accreditationId: 1,
+      expect(indexKeyFor(indexes, 'ledger_slot_by_number')).toEqual({
+        registrationNumber: 1,
+        accreditationNumber: 1,
         number: 1
       })
-      expect(indexOptionFor(indexes, 'partition_number', 'unique')).toBe(true)
+      expect(indexOptionFor(indexes, 'ledger_slot_by_number', 'unique')).toBe(
+        true
+      )
     })
 
-    it('creates the partition_kind_latest index for findLatestInLedgerByKind', async (/** @type {*} */ {
+    it('creates the ledger_kind_latest_by_number index for findLatestInLedgerByKind', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'partition_kind_latest')).toEqual({
-        registrationId: 1,
-        accreditationId: 1,
+      expect(indexKeyFor(indexes, 'ledger_kind_latest_by_number')).toEqual({
+        registrationNumber: 1,
+        accreditationNumber: 1,
         kind: 1,
         number: -1
       })
     })
 
-    it('creates the prn_watermark_catchup index for findEventsByPrnIdAfter', async (/** @type {*} */ {
+    it('creates the prn_watermark_catchup_by_number index for findEventsByPrnIdAfter', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'prn_watermark_catchup')).toEqual({
-        registrationId: 1,
-        accreditationId: 1,
+      expect(indexKeyFor(indexes, 'prn_watermark_catchup_by_number')).toEqual({
+        registrationNumber: 1,
+        accreditationNumber: 1,
         'payload.prnId': 1,
         number: 1
       })
+    })
+
+    it('drops the indexes keyed on the ids', async (/** @type {*} */ {
+      mongoClient
+    }) => {
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      await collection.createIndex(
+        { registrationId: 1, accreditationId: 1, number: 1 },
+        { name: 'partition_number', unique: true }
+      )
+      await collection.createIndex(
+        { registrationId: 1, accreditationId: 1, kind: 1, number: -1 },
+        { name: 'partition_kind_latest' }
+      )
+      await collection.createIndex(
+        {
+          registrationId: 1,
+          accreditationId: 1,
+          'payload.prnId': 1,
+          number: 1
+        },
+        { name: 'prn_watermark_catchup' }
+      )
+
+      await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
+
+      const names = (await collection.indexes()).map(({ name }) => name)
+      expect(names).not.toContain('partition_number')
+      expect(names).not.toContain('partition_kind_latest')
+      expect(names).not.toContain('prn_watermark_catchup')
     })
 
     it('creates the kind_number_report index for findLatestSubmittedSummaryLogPerLedger', async (/** @type {*} */ {
@@ -171,6 +205,7 @@ describe('MongoDB ledger repository', () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
+        dropIndex: () => Promise.resolve(),
         findOne: () => Promise.resolve(null),
         insertMany: () => Promise.reject(upstream)
       }
@@ -219,8 +254,8 @@ describe('MongoDB ledger repository', () => {
       )
       expect(reason).toBeInstanceOf(LedgerSlotConflictError)
       expect(reason).toMatchObject({
-        registrationId: contestedSlot.registrationId,
-        accreditationId: contestedSlot.accreditationId,
+        registrationNumber: contestedSlot.registrationNumber,
+        accreditationNumber: contestedSlot.accreditationNumber,
         slotNumber: contestedSlot.number
       })
 

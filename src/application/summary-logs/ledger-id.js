@@ -1,25 +1,26 @@
+/** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 
 /**
- * The ledger identity a summary log's reads and writes pivot on: the
- * organisation and registration it belongs to, and the accreditation the
- * submit path appended to — the summary log's own accreditationId when it
- * carries one (including `null`, which means registered-only), otherwise (a
- * legacy summary log, from before this field existed) the registration's.
- * Carries the full ancestor chain so a read pivots on the same accreditation
- * the write appended to, dropping no id above it.
+ * The ledger a summary log's reads pivot on: its organisation and registration,
+ * and the accreditation the submit path appended to — the summary log's own
+ * when it names one (`null` meaning registered-only), otherwise (a legacy
+ * summary log, from before this field existed) the registration's.
  *
  * @param {SubmittedSummaryLog} summaryLog
  * @param {Registration | undefined} registration
  * @returns {WasteBalanceLedgerId}
  */
 export const ledgerIdFor = (summaryLog, registration) => ({
-  organisationId: summaryLog.organisationId,
-  registrationId: summaryLog.registrationId,
-  accreditationId:
+  organisationNumber: summaryLog.organisationNumber,
+  registrationNumber: summaryLog.registrationNumber,
+  accreditationNumber:
     summaryLog.accreditationId !== undefined
-      ? summaryLog.accreditationId
-      : (registration?.accreditationId ?? null)
+      ? // The schema stores a number beside every accreditation id.
+        /** @type {AccreditationNumber | null} */ (
+          summaryLog.accreditationNumber
+        )
+      : (registration?.accreditation?.accreditationNumber ?? null)
 })

@@ -8,8 +8,8 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
  * registration or accreditation with no events yet has no balance, so this
  * resolves to `null`.
  *
- * The `organisationId` on the result is the caller's own — carried through from
- * the ledger id it asked for, not recovered from the latest event.
+ * The ledger id on the result is the caller's own, not recovered from the
+ * latest event.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId - The

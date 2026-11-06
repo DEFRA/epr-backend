@@ -117,11 +117,8 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The identity of an accreditation, or of a registration in its registered-only
- * phase (`accreditationId` null). An accreditation belongs to a registration,
- * which belongs to an organisation: all three ids are constitutive, and naming
- * one names those above it. Reads key a waste balance ledger by these ids;
- * `NumberedLedgerId` carries the numbers beside them.
+ * The ids of an accreditation, or of a registration in its registered-only
+ * phase (`accreditationId` null).
  *
  * @typedef {Object} RegistrationOrAccreditationId
  * @property {string} organisationId
@@ -130,41 +127,28 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The id of a waste balance ledger: a ledger is identified by the registration
- * or accreditation whose balance it records. An alias, so ledger-layer code can
- * name a ledger id while the value remains, honestly, a registration or
- * accreditation identity.
+ * A waste balance ledger is keyed by the numbers of the registration or
+ * accreditation whose balance it records. A registered-only ledger's
+ * accreditation number is `null`.
  *
- * @typedef {RegistrationOrAccreditationId} WasteBalanceLedgerId
+ * @typedef {RequiredNumbers} WasteBalanceLedgerId
  */
 
 /**
- * The numbers an event holds beside its ledger id's ids. A registered-only
- * ledger's accreditation number is `null`.
+ * A ledger's ids and numbers. Row states and ledger events are written with
+ * both.
  *
- * @typedef {RequiredNumbers} LedgerEventNumbers
+ * @typedef {RegistrationOrAccreditationId & WasteBalanceLedgerId} NumberedLedgerId
  */
 
 /**
- * A waste balance ledger's identity by both its ids and its numbers: the
- * registration or accreditation whose balance it records, as its ids name it
- * and as the organisation record numbers it. Summary-log row states, and the
- * ledger events a submission appends, are written with it. A registered-only
- * ledger's accreditation id and accreditation number are both `null`.
- *
- * @typedef {WasteBalanceLedgerId & RequiredNumbers} NumberedLedgerId
- */
-
-/**
- * A position within a waste balance ledger: the ledger id plus a sequence
- * number. The head a decision reads at, the slot it commits to (`number + 1`),
- * and the coordinate a slot-conflict or sequence error reports on a clash.
+ * A ledger id plus a sequence number.
  *
  * @typedef {WasteBalanceLedgerId & { number: number }} LedgerPosition
  */
 
 /**
- * @typedef {LedgerPosition & {
+ * @typedef {RegistrationOrAccreditationId & LedgerPosition & {
  *   kind: LedgerEventKind,
  *   payload: SummaryLogSubmittedPayload | PrnPayload | PrnAcceptedPayload,
  *   openingBalance: LedgerBalanceSnapshot,
@@ -176,18 +160,18 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape accepted by `WasteBalanceLedgerRepository.appendEvents`: the content of
- * an event at a `LedgerPosition`, with its ledger's numbers. Mirrors
+ * an event at a `LedgerPosition`, with its ledger's ids. Mirrors
  * `ledgerEventInsertSchema` — keep the two in sync; the schema is the runtime
  * gate, this typedef is the check-time gate.
  *
- * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEventInsert
+ * @typedef {LedgerEventFields} LedgerEventInsert
  */
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
  * written.
  *
- * @typedef {LedgerEventFields & LedgerEventNumbers} LedgerEvent
+ * @typedef {LedgerEventFields} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({

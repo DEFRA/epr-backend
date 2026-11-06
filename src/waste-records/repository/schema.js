@@ -21,12 +21,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @property {number} transactionAmount
  */
 
-/**
- * Ledger identity a row state belongs to — the ledger's own id type, not a
- * copy of it, so a row state's identity cannot drift from the ledger's.
- *
- * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
- */
+/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
 
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
@@ -60,7 +55,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * @typedef {WasteBalanceLedgerId & {
+ * @typedef {RegistrationOrAccreditationId & {
  *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
  *   rowId: string,
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,

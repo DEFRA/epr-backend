@@ -8,7 +8,7 @@ import {
 } from '#domain/organisations/numbers.js'
 import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
 
-/** @import { WasteBalanceLedgerId } from './schema.js' */
+/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
@@ -75,7 +75,7 @@ const organisationNumberOf = (organisationId) => {
  * The organisation and registration numbers `withNumbers` gives a ledger
  * identity, as the arguments a registration-scoped read takes.
  *
- * @param {Pick<WasteBalanceLedgerId, 'organisationId' | 'registrationId'>} ledgerId
+ * @param {Pick<RegistrationOrAccreditationId, 'organisationId' | 'registrationId'>} ledgerId
  * @returns {[OrganisationNumber, RegistrationNumber]}
  */
 export const registrationNumbersOf = ({ organisationId, registrationId }) => [
@@ -86,7 +86,7 @@ export const registrationNumbersOf = ({ organisationId, registrationId }) => [
 /**
  * The ledger identity with the numbers a submission stores beside its ids.
  *
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RegistrationOrAccreditationId} ledgerId
  * @returns {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId}
  */
 export const withNumbers = (ledgerId) => {

@@ -61,14 +61,13 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 
 const accreditationId = 'acc-1'
 
-const ledgerId = {
+const ledgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId
-}
+})
 
-const { organisationNumber, registrationNumber, accreditationNumber } =
-  withNumbers(ledgerId)
+const { organisationNumber, registrationNumber, accreditationNumber } = ledgerId
 const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
 /** @type {Accreditation} */

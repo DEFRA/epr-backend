@@ -373,7 +373,11 @@ export const createPrn =
       await assertCreatable({
         accreditation,
         ledgerRepository,
-        ledgerId: { organisationId, registrationId, accreditationId },
+        ledgerId: {
+          organisationNumber: params.organisationNumber,
+          registrationNumber: params.registrationNumber,
+          accreditationNumber: accreditation.accreditationNumber
+        },
         payload,
         now
       })

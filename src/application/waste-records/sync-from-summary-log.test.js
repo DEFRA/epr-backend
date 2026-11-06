@@ -5,6 +5,10 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -24,10 +28,11 @@ const TEST_USER = {
   scope: ['some-scope']
 }
 
+// The numbers the mocked organisation record gives org-1/reg-1.
 const LEDGER_ID = {
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('REG-1'),
+  accreditationNumber: null
 }
 
 const summaryLogFor = (fileId, accreditationId) => ({

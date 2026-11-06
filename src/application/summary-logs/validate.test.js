@@ -16,21 +16,38 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {NumberedLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+
+/**
+ * The ledger the fixture summary log reads: a legacy summary log, holding no
+ * accreditation id, reads its registration's current accreditation's ledger.
+ *
+ * @type {NumberedLedgerId}
+ */
+const FIXTURE_LEDGER = {
+  organisationId: 'org-123',
+  registrationId: 'reg-123',
+  accreditationId: 'acc-123',
+  organisationNumber: toOrganisationNumber('500123'),
+  registrationNumber: toRegistrationNumber('REG12345'),
+  accreditationNumber: toAccreditationNumber('ACC12345')
+}
 
 /**
  * Seed a submitted summary log for a ledger: its row states and the
  * SUMMARY_LOG_SUBMITTED ledger event that resolves it as the head.
  *
  * @param {Object} params
- * @param {WasteBalanceLedgerId} params.ledgerId
+ * @param {NumberedLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
  * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows
@@ -46,7 +63,7 @@ const seedSubmittedSummaryLog = async ({
   ledgerRepository
 }) => {
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(ledgerId),
+    ledgerId,
     rows.map((row) => buildSummaryLogRowStateEntry(row)),
     toSummaryLogFileId(summaryLogId)
   )
@@ -250,6 +267,8 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
+      organisationNumber: FIXTURE_LEDGER.organisationNumber,
+      registrationNumber: FIXTURE_LEDGER.registrationNumber,
       file: {
         id: 'file-123',
         name: 'test.xlsx',
@@ -2158,11 +2177,7 @@ describe('SummaryLogsValidator', () => {
       // triggers a fatal SEQUENTIAL_ROW_REMOVED error during data-business
       // validation — appended AFTER the 130+ non-fatal data-syntax issues.
       await seedSubmittedSummaryLog({
-        ledgerId: {
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: null
-        },
+        ledgerId: FIXTURE_LEDGER,
         summaryLogId: 'previous-summary-log',
         number: 1,
         rows: [{ rowId: '99999' }],
@@ -2201,11 +2216,7 @@ describe('SummaryLogsValidator', () => {
 
     it('rejects an upload that drops a row the latest submission carried, naming that submission', async () => {
       await seedSubmittedSummaryLog({
-        ledgerId: {
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: null
-        },
+        ledgerId: FIXTURE_LEDGER,
         summaryLogId: 'previous-log',
         number: 1,
         rows: [{ rowId: 'A' }],
@@ -2223,12 +2234,13 @@ describe('SummaryLogsValidator', () => {
 
     it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
       summaryLog.accreditationId = 'acc-1'
+      summaryLog.accreditationNumber = 'ACC-1'
 
       await seedSubmittedSummaryLog({
         ledgerId: {
-          organisationId: 'org-123',
-          registrationId: 'reg-123',
-          accreditationId: 'acc-1'
+          ...FIXTURE_LEDGER,
+          accreditationId: 'acc-1',
+          accreditationNumber: toAccreditationNumber('ACC-1')
         },
         summaryLogId: 'previous-log',
         number: 1,
@@ -2245,11 +2257,7 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('names the latest submission, not the one that first wrote the row', async () => {
-      const ledgerId = {
-        organisationId: 'org-123',
-        registrationId: 'reg-123',
-        accreditationId: null
-      }
+      const ledgerId = FIXTURE_LEDGER
       await seedSubmittedSummaryLog({
         ledgerId,
         summaryLogId: 'log-1',
