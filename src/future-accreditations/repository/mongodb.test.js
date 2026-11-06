@@ -2,7 +2,10 @@ import { MongoClient } from 'mongodb'
 import { describe, expect } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import {
   FUTURE_ACCREDITATIONS_COLLECTION_NAME,
@@ -104,6 +107,21 @@ describe('mongodb future accreditations repository', () => {
       await futureAccreditationsRepository.upsert(in2028)
 
       expect(await held()).toStrictEqual([in2027, in2028])
+    })
+
+    it('should hold the registration number trimmed and upper-cased, as organisations hold it', async ({
+      futureAccreditationsRepository,
+      held
+    }) => {
+      await futureAccreditationsRepository.upsert(
+        buildFutureAccreditation({
+          registrationNumber: toRegistrationNumber(
+            ` ${REGISTRATION_NUMBER.toLowerCase()} `
+          )
+        })
+      )
+
+      expect(await held()).toStrictEqual([buildFutureAccreditation()])
     })
   })
 

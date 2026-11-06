@@ -2,8 +2,8 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { accreditationCommonSchema } from '#organisation-read-model/domain/schema.js'
+import { registrationNumberParam } from '#routes/organisations/natural-keys.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -18,7 +18,7 @@ export const stubAccreditationPath =
   '/v1/dev/stub-accreditations/{registrationNumber}/{year}'
 
 export const stubAccreditationParams = Joi.object({
-  registrationNumber: Joi.string().custom(toRegistrationNumber).required(),
+  registrationNumber: registrationNumberParam,
   year: yearSchema().required()
 })
 
