@@ -29,6 +29,12 @@ describe('#parseTestOrganisationIds', () => {
     expect(parseTestOrganisationIds()).toEqual([999999])
   })
 
+  test('filters out values that are not whole numbers', () => {
+    config.get.mockReturnValue('[999999, 5.5, 1e21]')
+
+    expect(parseTestOrganisationIds()).toEqual([999999])
+  })
+
   test('returns empty array for empty JSON array', () => {
     config.get.mockReturnValue('[]')
 
@@ -70,5 +76,18 @@ describe('#parseTestOrganisationIds', () => {
     expect(() => parseTestOrganisationIds()).toThrow(
       'Invalid testOrganisations configuration: not an array'
     )
+  })
+})
+
+describe('TEST_ORGANISATION_NUMBERS', () => {
+  test('holds the organisation number of each test organisation', async () => {
+    vi.resetModules()
+    const { config: freshConfig } = await import('#root/config.js')
+    freshConfig.get.mockReturnValue('[999999, "888888", 999999]')
+
+    const { TEST_ORGANISATION_NUMBERS } =
+      await import('./parse-test-organisations.js')
+
+    expect(TEST_ORGANISATION_NUMBERS).toEqual(new Set(['999999', '888888']))
   })
 })

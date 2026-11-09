@@ -7,7 +7,10 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import {
+  requiredNumbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
@@ -121,7 +124,7 @@ const issuedNote = createMockIssuedPrn({
   registration: { registrationNumber: accreditedLedgerId.registrationNumber },
   accreditation: buildAccreditationSnapshot({
     id: accredited.id,
-    accreditationNumber: ACCREDITATION_NUMBER
+    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
   })
 })
 

@@ -11,7 +11,7 @@ import { validatePrnInsert, validatePrnRead } from './validation.js'
 import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -243,11 +243,11 @@ const performFindByIds = async (
 }
 
 /**
- * @param {Organisation['id'][]} excludeOrganisationIds
+ * @param {OrganisationNumber[]} excludeOrganisationNumbers
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) => Filter<Document>}
  */
 const buildFindByStatusFilter =
-  (excludeOrganisationIds) =>
+  (excludeOrganisationNumbers) =>
   ({ cursor, dateFrom, dateTo, statuses }) => {
     /** @type {Filter<Document>} */
     const filter = {}
@@ -270,8 +270,10 @@ const buildFindByStatusFilter =
       filter['status.currentStatusAt'] = dateCondition
     }
 
-    if (excludeOrganisationIds.length) {
-      filter['organisation.id'] = { $nin: excludeOrganisationIds }
+    if (excludeOrganisationNumbers.length) {
+      filter['organisation.organisationNumber'] = {
+        $nin: excludeOrganisationNumbers
+      }
     }
 
     return filter
@@ -279,11 +281,11 @@ const buildFindByStatusFilter =
 
 /**
  * @param {Db} db
- * @param {Organisation['id'][]} excludeOrganisationIds
+ * @param {OrganisationNumber[]} excludeOrganisationNumbers
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
-const performFindByStatus = (db, excludeOrganisationIds) => {
-  const buildFilter = buildFindByStatusFilter(excludeOrganisationIds)
+const performFindByStatus = (db, excludeOrganisationNumbers) => {
+  const buildFilter = buildFindByStatusFilter(excludeOrganisationNumbers)
 
   return async (params) => {
     const docs = await db
@@ -612,12 +614,12 @@ const performPersistProjection = async (
 
 /**
  * @param {Db} db
- * @param {Organisation['id'][]} excludeOrganisationIds
+ * @param {Iterable<OrganisationNumber>} excludeOrganisationNumbers
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
 export const createPackagingRecyclingNotesRepository = async (
   db,
-  excludeOrganisationIds
+  excludeOrganisationNumbers
 ) => {
   await ensureCollection(db)
 
@@ -628,7 +630,7 @@ export const createPackagingRecyclingNotesRepository = async (
     findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
-    findByStatus: performFindByStatus(db, excludeOrganisationIds),
+    findByStatus: performFindByStatus(db, [...excludeOrganisationNumbers]),
     sumTonnageByAccreditation: (params) =>
       performSumTonnageByAccreditation(db, params),
     updateStatus: (params) => performUpdateStatus(db, logger, params),

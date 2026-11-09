@@ -11,9 +11,9 @@ import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/te
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
   buildCreateReportParams,
-  uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
@@ -34,7 +34,6 @@ import { createMongoSummaryLogRowStatesRepository } from '#waste-records/reposit
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
 import { nonProdDataResetPlugin } from './mongodb.plugin.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -193,7 +192,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 const seedDownstreamForOrganisation = async (
   database,
   repositories,
-  { organisationId, registrationId, accreditationId }
+  { organisation, organisationId, registrationId, accreditationId }
 ) => {
   await repositories.prns.create(
     buildDraftPrn({
@@ -207,9 +206,7 @@ const seedDownstreamForOrganisation = async (
 
   await repositories.reports.createReport(
     buildCreateReportParams({
-      organisationId,
-      registrationId,
-      organisationNumber: uniqueOrganisationNumber(),
+      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
       registrationNumber: uniqueRegistrationNumber(),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January
@@ -222,6 +219,10 @@ const seedDownstreamForOrganisation = async (
   )
 
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
+  // Report audits record only the organisation number.
+  await repositories.systemLogs.insert(
+    buildSystemLog({ organisationNumber: String(organisation.orgId) })
+  )
 
   await database.collection('waste-balance-events').insertOne(
     buildLedgerEvent({
@@ -314,7 +315,7 @@ describe('non-prod data reset (mongo)', () => {
         reports: 1,
         'summary-logs': 1,
         'overseas-sites': 2,
-        'system-logs': 1,
+        'system-logs': 2,
         registration: 1,
         accreditation: 1,
         'epr-organisations': 1,
@@ -354,9 +355,9 @@ describe('non-prod data reset (mongo)', () => {
           .countDocuments({ 'organisation.id': other.organisationId })
       ).toBe(1)
       expect(
-        await database
-          .collection('reports')
-          .countDocuments({ organisationId: other.organisationId })
+        await database.collection('reports').countDocuments({
+          organisationNumber: String(other.organisation.orgId)
+        })
       ).toBe(1)
       expect(
         await database
@@ -380,9 +381,14 @@ describe('non-prod data reset (mongo)', () => {
       ).toBe(2)
       expect(
         await database.collection('system-logs').countDocuments({
-          'context.organisationId': other.organisationId
+          $or: [
+            { 'context.organisationId': other.organisationId },
+            {
+              'context.organisationNumber': String(other.organisation.orgId)
+            }
+          ]
         })
-      ).toBe(1)
+      ).toBe(2)
       expect(
         await database.collection('epr-organisations').countDocuments({
           _id: ObjectId.createFromHexString(other.organisationId)

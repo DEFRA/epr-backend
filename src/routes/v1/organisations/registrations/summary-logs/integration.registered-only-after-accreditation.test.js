@@ -98,8 +98,6 @@ describe('an operator accredited in July uploading their registered-only summary
     // Close Q1, so the quarterly split shows: January to March closed,
     // April to June open.
     await createAndSubmitReport(env.reportsRepository, {
-      organisationId,
-      registrationId,
       ...env.reportKey,
       year: YEAR,
       cadence: CADENCE.quarterly,

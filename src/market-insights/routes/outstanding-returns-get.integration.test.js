@@ -10,6 +10,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -117,8 +118,7 @@ const seedOperatorOwingFebruary = async ({
   )
 
   await buildSubmittedReport(reportsRepository, {
-    organisationId: organisation.id,
-    registrationId: registration.id,
+    ...reportKeyOf(organisation, organisation.registrations[0]),
     year: toYear(2026),
     cadence: 'monthly',
     period: 1

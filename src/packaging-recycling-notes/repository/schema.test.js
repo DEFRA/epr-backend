@@ -7,6 +7,7 @@ import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from './contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
 /** @typedef {import('#domain/organisations/model.js').AppliedForMaterial} AppliedForMaterial */
@@ -88,7 +89,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea',
@@ -104,7 +105,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
@@ -122,7 +123,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
@@ -359,7 +360,7 @@ describe('PRN insert schema', () => {
           material === 'glass'
             ? {
                 id: 'acc-1',
-                accreditationNumber: 'ACC-001',
+                accreditationNumber: toAccreditationNumber('ACC-001'),
                 accreditationYear: toYear(2026),
                 material,
                 submittedToRegulator: 'ea',
@@ -368,7 +369,7 @@ describe('PRN insert schema', () => {
               }
             : {
                 id: 'acc-1',
-                accreditationNumber: 'ACC-001',
+                accreditationNumber: toAccreditationNumber('ACC-001'),
                 accreditationYear: toYear(2026),
                 material,
                 submittedToRegulator: 'ea',
@@ -403,7 +404,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea',
@@ -421,7 +422,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
           submittedToRegulator: 'ea'
@@ -435,7 +436,7 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',
@@ -452,7 +453,7 @@ describe('PRN insert schema', () => {
         isExport: false,
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
@@ -467,7 +468,7 @@ describe('PRN insert schema', () => {
         isExport: true,
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
@@ -482,7 +483,7 @@ describe('PRN insert schema', () => {
         isExport: true,
         accreditation: {
           id: 'acc-1',
-          accreditationNumber: 'ACC-001',
+          accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea',

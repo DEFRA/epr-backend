@@ -22,6 +22,10 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
+import {
+  reportKeyOf,
+  uniqueRegistrationNumber
+} from '#reports/repository/contract/test-data.js'
 import { frameOf } from './cells.js'
 import { addNationFigures } from './nation-figures-tab.js'
 import {
@@ -86,7 +90,8 @@ const accreditedExporter = ({
   })
   const registration = buildRegistration({
     ...accredited,
-    accreditationId: accreditation.id
+    accreditationId: accreditation.id,
+    registrationNumber: uniqueRegistrationNumber()
   })
   const organisation = buildOrganisation({
     registrations: [registration],
@@ -94,10 +99,7 @@ const accreditedExporter = ({
   })
   return {
     organisation,
-    operator: {
-      organisationId: organisation.id,
-      registrationId: registration.id
-    }
+    operator: { reportKey: reportKeyOf(organisation, registration) }
   }
 }
 
@@ -135,18 +137,18 @@ const seedOperator = (
  * Submits the operator's monthly report for one month of 2026.
  *
  * @param {Register} register
- * @param {{ organisationId: string, registrationId: string }} operator
+ * @param {{ reportKey: import('#reports/repository/port.js').RegistrationKey }} operator
  * @param {number} period
  * @param {Partial<CreateReportBase>} figures
  */
 const submitMonthlyReport = (
   { reportsRepository },
-  operator,
+  { reportKey },
   period,
   figures
 ) =>
   buildSubmittedReport(reportsRepository, {
-    ...operator,
+    ...reportKey,
     year: toYear(2026),
     cadence: 'monthly',
     period,

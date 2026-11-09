@@ -284,10 +284,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       [
         reportId,
         {
-          ...buildCreateReportParams({
-            organisationId: staleTestOrgId,
-            registrationId: staleTestRegId
-          }),
+          ...buildCreateReportParams(),
           id: reportId,
           version: 1,
           schemaVersion: 1,

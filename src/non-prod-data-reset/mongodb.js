@@ -67,7 +67,8 @@ const extractCascadeKeys = (organisation) => {
  * organisation's id, so they join against organisationId, and the
  * epr-organisations delete assumes that id is the stored ObjectId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
- * the journey-test apply path) are keyed by the numeric orgId.
+ * the journey-test apply path) are keyed by the numeric orgId. Reports, and
+ * report system logs, carry the organisation number instead.
  *
  * @param {number} orgId
  * @param {string} organisationId
@@ -92,7 +93,7 @@ const buildCascadeSteps = (orgId, organisationId, { overseasSiteIds }) => [
   {
     label: 'reports',
     collection: COLLECTIONS.REPORTS,
-    filter: { organisationId }
+    filter: { organisationNumber: String(orgId) }
   },
   {
     label: 'summary-logs',
@@ -110,7 +111,12 @@ const buildCascadeSteps = (orgId, organisationId, { overseasSiteIds }) => [
   {
     label: 'system-logs',
     collection: COLLECTIONS.SYSTEM_LOGS,
-    filter: { 'context.organisationId': organisationId }
+    filter: {
+      $or: [
+        { 'context.organisationId': organisationId },
+        { 'context.organisationNumber': String(orgId) }
+      ]
+    }
   },
   {
     label: 'registration',

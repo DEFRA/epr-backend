@@ -17,6 +17,8 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
@@ -34,10 +36,64 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
- * The stored organisations as the read model shows them. An organisation the
- * model cannot represent is left out and reported through `logger.warn`.
+ * A registration's accreditation for a year, held outside the REEX database.
+ *
+ * @typedef {AccreditationCommon & {
+ *   registrationNumber: RegistrationNumber
+ *   year: Year
+ * }} ExternalAccreditation
+ */
+
+/**
+ * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
+ */
+
+/**
+ * @param {ExternalAccreditation} externalAccreditation
+ * @returns {AccreditationCommon}
+ */
+const toAccreditationCommon = ({
+  registrationNumber: _registrationNumber,
+  year: _year,
+  ...accreditation
+}) => accreditation
+
+/**
+ * Each registration's external accreditations, keyed by year.
+ *
+ * @param {ExternalAccreditation[]} externalAccreditations
+ * @returns {ExternalAccreditationsByRegistration}
+ */
+const byRegistrationAndYear = (externalAccreditations) =>
+  new Map(
+    [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
+      ([registrationNumber, held]) => [
+        registrationNumber,
+        Object.fromEntries(
+          held.map((a) => [String(a.year), toAccreditationCommon(a)])
+        )
+      ]
+    )
+  )
+
+/**
+ * The registration numbers granted across the stored organisations.
  *
  * @param {StoredOrganisation[]} stored
+ * @returns {RegistrationNumber[]}
+ */
+export const registrationNumbersOf = (stored) =>
+  stored.flatMap(({ registrations }) =>
+    registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
+  )
+
+/**
+ * The stored organisations as the read model shows them, with the external
+ * accreditations held for their registrations. An organisation the model
+ * cannot represent is left out and reported through `logger.warn`.
+ *
+ * @param {StoredOrganisation[]} stored
+ * @param {ExternalAccreditation[]} externalAccreditations
  * @param {{
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
@@ -46,6 +102,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 export async function toReadModelOrganisations(
   stored,
+  externalAccreditations,
   { overseasSitesRepository, logger }
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
@@ -63,8 +120,11 @@ export async function toReadModelOrganisations(
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: new Date().toISOString().slice(0, 10)
   }
+  const externalByRegistration = byRegistrationAndYear(externalAccreditations)
   return stored
-    .map((organisation) => toOrganisation(organisation, context))
+    .map((organisation) =>
+      toOrganisation(organisation, context, externalByRegistration)
+    )
     .filter((organisation) => organisation !== null)
 }
 
@@ -86,9 +146,10 @@ export function servesOrganisation(stored, today) {
  *
  * @param {StoredOrganisation} stored
  * @param {Context} context
+ * @param {ExternalAccreditationsByRegistration} externalByRegistration
  * @returns {Organisation | null}
  */
-function toOrganisation(stored, context) {
+function toOrganisation(stored, context, externalByRegistration) {
   const timeline = toStatusTimeline(stored.statusHistory)
   const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
@@ -125,7 +186,13 @@ function toOrganisation(stored, context) {
     }),
     registrations: keyedRecords(
       stored.registrations,
-      (registration) => toRegistrationEntry(registration, stored, context),
+      (registration) =>
+        toRegistrationEntry(
+          registration,
+          stored,
+          context,
+          externalByRegistration
+        ),
       'Registration number',
       context.onDrop
     )
@@ -148,9 +215,15 @@ function toLinkedDefraOrganisation(linked) {
  * @param {StoredRegistration} registration
  * @param {StoredOrganisation} organisation
  * @param {Context} context
+ * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
  * @returns {[string, Registration] | null}
  */
-export function toRegistrationEntry(registration, organisation, context) {
+export function toRegistrationEntry(
+  registration,
+  organisation,
+  context,
+  externalByRegistration = new Map()
+) {
   const { onDrop, today } = context
   const { registrationNumber, validFrom, applicationContactDetails } =
     registration
@@ -177,12 +250,22 @@ export function toRegistrationEntry(registration, organisation, context) {
     return null
   }
 
-  const accreditations = keyedRecords(
+  const storedAccreditations = keyedRecords(
     accreditationsForRegistration(registration, organisation),
     (accreditation) => toAccreditationEntry(accreditation, context),
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
+  const externalAccreditations =
+    externalByRegistration.get(registrationNumber) ?? {}
+  Object.keys(externalAccreditations)
+    .filter((year) => Object.hasOwn(storedAccreditations, year))
+    .forEach((year) =>
+      onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+      )
+    )
+  const accreditations = { ...storedAccreditations, ...externalAccreditations }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */

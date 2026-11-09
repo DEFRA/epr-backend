@@ -84,7 +84,7 @@ const awaitingAcceptancePrn = () =>
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
     accreditation: buildAccreditationSnapshot({
       id: accId,
-      accreditationNumber: 'ACC-INTEG',
+      accreditationNumber: toAccreditationNumber('ACC-INTEG'),
       material: MATERIAL.PLASTIC
     }),
     tonnage: 100

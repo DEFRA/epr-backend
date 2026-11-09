@@ -31,8 +31,8 @@ export const reportsUnsubmit = {
   handler: async (request, h) => {
     const { reportsRepository, params } = request
     const {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       cadence,
       year,
       period,
@@ -98,8 +98,8 @@ export const reportsUnsubmit = {
     })
 
     await auditReportStatusTransition(request, {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

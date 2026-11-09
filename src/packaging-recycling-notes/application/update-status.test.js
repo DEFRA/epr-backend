@@ -91,7 +91,7 @@ const buildPrn = (overrides = {}) => ({
   },
   accreditation: buildAccreditationSnapshot({
     id: ACC_ID,
-    accreditationNumber: 'ACC-1'
+    accreditationNumber: toAccreditationNumber('ACC-1')
   }),
   tonnage: 100,
   isExport: false,
@@ -343,7 +343,7 @@ describe('updatePrnStatus', () => {
         prn: buildPrn({
           accreditation: buildAccreditationSnapshot({
             id: 'different-acc',
-            accreditationNumber: 'ACC-1'
+            accreditationNumber: toAccreditationNumber('ACC-1')
           })
         })
       })

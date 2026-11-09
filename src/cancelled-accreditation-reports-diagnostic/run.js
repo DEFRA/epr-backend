@@ -45,7 +45,7 @@ const formatReportLine = (row, report) =>
     'Cancelled accreditation report:',
     `organisationId=${row.organisationId}`,
     `accreditationId=${row.accreditationId}`,
-    `registrationId=${report.registrationId}`,
+    `registrationNumber=${report.registrationNumber}`,
     `cadence=${report.cadence}`,
     `year=${report.year}`,
     `period=${report.period}`,

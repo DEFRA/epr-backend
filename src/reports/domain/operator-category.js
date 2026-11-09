@@ -4,6 +4,17 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
 /**
  * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
  * @import { AccreditationLink } from '#domain/organisations/registration-utils.js'
+ * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
+ */
+
+/**
+ * The registration a report route names, with the accreditation it reports
+ * under: none on a registered-only route.
+ *
+ * @typedef {{
+ *   registration: ReadModelRegistration,
+ *   accreditation: ReadModelRegistration['accreditations'][string] | null
+ * }} ReportRegistration
  */
 
 /**
@@ -79,3 +90,16 @@ export function getOperatorCategory(registration) {
     ? category.accredited
     : category.registeredOnly
 }
+
+/**
+ * The operator category a report route reports as: accredited only on an
+ * accredited route whose accreditation is held.
+ *
+ * @param {ReportRegistration} reportRegistration
+ * @returns {OperatorCategory}
+ */
+export const reportOperatorCategory = ({ registration, accreditation }) =>
+  getOperatorCategory({
+    wasteProcessingType: registration.wasteProcessingType,
+    accreditation: accreditation && { status: accreditation.status.current }
+  })

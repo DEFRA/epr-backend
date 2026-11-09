@@ -2,13 +2,16 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { ObjectId } from 'mongodb'
 import { it as base, describe, expect } from 'vitest'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   buildAwaitingAuthorisationPrn,
-  buildCancelledPrn
+  buildCancelledPrn,
+  generateTestPrnNumber
 } from './contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { PackagingRecyclingNotesRepository, PackagingRecyclingNotesRepositoryFactory } from './port.js' */
 
@@ -39,27 +42,39 @@ describe('In-memory packaging recycling notes repository', () => {
 })
 
 describe('in-memory adapter organisation exclusion', () => {
+  /**
+   * @param {string} name
+   * @param {OrganisationNumber} organisationNumber
+   */
+  const organisationNumbered = (name, organisationNumber) => ({
+    id: new ObjectId().toHexString(),
+    name,
+    organisationNumber
+  })
+
   base(
-    'should exclude PRNs belonging to excluded organisation ids',
+    'should exclude PRNs belonging to excluded organisation numbers',
     async () => {
-      const testOrgId = `test-org-${Date.now()}-${Math.random()}`
-      const realOrgId = `real-org-${Date.now()}-${Math.random()}`
+      const testOrganisationNumber = toOrganisationNumber('500001')
 
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
-        [testOrgId]
+        [testOrganisationNumber]
       )(createMockLogger())
 
       const testPrn = await repository.create(
         buildCancelledPrn({
-          prnNumber: `IME-OE-TEST-${Date.now()}-${Math.random()}`,
-          organisation: { id: testOrgId, name: 'Test Org', tradingName: 'Test' }
+          prnNumber: generateTestPrnNumber(),
+          organisation: organisationNumbered('Test Org', testOrganisationNumber)
         })
       )
       const realPrn = await repository.create(
         buildCancelledPrn({
-          prnNumber: `IME-OE-REAL-${Date.now()}-${Math.random()}`,
-          organisation: { id: realOrgId, name: 'Real Org', tradingName: 'Real' }
+          prnNumber: generateTestPrnNumber(),
+          organisation: organisationNumbered(
+            'Real Org',
+            toOrganisationNumber('500002')
+          )
         })
       )
 
@@ -75,20 +90,15 @@ describe('in-memory adapter organisation exclusion', () => {
   )
 
   base(
-    'should return all items when excludeOrganisationIds is empty',
+    'should return all items when no organisation numbers are excluded',
     async () => {
-      const orgId = `org-all-${Date.now()}-${Math.random()}`
-
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
         []
       )(createMockLogger())
 
       const prn = await repository.create(
-        buildCancelledPrn({
-          prnNumber: `IME-OE-ALL-${Date.now()}-${Math.random()}`,
-          organisation: { id: orgId, name: 'Some Org', tradingName: 'Some' }
-        })
+        buildCancelledPrn({ prnNumber: generateTestPrnNumber() })
       )
 
       const result = await repository.findByStatus({
@@ -103,42 +113,38 @@ describe('in-memory adapter organisation exclusion', () => {
   base(
     'should derive hasMore and nextCursor from the filtered universe',
     async () => {
-      const testOrgId = `test-org-hm-${Date.now()}-${Math.random()}`
+      const testOrganisationNumber = toOrganisationNumber('500003')
 
       const repository = createInMemoryPackagingRecyclingNotesRepository(
         [],
-        [testOrgId]
+        [testOrganisationNumber]
       )(createMockLogger())
 
       const sentinel = await repository.create(
-        buildCancelledPrn({
-          prnNumber: `IME-OE-S-${Date.now()}-${Math.random()}`
-        })
+        buildCancelledPrn({ prnNumber: generateTestPrnNumber() })
       )
       const realPrn1 = await repository.create(
         buildCancelledPrn({
-          prnNumber: `IME-OE-R1-${Date.now()}-${Math.random()}`,
-          organisation: {
-            id: `real-org-hm-1-${Date.now()}`,
-            name: 'Real Org 1',
-            tradingName: 'Real 1'
-          }
+          prnNumber: generateTestPrnNumber(),
+          organisation: organisationNumbered(
+            'Real Org 1',
+            toOrganisationNumber('500004')
+          )
         })
       )
       const realPrn2 = await repository.create(
         buildCancelledPrn({
-          prnNumber: `IME-OE-R2-${Date.now()}-${Math.random()}`,
-          organisation: {
-            id: `real-org-hm-2-${Date.now()}`,
-            name: 'Real Org 2',
-            tradingName: 'Real 2'
-          }
+          prnNumber: generateTestPrnNumber(),
+          organisation: organisationNumbered(
+            'Real Org 2',
+            toOrganisationNumber('500005')
+          )
         })
       )
       await repository.create(
         buildCancelledPrn({
-          prnNumber: `IME-OE-T1-${Date.now()}-${Math.random()}`,
-          organisation: { id: testOrgId, name: 'Test Org', tradingName: 'Test' }
+          prnNumber: generateTestPrnNumber(),
+          organisation: organisationNumbered('Test Org', testOrganisationNumber)
         })
       )
 

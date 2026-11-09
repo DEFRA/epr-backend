@@ -250,7 +250,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       [
         reportId,
         {
-          ...buildCreateReportParams({ organisationId, registrationId }),
+          ...buildCreateReportParams(),
           id: reportId,
           version: 1,
           schemaVersion: 1,
@@ -567,7 +567,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
         [
           reportId,
           {
-            ...buildCreateReportParams({ organisationId, registrationId }),
+            ...buildCreateReportParams(),
             id: reportId,
             version: 1,
             schemaVersion: 1,

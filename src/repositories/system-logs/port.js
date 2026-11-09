@@ -24,8 +24,11 @@
  */
 
 /**
+ * A log is the organisation's when it records either the given id or number.
+ *
  * @typedef {{
  *   organisationId?: string
+ *   organisationNumber?: string
  *   userId?: string
  *   subCategory?: string
  *   limit: number

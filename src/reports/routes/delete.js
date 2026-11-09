@@ -25,8 +25,8 @@ export const reportsDelete = {
   handler: async (request, h) => {
     const { reportsRepository, params } = request
     const {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       cadence,
       year,
       period,
@@ -57,8 +57,8 @@ export const reportsDelete = {
     const previous = await reportsRepository.findReportById(report.id)
 
     await reportsRepository.deleteReport({
-      organisationNumber: params.organisationNumber,
-      registrationNumber: params.registrationNumber,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -67,8 +67,8 @@ export const reportsDelete = {
     })
 
     await auditReportDelete(request, {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

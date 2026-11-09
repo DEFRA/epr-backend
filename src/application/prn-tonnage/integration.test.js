@@ -75,7 +75,7 @@ const prnWithStatus = (currentStatus, tonnage) =>
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
     accreditation: buildAccreditationSnapshot({
       id: accId,
-      accreditationNumber: 'ACC-1',
+      accreditationNumber: toAccreditationNumber('ACC-1'),
       material: MATERIAL.PLASTIC
     }),
     tonnage,
