@@ -1,27 +1,17 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 
+import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 
 /**
- * @import { ResponseObject } from '@hapi/hapi'
- * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import Joi from 'joi'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
- * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
+ * @import { KeyedOptions, KeyedResponse, NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { ReportRecords, ReportRequest } from './shared.js'
  *
- * @typedef {{
- *   schema: Joi.Schema,
- *   failAction(request: HapiRequest, h: HapiResponseToolkit, err: Error): unknown,
- *   map(request: ReportRequest, h: HapiResponseToolkit, response: ResponseObject): unknown
- * }} ReportResponse
+ * @typedef {KeyedResponse<ReportRequest>} ReportResponse
  *
- * @typedef {{
- *   accredited?: boolean,
- *   before?(request: ReportRequest): void | Promise<void>,
- *   respond?: ReportResponse
- * }} ReportKeyOptions
+ * @typedef {KeyedOptions<ReportRequest> & { accredited?: boolean }} ReportKeyOptions
  */
 
 /**
@@ -39,43 +29,28 @@ export const atReportKeys = (
   route,
   path,
   params,
-  { accredited = false, before, respond } = {}
-) => ({
-  ...route,
-  path,
-  options: {
-    ...route.options,
-    validate: { ...route.options.validate, params: Joi.object(params) },
-    ...(respond && {
-      response: { schema: respond.schema, failAction: respond.failAction }
-    })
-  },
-  /**
-   * @param {HapiRequest & { params: RegistrationParams & { year: Year } }} request
-   * @param {HapiResponseToolkit} h
-   */
-  handler: async (request, h) => {
-    const { organisation, registration } =
-      await findOrganisationAndRegistrationReadModels(request)
+  { accredited = false, ...options } = {}
+) =>
+  atKeys(
+    route,
+    path,
+    params,
+    async (request) => {
+      const { organisation, registration } =
+        await findOrganisationAndRegistrationReadModels(request)
 
-    const accreditation = accredited
-      ? registration.accreditations[request.params.year]
-      : null
-    if (accreditation === undefined) {
-      throw Boom.notFound('Accreditation not found')
-    }
+      const accreditation = accredited
+        ? registration.accreditations[/** @type {Year} */ (request.params.year)]
+        : null
+      if (accreditation === undefined) {
+        throw Boom.notFound('Accreditation not found')
+      }
 
-    /** @type {ReportRecords} */
-    const records = { organisation, registration, accreditation }
-    Object.assign(request.app, records)
+      /** @type {ReportRecords} */
+      const records = { organisation, registration, accreditation }
+      Object.assign(request.app, records)
 
-    const resolved = /** @type {ReportRequest} */ (
-      /** @type {unknown} */ (request)
-    )
-    await before?.(resolved)
-    const response = await route.handler(resolved, h)
-    return respond
-      ? respond.map(resolved, h, /** @type {ResponseObject} */ (response))
-      : response
-  }
-})
+      return /** @type {ReportRequest} */ (/** @type {unknown} */ (request))
+    },
+    options
+  )

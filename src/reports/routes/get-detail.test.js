@@ -23,8 +23,10 @@ import {
 } from '#reports/repository/contract/test-data.js'
 import {
   accreditation,
+  approvedSite,
   exporter,
   exporterAccreditation,
+  pendingSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -115,6 +117,7 @@ const accreditedExporter = () => {
  *   registration: Record<string, any>,
  *   accreditations?: object[],
  *   wasteRecords?: { type: string, data: object }[],
+ *   overseasSites?: object[],
  *   reportDataValidation?: boolean
  * }} options
  */
@@ -122,6 +125,7 @@ const createServer = async ({
   registration,
   accreditations = [],
   wasteRecords = [],
+  overseasSites = [],
   reportDataValidation = false
 }) => {
   const org = buildOrganisation({
@@ -136,9 +140,10 @@ const createServer = async ({
 
   const server = await createTestServer({
     repositories: {
-      organisationReadRepository: await organisationReadRepositoryOf([
-        partialMock(org)
-      ]),
+      organisationReadRepository: await organisationReadRepositoryOf(
+        [partialMock(org)],
+        { overseasSites }
+      ),
       ledgerRepository,
       summaryLogRowStatesRepository,
       reportsRepository: reportsRepositoryFactory
@@ -697,6 +702,60 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         { orsId: '001', tonnageExported: 5 },
         { orsId: '096', tonnageExported: 6.5 }
       ])
+    })
+
+    it('counts an export as approved only on or after the accredited site was approved', async () => {
+      const exportOn = (date, orsId, tonnage) => ({
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          DATE_RECEIVED_FOR_EXPORT: '2026-02-01',
+          DATE_OF_EXPORT: date,
+          TONNAGE_RECEIVED_FOR_EXPORT: tonnage,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
+          OSR_ID: orsId
+        }
+      })
+      const { server, monthly } = await createServer({
+        ...accreditedExporter(),
+        overseasSites: [
+          { ...approvedSite, validFrom: new Date('2026-02-15T00:00:00.000Z') },
+          pendingSite
+        ],
+        wasteRecords: [
+          exportOn('2026-02-15', '001', 5),
+          exportOn('2026-02-14', '001', 3),
+          exportOn('2026-02-20', '002', 4)
+        ]
+      })
+
+      const { payload } = await read(server, monthly(2))
+
+      expect(payload.exportActivity.overseasSites).toHaveLength(3)
+      expect(payload.exportActivity.overseasSites).toEqual(
+        expect.arrayContaining([
+          {
+            orsId: '001',
+            siteName: 'Beta Reprocessor',
+            country: 'Germany',
+            tonnageExported: 5,
+            approved: true
+          },
+          {
+            orsId: '001',
+            siteName: 'Beta Reprocessor',
+            country: 'Germany',
+            tonnageExported: 3,
+            approved: false
+          },
+          {
+            orsId: '002',
+            siteName: 'Alpha Reprocessor',
+            country: 'France',
+            tonnageExported: 4,
+            approved: false
+          }
+        ])
+      )
     })
 
     it('filters waste received and exported by different date fields', async () => {

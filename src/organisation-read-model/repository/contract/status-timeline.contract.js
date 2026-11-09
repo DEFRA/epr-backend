@@ -131,7 +131,7 @@ export const testStatusTimelineBehaviour = (it) => {
       ])
     })
 
-    it('dates the approval after the last re-creation at validFrom, and the earlier approval when it was recorded', async ({
+    it('dates the approval after the last re-creation at validFrom, and leaves out the approval before it', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -157,7 +157,6 @@ export const testStatusTimelineBehaviour = (it) => {
           .status.timeline
       ).toEqual([
         { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-02-01T09:00:00.000Z' },
         { status: 'created', at: '2026-03-01T09:00:00.000Z' },
         { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
       ])
