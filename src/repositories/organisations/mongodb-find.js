@@ -151,3 +151,14 @@ export const findPage = async (db, { page, pageSize, ...criteria }) => {
 
   return { items, page, pageSize, totalItems, totalPages }
 }
+
+/**
+ * Every stored organisation.
+ *
+ * @param {Db} db
+ * @returns {Promise<Organisation[]>}
+ */
+export const findAll = async (db) => {
+  const docs = await db.collection(COLLECTION_NAME).find().toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}

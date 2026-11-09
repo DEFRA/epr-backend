@@ -33,6 +33,7 @@ export const generateLatestPublicRegister = {
   handler: async (request, h) => {
     const {
       organisationsRepository,
+      organisationReadRepository,
       publicRegisterRepository,
       reportsRepository,
       logger
@@ -40,6 +41,7 @@ export const generateLatestPublicRegister = {
     try {
       const result = await generatePublicRegister(
         organisationsRepository,
+        organisationReadRepository,
         publicRegisterRepository,
         reportsRepository
       )

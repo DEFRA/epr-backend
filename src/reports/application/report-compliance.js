@@ -1,23 +1,17 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
-import {
-  registrationKey,
-  storedRegistrationKey
-} from '#reports/domain/registration-key.js'
+import { registrationKey } from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
-import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#organisation-read-model/repository/to-read-model.js'
-import { logger } from '#common/helpers/logging/logger.js'
-
-/** @param {string} message */
-const logDrop = (message) => logger.warn({ message })
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { Registration } from '#organisation-read-model/domain/model.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  */
 
 /**
@@ -26,8 +20,6 @@ const logDrop = (message) => logger.warn({ message })
 
 /**
  * @typedef {{
- *   registrationId: string;
- *   organisationId: string;
  *   submittedDates: Map<string, string | null>;
  * }} ReportComplianceEntry
  */
@@ -80,63 +72,56 @@ export function groupByRegistration(allPeriodicReports) {
 }
 
 /**
- * Builds a map of report compliance data for all approved/cancelled registrations.
+ * Builds a map of report compliance data for every registration the
+ * organisation read model serves, outside test organisations.
  *
- * Each entry in `entries` is keyed by `registrationId`. Its `submittedDates`
- * has a key, `${year}:${cadence}:${period}`, for each ended period the
- * registration has a reporting obligation for, as the year calendar lists them,
- * holding the original submitted date or null. An absent key is "N/A". A
- * registration the organisation read model does not serve has no entry, and
- * the reason is logged.
+ * Each entry in `entries` is keyed by the registration's organisation and
+ * registration numbers (see `registrationKey`). Its `submittedDates` has a key,
+ * `${year}:${cadence}:${period}`, for each ended period the registration has a
+ * reporting obligation for, as the year calendar lists them, holding the
+ * original submitted date or null. An absent key is "N/A". A registration the
+ * read model does not serve has no entry, and the read model logs why.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {Date} [now]
  * @returns {Promise<ReportComplianceData>}
  */
 export async function generateReportCompliance(
-  organisationsRepository,
+  organisationReadRepository,
   reportsRepository,
   now = new Date()
 ) {
   const periods = generateComplianceReportingPeriods()
   const years = [...new Set(periods.map((p) => p.year))]
 
-  const orgs = await organisationsRepository.findAll()
-  const registrations = getReportableRegistrations(orgs)
-
-  const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
+  const [organisations, allPeriodicReports] = await Promise.all([
+    organisationReadRepository.findAll(),
+    reportsRepository.findAllPeriodicReports()
+  ])
   const reportsByRegistration = groupByRegistration(allPeriodicReports)
 
   /** @type {Map<string, ReportComplianceEntry>} */
-  const entries = new Map()
-
-  for (const { org, registration } of registrations) {
-    const readModel = toReadModelRegistration(org, registration, logDrop)
-    if (!readModel) {
-      continue
-    }
-
-    entries.set(registration.id, {
-      registrationId: registration.id,
-      organisationId: org.id,
-      submittedDates: submittedDatesFor({
-        registration: readModel,
-        storedReports:
-          reportsByRegistration.get(storedRegistrationKey(org, registration)) ??
-          [],
-        years,
-        now
-      })
-    })
-  }
+  const entries = new Map(
+    reportableRegistrations(organisations).map(({ registration, key }) => [
+      key,
+      {
+        submittedDates: submittedDatesFor({
+          registration,
+          storedReports: reportsByRegistration.get(key) ?? [],
+          years,
+          now
+        })
+      }
+    ])
+  )
 
   return { periods, entries }
 }
 
 /**
  * @param {{
- *   registration: NonNullable<ReturnType<typeof toReadModelRegistration>>,
+ *   registration: Registration,
  *   storedReports: import('#reports/repository/port.js').PeriodicReport[],
  *   years: Year[],
  *   now: Date

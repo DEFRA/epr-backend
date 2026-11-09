@@ -2,6 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { transform } from './public-register-transformer.js'
+import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -582,12 +583,8 @@ describe('transform', () => {
       const org = createTestOrganisation({ registrations: [registration] })
       const entries = new Map([
         [
-          registration.id,
-          {
-            registrationId: registration.id,
-            organisationId: org.id,
-            submittedDates
-          }
+          storedRegistrationKey(org, /** @type {any} */ (registration)),
+          { submittedDates }
         ]
       ])
       return { org, entries }

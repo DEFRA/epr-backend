@@ -8,7 +8,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 
@@ -75,15 +75,15 @@ export const getReportSubmissions = {
   },
   /**
    * @param {HapiRequest & {
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationReadRepository: OrganisationReadRepository,
    *   reportsRepository: ReportsRepository
    * }} request
    */
   handler: async (request) => {
-    const { organisationsRepository, reportsRepository } = request
+    const { organisationReadRepository, reportsRepository } = request
 
     const result = await generateReportSubmissions(
-      organisationsRepository,
+      organisationReadRepository,
       reportsRepository
     )
 
