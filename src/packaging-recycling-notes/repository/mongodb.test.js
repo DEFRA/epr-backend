@@ -441,6 +441,7 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
 
     it('does not drop prnNumber index when already unique', async () => {
+      /** @type {string[]} */
       const droppedIndexes = []
 
       const mockDb = {
@@ -455,7 +456,7 @@ describe('MongoDB packaging recycling notes repository', () => {
             unique: true
           }
         ],
-        dropIndex: async (indexName) => {
+        dropIndex: async (/** @type {string} */ indexName) => {
           droppedIndexes.push(indexName)
         },
         createIndex: async () => {},
