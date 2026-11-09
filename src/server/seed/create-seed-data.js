@@ -99,9 +99,12 @@ async function createOrgRegAccFixtures(db) {
 async function createEprOrganisationFixtures(organisationsRepository) {
   const existingFixtures =
     await organisationsRepository.findByOrganisationNumbers(
-      [eprOrganisation1, eprOrganisation2, eprOrganisation3, eprOrganisation4]
-        .map((record) => String(record.orgId))
-        .map(toOrganisationNumber)
+      [
+        eprOrganisation1,
+        eprOrganisation2,
+        eprOrganisation3,
+        eprOrganisation4
+      ].map((record) => toOrganisationNumber(record.orgId))
     )
 
   if (existingFixtures.length === 0) {

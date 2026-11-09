@@ -13,6 +13,10 @@ describe('toOrganisationNumber', () => {
     expect(toOrganisationNumber('500001')).toBe('500001')
   })
 
+  it('accepts a number', () => {
+    expect(toOrganisationNumber(500001)).toBe('500001')
+  })
+
   it.each(['', '0', '0500001', '-1', '5000.1', ' 500001', 'abc'])(
     'rejects %j',
     (value) => {

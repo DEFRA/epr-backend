@@ -14,14 +14,15 @@
 export const ORGANISATION_NUMBER_PATTERN = /^[1-9]\d*$/
 
 /**
- * @param {string} value
+ * @param {string | number} value
  * @returns {OrganisationNumber}
  */
 export const toOrganisationNumber = (value) => {
-  if (!ORGANISATION_NUMBER_PATTERN.test(value)) {
-    throw new TypeError(`'${value}' is not an organisation number`)
+  const number = String(value)
+  if (!ORGANISATION_NUMBER_PATTERN.test(number)) {
+    throw new TypeError(`'${number}' is not an organisation number`)
   }
-  return /** @type {OrganisationNumber} */ (value)
+  return /** @type {OrganisationNumber} */ (number)
 }
 
 /**

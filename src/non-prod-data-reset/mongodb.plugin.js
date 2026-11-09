@@ -15,24 +15,23 @@ import { createNonProdDataReset } from './mongodb.js'
  * every environment (dev/test/prod). Using it here would disable the dev
  * cleanup endpoint in non-prod CDP envs, which is exactly where the
  * frontend journey tests need it.
- *
- * Reads organisations through `server.app.organisationsRepository`, so that
- * plugin must register before this one.
  */
 export const nonProdDataResetPlugin = {
   name: 'nonProdDataReset',
   version: '1.0.0',
-  dependencies: ['mongodb', 'organisationsRepository'],
+  dependencies: ['mongodb'],
   register: (
     /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
     /** @type {{db?: import('mongodb').Db}} */ options = {}
   ) => {
     const db = options?.db ?? server.db
-    const { organisationsRepository } =
-      /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
-    const reset = createNonProdDataReset(db, organisationsRepository, {
-      isProduction: isProductionEnvironment()
+    server.dependency('organisationsRepository', async () => {
+      const { organisationsRepository } =
+        /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
+      const reset = createNonProdDataReset(db, organisationsRepository, {
+        isProduction: isProductionEnvironment()
+      })
+      registerDependency(server, 'nonProdDataReset', () => reset)
     })
-    registerDependency(server, 'nonProdDataReset', () => reset)
   }
 }
