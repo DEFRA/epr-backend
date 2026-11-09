@@ -258,13 +258,13 @@ export function toRegistrationEntry(
   )
   const externalAccreditations =
     externalByRegistration.get(registrationNumber) ?? {}
-  for (const year of Object.keys(externalAccreditations)) {
-    if (Object.hasOwn(storedAccreditations, year)) {
+  Object.keys(externalAccreditations)
+    .filter((year) => Object.hasOwn(storedAccreditations, year))
+    .forEach((year) =>
       onDrop(
         `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
-    }
-  }
+    )
   const accreditations = { ...storedAccreditations, ...externalAccreditations }
   const registrationStatus = { current: status, timeline }
 
