@@ -204,6 +204,15 @@ describe('mongodb external accreditations repository', () => {
         })
       },
       {
+        description: 'a status in its timeline the read model does not show',
+        accreditation: buildExternalAccreditation({
+          status: {
+            current: 'approved',
+            timeline: [{ status: 'created', at: '2027-01-01T00:00:00.000Z' }]
+          }
+        })
+      },
+      {
         description: 'an unknown status',
         accreditation: buildExternalAccreditation({
           status: {

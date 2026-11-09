@@ -6,7 +6,13 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-const { registrationNumber, year, ...payload } = buildExternalAccreditation()
+const {
+  registrationNumber,
+  year,
+  status: { timeline },
+  ...fields
+} = buildExternalAccreditation()
+const payload = { ...fields, status: { timeline } }
 const url = `/v1/dev/external-accreditations/${registrationNumber}/${year}`
 
 /** @param {{ devEndpoints: boolean }} featureFlags */
@@ -45,6 +51,50 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
       buildExternalAccreditation()
     )
+  })
+
+  it('stores the timeline oldest first, with the latest change as the current status', async () => {
+    const { server, externalAccreditationsRepository } = await serverWith({
+      devEndpoints: true
+    })
+    const approved = { status: 'approved', at: '2027-01-01T00:00:00.000Z' }
+    const suspended = { status: 'suspended', at: '2027-03-01T00:00:00.000Z' }
+
+    await server.inject({
+      method: 'PUT',
+      url,
+      payload: { ...payload, status: { timeline: [suspended, approved] } }
+    })
+
+    expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
+      buildExternalAccreditation({
+        status: { current: 'suspended', timeline: [approved, suspended] }
+      })
+    )
+  })
+
+  it.for([
+    {
+      description: 'an empty timeline',
+      status: { timeline: [] }
+    },
+    {
+      description: 'a current status alongside the timeline',
+      status: { current: 'approved', timeline }
+    }
+  ])('refuses $description', async ({ status }) => {
+    const { server, externalAccreditationsRepository } = await serverWith({
+      devEndpoints: true
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url,
+      payload: { ...payload, status }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
   })
 
   it('refuses a year that is not a number', async () => {
@@ -89,10 +139,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       url,
       payload: {
         ...payload,
-        status: {
-          current: 'approved',
-          timeline: [{ status: 'approved', at: '2027' }]
-        }
+        status: { timeline: [{ status: 'approved', at: '2027' }] }
       }
     })
 

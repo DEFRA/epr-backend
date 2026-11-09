@@ -3,7 +3,10 @@ import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { accreditationSchema } from '#external-accreditations/repository/schema.js'
+import {
+  accreditationFields,
+  statusTimelineSchema
+} from '#external-accreditations/repository/schema.js'
 import { normalisedRegistrationNumberSchema } from '#repositories/organisations/schema/numbers.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -14,6 +17,10 @@ import { normalisedRegistrationNumberSchema } from '#repositories/organisations/
 
 /**
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams
+ *
+ * @typedef {Omit<ExternalAccreditation, 'registrationNumber' | 'year' | 'status'> & {
+ *   status: { timeline: { status: ExternalAccreditation['status']['current'], at: string }[] }
+ * }} ExternalAccreditationPayload
  *
  * @typedef {HapiRequest & {
  *   externalAccreditationsRepository: ExternalAccreditationsRepository
@@ -38,26 +45,34 @@ export const devExternalAccreditationPut = {
     tags: ['api'],
     validate: {
       params: externalAccreditationParams,
-      payload: accreditationSchema.required()
+      payload: Joi.object({
+        ...accreditationFields,
+        status: Joi.object({
+          timeline: statusTimelineSchema.min(1).required()
+        }).required()
+      }).required()
     }
   },
 
   /**
    * @param {ExternalAccreditationsRequest & {
    *   params: ExternalAccreditationParams,
-   *   payload: Omit<ExternalAccreditation, 'registrationNumber' | 'year'>
+   *   payload: ExternalAccreditationPayload
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { registrationNumber, year } = request.params
-    const { accreditationNumber, prnIssuance, status } = request.payload
+    /** @type {ExternalAccreditationPayload} */
+    const { status, ...fields } = request.payload
+    const timeline = status.timeline.toSorted((a, b) =>
+      a.at.localeCompare(b.at)
+    )
     const stored = await request.externalAccreditationsRepository.upsert({
+      ...fields,
       registrationNumber,
       year,
-      accreditationNumber,
-      prnIssuance,
-      status
+      status: { current: timeline[timeline.length - 1].status, timeline }
     })
     return h.response(stored).code(StatusCodes.OK)
   }

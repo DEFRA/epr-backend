@@ -1,10 +1,7 @@
 import Joi from 'joi'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import {
-  ACCREDITATION_STATUS,
-  TONNAGE_BAND
-} from '#domain/organisations/model.js'
+import { TONNAGE_BAND } from '#domain/organisations/model.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   normalisedAccreditationNumberSchema,
@@ -27,31 +24,30 @@ const isoDateTimeString = Joi.string()
     'string.isoDateTime': 'Date-time must be in YYYY-MM-DDTHH:mm:ss.sssZ format'
   })
 
-export const accreditationSchema = Joi.object({
+const accreditationStatusSchema = Joi.string().valid(...ACCREDITATION_STATUSES)
+
+export const statusTimelineSchema = Joi.array().items(
+  Joi.object({
+    at: isoDateTimeString.required(),
+    status: accreditationStatusSchema.required()
+  })
+)
+
+export const accreditationFields = {
   accreditationNumber: normalisedAccreditationNumberSchema.required(),
   prnIssuance: Joi.object({
     tonnageBand: Joi.string()
       .valid(...Object.values(TONNAGE_BAND))
       .required()
-  }).required(),
-  status: Joi.object({
-    current: Joi.string()
-      .valid(...ACCREDITATION_STATUSES)
-      .required(),
-    timeline: Joi.array()
-      .items(
-        Joi.object({
-          at: isoDateTimeString.required(),
-          status: Joi.string()
-            .valid(...Object.values(ACCREDITATION_STATUS))
-            .required()
-        })
-      )
-      .required()
   }).required()
-})
+}
 
-export const externalAccreditationSchema = accreditationSchema.keys({
+export const externalAccreditationSchema = Joi.object({
   registrationNumber: normalisedRegistrationNumberSchema.required(),
-  year: yearSchema().required()
+  year: yearSchema().required(),
+  ...accreditationFields,
+  status: Joi.object({
+    current: accreditationStatusSchema.required(),
+    timeline: statusTimelineSchema.required()
+  }).required()
 })
