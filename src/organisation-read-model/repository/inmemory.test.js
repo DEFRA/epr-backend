@@ -17,10 +17,12 @@ const it = /** @type {OrganisationReadRepositoryContractIt} */ (
       const organisationReadRepositoryWith = async ({
         organisations,
         overseasSites = [],
+        externalAccreditations = [],
         logger
       }) =>
         (
           await organisationReadRepositoryOf(organisations, {
+            externalAccreditations,
             overseasSites,
             logger
           })

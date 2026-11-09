@@ -3,7 +3,10 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { createOrganisationReadRepository } from './mongodb.js'
+import {
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
+  createOrganisationReadRepository
+} from './mongodb.js'
 import {
   REPROCESSOR_NUMBER,
   findOrganisation,
@@ -48,11 +51,15 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection('epr-organisations').deleteMany({})
       await database.collection('overseas-sites').deleteMany({})
+      await database
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
 
       /** @type {OrganisationReadRepositoryWith} */
       const organisationReadRepositoryWith = async ({
         organisations,
         overseasSites = [],
+        externalAccreditations = [],
         logger = { warn: () => {} }
       }) => {
         for (const organisation of organisations) {
@@ -64,6 +71,11 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
           await database
             .collection('overseas-sites')
             .insertOne(toDocument(site))
+        }
+        for (const externalAccreditation of externalAccreditations) {
+          await database
+            .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+            .insertOne({ ...externalAccreditation })
         }
 
         return createOrganisationReadRepository(database)({

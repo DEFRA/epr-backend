@@ -3,12 +3,14 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {{
+ *   externalAccreditations?: ExternalAccreditation[]
  *   overseasSites?: object[]
  *   overseasSitesRepository?: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger?: Pick<TypedLogger, 'warn'>
@@ -99,7 +101,8 @@ export const organisationReadRepositoryOf = async (organisations, options) => {
   const repository = createInMemoryOrganisationReadRepository(
     await createInMemoryOrganisationsRepository(
       /** @type {any[]} */ (organisations)
-    )().findAll()
+    )().findAll(),
+    options?.externalAccreditations
   )(dependenciesFor(options))
   return () => repository
 }
