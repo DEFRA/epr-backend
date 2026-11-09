@@ -1,5 +1,5 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { createPrnVisibilityFilter } from '#packaging-recycling-notes/application/prn-visibility-filter.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 
@@ -13,13 +13,11 @@ export const packagingRecyclingNotesRepositoryPlugin = {
   ) => {
     const db = options?.db ?? server.db
 
-    const { excludeOrganisationIds } = await createPrnVisibilityFilter(db, {
-      testOrganisationIds: [...TEST_ORGANISATION_IDS]
-    })
-
     const createRepository = await createPackagingRecyclingNotesRepository(
       db,
-      excludeOrganisationIds
+      [...TEST_ORGANISATION_IDS].map((orgId) =>
+        toOrganisationNumber(String(orgId))
+      )
     )
 
     registerDependency(server, 'packagingRecyclingNotesRepository', (request) =>

@@ -14,7 +14,7 @@ import {
 } from './watermark-guard.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
 /** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 
@@ -198,12 +198,12 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 /**
- * @param {Organisation['id'][]} excludeOrganisationIds
+ * @param {OrganisationNumber[]} excludeOrganisationNumbers
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) =>
  *   (prn: PackagingRecyclingNote) => boolean}
  */
 const buildFindByStatusFilter =
-  (excludeOrganisationIds) =>
+  (excludeOrganisationNumbers) =>
   ({ cursor, dateFrom, dateTo, statuses }) =>
   (prn) => {
     if (!statuses.includes(prn.status.currentStatus)) {
@@ -216,8 +216,7 @@ const buildFindByStatusFilter =
       return false
     }
     if (
-      excludeOrganisationIds.length &&
-      excludeOrganisationIds.includes(prn.organisation.id)
+      excludeOrganisationNumbers.includes(prn.organisation.organisationNumber)
     ) {
       return false
     }
@@ -227,11 +226,11 @@ const buildFindByStatusFilter =
 
 /**
  * @param {Storage} storage
- * @param {Organisation['id'][]} excludeOrganisationIds
+ * @param {OrganisationNumber[]} excludeOrganisationNumbers
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
-const performFindByStatus = (storage, excludeOrganisationIds) => {
-  const buildFilter = buildFindByStatusFilter(excludeOrganisationIds)
+const performFindByStatus = (storage, excludeOrganisationNumbers) => {
+  const buildFilter = buildFindByStatusFilter(excludeOrganisationNumbers)
 
   return async (params) => {
     const { limit } = params
@@ -392,11 +391,11 @@ const performPersistProjection =
 
 /**
  * @param {PackagingRecyclingNote[]} [initialData]
- * @param {Organisation['id'][]} [excludeOrganisationIds]
+ * @param {OrganisationNumber[]} [excludeOrganisationNumbers]
  */
 export function createInMemoryPackagingRecyclingNotesRepository(
   initialData = [],
-  excludeOrganisationIds = []
+  excludeOrganisationNumbers = []
 ) {
   /** @type {Storage} */
   const storage = new Map()
@@ -412,7 +411,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByIds: performFindByIds(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
-    findByStatus: performFindByStatus(storage, excludeOrganisationIds),
+    findByStatus: performFindByStatus(storage, excludeOrganisationNumbers),
     sumTonnageByAccreditation: performSumTonnageByAccreditation(storage),
     updateStatus: performUpdateStatus(storage, logger),
     updateWatermark: performUpdateWatermark(storage, logger),
