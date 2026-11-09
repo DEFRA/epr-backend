@@ -1,6 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildLedgerEvent, buildPrnCreatedEvent } from '../ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildLedgerId,
+  buildPrnCreatedEvent
+} from '../ledger-test-data.js'
 
 /**
  * @param {import('../ledger-port.js').LatestSubmittedSummaryLogPerLedger[]} entries
@@ -59,11 +63,10 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: {
-            organisationId: 'org-1',
+          ledgerId: buildLedgerId({
             registrationId: 'reg-latest',
             accreditationId: 'acc-latest'
-          },
+          }),
           summaryLogId: 'log-3'
         }
       ])
@@ -90,11 +93,10 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: {
-            organisationId: 'org-1',
+          ledgerId: buildLedgerId({
             registrationId: 'reg-mixed',
             accreditationId: 'acc-mixed'
-          },
+          }),
           summaryLogId: 'log-submitted'
         }
       ])
@@ -147,11 +149,10 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toHaveLength(2)
       expect(result).toContainEqual({
-        ledgerId: {
-          organisationId: 'org-1',
+        ledgerId: buildLedgerId({
           registrationId: 'reg-registered-only',
           accreditationId: null
-        },
+        }),
         summaryLogId: 'log-registered-only'
       })
     })
@@ -177,11 +178,10 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: {
-            organisationId: 'org-1',
+          ledgerId: buildLedgerId({
             registrationId: 'reg-submitted',
             accreditationId: 'acc-submitted'
-          },
+          }),
           summaryLogId: 'log-submitted'
         }
       ])

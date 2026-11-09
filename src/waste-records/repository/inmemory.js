@@ -25,23 +25,29 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /**
- * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
- */
-
-/**
  * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
  */
 
+/** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+
+/**
+ * @param {SummaryLogRowState} doc
+ * @param {RegistrationOrAccreditationId} ids
+ */
+const matchesLedgerIdentity = (doc, ids) =>
+  doc.organisationId === ids.organisationId &&
+  doc.registrationId === ids.registrationId &&
+  doc.accreditationId === ids.accreditationId
 
 /**
  * @param {SummaryLogRowState} doc
  * @param {WasteBalanceLedgerId} ledgerId
  */
-const matchesLedgerIdentity = (doc, ledgerId) =>
-  doc.organisationId === ledgerId.organisationId &&
-  doc.registrationId === ledgerId.registrationId &&
-  doc.accreditationId === ledgerId.accreditationId
+const matchesLedger = (doc, ledgerId) =>
+  doc.organisationNumber === ledgerId.organisationNumber &&
+  doc.registrationNumber === ledgerId.registrationNumber &&
+  doc.accreditationNumber === ledgerId.accreditationNumber
 
 /**
  * @param {SummaryLogRowState} doc
@@ -72,8 +78,7 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
   structuredClone(
     storage.filter(
       (doc) =>
-        matchesLedgerIdentity(doc, ledgerId) &&
-        doc.summaryLogIds.includes(summaryLogId)
+        matchesLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
     )
   )
 

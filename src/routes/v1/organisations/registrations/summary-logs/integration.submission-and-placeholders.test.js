@@ -46,7 +46,11 @@ import {
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -481,9 +485,11 @@ describe('Submission and placeholder tests', () => {
 
     it('should commit the submission rows as row states', async () => {
       const rowStates = await summaryLogRowStatesForRegistration({
-        organisationId,
-        registrationId,
-        accreditationId,
+        organisationNumber: toOrganisationNumber(
+          String(TEST_ORGANISATION_NUMBER)
+        ),
+        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        accreditationNumber: toAccreditationNumber('ACC-2025-001'),
         ledgerRepository,
         summaryLogRowStatesRepository
       })

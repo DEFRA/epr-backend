@@ -896,7 +896,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ).toBeUndefined()
 
       // Scenario 9: a summary log submitted against this registration
-      // appends to a registered-only ledger stream — accreditationId null —
+      // appends to a registered-only ledger stream — accreditation number null —
       // which rejects PRN events (application/summary-logs/ledger-id.js;
       // waste-balances/repository/ledger-schema.js:173).
       const ledgerId = ledgerIdFor(
@@ -909,7 +909,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         ),
         grantedRegistration
       )
-      expect(ledgerId.accreditationId).toBeNull()
+      expect(ledgerId.accreditationNumber).toBeNull()
     })
   })
 

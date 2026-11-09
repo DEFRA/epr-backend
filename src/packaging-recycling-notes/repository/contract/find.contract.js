@@ -274,6 +274,36 @@ export const testFindBehaviour = (it) => {
         expect(result).toEqual([])
       })
 
+      it('reads nothing for the same accreditation under a different organisation', async () => {
+        const accreditation = buildAccreditationKeys()
+        const note = await repository.create(
+          buildDraftPrn(underAccreditation(accreditation))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          organisationNumber: buildAccreditationKeys().organisationNumber,
+          ids: [note.id]
+        })
+
+        expect(result).toEqual([])
+      })
+
+      it('reads nothing for the same accreditation under a different registration', async () => {
+        const accreditation = buildAccreditationKeys()
+        const note = await repository.create(
+          buildDraftPrn(underAccreditation(accreditation))
+        )
+
+        const result = await repository.findByIds({
+          ...accreditation,
+          registrationNumber: buildAccreditationKeys().registrationNumber,
+          ids: [note.id]
+        })
+
+        expect(result).toEqual([])
+      })
+
       it('reads nothing for an id no note is stored under', async () => {
         const accreditation = buildAccreditationKeys()
         await repository.create(

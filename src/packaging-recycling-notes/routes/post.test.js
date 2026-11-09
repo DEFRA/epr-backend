@@ -25,11 +25,19 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
+  ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER,
   accreditation,
   exporter,
   granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -44,6 +52,21 @@ const registrationId = new ObjectId().toString()
 const accreditationId = new ObjectId().toString()
 const { orgId } = buildOrganisation()
 
+/**
+ * The served accreditation's ledger, under the reprocessor or exporter
+ * registration a test serves it under.
+ *
+ * @param {string} registrationNumber
+ */
+const ledgerUnder = (registrationNumber) => ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber(registrationNumber),
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+})
+
 const SEED_BALANCE = { amount: 500, availableAmount: 500 }
 
 /**
@@ -57,12 +80,10 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
 const seedStream = (closingBalance = SEED_BALANCE) =>
   createInMemoryLedgerRepository(
     closingBalance
-      ? [
+      ? [REPROCESSOR_NUMBER, EXPORTER_NUMBER].map((number) =>
           partialMock(
             buildLedgerEvent({
-              organisationId,
-              registrationId,
-              accreditationId,
+              ...ledgerUnder(number),
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -72,7 +93,7 @@ const seedStream = (closingBalance = SEED_BALANCE) =>
               closingBalance
             })
           )
-        ]
+        )
       : []
   )()
 
@@ -587,9 +608,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       // to 100 — the route must re-read this, not the balance it first saw.
       await ledgerRepository.appendEvents([
         buildPrnCreatedEvent({
-          organisationId,
-          registrationId,
-          accreditationId,
+          ...ledgerUnder(REPROCESSOR_NUMBER),
           number: 2,
           payload: { prnId: 'competing-prn', amount: 400 },
           openingBalance: { amount: 500, availableAmount: 500 },

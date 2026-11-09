@@ -2,14 +2,13 @@ import { describe, it, expect } from 'vitest'
 
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
-import { buildLedgerEvent } from '../repository/ledger-test-data.js'
+import {
+  buildLedgerEvent,
+  buildLedgerId
+} from '../repository/ledger-test-data.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 
-const ledgerId = {
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1'
-}
+const ledgerId = buildLedgerId()
 
 const submissionEvent = (number, creditTotal) =>
   buildLedgerEvent({
@@ -45,9 +44,7 @@ describe('currentWasteBalance', () => {
     const balance = await currentWasteBalance(repository, ledgerId)
 
     expect(balance).toEqual({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
+      ...ledgerId,
       amount: 1000,
       availableAmount: 700,
       eventNumber: 2,

@@ -96,9 +96,9 @@ const aggregatedRowSchema = Joi.object({
   material: Joi.string().required(),
   tonnageBand: Joi.string().required(),
   ledgerId: Joi.object({
-    organisationId: Joi.string().required(),
-    registrationId: Joi.string().required(),
-    accreditationId: Joi.string().required()
+    organisationNumber: Joi.string().required(),
+    registrationNumber: Joi.string().required(),
+    accreditationNumber: Joi.string().allow(null).required()
   }).required(),
   registration: Joi.object({
     wasteProcessingType: Joi.string()
@@ -142,7 +142,7 @@ const heldBy = (context, { organisationId, registrationId }) =>
  * @param {AccreditationContext | undefined} context
  */
 const toAggregatedRow = (
-  { id: { organisationId, registrationId, accreditationId }, tonnageByStatus },
+  { id: { organisationId, registrationId }, tonnageByStatus },
   context
 ) => {
   const resolved = heldBy(context, { organisationId, registrationId })
@@ -155,7 +155,11 @@ const toAggregatedRow = (
       resolved && (resolved.accreditation.accreditationNumber ?? ''),
     material: resolved?.accreditation.material,
     tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
-    ledgerId: { organisationId, registrationId, accreditationId },
+    ledgerId: resolved && {
+      organisationNumber: String(resolved.organisation.orgId),
+      registrationNumber: resolved.registration.registrationNumber,
+      accreditationNumber: resolved.accreditation.accreditationNumber ?? null
+    },
     registration: {
       wasteProcessingType: resolved?.registration.wasteProcessingType,
       reprocessingType: resolved?.registration.reprocessingType ?? undefined
@@ -192,12 +196,17 @@ const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
 
 /**
  * The accreditation's balances, read from the head of its ledger. An
- * accreditation whose ledger has no events yet holds nothing.
+ * accreditation whose ledger has no events yet holds nothing, and one that has
+ * lost its number names no ledger.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {WasteBalanceLedgerId} ledgerId
  */
 const balancesFor = async (ledgerRepository, ledgerId) => {
+  if (ledgerId.accreditationNumber === null) {
+    return ZERO_BALANCES
+  }
+
   const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
   if (latest === null) {
@@ -275,7 +284,7 @@ export const aggregatePrnTonnage = async (
         Joi.attempt(
           row,
           aggregatedRowSchema,
-          `Unreportable PRN tonnage row for accreditation ${row.ledgerId.accreditationId}:`
+          `Unreportable PRN tonnage row for accreditation ${accreditationTonnage.id.accreditationId}:`
         )
       )
     })

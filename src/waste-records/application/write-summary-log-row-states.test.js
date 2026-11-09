@@ -70,17 +70,17 @@ const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const registeredOnlyLedgerId = {
+const registeredOnlyLedgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null
-}
+})
 
-const accreditedLedgerId = {
+const accreditedLedgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
-}
+})
 
 describe('writeSummaryLogRowStates', () => {
   let summaryLogRowStatesRepository

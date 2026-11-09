@@ -45,7 +45,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
     ])()
 
     const committed = await repository.findWasteRecordStatesForSummaryLog(
-      DEFAULT_LEDGER_ID,
+      withNumbers(DEFAULT_LEDGER_ID),
       toSummaryLogFileId('log-seed')
     )
     expect(committed).toEqual([
