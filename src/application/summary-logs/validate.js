@@ -88,24 +88,17 @@ const extractSummaryLog = async ({
 }
 
 /**
- * The accreditation a summary log is validated against: the one it stored
- * (`null` = registered-only), or the registration's current one for a legacy
- * summary log that stored none.
+ * The accreditation a summary log is validated against: the one it stored,
+ * or none for a registered-only summary log.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SubmittedSummaryLog} summaryLog
- * @param {Registration} registration
  * @returns {Promise<Registration['accreditation']>}
  */
 const accreditationFor = async (
   organisationsRepository,
-  { organisationId, accreditationId },
-  registration
+  { organisationId, accreditationId }
 ) => {
-  if (accreditationId === undefined) {
-    return registration.accreditation
-  }
-
   return accreditationId === null
     ? null
     : organisationsRepository.findAccreditationById(
@@ -136,11 +129,7 @@ const fetchRegistration = async ({
     )
   const registration = {
     ...currentRegistration,
-    accreditation: await accreditationFor(
-      organisationsRepository,
-      summaryLog,
-      currentRegistration
-    )
+    accreditation: await accreditationFor(organisationsRepository, summaryLog)
   }
 
   logger.info({

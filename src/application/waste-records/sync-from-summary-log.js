@@ -18,7 +18,6 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
@@ -131,7 +130,6 @@ const prepareRowsForTransformation = (parsedData) => {
 
 /**
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { Registration } from '#domain/organisations/registration.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js'
@@ -139,43 +137,33 @@ const prepareRowsForTransformation = (parsedData) => {
 
 /**
  * The numbers a summary log names its registration and accreditation by. The
- * accreditation number is `null` for a registered-only submission, and absent
- * on a legacy summary log from before the field existed.
+ * accreditation number is `null` for a registered-only submission.
  *
  * @typedef {{
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
- *   accreditationNumber?: AccreditationNumber | null
+ *   accreditationNumber: AccreditationNumber | null
  * }} SubmissionNumbers
  */
 
 /**
  * The accreditation a submit writes to: the one the summary log's
- * accreditation number names, none when that number is `null`, and, for a
- * legacy summary log, the registration's current link.
+ * accreditation number names, or none for a registered-only submission.
  *
  * @param {Organisation} organisation
- * @param {Registration} registration
- * @param {AccreditationNumber | null | undefined} accreditationNumber
+ * @param {AccreditationNumber | null} accreditationNumber
  * @returns {Accreditation | null}
  */
-const findAccreditation = (organisation, registration, accreditationNumber) => {
+const findAccreditation = (organisation, accreditationNumber) => {
   if (accreditationNumber === null) {
     return null
   }
-  if (accreditationNumber === undefined && !registration.accreditationId) {
-    return null
-  }
 
-  const accreditation = organisation.accreditations.find((candidate) =>
-    accreditationNumber === undefined
-      ? candidate.id === registration.accreditationId
-      : candidate.accreditationNumber === accreditationNumber
+  const accreditation = organisation.accreditations.find(
+    (candidate) => candidate.accreditationNumber === accreditationNumber
   )
   if (!accreditation) {
-    throw new Error(
-      `Accreditation not found: ${accreditationNumber ?? registration.accreditationId}`
-    )
+    throw new Error(`Accreditation not found: ${accreditationNumber}`)
   }
   return accreditation
 }
@@ -208,20 +196,17 @@ const resolveSubmissionLedger = async (organisationsRepository, summaryLog) => {
 
   const accreditation = findAccreditation(
     organisation,
-    registration,
     summaryLog.accreditationNumber
   )
-  const ids = {
-    organisationId: organisation.id,
-    registrationId: registration.id,
-    accreditationId: accreditation?.id ?? null
-  }
-
   return {
     accreditation,
     ledgerId: {
-      ...ids,
-      ...requiredNumbersFor(organisation, ids, 'row states')
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      accreditationId: accreditation?.id ?? null,
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber,
+      accreditationNumber: summaryLog.accreditationNumber
     }
   }
 }
@@ -468,7 +453,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {OrganisationNumber} summaryLog.organisationNumber
    * @param {RegistrationNumber} summaryLog.registrationNumber
-   * @param {AccreditationNumber | null} [summaryLog.accreditationNumber] - `null` for a registered-only submission, absent on a legacy summary log
+   * @param {AccreditationNumber | null} summaryLog.accreditationNumber - `null` for a registered-only submission
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */

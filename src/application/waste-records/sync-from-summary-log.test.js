@@ -83,17 +83,6 @@ const summaryLogFor = (fileId, accreditationNumber = null) => ({
   accreditationNumber
 })
 
-/**
- * A summary log from before the accreditation was recorded on it.
- *
- * @param {string} fileId
- */
-const legacySummaryLogFor = (fileId) => ({
-  file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
-  organisationNumber: ORGANISATION_NUMBER,
-  registrationNumber: REGISTRATION_NUMBER
-})
-
 const reprocessorInput = (rows) =>
   /** @type {any} */ ({
     meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
@@ -235,35 +224,6 @@ describe('syncFromSummaryLog', () => {
       registrationNumber: 'REG-1',
       accreditationNumber: null
     })
-  })
-
-  it('stores no row state its organisation record gives no number for', async () => {
-    const fileId = 'file-numbers-missing'
-    const extractor = extractorFor(
-      fileId,
-      reprocessorInput([
-        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
-      ])
-    )
-    organisationsRepository.findByOrganisationNumber.mockResolvedValue(
-      organisationWith({
-        registration: { accreditationId: 'acc-1' },
-        accreditations: [{ id: 'acc-1', accreditationNumber: null }]
-      })
-    )
-
-    await expect(
-      makeSync({ extractor })(legacySummaryLogFor(fileId), TEST_USER)
-    ).rejects.toThrow(
-      'Cannot store row states without their numbers: accreditation acc-1 has no accreditation number'
-    )
-    expect(
-      await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-        '500001',
-        'REG-1',
-        fileId
-      )
-    ).toEqual([])
   })
 
   it('passes through tables that have no schema', async () => {
@@ -551,69 +511,6 @@ describe('syncFromSummaryLog', () => {
         TEST_USER
       )
     ).rejects.toThrow('Accreditation not found: ACC-MISSING')
-  })
-
-  describe('a summary log from before the accreditation was recorded on it', () => {
-    const rows = reprocessorInput([
-      receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
-    ])
-
-    it("writes to the registration's linked accreditation", async () => {
-      const fileId = 'file-legacy-linked'
-      organisationsRepository.findByOrganisationNumber.mockResolvedValue(
-        organisationWith({ registration: { accreditationId: 'acc-1' } })
-      )
-
-      await makeSync({ extractor: extractorFor(fileId, rows) })(
-        legacySummaryLogFor(fileId),
-        TEST_USER
-      )
-
-      const [rowState] =
-        await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-          '500001',
-          'REG-1',
-          fileId
-        )
-      expect(rowState).toMatchObject({
-        accreditationId: 'acc-1',
-        accreditationNumber: 'ACC-1'
-      })
-    })
-
-    it('writes registered-only when the registration links no accreditation', async () => {
-      const fileId = 'file-legacy-unlinked'
-
-      await makeSync({ extractor: extractorFor(fileId, rows) })(
-        legacySummaryLogFor(fileId),
-        TEST_USER
-      )
-
-      const [rowState] =
-        await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
-          '500001',
-          'REG-1',
-          fileId
-        )
-      expect(rowState).toMatchObject({
-        accreditationId: null,
-        accreditationNumber: null
-      })
-    })
-
-    it('throws when the linked accreditation is not on the organisation', async () => {
-      const fileId = 'file-legacy-gone'
-      organisationsRepository.findByOrganisationNumber.mockResolvedValue(
-        organisationWith({ registration: { accreditationId: 'acc-gone' } })
-      )
-
-      await expect(
-        makeSync({ extractor: extractorFor(fileId, rows) })(
-          legacySummaryLogFor(fileId),
-          TEST_USER
-        )
-      ).rejects.toThrow('Accreditation not found: acc-gone')
-    })
   })
 
   describe('return value (created/updated counts against the committed head)', () => {

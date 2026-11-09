@@ -22,7 +22,7 @@ export const MAX_VALIDATION_ISSUES = 100
  *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
- *   accreditationId?: string | null,
+ *   accreditationId: string | null,
  *   file: StoredFile
  * }} SubmittedSummaryLog
  */
