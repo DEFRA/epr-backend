@@ -118,17 +118,24 @@ export const OUTSTANDING_RETURNS_MATERIALS = Object.freeze([
   [MATERIAL.FIBRE, 'Fibre-based composite']
 ])
 
+/** @type {Readonly<Record<TonnageBand, string>>} */
+const TONNAGE_BAND_LABELS = Object.freeze({
+  [TONNAGE_BAND.UP_TO_500]: 'Up to 500 tonnes',
+  [TONNAGE_BAND.UP_TO_5000]: 'Up to 5,000 tonnes',
+  [TONNAGE_BAND.UP_TO_10000]: 'Up to 10,000 tonnes',
+  [TONNAGE_BAND.OVER_10000]: 'Over 10,000 tonnes'
+})
+
 /**
  * Each tonnage band, and its label, in the order the rows run down a block.
  *
  * @type {readonly (readonly [TonnageBand, string])[]}
  */
-export const TONNAGE_BANDS = Object.freeze([
-  [TONNAGE_BAND.UP_TO_500, 'Up to 500 tonnes'],
-  [TONNAGE_BAND.UP_TO_5000, 'Up to 5,000 tonnes'],
-  [TONNAGE_BAND.UP_TO_10000, 'Up to 10,000 tonnes'],
-  [TONNAGE_BAND.OVER_10000, 'Over 10,000 tonnes']
-])
+export const TONNAGE_BANDS = Object.freeze(
+  Object.values(TONNAGE_BAND).map(
+    (band) => /** @type {const} */ ([band, TONNAGE_BAND_LABELS[band]])
+  )
+)
 
 /**
  * The rows of the UK and England tables, in published order, by the material
