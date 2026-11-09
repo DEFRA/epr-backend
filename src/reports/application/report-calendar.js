@@ -15,6 +15,7 @@ import { periodBounds } from '#reports/domain/reporting-period.js'
 import { config } from '#root/config.js'
 
 /**
+ * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Registration } from '#organisation-read-model/domain/model.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -100,13 +101,22 @@ const reportingWindowsFor = (registration, year) => {
  * @returns {(period: MergedPeriod) => boolean}
  */
 const servesAccreditedReport = (registration, year) => {
-  const timeline = registration.accreditations[year]?.status.timeline ?? []
-  const [first] = statusRanges(timeline, yearBounds(year).end).approved ?? []
+  const from = accreditedFrom(registration, year)
   return ({ period }) =>
-    first !== undefined &&
-    periodBounds(CADENCE.monthly, year, period).endDate.localeCompare(
-      first.from
-    ) >= 0
+    from !== undefined &&
+    periodBounds(CADENCE.monthly, year, period).endDate.localeCompare(from) >= 0
+}
+
+/**
+ * The day the year's accreditation was first approved (its validFrom).
+ *
+ * @param {Registration} registration
+ * @param {Year} year
+ * @returns {CalendarDate | undefined}
+ */
+export const accreditedFrom = (registration, year) => {
+  const timeline = registration.accreditations[year]?.status.timeline ?? []
+  return statusRanges(timeline, yearBounds(year).end).approved?.[0]?.from
 }
 
 /**

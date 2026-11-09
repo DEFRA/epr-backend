@@ -32,8 +32,6 @@ const YEAR = toYear(2026)
 
 /**
  * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   year: Year,
@@ -56,8 +54,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const reportsRepository = reportsRepositoryFactory()
 
     const reportId = await seed(reportsRepository, {
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       year: YEAR,
       cadence: 'quarterly',
@@ -78,8 +74,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     return {
       server,
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       reportId: /** @type {string} */ (reportId),
       reportsRepository,
@@ -173,8 +167,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('calls auditReportStatusTransition with correct params', async () => {
-      const { server, urlFor, organisationId, registrationId, reportId } =
-        await createServerWithSubmittedReport()
+      const {
+        server,
+        urlFor,
+        organisationNumber,
+        registrationNumber,
+        reportId
+      } = await createServerWithSubmittedReport()
 
       await server.inject({
         method: 'POST',
@@ -185,8 +184,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
         expect.any(Object),
         {
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

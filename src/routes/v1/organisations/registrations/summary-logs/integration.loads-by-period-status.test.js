@@ -144,8 +144,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
   // closed reporting period. The org is accredited, so its cadence is monthly.
   const closeJanuary2025 = (env) =>
     createAndSubmitReport(env.reportsRepository, {
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
       ...env.reportKey,
       year: toYear(2025),
       cadence: 'monthly',
@@ -157,8 +155,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
   const closeFebruary2025 = (env) =>
     createAndSubmitReport(env.reportsRepository, {
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
       ...env.reportKey,
       year: toYear(2025),
       cadence: 'monthly',
@@ -962,8 +958,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     // Submit Q1 2025 so a load received in January is closed, while a load
     // received in April (Q2) stays open.
     await createAndSubmitReport(env.reportsRepository, {
-      organisationId,
-      registrationId,
       ...env.reportKey,
       year: toYear(2025),
       cadence: 'quarterly',

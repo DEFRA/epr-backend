@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { assertPresent } from '#test/type-helpers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { groupAsPeriodicReports, mapReport } from './helpers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/event.js'
@@ -94,8 +98,13 @@ describe('groupAsPeriodicReports', () => {
   })
 
   const currentOf = (docs) => {
-    const period = groupAsPeriodicReports('org-1', 'reg-1', docs)[0].reports
-      .monthly?.[1]
+    const period = groupAsPeriodicReports(
+      {
+        organisationNumber: toOrganisationNumber('500001'),
+        registrationNumber: toRegistrationNumber('R25SR500010912PL')
+      },
+      docs
+    )[0].reports.monthly?.[1]
     assertPresent(period)
     const { current } = period
     assertPresent(current)

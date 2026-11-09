@@ -72,6 +72,7 @@ const extractCascadeKeys = (organisation) => {
  * epr-organisations _id hex on the document, so they join against mongoIdHex.
  * The 'organisation' collection (written by the journey-test apply path) is
  * keyed by the numeric orgId, so its filter joins against orgId directly.
+ * Reports, and report system logs, carry the organisation number instead.
  *
  * @param {number} orgId
  * @param {string} mongoIdHex
@@ -96,7 +97,7 @@ const buildCascadeSteps = (orgId, mongoIdHex, { overseasSiteIds }) => [
   {
     label: 'reports',
     collection: COLLECTIONS.REPORTS,
-    filter: { organisationId: mongoIdHex }
+    filter: { organisationNumber: String(orgId) }
   },
   {
     label: 'summary-logs',
@@ -114,7 +115,12 @@ const buildCascadeSteps = (orgId, mongoIdHex, { overseasSiteIds }) => [
   {
     label: 'system-logs',
     collection: COLLECTIONS.SYSTEM_LOGS,
-    filter: { 'context.organisationId': mongoIdHex }
+    filter: {
+      $or: [
+        { 'context.organisationId': mongoIdHex },
+        { 'context.organisationNumber': String(orgId) }
+      ]
+    }
   },
   {
     label: 'registration',

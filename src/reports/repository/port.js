@@ -205,10 +205,10 @@
  * @property {number} version
  * @property {number} schemaVersion
  * @property {number} submissionNumber
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {OrganisationNumber} [organisationNumber]
- * @property {RegistrationNumber} [registrationNumber]
+ * @property {string} [organisationId] - only on reports created before they were keyed by number
+ * @property {string} [registrationId] - only on reports created before they were keyed by number
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
  * @property {Year} year
  * @property {string} cadence
@@ -310,8 +310,8 @@
 
 /**
  * @typedef {Object} PeriodicReport
- * @property {string} organisationId
- * @property {string} registrationId
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Year} year
  * @property {{ monthly?: PeriodicReportSlots, quarterly?: PeriodicReportSlots }} reports
  */
@@ -322,8 +322,6 @@
 
 /**
  * @typedef {Object} CreateReportBase
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {Year} year

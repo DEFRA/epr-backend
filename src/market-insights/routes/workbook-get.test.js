@@ -183,11 +183,11 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     let seededServer
 
     beforeAll(async () => {
-      const operator = await insertAccreditedOperator(
+      const { reportKey } = await insertAccreditedOperator(
         register.organisationsRepository
       )
       await buildSubmittedReport(register.reportsRepository, {
-        ...operator,
+        ...reportKey,
         year: toYear(2026),
         cadence: 'monthly',
         period: 1

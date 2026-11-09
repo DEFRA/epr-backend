@@ -83,8 +83,8 @@ describe('mergeReportingPeriods', () => {
   it('merges persisted report into matching period', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -113,8 +113,8 @@ describe('mergeReportingPeriods', () => {
   it('exposes report with submitted status when current report is submitted', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -147,8 +147,8 @@ describe('mergeReportingPeriods', () => {
   it('derives no submitted reports when the period has no submitted report', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -179,8 +179,8 @@ describe('mergeReportingPeriods', () => {
   it('lists submitted reports ascending, excluding the in-flight draft', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -232,8 +232,8 @@ describe('mergeReportingPeriods', () => {
   it('selects the highest-numbered submission regardless of slot ordering', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -282,8 +282,8 @@ describe('mergeReportingPeriods', () => {
   it('keeps an unsubmitted-but-previously-submitted report in the derived submissions', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -322,8 +322,8 @@ describe('mergeReportingPeriods', () => {
   it('sets report to null when current is null (no active draft)', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -356,8 +356,8 @@ describe('mergeReportingPeriods', () => {
   it('includes persisted periods not in computed set when current is non-null', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -389,8 +389,8 @@ describe('mergeReportingPeriods', () => {
   it('ignores persisted slots with null current not in computed set', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           monthly: {
@@ -423,8 +423,8 @@ describe('mergeReportingPeriods', () => {
   it('ignores slots from a different cadence', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2026),
         reports: {
           quarterly: {
@@ -453,8 +453,8 @@ describe('mergeReportingPeriods', () => {
   it('sorts output by year then period', () => {
     const periodicReports = [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: '500001',
+        registrationNumber: 'R25SR500010912PL',
         year: toYear(2025),
         reports: {
           monthly: {

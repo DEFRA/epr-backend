@@ -13,6 +13,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -140,7 +141,8 @@ const insertAccreditedOperator = async (organisationsRepository) => {
   return {
     organisationId: organisation.id,
     registrationId: registration.id,
-    accreditationId
+    accreditationId,
+    reportKey: reportKeyOf(organisation, organisation.registrations[0])
   }
 }
 
@@ -197,13 +199,12 @@ const sentOnRow = (rowId, tonnage) => ({
  * @param {import('#waste-records/repository/schema.js').SummaryLogRowStateEntry[]} rows
  */
 const submit = async (repositories, rows) => {
-  const ledgerId = await insertAccreditedOperator(
+  const { reportKey, ...ledgerId } = await insertAccreditedOperator(
     repositories.organisationsRepository
   )
 
   await buildSubmittedReport(repositories.reportsRepository, {
-    organisationId: ledgerId.organisationId,
-    registrationId: ledgerId.registrationId,
+    ...reportKey,
     year: toYear(2026),
     cadence: 'monthly',
     period: 1

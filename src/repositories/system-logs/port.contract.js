@@ -74,6 +74,55 @@ export const testSystemLogsRepositoryContract = (it) => {
         expect(result.systemLogs[0].context.organisationId).toBe(organisationId)
       })
 
+      it('returns logs matching the provided organisation number', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const organisationNumber = randomUUID()
+
+        await repository.insert(buildSystemLog({ organisationNumber, id: 1 }))
+        await repository.insert(
+          buildSystemLog({ organisationNumber: randomUUID(), id: 2 })
+        )
+
+        const result = await repository.find({
+          organisationNumber,
+          limit: DEFAULT_LIMIT
+        })
+
+        expect(result.systemLogs.map((log) => log.context.id)).toEqual([1])
+      })
+
+      it('returns logs recording either the organisation id or number', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const organisationId = randomUUID()
+        const organisationNumber = randomUUID()
+
+        await repository.insert(buildSystemLog({ organisationId, id: 1 }))
+        await repository.insert(buildSystemLog({ organisationNumber, id: 2 }))
+        await repository.insert(
+          buildSystemLog({
+            organisationId: randomUUID(),
+            organisationNumber: randomUUID(),
+            id: 3
+          })
+        )
+
+        const result = await repository.find({
+          organisationId,
+          organisationNumber,
+          limit: DEFAULT_LIMIT
+        })
+
+        expect(result.systemLogs.map((log) => log.context.id)).toEqual([2, 1])
+      })
+
       it('returns logs matching combined filters', async ({
         systemLogsRepository
       }) => {

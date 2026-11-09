@@ -215,8 +215,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     return {
       server,
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       accreditationNumber: accreditationRecord?.accreditationNumber,
       reportsRepositoryFactory,
@@ -293,15 +291,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
   })
 
-  it('stores the organisation and registration numbers beside their ids, and a null accreditation number', async () => {
+  it('stores the organisation and registration numbers, and a null accreditation number', async () => {
     const created = await createServer(registeredOnlyReprocessor)
 
     await created.post()
 
     expect(await storedQuarterlyReport(created)).toMatchObject({
-      organisationId: created.organisationId,
       organisationNumber: created.organisationNumber,
-      registrationId: created.registrationId,
       registrationNumber: created.registrationNumber,
       accreditationNumber: null
     })
@@ -663,17 +659,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     beforeEach(() => vi.clearAllMocks())
 
     it('calls auditReportCreate with correct params on success', async () => {
-      const { organisationId, registrationId, post } = await createServer(
-        registeredOnlyReprocessor
-      )
+      const { organisationNumber, registrationNumber, post } =
+        await createServer(registeredOnlyReprocessor)
 
       await post()
 
       expect(reportAudit.auditReportCreate).toHaveBeenCalledWith(
         expect.any(Object),
         {
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year: YEAR,
           cadence: 'quarterly',
           period: QUARTER,
@@ -728,16 +723,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const changedBy = { id: 'user-1', name: 'Test', position: 'Officer' }
 
     const buildSubmission = (
-      {
-        organisationId,
-        registrationId,
-        organisationNumber,
-        registrationNumber
-      },
+      { organisationNumber, registrationNumber },
       submissionNumber
     ) => ({
-      organisationId,
-      registrationId,
       organisationNumber,
       registrationNumber,
       accreditationNumber: null,

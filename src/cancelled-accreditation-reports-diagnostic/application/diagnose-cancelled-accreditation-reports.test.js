@@ -68,8 +68,6 @@ describe('diagnoseCancelledAccreditationReports', () => {
       accreditations: [accreditation]
     })
     const reportKey = {
-      organisationId: organisation.id,
-      registrationId: registration.id,
       ...reportKeyOf(organisation, registration),
       year: toYear(2026)
     }
@@ -104,7 +102,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
         linkedRegistrations: 1,
         reports: [
           {
-            registrationId: registration.id,
+            registrationNumber: registration.registrationNumber,
             cadence: 'monthly',
             year: toYear(2026),
             period: 1,
@@ -113,7 +111,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
             submittedAt: expect.any(String)
           },
           {
-            registrationId: registration.id,
+            registrationNumber: registration.registrationNumber,
             cadence: 'monthly',
             year: toYear(2026),
             period: 1,
@@ -122,7 +120,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
             submittedAt: expect.any(String)
           },
           {
-            registrationId: registration.id,
+            registrationNumber: registration.registrationNumber,
             cadence: 'quarterly',
             year: toYear(2026),
             period: 3,
@@ -146,8 +144,6 @@ describe('diagnoseCancelledAccreditationReports', () => {
       accreditations: [accreditation]
     })
     const base = {
-      organisationId: organisation.id,
-      registrationId: registration.id,
       ...reportKeyOf(organisation, registration)
     }
     /** @type {[number, Cadence, number][]} */
@@ -278,11 +274,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
       accreditations: [cancelled, approved]
     })
     await reportsRepository.createReport(
-      buildCreateReportParams({
-        organisationId: organisation.id,
-        registrationId: approvedRegistration.id,
-        ...reportKeyOf(organisation, approvedRegistration)
-      })
+      buildCreateReportParams(reportKeyOf(organisation, approvedRegistration))
     )
 
     const { rows, summary } = await diagnose([organisation])
@@ -314,11 +306,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
     })
     for (const registration of [firstRegistration, secondRegistration]) {
       await reportsRepository.createReport(
-        buildCreateReportParams({
-          organisationId: organisation.id,
-          registrationId: registration.id,
-          ...reportKeyOf(organisation, registration)
-        })
+        buildCreateReportParams(reportKeyOf(organisation, registration))
       )
     }
 

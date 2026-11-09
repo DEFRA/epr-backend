@@ -20,8 +20,9 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
+import { assertPresent } from '#test/type-helpers.js'
 
 import {
   asOperator,
@@ -271,34 +272,31 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     { year, cadence, period },
     submissionNumber = 1
   ) => {
-    const registration = await env.organisationsRepository.findRegistrationById(
-      env.organisationId,
-      env.registrationId
+    const organisationReadRepository = await organisationReadRepositoryFrom(
+      env.organisationsRepository,
+      { overseasSitesRepository: env.overseasSitesRepository }
     )
-
-    const { accreditationNumber } = numbersFor(
-      await env.organisationsRepository.findById(env.organisationId),
-      {
-        registrationId: env.registrationId,
-        accreditationId:
-          cadence === 'monthly' ? registration.accreditationId : null
-      }
-    ).numbers
+    const organisation =
+      await organisationReadRepository().findByOrganisationNumber(
+        env.reportKey.organisationNumber
+      )
+    assertPresent(organisation)
+    const registration =
+      organisation.registrations[env.reportKey.registrationNumber]
+    const accreditation =
+      cadence === 'monthly' ? registration.accreditations[year] : null
 
     return createReportForPeriod({
       reportsRepository: env.reportsRepository,
       ledgerRepository: env.ledgerRepository,
       summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository: env.packagingRecyclingNotesRepository,
-      overseasSitesRepository: env.overseasSitesRepository,
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
       numbers: env.reportKey,
-      registration,
+      reportRegistration: { registration, accreditation },
       year,
       cadenceAccreditation: cadenceAccreditationFor(
         cadence,
-        accreditationNumber
+        accreditation?.accreditationNumber ?? null
       ),
       period,
       submissionNumber,

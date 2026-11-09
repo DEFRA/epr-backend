@@ -29,6 +29,7 @@ const performFind =
   async (
     /** @type {FindParams} */ {
       organisationId,
+      organisationNumber,
       userId,
       subCategory,
       limit,
@@ -38,8 +39,18 @@ const performFind =
   ) => {
     const isPrev = direction === 'prev'
 
+    /** @param {{ organisationId?: string, organisationNumber?: string } | undefined} context */
+    const isOrganisations = (context) =>
+      (organisationId !== undefined &&
+        context?.organisationId === organisationId) ||
+      (organisationNumber !== undefined &&
+        context?.organisationNumber === organisationNumber)
+
     let results = storage.filter((item) => {
-      if (organisationId && item.context?.organisationId !== organisationId) {
+      if (
+        (organisationId || organisationNumber) &&
+        !isOrganisations(item.context)
+      ) {
         return false
       }
       if (userId && item.createdBy?.id !== userId) {

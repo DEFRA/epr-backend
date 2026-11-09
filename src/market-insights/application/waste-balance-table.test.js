@@ -24,6 +24,10 @@ import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
@@ -97,6 +101,7 @@ const makeOperator = ({
       registrations: [
         {
           id: registrationId,
+          registrationNumber: `REG-${orgId}`,
           accreditationId,
           statusHistory: approvedHistory,
           material,
@@ -246,7 +251,7 @@ const registeredOnly = ({ organisation }) => ({
 })
 
 /**
- * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationId' | 'registrationId' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
+ * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
  */
 
 /**
@@ -339,9 +344,11 @@ const approvalReverted = ({ organisation }) => ({
  * @param {number} period
  * @returns {MonthlyReportRef}
  */
-const monthlyReport = ({ ledgerId }, period) => ({
-  organisationId: ledgerId.organisationId,
-  registrationId: ledgerId.registrationId,
+const monthlyReport = ({ organisation }, period) => ({
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(
+    organisation.registrations[0].registrationNumber
+  ),
   year: toYear(2026),
   cadence: 'monthly',
   period

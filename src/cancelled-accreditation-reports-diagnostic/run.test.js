@@ -112,8 +112,6 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     storeOrganisations([partialMock(organisation)])
     const reportsRepository = reportsRepositoryFactory()
     const reportId = await createAndSubmitReport(reportsRepository, {
-      organisationId: organisation.id,
-      registrationId: registration.id,
       ...reportKeyOf(organisation, registration),
       year: toYear(2026),
       cadence: 'monthly',
@@ -132,7 +130,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
       ],
       [
         {
-          message: `Cancelled accreditation report: organisationId=${organisation.id} accreditationId=${accreditation.id} registrationId=${registration.id} cadence=monthly year=2026 period=3 submissionNumber=1 status=submitted submittedAt=${submittedAt}`
+          message: `Cancelled accreditation report: organisationId=${organisation.id} accreditationId=${accreditation.id} registrationNumber=${registration.registrationNumber} cadence=monthly year=2026 period=3 submissionNumber=1 status=submitted submittedAt=${submittedAt}`
         }
       ],
       [
@@ -191,11 +189,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     })
     storeOrganisations([partialMock(organisation)])
     await reportsRepositoryFactory().createReport(
-      buildCreateReportParams({
-        organisationId: organisation.id,
-        registrationId: registration.id,
-        ...reportKeyOf(organisation, registration)
-      })
+      buildCreateReportParams(reportKeyOf(organisation, registration))
     )
 
     await runCancelledAccreditationReportsDiagnostic(server)

@@ -7,49 +7,28 @@ export const calendarQuerySchema = Joi.object({
 export const submissionNumberSchema = Joi.number().integer().min(1).required()
 
 /**
+ * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Registration } from '#domain/organisations/registration.js'
- * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { Organisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  *
  * @typedef {RegistrationParams & {
- *   organisationId: string,
- *   registrationId: string,
  *   year: Year,
  *   cadence: Cadence,
- *   period: number,
- *   accreditationId?: string | null
+ *   period: number
  * }} PeriodPathParams
  *
  * @typedef {PeriodPathParams & { submissionNumber: number }} PeriodWithSubmissionPathParams
- */
-
-/**
- * The registration a report is for. A registered-only natural-key route
- * (`accreditationId: null`) reports without an accreditation, whatever the
- * registration's current one.
  *
- * @param {OrganisationsRepository} organisationsRepository
- * @param {{ organisationId: string, registrationId: string, accreditationId?: string | null }} params
- * @returns {Promise<Registration>}
+ * @typedef {ReportRegistration & { organisation: Organisation }} ReportRecords
+ *
+ * @typedef {HapiRequest & {
+ *   params: PeriodWithSubmissionPathParams,
+ *   app: ReportRecords
+ * }} ReportRequest
  */
-export async function findRegistrationForReport(
-  organisationsRepository,
-  { organisationId, registrationId, accreditationId }
-) {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
-  if (accreditationId !== null) {
-    return registration
-  }
-
-  const { accreditationId: _current, ...registeredOnly } = registration
-  return { ...registeredOnly, accreditation: null }
-}
 
 /**
  * Wraps a report (stored or computed) with registration details.

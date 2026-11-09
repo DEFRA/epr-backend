@@ -12,8 +12,6 @@ import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 import Joi from 'joi'
 
 const YEAR_SCHEMA = yearSchema().required()
-const MONGO_ID_LENGTH = 24
-const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
 
 const CALENDAR_DATE_SCHEMA = isoDateString().required().messages({
   'string.pattern.base': 'must be a bare YYYY-MM-DD date, not a full datetime'
@@ -165,8 +163,6 @@ const accreditationNumberForCadence = Joi.when('cadence', {
 })
 
 export const createReportSchema = Joi.object({
-  organisationId: MONGO_ID_SCHEMA,
-  registrationId: MONGO_ID_SCHEMA,
   ...registrationKeySchema,
   accreditationNumber: accreditationNumberForCadence,
   year: YEAR_SCHEMA,

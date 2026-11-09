@@ -27,8 +27,6 @@ export const reportsRequestResubmission = {
   handler: async (request, h) => {
     const { reportsRepository, params } = request
     const {
-      organisationId,
-      registrationId,
       organisationNumber,
       registrationNumber,
       cadence,
@@ -49,8 +47,8 @@ export const reportsRequestResubmission = {
     })
 
     await auditReportRequestResubmission(request, {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

@@ -7,6 +7,7 @@ import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
@@ -198,8 +199,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1
@@ -234,8 +234,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'quarterly',
       period: 1
@@ -352,8 +351,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 2
@@ -424,8 +422,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await seed(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: 2026,
       cadence: 'monthly',
       period: 1

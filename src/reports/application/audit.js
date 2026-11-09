@@ -42,8 +42,8 @@ export const MARK_STALE_ACTION = Object.freeze({
  * Audits a report status transition via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {string} params.organisationNumber
+ * @param {string} params.registrationNumber
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -54,8 +54,8 @@ export const MARK_STALE_ACTION = Object.freeze({
  */
 export async function auditReportStatusTransition(request, params) {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -74,8 +74,8 @@ export async function auditReportStatusTransition(request, params) {
       action: 'status-transition'
     },
     context: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -92,8 +92,8 @@ export async function auditReportStatusTransition(request, params) {
     : {
         ...payload,
         context: {
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year,
           cadence,
           period,
@@ -113,8 +113,8 @@ export async function auditReportStatusTransition(request, params) {
  * Audits a report deletion via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {string} params.organisationNumber
+ * @param {string} params.registrationNumber
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -124,8 +124,8 @@ export async function auditReportStatusTransition(request, params) {
  */
 export async function auditReportDelete(request, params) {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -143,8 +143,8 @@ export async function auditReportDelete(request, params) {
       action: 'delete'
     },
     context: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -160,8 +160,8 @@ export async function auditReportDelete(request, params) {
     : {
         ...payload,
         context: {
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year,
           cadence,
           period,
@@ -282,8 +282,8 @@ export async function auditMarkReportsRequiringResubmission({
  * Audits a report creation via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {string} params.organisationNumber
+ * @param {string} params.registrationNumber
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -293,8 +293,8 @@ export async function auditMarkReportsRequiringResubmission({
  */
 export async function auditReportCreate(request, params) {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -310,8 +310,8 @@ export async function auditReportCreate(request, params) {
       action: 'create'
     },
     context: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -332,8 +332,8 @@ export async function auditReportCreate(request, params) {
  * {@link auditMarkReportsRequiringResubmission} uses.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {string} params.organisationNumber
+ * @param {string} params.registrationNumber
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -343,8 +343,8 @@ export async function auditReportCreate(request, params) {
  */
 export async function auditReportRequestResubmission(request, params) {
   const {
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     year,
     cadence,
     period,
@@ -360,8 +360,8 @@ export async function auditReportRequestResubmission(request, params) {
       action: 'request-resubmission'
     },
     context: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,

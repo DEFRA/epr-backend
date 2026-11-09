@@ -140,8 +140,6 @@ describe('report routes by natural key', () => {
     for (const { registration, cadence, periods, seeded, prn } of streams) {
       /** @param {number} period */
       const forPeriod = (period) => ({
-        organisationId: organisation.id,
-        registrationId: registration.id,
         ...numbersOf(registration),
         year: YEAR,
         cadence,
@@ -291,12 +289,7 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const { detail, ...resource } = JSON.parse(response.payload)
         expect(resource).toMatchObject({ status: REPORT_STATUS.SUBMITTED })
-        const {
-          id: _id,
-          organisationId: _organisationId,
-          registrationId: _registrationId,
-          ...held
-        } = stored
+        const { id: _id, ...held } = stored
         expect(detail).toStrictEqual({
           ...JSON.parse(JSON.stringify(held)),
           details: expect.any(Object),
@@ -549,8 +542,6 @@ describe('report routes by natural key', () => {
     const period = 10
     await reportsRepository.createReport(
       buildCreateReportParams({
-        organisationId: organisation.id,
-        registrationId: accreditedRegistration.id,
         ...numbersOf(accreditedRegistration),
         year: YEAR,
         cadence: 'monthly',
@@ -607,8 +598,6 @@ describe('report routes by natural key', () => {
     const seedQ1 = (registration, overrides = {}) =>
       reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: organisation.id,
-          registrationId: registration.id,
           ...numbersOf(registration),
           year: YEAR,
           cadence: 'quarterly',
@@ -748,8 +737,6 @@ describe('report routes by natural key', () => {
     it('leaves out a stored report for a month before the accreditation began', async () => {
       await reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: organisation.id,
-          registrationId: accreditedRegistration.id,
           ...numbersOf(accreditedRegistration),
           year: YEAR,
           cadence: 'monthly',

@@ -154,8 +154,6 @@ const createServer = async ({
 
   return {
     server,
-    organisationId: org.id,
-    registrationId: registration.id,
     key: reportKeyOf(org, registration),
     reportsRepository: reportsRepositoryFactory(),
     quarterly: (period = 1, { year = YEAR, submissionNumber = 1 } = {}) =>
@@ -818,14 +816,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
      * @param {Awaited<ReturnType<typeof createServer>>} context
      * @param {object} [overrides]
      */
-    const storeReport = (
-      { reportsRepository, organisationId, registrationId, key },
-      overrides = {}
-    ) =>
+    const storeReport = ({ reportsRepository, key }, overrides = {}) =>
       reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId,
-          registrationId,
           ...key,
           year: YEAR,
           cadence: 'quarterly',
@@ -841,13 +834,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
      * @param {Awaited<ReturnType<typeof createServer>>} context
      * @param {object} [overrides]
      */
-    const submitReport = (
-      { reportsRepository, organisationId, registrationId, key },
-      overrides = {}
-    ) =>
+    const submitReport = ({ reportsRepository, key }, overrides = {}) =>
       createAndSubmitReport(reportsRepository, {
-        organisationId,
-        registrationId,
         ...key,
         year: YEAR,
         cadence: 'quarterly',

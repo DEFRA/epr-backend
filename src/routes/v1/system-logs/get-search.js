@@ -77,7 +77,7 @@ export const systemLogsGetSearch = {
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
-      // Logs record the organisation's id, which outlives a change of number
+      // Older logs record only the organisation's id; report logs only its number
       const organisation = organisationNumber
         ? await organisationsRepository.findByOrganisationNumber(
             toOrganisationNumber(organisationNumber)
@@ -91,6 +91,7 @@ export const systemLogsGetSearch = {
 
       const result = await systemLogsRepository.find({
         organisationId: organisation?.id,
+        organisationNumber,
         userId,
         subCategory,
         limit: effectiveLimit,

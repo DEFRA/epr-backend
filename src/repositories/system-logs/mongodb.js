@@ -34,6 +34,7 @@ async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
   await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
+  await collection.createIndex({ 'context.organisationNumber': 1, _id: -1 })
   await collection.createIndex({ 'createdBy.id': 1, _id: -1 })
 
   return collection
@@ -78,6 +79,7 @@ const performFind =
   async (
     /** @type {FindParams} */ {
       organisationId,
+      organisationNumber,
       userId,
       subCategory,
       limit,
@@ -88,8 +90,14 @@ const performFind =
     const isPrev = direction === 'prev'
 
     const filter = {}
-    if (organisationId) {
-      filter['context.organisationId'] = organisationId
+    const organisationKeys = [
+      ...(organisationId ? [{ 'context.organisationId': organisationId }] : []),
+      ...(organisationNumber
+        ? [{ 'context.organisationNumber': organisationNumber }]
+        : [])
+    ]
+    if (organisationKeys.length > 0) {
+      filter.$or = organisationKeys
     }
     if (userId) {
       filter['createdBy.id'] = userId

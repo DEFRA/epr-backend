@@ -86,8 +86,6 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
 
     const createdReport = await reportsRepository.createReport(
       buildCreateReportParams({
-        organisationId: org.id,
-        registrationId: registration.id,
         ...reportKeyOf(org, registration),
         year: YEAR,
         cadence,
@@ -115,8 +113,6 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       : `${registrationUrl}/reports/${YEAR}/${cadence}`
 
     return {
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       reportId: createdReport.id,
       reportsRepository,

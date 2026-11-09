@@ -104,8 +104,6 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
  */
 export const buildCreateReportParams = (overrides = {}) =>
   /** @type {import('../port.js').CreateReportParams} */ ({
-    organisationId: DEFAULT_ORG_ID,
-    registrationId: DEFAULT_REG_ID,
     organisationNumber: DEFAULT_ORG_NUMBER,
     registrationNumber: DEFAULT_REG_NUMBER,
     accreditationNumber:

@@ -16,8 +16,6 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5000000001PA')
 
 /** @type {Omit<CreateReportParams, 'cadence' | 'accreditationNumber'>} */
 const REPORT = {
-  organisationId: '6650a1b2c3d4e5f6a7b8c9d0',
-  registrationId: '6650a1b2c3d4e5f6a7b8c9d1',
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('R26ER5000000001PA'),
   year: toYear(2026),

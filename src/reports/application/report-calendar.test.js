@@ -239,8 +239,8 @@ describe('yearCalendar', () => {
     const storedQuarterOne = (year) =>
       /** @type {PeriodicReport} */ (
         /** @type {unknown} */ ({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
+          organisationNumber: '500001',
+          registrationNumber: 'R25SR500010912PL',
           year,
           reports: {
             quarterly: {
@@ -273,8 +273,8 @@ describe('yearCalendar', () => {
     it('does not list accredited reports for an accreditation the read model dropped', () => {
       const storedMarch = /** @type {PeriodicReport} */ (
         /** @type {unknown} */ ({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
+          organisationNumber: '500001',
+          registrationNumber: 'R25SR500010912PL',
           year: 2026,
           reports: {
             monthly: {
@@ -300,8 +300,8 @@ describe('yearCalendar', () => {
     describe('resubmitted period', () => {
       const resubmittedQuarterOne = /** @type {PeriodicReport} */ (
         /** @type {unknown} */ ({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
+          organisationNumber: '500001',
+          registrationNumber: 'R25SR500010912PL',
           year: 2026,
           reports: {
             quarterly: {
@@ -457,8 +457,8 @@ describe('yearCalendar with mid-year status transition off', () => {
 describe('reportingPeriodsByKind', () => {
   const storedMarch = /** @type {PeriodicReport} */ (
     /** @type {unknown} */ ({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
       year: 2026,
       reports: {
         monthly: {
@@ -475,8 +475,8 @@ describe('reportingPeriodsByKind', () => {
 
   const storedFirstQuarter = /** @type {PeriodicReport} */ (
     /** @type {unknown} */ ({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
       year: 2026,
       reports: {
         quarterly: {

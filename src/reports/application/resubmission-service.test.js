@@ -64,11 +64,8 @@ const KEY = {
 }
 
 const defaultParams = () => {
-  const organisationId = new ObjectId().toString()
   const registration = buildRegistration()
   return {
-    organisationId,
-    registrationId: registration.id,
     organisationNumber: uniqueOrganisationNumber(),
     registrationNumber: uniqueRegistrationNumber(),
     registration,
@@ -140,8 +137,7 @@ describe('resubmission-service', () => {
 
     const periodicReportsWith = (current, previousSubmissions = []) => [
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        ...KEY,
         year: toYear(2024),
         reports: {
           monthly: {
@@ -249,8 +245,6 @@ describe('resubmission-service', () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const { id: reportId } = await reportsRepository.createReport({
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
         organisationNumber: params.organisationNumber,
         registrationNumber: params.registrationNumber,
         accreditationNumber: toAccreditationNumber('A24ER5000000001PL'),
