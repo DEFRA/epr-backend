@@ -228,12 +228,12 @@ const describeBaseline = ({ reportId, submissionNumber, sourceSummaryLogId }) =>
  */
 const logPeriodOutcome = (
   logger,
-  { organisationId, registrationId, summaryLogId },
+  { organisationNumber, registrationNumber, summaryLogId },
   outcome
 ) => {
   const { year, cadence, period } = outcome.period
   logger.info({
-    message: `Closed period ${year} ${cadence} ${period} for ${organisationId}/${registrationId} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome)}`
+    message: `Closed period ${year} ${cadence} ${period} for ${organisationNumber}/${registrationNumber} (summary log ${summaryLogId}, ${describeBaseline(outcome.baseline)}) ${describeChange(outcome)}`
   })
 }
 

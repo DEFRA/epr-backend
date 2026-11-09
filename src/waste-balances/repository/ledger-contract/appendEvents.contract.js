@@ -3,6 +3,13 @@ import { describe, beforeEach, expect } from 'vitest'
 import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 import { LedgerSequenceError, LedgerSlotConflictError } from '../ledger-port.js'
 
+/** @param {Partial<import('../ledger-schema.js').RegistrationOrAccreditationId>} ids */
+const numbersOf = (ids) => {
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    buildLedgerId(ids)
+  return { organisationNumber, registrationNumber, accreditationNumber }
+}
+
 export const testAppendEventsBehaviour = (it) => {
   describe('appendEvents', () => {
     let repository
@@ -116,9 +123,11 @@ export const testAppendEventsBehaviour = (it) => {
           })
         ])
       ).rejects.toMatchObject({
-        organisationId: 'org-seq-err',
-        registrationId: 'reg-seq-err',
-        accreditationId: 'acc-seq-err',
+        ...numbersOf({
+          organisationId: 'org-seq-err',
+          registrationId: 'reg-seq-err',
+          accreditationId: 'acc-seq-err'
+        }),
         providedNumber: 5,
         expectedNumber: 2
       })
@@ -168,9 +177,11 @@ export const testAppendEventsBehaviour = (it) => {
           })
         ])
       ).rejects.toMatchObject({
-        organisationId: 'org-slot-err',
-        registrationId: 'reg-slot-err',
-        accreditationId: 'acc-slot-err',
+        ...numbersOf({
+          organisationId: 'org-slot-err',
+          registrationId: 'reg-slot-err',
+          accreditationId: 'acc-slot-err'
+        }),
         slotNumber: 1
       })
     })

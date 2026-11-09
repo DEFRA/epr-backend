@@ -7,6 +7,10 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import {
+  requiredNumbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
@@ -23,10 +27,7 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  TEST_ORGANISATION_NUMBER,
-  buildAccreditationSnapshot
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 import {
@@ -95,22 +96,36 @@ const registeredOnlyLedger = (year) =>
 const accreditationPath = (year) =>
   `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${year}`
 
-const accreditedLedgerId = {
+/**
+ * A ledger of the test organisation, with the numbers its record gives it.
+ *
+ * @param {{ registrationId: string, accreditationId: string | null }} ids
+ */
+const numbered = (ids) => ({
   organisationId: organisation.id,
+  ...ids,
+  ...requiredNumbersFor(partialMock(organisation), ids, 'the test ledger')
+})
+
+const accreditedLedgerId = numbered({
   registrationId: accreditedRegistration.id,
   accreditationId: accredited.id
-}
+})
 
 const issuedNote = createMockIssuedPrn({
   id: 'prn-numbered',
   prnNumber: 'ER26000123',
   organisation: {
     id: organisation.id,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: accreditedLedgerId.organisationNumber,
     name: 'A reprocessor'
   },
   registrationId: accreditedRegistration.id,
-  accreditation: buildAccreditationSnapshot({ id: accredited.id })
+  registration: { registrationNumber: accreditedLedgerId.registrationNumber },
+  accreditation: buildAccreditationSnapshot({
+    id: accredited.id,
+    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  })
 })
 
 /** @param {{ payload: string }} response */
@@ -119,9 +134,7 @@ const body = (response) => JSON.parse(response.payload)
 /** @param {object} overrides */
 const registeredOnlyEvent = (overrides) =>
   buildLedgerEvent({
-    organisationId: organisation.id,
-    registrationId: registeredOnly.id,
-    accreditationId: null,
+    ...numbered({ registrationId: registeredOnly.id, accreditationId: null }),
     ...overrides
   })
 
@@ -423,9 +436,10 @@ describe('ledger and waste balance routes by natural key', () => {
       ])
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent({
-          organisationId: organisation.id,
-          registrationId: accreditedExporter.id,
-          accreditationId: accreditedExport.id,
+          ...numbered({
+            registrationId: accreditedExporter.id,
+            accreditationId: accreditedExport.id
+          }),
           closingBalance: {
             amount: 120,
             availableAmount: 100,

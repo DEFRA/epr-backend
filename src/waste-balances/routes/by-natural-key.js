@@ -25,7 +25,9 @@ import { wasteBalanceSchema } from './response.schema.js'
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { ResolvedParams, ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js'
+ * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -49,18 +51,37 @@ const ledgerOptions = {
 }
 
 /**
- * The events of the ledger the path resolved to: the accreditation's, or the
- * registered-only one when the path names no accreditation.
+ * The ledger the path resolved to: the accreditation's, or the registered-only
+ * one when the path names no accreditation.
  *
+ * @param {ResolvedParams} params
+ * @returns {NumberedLedgerId}
+ */
+const ledgerIdOf = ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) => ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber: accreditationNumber ?? null
+})
+
+/**
  * @param {LedgerRequest} request
  * @returns {Promise<LedgerEventResource[]>}
  */
 const readLedgerEvents = async (request) => {
-  const { organisationId, registrationId, accreditationId } = request.params
   const { events } = await readLedger(
     request.ledgerRepository,
     request.packagingRecyclingNotesRepository,
-    { organisationId, registrationId, accreditationId }
+    ledgerIdOf(request.params)
   )
   return events
 }
@@ -127,12 +148,9 @@ const accreditationWasteBalanceGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId, registrationId, accreditationId } = request.params
-    const balance = await request.wasteBalanceService.currentBalance({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
+    const balance = await request.wasteBalanceService.currentBalance(
+      ledgerIdOf(request.params)
+    )
     return h.response(toBalanceBody(balance)).code(StatusCodes.OK)
   }
 }
@@ -177,9 +195,12 @@ const organisationWasteBalancesGet = {
         accreditation.accreditationNumber,
         toBalanceBody(
           await request.wasteBalanceService.currentBalance({
-            organisationId: organisation.id,
-            registrationId: registration.id,
-            accreditationId: accreditation.id
+            organisationNumber: request.params.organisationNumber,
+            // A served registration is found by its number.
+            registrationNumber: /** @type {RegistrationNumber} */ (
+              registration.registrationNumber
+            ),
+            accreditationNumber: accreditation.accreditationNumber
           })
         )
       ])

@@ -158,15 +158,20 @@ const performFindByAccreditation =
 
 const performFindByIds =
   (storage) =>
-  async ({ organisationId, registrationId, accreditationId, ids }) => {
+  async ({
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber,
+    ids
+  }) => {
     const wanted = new Set(ids)
     const results = []
     for (const prn of storage.values()) {
       if (
         wanted.has(prn.id) &&
-        prn.organisation?.id === organisationId &&
-        prn.registrationId === registrationId &&
-        prn.accreditation?.id === accreditationId &&
+        prn.organisation.organisationNumber === organisationNumber &&
+        prn.registration.registrationNumber === registrationNumber &&
+        prn.accreditation.accreditationNumber === accreditationNumber &&
         prn.status?.currentStatus !== PRN_STATUS.DELETED
       ) {
         results.push(structuredClone(prn))

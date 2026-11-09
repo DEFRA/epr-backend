@@ -25,7 +25,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {NumberedLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
 /** @import {OverseasSiteContextEntry} from '../domain/overseas-sites-context.js' */
 
@@ -120,7 +120,7 @@ const recomputedClassification = (rowState, context) =>
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
- * @param {WasteBalanceLedgerId} input.ledgerId
+ * @param {NumberedLedgerId} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites

@@ -3,6 +3,7 @@ import {
   TEST_REGISTRATION,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -41,10 +42,18 @@ const organisationId = 'org-123'
 const { buildOrganisationHolding } = createOrganisationBuilders()
 // The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
 // repository requires, so the organisation is handed back as it stands.
+// The numbers the PRN fixtures carry, which the organisation and the ledger
+// share with them.
+const PRN_NUMBERS = {
+  organisationNumber: TEST_ORGANISATION_NUMBER,
+  registrationNumber: TEST_REGISTRATION.registrationNumber,
+  accreditationNumber: toAccreditationNumber('ACC-2026-001')
+}
 const organisation = buildOrganisationHolding({
   organisationId,
   registrationId,
-  accreditationId
+  accreditationId,
+  ...PRN_NUMBERS
 })
 const organisationsRepository = () => ({
   findById: async () => organisation
@@ -67,6 +76,7 @@ const openingBalanceEvent = () =>
     registrationId,
     accreditationId,
     organisationId,
+    ...PRN_NUMBERS,
     number: 1
   })
 
@@ -173,11 +183,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.accepted?.by).toEqual(rpd)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger({
-      organisationId,
-      registrationId,
-      accreditationId
-    })
+    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_NUMBERS)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Acceptance is balance-neutral: the closing balance matches the opening one.

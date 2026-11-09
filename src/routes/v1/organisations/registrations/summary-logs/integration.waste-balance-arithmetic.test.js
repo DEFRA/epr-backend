@@ -28,9 +28,9 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
   createExporterRowValues,
-  EXPORTER_HEADERS
+  EXPORTER_HEADERS,
+  ledgerIdOf
 } from './integration-test-helpers.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.
@@ -142,17 +142,6 @@ describe('Waste balance arithmetic integration tests', () => {
   }
 
   /**
-   * The numbers the stream's events are written with, from the organisation
-   * record, as a real writer reads them.
-   */
-  const ledgerNumbers = async (env) =>
-    requiredNumbersFor(
-      await env.organisationsRepository.findById(env.organisationId),
-      env,
-      'ledger events'
-    )
-
-  /**
    * Debit the total balance straight on the stream, standing in for a competing
    * writer issuing a PRN these tests do not otherwise model. A real issuance
    * rules on the PRN's own status first; there is no such PRN here, so the
@@ -161,18 +150,16 @@ describe('Waste balance arithmetic integration tests', () => {
   const debitTotalBalanceOutOfBand = async (env, prnId, amount) => {
     const { balance, append } =
       await env.wasteBalanceService.readBalanceForUpdate(
+        await ledgerIdOf(env),
         {
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          accreditationId: env.accreditationId
-        },
-        { id: 'test-user' }
+          id: 'test-user'
+        }
       )
     const decision = decideIssuePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events, await ledgerNumbers(env))
+    return append(decision.events)
   }
 
   /**
@@ -184,18 +171,16 @@ describe('Waste balance arithmetic integration tests', () => {
   const debitAvailableBalanceOutOfBand = async (env, prnId, amount) => {
     const { balance, append } =
       await env.wasteBalanceService.readBalanceForUpdate(
+        await ledgerIdOf(env),
         {
-          organisationId: env.organisationId,
-          registrationId: env.registrationId,
-          accreditationId: env.accreditationId
-        },
-        { id: 'test-user' }
+          id: 'test-user'
+        }
       )
     const decision = decideCreatePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
     }
-    return append(decision.events, await ledgerNumbers(env))
+    return append(decision.events)
   }
 
   const createPrn = async (env, tonnage) => {
@@ -1224,12 +1209,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     it('ringfences available balance and stamps the PRN watermark when raising', async () => {
       const env = await setupLedgerEnv()
-      const {
-        packagingRecyclingNotesRepository,
-        ledgerRepository,
-        organisationId,
-        registrationId
-      } = env
+      const { packagingRecyclingNotesRepository, ledgerRepository } = env
 
       await performSummaryLogSubmission(
         env,
@@ -1251,11 +1231,9 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
 
       // The document watermark is the event the raise appended, not just any number.
-      const latest = await ledgerRepository.findLatestInLedger({
-        organisationId,
-        registrationId,
-        accreditationId: 'ACC-123'
-      })
+      const latest = await ledgerRepository.findLatestInLedger(
+        await ledgerIdOf(env)
+      )
       const stored = await packagingRecyclingNotesRepository.findById(prn.id)
       assert(stored)
       expect(stored.lastAppliedEventNumber).toBe(latest?.number)

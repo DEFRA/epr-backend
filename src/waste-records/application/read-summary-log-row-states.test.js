@@ -37,11 +37,7 @@ const submissionEvent = (number, summaryLogId, submittedAt) =>
     })
   )
 
-const registration = {
-  organisationId: DEFAULT_LEDGER_ID.organisationId,
-  registrationId: DEFAULT_LEDGER_ID.registrationId,
-  accreditationId: DEFAULT_LEDGER_ID.accreditationId
-}
+const registration = withNumbers(DEFAULT_LEDGER_ID)
 
 describe('summaryLogRowStatesForRegistration', () => {
   it('returns an empty array when the stream has no submission', async () => {
