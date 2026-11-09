@@ -15,6 +15,9 @@ import { createNonProdDataReset } from './mongodb.js'
  * every environment (dev/test/prod). Using it here would disable the dev
  * cleanup endpoint in non-prod CDP envs, which is exactly where the
  * frontend journey tests need it.
+ *
+ * Reads organisations through `server.app.organisationsRepository`, so that
+ * plugin must register before this one.
  */
 export const nonProdDataResetPlugin = {
   name: 'nonProdDataReset',

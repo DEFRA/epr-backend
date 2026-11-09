@@ -1,27 +1,27 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-
+/** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
- * Resolves test organisation numeric IDs to organisation ids
+ * Resolves test organisation numeric IDs to MongoDB _id hex strings
  * for filtering test org PRNs from the external API.
  *
- * @param {Pick<OrganisationsRepository, 'findByOrganisationNumbers'>} organisationsRepository
+ * @param {Db} db
  * @param {{ testOrganisationIds: Organisation['orgId'][] }} options
  * @returns {Promise<{ excludeOrganisationIds: Organisation['id'][] }>}
  */
-export async function createPrnVisibilityFilter(
-  organisationsRepository,
-  { testOrganisationIds }
-) {
+export async function createPrnVisibilityFilter(db, { testOrganisationIds }) {
   if (testOrganisationIds.length === 0) {
     return { excludeOrganisationIds: [] }
   }
 
-  const organisations = await organisationsRepository.findByOrganisationNumbers(
-    testOrganisationIds.map((orgId) => toOrganisationNumber(String(orgId)))
+  const organisations = await db
+    .collection('epr-organisations')
+    .find({ orgId: { $in: testOrganisationIds } }, { projection: { _id: 1 } })
+    .toArray()
+
+  const excludeOrganisationIds = organisations.map((org) =>
+    org._id.toHexString()
   )
 
-  return { excludeOrganisationIds: organisations.map(({ id }) => id) }
+  return { excludeOrganisationIds }
 }
