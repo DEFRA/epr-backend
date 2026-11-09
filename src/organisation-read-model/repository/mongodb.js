@@ -14,7 +14,8 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { ExternalAccreditation, OrganisationReadRepository } from './port.js' */
+/** @import { OrganisationReadRepository } from './port.js' */
+/** @import { ExternalAccreditation } from './to-read-model.js' */
 
 export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
 

@@ -5,7 +5,7 @@ import { testExternalAccreditationsBehaviour } from './contract/external-accredi
 import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**

@@ -1,15 +1,5 @@
-/** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationCommon, Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-
-/**
- * A registration's accreditation for a year, held outside the REEX database.
- *
- * @typedef {AccreditationCommon & {
- *   registrationNumber: RegistrationNumber
- *   year: Year
- * }} ExternalAccreditation
- */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * Every criterion that carries a value narrows the results, and an empty

@@ -4,7 +4,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { ExternalAccreditation } from '../port.js' */
+/** @import { ExternalAccreditation } from '../to-read-model.js' */
 
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
 const ACCREDITATION_YEAR = 2027

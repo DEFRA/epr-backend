@@ -17,9 +17,9 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -33,6 +33,15 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: string
  * }} Context
+ */
+
+/**
+ * A registration's accreditation for a year, held outside the REEX database.
+ *
+ * @typedef {AccreditationCommon & {
+ *   registrationNumber: RegistrationNumber
+ *   year: Year
+ * }} ExternalAccreditation
  */
 
 /**
