@@ -12,9 +12,11 @@ export const packagingRecyclingNotesRepositoryPlugin = {
     /** @type {{db?: import('mongodb').Db}} */ options = {}
   ) => {
     const db = options?.db ?? server.db
+    const { organisationsRepository } =
+      /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
 
     const { excludeOrganisationIds } = await createPrnVisibilityFilter(
-      server.app.organisationsRepository,
+      organisationsRepository,
       { testOrganisationIds: [...TEST_ORGANISATION_IDS] }
     )
 
