@@ -1,6 +1,7 @@
 /**
  * @param {object} [overrides]
  * @param {string} [overrides.organisationId]
+ * @param {string} [overrides.organisationNumber]
  * @param {Date} [overrides.createdAt]
  * @param {string} [overrides.userId]
  * @param {string} [overrides.email]
@@ -12,6 +13,7 @@
  */
 export const buildSystemLog = ({
   organisationId,
+  organisationNumber,
   createdAt = new Date(),
   userId = 'user-001',
   email = 'user@email.com',
@@ -30,6 +32,7 @@ export const buildSystemLog = ({
   },
   context: {
     ...(organisationId !== undefined && { organisationId }),
+    ...(organisationNumber !== undefined && { organisationNumber }),
     ...(id !== undefined && { id }),
     ...(summaryLogId !== undefined && { summaryLogId })
   }

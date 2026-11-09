@@ -11,6 +11,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { getReportSubmissionsPath } from './submissions.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -82,8 +83,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
     await buildSubmittedReport(reportsRepository, {
-      organisationId: org.id,
-      registrationId: org.registrations[0].id,
+      ...reportKeyOf(org, org.registrations[0]),
       year,
       cadence: 'monthly',
       period: 1,

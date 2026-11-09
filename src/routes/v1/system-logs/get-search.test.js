@@ -49,6 +49,7 @@ describe('GET /v1/system-logs/search', () => {
    * @param {{
    *   createdAt?: Date,
    *   organisationId?: string,
+   *   organisationNumber?: string,
    *   userId?: string,
    *   email?: string,
    *   subCategory?: string,
@@ -59,6 +60,7 @@ describe('GET /v1/system-logs/search', () => {
   const addSystemLog = async ({
     createdAt = new Date(),
     organisationId,
+    organisationNumber,
     userId = 'user-id',
     email = 'user@email.com',
     subCategory = 'test',
@@ -69,6 +71,7 @@ describe('GET /v1/system-logs/search', () => {
       event: { category: 'test', subCategory, action: 'test' },
       context: {
         ...(organisationId !== undefined && { organisationId }),
+        ...(organisationNumber !== undefined && { organisationNumber }),
         ...(id !== undefined && { id })
       },
       createdAt,
@@ -144,6 +147,21 @@ describe('GET /v1/system-logs/search', () => {
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
       expect(result.systemLogs[0].context.organisationId).toBe(organisation.id)
+    })
+
+    it('returns the logs recording the organisation by its number', async () => {
+      const organisation = await addOrganisation()
+      await addSystemLog({ organisationId: organisation.id, id: 1 })
+      await addSystemLog({ organisationNumber: numberOf(organisation), id: 2 })
+      await addSystemLog({ organisationNumber: '999999999', id: 3 })
+
+      const response = await makeRequest({
+        organisationNumber: numberOf(organisation)
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.systemLogs.map((log) => log.context.id)).toEqual([2, 1])
     })
 
     it('returns no logs for an organisation number nobody holds', async () => {

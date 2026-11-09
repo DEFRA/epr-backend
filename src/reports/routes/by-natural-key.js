@@ -2,17 +2,17 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { accreditedFrom } from '#reports/application/report-calendar.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { periodSchema } from '#reports/repository/schema.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams,
   registrationPath
 } from '#routes/organisations/natural-keys.js'
+import { atReportKeys } from './at-report-keys.js'
 import { reportsDelete } from './delete.js'
 import { reportsYearCalendar } from './get-year-calendar.js'
 import { reportsGetDetail } from './get-detail.js'
@@ -32,14 +32,15 @@ import { reportResponseFailAction } from './response-fail-action.js'
 import { submissionNumberSchema } from './shared.js'
 
 /**
- * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { NaturalKeyResponse, NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
+ * @import { ReportResponse } from './at-report-keys.js'
  * @import { PreviewBody, StoredReportBody } from './report-resource.js'
+ * @import { ReportRequest } from './shared.js'
  *
- * @typedef {ResolvedRequest & { params: { submissionNumber: number } }} SubmissionRequest
+ * @typedef {ReportRequest} SubmissionRequest
  * @typedef {StoredReportBody | PreviewBody} ReportDetailBody
  */
 
@@ -68,9 +69,9 @@ const streams = [
 ]
 
 /**
- * @param {NaturalKeyResponse['map']} map
- * @param {NaturalKeyResponse['schema']} [schema]
- * @returns {NaturalKeyResponse}
+ * @param {ReportResponse['map']} map
+ * @param {ReportResponse['schema']} [schema]
+ * @returns {ReportResponse}
  */
 const respondWithReport = (map, schema = reportResourceSchema) => ({
   schema,
@@ -202,27 +203,19 @@ const mapCommand = async (request, h) =>
  * An accredited report covers only periods from the accreditation's start: a
  * period ending before it is not found.
  *
- * @param {ResolvedRequest & { params: { cadence: Cadence, period: number, year: Year } }} request
+ * @param {ReportRequest} request
  */
-const assertPeriodWithinAccreditation = async (request) => {
-  const { organisationId, accreditationId, year, cadence, period } =
-    request.params
-  const { validFrom } =
-    await request.organisationsRepository.findAccreditationById(
-      organisationId,
-      /** @type {string} */ (accreditationId)
-    )
+const assertPeriodWithinAccreditation = (request) => {
+  const { year, cadence, period } = request.params
+  const from = accreditedFrom(request.app.registration, year)
   const { endDate } = periodBounds(cadence, year, period)
 
-  // The read model only serves an accreditation with a validFrom.
-  if (
-    endDate.localeCompare(toCalendarDate(/** @type {string} */ (validFrom))) < 0
-  ) {
+  if (from === undefined || endDate.localeCompare(from) < 0) {
     throw Boom.notFound('Report period is before the accreditation started')
   }
 }
 
-/** @type {[NaturalKeyRoute, string, NaturalKeyResponse?][]} */
+/** @type {[NaturalKeyRoute, string, ReportResponse?][]} */
 const submissionRoutes = [
   [
     expandableReportsGetDetail,
@@ -244,14 +237,14 @@ const submissionRoutes = [
 export const reportRoutesByNaturalKey = [
   ...streams.flatMap(({ path, params, accredited }) =>
     submissionRoutes.map(([route, action, respond]) =>
-      atNaturalKeys(route, `${path}${action}`, params, {
+      atReportKeys(route, `${path}${action}`, params, {
         accredited,
         respond,
         ...(accredited && { before: assertPeriodWithinAccreditation })
       })
     )
   ),
-  atNaturalKeys(
+  atReportKeys(
     reportsYearCalendar,
     `${registrationPath}/reports/{year}/calendar`,
     { ...registrationParams, year: yearSchema().required() }

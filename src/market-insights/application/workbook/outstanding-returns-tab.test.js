@@ -87,14 +87,14 @@ const seedOperator = async (
   { organisationsRepository, reportsRepository },
   { regulator = REGULATOR.EA, submitted = [], ...accreditedFor }
 ) => {
-  const operator = await insertAccreditedOperator(
+  const { reportKey } = await insertAccreditedOperator(
     organisationsRepository,
     regulator,
     accreditedFor
   )
   for (const period of submitted) {
     await buildSubmittedReport(reportsRepository, {
-      ...operator,
+      ...reportKey,
       year: toYear(2026),
       cadence: 'monthly',
       period

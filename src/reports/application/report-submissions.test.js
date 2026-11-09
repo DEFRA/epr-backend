@@ -9,6 +9,7 @@ import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
@@ -51,8 +52,7 @@ describe('generateReportSubmissions (integration)', () => {
     const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const org1Reg = org1.registrations[0]
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org1.id,
-      registrationId: org1Reg.id,
+      ...reportKeyOf(org1, org1Reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -201,15 +201,13 @@ describe('generateReportSubmissions (integration)', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2025),
       cadence: 'monthly',
       period: 1
     })
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'quarterly',
       period: 1
@@ -261,8 +259,7 @@ describe('generateReportSubmissions (integration)', () => {
     // Submission 1 submitted with PRN figures and a note the feed must keep
     // showing, with an in-flight submission 2 draft sitting over it
     await seedInFlightResubmission(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -310,8 +307,7 @@ describe('generateReportSubmissions (integration)', () => {
     // A submitted period a service maintainer then unsubmits for correction,
     // with no newer submission: the submitted slot (date, submitter) is retained
     await buildUnsubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -351,8 +347,7 @@ describe('generateReportSubmissions (integration)', () => {
 
     // Submission 1: submitted, with the original PRN figures and note
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -369,8 +364,7 @@ describe('generateReportSubmissions (integration)', () => {
     // figures and note (April has not yet ended, so the period set is unchanged)
     vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,

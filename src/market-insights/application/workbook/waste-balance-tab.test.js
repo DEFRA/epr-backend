@@ -131,20 +131,19 @@ const seedOperator = async (
   { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
   { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
-  const operator = await insertAccreditedOperator(
+  const { organisationId, registrationId } = await insertAccreditedOperator(
     organisationsRepository,
     regulator,
     { material, validFrom }
   )
-  const { registrations } = await organisationsRepository.findById(
-    operator.organisationId
-  )
+  const { registrations } =
+    await organisationsRepository.findById(organisationId)
   const accreditationId = registrations.find(
-    ({ id }) => id === operator.registrationId
+    ({ id }) => id === registrationId
   )?.accreditationId
   assertPresent(accreditationId)
-  const ledgerId = { ...operator, accreditationId }
-  const summaryLogId = `log-${operator.registrationId}`
+  const ledgerId = { organisationId, registrationId, accreditationId }
+  const summaryLogId = `log-${registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     withNumbers(ledgerId),

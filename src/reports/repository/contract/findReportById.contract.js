@@ -4,9 +4,7 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildCreateReportParams,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
@@ -42,8 +40,6 @@ export const testFindReportByIdBehaviour = (it) => {
         version: 1,
         schemaVersion: 1,
         submissionNumber: 1,
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
         organisationNumber: DEFAULT_ORG_NUMBER,
         registrationNumber: DEFAULT_REG_NUMBER,
         accreditationNumber: expect.any(String),

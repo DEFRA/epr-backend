@@ -5,9 +5,7 @@ import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
@@ -73,8 +71,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        ...DEFAULT_KEY,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
@@ -107,8 +104,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        ...DEFAULT_KEY,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
@@ -158,8 +154,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
 
       expect(result).toMatchObject({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        ...DEFAULT_KEY,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {

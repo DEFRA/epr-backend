@@ -4,7 +4,6 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -30,8 +29,6 @@ const YEAR = toYear(2026)
 
 /**
  * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   year: Year,
@@ -54,8 +51,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const reportsRepository = reportsRepositoryFactory()
 
     const reportId = await seed(reportsRepository, {
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       year: YEAR,
       cadence: 'quarterly',
@@ -64,9 +59,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(org)
-        ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
@@ -76,8 +68,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     return {
       server,
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       reportId,
       reportsRepository,
@@ -127,7 +117,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('calls auditReportRequestResubmission with correct params', async () => {
-      const { server, url, organisationId, registrationId, reportId } =
+      const { server, url, organisationNumber, registrationNumber, reportId } =
         await createServerWithSubmittedReport()
 
       await server.inject({ method: 'POST', url, ...asOperator() })
@@ -135,8 +125,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(reportAudit.auditReportRequestResubmission).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

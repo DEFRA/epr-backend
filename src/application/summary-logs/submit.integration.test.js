@@ -195,8 +195,6 @@ const setupSubmit = async ({
     summaryLogId,
     summaryLog,
     organisation,
-    organisationId,
-    registrationId,
     reportKey,
     summaryLogsRepository
   }
@@ -205,25 +203,15 @@ const setupSubmit = async ({
 describe('submitSummaryLog staleness guard (period closure)', () => {
   it('rejects when a report was submitted after the summary log was created', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const {
-      deps,
-      summaryLogId,
-      organisationId,
-      registrationId,
-      reportKey,
-      summaryLogsRepository
-    } = await setupSubmit({
-      reportsRepository,
-      createdAt: '2024-01-01T00:00:00.000Z'
-    })
+    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
+      await setupSubmit({
+        reportsRepository,
+        createdAt: '2024-01-01T00:00:00.000Z'
+      })
 
     // A periodic report closes for this registration after the log was created:
     // its SUBMITTED status.history entry is stamped "now", well after 2024.
-    await createAndSubmitReport(reportsRepository, {
-      organisationId,
-      registrationId,
-      ...reportKey
-    })
+    await createAndSubmitReport(reportsRepository, reportKey)
 
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
       PermanentError
@@ -241,20 +229,12 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
   it('proceeds and writes records when no report has been submitted since creation', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const {
-      deps,
-      summaryLogId,
-      organisationId,
-      registrationId,
-      reportKey,
-      summaryLogsRepository
-    } = await setupSubmit({ reportsRepository })
+    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
+      await setupSubmit({ reportsRepository })
 
     // An open (never-submitted) report exists for the registration: the guard
     // reacts only to SUBMITTED closures, so submission must still proceed.
-    await reportsRepository.createReport(
-      buildCreateReportParams({ organisationId, registrationId, ...reportKey })
-    )
+    await reportsRepository.createReport(buildCreateReportParams(reportKey))
 
     await submitSummaryLog(summaryLogId, deps)
 
@@ -281,23 +261,13 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const reportsRepository = createInMemoryReportsRepository()()
     // The log is created far in the future, after any real submission, so the
     // seeded closure predates it and the guard must not fire.
-    const {
-      deps,
-      summaryLogId,
-      organisationId,
-      registrationId,
-      reportKey,
-      summaryLogsRepository
-    } = await setupSubmit({
-      reportsRepository,
-      createdAt: '2099-01-01T00:00:00.000Z'
-    })
+    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
+      await setupSubmit({
+        reportsRepository,
+        createdAt: '2099-01-01T00:00:00.000Z'
+      })
 
-    await createAndSubmitReport(reportsRepository, {
-      organisationId,
-      registrationId,
-      ...reportKey
-    })
+    await createAndSubmitReport(reportsRepository, reportKey)
 
     await submitSummaryLog(summaryLogId, deps)
 
@@ -324,18 +294,15 @@ describe('submitSummaryLog resubmission flag source', () => {
     loadsByReportingPeriod
   ) => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, organisationId, registrationId, reportKey } =
-      await setupSubmit({
-        reportsRepository,
-        // After any real submission, so the staleness guard does not fire.
-        createdAt: '2099-01-01T00:00:00.000Z',
-        loadsByReportingPeriod
-      })
+    const { deps, summaryLogId, reportKey } = await setupSubmit({
+      reportsRepository,
+      // After any real submission, so the staleness guard does not fire.
+      createdAt: '2099-01-01T00:00:00.000Z',
+      loadsByReportingPeriod
+    })
 
     const submitReportFor = ({ year, period }) =>
       createAndSubmitReport(reportsRepository, {
-        organisationId,
-        registrationId,
         ...reportKey,
         year,
         period
@@ -387,21 +354,12 @@ describe('submitSummaryLog resubmission flag source', () => {
 describe('submitSummaryLog stale flagging', () => {
   it('leaves alone an active report already built from the summary log being submitted', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const {
-      deps,
-      summaryLogId,
-      summaryLog,
-      organisationId,
-      registrationId,
-      reportKey
-    } = await setupSubmit({
+    const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
       reportsRepository,
       createdAt: '2099-01-01T00:00:00.000Z'
     })
     const { id: reportId } = await reportsRepository.createReport(
       buildCreateReportParams({
-        organisationId,
-        registrationId,
         ...reportKey,
         source: {
           summaryLogId: summaryLog.file.id,
