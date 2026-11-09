@@ -29,11 +29,14 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {{
- *   externalAccreditationsByRegistration: Map<RegistrationNumber, Record<string, AccreditationCommon>>
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: string
  * }} Context
+ */
+
+/**
+ * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
  */
 
 /**
@@ -50,7 +53,7 @@ const toAccreditationCommon = ({
  * Each registration's external accreditations, keyed by year.
  *
  * @param {ExternalAccreditation[]} externalAccreditations
- * @returns {Context['externalAccreditationsByRegistration']}
+ * @returns {ExternalAccreditationsByRegistration}
  */
 const byRegistrationAndYear = (externalAccreditations) =>
   new Map(
@@ -74,13 +77,6 @@ export const registrationNumbersOf = (stored) =>
   stored.flatMap(({ registrations }) =>
     registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
   )
-
-/**
- * For reads that serve stored accreditations only.
- *
- * @returns {Context['externalAccreditationsByRegistration']}
- */
-export const noExternalAccreditations = () => new Map()
 
 /**
  * The stored organisations as the read model shows them, with the external
@@ -111,15 +107,15 @@ export async function toReadModelOrganisations(
 
   /** @type {Context} */
   const context = {
-    externalAccreditationsByRegistration: byRegistrationAndYear(
-      externalAccreditations
-    ),
     onDrop: (message) => logger.warn({ message }),
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: new Date().toISOString().slice(0, 10)
   }
+  const externalByRegistration = byRegistrationAndYear(externalAccreditations)
   return stored
-    .map((organisation) => toOrganisation(organisation, context))
+    .map((organisation) =>
+      toOrganisation(organisation, context, externalByRegistration)
+    )
     .filter((organisation) => organisation !== null)
 }
 
@@ -141,9 +137,10 @@ export function servesOrganisation(stored, today) {
  *
  * @param {StoredOrganisation} stored
  * @param {Context} context
+ * @param {ExternalAccreditationsByRegistration} externalByRegistration
  * @returns {Organisation | null}
  */
-function toOrganisation(stored, context) {
+function toOrganisation(stored, context, externalByRegistration) {
   const timeline = toStatusTimeline(stored.statusHistory)
   const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
@@ -180,7 +177,13 @@ function toOrganisation(stored, context) {
     }),
     registrations: keyedRecords(
       stored.registrations,
-      (registration) => toRegistrationEntry(registration, stored, context),
+      (registration) =>
+        toRegistrationEntry(
+          registration,
+          stored,
+          context,
+          externalByRegistration
+        ),
       'Registration number',
       context.onDrop
     )
@@ -203,9 +206,15 @@ function toLinkedDefraOrganisation(linked) {
  * @param {StoredRegistration} registration
  * @param {StoredOrganisation} organisation
  * @param {Context} context
+ * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
  * @returns {[string, Registration] | null}
  */
-export function toRegistrationEntry(registration, organisation, context) {
+export function toRegistrationEntry(
+  registration,
+  organisation,
+  context,
+  externalByRegistration = new Map()
+) {
   const { onDrop, today } = context
   const { registrationNumber, validFrom, applicationContactDetails } =
     registration
@@ -239,7 +248,7 @@ export function toRegistrationEntry(registration, organisation, context) {
     onDrop
   )
   const externalAccreditations =
-    context.externalAccreditationsByRegistration.get(registrationNumber) ?? {}
+    externalByRegistration.get(registrationNumber) ?? {}
   for (const year of Object.keys(externalAccreditations)) {
     if (Object.hasOwn(storedAccreditations, year)) {
       onDrop(
@@ -292,7 +301,6 @@ export function toReadModelRegistration(
     { ...registration, overseasSites: {} },
     organisation,
     {
-      externalAccreditationsByRegistration: noExternalAccreditations(),
       onDrop,
       overseasSitesById: new Map(),
       today: new Date().toISOString().slice(0, 10)
