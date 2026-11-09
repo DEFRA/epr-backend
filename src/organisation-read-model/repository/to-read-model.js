@@ -225,20 +225,17 @@ export function toRegistrationEntry(
   externalByRegistration = new Map()
 ) {
   const { onDrop, today } = context
-  const { registrationNumber, validFrom, applicationContactDetails } =
+  const { registrationNumber, validFrom, applicationContactDetails, status } =
     registration
+  // Not served by design, so not logged
+  if (!isOneOf(REGISTRATION_STATUSES, status)) {
+    return null
+  }
   if (!registrationNumber) {
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
   const timeline = toStatusTimeline(registration.statusHistory, validFrom)
-  const { status } = registration
-  if (!isOneOf(REGISTRATION_STATUSES, status)) {
-    onDrop(
-      `Registration ${registrationNumber} has status ${status} on ${today}`
-    )
-    return null
-  }
   if (!validFrom) {
     onDrop(`Registration ${registrationNumber} has no validFrom`)
     return null
@@ -289,33 +286,6 @@ export function toRegistrationEntry(
       : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
-}
-
-/**
- * The registration as the read model shows it, or null when the read model
- * does not serve it, with the reason passed to `onDrop`. Its overseas sites are
- * left out, as reporting does not need them.
- *
- * @param {StoredOrganisation} organisation
- * @param {StoredRegistration} registration
- * @param {OnDrop} [onDrop]
- * @returns {Registration | null}
- */
-export function toReadModelRegistration(
-  organisation,
-  registration,
-  onDrop = () => {}
-) {
-  const entry = toRegistrationEntry(
-    { ...registration, overseasSites: {} },
-    organisation,
-    {
-      onDrop,
-      overseasSitesById: new Map(),
-      today: new Date().toISOString().slice(0, 10)
-    }
-  )
-  return entry?.[1] ?? null
 }
 
 /**
@@ -389,8 +359,12 @@ function withAccreditedSites(accreditations, overseasSites) {
  * @param {Context} context
  * @returns {[string, AccreditationCommon] | null}
  */
-export function toAccreditationEntry(accreditation, { onDrop, today }) {
-  const { accreditationNumber, prnIssuance } = accreditation
+export function toAccreditationEntry(accreditation, { onDrop }) {
+  const { accreditationNumber, prnIssuance, status } = accreditation
+  // Not served by design, so not logged
+  if (!isOneOf(ACCREDITATION_STATUSES, status)) {
+    return null
+  }
   if (!accreditationNumber) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
@@ -399,13 +373,6 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
     accreditation.statusHistory,
     accreditation.validFrom
   )
-  const { status } = accreditation
-  if (!isOneOf(ACCREDITATION_STATUSES, status)) {
-    onDrop(
-      `Accreditation ${accreditationNumber} has status ${status} on ${today}`
-    )
-    return null
-  }
   if (!accreditation.validFrom) {
     onDrop(`Accreditation ${accreditationNumber} has no validFrom`)
     return null

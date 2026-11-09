@@ -1,29 +1,23 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { PeriodicReport, WasteSentSummary } from '#reports/repository/port.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { ReportableRegistration } from '#reports/application/reportable-registrations.js' */
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
-import {
-  registrationKey,
-  storedRegistrationKey
-} from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
-import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
+import {
+  capitalize,
+  formatResolvedMaterial
+} from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
-import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import { toReadModelRegistration } from '#organisation-read-model/repository/to-read-model.js'
-import { logger } from '#common/helpers/logging/logger.js'
-
-/** @param {string} message */
-const logDrop = (message) => logger.warn({ message })
+import { groupByRegistration } from '#reports/application/report-compliance.js'
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 
 /**
  * @typedef {Object} TonnageFields
@@ -139,8 +133,7 @@ function buildTonnageFields(report) {
 }
 
 /**
- * @param {Organisation} org
- * @param {ReportableRegistration} registration
+ * @param {ReportableRegistration} reportable
  * @param {Cadence} cadence
  * @param {MergedPeriod} mergedPeriod
  * @param {string} accreditationNumber
@@ -148,17 +141,19 @@ function buildTonnageFields(report) {
  * @returns {ReportSubmissionsRow}
  */
 function buildRow(
-  org,
-  registration,
+  { organisation, registrationNumber, registration },
   cadence,
   mergedPeriod,
   accreditationNumber,
   report
 ) {
   return {
-    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator],
-    organisationName: org.companyDetails.name,
-    submitterPhone: registration.submitterContactDetails.phone,
+    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator.code],
+    organisationName: organisation.name,
+    // A stored registration's submitter always has a phone.
+    submitterPhone: /** @type {string} */ (
+      registration.submitterContactDetails.phone
+    ),
     approvedPersonsPhone: registration.approvedPersons
       .map((p) => p.phone)
       .join(', '),
@@ -166,11 +161,8 @@ function buildRow(
     approvedPersonsEmail: registration.approvedPersons
       .map((p) => p.email)
       .join(', '),
-    material: formatMaterial(
-      registration.material,
-      registration.glassRecyclingProcess
-    ),
-    registrationNumber: registration.registrationNumber,
+    material: formatResolvedMaterial(registration.material),
+    registrationNumber,
     accreditationNumber,
     reportType: capitalize(cadence),
     reportingPeriod: formatPeriodLabel(
@@ -189,24 +181,15 @@ function buildRow(
   }
 }
 
-async function buildSubmissionRows(
-  organisationsRepository,
-  currentYear,
-  reportsByKey
-) {
-  const registrations = getReportableRegistrations(
-    await organisationsRepository.findAll()
-  )
-
-  /** @type {ReportSubmissionsRow[]} */
-  return registrations.flatMap(({ org, registration }) => {
-    const readModel = toReadModelRegistration(org, registration, logDrop)
-    if (!readModel) {
-      return []
-    }
-
-    const periodicReports =
-      reportsByKey.get(storedRegistrationKey(org, registration)) ?? []
+/**
+ * @param {ReportableRegistration[]} registrations
+ * @param {Year} currentYear
+ * @param {Map<string, PeriodicReport[]>} reportsByKey
+ * @returns {ReportSubmissionsRow[]}
+ */
+function buildSubmissionRows(registrations, currentYear, reportsByKey) {
+  return registrations.flatMap((reportable) => {
+    const periodicReports = reportsByKey.get(reportable.key) ?? []
     const earlierYears = [
       ...new Set(
         periodicReports
@@ -216,7 +199,7 @@ async function buildSubmissionRows(
     ]
 
     return [currentYear, ...earlierYears].flatMap((year) =>
-      periodRows(org, registration, readModel, periodicReports, year, {
+      periodRows(reportable, periodicReports, year, {
         storedOnly: year !== currentYear
       })
     )
@@ -224,25 +207,16 @@ async function buildSubmissionRows(
 }
 
 /**
- * @param {Organisation} org
- * @param {ReportableRegistration} registration
- * @param {ReadModelRegistration} readModel
+ * @param {ReportableRegistration} reportable
  * @param {PeriodicReport[]} periodicReports
  * @param {Year} year
  * @param {{ storedOnly: boolean }} options
  * @returns {ReportSubmissionsRow[]}
  */
-function periodRows(
-  org,
-  registration,
-  readModel,
-  periodicReports,
-  year,
-  { storedOnly }
-) {
+function periodRows(reportable, periodicReports, year, { storedOnly }) {
   const { registeredOnly, accredited, accreditationNumber } =
     reportingPeriodsByKind({
-      registration: readModel,
+      registration: reportable.registration,
       storedReports: periodicReports,
       year
     })
@@ -266,38 +240,33 @@ function periodRows(
         })
         const reports = submitted.length ? submitted : [null]
         return reports.map((report) =>
-          buildRow(org, registration, cadence, mergedPeriod, number, report)
+          buildRow(reportable, cadence, mergedPeriod, number, report)
         )
       })
   )
 }
 
 /**
- * Generates a flat list of report submission rows across all approved/cancelled
- * registrations for all organisations.
+ * Generates a flat list of report submission rows across every registration
+ * the organisation read model serves, outside test organisations.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @returns {Promise<{ reportSubmissions: ReportSubmissionsRow[], generatedAt: string }>}
  */
 export async function generateReportSubmissions(
-  organisationsRepository,
+  organisationReadRepository,
   reportsRepository
 ) {
-  const currentYear = currentUtcYear()
+  const [organisations, allPeriodicReports] = await Promise.all([
+    organisationReadRepository.findAll(),
+    reportsRepository.findAllPeriodicReports()
+  ])
 
-  const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
-  /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */
-  const reportsByRegistration = allPeriodicReports.reduce((map, pr) => {
-    const key = registrationKey(pr)
-    const existing = map.get(key) ?? []
-    return map.set(key, [...existing, pr])
-  }, new Map())
-
-  const rows = await buildSubmissionRows(
-    organisationsRepository,
-    currentYear,
-    reportsByRegistration
+  const rows = buildSubmissionRows(
+    reportableRegistrations(organisations),
+    currentUtcYear(),
+    groupByRegistration(allPeriodicReports)
   )
   return { reportSubmissions: rows, generatedAt: new Date().toISOString() }
 }

@@ -28,6 +28,7 @@ import {
   COLLECTION_NAME,
   DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
   DEFAULT_MAX_CONSISTENCY_RETRIES,
+  findAll,
   findOneAtMinimumVersion,
   findPage
 } from './mongodb-find.js'
@@ -193,10 +194,7 @@ const performFindById =
     return found
   }
 
-const performFindAll = (db) => async () => {
-  const docs = await db.collection(COLLECTION_NAME).find().toArray()
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
+const performFindAll = (db) => () => findAll(db)
 const performFind = (db) => (/** @type {FindParams} */ params) =>
   findPage(db, params)
 
