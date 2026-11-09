@@ -250,5 +250,21 @@ export const testExternalAccreditationsBehaviour = (it) => {
         items[0].registrations[REPROCESSOR_NUMBER].accreditations
       ).toStrictEqual({ 2026: storedAccreditation2026 })
     })
+
+    it('serves only stored accreditations from findAll, which does not read external ones yet', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = accreditedIn2026()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      })
+
+      const [organisation] = await repository.findAll()
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations
+      ).toStrictEqual({ 2026: storedAccreditation2026 })
+    })
   })
 }

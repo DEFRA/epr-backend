@@ -21,6 +21,7 @@ import {
   uppercaseString
 } from '#common/helpers/formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
+import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
@@ -157,7 +158,8 @@ function processBatch(batch, reportComplianceData) {
           )
           const reportComplianceFields = buildReportComplianceFields(
             periods,
-            entries.get(registration.id)?.submittedDates ?? new Map()
+            entries.get(storedRegistrationKey(org, registration))
+              ?.submittedDates ?? new Map()
           )
           return transformRegAcc(
             org,
