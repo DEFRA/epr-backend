@@ -3,7 +3,10 @@ import { isCounted, measure, comment, MEASURES } from './database-id-count.mjs'
 
 const PATH = 'src/application/example.js'
 
-/** @param {string} source */
+/**
+ * @param {string} source
+ * @param {string} [path]
+ */
 const countsFor = (source, path = PATH) => measure([{ path, source }])
 
 describe('isCounted', () => {
@@ -50,6 +53,10 @@ describe('lines naming a database id', () => {
     ).toBe(0)
   })
 
+  it('still counts a handler destructuring the parameter, however it is spaced', () => {
+    expect(countsFor('const {organisationId} = request.params')[0]).toBe(1)
+  })
+
   it('still counts an id interpolated into a template literal', () => {
     expect(countsFor('`organisations/${organisationId}`')[0]).toBe(1)
   })
@@ -85,7 +92,9 @@ describe('files using the stored organisation shapes', () => {
     "/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */",
     "/** @import {Registration} from '#domain/organisations/registration.js' */",
     "/** @import { Accreditation as Acc } from '#domain/organisations/accreditation.js' */",
-    " * @param {import('#domain/organisations/accreditation.js').Accreditation} accreditation"
+    " * @param {import('#domain/organisations/accreditation.js').Accreditation} accreditation",
+    "/**\n * @import {\n *   Organisation\n * } from '#domain/organisations/model.js'\n */",
+    "/**\n * @import { Organisation }\n * from '#domain/organisations/model.js'\n */"
   ])('counts a file that imports a shape: %s', (source) => {
     expect(countsFor(source)[3]).toBe(1)
   })

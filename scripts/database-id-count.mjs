@@ -10,7 +10,7 @@ const MONGODB_ADAPTER = /mongodb[^/]*$/
 
 const DATABASE_ID = /(organisation|registration|accreditation)Id/i
 const ROUTE_PATH_PARAMETER =
-  /(?<!\$)\{(organisation|registration|accreditation)Id\}/g
+  /\/\{(organisation|registration|accreditation)Id\}/g
 const DIRECT_COLLECTION = /\.collection\(/
 const RAW_ID = /\b_id\b/
 
@@ -24,6 +24,7 @@ const SHAPE_TAG_IMPORT = new RegExp(
   `@import\\s*\\{([^}]*)\\}\\s*from\\s*['"][^'"]*${SHAPE_MODULE.source}['"]`,
   'g'
 )
+const JSDOC_CONTINUATION = /^\s*\*(?!\/)/gm
 
 /**
  * @param {(line: string) => boolean} counts
@@ -36,12 +37,16 @@ const linesWhere = (counts) => (source) =>
  * @param {string} source
  * @param {string} path
  */
-const usesStoredShapes = (source, path) =>
-  !SHAPE_MODULE.test(path) &&
-  (SHAPE_INLINE_IMPORT.test(source) ||
-    [...source.matchAll(SHAPE_TAG_IMPORT)].some(([, names]) =>
-      SHAPE_TYPE.test(names)
-    ))
+const usesStoredShapes = (source, path) => {
+  const code = source.replace(JSDOC_CONTINUATION, '')
+  return (
+    !SHAPE_MODULE.test(path) &&
+    (SHAPE_INLINE_IMPORT.test(code) ||
+      [...code.matchAll(SHAPE_TAG_IMPORT)].some(([, names]) =>
+        SHAPE_TYPE.test(names)
+      ))
+  )
+}
 
 /**
  * @typedef {{
