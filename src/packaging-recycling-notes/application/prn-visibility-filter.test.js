@@ -4,8 +4,11 @@ import { createPrnVisibilityFilter } from './prn-visibility-filter.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @param {Omit<Organisation, 'status'>[]} organisations */
 const organisationsRepositoryHolding = async (organisations) => {
   const repository = createInMemoryOrganisationsRepository()()
   for (const organisation of organisations) {

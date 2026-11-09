@@ -84,7 +84,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/port.js').OrganisationsRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */

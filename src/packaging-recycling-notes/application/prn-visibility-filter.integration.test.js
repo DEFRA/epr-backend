@@ -20,6 +20,9 @@ import { generateExternalApiToken } from '#packaging-recycling-notes/routes/test
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 const it = mongoIt.extend({
@@ -35,8 +38,11 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
 
   let db
   let server
+  /** @type {OrganisationsRepository} */
   let organisationsRepository
+  /** @type {Omit<Organisation, 'status'>} */
   let testOrg
+  /** @type {Omit<Organisation, 'status'>} */
   let realOrg
 
   const externalApiClientId = randomUUID()
