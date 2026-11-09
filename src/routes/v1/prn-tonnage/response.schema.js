@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
@@ -25,6 +26,6 @@ const prnTonnageRowSchema = Joi.object({
 })
 
 export const prnTonnageResponseSchema = Joi.object({
-  generatedAt: Joi.string().isoDate().required(),
+  generatedAt: isoDateTimeString().required(),
   rows: Joi.array().items(prnTonnageRowSchema).required()
 })
