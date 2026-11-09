@@ -51,7 +51,7 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  */
 export const buildAccreditationSnapshot = (overrides = {}) => ({
   id: `acc-${randomUUID()}`,
-  accreditationNumber: 'ACC-2026-001',
+  accreditationNumber: toAccreditationNumber('ACC-2026-001'),
   accreditationYear: PRN_YEAR,
   material: 'plastic',
   submittedToRegulator: 'ea',
