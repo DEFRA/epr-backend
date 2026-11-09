@@ -121,7 +121,7 @@ const issuedNote = createMockIssuedPrn({
   registration: { registrationNumber: accreditedLedgerId.registrationNumber },
   accreditation: buildAccreditationSnapshot({
     id: accredited.id,
-    accreditationNumber: accreditedLedgerId.accreditationNumber
+    accreditationNumber: ACCREDITATION_NUMBER
   })
 })
 
