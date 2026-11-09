@@ -9,6 +9,7 @@ import {
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
   noExternalAccreditations,
+  registrationNumbersOf,
   servesOrganisation,
   toAccreditationEntry,
   toRegistrationEntry
@@ -156,11 +157,7 @@ export async function findOrganisationReadModel({
  * @returns {Registration[]}
  */
 export function servedRegistrations(organisation) {
-  const numbers = new Set(
-    organisation.registrations.flatMap(
-      ({ registrationNumber }) => registrationNumber ?? []
-    )
-  )
+  const numbers = new Set(registrationNumbersOf([organisation]))
   return [...numbers].flatMap(
     (number) => servedRegistrationByNumber(organisation, number) ?? []
   )
