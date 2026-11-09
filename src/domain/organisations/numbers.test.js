@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   numbersFor,
+  organisationNumberOf,
   requiredNumbersFor,
   toOrganisationNumber
 } from './numbers.js'
@@ -21,6 +22,12 @@ describe('toOrganisationNumber', () => {
       )
     }
   )
+})
+
+describe('organisationNumberOf', () => {
+  it("reads an organisation's number from its stored orgId", () => {
+    expect(organisationNumberOf({ orgId: 500001 })).toBe('500001')
+  })
 })
 
 /** @returns {Organisation} */

@@ -25,6 +25,13 @@ export const toOrganisationNumber = (value) => {
 }
 
 /**
+ * @param {Pick<Organisation, 'orgId'>} organisation
+ * @returns {OrganisationNumber}
+ */
+export const organisationNumberOf = ({ orgId }) =>
+  toOrganisationNumber(String(orgId))
+
+/**
  * @param {string} value
  * @returns {RegistrationNumber}
  */
