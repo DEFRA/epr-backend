@@ -12,7 +12,10 @@ const countsFor = (source, path = PATH) => measure([{ path, source }])
 describe('isCounted', () => {
   it.each([
     'src/routes/v1/organisations/get-by-id.js',
-    'src/repositories/organisations/inmemory.js'
+    'src/repositories/organisations/inmemory.js',
+    'src/common/helpers/mongo-client.js',
+    'src/common/helpers/plugins/mongo-db-plugin.js',
+    'src/non-prod-data-reset/mongodb.js'
   ])('counts production code: %s', (path) => {
     expect(isCounted(path)).toBe(true)
   })
@@ -20,6 +23,8 @@ describe('isCounted', () => {
   it.each([
     'src/repositories/organisations/mongodb.js',
     'src/repositories/organisations/mongodb-find.js',
+    'src/reports/repository/mongodb.js',
+    'src/waste-balances/repository/ledger-mongodb.js',
     'src/packaging-recycling-notes/repository/drift-query.mongodb.js',
     'src/routes/v1/organisations/get-by-id.test.js',
     'src/repositories/organisations/contract/find.contract.js',
@@ -27,8 +32,6 @@ describe('isCounted', () => {
     'src/routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js',
     'src/data/fixtures/organisation.json',
     'src/test/create-test-server.js',
-    'src/common/helpers/mongo-client.js',
-    'src/common/helpers/plugins/mongo-db-plugin.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {
     expect(isCounted(path)).toBe(false)
@@ -45,6 +48,19 @@ describe('lines naming a database id', () => {
     ].join('\n')
 
     expect(countsFor(source)[0]).toBe(3)
+  })
+
+  it('counts finding by id and reading id from a stored record', () => {
+    const source = [
+      'await repository.findById(id)',
+      'await repository.findByIds(ids)',
+      'const key = registration.id',
+      'accreditation.id === id',
+      'organisation.idempotencyKey',
+      'summaryLog.id'
+    ].join('\n')
+
+    expect(countsFor(source)[0]).toBe(4)
   })
 
   it('leaves out route path parameters', () => {
@@ -88,6 +104,18 @@ describe('lines naming _id', () => {
   })
 })
 
+describe('lines naming ObjectId', () => {
+  it('counts ObjectId as a word', () => {
+    const source = [
+      "import { ObjectId } from 'mongodb'",
+      'new ObjectId(id)',
+      'const isObjectIdLike = true'
+    ].join('\n')
+
+    expect(countsFor(source)[3]).toBe(2)
+  })
+})
+
 describe('files using the stored organisation shapes', () => {
   it.each([
     "/** @import {Organisation} from '#domain/organisations/model.js' */",
@@ -96,9 +124,12 @@ describe('files using the stored organisation shapes', () => {
     "/** @import { Accreditation as Acc } from '#domain/organisations/accreditation.js' */",
     " * @param {import('#domain/organisations/accreditation.js').Accreditation} accreditation",
     "/**\n * @import {\n *   Organisation\n * } from '#domain/organisations/model.js'\n */",
-    "/**\n * @import { Organisation }\n * from '#domain/organisations/model.js'\n */"
+    "/**\n * @import { Organisation }\n * from '#domain/organisations/model.js'\n */",
+    "/** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */",
+    "/** @import {RegistrationApproved} from '#domain/organisations/registration.js' */",
+    " * @param {import('#domain/organisations/accreditation.js').AccreditationApproved} accreditation"
   ])('counts a file that imports a shape: %s', (source) => {
-    expect(countsFor(source)[3]).toBe(1)
+    expect(countsFor(source)[4]).toBe(1)
   })
 
   it.each([
@@ -106,7 +137,7 @@ describe('files using the stored organisation shapes', () => {
     "/** @import { Registration } from './model.js' */",
     " * @param {import('#domain/organisations/model.js').OrganisationStatus} status"
   ])('leaves out a file that imports no shape: %s', (source) => {
-    expect(countsFor(source)[3]).toBe(0)
+    expect(countsFor(source)[4]).toBe(0)
   })
 
   it('counts a file once however many shapes it imports', () => {
@@ -115,7 +146,7 @@ describe('files using the stored organisation shapes', () => {
       "/** @import {Registration} from '#domain/organisations/registration.js' */"
     ].join('\n')
 
-    expect(countsFor(source)[3]).toBe(1)
+    expect(countsFor(source)[4]).toBe(1)
   })
 
   it('leaves out the modules that define the shapes', () => {
@@ -123,8 +154,25 @@ describe('files using the stored organisation shapes', () => {
       countsFor(
         "/** @import {Registration} from '#domain/organisations/registration.js' */",
         'src/domain/organisations/model.js'
-      )[3]
+      )[4]
     ).toBe(0)
+  })
+
+  it.each([
+    [
+      'src/domain/organisations/registration-utils.js',
+      "/** @import {Registration} from './registration.js' */"
+    ],
+    [
+      'src/domain/summary-logs/example.js',
+      "/** @import {Organisation} from '../organisations/model.js' */"
+    ],
+    [
+      'src/domain/organisations/status.js',
+      " * @param {import('./model.js').Organisation} organisation"
+    ]
+  ])('counts %s importing a shape by a relative path', (path, source) => {
+    expect(countsFor(source, path)[4]).toBe(1)
   })
 })
 
@@ -132,7 +180,7 @@ describe('comment', () => {
   const main = MEASURES.map(() => 42)
 
   it('shows each count on both refs and the change against main', () => {
-    const body = comment([40, 43, 42, 42], main, 'main')
+    const body = comment([40, 43, 42, 42, 42], main, 'main')
 
     expect(body).toContain('| Lines naming a database id | 40 | 42 | down 2 |')
     expect(body).toContain(

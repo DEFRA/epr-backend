@@ -1,29 +1,27 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, posix } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const TEST_CODE =
   /\.test\.js$|\.contract\.js$|test-helpers|test-fixtures|test-data|\/contract\/|\/fixtures\/|^src\/test\//
-const MONGODB_ADAPTER = /mongo[^/]*$/
+const MONGODB_ADAPTER = /\/repositor(y|ies)\/(.*\/)?[^/]*mongodb[^/]*\.js$/
 
-const DATABASE_ID = /(organisation|registration|accreditation)Id/i
+const DATABASE_ID =
+  /(organisation|registration|accreditation)Id|findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
 const ROUTE_PATH_PARAMETER =
   /\/\{(organisation|registration|accreditation)Id\}/g
 const DIRECT_COLLECTION = /\.collection\(/
 const RAW_ID = /\b_id\b/
+const OBJECT_ID = /\bObjectId\b/
 
 const SHAPE_MODULE =
-  /domain\/organisations\/(model|registration|accreditation)\.js/
-const SHAPE_TYPE = /\b(Organisation|Registration|Accreditation)\b/
-const SHAPE_INLINE_IMPORT = new RegExp(
-  `import\\(\\s*['"][^'"]*${SHAPE_MODULE.source}['"]\\s*\\)\\.${SHAPE_TYPE.source}`
-)
-const SHAPE_TAG_IMPORT = new RegExp(
-  `@import\\s*\\{([^}]*)\\}\\s*from\\s*['"][^'"]*${SHAPE_MODULE.source}['"]`,
-  'g'
-)
+  /^src\/domain\/organisations\/(model|registration|accreditation)\.js$/
+const SHAPE_TYPE =
+  /\b(Organisation|(Registration|Accreditation)(Approved|Other|Base)?|RegistrationOrAccreditation|ReportableRegistration)\b/
+const INLINE_IMPORT = /import\(\s*['"]([^'"]+)['"]\s*\)\.(\w+)/g
+const TAG_IMPORT = /@import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g
 const JSDOC_CONTINUATION = /^\s*\*(?!\/)/gm
 
 /**
@@ -34,16 +32,31 @@ const linesWhere = (counts) => (source) =>
   source.split('\n').filter(counts).length
 
 /**
+ * @param {string} specifier
+ * @param {string} importer
+ */
+const resolveModule = (specifier, importer) =>
+  specifier.startsWith('.')
+    ? posix.join(posix.dirname(importer), specifier)
+    : specifier.replace(/^#domain\//, 'src/domain/')
+
+/**
  * @param {string} source
  * @param {string} path
  */
 const usesStoredShapes = (source, path) => {
   const code = source.replace(JSDOC_CONTINUATION, '')
+  /** @param {string} specifier */
+  const isShapeModule = (specifier) =>
+    SHAPE_MODULE.test(resolveModule(specifier, path))
   return (
     !SHAPE_MODULE.test(path) &&
-    (SHAPE_INLINE_IMPORT.test(code) ||
-      [...code.matchAll(SHAPE_TAG_IMPORT)].some(([, names]) =>
-        SHAPE_TYPE.test(names)
+    ([...code.matchAll(INLINE_IMPORT)].some(
+      ([, specifier, name]) => isShapeModule(specifier) && SHAPE_TYPE.test(name)
+    ) ||
+      [...code.matchAll(TAG_IMPORT)].some(
+        ([, names, specifier]) =>
+          isShapeModule(specifier) && SHAPE_TYPE.test(names)
       ))
   )
 }
@@ -60,7 +73,7 @@ const usesStoredShapes = (source, path) => {
 export const MEASURES = [
   {
     label: 'Lines naming a database id',
-    rule: 'A line counts when it names `organisationId`, `registrationId` or `accreditationId`, in any case, so `findByRegistrationId` counts and `orgId` does not. Route path parameters such as `{organisationId}` are left out, so a route can still carry an id in its URL.',
+    rule: 'A line counts when it names `organisationId`, `registrationId` or `accreditationId`, in any case, calls `findById(` or `findByIds(`, or reads `.id` from an `organisation`, `registration` or `accreditation`. So `findByRegistrationId` counts and `orgId` does not. Route path parameters such as `{organisationId}` are left out, so a route can still carry an id in its URL.',
     count: linesWhere((line) =>
       DATABASE_ID.test(line.replace(ROUTE_PATH_PARAMETER, ''))
     )
@@ -76,14 +89,19 @@ export const MEASURES = [
     count: linesWhere((line) => RAW_ID.test(line))
   },
   {
+    label: 'Lines naming `ObjectId`',
+    rule: 'A line counts when it names `ObjectId`, the type of a raw document id.',
+    count: linesWhere((line) => OBJECT_ID.test(line))
+  },
+  {
     label: 'Files using the stored organisation shapes',
-    rule: 'A file counts when it imports the `Organisation`, `Registration` or `Accreditation` type from `src/domain/organisations`. The three modules that define them are left out.',
+    rule: 'A file counts when it imports, by any path, the `Organisation`, `Registration` or `Accreditation` type from `src/domain/organisations`, or a variant of one such as `RegistrationApproved` or `RegistrationOrAccreditation`. The three modules that define them are left out.',
     count: (source, path) => (usesStoredShapes(source, path) ? 1 : 0)
   }
 ]
 
 const SCOPE =
-  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The MongoDB adapters are left out too: any file whose name contains `mongo`.'
+  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The MongoDB repository adapters are left out too: any file under a `repository/` or `repositories/` directory whose name contains `mongodb`.'
 
 /** @param {string} path */
 export const isCounted = (path) =>
