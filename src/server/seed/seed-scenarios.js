@@ -20,8 +20,8 @@ import {
   USER_ROLES
 } from '#domain/organisations/model.js'
 import {
+  organisationNumberOf,
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -371,9 +371,8 @@ const SEED_SCENARIOS = {
  * @returns {Promise<void>}
  */
 export async function createEprOrganisationScenarios(organisationsRepository) {
-  const scenarioOrganisationNumbers = Object.values(SEED_SCENARIOS).map((s) =>
-    toOrganisationNumber(String(s.orgId))
-  )
+  const scenarioOrganisationNumbers =
+    Object.values(SEED_SCENARIOS).map(organisationNumberOf)
 
   const existingScenarios =
     await organisationsRepository.findByOrganisationNumbers(

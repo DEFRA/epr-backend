@@ -10,7 +10,7 @@ import {
   registrationFactory
 } from '#common/helpers/collections/factories/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
@@ -104,7 +104,7 @@ async function createEprOrganisationFixtures(organisationsRepository) {
         eprOrganisation2,
         eprOrganisation3,
         eprOrganisation4
-      ].map((record) => toOrganisationNumber(String(record.orgId)))
+      ].map(organisationNumberOf)
     )
 
   if (existingFixtures.length === 0) {

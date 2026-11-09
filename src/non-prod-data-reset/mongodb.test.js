@@ -13,7 +13,10 @@ import {
   buildCreateReportParams,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  organisationNumberOf,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
@@ -206,7 +209,7 @@ const seedDownstreamForOrganisation = async (
 
   await repositories.reports.createReport(
     buildCreateReportParams({
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisationNumberOf(organisation),
       registrationNumber: uniqueRegistrationNumber(),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January
@@ -305,7 +308,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(seeded.organisation.orgId))
+        organisationNumberOf(seeded.organisation)
       )
 
       expect(counts).toEqual({
@@ -346,7 +349,7 @@ describe('non-prod data reset (mongo)', () => {
       await seedStagingCollections(database, other.organisation.orgId)
 
       await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(target.organisation.orgId))
+        organisationNumberOf(target.organisation)
       )
 
       expect(
@@ -456,13 +459,13 @@ describe('non-prod data reset (mongo)', () => {
       await seedDownstreamForOrganisation(database, repositories, seeded)
 
       const first = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(seeded.organisation.orgId))
+        organisationNumberOf(seeded.organisation)
       )
       expect(first['epr-organisations']).toBe(1)
       expect(first['packaging-recycling-notes']).toBe(1)
 
       const second = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(seeded.organisation.orgId))
+        organisationNumberOf(seeded.organisation)
       )
       expect(second).toEqual(EMPTY_COUNTS)
     })
@@ -485,7 +488,7 @@ describe('non-prod data reset (mongo)', () => {
       })
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(organisation.orgId))
+        organisationNumberOf(organisation)
       )
 
       expect(counts['overseas-sites']).toBe(0)
@@ -514,7 +517,7 @@ describe('non-prod data reset (mongo)', () => {
 
       await expect(
         server.app.nonProdDataReset.deleteByOrganisationNumber(
-          toOrganisationNumber(String(seeded.organisation.orgId))
+          organisationNumberOf(seeded.organisation)
         )
       ).rejects.toThrow('Non-prod data reset is disabled in production.')
 
@@ -554,7 +557,7 @@ describe('non-prod data reset (mongo)', () => {
       const { nonProdDataReset } =
         /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
       const counts = await nonProdDataReset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(seeded.organisation.orgId))
+        organisationNumberOf(seeded.organisation)
       )
 
       expect(counts['epr-organisations']).toBe(1)
@@ -571,7 +574,7 @@ describe('non-prod data reset (mongo)', () => {
       await repositories.organisations.insert(organisation)
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(String(organisation.orgId))
+        organisationNumberOf(organisation)
       )
 
       expect(counts['epr-organisations']).toBe(1)

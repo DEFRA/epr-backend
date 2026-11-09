@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -70,75 +71,78 @@ const extractCascadeKeys = (organisation) => {
  * the journey-test apply path) are keyed by the numeric orgId. Reports, and
  * report system logs, carry the organisation number instead.
  *
- * @param {number} orgId
- * @param {string} organisationId
+ * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[] }} keys
  */
-const buildCascadeSteps = (orgId, organisationId, { overseasSiteIds }) => [
-  {
-    label: 'packaging-recycling-notes',
-    collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
-    filter: { 'organisation.id': organisationId }
-  },
-  {
-    label: 'waste-balance-events',
-    collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
-    filter: { organisationId }
-  },
-  {
-    label: 'summary-log-row-states',
-    collection: COLLECTIONS.SUMMARY_LOG_ROW_STATES,
-    filter: { organisationId }
-  },
-  {
-    label: 'reports',
-    collection: COLLECTIONS.REPORTS,
-    filter: { organisationNumber: String(orgId) }
-  },
-  {
-    label: 'summary-logs',
-    collection: COLLECTIONS.SUMMARY_LOGS,
-    filter: { organisationId }
-  },
-  {
-    label: 'overseas-sites',
-    collection: COLLECTIONS.OVERSEAS_SITES,
-    filter:
-      overseasSiteIds.length === 0
-        ? null
-        : { _id: { $in: overseasSiteIds.map(toObjectId) } }
-  },
-  {
-    label: 'system-logs',
-    collection: COLLECTIONS.SYSTEM_LOGS,
-    filter: {
-      $or: [
-        { 'context.organisationId': organisationId },
-        { 'context.organisationNumber': String(orgId) }
-      ]
+const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
+  const { orgId, id: organisationId } = organisation
+  const organisationNumber = organisationNumberOf(organisation)
+  return [
+    {
+      label: 'packaging-recycling-notes',
+      collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
+      filter: { 'organisation.id': organisationId }
+    },
+    {
+      label: 'waste-balance-events',
+      collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
+      filter: { organisationId }
+    },
+    {
+      label: 'summary-log-row-states',
+      collection: COLLECTIONS.SUMMARY_LOG_ROW_STATES,
+      filter: { organisationId }
+    },
+    {
+      label: 'reports',
+      collection: COLLECTIONS.REPORTS,
+      filter: { organisationNumber }
+    },
+    {
+      label: 'summary-logs',
+      collection: COLLECTIONS.SUMMARY_LOGS,
+      filter: { organisationId }
+    },
+    {
+      label: 'overseas-sites',
+      collection: COLLECTIONS.OVERSEAS_SITES,
+      filter:
+        overseasSiteIds.length === 0
+          ? null
+          : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+    },
+    {
+      label: 'system-logs',
+      collection: COLLECTIONS.SYSTEM_LOGS,
+      filter: {
+        $or: [
+          { 'context.organisationId': organisationId },
+          { 'context.organisationNumber': organisationNumber }
+        ]
+      }
+    },
+    {
+      label: 'registration',
+      collection: COLLECTIONS.REGISTRATION,
+      filter: { orgId }
+    },
+    {
+      label: 'accreditation',
+      collection: COLLECTIONS.ACCREDITATION,
+      filter: { orgId }
+    },
+    {
+      label: 'epr-organisations',
+      collection: COLLECTIONS.ORGANISATIONS,
+      filter: { _id: toObjectId(organisationId) }
+    },
+    {
+      label: 'organisation',
+      collection: COLLECTIONS.ORGANISATION,
+      filter: { orgId }
     }
-  },
-  {
-    label: 'registration',
-    collection: COLLECTIONS.REGISTRATION,
-    filter: { orgId }
-  },
-  {
-    label: 'accreditation',
-    collection: COLLECTIONS.ACCREDITATION,
-    filter: { orgId }
-  },
-  {
-    label: 'epr-organisations',
-    collection: COLLECTIONS.ORGANISATIONS,
-    filter: { _id: toObjectId(organisationId) }
-  },
-  {
-    label: 'organisation',
-    collection: COLLECTIONS.ORGANISATION,
-    filter: { orgId }
-  }
-]
+  ]
+}
 
 /**
  * Executes cascade steps in parallel. deleteMany is idempotent and each
@@ -198,9 +202,6 @@ export const createNonProdDataReset = (
       return { ...EMPTY_COUNTS }
     }
     const keys = extractCascadeKeys(organisation)
-    return runCascade(
-      db,
-      buildCascadeSteps(organisation.orgId, organisation.id, keys)
-    )
+    return runCascade(db, buildCascadeSteps(organisation, keys))
   }
 })
