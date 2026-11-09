@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { materialSchema } from '#common/validation/material-schema.js'
 import {
   catchUpPrnProjection,
@@ -139,7 +140,7 @@ const issuedStatuses = [
 ]
 const onceIssued = Joi.valid(...issuedStatuses)
 
-const isoDateTime = Joi.string().isoDate().required()
+const isoDateTime = isoDateTimeString().required()
 
 const prnOperationKeys = {
   at: isoDateTime,

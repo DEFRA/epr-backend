@@ -8,6 +8,7 @@ import { materialSchema } from '#common/validation/material-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { isFutureYear } from '#common/helpers/dates/year.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
+import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -32,9 +33,7 @@ const orsIdKey = Joi.string().pattern(/^\d{3}$/)
 
 const isoDate = isoDateString()
 
-const isoDateTime = Joi.string()
-  .isoDate()
-  .pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
+const isoDateTime = isoDateTimeString()
 
 const overseasSiteViewSchema = Joi.object({
   address: Joi.object({
