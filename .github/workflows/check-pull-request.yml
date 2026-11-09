@@ -159,10 +159,11 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.base_ref }}
+          ref: ${{ github.event.pull_request.base.sha }}
           path: base
 
       - name: Count database ids
+        shell: bash
         env:
           BASE_REF: ${{ github.base_ref }}
         run: node scripts/database-id-count.mjs . base "$BASE_REF" | tee "$RUNNER_TEMP/database-id-count.md" >> "$GITHUB_STEP_SUMMARY"
