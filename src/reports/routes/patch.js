@@ -83,15 +83,14 @@ function guardReportDataFields(payload, report, reportRegistration) {
     )
   }
 
-  if ('tonnageNotExported' in payload) {
-    if (
-      reportOperatorCategory(reportRegistration) !==
+  if (
+    'tonnageNotExported' in payload &&
+    reportOperatorCategory(reportRegistration) !==
       OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
-    ) {
-      throw Boom.badRequest(
-        'tonnageNotExported can only be set for registered-only exporters'
-      )
-    }
+  ) {
+    throw Boom.badRequest(
+      'tonnageNotExported can only be set for registered-only exporters'
+    )
   }
 }
 
