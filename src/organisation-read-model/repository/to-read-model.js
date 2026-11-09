@@ -76,6 +76,13 @@ export const registrationNumbersOf = (stored) =>
   )
 
 /**
+ * For reads that serve stored accreditations only.
+ *
+ * @returns {Context['externalAccreditationsByRegistration']}
+ */
+export const noExternalAccreditations = () => new Map()
+
+/**
  * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
  * cannot represent is left out and reported through `logger.warn`.
@@ -285,7 +292,7 @@ export function toReadModelRegistration(
     { ...registration, overseasSites: {} },
     organisation,
     {
-      externalAccreditationsByRegistration: new Map(),
+      externalAccreditationsByRegistration: noExternalAccreditations(),
       onDrop,
       overseasSitesById: new Map(),
       today: new Date().toISOString().slice(0, 10)

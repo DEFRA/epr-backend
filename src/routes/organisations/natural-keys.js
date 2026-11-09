@@ -8,6 +8,7 @@ import {
 } from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
+  noExternalAccreditations,
   servesOrganisation,
   toAccreditationEntry,
   toRegistrationEntry
@@ -48,7 +49,7 @@ export const registrationParams = {
  * is not served matter to the view alone.
  */
 const lookupContext = () => ({
-  externalAccreditationsByRegistration: new Map(),
+  externalAccreditationsByRegistration: noExternalAccreditations(),
   onDrop: () => {},
   overseasSitesById: new Map(),
   today: new Date().toISOString().slice(0, 10)
@@ -184,7 +185,8 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
 }
 
 /**
- * A registration's accreditations for a year, by the read model's rules.
+ * A registration's stored accreditations for a year, by the read model's
+ * rules. Accreditations held outside REEX are not found.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
@@ -199,8 +201,9 @@ export function accreditationsForYear(organisation, registration, year) {
 }
 
 /**
- * Finds a registration's accreditation for a year, the slot the accredited
- * routes address, by the read model's rules.
+ * Finds a registration's stored accreditation for a year, the slot the
+ * accredited routes address, by the read model's rules. A year held only
+ * outside REEX is not found.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
