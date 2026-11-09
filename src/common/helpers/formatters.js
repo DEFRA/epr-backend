@@ -7,7 +7,8 @@
 
 import {
   GLASS_RECYCLING_PROCESS,
-  MATERIAL
+  MATERIAL,
+  TONNAGE_BAND
 } from '#domain/organisations/model.js'
 
 const MATERIAL_DISPLAY_NAMES = {
@@ -30,12 +31,13 @@ export const ANNEX_II_PROCESS = {
   [MATERIAL.ALUMINIUM]: 'R4'
 }
 
-export const TONNAGE_BAND_DISPLAY_NAMES = {
-  up_to_500: 'Up to 500 tonnes',
-  up_to_5000: 'Up to 5,000 tonnes',
-  up_to_10000: 'Up to 10,000 tonnes',
-  over_10000: 'Over 10,000 tonnes'
-}
+/** @type {Readonly<Record<TonnageBand, string>>} */
+export const TONNAGE_BAND_DISPLAY_NAMES = Object.freeze({
+  [TONNAGE_BAND.UP_TO_500]: 'Up to 500 tonnes',
+  [TONNAGE_BAND.UP_TO_5000]: 'Up to 5,000 tonnes',
+  [TONNAGE_BAND.UP_TO_10000]: 'Up to 10,000 tonnes',
+  [TONNAGE_BAND.OVER_10000]: 'Over 10,000 tonnes'
+})
 
 /**
  * Formats an address object into a single comma-separated string
