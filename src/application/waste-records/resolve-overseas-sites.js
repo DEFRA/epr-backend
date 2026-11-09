@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * Resolves overseas sites for an exporter registration into a lookup map
@@ -15,24 +16,25 @@ import Boom from '@hapi/boom'
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {OverseasSitesRepository} overseasSitesRepository
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<Record<string, { validFrom: Date | null }>>}
  */
 export const resolveOverseasSites = async (
   organisationsRepository,
   overseasSitesRepository,
-  organisationId,
-  registrationId
+  organisationNumber,
+  registrationNumber
 ) => {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
+  const organisation =
+    await organisationsRepository.findByOrganisationNumber(organisationNumber)
+  const registration = organisation?.registrations.find(
+    (candidate) => candidate.registrationNumber === registrationNumber
   )
 
   if (!registration) {
     throw Boom.internal(
-      `Registration not found: ${registrationId} for organisation ${organisationId}`
+      `Registration not found: ${registrationNumber} for organisation ${organisationNumber}`
     )
   }
 

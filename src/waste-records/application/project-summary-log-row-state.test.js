@@ -23,8 +23,6 @@ describe('projectSummaryLogRowState', () => {
   it('classifies the record and coerces its stored tonnages to two decimal places', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
@@ -57,8 +55,6 @@ describe('projectSummaryLogRowState', () => {
   it('hoists processingType to a top-level field, leaving it out of the stored data', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '1',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
@@ -76,8 +72,6 @@ describe('projectSummaryLogRowState', () => {
   it('drops the redundant ROW_ID key from the stored data', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '1011',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
@@ -96,8 +90,6 @@ describe('projectSummaryLogRowState', () => {
   it('stores a row state that reconciles by construction — NET equals GROSS minus TARE minus PALLET at 2dp', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '3',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
@@ -120,8 +112,6 @@ describe('projectSummaryLogRowState', () => {
   it('projects a zero-tonnage sent-on debit as positive zero, not negative zero', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '5000',
       type: WASTE_RECORD_TYPE.SENT_ON,
       data: {
@@ -152,8 +142,6 @@ describe('projectSummaryLogRowState', () => {
   it('coerces a copy, leaving the source record data at full precision', () => {
     /** @type {WasteRecord} */
     const record = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       rowId: '2',
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', NET_WEIGHT: 7.536 }

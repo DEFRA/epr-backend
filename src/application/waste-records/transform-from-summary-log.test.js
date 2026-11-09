@@ -57,10 +57,7 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    })
+    const result = transformFromSummaryLog(parsedData)
 
     expect(result).toHaveLength(2)
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
@@ -77,41 +74,12 @@ describe('transformFromSummaryLog', () => {
       data: {}
     }
 
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    })
+    const result = transformFromSummaryLog(parsedData)
 
     expect(result).toEqual([])
   })
 
-  it('includes optional accreditationId when provided', () => {
-    const headers = ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING']
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers,
-          rows: [createRow(headers, [FIRST_ROW_ID, FIRST_DATE], FIRST_ROW_ID)]
-        }
-      }
-    }
-
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    })
-
-    expect(result[0].record.accreditationId).toBe('acc-1')
-  })
-
-  it('omits accreditationId when not provided', () => {
+  it('carries no organisation, registration or accreditation id', () => {
     /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -133,12 +101,9 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    })
+    const result = transformFromSummaryLog(parsedData)
 
-    expect(result[0].record).not.toHaveProperty('accreditationId')
+    expect(Object.keys(result[0].record)).toEqual(['rowId', 'type', 'data'])
   })
 
   it('throws error for unknown processing type', () => {
@@ -151,12 +116,9 @@ describe('transformFromSummaryLog', () => {
       data: {}
     }
 
-    expect(() =>
-      transformFromSummaryLog(parsedData, {
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      })
-    ).toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
+    expect(() => transformFromSummaryLog(parsedData)).toThrow(
+      'Unknown PROCESSING_TYPE: UNKNOWN_TYPE'
+    )
   })
 
   it('returns empty array when no processing type is specified', () => {
@@ -177,10 +139,7 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData, {
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    })
+    const result = transformFromSummaryLog(parsedData)
 
     expect(result).toEqual([])
   })
@@ -215,16 +174,11 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData, {
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      })
+      const result = transformFromSummaryLog(parsedData)
 
       expect(result).toHaveLength(1)
       const { record } = result[0]
       expect(record).toMatchObject({
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
         rowId: 'row-4001',
         type: WASTE_RECORD_TYPE.PROCESSED,
         data: {
@@ -267,10 +221,7 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData, {
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      })
+      const result = transformFromSummaryLog(parsedData)
 
       expect(result[0].record.data.MONTH_RECEIVED_FOR_EXPORT).toBe('2026-03')
     })
@@ -306,16 +257,11 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData, {
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      })
+      const result = transformFromSummaryLog(parsedData)
 
       expect(result).toHaveLength(1)
       const { record } = result[0]
       expect(record).toMatchObject({
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
         rowId: 'row-4001',
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
@@ -335,8 +281,6 @@ function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
 
   expect(issues).toEqual([])
   expect(record).toMatchObject({
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
     rowId,
     type: WASTE_RECORD_TYPE.RECEIVED,
     data: {

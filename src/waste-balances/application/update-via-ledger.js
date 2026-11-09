@@ -28,7 +28,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
- * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
+ * @param {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} params.ledgerId
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
@@ -38,14 +38,11 @@ export const performUpdateViaLedger = async ({
   user,
   overseasSites,
   summaryLogId,
-  numbers
+  ledgerId
 }) => {
   if (wasteRecords.length === 0) {
     return
   }
-
-  const registrationId = wasteRecords[0].registrationId
-  const organisationId = wasteRecords[0].organisationId
 
   const classifiedRows = wasteRecords.map((record) =>
     classifyWasteRecord(
@@ -67,12 +64,7 @@ export const performUpdateViaLedger = async ({
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(
-    {
-      registrationId,
-      accreditationId: accreditation.id,
-      organisationId,
-      ...numbers
-    },
+    ledgerId,
     { summaryLogId, creditTotal, decemberCreditTotal },
     {
       id: user.id,

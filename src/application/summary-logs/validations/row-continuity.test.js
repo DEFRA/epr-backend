@@ -28,9 +28,6 @@ describe('validateRowContinuity', () => {
     type = WASTE_RECORD_TYPE.RECEIVED
   }) => ({
     record: {
-      organisationId: 'org-456',
-      registrationId: 'reg-789',
-      accreditationId: 'acc-111',
       rowId,
       type,
       data: {

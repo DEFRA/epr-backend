@@ -216,6 +216,9 @@ describe('SummaryLogsValidator', () => {
     }
 
     organisationsRepository = {
+      findByOrganisationNumber: vi.fn().mockResolvedValue({
+        registrations: [{ registrationNumber: 'REG12345', overseasSites: {} }]
+      }),
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -250,6 +253,8 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
+      organisationNumber: '500123',
+      registrationNumber: 'REG12345',
       file: {
         id: 'file-123',
         name: 'test.xlsx',

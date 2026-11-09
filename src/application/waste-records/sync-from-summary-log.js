@@ -130,58 +130,100 @@ const prepareRowsForTransformation = (parsedData) => {
 }
 
 /**
- * The accreditation a submit writes to: the summary log's own
- * `accreditationId` when it carries one (including `null`, which means
- * registered-only), otherwise (a legacy summary log, from before this field
- * existed) the registration's current link.
+ * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { Accreditation } from '#domain/organisations/accreditation.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */
-const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
-  if (summaryLog.accreditationId !== undefined) {
-    return summaryLog.accreditationId
+
+/**
+ * The numbers a summary log names its registration and accreditation by. The
+ * accreditation number is `null` for a registered-only submission, and absent
+ * on a legacy summary log from before the field existed.
+ *
+ * @typedef {{
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   accreditationNumber?: AccreditationNumber | null
+ * }} SubmissionNumbers
+ */
+
+/**
+ * The accreditation a submit writes to: the one the summary log's
+ * accreditation number names, none when that number is `null`, and, for a
+ * legacy summary log, the registration's current link.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @param {AccreditationNumber | null | undefined} accreditationNumber
+ * @returns {Accreditation | null}
+ */
+const findAccreditation = (organisation, registration, accreditationNumber) => {
+  if (accreditationNumber === null) {
+    return null
+  }
+  if (accreditationNumber === undefined && !registration.accreditationId) {
+    return null
   }
 
-  const registration = await organisationsRepository.findRegistrationById(
-    summaryLog.organisationId,
-    summaryLog.registrationId
+  const accreditation = organisation.accreditations.find((candidate) =>
+    accreditationNumber === undefined
+      ? candidate.id === registration.accreditationId
+      : candidate.accreditationNumber === accreditationNumber
   )
-  return registration?.accreditationId
+  if (!accreditation) {
+    throw new Error(
+      `Accreditation not found: ${accreditationNumber ?? registration.accreditationId}`
+    )
+  }
+  return accreditation
 }
 
 /**
- * The numbers the row states and the ledger event are stored with, read from
- * the organisation record.
+ * The accreditation a submission writes to, found by the summary log's
+ * numbers, and the ledger it names. The ledger carries the ids the row states
+ * and ledger events still store beside the numbers, taken from the
+ * organisation record.
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {{ organisationId: string, registrationId: string }} summaryLog
- * @param {string | null} accreditationId
- * @returns {Promise<import('#domain/organisations/numbers.js').RequiredNumbers>}
+ * @param {SubmissionNumbers} summaryLog
+ * @returns {Promise<{ accreditation: Accreditation | null, ledgerId: NumberedLedgerId }>}
  */
-const resolveNumbers = async (
-  organisationsRepository,
-  { organisationId, registrationId },
-  accreditationId
-) =>
-  requiredNumbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId },
-    'row states'
+const resolveSubmissionLedger = async (organisationsRepository, summaryLog) => {
+  const organisation = await organisationsRepository.findByOrganisationNumber(
+    summaryLog.organisationNumber
   )
-
-const resolveAccreditation = async (
-  organisationsRepository,
-  organisationId,
-  accreditationId
-) => {
-  const accreditation = await organisationsRepository.findAccreditationById(
-    organisationId,
-    accreditationId
-  )
-
-  if (!accreditation) {
-    throw new Error(`Accreditation not found: ${accreditationId}`)
+  if (!organisation) {
+    throw new Error(`Organisation not found: ${summaryLog.organisationNumber}`)
   }
 
-  return accreditation
+  const registration = organisation.registrations.find(
+    (candidate) =>
+      candidate.registrationNumber === summaryLog.registrationNumber
+  )
+  if (!registration) {
+    throw new Error(`Registration not found: ${summaryLog.registrationNumber}`)
+  }
+
+  const accreditation = findAccreditation(
+    organisation,
+    registration,
+    summaryLog.accreditationNumber
+  )
+  const ids = {
+    organisationId: organisation.id,
+    registrationId: registration.id,
+    accreditationId: accreditation?.id ?? null
+  }
+
+  return {
+    accreditation,
+    ledgerId: {
+      ...ids,
+      ...requiredNumbersFor(organisation, ids, 'row states')
+    }
+  }
 }
 
 /**
@@ -193,10 +235,10 @@ const resolveAccreditation = async (
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
- * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
+ * @param {NumberedLedgerId} params.ledgerId
  */
 const updateWasteBalances = async ({
-  numbers,
+  ledgerId,
   parsedData,
   accreditation,
   wasteBalanceService,
@@ -215,7 +257,7 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites, summaryLogId, numbers }
+      { user, accreditation, overseasSites, summaryLogId, ledgerId }
     )
   }
 }
@@ -339,9 +381,8 @@ const countRecordChanges = async ({
  * zero-delta — the submission is still recorded, it just moves no tonnage.
  *
  * @param {object} params
- * @param {{ file: { id: SummaryLogFileId }, organisationId: string, registrationId: string }} params.summaryLog
- * @param {string | undefined} params.accreditationId
- * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
+ * @param {SummaryLogFileId} params.summaryLogId
+ * @param {NumberedLedgerId} params.ledgerId
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
@@ -351,9 +392,8 @@ const countRecordChanges = async ({
  * @param {ReturnType<typeof createWasteBalanceService>} params.wasteBalanceService
  */
 const commitStateAndBalance = async ({
-  summaryLog,
-  accreditationId,
-  numbers,
+  summaryLogId,
+  ledgerId,
   accreditation,
   wasteRecords,
   overseasSites,
@@ -366,36 +406,26 @@ const commitStateAndBalance = async ({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
-    ledgerId: {
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null,
-      ...numbers
-    },
+    ledgerId,
     overseasSites,
-    summaryLogId: summaryLog.file.id
+    summaryLogId
   })
 
   if (accreditation) {
     await updateWasteBalances({
-      numbers,
+      ledgerId,
       parsedData,
       accreditation,
       wasteBalanceService,
       wasteRecords,
       user,
       overseasSites,
-      summaryLogId: summaryLog.file.id
+      summaryLogId
     })
   } else {
     await wasteBalanceService.commitSummaryLogSubmittedEvent(
-      {
-        registrationId: summaryLog.registrationId,
-        accreditationId: null,
-        organisationId: summaryLog.organisationId,
-        ...numbers
-      },
-      { summaryLogId: summaryLog.file.id, creditTotal: 0 },
+      ledgerId,
+      { summaryLogId, creditTotal: 0 },
       {
         id: user.id,
         ...(user.name && { name: user.name }),
@@ -436,9 +466,9 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {Object} summaryLog.file - The file information
    * @param {SummaryLogFileId} summaryLog.file.id - The file ID
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
-   * @param {string} summaryLog.organisationId - The organisation ID
-   * @param {string} summaryLog.registrationId - The registration ID
-   * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
+   * @param {OrganisationNumber} summaryLog.organisationNumber
+   * @param {RegistrationNumber} summaryLog.registrationNumber
+   * @param {AccreditationNumber | null} [summaryLog.accreditationNumber] - `null` for a registered-only submission, absent on a legacy summary log
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */
@@ -449,17 +479,13 @@ export const syncFromSummaryLog = (dependencies) => {
     // 2. Extract row IDs for transformation
     const preparedData = prepareRowsForTransformation(parsedData)
 
-    const accreditationId = await resolveAccreditationId(
-      summaryLog,
-      organisationsRepository
+    const { accreditation, ledgerId } = await resolveSubmissionLedger(
+      organisationsRepository,
+      summaryLog
     )
 
     // 3. Transform to waste records
-    const wasteRecords = transformFromSummaryLog(preparedData, {
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId
-    })
+    const wasteRecords = transformFromSummaryLog(preparedData)
 
     // 4. Resolve overseas sites for exporter ORS validation (VAL014)
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -468,29 +494,17 @@ export const syncFromSummaryLog = (dependencies) => {
         ? await resolveOverseasSites(
             organisationsRepository,
             overseasSitesRepository,
-            summaryLog.organisationId,
-            summaryLog.registrationId
+            summaryLog.organisationNumber,
+            summaryLog.registrationNumber
           )
         : ORS_VALIDATION_DISABLED
-
-    const accreditation = accreditationId
-      ? await resolveAccreditation(
-          organisationsRepository,
-          summaryLog.organisationId,
-          accreditationId
-        )
-      : null
 
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
       accreditation,
       overseasSites,
-      ledgerId: {
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        accreditationId: accreditationId ?? null
-      },
+      ledgerId,
       ledgerRepository,
       summaryLogRowStatesRepository
     })
@@ -498,13 +512,8 @@ export const syncFromSummaryLog = (dependencies) => {
     // 6. Commit per-row state for every submission and the balance for
     // accredited balance-bearing ones.
     await commitStateAndBalance({
-      summaryLog,
-      accreditationId,
-      numbers: await resolveNumbers(
-        organisationsRepository,
-        summaryLog,
-        accreditationId ?? null
-      ),
+      summaryLogId: summaryLog.file.id,
+      ledgerId,
       accreditation,
       wasteRecords,
       overseasSites,

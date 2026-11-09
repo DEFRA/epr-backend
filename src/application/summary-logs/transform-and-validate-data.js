@@ -41,11 +41,7 @@ export const transformAndValidateData = async ({
   })
 
   /** @type {ValidatedWasteRecord[]} */
-  const wasteRecords = transformFromSummaryLog(validatedData, {
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
-    accreditationId: summaryLog.accreditationId
-  })
+  const wasteRecords = transformFromSummaryLog(validatedData)
 
   const issues = validateDataBusiness({ wasteRecords, previousSubmission })
 

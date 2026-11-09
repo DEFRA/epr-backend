@@ -157,8 +157,6 @@ describe('reclassifyWasteRecordStates', () => {
 
 /** @returns {WasteRecord} */
 const fullPrecisionReceivedRecord = (tonnage) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
   rowId: '1001',
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {

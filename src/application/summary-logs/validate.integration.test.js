@@ -11,6 +11,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -101,12 +102,15 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg, accreditationId) =>
-    summaryLogFactory.validating({
+  const createSummaryLog = (testOrg, accreditationId) => {
+    const registrationId = testOrg.registrations[0].id
+    return summaryLogFactory.validating({
       organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      accreditationId
+      registrationId,
+      accreditationId,
+      ...numbersFor(testOrg, { registrationId, accreditationId }).numbers
     })
+  }
 
   /**
    * @typedef {{

@@ -30,11 +30,54 @@ const LEDGER_ID = {
   accreditationId: null
 }
 
-const summaryLogFor = (fileId, accreditationId) => ({
+const ACCREDITATION = {
+  id: 'acc-1',
+  accreditationNumber: 'ACC-1',
+  validFrom: '2023-01-01',
+  validTo: '2023-12-31',
+  statusHistory: []
+}
+
+/**
+ * @param {{ registration?: object, accreditations?: object[] }} [options]
+ */
+const organisationWith = ({ registration = {}, accreditations } = {}) => ({
+  id: 'org-1',
+  orgId: 500001,
+  registrations: [
+    { id: 'reg-2', registrationNumber: 'REG-2', overseasSites: {} },
+    {
+      id: 'reg-1',
+      registrationNumber: 'REG-1',
+      overseasSites: {},
+      ...registration
+    }
+  ],
+  accreditations: accreditations ?? [
+    { id: 'acc-2', accreditationNumber: 'ACC-2' },
+    ACCREDITATION
+  ]
+})
+
+/**
+ * A summary log naming its registration and accreditation by number. A
+ * registered-only one carries a `null` accreditation number.
+ *
+ * @param {string} fileId
+ * @param {string | null} [accreditationNumber]
+ */
+const summaryLogFor = (fileId, accreditationNumber = null) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  ...(accreditationId && { accreditationId })
+  organisationNumber: '500001',
+  registrationNumber: 'REG-1',
+  accreditationNumber
+})
+
+/** A summary log from before the accreditation was recorded on it. */
+const legacySummaryLogFor = (fileId) => ({
+  file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
+  organisationNumber: '500001',
+  registrationNumber: 'REG-1'
 })
 
 const reprocessorInput = (rows) =>
@@ -85,19 +128,7 @@ describe('syncFromSummaryLog', () => {
       commitSummaryLogSubmittedEvent: vi.fn()
     }
     organisationsRepository = {
-      findById: vi.fn().mockResolvedValue({
-        id: 'org-1',
-        orgId: 500001,
-        registrations: [{ id: 'reg-1', registrationNumber: 'REG-1' }],
-        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
-      }),
-      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
-      findAccreditationById: vi.fn().mockResolvedValue({
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: []
-      })
+      findByOrganisationNumber: vi.fn().mockResolvedValue(organisationWith())
     }
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
@@ -150,7 +181,7 @@ describe('syncFromSummaryLog', () => {
       ])
     )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
 
     const [rowState] =
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
@@ -197,17 +228,17 @@ describe('syncFromSummaryLog', () => {
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
     )
-    organisationsRepository.findById.mockResolvedValue({
-      id: 'org-1',
-      orgId: 500001,
-      registrations: [{ id: 'reg-1', registrationNumber: null }],
-      accreditations: []
-    })
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: { accreditationId: 'acc-1' },
+        accreditations: [{ id: 'acc-1', accreditationNumber: null }]
+      })
+    )
 
     await expect(
-      makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+      makeSync({ extractor })(legacySummaryLogFor(fileId), TEST_USER)
     ).rejects.toThrow(
-      'Cannot store row states without their numbers: registration reg-1 has no registration number'
+      'Cannot store row states without their numbers: accreditation acc-1 has no accreditation number'
     )
     expect(
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
@@ -295,7 +326,7 @@ describe('syncFromSummaryLog', () => {
       data: {}
     })
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     expect(
@@ -362,7 +393,7 @@ describe('syncFromSummaryLog', () => {
     ])
   })
 
-  it('updates waste balances when accreditationId is present', async () => {
+  it('updates waste balances when the summary log names an accreditation', async () => {
     const fileId = 'file-wb'
     const extractor = extractorFor(
       fileId,
@@ -371,7 +402,7 @@ describe('syncFromSummaryLog', () => {
       ])
     )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -382,15 +413,13 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: {
-          id: 'acc-default',
-          validFrom: '2023-01-01',
-          validTo: '2023-12-31',
-          statusHistory: []
-        },
+        accreditation: ACCREDITATION,
         overseasSites: {},
         summaryLogId: fileId,
-        numbers: {
+        ledgerId: {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1',
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
           accreditationNumber: 'ACC-1'
@@ -412,11 +441,15 @@ describe('syncFromSummaryLog', () => {
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
     }
-    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
-      overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
-    })
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
+        }
+      })
+    )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'acc-1'), TEST_USER)
+    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
@@ -452,7 +485,29 @@ describe('syncFromSummaryLog', () => {
     )
   })
 
-  it('throws when accreditationId exists but accreditation is not found', async () => {
+  it('throws when no organisation holds the organisation number', async () => {
+    const fileId = 'file-no-org'
+    const extractor = extractorFor(fileId, reprocessorInput([]))
+    organisationsRepository.findByOrganisationNumber.mockResolvedValue(null)
+
+    await expect(
+      makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+    ).rejects.toThrow('Organisation not found: 500001')
+  })
+
+  it('throws when the organisation holds no registration with the number', async () => {
+    const fileId = 'file-no-reg'
+    const extractor = extractorFor(fileId, reprocessorInput([]))
+
+    await expect(
+      makeSync({ extractor })(
+        { ...summaryLogFor(fileId), registrationNumber: 'REG-MISSING' },
+        TEST_USER
+      )
+    ).rejects.toThrow('Registration not found: REG-MISSING')
+  })
+
+  it('throws when the organisation holds no accreditation with the number', async () => {
     const fileId = 'file-no-accred'
     const extractor = extractorFor(
       fileId,
@@ -460,22 +515,73 @@ describe('syncFromSummaryLog', () => {
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
     )
-    organisationsRepository.findAccreditationById.mockResolvedValue(null)
 
     await expect(
-      makeSync({ extractor })(summaryLogFor(fileId, 'acc-missing'), TEST_USER)
-    ).rejects.toThrow('Accreditation not found: acc-missing')
+      makeSync({ extractor })(summaryLogFor(fileId, 'ACC-MISSING'), TEST_USER)
+    ).rejects.toThrow('Accreditation not found: ACC-MISSING')
   })
 
-  it('resolves accreditationId from the registration when absent on the summary log', async () => {
-    const fileId = 'file-resolve-accred'
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: reprocessorInput([])
+  describe('a summary log from before the accreditation was recorded on it', () => {
+    const rows = reprocessorInput([
+      receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+    ])
+
+    it("writes to the registration's linked accreditation", async () => {
+      const fileId = 'file-legacy-linked'
+      organisationsRepository.findByOrganisationNumber.mockResolvedValue(
+        organisationWith({ registration: { accreditationId: 'acc-1' } })
+      )
+
+      await makeSync({ extractor: extractorFor(fileId, rows) })(
+        legacySummaryLogFor(fileId),
+        TEST_USER
+      )
+
+      const [rowState] =
+        await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          '500001',
+          'REG-1',
+          fileId
+        )
+      expect(rowState).toMatchObject({
+        accreditationId: 'acc-1',
+        accreditationNumber: 'ACC-1'
+      })
     })
 
-    await makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
+    it('writes registered-only when the registration links no accreditation', async () => {
+      const fileId = 'file-legacy-unlinked'
 
-    expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
+      await makeSync({ extractor: extractorFor(fileId, rows) })(
+        legacySummaryLogFor(fileId),
+        TEST_USER
+      )
+
+      const [rowState] =
+        await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+          '500001',
+          'REG-1',
+          fileId
+        )
+      expect(rowState).toMatchObject({
+        accreditationId: null,
+        accreditationNumber: null
+      })
+    })
+
+    it('throws when the linked accreditation is not on the organisation', async () => {
+      const fileId = 'file-legacy-gone'
+      organisationsRepository.findByOrganisationNumber.mockResolvedValue(
+        organisationWith({ registration: { accreditationId: 'acc-gone' } })
+      )
+
+      await expect(
+        makeSync({ extractor: extractorFor(fileId, rows) })(
+          legacySummaryLogFor(fileId),
+          TEST_USER
+        )
+      ).rejects.toThrow('Accreditation not found: acc-gone')
+    })
   })
 
   describe('return value (created/updated counts against the committed head)', () => {
