@@ -13,7 +13,6 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
@@ -162,10 +161,6 @@ describe('report routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation),
-          partialMock(otherOrganisation)
-        ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(otherOrganisation)

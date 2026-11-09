@@ -8,7 +8,6 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -137,9 +136,6 @@ const createServer = async ({
 
   const server = await createTestServer({
     repositories: {
-      organisationsRepository: createInMemoryOrganisationsRepository([
-        partialMock(org)
-      ]),
       organisationReadRepository: await organisationReadRepositoryOf([
         partialMock(org)
       ]),
