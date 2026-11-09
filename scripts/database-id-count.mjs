@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url'
 
 const TEST_CODE =
   /\.test\.js$|\.contract\.js$|test-helpers|test-fixtures|test-data|\/contract\/|\/fixtures\/|^src\/test\//
-const MONGODB_ADAPTER = /mongodb[^/]*$/
+const MONGODB_ADAPTER = /mongo[^/]*$/
 
 const DATABASE_ID = /(organisation|registration|accreditation)Id/i
 const ROUTE_PATH_PARAMETER =
@@ -83,7 +83,7 @@ export const MEASURES = [
 ]
 
 const SCOPE =
-  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The MongoDB adapters are left out too: any file whose name contains `mongodb`.'
+  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The MongoDB adapters are left out too: any file whose name contains `mongo`.'
 
 /** @param {string} path */
 export const isCounted = (path) =>
@@ -116,19 +116,20 @@ const describeChange = (change) =>
 
 /**
  * @param {number[]} head
- * @param {number[]} main
+ * @param {number[]} base
+ * @param {string} baseName
  */
-export const comment = (head, main) =>
+export const comment = (head, base, baseName) =>
   [
     '## Database ids and raw documents outside the MongoDB adapters',
     '',
     'Advisory only. These count the code that still handles organisations, registrations and accreditations by database id, or works with documents straight from the database. The aim for each is zero.',
     '',
-    '| | This pull request | main | Change |',
+    `| | This pull request | ${baseName} | Change |`,
     '|---|---|---|---|',
     ...MEASURES.map(
       ({ label }, i) =>
-        `| ${label} | ${head[i]} | ${main[i]} | ${describeChange(head[i] - main[i])} |`
+        `| ${label} | ${head[i]} | ${base[i]} | ${describeChange(head[i] - base[i])} |`
     ),
     '',
     '<details><summary>How each count works</summary>',
@@ -142,8 +143,14 @@ export const comment = (head, main) =>
   ].join('\n')
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [head, main] = process.argv.slice(2)
+  const [head, base, baseName] = process.argv.slice(2)
+  if (!baseName) {
+    console.error(
+      'Usage: database-id-count.mjs <head dir> <base dir> <base branch>'
+    )
+    process.exit(1)
+  }
   process.stdout.write(
-    comment(measure(readRepo(head)), measure(readRepo(main ?? head)))
+    comment(measure(readRepo(head)), measure(readRepo(base)), baseName)
   )
 }

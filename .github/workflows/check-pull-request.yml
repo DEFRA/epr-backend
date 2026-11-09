@@ -163,7 +163,9 @@ jobs:
           path: base
 
       - name: Count database ids
-        run: node scripts/database-id-count.mjs . base | tee "$RUNNER_TEMP/database-id-count.md" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/database-id-count.mjs . base "$BASE_REF" | tee "$RUNNER_TEMP/database-id-count.md" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:

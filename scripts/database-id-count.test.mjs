@@ -27,6 +27,8 @@ describe('isCounted', () => {
     'src/routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js',
     'src/data/fixtures/organisation.json',
     'src/test/create-test-server.js',
+    'src/common/helpers/mongo-client.js',
+    'src/common/helpers/plugins/mongo-db-plugin.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {
     expect(isCounted(path)).toBe(false)
@@ -130,7 +132,7 @@ describe('comment', () => {
   const main = MEASURES.map(() => 42)
 
   it('shows each count on both refs and the change against main', () => {
-    const body = comment([40, 43, 42, 42], main)
+    const body = comment([40, 43, 42, 42], main, 'main')
 
     expect(body).toContain('| Lines naming a database id | 40 | 42 | down 2 |')
     expect(body).toContain(
@@ -140,7 +142,7 @@ describe('comment', () => {
   })
 
   it('states the rule behind each count', () => {
-    const body = comment(main, main)
+    const body = comment(main, main, 'main')
 
     for (const { rule } of MEASURES) {
       expect(body).toContain(rule)
