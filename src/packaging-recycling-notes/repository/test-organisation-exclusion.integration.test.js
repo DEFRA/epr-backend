@@ -15,6 +15,8 @@ import {
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from '#packaging-recycling-notes/routes/test-helpers.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
 const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500001')
@@ -51,6 +53,7 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
     server = undefined
   })
 
+  /** @param {OrganisationNumber[]} excludeOrganisationNumbers */
   async function createServerWithExclusion(excludeOrganisationNumbers) {
     const repositoryFactory = await createPackagingRecyclingNotesRepository(
       db,
