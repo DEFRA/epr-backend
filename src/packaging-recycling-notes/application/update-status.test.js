@@ -814,9 +814,6 @@ describe('updatePrnStatus', () => {
       ])(createMockLogger())
       const ledgerRepository = createInMemoryLedgerRepository([
         {
-          organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID,
-          accreditationId: ACC_ID,
           organisationNumber: DEFAULT_ORG_NUMBER,
           registrationNumber: DEFAULT_REG_NUMBER,
           accreditationNumber: LEDGER.accreditationNumber,
@@ -845,7 +842,6 @@ describe('updatePrnStatus', () => {
         logger: createMockLogger(),
         id: PRN_ID,
         organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
         accreditationId: ACC_ID,
         user: USER,
         prnRepository,

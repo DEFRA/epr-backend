@@ -28,7 +28,7 @@ import { catchUpPrnProjection } from './get-projected-prn.js'
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
- * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
@@ -70,7 +70,6 @@ export const FOLLOW_RAISE_POOL_STATUSES = new Set([
  *   logger: import('#common/hapi-types.js').TypedLogger,
  *   id: string,
  *   organisationId: string,
- *   registrationId: string,
  *   accreditationId: string,
  *   newStatus: PrnStatus,
  *   actor: import('#packaging-recycling-notes/domain/model.js').PrnActor,
@@ -89,7 +88,9 @@ export const FOLLOW_RAISE_POOL_STATUSES = new Set([
  * loaded inside phase 1, after the balance is read for update.
  *
  * @typedef {{
- *   ledgerId: NumberedLedgerId & { accreditationId: string, accreditationNumber: AccreditationNumber },
+ *   ledgerId: WasteBalanceLedgerId & { accreditationNumber: AccreditationNumber },
+ *   organisationId: string,
+ *   accreditationId: string,
  *   prnRepository: PackagingRecyclingNotesRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   service: WasteBalanceService,
@@ -156,7 +157,6 @@ async function buildTransitionContext({
   newStatus,
   actor,
   organisationId,
-  registrationId,
   accreditationId,
   user,
   id,
@@ -181,12 +181,9 @@ async function buildTransitionContext({
     providedPrn,
     newStatus,
     actor,
-    ledgerId: {
-      organisationId,
-      registrationId,
-      accreditationId,
-      ...prnLedgerId(stored)
-    },
+    ledgerId: prnLedgerId(stored),
+    organisationId,
+    accreditationId,
     user,
     now: updatedAt ?? new Date(),
     id,
@@ -206,7 +203,7 @@ async function buildTransitionContext({
  * @returns {Promise<{ updatedPrn: PackagingRecyclingNote, fromStatus: PrnStatus }>}
  */
 async function applyPrnTransition(ctx) {
-  const { newStatus, actor, user, now, ledgerId, obligationYear } = ctx
+  const { newStatus, actor, user, now, accreditationId, obligationYear } = ctx
 
   // Phase 1 — gather.
   const { balance, append, prn, issuance, pool } =
@@ -228,7 +225,7 @@ async function applyPrnTransition(ctx) {
   })
 
   if ('error' in outcome) {
-    throw toTransitionError(outcome.error, ledgerId.accreditationId)
+    throw toTransitionError(outcome.error, accreditationId)
   }
 
   // Phase 3 — persist, on whichever arm the ruling named.
@@ -279,7 +276,15 @@ async function applyPrnTransition(ctx) {
  * }>}
  */
 async function gatherTransitionState(ctx) {
-  const { service, organisationsRepository, newStatus, ledgerId, user } = ctx
+  const {
+    service,
+    organisationsRepository,
+    newStatus,
+    ledgerId,
+    organisationId,
+    accreditationId,
+    user
+  } = ctx
 
   const { balance, append } = await service.readBalanceForUpdate(ledgerId, user)
 
@@ -300,8 +305,8 @@ async function gatherTransitionState(ctx) {
     (prn.isDecemberWaste && newStatus === PRN_STATUS.AWAITING_AUTHORISATION)
   const accreditation = needsAccreditation
     ? await organisationsRepository.findAccreditationById(
-        ledgerId.organisationId,
-        ledgerId.accreditationId
+        organisationId,
+        accreditationId
       )
     : undefined
 
@@ -357,7 +362,7 @@ async function resolveTransitionPool(
  * general.
  *
  * @param {WasteBalanceService} service
- * @param {NumberedLedgerId & { accreditationNumber: AccreditationNumber }} ledgerId
+ * @param {WasteBalanceLedgerId & { accreditationNumber: AccreditationNumber }} ledgerId
  * @param {string} prnId
  * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').Pool | undefined>}
  */

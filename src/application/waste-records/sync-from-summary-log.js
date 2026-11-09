@@ -339,8 +339,7 @@ const countRecordChanges = async ({
  * zero-delta — the submission is still recorded, it just moves no tonnage.
  *
  * @param {object} params
- * @param {{ file: { id: SummaryLogFileId }, organisationId: string, registrationId: string }} params.summaryLog
- * @param {string | undefined} params.accreditationId
+ * @param {{ file: { id: SummaryLogFileId } }} params.summaryLog
  * @param {import('#domain/organisations/numbers.js').RequiredNumbers} params.numbers
  * @param {import('#domain/organisations/accreditation.js').Accreditation | null} params.accreditation
  * @param {ValidatedWasteRecord[]} params.wasteRecords
@@ -352,7 +351,6 @@ const countRecordChanges = async ({
  */
 const commitStateAndBalance = async ({
   summaryLog,
-  accreditationId,
   numbers,
   accreditation,
   wasteRecords,
@@ -366,12 +364,7 @@ const commitStateAndBalance = async ({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
     accreditation,
-    ledgerId: {
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: accreditationId ?? null,
-      ...numbers
-    },
+    ledgerId: numbers,
     overseasSites,
     summaryLogId: summaryLog.file.id
   })
@@ -389,12 +382,7 @@ const commitStateAndBalance = async ({
     })
   } else {
     await wasteBalanceService.commitSummaryLogSubmittedEvent(
-      {
-        registrationId: summaryLog.registrationId,
-        accreditationId: null,
-        organisationId: summaryLog.organisationId,
-        ...numbers
-      },
+      numbers,
       { summaryLogId: summaryLog.file.id, creditTotal: 0 },
       {
         id: user.id,
@@ -501,7 +489,6 @@ export const syncFromSummaryLog = (dependencies) => {
     // accredited balance-bearing ones.
     await commitStateAndBalance({
       summaryLog,
-      accreditationId,
       numbers,
       accreditation,
       wasteRecords,

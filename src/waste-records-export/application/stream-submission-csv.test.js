@@ -11,6 +11,7 @@ import {
 import { encodeRow } from './stream-csv-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -35,9 +36,6 @@ const collect = async (iterable) => {
  */
 const rowState = (overrides = {}) => ({
   id: 'row-state-1',
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null,
   organisationNumber: toOrganisationNumber('500001'),
   registrationNumber: toRegistrationNumber('REG-001'),
   accreditationNumber: null,
@@ -135,20 +133,29 @@ describe('streamSubmissionCsv', () => {
     expect(header).not.toContain('OSR Name Revised')
   })
 
-  it('orders rows registered-only first, then by accreditation id, type and natural row id', async () => {
+  it('orders rows registered-only first, then by accreditation number, type and natural row id', async () => {
     const out = await collect(
       streamSubmissionCsv(
         input({
           rowStates: [
-            rowState({ accreditationId: 'acc-b', rowId: '1' }),
-            rowState({ accreditationId: 'acc-a', rowId: '10' }),
             rowState({
-              accreditationId: 'acc-a',
+              accreditationNumber: toAccreditationNumber('ACC-B'),
+              rowId: '1'
+            }),
+            rowState({
+              accreditationNumber: toAccreditationNumber('ACC-A'),
+              rowId: '10'
+            }),
+            rowState({
+              accreditationNumber: toAccreditationNumber('ACC-A'),
               rowId: '1',
               wasteRecordType: WASTE_RECORD_TYPE.PROCESSED
             }),
-            rowState({ accreditationId: 'acc-a', rowId: '9' }),
-            rowState({ accreditationId: null, rowId: '5' })
+            rowState({
+              accreditationNumber: toAccreditationNumber('ACC-A'),
+              rowId: '9'
+            }),
+            rowState({ accreditationNumber: null, rowId: '5' })
           ]
         })
       )
@@ -177,7 +184,7 @@ describe('streamSubmissionCsv', () => {
         input({
           rowStates: [
             rowState({
-              accreditationId: 'acc-1',
+              accreditationNumber: toAccreditationNumber('ACC-1'),
               classification: {
                 outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
                 reasons: [],

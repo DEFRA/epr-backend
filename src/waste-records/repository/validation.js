@@ -10,7 +10,8 @@ import {
  */
 export const validateSummaryLogRowStateInsert = (data) => {
   const { error, value } = summaryLogRowStateInsertSchema.validate(data, {
-    abortEarly: false
+    abortEarly: false,
+    stripUnknown: true
   })
 
   if (error) {
@@ -25,8 +26,10 @@ export const validateSummaryLogRowStateInsert = (data) => {
  * @returns {import('./schema.js').SummaryLogRowState}
  */
 export const validateSummaryLogRowStateRead = (data) => {
+  // Documents written before the ids were dropped still carry them.
   const { error, value } = summaryLogRowStateReadSchema.validate(data, {
-    abortEarly: false
+    abortEarly: false,
+    stripUnknown: true
   })
 
   if (error) {

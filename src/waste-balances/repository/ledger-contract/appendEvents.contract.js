@@ -34,8 +34,8 @@ export const testAppendEventsBehaviour = (it) => {
       const [stored] = await repository.appendEvents([event])
 
       expect(stored).not.toHaveProperty('id')
-      expect(stored.registrationId).toBe('reg-append')
-      expect(stored.accreditationId).toBe('acc-append')
+      expect(stored.registrationNumber).toBe('REG-reg-append')
+      expect(stored.accreditationNumber).toBe('ACC-acc-append')
       expect(stored.number).toBe(1)
       expect(stored.kind).toBe(event.kind)
       expect(stored.payload).toEqual(event.payload)

@@ -69,9 +69,9 @@ describe('createWasteBalanceService', () => {
       )
 
       expect(event.number).toBe(1)
-      expect(event.organisationId).toBe('org-1')
-      expect(event.registrationId).toBe('reg-1')
-      expect(event.accreditationId).toBe('acc-1')
+      expect(event).not.toHaveProperty('organisationId')
+      expect(event).not.toHaveProperty('registrationId')
+      expect(event).not.toHaveProperty('accreditationId')
       expect(event.organisationNumber).toBe(ledgerId.organisationNumber)
       expect(event.registrationNumber).toBe('REG-reg-1')
       expect(event.accreditationNumber).toBe('ACC-acc-1')
@@ -197,7 +197,11 @@ describe('createWasteBalanceService', () => {
       expect(result.status).toBe(PRN_COMMAND_STATUS.COMMITTED)
       const [event] = result.events
       expect(event.number).toBe(2)
-      expect(event).toMatchObject(ledgerId)
+      expect(event).toMatchObject({
+        organisationNumber: ledgerId.organisationNumber,
+        registrationNumber: ledgerId.registrationNumber,
+        accreditationNumber: ledgerId.accreditationNumber
+      })
       expect(event.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
       expect(event.payload).toEqual({ prnId: 'prn-1', amount: 100 })
       expect(event.closingBalance).toEqual({

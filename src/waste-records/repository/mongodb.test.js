@@ -114,18 +114,38 @@ describe('ensureSummaryLogRowStatesCollection', () => {
     summaryLogRowStatesCollection
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'summary_log_row_state_identity')).toEqual({
-      organisationId: 1,
-      registrationId: 1,
-      accreditationId: 1,
+    expect(
+      indexKeyFor(indexes, 'summary_log_row_state_identity_by_number')
+    ).toEqual({
+      organisationNumber: 1,
+      registrationNumber: 1,
+      accreditationNumber: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     })
     expect(
-      indexes.find((idx) => idx.name === 'summary_log_row_state_identity')
-        ?.unique
+      indexes.find(
+        (idx) => idx.name === 'summary_log_row_state_identity_by_number'
+      )?.unique
     ).toBe(true)
+  })
+
+  it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {
+    mongoClient,
+    summaryLogRowStatesCollection
+  }) => {
+    await summaryLogRowStatesCollection.createIndex(
+      { organisationId: 1, registrationId: 1, rowId: 1, contentHash: 1 },
+      { name: 'summary_log_row_state_identity', unique: true }
+    )
+
+    await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+
+    const names = (await summaryLogRowStatesCollection.indexes()).map(
+      ({ name }) => name
+    )
+    expect(names).not.toContain('summary_log_row_state_identity')
   })
 
   it('is safe to call multiple times', async (/** @type {*} */ {

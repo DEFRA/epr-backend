@@ -21,13 +21,11 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @property {number} transactionAmount
  */
 
-/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
-
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * The numbers a row state holds beside its ledger identity's ids. A
- * registered-only row state's accreditation number is `null`.
+ * The numbers that identify a row state's ledger. A registered-only row
+ * state's accreditation number is `null`.
  *
  * @typedef {{
  *   organisationNumber: OrganisationNumber,
@@ -55,7 +53,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /**
- * @typedef {RegistrationOrAccreditationId & {
+ * @typedef {{
  *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
  *   rowId: string,
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
@@ -67,7 +65,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Shape accepted by the row-states schema for a document to store — a ledger
- * identity and its numbers, a row entry's content + classification, and the
+ * identity, a row entry's content + classification, and the
  * membership of submissions that produced this exact state.
  *
  * @typedef {RowStateFields & RowStateNumbers} SummaryLogRowStateInsert
@@ -97,17 +95,10 @@ const classificationSchema = Joi.object({
 const numbersKeys = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.when('accreditationId', {
-    is: null,
-    then: Joi.valid(null).required(),
-    otherwise: Joi.string().required()
-  })
+  accreditationNumber: Joi.string().allow(null).required()
 }
 
 const rowStateBaseSchema = Joi.object({
-  organisationId: Joi.string().required(),
-  registrationId: Joi.string().required(),
-  accreditationId: Joi.string().allow(null).required(),
   wasteRecordType: Joi.string()
     .valid(...Object.values(WASTE_RECORD_TYPE))
     .required(),
