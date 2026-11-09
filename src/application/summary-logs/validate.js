@@ -328,7 +328,6 @@ const performValidationChecks = async ({
     const dataResult = await transformAndValidateData({
       summaryLog,
       validatedData,
-      registration,
       summaryLogRowStatesRepository,
       ledgerRepository
     })
@@ -521,19 +520,17 @@ const persistValidationResult = async ({
  * @param {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
- *   summaryLog: SubmittedSummaryLog,
- *   registration: Registration | undefined
+ *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<Map<string, import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState>>}
  */
 const loadSubmittedRowStatesByKey = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  summaryLog,
-  registration
+  summaryLog
 }) => {
   const submittedRowStates = await summaryLogRowStatesForRegistration({
-    ...ledgerIdFor(summaryLog, registration),
+    ...ledgerIdFor(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
   })
@@ -585,8 +582,7 @@ const classifyAndPersistResult = async ({
   const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
     ledgerRepository,
     summaryLogRowStatesRepository,
-    summaryLog,
-    registration
+    summaryLog
   })
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
