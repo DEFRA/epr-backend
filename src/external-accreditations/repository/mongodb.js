@@ -1,5 +1,8 @@
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
-import { validateExternalAccreditation } from './validation.js'
+import {
+  normaliseRegistrationNumber,
+  validateExternalAccreditation
+} from './validation.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
@@ -43,6 +46,12 @@ export const createMongoExternalAccreditationsRepository = async (db) => {
     },
 
     remove: (registrationNumber, year) =>
-      collection.findOneAndDelete({ registrationNumber, year }, withoutId)
+      collection.findOneAndDelete(
+        {
+          registrationNumber: normaliseRegistrationNumber(registrationNumber),
+          year
+        },
+        withoutId
+      )
   })
 }

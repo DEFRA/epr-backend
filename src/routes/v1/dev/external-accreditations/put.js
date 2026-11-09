@@ -2,12 +2,11 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   accreditationFields,
   statusTimelineSchema
 } from '#external-accreditations/repository/schema.js'
-import { normalisedRegistrationNumberSchema } from '#repositories/organisations/schema/numbers.js'
+import { registrationParams } from '#routes/organisations/natural-keys.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -31,9 +30,7 @@ export const externalAccreditationPath =
   '/v1/dev/external-accreditations/{registrationNumber}/{year}'
 
 export const externalAccreditationParams = Joi.object({
-  registrationNumber: normalisedRegistrationNumberSchema
-    .custom(toRegistrationNumber)
-    .required(),
+  registrationNumber: registrationParams.registrationNumber,
   year: yearSchema().required()
 })
 

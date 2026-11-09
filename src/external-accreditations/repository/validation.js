@@ -1,8 +1,21 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { normalisedRegistrationNumberSchema } from '#repositories/organisations/schema/numbers.js'
 import { externalAccreditationSchema } from './schema.js'
 
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+
+/**
+ * @param {RegistrationNumber} registrationNumber
+ * @returns {RegistrationNumber}
+ */
+export const normaliseRegistrationNumber = (registrationNumber) =>
+  toRegistrationNumber(
+    Joi.attempt(registrationNumber, normalisedRegistrationNumberSchema)
+  )
 
 /**
  * @param {ExternalAccreditation} accreditation

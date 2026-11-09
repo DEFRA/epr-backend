@@ -51,27 +51,6 @@ describe('DELETE /v1/dev/external-accreditations/{registrationNumber}/{year}', (
     )
   })
 
-  it('removes the accreditation when the registration number differs in case and spacing', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith(
-      { devEndpoints: true },
-      held
-    )
-    const looseNumber = encodeURIComponent(
-      ` ${held.registrationNumber.toLowerCase()} `
-    )
-
-    const response = await server.inject({
-      method: 'DELETE',
-      url: `/v1/dev/external-accreditations/${looseNumber}/${held.year}`
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-    expect(externalAccreditationsRepository.remove).toHaveBeenCalledWith(
-      held.registrationNumber,
-      held.year
-    )
-  })
-
   it('is not found when no accreditation is held for that year', async () => {
     const { server, externalAccreditationsRepository } = await serverWith(
       { devEndpoints: true },

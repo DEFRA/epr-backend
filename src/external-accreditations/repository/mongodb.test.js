@@ -173,6 +173,22 @@ describe('mongodb external accreditations repository', () => {
       expect(await held()).toStrictEqual([followingYear])
     })
 
+    it('matches the registration number trimmed and upper-cased, as it is held', async ({
+      externalAccreditationsRepository,
+      held
+    }) => {
+      await externalAccreditationsRepository.upsert(
+        buildExternalAccreditation()
+      )
+
+      await externalAccreditationsRepository.remove(
+        toRegistrationNumber(` ${registrationNumber.toLowerCase()} `),
+        year
+      )
+
+      expect(await held()).toStrictEqual([])
+    })
+
     it('returns null when no accreditation is held for the year', async ({
       externalAccreditationsRepository
     }) => {
