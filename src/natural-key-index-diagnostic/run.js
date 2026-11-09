@@ -45,7 +45,8 @@ const runDiagnostic = async (server) => {
       `prns=${diagnosis.prns}`,
       `prnsWithoutNumbers=${diagnosis.prnsWithoutNumbers}`,
       `ledgerEvents=${diagnosis.ledgerEvents}`,
-      `ledgerEventsWithoutNumbers=${diagnosis.ledgerEventsWithoutNumbers}`
+      `ledgerEventsWithoutNumbers=${diagnosis.ledgerEventsWithoutNumbers}`,
+      `ledgerSlotClashes=${diagnosis.ledgerSlotClashes}`
     ].join(' ')
   })
 }
