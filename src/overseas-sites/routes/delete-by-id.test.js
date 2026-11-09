@@ -1,19 +1,10 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach
-} from 'vitest'
+import { vi } from 'vitest'
 
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { it } from '#vite/fixtures/server.js'
 import { overseasSiteDeletePath } from './delete-by-id.js'
 
 const mockCdpAuditing = vi.fn()
@@ -23,155 +14,121 @@ vi.mock('@defra/cdp-auditing', () => ({
 }))
 
 describe(`${overseasSiteDeletePath} route`, () => {
-  setupAuthContext()
+  const unknownSiteUrl = '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa'
 
-  describe('when feature flag is enabled', () => {
-    let server
-    let overseasSitesRepository
-
-    beforeAll(async () => {
-      overseasSitesRepository = createInMemoryOverseasSitesRepository()()
-      vi.spyOn(overseasSitesRepository, 'remove')
-
-      server = await createTestServer({
-        repositories: {
-          overseasSitesRepository: () => overseasSitesRepository
-        }
-      })
+  const deleteSite = (server, id) =>
+    server.inject({
+      method: 'DELETE',
+      url: `/v1/overseas-sites/${id}`,
+      ...asServiceMaintainer()
     })
 
-    afterEach(() => {
-      vi.clearAllMocks()
+  describe('successful requests', () => {
+    it('returns 204 when site is deleted', async ({ server }) => {
+      const created =
+        await server.app.overseasSitesRepository.create(buildOverseasSite())
+
+      const response = await deleteSite(server, created.id)
+
+      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
     })
 
-    afterAll(async () => {
-      await server.stop()
+    it('removes the site from the repository', async ({ server }) => {
+      const created =
+        await server.app.overseasSitesRepository.create(buildOverseasSite())
+
+      await deleteSite(server, created.id)
+
+      const found = await server.app.overseasSitesRepository.findById(
+        created.id
+      )
+      expect(found).toBeNull()
     })
 
-    describe('successful requests', () => {
-      it('returns 204 when site is deleted', async () => {
-        const created =
-          await overseasSitesRepository.create(buildOverseasSite())
+    it('records audit event for site deletion', async ({ server }) => {
+      const created =
+        await server.app.overseasSitesRepository.create(buildOverseasSite())
 
-        const response = await server.inject({
-          method: 'DELETE',
-          url: `/v1/overseas-sites/${created.id}`,
-          ...asServiceMaintainer()
-        })
+      const response = await deleteSite(server, created.id)
 
-        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-      })
+      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-      it('removes the site from the repository', async () => {
-        const created =
-          await overseasSitesRepository.create(buildOverseasSite())
-
-        await server.inject({
-          method: 'DELETE',
-          url: `/v1/overseas-sites/${created.id}`,
-          ...asServiceMaintainer()
-        })
-
-        const found = await overseasSitesRepository.findById(created.id)
-        expect(found).toBeNull()
-      })
-
-      it('records audit event for site deletion', async () => {
-        const created =
-          await overseasSitesRepository.create(buildOverseasSite())
-
-        const response = await server.inject({
-          method: 'DELETE',
-          url: `/v1/overseas-sites/${created.id}`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-
-        expect(mockCdpAuditing).toHaveBeenCalledWith(
-          expect.objectContaining({
-            event: {
-              category: 'entity',
-              subCategory: 'overseas-sites',
-              action: 'delete'
-            },
-            context: expect.objectContaining({
-              siteId: created.id,
-              site: expect.objectContaining({ name: created.name })
-            })
+      expect(mockCdpAuditing).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: {
+            category: 'entity',
+            subCategory: 'overseas-sites',
+            action: 'delete'
+          },
+          context: expect.objectContaining({
+            siteId: created.id,
+            site: expect.objectContaining({ name: created.name })
           })
-        )
+        })
+      )
+    })
+  })
+
+  describe('not found', () => {
+    it('returns 404 when site does not exist', async ({ server }) => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: unknownSiteUrl,
+        ...asServiceMaintainer()
       })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
+  describe('authorisation', () => {
+    it('returns 401 when not authenticated', async ({ server }) => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: unknownSiteUrl
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    describe('not found', () => {
-      it('returns 404 when site does not exist', async () => {
-        const response = await server.inject({
-          method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    it('returns 403 when authenticated as standard user', async ({
+      server
+    }) => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: unknownSiteUrl,
+        ...asOperator()
       })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+  })
+
+  describe('error handling', () => {
+    it('re-throws Boom errors from repository', async ({ server }) => {
+      const created =
+        await server.app.overseasSitesRepository.create(buildOverseasSite())
+      vi.spyOn(
+        server.app.overseasSitesRepository,
+        'remove'
+      ).mockRejectedValueOnce(Boom.badRequest('Invalid ID'))
+
+      const response = await deleteSite(server, created.id)
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     })
 
-    describe('authorisation', () => {
-      it('returns 401 when not authenticated', async () => {
-        const response = await server.inject({
-          method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa'
-        })
+    it('returns 500 for unexpected errors', async ({ server }) => {
+      const created =
+        await server.app.overseasSitesRepository.create(buildOverseasSite())
+      vi.spyOn(
+        server.app.overseasSitesRepository,
+        'remove'
+      ).mockRejectedValueOnce(new Error('Database connection failed'))
 
-        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      })
+      const response = await deleteSite(server, created.id)
 
-      it('returns 403 when authenticated as standard user', async () => {
-        const response = await server.inject({
-          method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
-          ...asOperator()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-      })
-    })
-
-    describe('error handling', () => {
-      it('re-throws Boom errors from repository', async () => {
-        const created =
-          await overseasSitesRepository.create(buildOverseasSite())
-
-        const Boom = await import('@hapi/boom')
-        overseasSitesRepository.remove.mockRejectedValueOnce(
-          Boom.default.badRequest('Invalid ID')
-        )
-
-        const response = await server.inject({
-          method: 'DELETE',
-          url: `/v1/overseas-sites/${created.id}`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-      })
-
-      it('returns 500 for unexpected errors', async () => {
-        const created =
-          await overseasSitesRepository.create(buildOverseasSite())
-
-        overseasSitesRepository.remove.mockRejectedValueOnce(
-          new Error('Database connection failed')
-        )
-
-        const response = await server.inject({
-          method: 'DELETE',
-          url: `/v1/overseas-sites/${created.id}`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-      })
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
   })
 })
