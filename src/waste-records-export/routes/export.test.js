@@ -44,7 +44,7 @@ const buildRegistration = (overrides = {}) => {
   return {
     ...exporterRegistration,
     id: 'reg-1',
-    registrationNumber: `REG-${overrides.id ?? 'reg-1'}`,
+    registrationNumber: toRegistrationNumber(`REG-${overrides.id ?? 'reg-1'}`),
     material: 'plastic',
     submittedToRegulator: 'ea',
     accreditation: null,
