@@ -24,10 +24,7 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  TEST_ORGANISATION_NUMBER,
-  buildAccreditationSnapshot
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 import {
@@ -117,11 +114,15 @@ const issuedNote = createMockIssuedPrn({
   prnNumber: 'ER26000123',
   organisation: {
     id: organisation.id,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: accreditedLedgerId.organisationNumber,
     name: 'A reprocessor'
   },
   registrationId: accreditedRegistration.id,
-  accreditation: buildAccreditationSnapshot({ id: accredited.id })
+  registration: { registrationNumber: accreditedLedgerId.registrationNumber },
+  accreditation: buildAccreditationSnapshot({
+    id: accredited.id,
+    accreditationNumber: accreditedLedgerId.accreditationNumber
+  })
 })
 
 /** @param {{ payload: string }} response */

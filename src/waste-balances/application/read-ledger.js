@@ -89,7 +89,7 @@
  * notes are not among them, so a ledger states null for every event of one.
  *
  * @typedef {Object} LedgerNoteReader
- * @property {(params: RegistrationOrAccreditationId & { accreditationId: string, ids: string[] }) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
+ * @property {(params: import('#packaging-recycling-notes/repository/port.js').FindByIdsParams) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
 
 /**
@@ -147,9 +147,10 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
  * @returns {Promise<Map<string, string | null>>}
  */
 const noteNumbersById = async (noteReader, ledgerId, events) => {
-  const { organisationId, registrationId, accreditationId } = ledgerId
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    ledgerId
 
-  if (accreditationId === null) {
+  if (accreditationNumber === null) {
     return new Map()
   }
 
@@ -162,9 +163,9 @@ const noteNumbersById = async (noteReader, ledgerId, events) => {
   }
 
   const notes = await noteReader.findByIds({
-    organisationId,
-    registrationId,
-    accreditationId,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber,
     ids: noteIds
   })
 
