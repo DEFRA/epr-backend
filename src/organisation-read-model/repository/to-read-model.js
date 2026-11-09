@@ -341,7 +341,9 @@ export function toAccreditationEntry(accreditation, { onDrop, today }) {
 /**
  * Until ADR-0051's events exist, the approval after the last `created` takes
  * effect from the record's validFrom, anything recorded before it no later than
- * that, and every other change when it was recorded.
+ * that, and every other change when it was recorded. A re-creation starts the
+ * record again, so a status other than `created` recorded before it is left
+ * out.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
  * @param {string} [validFrom]
@@ -357,15 +359,21 @@ export function toStatusTimeline(statusHistory, validFrom) {
   const approvalAfterLastCreated = recorded.findIndex(
     ({ status }, index) => index > lastCreated && status === 'approved'
   )
-  if (approvalAfterLastCreated >= 0 && validFrom) {
-    const approvedFrom = new Date(validFrom)
+  const startsAgain = approvalAfterLastCreated >= 0 && Boolean(validFrom)
+  if (startsAgain) {
+    const approvedFrom = new Date(/** @type {string} */ (validFrom))
     for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
       entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
     }
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
+  const kept = startsAgain
+    ? recorded.filter(
+        ({ status }, index) => index >= lastCreated || status === 'created'
+      )
+    : recorded
   // A stable sort keeps recorded order among equal times
-  return recorded
+  return kept
     .toSorted(byDate)
     .map(({ status, at }) => ({ status, at: at.toISOString() }))
 }
