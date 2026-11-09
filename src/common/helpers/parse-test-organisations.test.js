@@ -7,7 +7,7 @@ vi.mock('#root/config.js', () => ({
 }))
 
 const { config } = await import('#root/config.js')
-const { parseTestOrganisationIds } =
+const { parseTestOrganisationIds, parseTestOrganisationNumbers } =
   await import('./parse-test-organisations.js')
 
 describe('#parseTestOrganisationIds', () => {
@@ -25,6 +25,12 @@ describe('#parseTestOrganisationIds', () => {
 
   test('filters out non-finite values', () => {
     config.get.mockReturnValue('[999999, "not-a-number", null]')
+
+    expect(parseTestOrganisationIds()).toEqual([999999])
+  })
+
+  test('filters out values that are not whole numbers', () => {
+    config.get.mockReturnValue('[999999, 5.5, 1e21]')
 
     expect(parseTestOrganisationIds()).toEqual([999999])
   })
@@ -70,5 +76,13 @@ describe('#parseTestOrganisationIds', () => {
     expect(() => parseTestOrganisationIds()).toThrow(
       'Invalid testOrganisations configuration: not an array'
     )
+  })
+})
+
+describe('#parseTestOrganisationNumbers', () => {
+  test('gives the organisation number of each test organisation', () => {
+    config.get.mockReturnValue('[999999, "888888"]')
+
+    expect(parseTestOrganisationNumbers()).toEqual(['999999', '888888'])
   })
 })

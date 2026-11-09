@@ -1,5 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 
@@ -15,9 +14,7 @@ export const packagingRecyclingNotesRepositoryPlugin = {
 
     const createRepository = await createPackagingRecyclingNotesRepository(
       db,
-      [...TEST_ORGANISATION_IDS].map((orgId) =>
-        toOrganisationNumber(String(orgId))
-      )
+      TEST_ORGANISATION_NUMBERS
     )
 
     registerDependency(server, 'packagingRecyclingNotesRepository', (request) =>
