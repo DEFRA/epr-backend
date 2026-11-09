@@ -1,8 +1,7 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
-import { statusRanges } from '#organisation-read-model/domain/status-timeline.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -73,7 +72,7 @@ const onePerPeriod = (periods) => {
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[], wholePeriods: boolean }}
  */
 const reportingWindowsFor = (registration, year) => {
-  const windows = registrationStatusWindows(registration, year)
+  const windows = reportStatusWindows(registration, year)
   if (config.get('featureFlags.midYearStatusTransition')) {
     return { ...windows, wholePeriods: false }
   }
@@ -93,8 +92,8 @@ const reportingWindowsFor = (registration, year) => {
 
 /**
  * Whether the accredited report routes serve a month: they need the year's
- * accreditation, and refuse a month ending before the day it was first
- * approved (its validFrom).
+ * accreditation, and refuse a month ending before it took effect (its
+ * validFrom).
  *
  * @param {Registration} registration
  * @param {Year} year
@@ -108,7 +107,9 @@ const servesAccreditedReport = (registration, year) => {
 }
 
 /**
- * The day the year's accreditation was first approved (its validFrom).
+ * The day the year's accreditation took effect: its validFrom, which the read
+ * model dates the approval after its last re-creation at. An approval before a
+ * re-creation does not count.
  *
  * @param {Registration} registration
  * @param {Year} year
@@ -116,7 +117,36 @@ const servesAccreditedReport = (registration, year) => {
  */
 export const accreditedFrom = (registration, year) => {
   const timeline = registration.accreditations[year]?.status.timeline ?? []
-  return statusRanges(timeline, yearBounds(year).end).approved?.[0]?.from
+  const lastCreated = timeline.findLastIndex(
+    ({ status }) => status === 'created'
+  )
+  const approval = timeline
+    .slice(lastCreated + 1)
+    .find(({ status }) => status === 'approved')
+  return approval && calendarDate(approval.at)
+}
+
+/**
+ * The registration's status windows for the year, as reports owe them: an
+ * accredited window from an approval before the accreditation's last
+ * re-creation is not owed, so reports start the accreditation at its
+ * validFrom. Such a window ends before the re-creation, so each window lies
+ * wholly before validFrom or starts on or after it.
+ *
+ * @param {Registration} registration
+ * @param {Year} year
+ * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
+ */
+const reportStatusWindows = (registration, year) => {
+  const windows = registrationStatusWindows(registration, year)
+  const from = accreditedFrom(registration, year)
+  return {
+    ...windows,
+    accredited:
+      from === undefined
+        ? []
+        : windows.accredited.filter(({ to }) => to.localeCompare(from) >= 0)
+  }
 }
 
 /**
@@ -231,7 +261,7 @@ export const requiredReportingPeriods = ({
   cadence,
   now = new Date()
 }) => {
-  const windows = registrationStatusWindows(registration, year)
+  const windows = reportStatusWindows(registration, year)
   const reportingWindows =
     cadence === CADENCE.monthly ? windows.accredited : windows.registeredOnly
   return endedPeriodsIn(cadence, reportingWindows, {

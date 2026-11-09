@@ -22,6 +22,17 @@ import {
 const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
 
 const approvedOn = changeTo('approved')
+const createdOn = changeTo('created')
+
+/**
+ * Approved, sent back to created, and approved again from its validFrom in
+ * July, as the read model dates it.
+ */
+const recreatedAccreditation = () => [
+  approvedOn('2026-02-01'),
+  createdOn('2026-03-01'),
+  approvedOn('2026-07-01')
+]
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
 
@@ -567,6 +578,16 @@ describe('reportingPeriodsByKind', () => {
         expect(result.accredited[0].period).toBe(4)
       })
 
+      it('leaves out a stored report for a month approved before a re-creation', () => {
+        const result = byKind(
+          registeredSinceLastYear(recreatedAccreditation()),
+          [storedMarch]
+        )
+
+        expect(result.accredited.map(({ period }) => period)).not.toContain(3)
+        expect(result.accredited[0].period).toBe(7)
+      })
+
       it('lists a stored report of an accreditation cancelled since', () => {
         const result = byKind(
           registeredSinceLastYear([
@@ -706,6 +727,23 @@ describe('requiredReportingPeriods', () => {
           expect(
             required(accreditedInJuly(), { cadence: 'monthly', period: 6 })
           ).toBe(false)
+        })
+      })
+
+      describe('for an accreditation re-created before its validFrom in July', () => {
+        const recreated = () =>
+          registeredSinceLastYear(recreatedAccreditation())
+
+        it('owes no accredited month approved before the re-creation', () => {
+          expect(required(recreated(), { cadence: 'monthly', period: 2 })).toBe(
+            false
+          )
+        })
+
+        it('owes accredited months from its validFrom', () => {
+          expect(required(recreated(), { cadence: 'monthly', period: 7 })).toBe(
+            true
+          )
         })
       })
     }
