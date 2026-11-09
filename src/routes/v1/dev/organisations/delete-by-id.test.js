@@ -33,7 +33,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
 
     beforeEach(async () => {
       const nonProdDataReset = {
-        deleteByOrgId: async () => stubCounts
+        deleteByOrganisationNumber: async () => stubCounts
       }
       server = await createTestServer({
         config: { featureFlags: { devEndpoints: true } },
@@ -78,11 +78,11 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       })
     })
 
-    it('passes the numeric path id through to the reset module', async () => {
+    it('passes the path id to the reset module as an organisation number', async () => {
       const orgId = 506544
       const received = []
       const nonProdDataReset = {
-        deleteByOrgId: async (id) => {
+        deleteByOrganisationNumber: async (id) => {
           received.push(id)
           return {}
         }
@@ -97,7 +97,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
         url: `/v1/dev/organisations/${orgId}`
       })
 
-      expect(received).toEqual([orgId])
+      expect(received).toEqual([String(orgId)])
     })
   })
 })
