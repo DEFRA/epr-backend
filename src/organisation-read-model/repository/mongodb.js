@@ -97,13 +97,7 @@ export const createOrganisationReadRepository = (
       }
     },
 
-    findAll: async () => {
-      const stored = await findAll(db)
-      return toReadModelOrganisations(
-        stored,
-        await findExternalAccreditations(db, stored),
-        dependencies
-      )
-    }
+    findAll: async () =>
+      toReadModelOrganisations(await findAll(db), [], dependencies)
   })
 }

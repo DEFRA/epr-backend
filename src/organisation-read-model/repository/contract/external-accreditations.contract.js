@@ -251,7 +251,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
       ).toStrictEqual({ 2026: storedAccreditation2026 })
     })
 
-    it('serves stored and external accreditations from findAll, as for one organisation', async ({
+    it('serves only stored accreditations from findAll, which does not read external ones yet', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = accreditedIn2026()
@@ -264,10 +264,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations
-      ).toStrictEqual({
-        2026: storedAccreditation2026,
-        2027: externalAccreditation2027
-      })
+      ).toStrictEqual({ 2026: storedAccreditation2026 })
     })
   })
 }
