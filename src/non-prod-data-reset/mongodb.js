@@ -17,7 +17,6 @@ import { organisationNumberOf } from '#domain/organisations/numbers.js'
  */
 
 const COLLECTIONS = {
-  ORGANISATIONS: 'epr-organisations',
   ORGANISATION: 'organisation',
   REGISTRATION: 'registration',
   ACCREDITATION: 'accreditation',
@@ -65,11 +64,10 @@ const extractCascadeKeys = (organisation) => {
  * so there are no ordering constraints between steps.
  *
  * Two different id shapes drive the filters. Most collections store the
- * organisation's id, so they join against organisationId, and the
- * epr-organisations delete assumes that id is the stored ObjectId. The
+ * organisation's id, so they join against organisationId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
- * the journey-test apply path) are keyed by the numeric orgId. Reports, and
- * report system logs, carry the organisation number instead.
+ * the journey-test apply path) are keyed by the numeric orgId. PRNs, reports
+ * and report system logs carry the organisation number instead.
  *
  * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[] }} keys
@@ -81,7 +79,7 @@ const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
     {
       label: 'packaging-recycling-notes',
       collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
-      filter: { 'organisation.id': organisationId }
+      filter: { 'organisation.organisationNumber': organisationNumber }
     },
     {
       label: 'waste-balance-events',
@@ -132,11 +130,6 @@ const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
       filter: { orgId }
     },
     {
-      label: 'epr-organisations',
-      collection: COLLECTIONS.ORGANISATIONS,
-      filter: { _id: toObjectId(organisationId) }
-    },
-    {
       label: 'organisation',
       collection: COLLECTIONS.ORGANISATION,
       filter: { orgId }
@@ -174,11 +167,13 @@ const runCascade = async (db, steps) => {
  * means the capability does not exist on the request object in production,
  * providing runtime defence beyond the router-level route gate.
  *
- * As a final safety net, deleteByOrganisationNumber refuses to run when
- * isProduction is true and logs an error.
+ * As a final safety net, the reset refuses to run when isProduction is true
+ * and logs an error.
+ *
+ * The organisation goes last, so a reset that fails part way can be retried.
  *
  * @param {Db} db
- * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber'>} organisationsRepository
+ * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber' | 'deleteByOrganisationNumber'>} organisationsRepository
  * @param {{ isProduction?: boolean }} [options]
  * @returns {NonProdDataReset}
  */
@@ -202,6 +197,11 @@ export const createNonProdDataReset = (
       return { ...EMPTY_COUNTS }
     }
     const keys = extractCascadeKeys(organisation)
-    return runCascade(db, buildCascadeSteps(organisation, keys))
+    const counts = await runCascade(db, buildCascadeSteps(organisation, keys))
+    const deletedOrganisations =
+      await organisationsRepository.deleteByOrganisationNumber(
+        organisationNumber
+      )
+    return { ...counts, 'epr-organisations': deletedOrganisations }
   }
 })
