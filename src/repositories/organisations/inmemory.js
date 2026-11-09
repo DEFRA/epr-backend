@@ -3,6 +3,7 @@
 /** @import { NumberHolder, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
@@ -397,6 +398,44 @@ const performFindAllIds = (staleCache) => async () => {
   )
 }
 
+/**
+ * @param {Array<{ orgId: number }>} storage
+ * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
+ */
+const performFindHighestOrganisationNumber = (storage) => async () => {
+  if (storage.length === 0) {
+    return null
+  }
+  return organisationNumberOf({
+    orgId: Math.max(...storage.map(({ orgId }) => orgId))
+  })
+}
+
+/**
+ * @param {Array<{ orgId: number }>} records
+ * @param {number} orgId
+ */
+const removeByOrgId = (records, orgId) => {
+  const index = records.findIndex((org) => org.orgId === orgId)
+  if (index === -1) {
+    return 0
+  }
+  records.splice(index, 1)
+  return 1
+}
+
+/**
+ * @param {Array<{ orgId: number }>} storage
+ * @param {Array<{ orgId: number }>} staleCache
+ * @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']}
+ */
+const performDeleteByOrganisationNumber =
+  (storage, staleCache) => async (organisationNumber) => {
+    const orgId = storedOrgId(organisationNumber)
+    removeByOrgId(staleCache, orgId)
+    return removeByOrgId(storage, orgId)
+  }
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -488,6 +527,12 @@ export const createInMemoryOrganisationsRepository = (
       isRegistrationNumberInUse: performIsRegistrationNumberInUse(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrganisationNumber: performFindByOrganisationNumber(staleCache),
+      findHighestOrganisationNumber:
+        performFindHighestOrganisationNumber(storage),
+      deleteByOrganisationNumber: performDeleteByOrganisationNumber(
+        storage,
+        staleCache
+      ),
       replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(
         storage,
         staleCache,
