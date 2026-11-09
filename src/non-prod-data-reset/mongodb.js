@@ -68,8 +68,9 @@ const extractCascadeKeys = (organisation) => {
  * organisation's id, so they join against organisationId, and the
  * epr-organisations delete assumes that id is the stored ObjectId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
- * the journey-test apply path) are keyed by the numeric orgId. Reports, and
- * report system logs, carry the organisation number instead.
+ * the journey-test apply path) are keyed by the numeric orgId. Reports,
+ * waste balance events, row states and report system logs carry the
+ * organisation number instead.
  *
  * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[] }} keys
@@ -86,12 +87,12 @@ const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
     {
       label: 'waste-balance-events',
       collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
-      filter: { organisationId }
+      filter: { organisationNumber }
     },
     {
       label: 'summary-log-row-states',
       collection: COLLECTIONS.SUMMARY_LOG_ROW_STATES,
-      filter: { organisationId }
+      filter: { organisationNumber }
     },
     {
       label: 'reports',

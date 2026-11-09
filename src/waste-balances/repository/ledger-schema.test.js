@@ -179,23 +179,12 @@ describe('ledger event insert schema', () => {
     ])
   })
 
-  it('rejects an accreditation number on a registered-only event', () => {
-    const { error } = validate(
-      buildLedgerEvent({
-        accreditationId: null,
-        accreditationNumber: 'ACC-acc-1'
-      })
-    )
-    expect(error?.details.map((d) => d.path[0])).toEqual([
-      'accreditationNumber'
-    ])
-  })
+  it('judges a ledger registered-only by its null accreditation number, not its ids', () => {
+    const submitted = buildLedgerEvent({ accreditationNumber: null })
+    const prnEvent = buildPrnCreatedEvent({ accreditationNumber: null })
 
-  it('rejects a null accreditation number on an accredited event', () => {
-    const { error } = validate(buildLedgerEvent({ accreditationNumber: null }))
-    expect(error?.details.map((d) => d.path[0])).toEqual([
-      'accreditationNumber'
-    ])
+    expect(validate(submitted).error).toBeUndefined()
+    expect(validate(prnEvent).error).toBeDefined()
   })
 
   it('rejects PRN kinds when accreditationId is null', () => {
