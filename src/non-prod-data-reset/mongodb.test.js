@@ -305,7 +305,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(seeded.organisation.orgId)
+        toOrganisationNumber(String(seeded.organisation.orgId))
       )
 
       expect(counts).toEqual({
@@ -346,7 +346,7 @@ describe('non-prod data reset (mongo)', () => {
       await seedStagingCollections(database, other.organisation.orgId)
 
       await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(target.organisation.orgId)
+        toOrganisationNumber(String(target.organisation.orgId))
       )
 
       expect(
@@ -420,7 +420,7 @@ describe('non-prod data reset (mongo)', () => {
       reset
     }) => {
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(999999)
+        toOrganisationNumber('999999')
       )
 
       expect(counts).toEqual(EMPTY_COUNTS)
@@ -437,7 +437,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       await expect(
-        productionReset.deleteByOrganisationNumber(toOrganisationNumber(123))
+        productionReset.deleteByOrganisationNumber(toOrganisationNumber('123'))
       ).rejects.toThrow()
 
       expect(productionLoggerError).toHaveBeenCalledWith({
@@ -456,13 +456,13 @@ describe('non-prod data reset (mongo)', () => {
       await seedDownstreamForOrganisation(database, repositories, seeded)
 
       const first = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(seeded.organisation.orgId)
+        toOrganisationNumber(String(seeded.organisation.orgId))
       )
       expect(first['epr-organisations']).toBe(1)
       expect(first['packaging-recycling-notes']).toBe(1)
 
       const second = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(seeded.organisation.orgId)
+        toOrganisationNumber(String(seeded.organisation.orgId))
       )
       expect(second).toEqual(EMPTY_COUNTS)
     })
@@ -485,7 +485,7 @@ describe('non-prod data reset (mongo)', () => {
       })
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(organisation.orgId)
+        toOrganisationNumber(String(organisation.orgId))
       )
 
       expect(counts['overseas-sites']).toBe(0)
@@ -514,7 +514,7 @@ describe('non-prod data reset (mongo)', () => {
 
       await expect(
         server.app.nonProdDataReset.deleteByOrganisationNumber(
-          toOrganisationNumber(seeded.organisation.orgId)
+          toOrganisationNumber(String(seeded.organisation.orgId))
         )
       ).rejects.toThrow('Non-prod data reset is disabled in production.')
 
@@ -554,7 +554,7 @@ describe('non-prod data reset (mongo)', () => {
       const { nonProdDataReset } =
         /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
       const counts = await nonProdDataReset.deleteByOrganisationNumber(
-        toOrganisationNumber(seeded.organisation.orgId)
+        toOrganisationNumber(String(seeded.organisation.orgId))
       )
 
       expect(counts['epr-organisations']).toBe(1)
@@ -571,7 +571,7 @@ describe('non-prod data reset (mongo)', () => {
       await repositories.organisations.insert(organisation)
 
       const counts = await reset.deleteByOrganisationNumber(
-        toOrganisationNumber(organisation.orgId)
+        toOrganisationNumber(String(organisation.orgId))
       )
 
       expect(counts['epr-organisations']).toBe(1)

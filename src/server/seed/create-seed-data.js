@@ -104,7 +104,7 @@ async function createEprOrganisationFixtures(organisationsRepository) {
         eprOrganisation2,
         eprOrganisation3,
         eprOrganisation4
-      ].map((record) => toOrganisationNumber(record.orgId))
+      ].map((record) => toOrganisationNumber(String(record.orgId)))
     )
 
   if (existingFixtures.length === 0) {

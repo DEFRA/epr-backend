@@ -372,7 +372,7 @@ const SEED_SCENARIOS = {
  */
 export async function createEprOrganisationScenarios(organisationsRepository) {
   const scenarioOrganisationNumbers = Object.values(SEED_SCENARIOS).map((s) =>
-    toOrganisationNumber(s.orgId)
+    toOrganisationNumber(String(s.orgId))
   )
 
   const existingScenarios =

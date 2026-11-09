@@ -45,7 +45,7 @@ export const devOrganisationsDeleteById = {
     const { id } = request.params
     const deletedCounts =
       await request.nonProdDataReset.deleteByOrganisationNumber(
-        toOrganisationNumber(id)
+        toOrganisationNumber(String(id))
       )
     return h.response({ orgId: id, deletedCounts }).code(StatusCodes.OK)
   }
