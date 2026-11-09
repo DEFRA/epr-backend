@@ -7,6 +7,8 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 const REPORTS_COLLECTION_NAME = 'reports'
 
+const REGISTRATION_NUMBER_PATH = '$registrationNumber'
+
 /**
  * Numbers more than one pair of ids stores reports under. The unique report
  * indexes on the numbers cannot be built while any exist.
@@ -97,7 +99,7 @@ const countSubmittingLockClashes = async (db) => {
         $group: {
           _id: {
             organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber',
+            registrationNumber: REGISTRATION_NUMBER_PATH,
             year: '$year',
             accreditationNumber: '$accreditationNumber'
           },
@@ -125,7 +127,7 @@ const countLedgerSlotClashes = async (db) => {
       {
         $group: {
           _id: {
-            registrationNumber: '$registrationNumber',
+            registrationNumber: REGISTRATION_NUMBER_PATH,
             accreditationNumber: '$accreditationNumber',
             number: '$number'
           },
@@ -151,7 +153,7 @@ const findSharedReportNumbers = async (db) => {
         $group: {
           _id: {
             organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber'
+            registrationNumber: REGISTRATION_NUMBER_PATH
           },
           idPairs: {
             $addToSet: {
