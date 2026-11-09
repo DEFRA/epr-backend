@@ -80,6 +80,8 @@
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<Organisation|null>} findByOrganisationNumber - Find the organisation with this number. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
+ * @property {() => Promise<OrganisationNumber|null>} findHighestOrganisationNumber - The highest number any organisation holds, or null when there are no organisations
+ * @property {(organisationNumber: OrganisationNumber) => Promise<number>} deleteByOrganisationNumber - Delete the organisation with this number, giving how many were deleted. Only the non-production data reset calls it
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
  */
 

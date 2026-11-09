@@ -201,6 +201,7 @@ const seedDownstreamForOrganisation = async (
     buildDraftPrn({
       organisation: {
         id: organisationId,
+        organisationNumber: organisationNumberOf(organisation),
         name: 'Target',
         tradingName: 'Target Trading'
       }
@@ -301,6 +302,7 @@ describe('non-prod data reset (mongo)', () => {
         buildDraftPrn({
           organisation: {
             id: seeded.organisationId,
+            organisationNumber: organisationNumberOf(seeded.organisation),
             name: 'Target',
             tradingName: 'Target Trading'
           }
@@ -353,9 +355,9 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       expect(
-        await database
-          .collection('packaging-recycling-notes')
-          .countDocuments({ 'organisation.id': other.organisationId })
+        await database.collection('packaging-recycling-notes').countDocuments({
+          'organisation.organisationNumber': String(other.organisation.orgId)
+        })
       ).toBe(1)
       expect(
         await database.collection('reports').countDocuments({
@@ -527,9 +529,9 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('packaging-recycling-notes')
-          .countDocuments({ 'organisation.id': seeded.organisationId })
+        await database.collection('packaging-recycling-notes').countDocuments({
+          'organisation.organisationNumber': String(seeded.organisation.orgId)
+        })
       ).toBe(1)
     })
 

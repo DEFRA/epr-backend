@@ -2,11 +2,11 @@ import { ObjectId } from 'mongodb'
 import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const ORGANISATION_COLLECTION = 'organisation'
-const EPR_ORGANISATIONS_COLLECTION = 'epr-organisations'
 const COUNTERS_COLLECTION = 'counters'
 
 /**
@@ -14,8 +14,9 @@ const COUNTERS_COLLECTION = 'counters'
  * Safe to call multiple times - MongoDB createIndex is idempotent.
  *
  * @param {import('mongodb').Db} db
+ * @param {Pick<OrganisationsRepository, 'findHighestOrganisationNumber'>} organisationsRepository
  */
-async function ensureCollections(db, logger) {
+async function ensureCollections(db, logger, organisationsRepository) {
   await db.collection(ORGANISATION_COLLECTION).createIndex({ orgId: 1 })
   await db
     .collection(REGISTRATIONS_COLLECTION)
@@ -24,32 +25,31 @@ async function ensureCollections(db, logger) {
     .collection(ACCREDITATIONS_COLLECTION)
     .createIndex({ referenceNumber: 1 })
 
-  await seedOrgIdCounter(db, logger)
+  await seedOrgIdCounter(db, logger, organisationsRepository)
 }
 
 /**
- * Finds the highest orgId across form-submissions and epr-organisations.
+ * Finds the highest orgId across form-submissions and organisations.
  *
  * @param {import('mongodb').Db} db
+ * @param {Pick<OrganisationsRepository, 'findHighestOrganisationNumber'>} organisationsRepository
  * @returns {Promise<number>}
  */
-async function findHighestOrgId(db) {
-  const findMax = async (collectionName) => {
-    const [doc] = await db
-      .collection(collectionName)
+async function findHighestOrgId(db, organisationsRepository) {
+  const [[formsDoc], highestOrganisationNumber] = await Promise.all([
+    db
+      .collection(ORGANISATION_COLLECTION)
       .find({ orgId: { $gte: ORG_ID_START_NUMBER } })
       .sort({ orgId: -1 })
       .limit(1)
-      .toArray()
-    return doc?.orgId ?? ORG_ID_START_NUMBER
-  }
-
-  const [formsMax, eprMax] = await Promise.all([
-    findMax(ORGANISATION_COLLECTION),
-    findMax(EPR_ORGANISATIONS_COLLECTION)
+      .toArray(),
+    organisationsRepository.findHighestOrganisationNumber()
   ])
 
-  return Math.max(formsMax, eprMax)
+  return Math.max(
+    formsDoc?.orgId ?? ORG_ID_START_NUMBER,
+    Number(highestOrganisationNumber ?? ORG_ID_START_NUMBER)
+  )
 }
 
 /**
@@ -58,9 +58,10 @@ async function findHighestOrgId(db) {
  *
  * @param {import('mongodb').Db} db
  * @param {TypedLogger} logger
+ * @param {Pick<OrganisationsRepository, 'findHighestOrganisationNumber'>} organisationsRepository
  */
-async function seedOrgIdCounter(db, logger) {
-  const seq = await findHighestOrgId(db)
+async function seedOrgIdCounter(db, logger, organisationsRepository) {
+  const seq = await findHighestOrgId(db, organisationsRepository)
 
   await db
     .collection(COUNTERS_COLLECTION)
@@ -190,10 +191,15 @@ const findAllFormSubmissionIds = (db) => async () => {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
+ * @param {Pick<OrganisationsRepository, 'findHighestOrganisationNumber'>} organisationsRepository
  * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
  */
-export const createFormSubmissionsRepository = async (db, logger) => {
-  await ensureCollections(db, logger)
+export const createFormSubmissionsRepository = async (
+  db,
+  logger,
+  organisationsRepository
+) => {
+  await ensureCollections(db, logger, organisationsRepository)
 
   return () => {
     return {

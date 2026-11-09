@@ -2,6 +2,8 @@ import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createFormSubmissionsRepository } from './mongodb.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { testFormSubmissionsRepositoryContract } from './port.contract.js'
 import {
   buildAccreditation,
@@ -25,6 +27,7 @@ import {
 
 const DATABASE_NAME = 'epr-backend'
 const testLogger = { info: vi.fn() }
+const noOrganisations = createInMemoryOrganisationsRepository()()
 
 /**
  * The counters collection is keyed by a string `_id` (e.g. 'orgId'), not the
@@ -50,7 +53,8 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       const factory = await createFormSubmissionsRepository(
         database,
-        testLogger
+        testLogger,
+        noOrganisations
       )
       await use(factory)
     },
@@ -156,7 +160,7 @@ describe('MongoDB form submissions repository', () => {
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger)
+      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(500000)
@@ -169,39 +173,41 @@ describe('MongoDB form submissions repository', () => {
       const orgs = await seedOrganisations()
       const maxOrgId = Math.max(...orgs.map((o) => o.orgId))
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger)
+      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(maxOrgId)
     })
 
-    it('initialises counter to highest orgId from epr-organisations when higher', async ({
+    it('initialises counter to the highest organisation number when higher', async ({
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      const eprOrgId = 500999
-      await db.collection('epr-organisations').insertOne({ orgId: eprOrgId })
+      const highestOrgId = 500999
+      const organisations = createInMemoryOrganisationsRepository([
+        createOrganisationBuilders().buildReadOrganisation({
+          orgId: highestOrgId
+        })
+      ])()
 
-      await createFormSubmissionsRepository(db, testLogger)
+      await createFormSubmissionsRepository(db, testLogger, organisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
-      expect(counter?.seq).toBe(eprOrgId)
-
-      await db.collection('epr-organisations').deleteMany({})
+      expect(counter?.seq).toBe(highestOrgId)
     })
 
     it('does not overwrite counter on subsequent calls', async ({
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger)
+      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
 
       await countersCollection(db).updateOne(
         { _id: 'orgId' },
         { $set: { seq: 600000 } }
       )
 
-      await createFormSubmissionsRepository(db, testLogger)
+      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(600000)

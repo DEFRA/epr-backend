@@ -3,6 +3,7 @@ import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
@@ -361,6 +362,26 @@ const performFindByOrganisationNumber =
       minimumVersion
     )
 
+/** @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']} */
+const performFindHighestOrganisationNumber = (db) => async () => {
+  const [doc] = await db
+    .collection(COLLECTION_NAME)
+    .find({}, { projection: { orgId: 1 } })
+    .sort({ orgId: -1 })
+    .limit(1)
+    .toArray()
+  return doc ? organisationNumberOf(doc) : null
+}
+
+/** @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']} */
+const performDeleteByOrganisationNumber =
+  (db) => async (organisationNumber) => {
+    const { deletedCount } = await db
+      .collection(COLLECTION_NAME)
+      .deleteOne({ orgId: storedOrgId(organisationNumber) })
+    return deletedCount
+  }
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -461,6 +482,8 @@ export const createOrganisationsRepository = async (
         maxRetries,
         retryDelayMs
       ),
+      findHighestOrganisationNumber: performFindHighestOrganisationNumber(db),
+      deleteByOrganisationNumber: performDeleteByOrganisationNumber(db),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }
