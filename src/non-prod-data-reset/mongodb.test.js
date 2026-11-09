@@ -1,5 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
+/** @import { Db } from 'mongodb' */
 import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
@@ -470,6 +471,42 @@ describe('non-prod data reset (mongo)', () => {
         organisationNumberOf(seeded.organisation)
       )
       expect(second).toEqual(EMPTY_COUNTS)
+    })
+
+    it('keeps the organisation when a cascade step fails, so the reset can be retried', async ({
+      database,
+      repositories
+    }) => {
+      const seeded = await seedOrganisationWithOverseasSites(repositories)
+      const databaseWithFailingReports = /** @type {Db} */ (
+        /** @type {unknown} */ ({
+          collection: (/** @type {string} */ name) =>
+            name === 'reports'
+              ? {
+                  deleteMany: () =>
+                    new Promise((_resolve, reject) =>
+                      setTimeout(() => reject(new Error('reports down')), 50)
+                    )
+                }
+              : database.collection(name)
+        })
+      )
+      const failingReset = createNonProdDataReset(
+        databaseWithFailingReports,
+        repositories.organisations
+      )
+
+      await expect(
+        failingReset.deleteByOrganisationNumber(
+          organisationNumberOf(seeded.organisation)
+        )
+      ).rejects.toThrow('reports down')
+
+      await expect(
+        repositories.organisations.findByOrganisationNumber(
+          organisationNumberOf(seeded.organisation)
+        )
+      ).resolves.toMatchObject({ id: seeded.organisationId })
     })
 
     it('short-circuits overseas-sites when the organisation has no overseas sites', async ({
