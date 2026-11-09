@@ -177,7 +177,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
         String(stored.orgId)
       )
 
-      expect(Object.keys(organisation.registrations)).toEqual([
+      expect(Object.keys(organisation.registrations)).toStrictEqual([
         REPROCESSOR_NUMBER
       ])
       expect(
@@ -201,7 +201,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
         String(stored.orgId)
       )
 
-      expect(Object.keys(organisation.registrations)).toEqual([
+      expect(Object.keys(organisation.registrations)).toStrictEqual([
         REPROCESSOR_NUMBER
       ])
     })
