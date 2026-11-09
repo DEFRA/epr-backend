@@ -7,6 +7,7 @@ import {
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -42,7 +43,7 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   registration: TEST_REGISTRATION,
   accreditation: {
     id: 'acc-789',
-    accreditationNumber: 'A26ER1075628626-PL',
+    accreditationNumber: toAccreditationNumber('A26ER1075628626-PL'),
     accreditationYear: toYear(2026),
     material: 'plastic',
     submittedToRegulator: 'ea'
@@ -298,7 +299,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       accreditation: {
         id: 'acc-789',
-        accreditationNumber: 'A26ER1075628626-GL',
+        accreditationNumber: toAccreditationNumber('A26ER1075628626-GL'),
         accreditationYear: toYear(2026),
         material: 'glass',
         submittedToRegulator: 'ea',
@@ -323,7 +324,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       accreditation: {
         id: 'acc-789',
-        accreditationNumber: 'A26ER1075628626-PL',
+        accreditationNumber: toAccreditationNumber('A26ER1075628626-PL'),
         accreditationYear: toYear(2026),
         material: 'plastic',
         submittedToRegulator: 'ea',
