@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -18,6 +19,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 
 export const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+const RETIRED_ORGANISATION_STATUS_INDEX_NAME = 'organisationId_status'
 
 /**
  * Ensures the prnNumber index exists with the unique constraint.
@@ -50,34 +52,6 @@ async function ensurePrnNumberIndex(collection) {
 }
 
 /**
- * Ensures the organisation_status compound index uses the v2 field path.
- * Handles migration from v1 (organisationId) to v2 (organisation.id).
- *
- * @param {Collection} collection
- */
-async function ensureOrganisationStatusIndex(collection) {
-  const indexName = 'organisationId_status'
-
-  try {
-    const indexes = await collection.indexes()
-    const existingIndex = indexes.find((idx) => idx.name === indexName)
-
-    if (existingIndex?.key?.organisationId) {
-      await collection.dropIndex(indexName)
-    }
-  } catch (error) {
-    if (error.codeName !== 'NamespaceNotFound') {
-      throw error
-    }
-  }
-
-  await collection.createIndex(
-    { 'organisation.id': 1, 'status.currentStatus': 1 },
-    { name: indexName }
-  )
-}
-
-/**
  * Ensures the status_currentStatusAt compound index exists.
  * Covers findByStatus queries: status + date range + cursor pagination.
  *
@@ -103,7 +77,7 @@ async function ensureStatusDateIndex(collection) {
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
-  await ensureOrganisationStatusIndex(collection)
+  await dropIndexIfPresent(collection, RETIRED_ORGANISATION_STATUS_INDEX_NAME)
 
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
