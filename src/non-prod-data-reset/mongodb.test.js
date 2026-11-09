@@ -230,7 +230,7 @@ const seedDownstreamForOrganisation = async (
   // The ledger and its row states name the organisation by number.
   const ledgerId = {
     ...withNumbers({ organisationId, registrationId, accreditationId }),
-    organisationNumber: toOrganisationNumber(String(organisation.orgId))
+    organisationNumber: organisationNumberOf(organisation)
   }
 
   await database
@@ -365,7 +365,7 @@ describe('non-prod data reset (mongo)', () => {
       ).toBe(1)
       expect(
         await database.collection('summary-log-row-states').countDocuments({
-          organisationNumber: String(other.organisation.orgId)
+          organisationNumber: organisationNumberOf(other.organisation)
         })
       ).toBe(1)
       expect(
