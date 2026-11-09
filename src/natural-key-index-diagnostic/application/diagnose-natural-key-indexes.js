@@ -7,6 +7,8 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 const REPORTS_COLLECTION_NAME = 'reports'
 
+const REGISTRATION_NUMBER_PATH = '$registrationNumber'
+
 /**
  * Numbers more than one pair of ids stores reports under. The unique report
  * indexes on the numbers cannot be built while any exist.
@@ -30,7 +32,8 @@ const REPORTS_COLLECTION_NAME = 'reports'
  *   prns: number,
  *   prnsWithoutNumbers: number,
  *   ledgerEvents: number,
- *   ledgerEventsWithoutNumbers: number
+ *   ledgerEventsWithoutNumbers: number,
+ *   ledgerSlotClashes: number
  * }} NaturalKeyIndexDiagnosis
  */
 
@@ -96,9 +99,37 @@ const countSubmittingLockClashes = async (db) => {
         $group: {
           _id: {
             organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber',
+            registrationNumber: REGISTRATION_NUMBER_PATH,
             year: '$year',
             accreditationNumber: '$accreditationNumber'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $match: { count: { $gt: 1 } } }
+    ])
+    .toArray()
+
+  return clashes.length
+}
+
+/**
+ * Groups of ledger events that would clash on the unique slot index keyed on
+ * the numbers.
+ *
+ * @param {Db} db
+ * @returns {Promise<number>}
+ */
+const countLedgerSlotClashes = async (db) => {
+  const clashes = await db
+    .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+    .aggregate([
+      {
+        $group: {
+          _id: {
+            registrationNumber: REGISTRATION_NUMBER_PATH,
+            accreditationNumber: '$accreditationNumber',
+            number: '$number'
           },
           count: { $sum: 1 }
         }
@@ -122,7 +153,7 @@ const findSharedReportNumbers = async (db) => {
         $group: {
           _id: {
             organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber'
+            registrationNumber: REGISTRATION_NUMBER_PATH
           },
           idPairs: {
             $addToSet: {
@@ -141,8 +172,8 @@ const findSharedReportNumbers = async (db) => {
 
 /**
  * Reads whether the stored data allows the indexes moving onto the numbers to
- * be built at startup (the submitting lock on summary logs and the unique
- * report indexes), and whether every PRN and ledger event would pass a read
+ * be built at startup (the submitting lock on summary logs, the unique report
+ * indexes and the ledger slot index), and whether every PRN and ledger event would pass a read
  * requiring its numbers. It writes nothing.
  *
  * @param {Db} db
@@ -164,7 +195,8 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     prns,
     prnsWithoutNumbers,
     ledgerEvents,
-    ledgerEventsWithoutNumbers
+    ledgerEventsWithoutNumbers,
+    ledgerSlotClashes
   ] = await Promise.all([
     db.collection(SUMMARY_LOGS_COLLECTION_NAME).estimatedDocumentCount(),
     countSummaryLogsWithoutNumbers(db, SUMMARY_LOG_STATUS.SUBMITTING),
@@ -181,7 +213,8 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     prnCollection.estimatedDocumentCount(),
     prnCollection.countDocuments(PRN_LACKING_A_NUMBER),
     ledger.estimatedDocumentCount(),
-    ledger.countDocuments(LEDGER_EVENT_LACKING_A_NUMBER)
+    ledger.countDocuments(LEDGER_EVENT_LACKING_A_NUMBER),
+    countLedgerSlotClashes(db)
   ])
 
   return {
@@ -195,6 +228,7 @@ export const diagnoseNaturalKeyIndexes = async (db) => {
     prns,
     prnsWithoutNumbers,
     ledgerEvents,
-    ledgerEventsWithoutNumbers
+    ledgerEventsWithoutNumbers,
+    ledgerSlotClashes
   }
 }
