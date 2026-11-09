@@ -17,8 +17,7 @@ describe('#isoDateTimeString', () => {
     '2027-01-01',
     '2027-01-01T10:30:00.000+01:00',
     '2027',
-    'not a date',
-    '2027-13-01T00:00:00.000Z'
+    'not a date'
   ])('rejects %s, which is not a UTC date-time with milliseconds', (value) => {
     const [detail] = expectValidationError(isoDateTimeString(), value)
 
@@ -33,14 +32,12 @@ describe('#isoDateTimeString', () => {
     expect(rules).toContainEqual(expect.objectContaining({ name: 'pattern' }))
   })
 
-  it('rejects 30 February', () => {
-    const [detail] = expectValidationError(
-      isoDateTimeString(),
-      '2027-02-30T00:00:00.000Z'
-    )
+  it.each(['2027-02-30T00:00:00.000Z', '2027-13-01T00:00:00.000Z'])(
+    'rejects %s, which is in the format but is not a real date-time',
+    (value) => {
+      const [detail] = expectValidationError(isoDateTimeString(), value)
 
-    expect(detail.message).toBe(
-      'Date-time must be in YYYY-MM-DDTHH:mm:ss.sssZ format'
-    )
-  })
+      expect(detail.message).toBe('Date-time must be a real date and time')
+    }
+  )
 })
