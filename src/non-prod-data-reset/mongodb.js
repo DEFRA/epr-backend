@@ -48,6 +48,13 @@ const EMPTY_COUNTS = Object.freeze({
 
 const toObjectId = (id) => ObjectId.createFromHexString(id)
 
+/**
+ * @param {string} field
+ * @param {unknown[]} values
+ */
+const anyOf = (field, values) =>
+  values.length === 0 ? null : { [field]: { $in: values } }
+
 /** @param {Organisation} organisation */
 const extractCascadeKeys = (organisation) => {
   const { registrations } = organisation
@@ -115,18 +122,12 @@ const buildCascadeSteps = (
     {
       label: 'overseas-sites',
       collection: COLLECTIONS.OVERSEAS_SITES,
-      filter:
-        overseasSiteIds.length === 0
-          ? null
-          : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+      filter: anyOf('_id', overseasSiteIds.map(toObjectId))
     },
     {
       label: 'external-accreditations',
       collection: COLLECTIONS.EXTERNAL_ACCREDITATIONS,
-      filter:
-        registrationNumbers.length === 0
-          ? null
-          : { registrationNumber: { $in: registrationNumbers } }
+      filter: anyOf('registrationNumber', registrationNumbers)
     },
     {
       label: 'system-logs',
