@@ -7,7 +7,7 @@ vi.mock('#root/config.js', () => ({
 }))
 
 const { config } = await import('#root/config.js')
-const { parseTestOrganisationIds, parseTestOrganisationNumbers } =
+const { parseTestOrganisationIds } =
   await import('./parse-test-organisations.js')
 
 describe('#parseTestOrganisationIds', () => {
@@ -79,10 +79,15 @@ describe('#parseTestOrganisationIds', () => {
   })
 })
 
-describe('#parseTestOrganisationNumbers', () => {
-  test('gives the organisation number of each test organisation', () => {
-    config.get.mockReturnValue('[999999, "888888"]')
+describe('TEST_ORGANISATION_NUMBERS', () => {
+  test('holds the organisation number of each test organisation', async () => {
+    vi.resetModules()
+    const { config: freshConfig } = await import('#root/config.js')
+    freshConfig.get.mockReturnValue('[999999, "888888", 999999]')
 
-    expect(parseTestOrganisationNumbers()).toEqual(['999999', '888888'])
+    const { TEST_ORGANISATION_NUMBERS } =
+      await import('./parse-test-organisations.js')
+
+    expect(TEST_ORGANISATION_NUMBERS).toEqual(new Set(['999999', '888888']))
   })
 })

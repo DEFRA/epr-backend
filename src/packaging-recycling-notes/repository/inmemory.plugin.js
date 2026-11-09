@@ -203,7 +203,7 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 /**
- * @param {OrganisationNumber[]} excludeOrganisationNumbers
+ * @param {ReadonlySet<OrganisationNumber>} excludeOrganisationNumbers
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) =>
  *   (prn: PackagingRecyclingNote) => boolean}
  */
@@ -220,9 +220,7 @@ const buildFindByStatusFilter =
     if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
       return false
     }
-    if (
-      excludeOrganisationNumbers.includes(prn.organisation.organisationNumber)
-    ) {
+    if (excludeOrganisationNumbers.has(prn.organisation.organisationNumber)) {
       return false
     }
 
@@ -231,7 +229,7 @@ const buildFindByStatusFilter =
 
 /**
  * @param {Storage} storage
- * @param {OrganisationNumber[]} excludeOrganisationNumbers
+ * @param {ReadonlySet<OrganisationNumber>} excludeOrganisationNumbers
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
 const performFindByStatus = (storage, excludeOrganisationNumbers) => {
@@ -396,7 +394,7 @@ const performPersistProjection =
 
 /**
  * @param {PackagingRecyclingNote[]} [initialData]
- * @param {OrganisationNumber[]} [excludeOrganisationNumbers]
+ * @param {Iterable<OrganisationNumber>} [excludeOrganisationNumbers]
  */
 export function createInMemoryPackagingRecyclingNotesRepository(
   initialData = [],
@@ -416,7 +414,10 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByIds: performFindByIds(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
-    findByStatus: performFindByStatus(storage, excludeOrganisationNumbers),
+    findByStatus: performFindByStatus(
+      storage,
+      new Set(excludeOrganisationNumbers)
+    ),
     sumTonnageByAccreditation: performSumTonnageByAccreditation(storage),
     updateStatus: performUpdateStatus(storage, logger),
     updateWatermark: performUpdateWatermark(storage, logger),

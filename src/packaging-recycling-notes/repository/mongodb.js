@@ -614,7 +614,7 @@ const performPersistProjection = async (
 
 /**
  * @param {Db} db
- * @param {OrganisationNumber[]} excludeOrganisationNumbers
+ * @param {Iterable<OrganisationNumber>} excludeOrganisationNumbers
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
 export const createPackagingRecyclingNotesRepository = async (
@@ -630,7 +630,7 @@ export const createPackagingRecyclingNotesRepository = async (
     findByIds: (params) => performFindByIds(db, params),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
-    findByStatus: performFindByStatus(db, excludeOrganisationNumbers),
+    findByStatus: performFindByStatus(db, [...excludeOrganisationNumbers]),
     sumTonnageByAccreditation: (params) =>
       performSumTonnageByAccreditation(db, params),
     updateStatus: (params) => performUpdateStatus(db, logger, params),

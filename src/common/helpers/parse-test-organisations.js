@@ -1,6 +1,8 @@
 import { config } from '#root/config.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
 export function parseTestOrganisationIds() {
   const raw = config.get('testOrganisations')
 
@@ -22,10 +24,7 @@ export function parseTestOrganisationIds() {
 
 export const TEST_ORGANISATION_IDS = new Set(parseTestOrganisationIds())
 
-export function parseTestOrganisationNumbers() {
-  return parseTestOrganisationIds().map((orgId) =>
-    toOrganisationNumber(String(orgId))
-  )
-}
-
-export const TEST_ORGANISATION_NUMBERS = parseTestOrganisationNumbers()
+/** @type {ReadonlySet<OrganisationNumber>} */
+export const TEST_ORGANISATION_NUMBERS = new Set(
+  [...TEST_ORGANISATION_IDS].map((orgId) => toOrganisationNumber(String(orgId)))
+)
