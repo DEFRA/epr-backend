@@ -11,6 +11,7 @@ import { yearBounds } from '#common/helpers/dates/year.js'
 /** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
 /** @type {Set<RegistrationStatus>} */
@@ -134,6 +135,27 @@ export function resolveAccreditation(registration, org) {
     org.accreditations.find(
       (a) =>
         a.id === registration.accreditationId &&
+        ACTIVE_ACCREDITATION_STATUSES.has(a.status)
+    ) ?? null
+  )
+}
+
+/**
+ * The organisation's approved or suspended accreditation with the number, or
+ * null when there is none or the number is null.
+ *
+ * @param {AccreditationNumber | null} accreditationNumber
+ * @param {{ accreditations: Array<{ status: AccreditationStatus } & Accreditation> }} org
+ * @returns {Accreditation | null}
+ */
+export function resolveAccreditationByNumber(accreditationNumber, org) {
+  if (accreditationNumber === null) {
+    return null
+  }
+  return (
+    org.accreditations.find(
+      (a) =>
+        a.accreditationNumber === accreditationNumber &&
         ACTIVE_ACCREDITATION_STATUSES.has(a.status)
     ) ?? null
   )

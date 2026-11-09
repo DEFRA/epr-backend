@@ -15,6 +15,8 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * What an accredited operator is accredited for, where a test needs other than
@@ -60,7 +62,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf> }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: NumberedLedgerId }>}
    */
   return async (
     organisationsRepository,
@@ -88,10 +90,20 @@ export const createAccreditedOperatorInserter = (builders) => {
       { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
     )
 
+    const reportKey = reportKeyOf(organisation, organisation.registrations[0])
     return {
       organisationId: organisation.id,
       registrationId: registration.id,
-      reportKey: reportKeyOf(organisation, organisation.registrations[0])
+      reportKey,
+      ledgerId: {
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId,
+        ...reportKey,
+        accreditationNumber: /** @type {AccreditationNumber} */ (
+          organisation.accreditations[0].accreditationNumber
+        )
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 /**
- * @import { LedgerEvent, LedgerBalanceSnapshot, LedgerEventKind, LedgerUserSummary, NumberedLedgerId, PrnPayload, RegistrationOrAccreditationId, SummaryLogSubmittedPayload } from '../repository/ledger-schema.js'
+ * @import { LedgerEvent, LedgerBalanceSnapshot, LedgerEventKind, LedgerUserSummary, PrnPayload, SummaryLogSubmittedPayload, WasteBalanceLedgerId } from '../repository/ledger-schema.js'
  * @import { WasteBalanceLedgerRepository } from '../repository/ledger-port.js'
  */
 
@@ -80,7 +80,6 @@
  * the check-time gate.
  *
  * @typedef {Object} LedgerResource
- * @property {RegistrationOrAccreditationId} ledger
  * @property {LedgerEventResource[]} events
  */
 
@@ -91,16 +90,6 @@
  * @typedef {Object} LedgerNoteReader
  * @property {(params: import('#packaging-recycling-notes/repository/port.js').FindByIdsParams) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
-
-/**
- * @param {NumberedLedgerId} ledgerId
- * @returns {RegistrationOrAccreditationId}
- */
-const toLedger = ({ organisationId, registrationId, accreditationId }) => ({
-  organisationId,
-  registrationId,
-  accreditationId
-})
 
 /**
  * @param {LedgerBalanceSnapshot} snapshot
@@ -142,7 +131,7 @@ const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
  * @param {LedgerNoteReader} noteReader
- * @param {NumberedLedgerId} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {LedgerEvent[]} events
  * @returns {Promise<Map<string, string | null>>}
  */
@@ -210,10 +199,6 @@ const toEventResource = (event, noteNumbers) => {
 /**
  * Reads one waste balance ledger.
  *
- * The organisation, registration and accreditation identify the ledger rather
- * than the event, so they come out once under `ledger`. A registration's
- * registered-only ledger says so there, as an accreditation of null.
- *
  * The whole ledger comes back. A ledger holds one event per submission and per
  * PRN decision, so the count follows the operator's own activity rather than
  * the size of the service. The `events` key leaves room to page it later
@@ -221,7 +206,7 @@ const toEventResource = (event, noteNumbers) => {
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {LedgerNoteReader} noteReader
- * @param {NumberedLedgerId} ledgerId - The registration or accreditation
+ * @param {WasteBalanceLedgerId} ledgerId - The registration or accreditation
  *   whose ledger is read.
  * @returns {Promise<LedgerResource>}
  */
@@ -230,7 +215,6 @@ export const readLedger = async (ledgerRepository, noteReader, ledgerId) => {
   const noteNumbers = await noteNumbersById(noteReader, ledgerId, events)
 
   return {
-    ledger: toLedger(ledgerId),
     events: events.map((event) => toEventResource(event, noteNumbers))
   }
 }

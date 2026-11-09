@@ -2,7 +2,7 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
+import { resolveAccreditationByNumber } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
@@ -25,7 +25,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {NumberedLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
 /** @import {OverseasSiteContextEntry} from '../domain/overseas-sites-context.js' */
 
@@ -95,10 +95,10 @@ export const encodeRow = async (cells) => {
 }
 
 // Deterministic partition order within a registration: registered-only
-// (null accreditation) first, then accreditation ids ascending.
-const sortEntriesByAccreditationId = (a, b) =>
-  String(a.ledgerId.accreditationId ?? '').localeCompare(
-    String(b.ledgerId.accreditationId ?? '')
+// (null accreditation) first, then accreditation numbers ascending.
+const sortEntriesByAccreditationNumber = (a, b) =>
+  String(a.ledgerId.accreditationNumber ?? '').localeCompare(
+    String(b.ledgerId.accreditationNumber ?? '')
   )
 
 /**
@@ -120,7 +120,7 @@ const recomputedClassification = (rowState, context) =>
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
- * @param {NumberedLedgerId} input.ledgerId
+ * @param {WasteBalanceLedgerId} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites
@@ -141,8 +141,8 @@ async function* streamPartitionRows({
   // registration's current link. Rows submitted under a since-cancelled
   // accreditation or a registered-only period render as not accredited but are
   // still exported.
-  const accreditation = resolveAccreditation(
-    { accreditationId: ledgerId.accreditationId },
+  const accreditation = resolveAccreditationByNumber(
+    ledgerId.accreditationNumber,
     org
   )
 
@@ -194,7 +194,7 @@ async function* streamLatestSubmissionRows({
   ...context
 }) {
   for (const { ledgerId, summaryLogId } of [...entries].sort(
-    sortEntriesByAccreditationId
+    sortEntriesByAccreditationNumber
   )) {
     yield* streamPartitionRows({
       ...context,
@@ -310,8 +310,12 @@ export async function* streamCsvExport(deps) {
         org,
         registration,
         entries:
-          entriesByRegistration.get(registrationKey(org.id, registration.id)) ??
-          [],
+          entriesByRegistration.get(
+            registrationKey(
+              String(org.orgId),
+              String(registration.registrationNumber)
+            )
+          ) ?? [],
         sitesById,
         dataFieldColumns,
         summaryLogRowStatesRepository,
@@ -322,12 +326,12 @@ export async function* streamCsvExport(deps) {
 }
 
 /**
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {string} organisationNumber
+ * @param {string} registrationNumber
  * @returns {string}
  */
-const registrationKey = (organisationId, registrationId) =>
-  `${organisationId}::${registrationId}`
+const registrationKey = (organisationNumber, registrationNumber) =>
+  `${organisationNumber}::${registrationNumber}`
 
 /**
  * Group the per-partition latest-submission entries by owning
@@ -342,8 +346,8 @@ const groupByRegistration = (entries) => {
   const grouped = new Map()
   for (const entry of entries) {
     const key = registrationKey(
-      entry.ledgerId.organisationId,
-      entry.ledgerId.registrationId
+      entry.ledgerId.organisationNumber,
+      entry.ledgerId.registrationNumber
     )
     const list = grouped.get(key)
     if (list) {

@@ -22,7 +22,7 @@ import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { withNumbersHeldBy } from '#waste-records/repository/test-data.js'
 
 /**
  * @param {string} id
@@ -184,11 +184,17 @@ const buildDeps = async ({
   organisation,
   registrationNumber
 } = {}) => {
-  const ledgerEvents = seeds.map((seed) =>
-    buildLedgerEvent({
+  const heldOrgs = organisation ? [organisation, ...orgs] : orgs
+  const ledgerIdOf = (seed) =>
+    withNumbersHeldBy(heldOrgs, {
       organisationId: seed.organisationId ?? 'org-1',
       registrationId: seed.registrationId ?? 'reg-1',
-      accreditationId: seed.accreditationId ?? null,
+      accreditationId: seed.accreditationId ?? null
+    })
+
+  const ledgerEvents = seeds.map((seed) =>
+    buildLedgerEvent({
+      ...ledgerIdOf(seed),
       // A partition seeded twice needs ascending numbers so the later
       // submission is the one the latest-per-ledger query resolves.
       number: seed.number ?? 1,
@@ -206,11 +212,7 @@ const buildDeps = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers({
-        organisationId: seed.organisationId ?? 'org-1',
-        registrationId: seed.registrationId ?? 'reg-1',
-        accreditationId: seed.accreditationId ?? null
-      }),
+      ledgerIdOf(seed),
       seed.rows ?? [],
       seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID
     )
@@ -928,11 +930,11 @@ describe('streamCsvExport', () => {
     ).toBe('ACC-777')
   })
 
-  it("orders a registration's partitions registered-only first, then by accreditation id", async () => {
+  it("orders a registration's partitions registered-only first, then by accreditation number", async () => {
     const org = baseOrg({
       accreditations: [
-        approvedAccreditation({ id: 'acc-a' }),
-        approvedAccreditation({ id: 'acc-b' })
+        approvedAccreditation({ id: 'acc-a', accreditationNumber: 'ACC-A' }),
+        approvedAccreditation({ id: 'acc-b', accreditationNumber: 'ACC-B' })
       ],
       registrations: [
         baseRegistration({ accreditation: null, accreditationId: 'acc-b' })
