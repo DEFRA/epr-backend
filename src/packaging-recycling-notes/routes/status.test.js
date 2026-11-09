@@ -1,4 +1,8 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
@@ -107,8 +111,13 @@ const createMockPrn = (overrides = {}) => ({
   id: prnId,
   version: 1,
   schemaVersion: 2,
-  organisation: { id: organisationId, name: 'Test Organisation' },
+  organisation: {
+    id: organisationId,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    name: 'Test Organisation'
+  },
   registrationId,
+  registration: TEST_REGISTRATION,
   accreditation: buildAccreditationSnapshot({
     id: accreditationId,
     submittedToRegulator: REGULATOR.EA
@@ -681,7 +690,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       it('returns 404 when PRN belongs to different organisation', async () => {
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn({
-            organisation: { id: 'different-org', name: 'Other Organisation' }
+            organisation: {
+              id: 'different-org',
+              organisationNumber: TEST_ORGANISATION_NUMBER,
+              name: 'Other Organisation'
+            }
           })
         )
 
