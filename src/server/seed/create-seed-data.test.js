@@ -1,5 +1,4 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { ObjectId } from 'mongodb'
 import { describe, expect, it, vi } from 'vitest'
 import { createSeedData } from './create-seed-data.js'
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
@@ -9,6 +8,7 @@ import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
  */
 
 const PRODUCTION = () => true
+const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 const NON_PRODUCTION = () => false
 
 describe('createSeedData', () => {
@@ -75,17 +75,14 @@ describe('createSeedData', () => {
     }
   )
 
-  it('does not create epr-organisation seed data when the fixtures are already present in the collection', async () => {
+  it('does not create epr-organisation seed data when the organisations already exist', async () => {
     const { mockDb } = createMockDb({
-      countDocuments: async () => 1,
-      find: (_query) => ({
-        toArray: async () => [
-          ObjectId.createFromHexString('6507f1f77bcf86cd79943901')
-        ]
-      })
+      countDocuments: async () => 1
     })
 
     const repository = createInMemoryOrganisationsRepository()()
+    await createSeedData(mockDb, NON_PRODUCTION, repository)
+    await waitForCacheSync()
     const spy = vi.spyOn(repository, 'insert')
 
     await createSeedData(mockDb, NON_PRODUCTION, repository)
@@ -96,14 +93,10 @@ describe('createSeedData', () => {
 
 /**
  * @param {{
- *   countDocuments?: () => Promise<number>,
- *   find?: (query?: unknown) => { toArray: () => Promise<unknown[]> }
+ *   countDocuments?: () => Promise<number>
  * }} [overrides]
  */
-function createMockDb({
-  countDocuments = async () => 0,
-  find = () => ({ toArray: async () => [] })
-} = {}) {
+function createMockDb({ countDocuments = async () => 0 } = {}) {
   /** @type {Array<{ collectionName: string, items: unknown }>} */
   const insertions = []
   const mockDb = createSharedMockDb({
@@ -114,8 +107,7 @@ function createMockDb({
             insertions.push({ collectionName, items })
             return { insertedIds: [] }
           },
-          countDocuments,
-          find
+          countDocuments
         })
       )
   })

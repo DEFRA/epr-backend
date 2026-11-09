@@ -20,6 +20,7 @@ import {
   USER_ROLES
 } from '#domain/organisations/model.js'
 import {
+  organisationNumberOf,
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -36,9 +37,6 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
-/** @import {Db} from 'mongodb' */
-
-const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 
 /**
  * Well-known orgIds for seed scenarios.
@@ -369,20 +367,17 @@ const SEED_SCENARIOS = {
  * Only seeds if the scenarios don't already exist in the database.
  * Uses fixed orgIds to enable idempotent seeding.
  *
- * @param {Db} db - MongoDB database instance
  * @param {OrganisationsRepository} organisationsRepository
  * @returns {Promise<void>}
  */
-export async function createEprOrganisationScenarios(
-  db,
-  organisationsRepository
-) {
-  const scenarioOrgIds = Object.values(SEED_SCENARIOS).map((s) => s.orgId)
+export async function createEprOrganisationScenarios(organisationsRepository) {
+  const scenarioOrganisationNumbers =
+    Object.values(SEED_SCENARIOS).map(organisationNumberOf)
 
-  const existingScenarios = await db
-    .collection(COLLECTION_EPR_ORGANISATIONS)
-    .find({ orgId: { $in: scenarioOrgIds } })
-    .toArray()
+  const existingScenarios =
+    await organisationsRepository.findByOrganisationNumbers(
+      scenarioOrganisationNumbers
+    )
 
   if (existingScenarios.length > 0) {
     logger.info({
