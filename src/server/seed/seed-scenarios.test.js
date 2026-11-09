@@ -11,8 +11,6 @@ import {
   SCENARIO_ORG_IDS
 } from './seed-scenarios.js'
 
-/** @import {Db} from 'mongodb' */
-
 /**
  * Wait for the inmemory repository's stale cache to sync.
  * The repository uses setImmediate for cache updates.
@@ -23,35 +21,17 @@ import {
  */
 const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 
-/**
- * @param {{ find?: () => { toArray: () => Promise<object[]> } }} options
- * @returns {Db}
- */
-function createMockDb({ find = () => ({ toArray: async () => [] }) } = {}) {
-  return /** @type {Db} */ (
-    /** @type {unknown} */ ({
-      collection: () => ({
-        find,
-        countDocuments: async () => 0
-      })
-    })
-  )
-}
-
 describe('seed-scenarios', () => {
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let repository
-  /** @type {Db} */
-  let mockDb
 
   beforeEach(() => {
     repository = createInMemoryOrganisationsRepository()()
-    mockDb = createMockDb()
   })
 
   describe('createEprOrganisationScenarios', () => {
     it('creates approved, active, and active-with-rejected-accreditation scenarios', async () => {
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
 
       const orgs = await repository.findAll()
       const orgIds = /** @type {number[]} */ (Object.values(SCENARIO_ORG_IDS))
@@ -69,7 +49,7 @@ describe('seed-scenarios', () => {
       // If this test passes without errors, the scenarios are schema-valid.
       // We don't need to manually validate - the repository already does this.
       await expect(
-        createEprOrganisationScenarios(mockDb, repository)
+        createEprOrganisationScenarios(repository)
       ).resolves.not.toThrow()
 
       // Verify all scenarios were created successfully
@@ -93,7 +73,7 @@ describe('seed-scenarios', () => {
     })
 
     it('creates an approved organisation with approved registration and accreditation', async () => {
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
       const orgs = await repository.findAll()
@@ -122,7 +102,7 @@ describe('seed-scenarios', () => {
     })
 
     it('numbers registrations and accreditations in the production format', async () => {
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
       const orgs = await repository.findAll()
@@ -140,7 +120,7 @@ describe('seed-scenarios', () => {
     })
 
     it('creates an active organisation with approved registration and accreditation', async () => {
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
       const orgs = await repository.findAll()
@@ -165,7 +145,7 @@ describe('seed-scenarios', () => {
     })
 
     it('creates an active organisation with suspended accreditation', async () => {
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
       const orgs = await repository.findAll()
@@ -193,7 +173,7 @@ describe('seed-scenarios', () => {
       process.env.SEED_TESTER_EMAIL = 'custom-tester@example.com'
 
       try {
-        await createEprOrganisationScenarios(mockDb, repository)
+        await createEprOrganisationScenarios(repository)
         await waitForCacheSync()
 
         const orgs = await repository.findAll()
@@ -220,7 +200,7 @@ describe('seed-scenarios', () => {
         'custom-approved-tester@example.com'
 
       try {
-        await createEprOrganisationScenarios(mockDb, repository)
+        await createEprOrganisationScenarios(repository)
         await waitForCacheSync()
 
         const orgs = await repository.findAll()
@@ -245,20 +225,15 @@ describe('seed-scenarios', () => {
 
     it('skips seeding when scenarios already exist', async () => {
       // First run - should create scenarios
-      await createEprOrganisationScenarios(mockDb, repository)
+      await createEprOrganisationScenarios(repository)
 
-      // Mock DB to return existing scenarios
-      const mockDbWithExisting = createMockDb({
-        find: () => ({
-          toArray: async () => [{ orgId: SCENARIO_ORG_IDS.APPROVED }]
-        })
-      })
+      await waitForCacheSync()
 
       const insertSpy = vi.spyOn(repository, 'insert')
       insertSpy.mockClear()
 
       // Second run - should skip
-      await createEprOrganisationScenarios(mockDbWithExisting, repository)
+      await createEprOrganisationScenarios(repository)
 
       expect(insertSpy).not.toHaveBeenCalled()
     })
@@ -279,7 +254,7 @@ describe('seed-scenarios', () => {
 
       // Should not throw - errors are caught and logged
       await expect(
-        createEprOrganisationScenarios(mockDb, failingRepository)
+        createEprOrganisationScenarios(failingRepository)
       ).resolves.not.toThrow()
 
       // Should have attempted all 3 scenarios despite first failing

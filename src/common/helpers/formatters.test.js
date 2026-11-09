@@ -4,6 +4,7 @@ import {
   capitalize,
   formatAddress,
   formatMaterial,
+  formatResolvedMaterial,
   formatTonnageBand,
   getAnnexIIProcess,
   uppercaseString
@@ -103,6 +104,22 @@ describe('formatters', () => {
           GLASS_RECYCLING_PROCESS.GLASS_OTHER
         ])
       ).toBe('Glass-remelt-other')
+    })
+  })
+
+  describe('formatResolvedMaterial', () => {
+    it('formats a glass recycling process as glass with that process', () => {
+      expect(
+        formatResolvedMaterial(GLASS_RECYCLING_PROCESS.GLASS_RE_MELT)
+      ).toBe('Glass-remelt')
+      expect(formatResolvedMaterial(GLASS_RECYCLING_PROCESS.GLASS_OTHER)).toBe(
+        'Glass-other'
+      )
+    })
+
+    it('formats any other material as formatMaterial does', () => {
+      expect(formatResolvedMaterial(MATERIAL.PAPER)).toBe('Paper and board')
+      expect(formatResolvedMaterial(MATERIAL.PLASTIC)).toBe('Plastic')
     })
   })
 

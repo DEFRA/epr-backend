@@ -10,7 +10,7 @@ import {
   registrationFactory
 } from '#common/helpers/collections/factories/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { ObjectId } from 'mongodb'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
@@ -28,7 +28,6 @@ import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-org
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
-const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 
 /**
  * Create seed data
@@ -48,8 +47,8 @@ export async function createSeedData(
     logger.info({ message: 'Create seed data: start' })
 
     await createOrgRegAccFixtures(db)
-    await createEprOrganisationFixtures(db, organisationsRepository)
-    await createEprOrganisationScenarios(db, organisationsRepository)
+    await createEprOrganisationFixtures(organisationsRepository)
+    await createEprOrganisationScenarios(organisationsRepository)
   }
 }
 
@@ -97,22 +96,18 @@ async function createOrgRegAccFixtures(db) {
   }
 }
 
-async function createEprOrganisationFixtures(db, organisationsRepository) {
-  const eprOrganisationFixturesIds = [
-    eprOrganisation1,
-    eprOrganisation2,
-    eprOrganisation3,
-    eprOrganisation4
-  ]
-    .map((record) => record.id)
-    .map(ObjectId.createFromHexString)
+async function createEprOrganisationFixtures(organisationsRepository) {
+  const existingFixtures =
+    await organisationsRepository.findByOrganisationNumbers(
+      [
+        eprOrganisation1,
+        eprOrganisation2,
+        eprOrganisation3,
+        eprOrganisation4
+      ].map(organisationNumberOf)
+    )
 
-  const eprOrganisationFixturesDocs = await db
-    .collection(COLLECTION_EPR_ORGANISATIONS)
-    .find({ _id: { $in: eprOrganisationFixturesIds } })
-    .toArray()
-
-  if (eprOrganisationFixturesDocs.length === 0) {
+  if (existingFixtures.length === 0) {
     logger.info({
       message: 'Create seed data: inserting epr-organisation fixtures'
     })

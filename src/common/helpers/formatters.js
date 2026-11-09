@@ -2,7 +2,7 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {Address, AppliedForMaterial, GlassRecyclingProcess, TonnageBand} from '#domain/organisations/model.js' */
+/** @import {Address, AppliedForMaterial, GlassRecyclingProcess, Material, TonnageBand} from '#domain/organisations/model.js' */
 /** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
 import {
@@ -85,6 +85,20 @@ export function formatMaterial(material, glassRecyclingProcess = []) {
   }
 
   return MATERIAL_DISPLAY_NAMES[material] || capitalize(material)
+}
+
+/**
+ * Formats a material already resolved to its glass recycling process, as the
+ * organisation read model holds it, the way {@link formatMaterial} does.
+ * @param {Material} material - e.g. 'plastic', 'glass_re_melt'
+ * @returns {string} - e.g. 'Plastic', 'Glass-remelt'
+ */
+export function formatResolvedMaterial(material) {
+  return material in GLASS_RECYCLING_PROCESS_MAPPING
+    ? formatMaterial(MATERIAL.GLASS, [
+        /** @type {GlassRecyclingProcess} */ (material)
+      ])
+    : formatMaterial(/** @type {AppliedForMaterial} */ (material))
 }
 
 /**

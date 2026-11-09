@@ -4,7 +4,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 
 /** @type {NonProdDataReset} */
 const noopReset = {
-  async deleteByOrgId() {
+  async deleteByOrganisationNumber() {
     return {}
   }
 }

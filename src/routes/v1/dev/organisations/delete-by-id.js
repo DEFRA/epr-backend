@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js' */
 
@@ -41,7 +43,10 @@ export const devOrganisationsDeleteById = {
    */
   handler: async (request, h) => {
     const { id } = request.params
-    const deletedCounts = await request.nonProdDataReset.deleteByOrgId(id)
+    const deletedCounts =
+      await request.nonProdDataReset.deleteByOrganisationNumber(
+        toOrganisationNumber(String(id))
+      )
     return h.response({ orgId: id, deletedCounts }).code(StatusCodes.OK)
   }
 }
