@@ -14,6 +14,7 @@ import {
   asOperator,
   createReprocessorReceivedRowValues,
   getWasteBalance,
+  ledgerIdOf,
   REPROCESSOR_RECEIVED_HEADERS,
   setupWasteBalanceIntegrationEnvironment
 } from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
@@ -167,11 +168,9 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     })
     expect(body.validation.counts.total).toBeGreaterThan(0)
 
-    const balance = await env.wasteBalanceService.currentBalance({
-      organisationId: env.organisationId,
-      registrationId: env.registrationId,
-      accreditationId: env.accreditationId
-    })
+    const balance = await env.wasteBalanceService.currentBalance(
+      await ledgerIdOf(env)
+    )
     expect(balance?.amount ?? 0).toBe(0)
   })
 

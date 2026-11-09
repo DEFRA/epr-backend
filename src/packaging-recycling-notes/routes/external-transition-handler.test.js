@@ -1,8 +1,4 @@
-import {
-  TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION,
-  buildAccreditationSnapshot
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -19,7 +15,11 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
@@ -53,6 +53,15 @@ const organisation = buildOrganisationHolding({
   registrationId: REG_ID,
   accreditationId: ACC_ID
 })
+// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+}
 const organisationsRepository = () => ({
   findById: async () => organisation
 })
@@ -77,13 +86,16 @@ const buildPrn = (currentStatus) => ({
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
   registrationId: REG_ID,
-  registration: TEST_REGISTRATION,
+  registration: { registrationNumber: LEDGER.registrationNumber },
   organisation: {
     id: ORG_ID,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor'
   },
-  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  accreditation: buildAccreditationSnapshot({
+    id: ACC_ID,
+    accreditationNumber: LEDGER.accreditationNumber
+  }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
@@ -103,11 +115,7 @@ const buildPrn = (currentStatus) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number) => ({
-  ...withNumbers({
-    registrationId: REG_ID,
-    accreditationId: ACC_ID,
-    organisationId: ORG_ID
-  }),
+  ...LEDGER,
   number,
   kind,
   payload: { prnId: PRN_ID, amount: 50 },
@@ -183,9 +191,7 @@ describe('external PRN transition read-side fold', () => {
       events: [
         partialMock(
           buildLedgerEvent({
-            registrationId: REG_ID,
-            accreditationId: ACC_ID,
-            organisationId: ORG_ID,
+            ...LEDGER,
             number: 1
           })
         )
@@ -200,11 +206,7 @@ describe('external PRN transition read-side fold', () => {
 
     expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-    const latest = await ledgerRepository.findLatestInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const latest = await ledgerRepository.findLatestInLedger(LEDGER)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latest.createdBy).toEqual({
       id: externalApiClientId,
@@ -219,9 +221,9 @@ describe('mapTransitionError', () => {
   // here directly to keep the generic handler's 400 path verified.
   it('maps a ledger slot conflict to a 409 without naming the ledger', () => {
     const error = new LedgerSlotConflictError({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
+      organisationNumber: toOrganisationNumber('500001'),
+      registrationNumber: toRegistrationNumber('REG-1'),
+      accreditationNumber: toAccreditationNumber('ACC-1'),
       number: 2
     })
 
@@ -229,7 +231,7 @@ describe('mapTransitionError', () => {
 
     expect(result.isBoom).toBe(true)
     expect(result.output.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(result.output.payload.message).not.toContain('acc-1')
+    expect(result.output.payload.message).not.toContain('ACC-1')
   })
 
   it('maps an unauthorised transition to a 400', () => {

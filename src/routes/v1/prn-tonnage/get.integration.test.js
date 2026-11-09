@@ -21,6 +21,11 @@ import {
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { prnTonnagePath } from './get.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
@@ -41,7 +46,10 @@ const approvedStatusHistory = [
 const ledgerId = {
   organisationId,
   registrationId,
-  accreditationId: accId
+  accreditationId: accId,
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber('REG-INTEG'),
+  accreditationNumber: toAccreditationNumber('ACC-INTEG')
 }
 
 /** @param {string | null} accreditationNumber */

@@ -2,7 +2,7 @@ import { describe, it as base, expect, it } from 'vitest'
 
 import { createInMemoryLedgerRepository } from './ledger-inmemory.js'
 import { testLedgerRepositoryContract } from './ledger-port.contract.js'
-import { buildLedgerEvent } from './ledger-test-data.js'
+import { buildLedgerEvent, buildLedgerId } from './ledger-test-data.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -37,11 +37,11 @@ describe('waste-balances ledger repository - in-memory implementation', () => {
   // so this behaviour lives here rather than in the shared contract.
   describe('findLatestSubmittedSummaryLogPerLedger with out-of-order seeds', () => {
     it('returns the highest-numbered submission regardless of storage order', async () => {
-      const partition = {
+      const partition = buildLedgerId({
         organisationId: 'org-seed',
         registrationId: 'reg-seed',
         accreditationId: 'acc-seed'
-      }
+      })
       const repository = createInMemoryLedgerRepository([
         {
           ...buildLedgerEvent({

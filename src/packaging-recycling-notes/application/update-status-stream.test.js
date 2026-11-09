@@ -1,9 +1,9 @@
+import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
-  TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION,
-  buildAccreditationSnapshot
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
@@ -39,6 +39,15 @@ const organisation = buildOrganisationHolding({
   registrationId: REG_ID,
   accreditationId: ACC_ID
 })
+// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+}
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const TONNAGE = 50
@@ -65,13 +74,16 @@ const buildPrn = (overrides = {}) => ({
   schemaVersion: 2,
   version: 3,
   registrationId: REG_ID,
-  registration: TEST_REGISTRATION,
+  registration: { registrationNumber: LEDGER.registrationNumber },
   organisation: {
     id: ORG_ID,
-    organisationNumber: TEST_ORGANISATION_NUMBER,
+    organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor'
   },
-  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  accreditation: buildAccreditationSnapshot({
+    id: ACC_ID,
+    accreditationNumber: LEDGER.accreditationNumber
+  }),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: TONNAGE,
@@ -90,9 +102,7 @@ const buildPrn = (overrides = {}) => ({
 })
 
 const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationId: ORG_ID,
+  ...LEDGER,
   number,
   kind,
   payload: { prnId: PRN_ID, amount: TONNAGE },
@@ -110,11 +120,7 @@ const buildLedgerEvent = (kind, number = APPENDED_WATERMARK) => ({
 const buildSeededLedgerRepository = () =>
   createInMemoryLedgerRepository([
     {
-      ...withNumbers({
-        registrationId: REG_ID,
-        accreditationId: ACC_ID,
-        organisationId: ORG_ID
-      }),
+      ...LEDGER,
       number: SEED_NUMBER,
       kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId: toSummaryLogFileId('seed'), creditTotal: 1000 },
@@ -126,7 +132,6 @@ const buildSeededLedgerRepository = () =>
   ])()
 
 const buildOrganisationsRepository = (accreditation = {}) => ({
-  findById: async () => organisation,
   findAccreditationById: vi.fn().mockResolvedValue({
     status: 'approved',
     submittedToRegulator: REGULATOR.EA,
@@ -251,11 +256,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       obligationYear: toYear(2027)
     })
 
-    const latest = await ledgerRepository.findLatestInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const latest = await ledgerRepository.findLatestInLedger(LEDGER)
     const reread = await packagingRecyclingNotesRepository.findById(PRN_ID)
 
     // Acceptance moves no pool, so it loads no accreditation and writes none -
@@ -353,11 +354,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
   })
@@ -419,11 +416,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     ).rejects.toThrow(/Unable to generate unique PRN number/)
 
     // Numbering runs first, so exhausting every suffix announces no issuance.
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(1)
     expect(all.at(-1)?.number).toBe(SEED_NUMBER)
   })
@@ -495,11 +488,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(1)
     expect(all.at(-1)?.number).toBe(SEED_NUMBER)
   })
@@ -528,11 +517,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       })
     ).rejects.toThrow('doc write failed')
 
-    const all = await ledgerRepository.findAllInLedger({
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    })
+    const all = await ledgerRepository.findAllInLedger(LEDGER)
     expect(all).toHaveLength(2)
     expect(all.at(-1)?.kind).toBe(LEDGER_EVENT_KIND.PRN_ISSUED)
     expect(persistProjection.mock.calls[0]?.[0].projection.prnNumber).toEqual(

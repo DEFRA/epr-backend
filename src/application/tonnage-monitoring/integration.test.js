@@ -14,6 +14,7 @@ import {
   createMongoLedgerRepository
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -145,9 +146,7 @@ const submittedSummaryLogEvent = ({
   summaryLogId,
   number
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
+  ...withNumbers({ organisationId, registrationId, accreditationId }),
   number,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: { summaryLogId, creditTotal: 0 }

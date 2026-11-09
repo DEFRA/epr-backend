@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto'
  */
 
 /**
- * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
@@ -162,9 +162,9 @@ const identityKey = (fields) =>
  * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
-  organisationId: ledgerId.organisationId,
-  registrationId: ledgerId.registrationId,
-  accreditationId: ledgerId.accreditationId,
+  organisationNumber: ledgerId.organisationNumber,
+  registrationNumber: ledgerId.registrationNumber,
+  accreditationNumber: ledgerId.accreditationNumber,
   summaryLogIds: summaryLogId
 })
 

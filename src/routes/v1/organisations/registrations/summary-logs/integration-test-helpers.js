@@ -36,6 +36,7 @@ import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
 import {
+  requiredNumbersFor,
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -49,18 +50,52 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 export { asOperator } from '#test/inject-auth.js'
 
 /**
+ * @typedef {{
+ *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   accreditationId: string
+ * }} LedgerEnvironment
+ */
+
+/**
+ * The ids and numbers of one of the environment's ledgers: its accreditation's
+ * by default, or the registered-only one for a `null` accreditation.
+ *
+ * @param {LedgerEnvironment} env
+ * @param {string | null} [accreditationId]
+ * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId>}
+ */
+export const ledgerIdOf = async (
+  env,
+  accreditationId = env.accreditationId
+) => {
+  const ids = {
+    organisationId: env.organisationId,
+    registrationId: env.registrationId,
+    accreditationId
+  }
+  return {
+    ...ids,
+    ...requiredNumbersFor(
+      await env.organisationsRepository.findById(env.organisationId),
+      ids,
+      'the test ledger'
+    )
+  }
+}
+
+/**
  * Reads an accreditation's waste balance from the environment's service and
  * asserts it is present, so callers can read its fields without a null guard at
  * every assertion site. The ledger id is taken entirely from the environment.
  *
- * @param {{ wasteBalanceService: ReturnType<typeof createWasteBalanceService>, organisationId: string, registrationId: string, accreditationId: string }} env
+ * @param {LedgerEnvironment & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
  */
 export const getWasteBalance = async (env) => {
-  const balance = await env.wasteBalanceService.currentBalance({
-    organisationId: env.organisationId,
-    registrationId: env.registrationId,
-    accreditationId: env.accreditationId
-  })
+  const balance = await env.wasteBalanceService.currentBalance(
+    await ledgerIdOf(env)
+  )
   assert(balance)
   return balance
 }

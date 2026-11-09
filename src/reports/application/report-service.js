@@ -176,8 +176,6 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
  * @param {RegistrationKey} params.key
  * @param {Registration} params.registration
  * @param {Year} params.year
@@ -194,8 +192,6 @@ export async function fetchOrGenerateReportForPeriod({
   summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   overseasSitesRepository,
-  organisationId,
-  registrationId,
   key: { organisationNumber, registrationNumber },
   registration,
   year,
@@ -235,8 +231,7 @@ export async function fetchOrGenerateReportForPeriod({
     {
       ledgerRepository,
       summaryLogRowStatesRepository,
-      organisationId,
-      registrationId,
+      key: { organisationNumber, registrationNumber },
       registration
     }
   )
@@ -295,19 +290,20 @@ function toSource(latestSubmission) {
  * @param {object} params
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {RegistrationKey} params.key
  * @param {Registration} params.registration
  */
 async function readSubmissionRowStates({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationId,
-  registrationId,
+  key: { organisationNumber, registrationNumber },
   registration
 }) {
-  const accreditationId = registration.accreditationId ?? null
-  const ledgerId = { organisationId, registrationId, accreditationId }
+  const ledgerId = {
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber: registration.accreditation?.accreditationNumber ?? null
+  }
 
   const latestSubmission = await latestSubmittedSummaryLog(
     ledgerRepository,
@@ -532,8 +528,7 @@ export async function createReportForPeriod({
     {
       ledgerRepository,
       summaryLogRowStatesRepository,
-      organisationId,
-      registrationId,
+      key: numbers,
       registration
     }
   )
