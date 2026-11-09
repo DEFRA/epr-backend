@@ -192,7 +192,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
 /**
  * @typedef {{
  *   id: string;
- *   accreditationNumber: string;
+ *   accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber;
  *   accreditationYear: Year;
  *   material: import('#domain/organisations/model.js').AppliedForMaterial;
  *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
