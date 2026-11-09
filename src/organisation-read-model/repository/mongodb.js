@@ -5,16 +5,38 @@ import {
   findOneAtMinimumVersion,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
-import { toReadModelOrganisations } from './to-read-model.js'
+import {
+  registrationNumbersOf,
+  toReadModelOrganisations
+} from './to-read-model.js'
 
-/** @import { Db } from 'mongodb' */
+/** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
+/** @import { ExternalAccreditation } from './to-read-model.js' */
+
+export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
 
 /**
- * Reads the organisations collection directly, the same way the organisations
- * repository does, and serves what it finds in the read model's shape.
+ * @param {Db} db
+ * @param {StoredOrganisation[]} stored
+ * @returns {Promise<ExternalAccreditation[]>}
+ */
+const findExternalAccreditations = (db, stored) =>
+  /** @type {Collection<ExternalAccreditation>} */ (
+    db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+  )
+    .find(
+      { registrationNumber: { $in: registrationNumbersOf(stored) } },
+      { projection: { _id: 0 } }
+    )
+    .toArray()
+
+/**
+ * Reads the organisations and external accreditations collections directly, and
+ * serves what it finds in the read model's shape.
  *
  * It shares the organisations repository's reads through the
  * `#repositories/organisations/mongodb-find.js` import while both read
@@ -57,6 +79,7 @@ export const createOrganisationReadRepository = (
       }
       const [organisation] = await toReadModelOrganisations(
         [stored],
+        await findExternalAccreditations(db, [stored]),
         dependencies
       )
       return organisation ?? null
@@ -69,7 +92,7 @@ export const createOrganisationReadRepository = (
       })
       return {
         ...page,
-        items: await toReadModelOrganisations(items, dependencies)
+        items: await toReadModelOrganisations(items, [], dependencies)
       }
     }
   })
