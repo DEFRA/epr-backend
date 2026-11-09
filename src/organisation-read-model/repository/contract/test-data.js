@@ -7,6 +7,7 @@ import {
 /** @import { ExternalAccreditation } from '../port.js' */
 
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
+const ACCREDITATION_YEAR = 2027
 
 /**
  * @param {Partial<ExternalAccreditation>} [overrides]
@@ -14,7 +15,7 @@ const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
  */
 export const buildExternalAccreditation = (overrides = {}) => ({
   registrationNumber: REGISTRATION_NUMBER,
-  year: toYear(2027),
+  year: toYear(ACCREDITATION_YEAR),
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
