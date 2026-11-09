@@ -82,8 +82,44 @@ describe('diagnoseNaturalKeyIndexes', () => {
       prns: 1,
       prnsWithoutNumbers: 0,
       ledgerEvents: 2,
-      ledgerEventsWithoutNumbers: 0
+      ledgerEventsWithoutNumbers: 0,
+      ledgerSlotClashes: 0
     })
+  })
+
+  it('counts ledger slots more than one id partition would take under its numbers', async ({
+    database
+  }) => {
+    await database.collection('waste-balance-events').insertMany([
+      ledgerEvent({
+        registrationId: 'r1',
+        accreditationId: 'acc-1',
+        accreditationNumber: 'A1',
+        number: 1
+      }),
+      ledgerEvent({
+        registrationId: 'r2',
+        accreditationId: 'acc-2',
+        accreditationNumber: 'A1',
+        number: 1
+      }),
+      ledgerEvent({
+        registrationId: 'r1',
+        accreditationId: 'acc-1',
+        accreditationNumber: 'A1',
+        number: 2
+      }),
+      ledgerEvent({
+        registrationId: 'r1',
+        accreditationId: null,
+        accreditationNumber: null,
+        number: 1
+      })
+    ])
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis.ledgerSlotClashes).toBe(1)
   })
 
   it('counts PRNs lacking any of their numbers', async ({ database }) => {
