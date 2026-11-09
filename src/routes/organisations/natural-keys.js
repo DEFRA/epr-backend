@@ -183,7 +183,8 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
 }
 
 /**
- * A registration's accreditations for a year, by the read model's rules.
+ * A registration's stored accreditations for a year, by the read model's
+ * rules.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
@@ -198,8 +199,8 @@ export function accreditationsForYear(organisation, registration, year) {
 }
 
 /**
- * Finds a registration's accreditation for a year, the slot the accredited
- * routes address, by the read model's rules.
+ * Finds a registration's stored accreditation for a year, the slot the
+ * accredited routes address, by the read model's rules.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration
