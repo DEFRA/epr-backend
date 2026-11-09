@@ -362,7 +362,10 @@ const performFindByOrganisationNumber =
       minimumVersion
     )
 
-/** @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']} */
+/**
+ * @param {Db} db
+ * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
+ */
 const performFindHighestOrganisationNumber = (db) => async () => {
   const [doc] = await db
     .collection(COLLECTION_NAME)
@@ -370,10 +373,13 @@ const performFindHighestOrganisationNumber = (db) => async () => {
     .sort({ orgId: -1 })
     .limit(1)
     .toArray()
-  return doc ? organisationNumberOf(doc) : null
+  return doc ? organisationNumberOf({ orgId: doc.orgId }) : null
 }
 
-/** @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']} */
+/**
+ * @param {Db} db
+ * @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']}
+ */
 const performDeleteByOrganisationNumber =
   (db) => async (organisationNumber) => {
     const { deletedCount } = await db

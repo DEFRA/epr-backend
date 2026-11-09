@@ -1,22 +1,33 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
+/** @import { TestAPI } from 'vitest' */
 /** @import { OrganisationBuilders } from './test-data.js' */
+/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
 
+/**
+ * @typedef {{
+ *   organisationsRepository: OrganisationsRepositoryFactory,
+ *   organisationBuilders: OrganisationBuilders
+ * }} ContractFixtures
+ */
+
+/** @param {TestAPI<ContractFixtures>} it */
 export const testDeleteByOrganisationNumberBehaviour = (it) => {
   describe('deleteByOrganisationNumber', () => {
+    /** @type {OrganisationsRepository} */
     let repository
     /** @type {OrganisationBuilders['buildOrganisation']} */
     let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+        /** @type {ContractFixtures} */ {
           organisationsRepository,
           organisationBuilders
         }
       ) => {
-        repository = await organisationsRepository()
+        repository = organisationsRepository()
         buildOrganisation = organisationBuilders.buildOrganisation
       }
     )

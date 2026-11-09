@@ -398,7 +398,10 @@ const performFindAllIds = (staleCache) => async () => {
   )
 }
 
-/** @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']} */
+/**
+ * @param {Array<{ orgId: number }>} storage
+ * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
+ */
 const performFindHighestOrganisationNumber = (storage) => async () => {
   if (storage.length === 0) {
     return null
@@ -421,7 +424,11 @@ const removeByOrgId = (records, orgId) => {
   return 1
 }
 
-/** @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']} */
+/**
+ * @param {Array<{ orgId: number }>} storage
+ * @param {Array<{ orgId: number }>} staleCache
+ * @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']}
+ */
 const performDeleteByOrganisationNumber =
   (storage, staleCache) => async (organisationNumber) => {
     const orgId = storedOrgId(organisationNumber)
