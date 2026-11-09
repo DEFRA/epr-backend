@@ -8,14 +8,15 @@ import Joi from 'joi'
  */
 export const isoDateTimeString = () =>
   Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
     .custom((value, helpers) => {
       const date = new Date(value)
       if (Number.isNaN(date.getTime()) || date.toISOString() !== value) {
-        return helpers.error('string.isoDateTime')
+        return helpers.error('string.pattern.base')
       }
       return value
     })
     .messages({
-      'string.isoDateTime':
+      'string.pattern.base':
         'Date-time must be in YYYY-MM-DDTHH:mm:ss.sssZ format'
     })
