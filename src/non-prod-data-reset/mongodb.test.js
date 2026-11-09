@@ -134,8 +134,8 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       })
     },
 
-    reset: async ({ database }, use) => {
-      await use(createNonProdDataReset(database))
+    reset: async ({ database, repositories }, use) => {
+      await use(createNonProdDataReset(database, repositories.organisations))
     },
 
     // Snapshot config.cdpEnvironment for the duration of a test and expose a
@@ -413,11 +413,14 @@ describe('non-prod data reset (mongo)', () => {
     })
 
     it('logs the refusal with the orgId reference when run in production', async ({
-      database
+      database,
+      repositories
     }) => {
-      const productionReset = createNonProdDataReset(database, {
-        isProduction: true
-      })
+      const productionReset = createNonProdDataReset(
+        database,
+        repositories.organisations,
+        { isProduction: true }
+      )
 
       await expect(productionReset.deleteByOrgId(123)).rejects.toThrow()
 
@@ -446,22 +449,22 @@ describe('non-prod data reset (mongo)', () => {
 
     it('short-circuits overseas-sites when the organisation has no overseas sites', async ({
       database,
+      repositories,
       reset
     }) => {
-      const orgId = 600002
-      await database.collection('epr-organisations').insertOne({
-        _id: new ObjectId(),
-        orgId,
-        accreditations: [],
-        registrations: [{ id: new ObjectId().toHexString() }]
+      const organisation = buildOrganisation({
+        registrations: [
+          buildRegistration({ wasteProcessingType: 'reprocessor' })
+        ]
       })
+      await repositories.organisations.insert(organisation)
       // An orphan overseas site the cascade should not touch.
       await database.collection('overseas-sites').insertOne({
         _id: new ObjectId(),
         name: 'Orphan'
       })
 
-      const counts = await reset.deleteByOrgId(orgId)
+      const counts = await reset.deleteByOrgId(organisation.orgId)
 
       expect(counts['overseas-sites']).toBe(0)
       expect(await database.collection('overseas-sites').countDocuments()).toBe(
@@ -478,7 +481,11 @@ describe('non-prod data reset (mongo)', () => {
       await seedDownstreamForOrganisation(database, repositories, seeded)
       setCdpEnvironment('prod')
 
-      const server = { app: {}, logger: mockLogger, ext: () => {} }
+      const server = {
+        app: { organisationsRepository: repositories.organisations },
+        logger: mockLogger,
+        ext: () => {}
+      }
       // @ts-expect-error -- partial server mock for plugin registration test
       nonProdDataResetPlugin.register(server, { db: database })
 
@@ -498,18 +505,17 @@ describe('non-prod data reset (mongo)', () => {
       ).toBe(1)
     })
 
-    it('handles an organisation document missing accreditations and registrations entirely', async ({
-      database,
+    it('resets an organisation with no registrations or accreditations', async ({
+      repositories,
       reset
     }) => {
-      // Raw insert of a skeletal org doc missing accreditations and
-      // registrations, to cover the `?? []` fallbacks in extractCascadeKeys.
-      const orgId = 600003
-      await database
-        .collection('epr-organisations')
-        .insertOne({ _id: new ObjectId(), orgId })
+      const organisation = buildOrganisation({
+        registrations: [],
+        accreditations: []
+      })
+      await repositories.organisations.insert(organisation)
 
-      const counts = await reset.deleteByOrgId(orgId)
+      const counts = await reset.deleteByOrgId(organisation.orgId)
 
       expect(counts['epr-organisations']).toBe(1)
       expect(counts['overseas-sites']).toBe(0)

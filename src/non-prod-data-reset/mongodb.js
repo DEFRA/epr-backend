@@ -1,8 +1,11 @@
 import { ObjectId } from 'mongodb'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Db } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {{
@@ -42,17 +45,20 @@ const toObjectId = (id) => ObjectId.createFromHexString(id)
 
 /**
  * Looks up the organisation by its numeric orgId (the stable identifier used
- * by journey tests and upstream systems), not the Mongo _id. Shape validation
+ * by journey tests and upstream systems), not its id. Shape validation
  * for the incoming id lives at the route layer.
  *
- * @param {Db} db
+ * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber'>} organisationsRepository
  * @param {number} orgId
  */
-const findOrganisationForCleanup = async (db, orgId) =>
-  db.collection(COLLECTIONS.ORGANISATIONS).findOne({ orgId })
+const findOrganisationForCleanup = async (organisationsRepository, orgId) =>
+  organisationsRepository.findByOrganisationNumber(
+    toOrganisationNumber(String(orgId))
+  )
 
+/** @param {Organisation} organisation */
 const extractCascadeKeys = (organisation) => {
-  const overseasSiteIds = (organisation.registrations ?? []).flatMap((reg) =>
+  const overseasSiteIds = organisation.registrations.flatMap((reg) =>
     Object.values(reg.overseasSites ?? {}).map((entry) => entry.overseasSiteId)
   )
   return { overseasSiteIds }
@@ -172,10 +178,15 @@ const runCascade = async (db, steps) => {
  * true and logs an error.
  *
  * @param {Db} db
+ * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber'>} organisationsRepository
  * @param {{ isProduction?: boolean }} [options]
  * @returns {NonProdDataReset}
  */
-export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
+export const createNonProdDataReset = (
+  db,
+  organisationsRepository,
+  { isProduction = false } = {}
+) => ({
   async deleteByOrgId(orgId) {
     if (isProduction) {
       logger.error({
@@ -185,11 +196,14 @@ export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
       })
       throw new Error('Non-prod data reset is disabled in production.')
     }
-    const organisation = await findOrganisationForCleanup(db, orgId)
+    const organisation = await findOrganisationForCleanup(
+      organisationsRepository,
+      orgId
+    )
     if (!organisation) {
       return { ...EMPTY_COUNTS }
     }
-    const mongoIdHex = organisation._id.toHexString()
+    const mongoIdHex = organisation.id
     const keys = extractCascadeKeys(organisation)
     return runCascade(db, buildCascadeSteps(orgId, mongoIdHex, keys))
   }

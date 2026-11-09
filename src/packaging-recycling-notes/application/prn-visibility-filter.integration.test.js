@@ -6,6 +6,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { createPrnVisibilityFilter } from './prn-visibility-filter.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -18,8 +20,7 @@ import { generateExternalApiToken } from '#packaging-recycling-notes/routes/test
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
-const TEST_ORG_NUMERIC_ID = 500001
-const REAL_ORG_NUMERIC_ID = 500002
+const { buildOrganisation } = createOrganisationBuilders()
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -34,8 +35,9 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
 
   let db
   let server
-  let testOrgHexId
-  let realOrgHexId
+  let organisationsRepository
+  let testOrg
+  let realOrg
 
   const externalApiClientId = randomUUID()
   const authHeaders = {
@@ -48,15 +50,11 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
       await db.collection(PRNS_COLLECTION).deleteMany({})
 
-      const { insertedIds } = await db
-        .collection(ORGANISATIONS_COLLECTION)
-        .insertMany([
-          { orgId: TEST_ORG_NUMERIC_ID, version: 1 },
-          { orgId: REAL_ORG_NUMERIC_ID, version: 1 }
-        ])
-
-      testOrgHexId = insertedIds[0].toHexString()
-      realOrgHexId = insertedIds[1].toHexString()
+      organisationsRepository = (await createOrganisationsRepository(db))()
+      testOrg = buildOrganisation()
+      realOrg = buildOrganisation()
+      await organisationsRepository.insert(testOrg)
+      await organisationsRepository.insert(realOrg)
     }
   )
 
@@ -66,9 +64,10 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
   })
 
   async function createServerWithExclusion(testOrganisationIds) {
-    const { excludeOrganisationIds } = await createPrnVisibilityFilter(db, {
-      testOrganisationIds
-    })
+    const { excludeOrganisationIds } = await createPrnVisibilityFilter(
+      organisationsRepository,
+      { testOrganisationIds }
+    )
     const repositoryFactory = await createPackagingRecyclingNotesRepository(
       db,
       excludeOrganisationIds
@@ -77,12 +76,12 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
 
     await repository.create(
       buildAwaitingAcceptancePrn({
-        organisation: { id: testOrgHexId, name: 'Test Reprocessor' }
+        organisation: { id: testOrg.id, name: 'Test Reprocessor' }
       })
     )
     await repository.create(
       buildAwaitingAcceptancePrn({
-        organisation: { id: realOrgHexId, name: 'Real Reprocessor' }
+        organisation: { id: realOrg.id, name: 'Real Reprocessor' }
       })
     )
 
@@ -100,7 +99,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
   }
 
   it('excludes test organisation PRNs from the external list API', async () => {
-    server = await createServerWithExclusion([TEST_ORG_NUMERIC_ID])
+    server = await createServerWithExclusion([testOrg.orgId])
 
     const response = await server.inject({
       method: 'GET',

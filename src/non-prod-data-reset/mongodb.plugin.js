@@ -19,15 +19,17 @@ import { createNonProdDataReset } from './mongodb.js'
 export const nonProdDataResetPlugin = {
   name: 'nonProdDataReset',
   version: '1.0.0',
-  dependencies: ['mongodb'],
+  dependencies: ['mongodb', 'organisationsRepository'],
   register: (
     /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
     /** @type {{db?: import('mongodb').Db}} */ options = {}
   ) => {
     const db = options?.db ?? server.db
-    const reset = createNonProdDataReset(db, {
-      isProduction: isProductionEnvironment()
-    })
+    const reset = createNonProdDataReset(
+      db,
+      server.app.organisationsRepository,
+      { isProduction: isProductionEnvironment() }
+    )
     registerDependency(server, 'nonProdDataReset', () => reset)
   }
 }
