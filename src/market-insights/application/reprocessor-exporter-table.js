@@ -1,5 +1,5 @@
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
@@ -337,9 +337,7 @@ const measuresByCell = ({
     const key = registrationKey(periodicReport)
     const entry = registrations.get(key)
     if (entry === undefined) {
-      if (
-        !TEST_ORGANISATION_IDS.has(Number(periodicReport.organisationNumber))
-      ) {
+      if (!TEST_ORGANISATION_NUMBERS.has(periodicReport.organisationNumber)) {
         warnAboutUnmatchedReport(logger, key)
       }
       return undefined
