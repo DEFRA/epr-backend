@@ -2,7 +2,8 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import {
   toOrganisationNumber,
-  toRegistrationNumber
+  toRegistrationNumber,
+  toAccreditationNumber
 } from '#domain/organisations/numbers.js'
 import { buildPrn, buildDraftPrn } from './test-data.js'
 
@@ -37,7 +38,7 @@ export const testCreateBehaviour = (it) => {
           tonnage: 250.75,
           accreditation: {
             id: 'acc-glass',
-            accreditationNumber: 'ACC-G1',
+            accreditationNumber: toAccreditationNumber('ACC-G1'),
             accreditationYear: toYear(2026),
             material: 'glass',
             submittedToRegulator: 'ea',
@@ -70,7 +71,7 @@ export const testCreateBehaviour = (it) => {
           },
           accreditation: {
             id: 'acc-preserve-test',
-            accreditationNumber: 'ACC-PRESERVE',
+            accreditationNumber: toAccreditationNumber('ACC-PRESERVE'),
             accreditationYear: toYear(2026),
             material: 'paper',
             submittedToRegulator: 'nrw'
