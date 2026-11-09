@@ -1,6 +1,10 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { CADENCE } from './cadence.js'
 import { REPORT_STATUS } from './report-status.js'
 import {
@@ -59,8 +63,8 @@ const resubmittedSlot = () =>
  * @returns {import('#reports/repository/port.js').PeriodicReport}
  */
 const periodicReport = (year, reports) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('R25SR500010912PL'),
   year: toYear(year),
   reports
 })

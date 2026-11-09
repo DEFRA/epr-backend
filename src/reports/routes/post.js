@@ -10,25 +10,18 @@ import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
-import {
-  extractChangedBy,
-  findRegistrationForReport,
-  withRegistrationDetails
-} from './shared.js'
+import { extractChangedBy, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
 
 /**
- * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { ReportRequest } from './shared.js'
  */
 
 export const reportsPostFailureMessage = 'Failure on report create'
@@ -78,31 +71,24 @@ export const reportsPost = {
     }
   },
   /**
-   * @param {HapiRequest & {
-   *   params: PeriodWithSubmissionPathParams,
-   *   organisationsRepository: OrganisationsRepository,
+   * @param {ReportRequest & {
    *   ledgerRepository: WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   reportsRepository: ReportsRepository,
-   *   overseasSitesRepository: OverseasSitesRepository
+   *   reportsRepository: ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const {
-      organisationsRepository,
       ledgerRepository,
       summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
-      overseasSitesRepository,
       params,
       logger
     } = request
     const {
-      organisationId,
-      registrationId,
       year,
       cadence,
       period,
@@ -110,17 +96,10 @@ export const reportsPost = {
       registrationNumber,
       submissionNumber
     } = params
+    const { registration, accreditation } = request.app
 
     try {
-      const storedRegistration = await findRegistrationForReport(
-        organisationsRepository,
-        params
-      )
-
-      const { registration } =
-        await findOrganisationAndRegistrationReadModels(request)
-
-      // atNaturalKeys has already answered 404 for a monthly report whose
+      // atReportKeys has already answered 404 for a monthly report whose
       // registration holds no accreditation for the year.
       const cadenceAccreditation = cadenceAccreditationFor(
         cadence,
@@ -132,14 +111,11 @@ export const reportsPost = {
         ledgerRepository,
         summaryLogRowStatesRepository,
         packagingRecyclingNotesRepository,
-        overseasSitesRepository,
-        organisationId,
-        registrationId,
         numbers: {
           registrationNumber,
           organisationNumber
         },
-        registration: storedRegistration,
+        reportRegistration: { registration, accreditation },
         year,
         cadenceAccreditation,
         period,
@@ -156,8 +132,8 @@ export const reportsPost = {
       })
 
       await auditReportCreate(request, {
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         year,
         cadence,
         period,

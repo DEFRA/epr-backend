@@ -8,7 +8,6 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -105,8 +104,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const createdReport = withReport
       ? await reportsRepository.createReport(
           buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
             ...reportKeyOf(org, registration),
             year: YEAR,
             ...stream,
@@ -118,9 +115,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(org)
-        ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
@@ -137,8 +131,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     return {
       server,
-      organisationId: org.id,
-      registrationId: registration.id,
       ...reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
@@ -216,7 +208,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     beforeEach(() => vi.clearAllMocks())
 
     it('calls auditReportStatusTransition with correct params on successful transition', async () => {
-      const { postStatus, organisationId, registrationId, reportId } =
+      const { postStatus, organisationNumber, registrationNumber, reportId } =
         await createServer()
 
       await postStatus({ status: 'ready_to_submit', version: 1 })
@@ -224,8 +216,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
         expect.any(Object),
         {
-          organisationId,
-          registrationId,
+          organisationNumber,
+          registrationNumber,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

@@ -1,6 +1,10 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import {
+  registrationKey,
+  storedRegistrationKey
+} from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
 import { getReportableRegistrations } from '#domain/organisations/registration-utils.js'
@@ -62,14 +66,14 @@ function originalSubmittedDate(mergedPeriod) {
 }
 
 /**
- * Groups all periodic reports by `${organisationId}::${registrationId}`.
+ * Groups all periodic reports by their registration's numbers.
  *
  * @param {import('#reports/repository/port.js').PeriodicReport[]} allPeriodicReports
  * @returns {Map<string, import('#reports/repository/port.js').PeriodicReport[]>}
  */
 export function groupByRegistration(allPeriodicReports) {
   return allPeriodicReports.reduce((map, pr) => {
-    const key = `${pr.organisationId}::${pr.registrationId}`
+    const key = registrationKey(pr)
     const existing = map.get(key) ?? []
     return map.set(key, [...existing, pr])
   }, new Map())
@@ -119,7 +123,8 @@ export async function generateReportCompliance(
       submittedDates: submittedDatesFor({
         registration: readModel,
         storedReports:
-          reportsByRegistration.get(`${org.id}::${registration.id}`) ?? [],
+          reportsByRegistration.get(storedRegistrationKey(org, registration)) ??
+          [],
         years,
         now
       })

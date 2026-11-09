@@ -5,13 +5,13 @@ import { StatusCodes } from 'http-status-codes'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { assertReportComplete } from '#reports/application/assert-report-complete.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
 import { assertNotStale } from '#reports/domain/stale.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { extractChangedBy, findRegistrationForReport } from './shared.js'
+import { extractChangedBy } from './shared.js'
 
 const MIN_DECLARED_BY_LENGTH = 2
 const MAX_DECLARED_BY_LENGTH = 255
@@ -47,18 +47,18 @@ export const reportsStatus = {
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number, submissionDeclaredBy?: string }> & {
-   *   params: PeriodWithSubmissionPathParams,
+   * @param {ReportRequest & {
+   *   payload: { status: ReportStatus, version: number, submissionDeclaredBy?: string },
    *   reportsRepository: ReportsRepository,
    *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository, reportsRepository, params } = request
+    const { reportsRepository, params } = request
     const {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       cadence,
       year,
       period,
@@ -66,17 +66,14 @@ export const reportsStatus = {
     } = params
     const { status, version, submissionDeclaredBy } = request.payload
 
-    const [registration, report] = await Promise.all([
-      findRegistrationForReport(organisationsRepository, params),
-      fetchReportBySubmissionNumber(
-        reportsRepository,
-        params,
-        year,
-        cadence,
-        period,
-        submissionNumber
-      )
-    ])
+    const report = await fetchReportBySubmissionNumber(
+      reportsRepository,
+      params,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    )
 
     if (!report) {
       throw Boom.notFound(
@@ -92,7 +89,7 @@ export const reportsStatus = {
       )
     }
 
-    assertReportComplete(report, getOperatorCategory(registration))
+    assertReportComplete(report, reportOperatorCategory(request.app))
 
     const updated = await reportsRepository.updateReportStatus({
       reportId: report.id,
@@ -104,8 +101,8 @@ export const reportsStatus = {
     })
 
     await auditReportStatusTransition(request, {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year,
       cadence,
       period,
@@ -124,7 +121,7 @@ export const reportsStatus = {
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { ReportStatus } from '#reports/domain/report-status.js'
- * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
- * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { ReportRequest } from './shared.js'
  */

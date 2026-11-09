@@ -149,6 +149,8 @@ const findSharedReportNumbers = async (db) => {
   const groups = await db
     .collection(REPORTS_COLLECTION_NAME)
     .aggregate([
+      // Reports created since they were keyed by number carry no ids.
+      { $match: { organisationId: { $exists: true } } },
       {
         $group: {
           _id: {

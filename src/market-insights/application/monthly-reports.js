@@ -7,6 +7,7 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
+import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import {
   accreditationWindow,
   getStatusHistoryDateTimes
@@ -128,7 +129,7 @@ export function* owedMonthlyReports({
     const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =
-      reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
+      reportsByRegistration.get(storedRegistrationKey(org, registration)) ?? []
 
     // The merge also appends any report the operator submitted for a month it
     // does not owe, and those count for nothing.

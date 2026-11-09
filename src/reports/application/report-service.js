@@ -1,11 +1,9 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
 import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
@@ -22,12 +20,13 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
- * @import { Registration, RegistrationAddress } from '#domain/organisations/registration.js'
+ * @import { ExporterAccreditation, UkAddress } from '#organisation-read-model/domain/model.js'
+ * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
- * @import { OperatorCategory } from '#reports/domain/operator-category.js'
+ * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
@@ -101,16 +100,48 @@ export async function fetchReportBySubmissionNumber(
 
 /**
  * Formats a site address object into a single-line string.
- * @param {RegistrationAddress|undefined} address
- * @returns {string|undefined}
+ * @param {UkAddress} address
+ * @returns {string}
  */
 function formatSiteAddress(address) {
-  if (!address) {
-    return undefined
+  if ('fullAddress' in address) {
+    return address.fullAddress
   }
   return [address.line1, address.line2, address.town, address.postcode]
     .filter(Boolean)
     .join(', ')
+}
+
+/**
+ * Each of an exporter's overseas sites by ORS key, approved from the day the
+ * accreditation reported under approved it. A reprocessor has none.
+ *
+ * @param {ReportRegistration} reportRegistration
+ * @returns {Map<string, OrsDetails>}
+ */
+function orsDetailsOf({ registration, accreditation }) {
+  if (!('overseasSites' in registration)) {
+    return new Map()
+  }
+  const approvals =
+    /** @type {ExporterAccreditation | null} */ (accreditation)
+      ?.overseasSites ?? {}
+  return new Map(
+    Object.entries(registration.overseasSites).map(([orsKey, site]) => {
+      const approval = approvals[orsKey]
+      return [
+        orsKey,
+        {
+          siteName: site.name,
+          country: site.address.country,
+          validFrom:
+            approval?.status === 'approved'
+              ? new Date(approval.approvedOn)
+              : null
+        }
+      ]
+    })
+  )
 }
 
 /**
@@ -125,16 +156,19 @@ function formatSiteAddress(address) {
 /**
  * Extracts the report-specific fields from aggregated data and registration.
  * @param {AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
- * @param {Registration} registration
+ * @param {ReportRegistration['registration']} registration
  * @returns {ReportData}
  */
 function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
     aggregated
   return {
-    material: resolveMaterial(registration),
+    material: registration.material,
     wasteProcessingType: registration.wasteProcessingType,
-    siteAddress: formatSiteAddress(registration.site?.address),
+    siteAddress:
+      'site' in registration
+        ? formatSiteAddress(registration.site.address)
+        : undefined,
     source,
     recyclingActivity,
     prn,
@@ -175,9 +209,8 @@ function buildStoredReportResult(storedReport, periodicReports) {
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {RegistrationKey} params.key
- * @param {Registration} params.registration
+ * @param {ReportRegistration} params.reportRegistration
  * @param {Year} params.year
  * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
@@ -191,9 +224,8 @@ export async function fetchOrGenerateReportForPeriod({
   ledgerRepository,
   summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
-  overseasSitesRepository,
   key: { organisationNumber, registrationNumber },
-  registration,
+  reportRegistration,
   year,
   cadenceAccreditation,
   period,
@@ -225,23 +257,19 @@ export async function fetchOrGenerateReportForPeriod({
 
   assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
 
-  const operatorCategory = getOperatorCategory(registration)
-
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
       ledgerRepository,
       summaryLogRowStatesRepository,
       key: { organisationNumber, registrationNumber },
-      registration
+      accreditation: reportRegistration.accreditation
     }
   )
 
   const aggregatedReportDetail = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
-    overseasSitesRepository,
-    operatorCategory,
     numbers: { organisationNumber, registrationNumber },
-    registration,
+    reportRegistration,
     year,
     cadenceAccreditation,
     period,
@@ -291,18 +319,18 @@ function toSource(latestSubmission) {
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {RegistrationKey} params.key
- * @param {Registration} params.registration
+ * @param {ReportRegistration['accreditation']} params.accreditation
  */
 async function readSubmissionRowStates({
   ledgerRepository,
   summaryLogRowStatesRepository,
   key: { organisationNumber, registrationNumber },
-  registration
+  accreditation
 }) {
   const ledgerId = {
     organisationNumber,
     registrationNumber,
-    accreditationNumber: registration.accreditation?.accreditationNumber ?? null
+    accreditationNumber: accreditation?.accreditationNumber ?? null
   }
 
   const latestSubmission = await latestSubmittedSummaryLog(
@@ -325,10 +353,8 @@ async function readSubmissionRowStates({
  * completeness gate and this aggregation describe the same submission.
  * @param {object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {OperatorCategory} params.operatorCategory
  * @param {RegistrationKey} params.numbers
- * @param {Registration} params.registration
+ * @param {ReportRegistration} params.reportRegistration
  * @param {Year} params.year
  * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
@@ -338,30 +364,21 @@ async function readSubmissionRowStates({
  */
 async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,
-  overseasSitesRepository,
-  operatorCategory,
   numbers,
-  registration,
+  reportRegistration,
   year,
   cadenceAccreditation: { cadence, accreditationNumber },
   period,
   wasteRecordStates,
   latestSubmission
 }) {
-  const source = toSource(latestSubmission)
-
-  const orsDetailsMap = await getOrsDetailsMap(
-    overseasSitesRepository,
-    registration.overseasSites
-  )
-
   const aggregatedReportDetail = aggregateReportDetail(wasteRecordStates, {
-    operatorCategory,
+    operatorCategory: reportOperatorCategory(reportRegistration),
     cadence,
     year,
     period,
-    source,
-    orsDetailsMap
+    source: toSource(latestSubmission),
+    orsDetailsMap: orsDetailsOf(reportRegistration)
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
@@ -476,11 +493,8 @@ function summariseIncompleteDataIfEnabled(
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
- * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
  * @param {RegistrationKey} params.numbers
- * @param {Registration} params.registration
+ * @param {ReportRegistration} params.reportRegistration
  * @param {Year} params.year
  * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
@@ -495,11 +509,8 @@ export async function createReportForPeriod({
   ledgerRepository,
   summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
-  overseasSitesRepository,
-  organisationId,
-  registrationId,
   numbers,
-  registration,
+  reportRegistration,
   year,
   cadenceAccreditation,
   period,
@@ -529,22 +540,20 @@ export async function createReportForPeriod({
       ledgerRepository,
       summaryLogRowStatesRepository,
       key: numbers,
-      registration
+      accreditation: reportRegistration.accreditation
     }
   )
 
   assertReportDataCompleteIfEnabled(
     reportDataValidationEnabled,
     wasteRecordStates,
-    registrationId
+    numbers.registrationNumber
   )
 
   const aggregatedReportData = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
-    overseasSitesRepository,
-    operatorCategory: getOperatorCategory(registration),
     numbers,
-    registration,
+    reportRegistration,
     year,
     cadenceAccreditation,
     period,
@@ -553,8 +562,6 @@ export async function createReportForPeriod({
   })
 
   return reportsRepository.createReport({
-    organisationId,
-    registrationId,
     ...numbers,
     ...cadenceAccreditation,
     year,
@@ -564,6 +571,6 @@ export async function createReportForPeriod({
     dueDate,
     submissionNumber,
     changedBy,
-    ...buildReportData(aggregatedReportData, registration)
+    ...buildReportData(aggregatedReportData, reportRegistration.registration)
   })
 }

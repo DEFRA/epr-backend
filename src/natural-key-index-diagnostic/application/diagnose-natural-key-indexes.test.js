@@ -250,4 +250,19 @@ describe('diagnoseNaturalKeyIndexes', () => {
       }
     ])
   })
+
+  it('does not count a report keyed by number alone as another id pair', async ({
+    database
+  }) => {
+    await database
+      .collection('reports')
+      .insertMany([
+        { organisationId: 'o1', registrationId: 'r1', ...NUMBERS },
+        { ...NUMBERS }
+      ])
+
+    const diagnosis = await diagnoseNaturalKeyIndexes(database)
+
+    expect(diagnosis.sharedReportNumbers).toStrictEqual([])
+  })
 })

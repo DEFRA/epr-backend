@@ -76,8 +76,8 @@ afterEach(() => {
 
 describe('auditReportStatusTransition', () => {
   const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
+    organisationNumber: '500001',
+    registrationNumber: 'R25SR500010912PL',
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -128,8 +128,8 @@ describe('auditReportStatusTransition', () => {
   it('strips previous and next from CDP audit event when payload is oversized', async () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
       year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
@@ -159,8 +159,8 @@ describe('auditReportStatusTransition', () => {
           action: 'status-transition'
         },
         context: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
+          organisationNumber: '500001',
+          registrationNumber: 'R25SR500010912PL',
           year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
@@ -184,8 +184,8 @@ describe('auditReportStatusTransition', () => {
 
 describe('auditReportDelete', () => {
   const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
+    organisationNumber: '500001',
+    registrationNumber: 'R25SR500010912PL',
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -231,8 +231,8 @@ describe('auditReportDelete', () => {
   it('strips previous to { status } in CDP audit event when payload is oversized', async () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
       year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
@@ -256,8 +256,8 @@ describe('auditReportDelete', () => {
           action: 'delete'
         },
         context: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
+          organisationNumber: '500001',
+          registrationNumber: 'R25SR500010912PL',
           year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
@@ -409,8 +409,8 @@ describe.each([
 
 describe('auditReportCreate', () => {
   const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
+    organisationNumber: '500001',
+    registrationNumber: 'R25SR500010912PL',
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -452,8 +452,8 @@ describe('auditReportCreate', () => {
 
 describe('auditReportRequestResubmission', () => {
   const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
+    organisationNumber: '500001',
+    registrationNumber: 'R25SR500010912PL',
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,

@@ -13,7 +13,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 
 /**
  * @typedef {Object} CancelledAccreditationReportRow
- * @property {string} registrationId
+ * @property {string} registrationNumber
  * @property {Cadence} cadence
  * @property {Year} year
  * @property {number} period
@@ -68,13 +68,13 @@ const cancelledAt = (accreditation) => {
  * @param {PeriodicReport} periodicReport
  * @returns {CancelledAccreditationReportRow[]}
  */
-const reportRowsOf = ({ registrationId, year, reports }) =>
+const reportRowsOf = ({ registrationNumber, year, reports }) =>
   Object.values(CADENCE).flatMap((cadence) =>
     Object.entries(reports[cadence] ?? {}).flatMap(([period, slot]) =>
       [slot.current, ...slot.previousSubmissions]
         .filter((report) => report !== null)
         .map((report) => ({
-          registrationId,
+          registrationNumber,
           cadence,
           year,
           period: Number(period),

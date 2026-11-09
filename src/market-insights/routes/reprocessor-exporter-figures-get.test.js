@@ -247,11 +247,11 @@ describe(`GET ${marketInsightsReprocessorExporterFiguresPath}`, () => {
 })
 
 /**
- * @param {{ organisationId: string, registrationId: string }} operator
+ * @param {{ reportKey: import('#reports/repository/port.js').RegistrationKey }} operator
  * @param {number} issuedTonnage
  */
-const januaryPrns = (operator, issuedTonnage) => ({
-  ...operator,
+const januaryPrns = ({ reportKey }, issuedTonnage) => ({
+  ...reportKey,
   year: toYear(2026),
   cadence: CADENCE.monthly,
   period: 1,

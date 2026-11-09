@@ -9,6 +9,10 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import {
+  registrationKey,
+  storedRegistrationKey
+} from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
@@ -202,7 +206,7 @@ async function buildSubmissionRows(
     }
 
     const periodicReports =
-      reportsByKey.get(`${org.id}::${registration.id}`) ?? []
+      reportsByKey.get(storedRegistrationKey(org, registration)) ?? []
     const earlierYears = [
       ...new Set(
         periodicReports
@@ -285,7 +289,7 @@ export async function generateReportSubmissions(
   const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
   /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */
   const reportsByRegistration = allPeriodicReports.reduce((map, pr) => {
-    const key = `${pr.organisationId}::${pr.registrationId}`
+    const key = registrationKey(pr)
     const existing = map.get(key) ?? []
     return map.set(key, [...existing, pr])
   }, new Map())

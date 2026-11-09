@@ -15,6 +15,10 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
 /** @import { AppliedForMaterial, Organisation, TonnageBand } from '#domain/organisations/model.js' */
@@ -68,6 +72,7 @@ const makeOperator = ({
         registrations: [
           {
             id: registrationId,
+            registrationNumber: `REG-${orgId}`,
             accreditationId,
             status: REGISTRATION_STATUS.APPROVED,
             statusHistory: approvedHistory,
@@ -90,7 +95,10 @@ const makeOperator = ({
         ]
       })
     ),
-    reportRef: { organisationId: id, registrationId }
+    reportRef: {
+      organisationNumber: toOrganisationNumber(String(orgId)),
+      registrationNumber: toRegistrationNumber(`REG-${orgId}`)
+    }
   }
 }
 

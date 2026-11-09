@@ -19,6 +19,10 @@ import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { noMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { buildReprocessorExporterTable } from './reprocessor-exporter-table.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 
@@ -77,6 +81,7 @@ const makeOperator = ({
     registrations: [
       {
         id: registrationId,
+        registrationNumber: `REG-${orgId}`,
         accreditationId,
         statusHistory: registrationStatusHistory,
         material,
@@ -132,8 +137,10 @@ const prn = (
  * @param {Partial<import('#reports/repository/port.js').CreateReportBase>} figures
  */
 const monthlyReport = (operator, period, figures = {}) => ({
-  organisationId: operator.id,
-  registrationId: operator.registrations[0].id,
+  organisationNumber: toOrganisationNumber(String(operator.orgId)),
+  registrationNumber: toRegistrationNumber(
+    operator.registrations[0].registrationNumber
+  ),
   year: toYear(2026),
   cadence: CADENCE.monthly,
   period,
@@ -618,7 +625,7 @@ describe('buildReprocessorExporterTable', () => {
     })
 
     expect(reported(table)).toEqual([])
-    const registrationKey = `${operator.id}::${operator.registrations[0].id}`
+    const registrationKey = `${operator.orgId}::${operator.registrations[0].registrationNumber}`
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(registrationKey),
@@ -1063,7 +1070,9 @@ describe('buildReprocessorExporterTable', () => {
           monthlyReport(twoNations, 1, { prn: prn(10, 0, 1000) }),
           {
             ...monthlyReport(twoNations, 1, { prn: prn(20, 0, 2000) }),
-            registrationId: scottishSite.registrations[0].id
+            registrationNumber: toRegistrationNumber(
+              scottishSite.registrations[0].registrationNumber
+            )
           }
         ]
       }
@@ -1344,7 +1353,10 @@ describe('buildReprocessorExporterTable', () => {
         organisations: [twoMaterials, issuing],
         reports: [
           plastic.report,
-          { ...wood.report, organisationId: twoMaterials.id },
+          {
+            ...wood.report,
+            organisationNumber: toOrganisationNumber(String(twoMaterials.orgId))
+          },
           monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) })
         ]
       })

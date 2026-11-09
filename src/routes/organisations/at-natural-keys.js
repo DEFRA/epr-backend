@@ -36,17 +36,28 @@ import {
  *
  * @typedef {ResolvedRecords & { registration?: Registration }} ResolvedOrginisationAndRegistration
  *
+ * @typedef {KeyedResponse<ResolvedRequest>} NaturalKeyResponse
+ *
+ * @typedef {KeyedOptions<ResolvedRequest> & { accredited?: boolean }} NaturalKeyOptions
+ */
+
+/**
+ * How a route at natural keys answers, as the request its keys resolved to.
+ *
+ * @template R
  * @typedef {{
  *   schema: Joi.Schema,
  *   failAction(request: HapiRequest, h: HapiResponseToolkit, err: Error): unknown,
- *   map(request: ResolvedRequest, h: HapiResponseToolkit, response: ResponseObject): unknown
- * }} NaturalKeyResponse
- *
+ *   map(request: R, h: HapiResponseToolkit, response: ResponseObject): unknown
+ * }} KeyedResponse
+ */
+
+/**
+ * @template R
  * @typedef {{
- *   accredited?: boolean,
- *   before?(request: ResolvedRequest): void | Promise<void>,
- *   respond?: NaturalKeyResponse
- * }} NaturalKeyOptions
+ *   before?(request: R): void | Promise<void>,
+ *   respond?: KeyedResponse<R>
+ * }} KeyedOptions
  */
 
 /**
@@ -76,6 +87,51 @@ const resolveRegistration = (organisationsRepository, params) =>
   )
 
 /**
+ * Wraps a route at a natural-key path. `resolve` reads what the keys name onto
+ * the request before `before` and the route's handler see it; a key naming
+ * nothing is not found.
+ *
+ * @template R
+ * @param {NaturalKeyRoute} route
+ * @param {string} path
+ * @param {Joi.PartialSchemaMap} params
+ * @param {(request: HapiRequest & { params: RegistrationParams & { year?: Year } }) => Promise<R>} resolve
+ * @param {KeyedOptions<R>} [options]
+ */
+export const atKeys = (
+  route,
+  path,
+  params,
+  resolve,
+  { before, respond } = {}
+) => ({
+  ...route,
+  path,
+  options: {
+    ...route.options,
+    validate: { ...route.options.validate, params: Joi.object(params) },
+    ...(respond && {
+      response: { schema: respond.schema, failAction: respond.failAction }
+    })
+  },
+  /**
+   * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
+   * @param {HapiResponseToolkit} h
+   */
+  handler: async (request, h) => {
+    const resolved = await resolve(request)
+    await before?.(resolved)
+    const response = await route.handler(
+      /** @type {HapiRequest} */ (/** @type {unknown} */ (resolved)),
+      h
+    )
+    return respond
+      ? respond.map(resolved, h, /** @type {ResponseObject} */ (response))
+      : response
+  }
+})
+
+/**
  * Wraps a route at a natural-key path, resolving
  * - {organisationNumber} to `request.params.organisationId`
  * - {registrationNumber} (if present) to `request.params.registrationId`
@@ -94,26 +150,16 @@ export const atNaturalKeys = (
   route,
   path,
   params,
-  { accredited = false, before, respond } = {}
+  { accredited = false, ...options } = {}
 ) => {
   const resolveRecords =
     'registrationNumber' in params ? resolveRegistration : resolveOrganisation
 
-  return {
-    ...route,
+  return atKeys(
+    route,
     path,
-    options: {
-      ...route.options,
-      validate: { ...route.options.validate, params: Joi.object(params) },
-      ...(respond && {
-        response: { schema: respond.schema, failAction: respond.failAction }
-      })
-    },
-    /**
-     * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
-     * @param {HapiResponseToolkit} h
-     */
-    handler: async (request, h) => {
+    params,
+    async (request) => {
       const { organisation, registration } = await resolveRecords(
         request.organisationsRepository,
         request.params
@@ -148,11 +194,8 @@ export const atNaturalKeys = (
         ...request.params,
         ...ids
       })
-      await before?.(resolved)
-      const response = await route.handler(resolved, h)
-      return respond
-        ? respond.map(resolved, h, /** @type {ResponseObject} */ (response))
-        : response
-    }
-  }
+      return resolved
+    },
+    options
+  )
 }

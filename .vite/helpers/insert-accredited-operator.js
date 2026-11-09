@@ -11,6 +11,7 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
@@ -59,7 +60,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf> }>}
    */
   return async (
     organisationsRepository,
@@ -87,6 +88,10 @@ export const createAccreditedOperatorInserter = (builders) => {
       { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
     )
 
-    return { organisationId: organisation.id, registrationId: registration.id }
+    return {
+      organisationId: organisation.id,
+      registrationId: registration.id,
+      reportKey: reportKeyOf(organisation, organisation.registrations[0])
+    }
   }
 }
