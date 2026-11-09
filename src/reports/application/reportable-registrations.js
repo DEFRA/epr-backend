@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 
 /**
@@ -24,7 +24,7 @@ export const reportableRegistrations = (organisations) =>
   organisations
     .filter(
       ({ organisationNumber }) =>
-        !TEST_ORGANISATION_IDS.has(Number(organisationNumber))
+        !TEST_ORGANISATION_NUMBERS.has(organisationNumber)
     )
     .flatMap((organisation) =>
       Object.entries(organisation.registrations).map(
