@@ -69,6 +69,9 @@ export const createInMemoryOrganisationReadRepository = (
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)
       }
-    }
+    },
+
+    findAll: async () =>
+      toReadModelOrganisations(structuredClone(stored), [], dependencies)
   })
 }

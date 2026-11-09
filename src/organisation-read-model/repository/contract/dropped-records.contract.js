@@ -1,5 +1,6 @@
 import {
   buildAccreditation,
+  buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -72,10 +73,10 @@ export const testDroppedRecordsBehaviour = (it) => {
       expect(registrations).toEqual({})
     })
 
-    it('leaves out a numbered registration that is not approved or cancelled', async ({
+    it('leaves out a numbered registration that is not approved or cancelled, without logging', async ({
       organisationReadRepositoryWith
     }) => {
-      const { registrations } = await registrationsOf(
+      const { registrations, logger } = await registrationsOf(
         organisationReadRepositoryWith,
         buildOrganisation({
           registrations: [
@@ -86,6 +87,21 @@ export const testDroppedRecordsBehaviour = (it) => {
       )
 
       expect(Object.keys(registrations)).toEqual([REPROCESSOR_NUMBER])
+      expect(logger.warn).not.toHaveBeenCalled()
+    })
+
+    it('leaves out a registration not yet granted, without logging', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const { registrations, logger } = await registrationsOf(
+        organisationReadRepositoryWith,
+        buildOrganisation({
+          registrations: [reprocessor(), buildRegistration()]
+        })
+      )
+
+      expect(Object.keys(registrations)).toEqual([REPROCESSOR_NUMBER])
+      expect(logger.warn).not.toHaveBeenCalled()
     })
 
     it('leaves out and logs a registration without application contact details', async ({
@@ -164,11 +180,11 @@ export const testDroppedRecordsBehaviour = (it) => {
       expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
     })
 
-    it('leaves out a numbered accreditation that is not approved, suspended or cancelled', async ({
+    it('leaves out a numbered accreditation that is not approved, suspended or cancelled, without logging', async ({
       organisationReadRepositoryWith
     }) => {
       const rejected = accreditation({ statusHistory: granted('rejected') })
-      const { registrations } = await registrationsOf(
+      const { registrations, logger } = await registrationsOf(
         organisationReadRepositoryWith,
         buildOrganisation({
           registrations: [reprocessor({ accreditationId: rejected.id })],
@@ -177,6 +193,25 @@ export const testDroppedRecordsBehaviour = (it) => {
       )
 
       expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
+      expect(logger.warn).not.toHaveBeenCalled()
+    })
+
+    it('leaves out and logs an approved accreditation without a number', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const unnumbered = accreditation({ accreditationNumber: null })
+      const { registrations, logger } = await registrationsOf(
+        organisationReadRepositoryWith,
+        buildOrganisation({
+          registrations: [reprocessor({ accreditationId: unnumbered.id })],
+          accreditations: [unnumbered]
+        })
+      )
+
+      expect(registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
+      expect(logger.warn).toHaveBeenCalledWith({
+        message: `Accreditation ${unnumbered.id} has no accreditation number`
+      })
     })
 
     it('leaves out an accreditation without validFrom', async ({

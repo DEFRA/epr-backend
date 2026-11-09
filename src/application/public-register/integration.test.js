@@ -5,6 +5,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -39,6 +40,7 @@ describe('generatePublicRegister', () => {
 
     const result = await generatePublicRegister(
       organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       publicRegisterRepo,
       reportsRepo
     )
