@@ -2,11 +2,8 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import {
-  accreditationFields,
-  statusTimelineSchema
-} from '#external-accreditations/repository/schema.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
+import { externalAccreditationPayloadSchema } from './put.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -42,12 +39,7 @@ export const devExternalAccreditationPut = {
     tags: ['api'],
     validate: {
       params: externalAccreditationParams,
-      payload: Joi.object({
-        ...accreditationFields,
-        status: Joi.object({
-          timeline: statusTimelineSchema.min(1).required()
-        }).required()
-      }).required()
+      payload: externalAccreditationPayloadSchema.required()
     }
   },
 
