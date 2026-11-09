@@ -22,6 +22,7 @@ import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnag
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { prnTonnagePath } from './get.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 
@@ -76,7 +77,7 @@ const awaitingAcceptancePrn = () =>
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
     accreditation: buildAccreditationSnapshot({
       id: accId,
-      accreditationNumber: 'ACC-INTEG',
+      accreditationNumber: toAccreditationNumber('ACC-INTEG'),
       material: MATERIAL.PLASTIC
     }),
     tonnage: 100

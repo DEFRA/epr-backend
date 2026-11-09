@@ -21,6 +21,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -63,7 +64,7 @@ const prnWithStatus = (currentStatus, tonnage) =>
     organisation: { id: organisationId, name: 'Acme Reprocessing' },
     accreditation: buildAccreditationSnapshot({
       id: accId,
-      accreditationNumber: 'ACC-1',
+      accreditationNumber: toAccreditationNumber('ACC-1'),
       material: MATERIAL.PLASTIC
     }),
     tonnage,
