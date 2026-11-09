@@ -1,4 +1,6 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {NumberedLedgerId} from './ledger-schema.js' */
 /**
  * Storage-level port for the waste balance event ledger.
  *
@@ -18,14 +20,16 @@
  */
 
 /**
- * Names the ledger a failed append was addressing. Both append errors report the
- * full ledger coordinate, so a caller or a log line never has to guess which
- * organisation's ledger refused the write.
+ * Names the ledger a failed append was addressing.
  *
  * @param {WasteBalanceLedgerId} ledgerId
  */
-const describeLedger = ({ organisationId, registrationId, accreditationId }) =>
-  `organisation ${organisationId} registration ${registrationId} accreditation ${accreditationId}`
+const describeLedger = ({
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) =>
+  `organisation ${organisationNumber} registration ${registrationNumber} accreditation ${accreditationNumber}`
 
 /**
  * Raised by `appendEvents` when the slot a position addresses is already
@@ -34,12 +38,12 @@ const describeLedger = ({ organisationId, registrationId, accreditationId }) =>
  * uniformly.
  */
 export class LedgerSlotConflictError extends Error {
-  /** @type {string} */
-  organisationId
-  /** @type {string} */
-  registrationId
-  /** @type {string | null} */
-  accreditationId
+  /** @type {OrganisationNumber} */
+  organisationNumber
+  /** @type {RegistrationNumber} */
+  registrationNumber
+  /** @type {AccreditationNumber | null} */
+  accreditationNumber
   /** @type {number} */
   slotNumber
 
@@ -51,9 +55,9 @@ export class LedgerSlotConflictError extends Error {
       `Ledger slot already occupied for ${describeLedger(position)} number ${position.number}`
     )
     this.name = 'LedgerSlotConflictError'
-    this.organisationId = position.organisationId
-    this.registrationId = position.registrationId
-    this.accreditationId = position.accreditationId
+    this.organisationNumber = position.organisationNumber
+    this.registrationNumber = position.registrationNumber
+    this.accreditationNumber = position.accreditationNumber
     this.slotNumber = position.number
   }
 }
@@ -65,12 +69,12 @@ export class LedgerSlotConflictError extends Error {
  * an empty ledger).
  */
 export class LedgerSequenceError extends Error {
-  /** @type {string} */
-  organisationId
-  /** @type {string} */
-  registrationId
-  /** @type {string | null} */
-  accreditationId
+  /** @type {OrganisationNumber} */
+  organisationNumber
+  /** @type {RegistrationNumber} */
+  registrationNumber
+  /** @type {AccreditationNumber | null} */
+  accreditationNumber
   /** @type {number} */
   providedNumber
   /** @type {number} */
@@ -85,9 +89,9 @@ export class LedgerSequenceError extends Error {
       `Ledger sequence violation for ${describeLedger(position)}: expected number ${expectedNumber}, got ${position.number}`
     )
     this.name = 'LedgerSequenceError'
-    this.organisationId = position.organisationId
-    this.registrationId = position.registrationId
-    this.accreditationId = position.accreditationId
+    this.organisationNumber = position.organisationNumber
+    this.registrationNumber = position.registrationNumber
+    this.accreditationNumber = position.accreditationNumber
     this.providedNumber = position.number
     this.expectedNumber = expectedNumber
   }
@@ -102,21 +106,20 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
- * One ledger partition's latest submitted summary log: its ledger id and the
- * `summaryLogId` carried by the highest-numbered `summary log submitted`
- * event in that partition.
+ * One ledger partition's latest submitted summary log: its ledger's ids and
+ * numbers, and the `summaryLogId` carried by the highest-numbered `summary log
+ * submitted` event in that partition.
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
- * @property {WasteBalanceLedgerId} ledgerId
+ * @property {NumberedLedgerId} ledgerId
  * @property {SummaryLogFileId} summaryLogId
  */
 
 /**
  * Every per-ledger read names its ledger with a complete `WasteBalanceLedgerId`,
- * and every adapter filters on all three of its ids. A ledger read that names a
- * registration or accreditation under the wrong organisation matches nothing —
- * it does not fall back to the ledger that registration happens to live in. The
- * exception is `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
+ * and every adapter filters on all three of its numbers. A read that names a
+ * registration or accreditation under the wrong organisation matches nothing.
+ * The exception is `findLatestSubmittedSummaryLogPerLedger`, a cross-ledger
  * reporting query, which scans partitions rather than naming one.
  *
  * @typedef {Object} WasteBalanceLedgerRepository
@@ -129,14 +132,13 @@ export class LedgerSequenceError extends Error {
  * @property {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified ledger, with `number > afterNumber`, ordered by
- *   `number` ascending. A ledger read that happens to be about a PRN: it takes
- *   a ledger id, not a PRN's ancestry.
+ *   `number` ascending.
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>} findAllInLedger
  *   Return all events for the given ledger, ordered by `number`
  *   ascending. Returns an empty array if the ledger has no events.
  * @property {() => Promise<LatestSubmittedSummaryLogPerLedger[]>} findLatestSubmittedSummaryLogPerLedger
  *   Return one entry per ledger partition that has at least one
- *   `summary log submitted` event: the ledger id and the `summaryLogId` of
+ *   `summary log submitted` event: the partition's ledger and the `summaryLogId` of
  *   the highest-numbered such event in that partition. Registered-only
  *   partitions appear with `accreditationId: null`; partitions with no
  *   submitted summary log never appear. Order is unspecified.

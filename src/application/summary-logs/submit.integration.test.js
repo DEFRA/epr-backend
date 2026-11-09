@@ -261,9 +261,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     await submitSummaryLog(summaryLogId, deps)
 
     const rowStates = await summaryLogRowStatesForRegistration({
-      organisationId,
-      registrationId,
-      accreditationId: 'acc-123',
+      ...reportKey,
+      accreditationNumber: toAccreditationNumber('ACC-123'),
       ledgerRepository: deps.ledgerRepository,
       summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository
     })

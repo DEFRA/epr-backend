@@ -11,10 +11,7 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAcceptancePrn,
@@ -104,27 +101,37 @@ const buildReceivedEntry = (overrides = {}) =>
  * report service resolves `entries` as the state at the latest submitted
  * summary log. An empty `entries` leaves the ledger without a submission.
  */
-const seedState = async ({ organisationId, registration }, entries) => {
-  const accreditationId = registration.accreditationId ?? null
-  const ledgerId = {
+/**
+ * The ledger report creation reads: the report key's numbers and the
+ * registration's current accreditation.
+ */
+const reportLedger = ({ organisationId, key, registration }) => {
+  const accreditationNumber =
+    registration.accreditation?.accreditationNumber ?? null
+  return {
     organisationId,
     registrationId: registration.id,
-    accreditationId
+    accreditationId:
+      accreditationNumber === null ? null : registration.accreditationId,
+    ...key,
+    accreditationNumber
   }
+}
+
+const seedState = async (params, entries) => {
+  const ledgerId = reportLedger(params)
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   const ledgerEvents = []
   if (entries.length > 0) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       entries,
       toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     ledgerEvents.push(
       buildLedgerEvent({
-        organisationId,
-        registrationId: registration.id,
-        accreditationId,
+        ...ledgerId,
         number: 1,
         createdAt: SUBMITTED_AT,
         payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
@@ -193,24 +200,17 @@ describe('report-service', () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const packagingRecyclingNotesRepository = createPrnRepo()
       const params = defaultParams()
-      const accreditationId = /** @type {string | null} */ (
-        params.registration.accreditationId ?? null
-      )
-      const ledgerId = {
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
-        accreditationId
-      }
+      const ledgerId = reportLedger(params)
 
       const summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
       await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-        withNumbers(ledgerId),
+        ledgerId,
         [buildReceivedEntry({ SUPPLIER_NAME: 'First Supplier' })],
         toSummaryLogFileId('sl-1')
       )
       await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-        withNumbers(ledgerId),
+        ledgerId,
         [buildReceivedEntry({ SUPPLIER_NAME: 'Second Supplier' })],
         toSummaryLogFileId('sl-2')
       )

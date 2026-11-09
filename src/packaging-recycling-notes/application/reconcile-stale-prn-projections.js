@@ -1,4 +1,5 @@
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { validatePrnRead } from '#packaging-recycling-notes/repository/validation.js'
 
 /**
@@ -61,9 +62,7 @@ const buildReport = (prn, catchupEvents, projection) => ({
  */
 const unappliedEventsFor = (prn, service) =>
   service.prnCatchupEvents({
-    organisationId: prn.organisation.id,
-    registrationId: prn.registrationId,
-    accreditationId: prn.accreditation.id,
+    ...prnLedgerId(prn),
     prnId: prn.id,
     afterEventNumber: prn.lastAppliedEventNumber ?? 0
   })

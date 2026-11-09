@@ -22,7 +22,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
     it('returns an empty list for a summary log with no row states', async () => {
       expect(
         await repository.findWasteRecordStatesForSummaryLog(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           'unknown-log'
         )
       ).toEqual([])
@@ -36,7 +36,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
       )
 
       const [state] = await repository.findWasteRecordStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         'log-1'
       )
 
@@ -61,7 +61,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
       )
 
       const states = await repository.findWasteRecordStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         'log-1'
       )
 
@@ -93,7 +93,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
       )
 
       const atLog2 = await repository.findWasteRecordStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         'log-2'
       )
 
@@ -133,7 +133,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
 
       it('returns only the rows of the ledger asked for', async () => {
         const own = await repository.findWasteRecordStatesForSummaryLog(
-          DEFAULT_LEDGER_ID,
+          withNumbers(DEFAULT_LEDGER_ID),
           'log-1'
         )
 
@@ -143,7 +143,7 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
 
       it('returns only the rows of the other ledger when it is the one asked for', async () => {
         const other = await repository.findWasteRecordStatesForSummaryLog(
-          otherLedgerId,
+          withNumbers(otherLedgerId),
           'log-1'
         )
 

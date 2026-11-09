@@ -219,7 +219,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       expect(history[0].summaryLogIds).toEqual(['log-1'])
 
       const committed = await repository.findWasteRecordStatesForSummaryLog(
-        DEFAULT_LEDGER_ID,
+        withNumbers(DEFAULT_LEDGER_ID),
         'log-1'
       )
       expect(committed).toHaveLength(1)
@@ -353,7 +353,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     // Read the submitted state back through Mongo, then compare the identical
     // row's fresh projection against it — exactly what a resubmission does.
     const submitted = await repository.findWasteRecordStatesForSummaryLog(
-      DEFAULT_LEDGER_ID,
+      withNumbers(DEFAULT_LEDGER_ID),
       'log-1'
     )
     const submittedRowStatesByKey = new Map(

@@ -5,6 +5,11 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -24,11 +29,16 @@ const TEST_USER = {
   scope: ['some-scope']
 }
 
+// The numbers the mocked organisation record gives org-1/reg-1.
 const LEDGER_ID = {
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('REG-1'),
+  accreditationNumber: null
 }
+
+const ORGANISATION_NUMBER = toOrganisationNumber('500001')
+const REGISTRATION_NUMBER = toRegistrationNumber('REG-1')
+const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 
 const ACCREDITATION = {
   id: 'acc-1',
@@ -64,20 +74,24 @@ const organisationWith = ({ registration = {}, accreditations } = {}) => ({
  * registered-only one carries a `null` accreditation number.
  *
  * @param {string} fileId
- * @param {string | null} [accreditationNumber]
+ * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [accreditationNumber]
  */
 const summaryLogFor = (fileId, accreditationNumber = null) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
-  organisationNumber: '500001',
-  registrationNumber: 'REG-1',
+  organisationNumber: ORGANISATION_NUMBER,
+  registrationNumber: REGISTRATION_NUMBER,
   accreditationNumber
 })
 
-/** A summary log from before the accreditation was recorded on it. */
+/**
+ * A summary log from before the accreditation was recorded on it.
+ *
+ * @param {string} fileId
+ */
 const legacySummaryLogFor = (fileId) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
-  organisationNumber: '500001',
-  registrationNumber: 'REG-1'
+  organisationNumber: ORGANISATION_NUMBER,
+  registrationNumber: REGISTRATION_NUMBER
 })
 
 const reprocessorInput = (rows) =>
@@ -181,7 +195,10 @@ describe('syncFromSummaryLog', () => {
       ])
     )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
+    await makeSync({ extractor })(
+      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      TEST_USER
+    )
 
     const [rowState] =
       await summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
@@ -326,7 +343,10 @@ describe('syncFromSummaryLog', () => {
       data: {}
     })
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
+    await makeSync({ extractor })(
+      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      TEST_USER
+    )
 
     expect(wasteBalanceService.submitSummaryLog).not.toHaveBeenCalled()
     expect(
@@ -402,7 +422,10 @@ describe('syncFromSummaryLog', () => {
       ])
     )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
+    await makeSync({ extractor })(
+      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      TEST_USER
+    )
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -449,7 +472,10 @@ describe('syncFromSummaryLog', () => {
       })
     )
 
-    await makeSync({ extractor })(summaryLogFor(fileId, 'ACC-1'), TEST_USER)
+    await makeSync({ extractor })(
+      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      TEST_USER
+    )
 
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
@@ -501,7 +527,10 @@ describe('syncFromSummaryLog', () => {
 
     await expect(
       makeSync({ extractor })(
-        { ...summaryLogFor(fileId), registrationNumber: 'REG-MISSING' },
+        {
+          ...summaryLogFor(fileId),
+          registrationNumber: toRegistrationNumber('REG-MISSING')
+        },
         TEST_USER
       )
     ).rejects.toThrow('Registration not found: REG-MISSING')
@@ -517,7 +546,10 @@ describe('syncFromSummaryLog', () => {
     )
 
     await expect(
-      makeSync({ extractor })(summaryLogFor(fileId, 'ACC-MISSING'), TEST_USER)
+      makeSync({ extractor })(
+        summaryLogFor(fileId, toAccreditationNumber('ACC-MISSING')),
+        TEST_USER
+      )
     ).rejects.toThrow('Accreditation not found: ACC-MISSING')
   })
 

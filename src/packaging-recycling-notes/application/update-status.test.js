@@ -40,7 +40,7 @@ import { createOnPrnCancelled } from '#reports/application/prn-cancellation-even
 import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -62,6 +62,17 @@ const REG_ID = 'reg-789'
 const PRN_ID = '507f1f77bcf86cd799439011'
 const USER = { id: 'user-789', name: 'Test User' }
 const EVENT_AT = new Date('2026-02-01T12:00:00.000Z')
+
+// The ledger under test, as the organisation record, the PRN and the seeded
+// events all number it.
+const LEDGER = {
+  organisationId: ORG_ID,
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationNumber: TEST_ORGANISATION_NUMBER,
+  registrationNumber: TEST_REGISTRATION.registrationNumber,
+  accreditationNumber: toAccreditationNumber('ACC-1')
+}
 
 /**
  * @param {Object} [overrides]
@@ -113,11 +124,7 @@ const buildOpeningBalanceEvent = ({
   decemberAmount,
   decemberAvailableAmount
 }) => ({
-  ...withNumbers({
-    registrationId: REG_ID,
-    accreditationId: ACC_ID,
-    organisationId: ORG_ID
-  }),
+  ...LEDGER,
   number: 1,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: {
@@ -162,11 +169,7 @@ const buildPrnLedgerEvent = ({
   pool,
   amount = 100
 }) => ({
-  ...withNumbers({
-    registrationId: REG_ID,
-    accreditationId: ACC_ID,
-    organisationId: ORG_ID
-  }),
+  ...LEDGER,
   number,
   kind,
   payload: { prnId: PRN_ID, amount, ...(pool !== undefined && { pool }) },
@@ -187,20 +190,23 @@ const buildPrnLedgerEvent = ({
  * @param {boolean} [options.withAccreditation]
  * @param {string} [options.organisationId]
  * @param {string} [options.registrationId]
- * @param {string | null} [options.registrationNumber]
+ * @param {string} [options.registrationNumber]
+ * @param {string} [options.organisationNumber]
  */
 const buildOrgWithAccreditation = ({
   accreditation = {},
   withAccreditation = true,
   organisationId = ORG_ID,
   registrationId = REG_ID,
-  registrationNumber = 'R26SR500000789PL'
+  registrationNumber = LEDGER.registrationNumber,
+  organisationNumber = LEDGER.organisationNumber
 } = {}) => ({
   // `status` is derived from `statusHistory` on read; the seeded value only
   // satisfies the constructor's Organisation type.
   status: ORGANISATION_STATUS.APPROVED,
   ...buildOrganisation({
     id: organisationId,
+    orgId: Number(organisationNumber),
     registrations: [
       buildRegistration({
         id: registrationId,
@@ -237,7 +243,6 @@ const buildOrgWithAccreditation = ({
  * @param {import('#waste-balances/repository/ledger-schema.js').LedgerEvent[]} [options.ledgerEvents] - raw ledger events to seed, taking precedence over `balance` (for a raised-then-cancelled sequence)
  * @param {Object} [options.accreditation] - accreditation field overrides
  * @param {boolean} [options.withAccreditation]
- * @param {string | null} [options.registrationNumber]
  */
 const seedRepositories = ({
   prn,
@@ -245,8 +250,7 @@ const seedRepositories = ({
   balance,
   ledgerEvents,
   accreditation,
-  withAccreditation = true,
-  registrationNumber
+  withAccreditation = true
 } = {}) => {
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository(
     prns ?? (prn ? [prn] : [])
@@ -258,8 +262,7 @@ const seedRepositories = ({
   const organisationsRepository = createInMemoryOrganisationsRepository([
     buildOrgWithAccreditation({
       accreditation,
-      withAccreditation,
-      registrationNumber
+      withAccreditation
     })
   ])()
   return {
@@ -271,11 +274,7 @@ const seedRepositories = ({
 }
 
 const readBalance = (wasteBalanceService) =>
-  wasteBalanceService.currentBalance({
-    organisationId: ORG_ID,
-    registrationId: REG_ID,
-    accreditationId: ACC_ID
-  })
+  wasteBalanceService.currentBalance(LEDGER)
 
 const buildSystemLogsRepository = () => ({
   insert: vi.fn().mockResolvedValue(undefined),
@@ -320,12 +319,19 @@ describe('updatePrnStatus', () => {
     })
 
     it('throws not found when the PRN belongs to a different organisation', async () => {
-      const repositories = seedRepositories({ prn: buildPrn() })
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          organisation: {
+            id: '507f1f77bcf86cd799439bbb',
+            organisationNumber: LEDGER.organisationNumber,
+            name: 'Other Reprocessor'
+          }
+        })
+      })
 
       await expect(
         callUpdate({
           ...repositories,
-          organisationId: '507f1f77bcf86cd799439bbb',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -333,12 +339,18 @@ describe('updatePrnStatus', () => {
     })
 
     it('throws not found when the PRN belongs to a different accreditation', async () => {
-      const repositories = seedRepositories({ prn: buildPrn() })
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          accreditation: buildAccreditationSnapshot({
+            id: 'different-acc',
+            accreditationNumber: 'ACC-1'
+          })
+        })
+      })
 
       await expect(
         callUpdate({
           ...repositories,
-          accreditationId: 'different-acc',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -347,7 +359,7 @@ describe('updatePrnStatus', () => {
   })
 
   describe('the waste-balance write boundary', () => {
-    it('writes the event with the numbers its organisation record gives', async () => {
+    it('writes the event with the numbers the PRN carries', async () => {
       const repositories = seedRepositories({
         prn: buildPrn({
           tonnage: 100,
@@ -362,45 +374,13 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER
       })
 
-      const organisation =
-        await repositories.organisationsRepository.findById(ORG_ID)
       expect(
-        await repositories.ledgerRepository.findLatestInLedger({
-          organisationId: ORG_ID,
-          registrationId: REG_ID,
-          accreditationId: ACC_ID
-        })
+        await repositories.ledgerRepository.findLatestInLedger(LEDGER)
       ).toMatchObject({
-        organisationNumber: String(organisation.orgId),
-        registrationNumber: 'R26SR500000789PL',
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: TEST_REGISTRATION.registrationNumber,
         accreditationNumber: 'ACC-1'
       })
-    })
-
-    it('refuses the change, appending nothing, when the organisation record gives no accreditation number', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          tonnage: 100,
-          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        accreditation: { accreditationNumber: null }
-      })
-
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          actor: PRN_ACTOR.REPROCESSOR_EXPORTER
-        })
-      ).rejects.toThrow('Cannot store ledger events without their numbers')
-
-      const latest = await repositories.ledgerRepository.findLatestInLedger({
-        organisationId: ORG_ID,
-        registrationId: REG_ID,
-        accreditationId: ACC_ID
-      })
-      expect(latest?.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
     })
 
     // Tonnage is validated positive at the route and in the PRN schema, so a
@@ -687,33 +667,6 @@ describe('updatePrnStatus', () => {
         })
       ).rejects.toThrow()
     })
-
-    it('refuses to issue, numbering nothing, when the organisation record gives no registration number', async () => {
-      const repositories = seedRepositories({
-        prn: buildPrn({
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-            history: []
-          }
-        }),
-        balance: { amount: 1000, availableAmount: 1000 },
-        registrationNumber: null
-      })
-
-      await expect(
-        callUpdate({
-          ...repositories,
-          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          actor: PRN_ACTOR.SIGNATORY
-        })
-      ).rejects.toThrow('Cannot store ledger events without their numbers')
-
-      const stored = await repositories.prnRepository.findById(PRN_ID)
-      expect(stored?.prnNumber).toBeUndefined()
-      expect(stored?.status.currentStatus).toBe(
-        PRN_STATUS.AWAITING_AUTHORISATION
-      )
-    })
   })
 
   describe('accepting a PRN (awaiting acceptance to accepted)', () => {
@@ -800,7 +753,9 @@ describe('updatePrnStatus', () => {
             updateStatus: vi.fn().mockResolvedValue(null)
           },
           ledgerRepository: createInMemoryLedgerRepository()(),
-          organisationsRepository: {},
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            buildOrgWithAccreditation()
+          ])(),
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER
         })
@@ -859,11 +814,12 @@ describe('updatePrnStatus', () => {
       ])(createMockLogger())
       const ledgerRepository = createInMemoryLedgerRepository([
         {
-          ...withNumbers({
-            registrationId: DEFAULT_REG_ID,
-            accreditationId: ACC_ID,
-            organisationId: DEFAULT_ORG_ID
-          }),
+          organisationId: DEFAULT_ORG_ID,
+          registrationId: DEFAULT_REG_ID,
+          accreditationId: ACC_ID,
+          organisationNumber: DEFAULT_ORG_NUMBER,
+          registrationNumber: DEFAULT_REG_NUMBER,
+          accreditationNumber: LEDGER.accreditationNumber,
           number: 1,
           kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
           payload: {
@@ -879,7 +835,9 @@ describe('updatePrnStatus', () => {
       const organisationsRepository = createInMemoryOrganisationsRepository([
         buildOrgWithAccreditation({
           organisationId: DEFAULT_ORG_ID,
-          registrationId: DEFAULT_REG_ID
+          registrationId: DEFAULT_REG_ID,
+          organisationNumber: DEFAULT_ORG_NUMBER,
+          registrationNumber: DEFAULT_REG_NUMBER
         })
       ])()
 
@@ -1015,11 +973,7 @@ describe('updatePrnStatus', () => {
   })
 
   describe('routing the balance to the correct pool (December vs general)', () => {
-    const LEDGER_ID = {
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    }
+    const LEDGER_ID = LEDGER
 
     it('ringfences both the December and total available amounts for an exporter December raise', async () => {
       const repositories = seedRepositories({
@@ -1209,11 +1163,7 @@ describe('updatePrnStatus', () => {
     // pool by reading it off the raise event, so it restores the right pool even
     // when the accreditation has since changed. General and output-reprocessor
     // PRNs draw the general balance, so their December amounts never move.
-    const LEDGER_ID = {
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    }
+    const LEDGER_ID = LEDGER
 
     it('returns the ringfenced December available amount when a not-yet-issued December PRN is cancelled', async () => {
       const repositories = seedRepositories({
@@ -1588,11 +1538,7 @@ describe('updatePrnStatus', () => {
     // (which reads the raise event) would credit December tonnage that was
     // never debited. As with the reversal tests, the disagreeing accreditation
     // guards the invariant rather than modelling a real operator flow.
-    const LEDGER_ID = {
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    }
+    const LEDGER_ID = LEDGER
 
     it('debits the pool the raise recorded, not the one the current accreditation would resolve', async () => {
       const repositories = seedRepositories({
@@ -1926,11 +1872,7 @@ describe('updatePrnStatus', () => {
     // general PRN carries `pool: general` uniformly. A historical raise that
     // predates the pool dimension stays bare and coalesces to general, so no
     // migration is needed.
-    const LEDGER_ID = {
-      organisationId: ORG_ID,
-      registrationId: REG_ID,
-      accreditationId: ACC_ID
-    }
+    const LEDGER_ID = LEDGER
 
     it('writes an explicit general pool on a non-December raise without reading the accreditation', async () => {
       const repositories = seedRepositories({

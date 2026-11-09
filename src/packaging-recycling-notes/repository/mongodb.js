@@ -216,7 +216,7 @@ const isDocumentId = (id) => /^[0-9a-f]{24}$/i.test(id)
  */
 const performFindByIds = async (
   db,
-  { organisationId, registrationId, accreditationId, ids }
+  { organisationNumber, registrationNumber, accreditationNumber, ids }
 ) => {
   const documentIds = ids
     .filter(isDocumentId)
@@ -230,9 +230,9 @@ const performFindByIds = async (
     .collection(COLLECTION_NAME)
     .find({
       _id: { $in: documentIds },
-      'organisation.id': organisationId,
-      registrationId,
-      'accreditation.id': accreditationId,
+      'organisation.organisationNumber': organisationNumber,
+      'registration.registrationNumber': registrationNumber,
+      'accreditation.accreditationNumber': accreditationNumber,
       'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })
     .toArray()

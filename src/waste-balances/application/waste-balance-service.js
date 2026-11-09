@@ -30,12 +30,9 @@ import { validateAccreditationId } from '../repository/validation.js'
  * the fault is ours and retrying cannot fix it. Naming it as our bug is what
  * the guard is for. ADR-0036's detection over absorption, one layer up.
  *
- * The events are written with the ledger's numbers, which the caller supplies
- * at the commit because nothing is decided against them.
- *
  * @typedef {Object} BalanceForUpdate
  * @property {import('../repository/ledger-schema.js').LedgerBalanceSnapshot | null} balance
- * @property {(events: import('../domain/commands.js').BalanceEvent[], numbers: import('../repository/ledger-schema.js').LedgerEventNumbers) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
+ * @property {(events: import('../domain/commands.js').BalanceEvent[]) => Promise<import('../repository/ledger-port.js').LedgerEvent[]>} append
  */
 
 /**
@@ -84,7 +81,7 @@ const createLedgerCommands = (ledgerRepository) => {
    * defaults to now for a live command; the historical backfill supplies the
    * original submission time so replayed history is dated when it happened.
    *
-   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId & import('../repository/ledger-schema.js').LedgerEventNumbers} ledgerId
+   * @param {import('../repository/ledger-schema.js').NumberedLedgerId} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
@@ -131,7 +128,7 @@ const createLedgerCommands = (ledgerRepository) => {
    * state: whether that is a client error or corruption depends on the
    * transition, which the ledger does not know.
    *
-   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').NumberedLedgerId} ledgerId
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
    * @returns {Promise<BalanceForUpdate>}
    */
@@ -141,14 +138,14 @@ const createLedgerCommands = (ledgerRepository) => {
 
     return {
       balance: state ? state.balance : null,
-      append: async (events, numbers) => {
+      append: async (events) => {
         if (appendAttempted) {
           throw Boom.badImplementation(
             'A balance read for update commits once; committing twice off one read is a caller error, not the slot conflict a competing writer produces'
           )
         }
         appendAttempted = true
-        return append({ ...ledgerId, ...numbers }, head, events, createdBy)
+        return append(ledgerId, head, events, createdBy)
       }
     }
   }
@@ -258,22 +255,18 @@ export const createWasteBalanceService = (
      * read that happens to be about a PRN, so it names its ledger in full and
      * the `prnId` selects within it.
      *
-     * @param {{ organisationId: string, registrationId: string, accreditationId: string, prnId: string, afterEventNumber: number }} params
+     * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId & { accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber, prnId: string, afterEventNumber: number }} params
      * @returns {Promise<import('../repository/ledger-port.js').LedgerEvent[]>}
      */
     prnCatchupEvents: async ({
-      organisationId,
-      registrationId,
-      accreditationId,
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber,
       prnId,
       afterEventNumber
     }) =>
       ledgerRepository.findEventsByPrnIdAfter(
-        {
-          organisationId,
-          registrationId,
-          accreditationId: validateAccreditationId(accreditationId)
-        },
+        { organisationNumber, registrationNumber, accreditationNumber },
         prnId,
         afterEventNumber
       )

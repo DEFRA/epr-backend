@@ -109,8 +109,6 @@ export const reportsGetDetail = {
       summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       overseasSitesRepository,
-      organisationId,
-      registrationId,
       key: params,
       registration: storedRegistration,
       year,

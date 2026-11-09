@@ -22,7 +22,10 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  requiredNumbersFor,
+  toAccreditationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -133,18 +136,20 @@ const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  * @param {string} prnId
  */
-const prnsRepositoryAwaitingAuthorisation = (
-  { id, registrations: [registration] },
-  prnId
-) =>
-  createInMemoryPackagingRecyclingNotesRepository([
+const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) => {
+  const [registration] = organisation.registrations
+  const ids = {
+    registrationId: registration.id,
+    accreditationId: /** @type {string} */ (registration.accreditationId)
+  }
+  return createInMemoryPackagingRecyclingNotesRepository([
     /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
       id: prnId,
       ...buildAwaitingAuthorisationPrn(
         underAccreditation({
-          organisationId: id,
-          registrationId: registration.id,
-          accreditationId: /** @type {string} */ (registration.accreditationId)
+          organisationId: organisation.id,
+          ...ids,
+          ...requiredNumbersFor(organisation, ids, 'the test PRN')
         })
       )
     })
@@ -157,6 +162,7 @@ const prnsRepositoryAwaitingAuthorisation = (
     fatal: vi.fn(),
     child: vi.fn()
   })
+}
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
@@ -1180,6 +1186,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
+            ...requiredNumbersFor(
+              partialMock(fixture),
+              { registrationId: registration.id, accreditationId },
+              'the test ledger'
+            ),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },
@@ -1288,6 +1299,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
+            ...requiredNumbersFor(
+              partialMock(fixture),
+              { registrationId: registration.id, accreditationId },
+              'the test ledger'
+            ),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },
