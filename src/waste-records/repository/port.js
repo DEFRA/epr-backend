@@ -27,17 +27,13 @@
  * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
-/**
- * @typedef {import('./schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
- */
-
-/** @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { NumberedLedgerId, RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
  *
- * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ * @typedef {RegistrationOrAccreditationId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
  */
 
 /**

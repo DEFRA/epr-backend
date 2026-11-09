@@ -12,10 +12,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -50,10 +48,11 @@ const YEAR = toYear(2026)
  */
 const seedRepositories = async (org, registration, wasteRecords) => {
   const accreditationId = registration.accreditationId ?? null
+  const ids = { registrationId: registration.id, accreditationId }
   const ledgerId = {
     organisationId: org.id,
-    registrationId: registration.id,
-    accreditationId
+    ...ids,
+    ...requiredNumbersFor(partialMock(org), ids, 'the test ledger')
   }
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
@@ -67,15 +66,13 @@ const seedRepositories = async (org, registration, wasteRecords) => {
       })
     )
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       entries,
       toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     ledgerEvents.push(
       buildLedgerEvent({
-        organisationId: org.id,
-        registrationId: registration.id,
-        accreditationId,
+        ...ledgerId,
         number: 1,
         createdAt: SUBMITTED_AT,
         payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }

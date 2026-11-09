@@ -74,11 +74,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  * it is reading. The scope is what keeps a note belonging to another
  * accreditation from being read here, so it is required rather than optional.
  *
- * @typedef {Object} FindByIdsParams
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string} accreditationId
- * @property {string[]} ids
+ * @typedef {AccreditationNumbers & { ids: string[] }} FindByIdsParams
  */
 
 /**

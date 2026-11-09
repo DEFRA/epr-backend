@@ -3,7 +3,7 @@ import {
   TEST_REGISTRATION,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
@@ -82,11 +82,10 @@ const buildPrn = (overrides = {}) => ({
  * @returns {LedgerEvent}
  */
 const buildEvent = (kind, number, createdAt) => ({
-  ...withNumbers({
-    registrationId: REG_ID,
-    accreditationId: ACC_ID,
-    organisationId: ORG_ID
-  }),
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationId: ORG_ID,
+  ...prnLedgerId(buildPrn()),
   number,
   kind,
   payload: { prnId: PRN_ID, amount: 50 },

@@ -1,6 +1,7 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -20,9 +21,7 @@ import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply
  */
 export const catchUpPrnProjection = async (prn, service) => {
   const catchupEvents = await service.prnCatchupEvents({
-    organisationId: prn.organisation.id,
-    registrationId: prn.registrationId,
-    accreditationId: prn.accreditation.id,
+    ...prnLedgerId(prn),
     prnId: prn.id,
     afterEventNumber: prn.lastAppliedEventNumber ?? 0
   })

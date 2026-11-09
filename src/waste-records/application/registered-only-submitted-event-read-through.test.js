@@ -19,11 +19,11 @@ import { summaryLogRowStatesForRegistration } from './read-summary-log-row-state
  * against the event — a zero-delta balance event — surfacing a spurious balance.
  */
 
-const registeredOnlyLedgerId = {
+const registeredOnlyLedgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: null
-}
+})
 const createdBy = { id: 'system', name: 'backfill' }
 
 const seedMembership = async (summaryLogRowStatesRepository, summaryLogId) =>
@@ -103,11 +103,13 @@ describe('registered-only summary-log submitted event — balance neutrality', (
 
     const accreditedBalance = await createWasteBalanceService(
       ledgerRepository
-    ).currentBalance({
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
-      organisationId: 'org-1'
-    })
+    ).currentBalance(
+      withNumbers({
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1',
+        organisationId: 'org-1'
+      })
+    )
     expect(accreditedBalance).toMatchObject({ amount: 50, availableAmount: 50 })
   })
 })

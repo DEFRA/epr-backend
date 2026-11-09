@@ -12,10 +12,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -31,7 +28,10 @@ import {
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  numbersFor,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -91,24 +91,33 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    */
   const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
     const accreditationId = registration.accreditationId ?? null
-    const ledgerId = {
-      organisationId: org.id,
-      registrationId: registration.id,
-      accreditationId
-    }
+    const ids = { registrationId: registration.id, accreditationId }
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
+    const { numbers, unmapped } = numbersFor(partialMock(org), ids)
+    // An accreditation without its number holds no ledger.
+    if (unmapped.length > 0) {
+      return {
+        ledgerRepository: createInMemoryLedgerRepository()(),
+        summaryLogRowStatesRepository
+      }
+    }
+    const ledgerId = {
+      organisationId: org.id,
+      ...ids,
+      .../** @type {import('#domain/organisations/numbers.js').RequiredNumbers} */ (
+        numbers
+      )
+    }
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       rows,
       toSummaryLogFileId(SUMMARY_LOG_ID)
     )
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          organisationId: org.id,
-          registrationId: registration.id,
-          accreditationId,
+          ...ledgerId,
           number: 1,
           createdAt: SUBMITTED_AT,
           payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }

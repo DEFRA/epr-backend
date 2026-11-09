@@ -230,13 +230,13 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(
           await repository.findWasteRecordStatesForSummaryLog(
-            DEFAULT_LEDGER_ID,
+            withNumbers(DEFAULT_LEDGER_ID),
             'log-1'
           )
         ).toHaveLength(1)
         expect(
           await repository.findWasteRecordStatesForSummaryLog(
-            otherLedgerId,
+            withNumbers(otherLedgerId),
             'log-2'
           )
         ).toHaveLength(1)
@@ -262,7 +262,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(
           await repository.findWasteRecordStatesForSummaryLog(
-            DEFAULT_LEDGER_ID,
+            withNumbers(DEFAULT_LEDGER_ID),
             'log-1'
           )
         ).toHaveLength(2)

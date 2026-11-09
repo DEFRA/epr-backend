@@ -481,16 +481,18 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : null
 
+    const numbers = await resolveNumbers(
+      organisationsRepository,
+      summaryLog,
+      accreditationId ?? null
+    )
+
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
       accreditation,
       overseasSites,
-      ledgerId: {
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        accreditationId: accreditationId ?? null
-      },
+      ledgerId: numbers,
       ledgerRepository,
       summaryLogRowStatesRepository
     })
@@ -500,11 +502,7 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLog,
       accreditationId,
-      numbers: await resolveNumbers(
-        organisationsRepository,
-        summaryLog,
-        accreditationId ?? null
-      ),
+      numbers,
       accreditation,
       wasteRecords,
       overseasSites,
