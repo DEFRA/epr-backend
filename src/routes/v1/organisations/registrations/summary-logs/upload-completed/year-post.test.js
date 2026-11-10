@@ -34,12 +34,15 @@ const registrationId = '507f1f77bcf86cd799439012'
 const orgId = 500123
 const registrationNumber = REPROCESSOR_NUMBER
 
+const uploadedKeyFor = (uploadOrganisationId, uploadRegistrationId) =>
+  `/organisations/${uploadOrganisationId}/registrations/${uploadRegistrationId}/upload-1/file-1`
+
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
   filename: 'test.xlsx',
   fileStatus: 'complete',
-  s3Bucket: 'test-bucket',
-  s3Key: 'test-key',
+  s3Bucket: 're-ex-summary-logs',
+  s3Key: uploadedKeyFor(organisationId, registrationId),
   ...overrides
 })
 
@@ -204,7 +207,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             registrationId: accreditedRegistrationId
           },
           form: {
-            summaryLogUpload: createFileDetails({ fileId: 'file-accredited' })
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-accredited',
+              s3Key: uploadedKeyFor(
+                accreditedOrganisationId,
+                accreditedRegistrationId
+              )
+            })
           },
           numberOfRejectedFiles: 0
         }
@@ -308,6 +317,56 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  describe('when the upload is not where this registration sends its uploads', () => {
+    it.for([
+      {
+        description: 'another bucket',
+        s3Bucket: 'some-other-bucket',
+        s3Key: uploadedKeyFor(organisationId, registrationId)
+      },
+      {
+        description: 'another organisation',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor('507f1f77bcf86cd799439099', registrationId)
+      },
+      {
+        description: 'another registration',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
+      },
+      {
+        description: 'a registration whose id starts with this one',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor(organisationId, `${registrationId}0`)
+      },
+      {
+        description: 'the registration folder itself',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: `/organisations/${organisationId}/registrations/${registrationId}`
+      }
+    ])(
+      'refuses $description, and stores nothing',
+      async ({ s3Bucket, s3Key }) => {
+        const summaryLogId = randomUUID()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: uploadCompletedUrl(2026, summaryLogId),
+          payload: {
+            ...createCompletePayload(),
+            form: {
+              summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+        expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
+      }
+    )
   })
 
   it.each([

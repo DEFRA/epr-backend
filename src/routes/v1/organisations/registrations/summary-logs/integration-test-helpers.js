@@ -491,8 +491,8 @@ export const createUploadPayload = (
       detectedContentType:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ...(includeS3 && {
-        s3Bucket: 'test-bucket',
-        s3Key: `path/to/${filename}`
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/${filename}`
       })
     }
   },

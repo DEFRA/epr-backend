@@ -6,7 +6,15 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
+import {
+  isUploadedTo,
+  summaryLogUploadPath
+} from '#domain/uploads/upload-locations.js'
+import { config } from '#root/config.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   formatS3Info,
@@ -60,6 +68,20 @@ const numbersFromPath = async (request) => {
 }
 
 /**
+ * Only a completed upload names an S3 location to check.
+ *
+ * @param {SummaryLogUpload} upload
+ * @param {{ organisationId: string, registrationId: string }} ids
+ * @returns {boolean}
+ */
+const isUploadedForRegistration = (upload, ids) =>
+  upload.fileStatus !== UPLOAD_STATUS.COMPLETE ||
+  isUploadedTo(upload, {
+    bucket: config.get('cdpUploader.summaryLogsBucket'),
+    path: summaryLogUploadPath(ids)
+  })
+
+/**
  * The callback for an upload, under the address it was started at. The path
  * carries the year and names the accreditation (`null` for registered-only).
  */
@@ -92,6 +114,17 @@ export const summaryLogsUploadCompletedYear = {
       accreditationId
     } = params
     const { summaryLogUpload } = payload.form
+
+    if (
+      !isUploadedForRegistration(summaryLogUpload, {
+        organisationId,
+        registrationId
+      })
+    ) {
+      throw Boom.badData(
+        'Upload is not in the upload location for this registration'
+      )
+    }
 
     try {
       const status = await updateStatusBasedOnUpload(
