@@ -204,7 +204,7 @@ export const organisationListResponseSchema = Joi.object({
 })
 
 const servedYear = yearSchema().custom((year, helpers) =>
-  year > latestOpenYear() ? helpers.error('any.invalid') : year
+  year > latestOpenYear(new Date()) ? helpers.error('any.invalid') : year
 )
 
 export const organisationYearsResponseSchema = Joi.object({

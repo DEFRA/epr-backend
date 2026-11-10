@@ -109,7 +109,7 @@ export const organisationViewGet = {
       throw Boom.notFound('Organisation not found')
     }
     const { year } = request.query
-    if (year !== undefined && year > latestOpenYear()) {
+    if (year !== undefined && year > latestOpenYear(new Date())) {
       throw Boom.notFound('Year not found')
     }
 

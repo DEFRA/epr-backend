@@ -41,7 +41,9 @@ export const organisationYearsGet = {
     }
 
     return h
-      .response({ years: organisationYears(organisation, lastOpenDay()) })
+      .response({
+        years: organisationYears(organisation, lastOpenDay(new Date()))
+      })
       .code(StatusCodes.OK)
   }
 }

@@ -50,7 +50,7 @@ export const summaryLogsYearCreate = {
     const eligibility = checkSummaryLogUploadEligibility({
       registration,
       year,
-      latestOpenYear: latestOpenYear()
+      latestOpenYear: latestOpenYear(new Date())
     })
 
     if (!eligibility.eligible) {
