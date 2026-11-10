@@ -9,6 +9,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { config } from '#root/config.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -397,6 +398,10 @@ describe('GET /organisations/{organisationNumber}', () => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
     })
 
+    afterEach(() => {
+      config.reset('openNextYear')
+    })
+
     it('serves every year the registration was approved in', async () => {
       const organisation = buildOrganisation({
         registrations: [
@@ -410,6 +415,22 @@ describe('GET /organisations/{organisationNumber}', () => {
       expect(await regAccStatusOf(organisation)).toEqual({
         2026: { '2026-02-01': { status: 'registeredOnly' } },
         2027: { '2027-01-01': { status: 'registeredOnly' } }
+      })
+    })
+
+    it('serves next year while it is open', async () => {
+      config.set('openNextYear', true)
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            validFrom: '2026-02-01',
+            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
+          })
+        ]
+      })
+
+      expect(await regAccStatusOf(organisation, '?year=2028')).toEqual({
+        2028: { '2028-01-01': { status: 'registeredOnly' } }
       })
     })
 
@@ -428,13 +449,13 @@ describe('GET /organisations/{organisationNumber}', () => {
       })
     })
 
-    it('serves a later year the registration holds an accreditation for', async () => {
+    const accreditedEarlyForNextYear = () => {
       const accredited = accreditation({
         validFrom: '2028-01-01',
         validTo: '2028-12-31',
         statusHistory: approvedSince('2027-02-01T09:00:00.000Z')
       })
-      const organisation = buildOrganisation({
+      return buildOrganisation({
         registrations: [
           reprocessor({
             accreditationId: accredited.id,
@@ -444,10 +465,20 @@ describe('GET /organisations/{organisationNumber}', () => {
         ],
         accreditations: [accredited]
       })
+    }
 
-      expect(await regAccStatusOf(organisation)).toEqual({
+    it('serves next year accredited from an accreditation approved early, while that year is open', async () => {
+      config.set('openNextYear', true)
+
+      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
         2027: { '2027-01-10': { status: 'registeredOnly' } },
         2028: { '2028-01-01': { status: 'accredited' } }
+      })
+    })
+
+    it('leaves out next year while it is closed, even with an accreditation approved early', async () => {
+      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
+        2027: { '2027-01-10': { status: 'registeredOnly' } }
       })
     })
 
@@ -589,6 +620,44 @@ describe('GET /organisations/{organisationNumber}', () => {
         'approved'
       )
       expect(in2026.registrations).toEqual({})
+    })
+
+    describe('for next year', () => {
+      const withNextYearAccreditation = () => {
+        const accredited = accreditation({
+          validFrom: '2028-01-01',
+          validTo: '2028-12-31'
+        })
+        return buildOrganisation({
+          registrations: [reprocessor({ accreditationId: accredited.id })],
+          accreditations: [accredited]
+        })
+      }
+
+      afterEach(() => {
+        config.reset('openNextYear')
+      })
+
+      it('serves its registrations and accreditations while it is open', async () => {
+        config.set('openNextYear', true)
+        const organisation = withNextYearAccreditation()
+        await serve(organisation)
+
+        const response = await get(urlFor(organisation, 2028))
+
+        const registration = body(response).registrations[REPROCESSOR_NUMBER]
+        expect(Object.keys(registration.accreditations)).toEqual(['2028'])
+        expect(registration.status.current).toBe('approved')
+      })
+
+      it('returns 404 while it is closed', async () => {
+        const organisation = withNextYearAccreditation()
+        await serve(organisation)
+
+        const response = await get(urlFor(organisation, 2028))
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
     })
 
     it('rejects a year outside the supported range', async () => {

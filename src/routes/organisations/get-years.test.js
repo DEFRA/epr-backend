@@ -1,6 +1,7 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { StatusCodes } from 'http-status-codes'
 
+import { config } from '#root/config.js'
 import { organisationYearsResponseSchema } from './response.schema.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
@@ -27,6 +28,7 @@ describe('GET /organisations/{organisationNumber}/years', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    config.reset('openNextYear')
   })
 
   it('lists the years the organisation held approved registrations', async () => {
@@ -36,6 +38,14 @@ describe('GET /organisations/{organisationNumber}/years', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({ years: [2027, 2026] })
+  })
+
+  it('lists the next year while it is open', async () => {
+    config.set('openNextYear', true)
+
+    const response = await get(`/organisations/${organisation.orgId}/years`)
+
+    expect(body(response)).toEqual({ years: [2028, 2027, 2026] })
   })
 
   it('returns 404 for an unknown organisation', async () => {
@@ -52,6 +62,7 @@ describe('organisationYearsResponseSchema', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    config.reset('openNextYear')
   })
 
   it('accepts years up to the current year', () => {
@@ -76,5 +87,15 @@ describe('organisationYearsResponseSchema', () => {
     })
 
     expect(error).toBeDefined()
+  })
+
+  it('accepts the next year while it is open', () => {
+    config.set('openNextYear', true)
+
+    const { error } = organisationYearsResponseSchema.validate({
+      years: [2028]
+    })
+
+    expect(error).toBeUndefined()
   })
 })

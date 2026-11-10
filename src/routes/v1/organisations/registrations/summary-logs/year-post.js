@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { createSummaryLogUpload } from './create-summary-log-upload.js'
@@ -48,7 +49,8 @@ export const summaryLogsYearCreate = {
 
     const eligibility = checkSummaryLogUploadEligibility({
       registration,
-      year
+      year,
+      latestOpenYear: latestOpenYear(new Date())
     })
 
     if (!eligibility.eligible) {
