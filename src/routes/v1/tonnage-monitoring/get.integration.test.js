@@ -23,6 +23,7 @@ const { validToken } = entraIdMockAuthTokens
 const orgId = '507f1f77bcf86cd799439011'
 const orgNumber = 500001
 const regId = 'REG-001'
+const regNumber = `R-${regId}`
 const summaryLogId = 'sl-REG-001'
 
 /** @param {Db} db */
@@ -33,7 +34,7 @@ const seedOrganisation = (db) =>
     registrations: [
       {
         id: regId,
-        registrationNumber: regId,
+        registrationNumber: regNumber,
         material: MATERIAL.PLASTIC,
         status: 'approved'
       }
@@ -48,7 +49,7 @@ const seedOrganisation = (db) =>
 const seedExporterRow = (db, tonnage, dateOfExport) =>
   db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertOne({
     organisationNumber: String(orgNumber),
-    registrationNumber: regId,
+    registrationNumber: regNumber,
     accreditationNumber: null,
     rowId: 'row-1',
     wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
@@ -69,7 +70,7 @@ const seedExporterRow = (db, tonnage, dateOfExport) =>
 const seedSubmittedSummaryLog = (db) =>
   db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertOne({
     organisationNumber: String(orgNumber),
-    registrationNumber: regId,
+    registrationNumber: regNumber,
     accreditationNumber: null,
     number: 1,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
