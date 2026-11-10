@@ -15,6 +15,7 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
+import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { registerDependency } from '#plugins/register-dependency.js'
@@ -290,6 +291,10 @@ export async function createTestServer(options = {}) {
     },
     {
       plugin: externalApiAuthPlugin.plugin,
+      options: { config }
+    },
+    {
+      plugin: uploadCallbackAuthPlugin.plugin,
       options: { config }
     },
     authFailureLogger,
