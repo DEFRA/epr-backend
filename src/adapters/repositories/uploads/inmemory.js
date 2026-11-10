@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
+import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
+
 /**
  * @typedef {import('#domain/uploads/repository/port.js').InitiateSummaryLogUploadOptions} InitiateSummaryLogUploadOptions
  */
@@ -25,7 +27,7 @@ import { randomUUID } from 'node:crypto'
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
-  const summaryLogsBucket = config.summaryLogsBucket ?? 'test-bucket'
+  const summaryLogsBucket = config.summaryLogsBucket ?? 're-ex-summary-logs'
 
   /** @type {Map<string, Buffer>} */
   const storage = new Map()
@@ -92,7 +94,7 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
       const { organisationId, registrationId, callbackUrl } = options
-      const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
+      const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)

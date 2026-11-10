@@ -2,6 +2,10 @@ import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { StatusCodes } from 'http-status-codes'
 import { parseS3Uri } from './s3-uri.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
+import {
+  orsImportUploadPath,
+  summaryLogUploadPath
+} from '#domain/uploads/upload-locations.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -72,7 +76,7 @@ export const createUploadsRepository = ({
     redirectUrl,
     callbackUrl
   }) {
-    const s3Path = `/organisations/${organisationId}/registrations/${registrationId}`
+    const s3Path = summaryLogUploadPath({ organisationId, registrationId })
 
     return fetchJson(`${cdpUploaderUrl}/initiate`, {
       method: 'POST',
@@ -88,7 +92,7 @@ export const createUploadsRepository = ({
   },
 
   async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-    const s3Path = `/overseas-sites/imports/${importId}`
+    const s3Path = orsImportUploadPath(importId)
 
     return fetchJson(`${cdpUploaderUrl}/initiate`, {
       method: 'POST',
