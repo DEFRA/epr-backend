@@ -132,13 +132,15 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
+ * @param {boolean} [options.accreditationStoredByNumberOnly] - store the accreditation with its number and no database id, as one from 2027 is
  */
 const setupSubmit = async ({
   reportsRepository,
   createdAt,
   data,
   loadsByReportingPeriod,
-  accreditationId = 'acc-123'
+  accreditationId = 'acc-123',
+  accreditationStoredByNumberOnly = false
 }) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
@@ -146,6 +148,19 @@ const setupSubmit = async ({
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   const organisation = buildTestOrg(organisationId, registrationId)
+  const { numbers } = numbersFor(organisation, {
+    registrationId,
+    accreditationId
+  })
+  if (accreditationStoredByNumberOnly) {
+    delete (
+      /** @type {Record<string, unknown>} */ (organisation.accreditations[0]).id
+    )
+    delete (
+      /** @type {Record<string, unknown>} */ (organisation.registrations[0])
+        .accreditationId
+    )
+  }
   const organisationsRepository = createInMemoryOrganisationsRepository([
     organisation
   ])()
@@ -156,7 +171,7 @@ const setupSubmit = async ({
     registrationId,
     ...reportKey,
     accreditationId,
-    ...numbersFor(organisation, { registrationId, accreditationId }).numbers,
+    ...numbers,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
@@ -457,4 +472,38 @@ describe('submitSummaryLog row-state numbers', () => {
       ])
     }
   )
+})
+
+describe('submitSummaryLog for an accreditation stored by number only', () => {
+  it('credits its ledger and stores its row states by number', async () => {
+    const { deps, summaryLogId, summaryLog, organisation, reportKey } =
+      await setupSubmit({
+        reportsRepository: createInMemoryReportsRepository()(),
+        accreditationStoredByNumberOnly: true
+      })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const balance = await deps.wasteBalanceService.currentBalance({
+      organisationNumber: reportKey.organisationNumber,
+      registrationNumber: reportKey.registrationNumber,
+      accreditationNumber: toAccreditationNumber('ACC-123')
+    })
+    expect(balance?.amount).toBeGreaterThan(0)
+    const rowStates =
+      await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
+        reportKey.organisationNumber,
+        reportKey.registrationNumber,
+        summaryLog.file.id
+      )
+    const numbers = {
+      organisationNumber: String(organisation.orgId),
+      registrationNumber: 'REG-123',
+      accreditationNumber: 'ACC-123'
+    }
+    expect(rowStates).toEqual([
+      expect.objectContaining(numbers),
+      expect.objectContaining(numbers)
+    ])
+  })
 })

@@ -291,7 +291,7 @@ describe('performUpdateViaLedger', () => {
         action: 'update'
       })
       expect(entry.context).toEqual({
-        accreditationId,
+        ...numbers,
         amount: 150,
         availableAmount: 150,
         events: [latest]
