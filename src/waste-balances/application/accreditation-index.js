@@ -118,16 +118,19 @@ export const accreditationForLedger = (organisations) => {
   )
   return ({ organisationNumber, registrationNumber, accreditationNumber }) => {
     const organisation = organisationByNumber.get(organisationNumber)
-    const registration = organisation?.registrations.find(
+    if (!organisation) {
+      return undefined
+    }
+    const registration = organisation.registrations.find(
       (candidate) => candidate.registrationNumber === registrationNumber
     )
-    const accreditation = organisation?.accreditations.find(
+    const accreditation = organisation.accreditations.find(
       (candidate) => candidate.accreditationNumber === accreditationNumber
     )
-    return organisation &&
-      registration &&
-      accreditation &&
-      registration.accreditationId === accreditation.id
+    if (!registration || !accreditation) {
+      return undefined
+    }
+    return registration.accreditationId === accreditation.id
       ? { organisation, registration, accreditation }
       : undefined
   }
