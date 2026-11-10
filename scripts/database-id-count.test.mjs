@@ -12,7 +12,10 @@ const countsFor = (source, path = PATH) => measure([{ path, source }])
 describe('isCounted', () => {
   it.each([
     'src/routes/v1/organisations/get-by-id.js',
-    'src/repositories/organisations/inmemory.js',
+    'src/repositories/organisations/port.js',
+    'src/reports/repository/port.js',
+    'src/waste-balances/repository/ledger-port.js',
+    'src/domain/uploads/repository/port.js',
     'src/common/helpers/mongo-client.js',
     'src/common/helpers/plugins/mongo-db-plugin.js',
     'src/non-prod-data-reset/mongodb.js'
@@ -26,6 +29,14 @@ describe('isCounted', () => {
     'src/reports/repository/mongodb.js',
     'src/waste-balances/repository/ledger-mongodb.js',
     'src/packaging-recycling-notes/repository/drift-query.mongodb.js',
+    'src/repositories/organisations/inmemory.js',
+    'src/repositories/summary-logs/inmemory.js',
+    'src/waste-balances/repository/ledger-inmemory.js',
+    'src/repositories/organisations/helpers.js',
+    'src/repositories/organisations/schema/validation.js',
+    'src/repositories/summary-logs/schema.js',
+    'src/organisation-read-model/repository/to-read-model.js',
+    'src/adapters/repositories/uploads/cdp-uploader.js',
     'src/routes/v1/organisations/get-by-id.test.js',
     'src/repositories/organisations/contract/find.contract.js',
     'src/repositories/organisations/contract/test-data.js',
