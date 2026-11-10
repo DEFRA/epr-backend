@@ -142,7 +142,6 @@ const performCancellation = async (request, previousPrn, id, h, respond) => {
     logger,
     id,
     organisationId: previousPrn.organisation.id,
-    registrationId: previousPrn.registrationId,
     accreditationId: previousPrn.accreditation.id,
     newStatus: PRN_STATUS.CANCELLED,
     actor: PRN_ACTOR.SERVICE_MAINTAINER,

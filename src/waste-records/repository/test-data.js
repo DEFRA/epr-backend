@@ -14,27 +14,36 @@ import { generateOrgId } from '#repositories/form-submissions/contract/test-data
 /**
  * Build a summary-log row state document (insert shape — no `id`).
  * Defaults to an INCLUDED received-waste row in one submission's membership.
+ * A row state stores numbers alone, so ids in the overrides only choose them.
  * @param {object} [overrides]
  */
-export const buildSummaryLogRowState = (overrides = {}) => ({
-  ...withNumbers({
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    accreditationId: 'acc-1',
+export const buildSummaryLogRowState = (overrides = {}) => {
+  const {
+    organisationId: _organisationId,
+    registrationId: _registrationId,
+    accreditationId: _accreditationId,
+    ...rowState
+  } = {
+    ...withNumbers({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      ...overrides
+    }),
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    rowId: 'row-1',
+    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+    data: { supplierName: 'Acme', tonnage: 10 },
+    classification: {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 10
+    },
+    summaryLogIds: ['log-1'],
     ...overrides
-  }),
-  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-  rowId: 'row-1',
-  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-  data: { supplierName: 'Acme', tonnage: 10 },
-  classification: {
-    outcome: ROW_OUTCOME.INCLUDED,
-    reasons: [],
-    transactionAmount: 10
-  },
-  summaryLogIds: ['log-1'],
-  ...overrides
-})
+  }
+  return rowState
+}
 
 /**
  * Build a per-row entry as produced by the 1.1 classification list — the
@@ -87,7 +96,7 @@ export const registrationNumbersOf = ({ organisationId, registrationId }) => [
  * The ledger identity with the numbers a submission stores beside its ids.
  *
  * @param {RegistrationOrAccreditationId} ledgerId
- * @returns {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
 export const withNumbers = (ledgerId) => {
   const [organisationNumber, registrationNumber] =
@@ -109,7 +118,7 @@ export const withNumbers = (ledgerId) => {
  *
  * @param {Array<{ id: string, orgId: number, registrations: Array<{ id: string, registrationNumber?: string | null }>, accreditations: Array<{ id: string, accreditationNumber?: string | null }> }>} organisations
  * @param {RegistrationOrAccreditationId} ledgerId
- * @returns {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
 export const withNumbersHeldBy = (organisations, ledgerId) => {
   const derived = withNumbers(ledgerId)

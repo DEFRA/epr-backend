@@ -108,7 +108,7 @@ describe('ledger event insert schema', () => {
       }
     )
     const missingFields = details.map((d) => d.path[0])
-    expect(missingFields).toContain('registrationId')
+    expect(missingFields).toContain('registrationNumber')
     expect(missingFields).toContain('number')
     expect(missingFields).toContain('kind')
     expect(missingFields).toContain('openingBalance')
@@ -257,7 +257,19 @@ describe('ledger event validation', () => {
     it('returns the validated event for valid input', () => {
       const event = buildLedgerEvent()
       const result = validateLedgerEventInsert(event)
-      expect(result.registrationId).toBe(event.registrationId)
+      expect(result.registrationNumber).toBe(event.registrationNumber)
+    })
+
+    it('does not store the ids of the ledger', () => {
+      const result = validateLedgerEventInsert({
+        ...buildLedgerEvent(),
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
+      expect(result).not.toHaveProperty('organisationId')
+      expect(result).not.toHaveProperty('registrationId')
+      expect(result).not.toHaveProperty('accreditationId')
     })
 
     it('throws Boom.badData for invalid input', () => {
@@ -283,6 +295,17 @@ describe('ledger event validation', () => {
       expect(() => validateLedgerEventRead(storedWithoutNumbers)).toThrow(
         '"organisationNumber" is required'
       )
+    })
+
+    it('reads an event stored with the ids of its ledger, without them', () => {
+      const event = buildLedgerEvent()
+      const result = validateLedgerEventRead({
+        ...event,
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
+      })
+      expect(result).toEqual(event)
     })
 
     it('keeps the document id the store gave the event', () => {

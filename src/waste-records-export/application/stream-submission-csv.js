@@ -26,7 +26,7 @@ import {
  */
 
 /**
- * Registered-only (null accreditation) rows first, then accreditation ids
+ * Registered-only (null accreditation) rows first, then accreditation numbers
  * ascending, then type and natural row id.
  *
  * @param {SummaryLogRowState} a
@@ -34,8 +34,8 @@ import {
  * @returns {number}
  */
 const sortSubmissionRowStates = (a, b) =>
-  String(a.accreditationId ?? '').localeCompare(
-    String(b.accreditationId ?? '')
+  String(a.accreditationNumber ?? '').localeCompare(
+    String(b.accreditationNumber ?? '')
   ) || sortRowStates(a, b)
 
 /**

@@ -106,9 +106,9 @@ export const testFindLatestInLedgerByKindBehaviour = (it) => {
         LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
       )
 
-      expect(a.accreditationId).toBe('acc-a')
+      expect(a.accreditationNumber).toBe('ACC-acc-a')
       expect(a.payload.summaryLogId).toBe('log-a')
-      expect(b.accreditationId).toBe('acc-b')
+      expect(b.accreditationNumber).toBe('ACC-acc-b')
       expect(b.payload.summaryLogId).toBe('log-b')
     })
 

@@ -44,9 +44,6 @@ export const performUpdateViaLedger = async ({
     return
   }
 
-  const registrationId = wasteRecords[0].registrationId
-  const organisationId = wasteRecords[0].organisationId
-
   const classifiedRows = wasteRecords.map((record) =>
     classifyWasteRecord(
       record,
@@ -67,12 +64,7 @@ export const performUpdateViaLedger = async ({
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(
-    {
-      registrationId,
-      accreditationId: accreditation.id,
-      organisationId,
-      ...numbers
-    },
+    numbers,
     { summaryLogId, creditTotal, decemberCreditTotal },
     {
       id: user.id,

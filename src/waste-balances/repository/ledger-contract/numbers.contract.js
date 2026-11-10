@@ -22,15 +22,33 @@ export const testNumbersBehaviour = (it) => {
       repository = await ledgerRepository()
     })
 
-    it('stores the numbers it is given beside the ids', async () => {
+    it('stores the numbers it is given', async () => {
       const [event] = await repository.appendEvents([
         buildLedgerEvent({ ...LEDGER_ID, ...NUMBERS })
       ])
 
-      expect(event).toMatchObject({ ...LEDGER_ID, ...NUMBERS })
-      expect(
-        await repository.findLatestInLedger({ ...LEDGER_ID, ...NUMBERS })
-      ).toMatchObject(NUMBERS)
+      expect(event).toMatchObject(NUMBERS)
+      expect(await repository.findLatestInLedger(NUMBERS)).toMatchObject(
+        NUMBERS
+      )
+    })
+
+    it('does not store the ids of the ledger', async () => {
+      const [event] = await repository.appendEvents([
+        {
+          ...buildLedgerEvent({ ...LEDGER_ID, ...NUMBERS }),
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1'
+        }
+      ])
+      const stored = await repository.findLatestInLedger(NUMBERS)
+
+      for (const written of [event, stored]) {
+        expect(written).not.toHaveProperty('organisationId')
+        expect(written).not.toHaveProperty('registrationId')
+        expect(written).not.toHaveProperty('accreditationId')
+      }
     })
 
     it('stores a null accreditation number for a registered-only ledger', async () => {

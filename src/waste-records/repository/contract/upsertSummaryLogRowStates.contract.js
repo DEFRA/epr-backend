@@ -53,9 +53,11 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
       expect(state.id).toEqual(expect.any(String))
       expect(state.id).not.toBe('')
-      expect(state.organisationId).toBe(DEFAULT_LEDGER_ID.organisationId)
-      expect(state.registrationId).toBe(DEFAULT_LEDGER_ID.registrationId)
-      expect(state.accreditationId).toBe(DEFAULT_LEDGER_ID.accreditationId)
+      const { organisationNumber, registrationNumber, accreditationNumber } =
+        withNumbers(DEFAULT_LEDGER_ID)
+      expect(state.organisationNumber).toBe(organisationNumber)
+      expect(state.registrationNumber).toBe(registrationNumber)
+      expect(state.accreditationNumber).toBe(accreditationNumber)
       expect(state.rowId).toBe('row-1')
       expect(state.processingType).toBe('REPROCESSOR_INPUT')
       expect(state.data).not.toHaveProperty('processingType')
@@ -86,7 +88,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
       expect(states.map((s) => s.rowId)).toEqual(['row-a', 'row-b', 'row-c'])
     })
 
-    it('stores a registered-only state with a null accreditationId', async () => {
+    it('stores a registered-only state with a null accreditation number', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
         withNumbers({
           organisationId: 'org-1',
@@ -97,7 +99,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         'log-1'
       )
 
-      expect(state.accreditationId).toBeNull()
+      expect(state.accreditationNumber).toBeNull()
     })
 
     describe('content-match dedup', () => {
