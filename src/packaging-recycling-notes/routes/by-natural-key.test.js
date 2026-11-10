@@ -16,7 +16,6 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
@@ -64,17 +63,13 @@ const organisation = buildOrganisation({
   accreditations: [accredited]
 })
 
-const ownIds = {
-  organisationId: organisation.id,
-  registrationId: registration.id,
-  accreditationId: accredited.id,
+const ownNumbers = {
   organisationNumber: organisation.organisationNumber,
   registrationNumber: registration.registrationNumber,
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
-const otherIds = {
-  ...ownIds,
-  accreditationId: new ObjectId().toString(),
+const otherNumbers = {
+  ...ownNumbers,
   accreditationNumber: toAccreditationNumber('A26ER9999999999PA')
 }
 
@@ -90,7 +85,7 @@ const fullSiteAddress = {
 const draft = {
   id: new ObjectId().toString(),
   ...buildDraftPrn({
-    ...underAccreditation(ownIds),
+    ...underAccreditation(ownNumbers),
     createdAt: new Date('2026-03-01T10:00:00Z'),
     notes: 'For the spring run'
   })
@@ -99,7 +94,7 @@ draft.accreditation.siteAddress = fullSiteAddress
 const issued = {
   id: new ObjectId().toString(),
   ...buildAwaitingAcceptancePrn({
-    ...underAccreditation(ownIds),
+    ...underAccreditation(ownNumbers),
     createdAt: new Date('2026-04-01T10:00:00Z'),
     issuedToOrganisation: {
       id: 'producer-1',
@@ -112,16 +107,14 @@ const issued = {
 const exported = {
   id: new ObjectId().toString(),
   ...buildCancelledPrn({
-    ...underAccreditation(ownIds),
+    ...underAccreditation(ownNumbers),
     organisation: {
-      id: ownIds.organisationId,
-      organisationNumber: ownIds.organisationNumber,
+      organisationNumber: ownNumbers.organisationNumber,
       name: 'Test Organisation',
       tradingName: 'Test Trading'
     },
     accreditation: buildAccreditationSnapshot({
-      id: ownIds.accreditationId,
-      accreditationNumber: ownIds.accreditationNumber,
+      accreditationNumber: ownNumbers.accreditationNumber,
       material: 'glass',
       glassRecyclingProcess: 'glass_re_melt',
       siteAddress: undefined
@@ -132,17 +125,17 @@ const exported = {
 }
 const deleted = {
   id: new ObjectId().toString(),
-  ...buildDeletedPrn(underAccreditation(ownIds))
+  ...buildDeletedPrn(underAccreditation(ownNumbers))
 }
 const elsewhere = {
   id: new ObjectId().toString(),
-  ...buildAwaitingAcceptancePrn(underAccreditation(otherIds))
+  ...buildAwaitingAcceptancePrn(underAccreditation(otherNumbers))
 }
 const underOtherRegistration = {
   id: new ObjectId().toString(),
   ...buildAwaitingAcceptancePrn(
     underAccreditation({
-      ...ownIds,
+      ...ownNumbers,
       registrationNumber: toRegistrationNumber('R26ER9999999999PA')
     })
   )
@@ -184,7 +177,7 @@ describe('PRN routes by natural key', () => {
     ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          ...ownIds,
+          ...ownNumbers,
           number: 1,
           payload: { summaryLogId: 'log-1', creditTotal: 500 },
           openingBalance: { amount: 0, availableAmount: 0 },
@@ -195,9 +188,6 @@ describe('PRN routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
@@ -359,7 +349,7 @@ describe('PRN routes by natural key', () => {
 
       /** @param {object} overrides */
       const draftEvent = (overrides) => ({
-        ...ownIds,
+        ...ownNumbers,
         payload: { prnId: draft.id, amount: 100 },
         ...overrides
       })
@@ -478,7 +468,7 @@ describe('PRN routes by natural key', () => {
       const at = new Date('2026-05-01T09:00:00.000Z')
       const { id } = await packagingRecyclingNotesRepository.create(
         buildAwaitingAuthorisationPrn({
-          ...underAccreditation(ownIds),
+          ...underAccreditation(ownNumbers),
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             currentStatusAt: at,
@@ -540,10 +530,13 @@ describe('PRN routes by natural key', () => {
         body(response).id
       )
       expect(created).toMatchObject({
-        organisation: { id: organisation.id },
-        registrationId: registration.id,
-        accreditation: { id: accredited.id }
+        organisation: { organisationNumber: ownNumbers.organisationNumber },
+        registration: { registrationNumber: ownNumbers.registrationNumber },
+        accreditation: { accreditationNumber: ownNumbers.accreditationNumber }
       })
+      expect(created?.organisation).not.toHaveProperty('id')
+      expect(created).not.toHaveProperty('registrationId')
+      expect(created?.accreditation).not.toHaveProperty('id')
     })
 
     it('should list a PRN raised in the January after the year under that year', async () => {

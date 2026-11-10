@@ -70,8 +70,8 @@ export const createOnSummaryLogUploaded =
 
       await auditMarkReportsStale({
         systemLogsRepository,
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         reportsMarkedStale,
         action: MARK_STALE_ACTION.SUMMARY_LOG_CHANGED
       })
@@ -97,8 +97,8 @@ export const createOnSummaryLogUploaded =
 
       await auditMarkReportsRequiringResubmission({
         systemLogsRepository,
-        organisationId,
-        registrationId,
+        organisationNumber,
+        registrationNumber,
         reportsRequiringResubmission
       })
     }

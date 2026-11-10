@@ -22,7 +22,6 @@ import {
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -42,7 +41,6 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 /** @import { MockInstance } from 'vitest' */
-/** @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
@@ -58,9 +56,6 @@ const { organisationNumber } = buildOrganisation()
  * @param {string} registrationNumber
  */
 const ledgerUnder = (registrationNumber) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
@@ -135,8 +130,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let packagingRecyclingNotesRepository
   /** @type {MockInstance<PackagingRecyclingNotesRepository['create']>} */
   let createSpy
-  /** @type {OrganisationsRepositoryFactory} */
-  let organisationsRepository
   /** @type {WasteBalanceLedgerRepository} */
   let ledgerRepository
   /** @type {string} */
@@ -156,11 +149,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       id: accreditationId,
       ...overrides
     })
-    const registration = (
+    const isExporter =
       accredited.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        ? exporter
-        : reprocessor
-    )({ id: registrationId, accreditationId })
+    // The read model reads the material, processing and regulator from the
+    // registration, so it is given the accreditation's.
+    const registration = (isExporter ? exporter : reprocessor)({
+      id: registrationId,
+      accreditationId,
+      material: accredited.material,
+      glassRecyclingProcess: accredited.glassRecyclingProcess,
+      submittedToRegulator: accredited.submittedToRegulator,
+      ...(!isExporter && { reprocessingType: accredited.reprocessingType })
+    })
     const organisation = buildOrganisation({
       id: organisationId,
       organisationNumber,
@@ -170,16 +170,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrations: [registration],
       accreditations: [accredited]
     })
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      partialMock(organisation)
-    ])
-
     await server?.stop()
     server = await createTestServer({
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,
-        organisationsRepository,
         organisationReadRepository: await organisationReadRepositoryOf([
           organisation
         ]),
@@ -286,29 +281,32 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          organisation: expect.objectContaining({ id: organisationId }),
-          registrationId,
-          accreditation: expect.objectContaining({ id: accreditationId }),
+          organisation: expect.objectContaining({
+            organisationNumber
+          }),
+          registration: { registrationNumber },
+          accreditation: expect.objectContaining({
+            accreditationNumber: ACCREDITATION_NUMBER
+          }),
           obligationYear: 2026,
           issuedToOrganisation: validPayload.issuedToOrganisation
         })
       )
     })
 
-    it('stores the organisation and registration numbers beside their ids', async () => {
+    it('stores the organisation, registration and accreditation by number, with no database ids', async () => {
       const response = await createPrn()
 
       const stored = await packagingRecyclingNotesRepository.findById(
         JSON.parse(response.payload).id
       )
       expect(stored?.organisation).toMatchObject({
-        id: organisationId,
         organisationNumber
       })
-      expect(stored).toMatchObject({
-        registrationId,
-        registration: { registrationNumber }
-      })
+      expect(stored?.organisation).not.toHaveProperty('id')
+      expect(stored).toMatchObject({ registration: { registrationNumber } })
+      expect(stored).not.toHaveProperty('registrationId')
+      expect(stored?.accreditation).not.toHaveProperty('id')
     })
 
     it('sets obligationYear from the accreditation year', async () => {
@@ -397,8 +395,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('snapshots glass recycling process for glass accreditations', async () => {
       await useAccreditation({
         material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt'],
-        site: { address: { line1: '123 Glass Lane', postcode: 'GL1 2AB' } }
+        glassRecyclingProcess: ['glass_re_melt']
       })
 
       await createPrn()
@@ -407,11 +404,20 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect.objectContaining({
           accreditation: expect.objectContaining({
             material: MATERIAL.GLASS,
-            glassRecyclingProcess: 'glass_re_melt',
-            siteAddress: { line1: '123 Glass Lane', postcode: 'GL1 2AB' }
+            glassRecyclingProcess: 'glass_re_melt'
           })
         })
       )
+    })
+
+    it("snapshots the registration's site address", async () => {
+      await createPrn()
+
+      expect(firstCreatedPrn().accreditation.siteAddress).toStrictEqual({
+        line1: '7 Glass processing site',
+        town: 'London',
+        postcode: 'SW2A 0AA'
+      })
     })
 
     it('omits glass recycling process for non-glass accreditations', async () => {

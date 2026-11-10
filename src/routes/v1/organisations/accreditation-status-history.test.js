@@ -13,6 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -116,7 +117,9 @@ const statusHistoryUrl = ({
  */
 const buildServedOrgWithAccreditationStatus = (status) => ({
   ...buildOrgWithAccreditationStatus(status, {
-    registrationStatus: 'approved'
+    registrationStatus: 'approved',
+    // The year a test PRN is raised in, so the PRN finds its accreditation.
+    accreditationOverrides: { validFrom: '2026-01-01', validTo: '2027-01-01' }
   }),
   statusHistory:
     /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
@@ -132,7 +135,7 @@ const prnStatusUrl = (
   { organisationNumber, registrations: [registration] },
   prnId
 ) =>
-  `/organisations/${organisationNumber}/registrations/${registration.registrationNumber}/accreditations/2024/packaging-recycling-notes/${prnId}/status`
+  `/organisations/${organisationNumber}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
 
 /**
  * A PRN awaiting authorisation under the organisation's accreditation.
@@ -149,11 +152,9 @@ const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) => {
     /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
       id: prnId,
       ...buildAwaitingAuthorisationPrn(
-        underAccreditation({
-          organisationId: organisation.id,
-          ...ids,
-          ...requiredNumbersFor(organisation, ids, 'the test PRN')
-        })
+        underAccreditation(
+          requiredNumbersFor(organisation, ids, 'the test PRN')
+        )
       )
     })
   ])({
@@ -1123,6 +1124,23 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
   })
 
   describe('downstream effect: PRN issuance', () => {
+    /**
+     * The stored organisation, and the read model reading it afresh, so a
+     * status this endpoint writes is what the PRN routes then read.
+     *
+     * @param {*} fixture
+     */
+    const servingStored = (fixture) => {
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        fixture
+      ])
+      return {
+        organisationsRepository,
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository())
+      }
+    }
+
     it('refuses to issue a PRN once the accreditation has been suspended through this endpoint', async () => {
       const fixture = buildServedOrgWithAccreditationStatus('approved')
       const registration = fixture.registrations[0]
@@ -1136,9 +1154,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          ...servingStored(fixture),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
@@ -1204,9 +1220,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          ...servingStored(fixture),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
@@ -1249,9 +1263,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          ...servingStored(fixture),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
@@ -1317,9 +1329,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          ...servingStored(fixture),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,

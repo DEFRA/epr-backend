@@ -118,14 +118,11 @@ const issuedNote = createMockIssuedPrn({
   id: 'prn-numbered',
   prnNumber: 'ER26000123',
   organisation: {
-    id: organisation.id,
     organisationNumber: accreditedLedgerId.organisationNumber,
     name: 'A reprocessor'
   },
-  registrationId: accreditedRegistration.id,
   registration: { registrationNumber: accreditedLedgerId.registrationNumber },
   accreditation: buildAccreditationSnapshot({
-    id: accredited.id,
     accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
   })
 })

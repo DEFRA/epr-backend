@@ -8,6 +8,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -791,11 +792,15 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           child: vi.fn()
         })
 
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        fixture
+      ])
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationsRepository,
+          // Read afresh, so the PRN route sees the grant this endpoint writes.
+          organisationReadRepository: () =>
+            organisationReadRepositoryOver(organisationsRepository()),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository

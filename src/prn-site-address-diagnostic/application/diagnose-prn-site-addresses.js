@@ -43,7 +43,6 @@ export const SITE_FINDING = Object.freeze({
  * @property {number} checkedRegistrations
  * @property {number} fullAddressOnly
  * @property {number} fullOnlyHeld
- * @property {number} fullOnlyHeldWithLine1AndPostcode
  * @property {number} checkedAccreditations
  * @property {number} matched
  * @property {number} siteDiffers
@@ -229,7 +228,7 @@ const checkRegistration = (organisation, registration, context) => {
     registrationNumber
   }
 
-  if ('fullAddress' in address) {
+  if (!('line1' in address)) {
     const servedAccreditationRecords = Object.values(accreditations)
     return [
       {
@@ -298,9 +297,6 @@ const summarise = (
     checkedRegistrations,
     fullAddressOnly: count(SITE_FINDING.FULL_ADDRESS_ONLY),
     fullOnlyHeld: fullOnlyHeld.length,
-    fullOnlyHeldWithLine1AndPostcode: fullOnlyHeld.filter(
-      ({ hasLine1, hasPostcode }) => hasLine1 && hasPostcode
-    ).length,
     checkedAccreditations,
     matched: checkedAccreditations - siteDiffers - noAccreditationSite,
     siteDiffers,

@@ -1,13 +1,22 @@
 import { describe, beforeEach, afterEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient } from 'mongodb'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
-import { buildAwaitingAcceptancePrn } from './contract/test-data.js'
+import {
+  buildAccreditationSnapshot,
+  buildAwaitingAcceptancePrn
+} from './contract/test-data.js'
+import {
+  buildAccreditation,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import {
   cognitoJwksUrl,
@@ -21,6 +30,8 @@ const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500001')
 const REAL_ORGANISATION_NUMBER = toOrganisationNumber('500002')
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -64,7 +75,6 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
     await repository.create(
       buildAwaitingAcceptancePrn({
         organisation: {
-          id: new ObjectId().toHexString(),
           name: 'Test Reprocessor',
           organisationNumber: TEST_ORGANISATION_NUMBER
         }
@@ -73,7 +83,6 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
     await repository.create(
       buildAwaitingAcceptancePrn({
         organisation: {
-          id: new ObjectId().toHexString(),
           name: 'Real Reprocessor',
           organisationNumber: REAL_ORGANISATION_NUMBER
         }
@@ -88,7 +97,23 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
         }
       },
       repositories: {
-        packagingRecyclingNotesRepository: () => repository
+        packagingRecyclingNotesRepository: () => repository,
+        organisationsRepository: createInMemoryOrganisationsRepository(
+          [TEST_ORGANISATION_NUMBER, REAL_ORGANISATION_NUMBER].map(
+            (organisationNumber) =>
+              partialMock(
+                buildOrganisation({
+                  organisationNumber,
+                  accreditations: [
+                    buildAccreditation({
+                      accreditationNumber:
+                        buildAccreditationSnapshot().accreditationNumber
+                    })
+                  ]
+                })
+              )
+          )
+        )
       }
     })
   }

@@ -21,9 +21,6 @@ import {
  * @import { LedgerEvent, LedgerEventKind } from '#waste-balances/repository/ledger-schema.js'
  */
 
-const REG_ID = 'reg-789'
-const ACC_ID = 'acc-456'
-const ORG_ID = 'org-123'
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'
 const baseAt = new Date('2026-01-15T10:00:00.000Z')
@@ -49,14 +46,12 @@ const buildPrn = (overrides = {}) => ({
   id: PRN_ID,
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
-  registrationId: REG_ID,
   registration: TEST_REGISTRATION,
   organisation: {
-    id: ORG_ID,
     organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Reprocessor'
   },
-  accreditation: buildAccreditationSnapshot({ id: ACC_ID }),
+  accreditation: buildAccreditationSnapshot(),
   issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
   tonnage: 50,
   isExport: false,

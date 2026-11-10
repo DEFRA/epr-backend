@@ -85,15 +85,12 @@ const buildPrn = (currentStatus) => ({
   id: PRN_ID,
   schemaVersion: 2,
   prnNumber: PRN_NUMBER,
-  registrationId: REG_ID,
   registration: { registrationNumber: LEDGER.registrationNumber },
   organisation: {
-    id: ORG_ID,
     organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor'
   },
   accreditation: buildAccreditationSnapshot({
-    id: ACC_ID,
     accreditationNumber: LEDGER.accreditationNumber
   }),
   obligationYear: toYear(2026),

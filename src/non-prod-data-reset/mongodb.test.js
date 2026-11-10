@@ -221,7 +221,6 @@ const seedDownstreamForOrganisation = async (
   await repositories.prns.create(
     buildDraftPrn({
       organisation: {
-        id: organisationId,
         organisationNumber: organisation.organisationNumber,
         name: 'Target',
         tradingName: 'Target Trading'
@@ -331,7 +330,6 @@ describe('non-prod data reset (mongo)', () => {
       await repositories.prns.create(
         buildDraftPrn({
           organisation: {
-            id: seeded.organisationId,
             organisationNumber: seeded.organisation.organisationNumber,
             name: 'Target',
             tradingName: 'Target Trading'

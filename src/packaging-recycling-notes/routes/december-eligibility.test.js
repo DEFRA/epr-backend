@@ -6,7 +6,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
@@ -16,10 +16,9 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
-
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
+const { buildOrganisation } = createOrganisationBuilders()
 
 const cancelledAfterApproval = [
   { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
@@ -29,21 +28,18 @@ const cancelledAfterApproval = [
 
 /**
  * @param {object} accreditationOverrides
- * @param {{ exporting?: boolean }} [options]
+ * @param {{ exporting?: boolean, reprocessingType?: string }} [options]
  */
 const organisationWith = (
   accreditationOverrides,
-  { exporting = false } = {}
+  { exporting = false, reprocessingType = REPROCESSING_TYPE.OUTPUT } = {}
 ) => {
   const accredited = exporting
     ? exporterAccreditation(accreditationOverrides)
-    : accreditation({
-        reprocessingType: REPROCESSING_TYPE.OUTPUT,
-        ...accreditationOverrides
-      })
-  const registration = (exporting ? exporter : reprocessor)({
-    accreditationId: accredited.id
-  })
+    : accreditation(accreditationOverrides)
+  const registration = exporting
+    ? exporter({ accreditationId: accredited.id })
+    : reprocessor({ accreditationId: accredited.id, reprocessingType })
   return buildOrganisation({
     statusHistory: [
       { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
@@ -68,16 +64,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
-  /** @type {OrganisationsRepository} */
-  let organisationsRepository
 
   /** @param {ReturnType<typeof buildOrganisation>} organisation */
   const startServer = async (organisation) => {
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      partialMock(organisation)
-    ])()
     server = await createTestServer({
-      repositories: { organisationsRepository: () => organisationsRepository }
+      repositories: {
+        organisationReadRepository: await organisationReadRepositoryOf([
+          partialMock(organisation)
+        ])
+      }
     })
   }
 
@@ -124,25 +119,15 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         body: { mode: 'manual', windowOpen }
       })
     })
-
-    it('returns 500 when the repository fails unexpectedly', async () => {
-      vi.spyOn(
-        organisationsRepository,
-        'findAccreditationById'
-      ).mockRejectedValueOnce(new Error('database unavailable'))
-
-      const response = await eligibility(eligibilityUrl(organisation))
-
-      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-    })
   })
 
   it('chooses a pool for an input reprocessor, even when the window is open', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-    const organisation = organisationWith({
-      reprocessingType: REPROCESSING_TYPE.INPUT
-    })
+    const organisation = organisationWith(
+      {},
+      { reprocessingType: REPROCESSING_TYPE.INPUT }
+    )
     await startServer(organisation)
 
     const response = await eligibility(eligibilityUrl(organisation))

@@ -40,22 +40,6 @@ const linkedAccreditations = (organisation) => {
 }
 
 /**
- * Index every organisation's accreditations by id, carrying the linked
- * registration and owning organisation. No status filtering: suspended and
- * cancelled accreditations are indexed too. A registered-only registration (no
- * accreditation) contributes nothing to the index.
- *
- * @param {Organisation[]} organisations
- * @returns {Map<string, AccreditationContext>}
- */
-export const indexAccreditations = (organisations) =>
-  new Map(
-    organisations
-      .flatMap(linkedAccreditations)
-      .map((context) => [context.accreditation.id, context])
-  )
-
-/**
  * @param {WasteBalanceLedgerId} ledgerId
  * @returns {string}
  */
@@ -69,16 +53,21 @@ export const ledgerKey = ({
 /**
  * Index every non-test organisation's accreditations by the `ledgerKey` of the
  * ledger they write to, carrying the linked registration and owning
- * organisation. As `indexAccreditations`, no status filtering.
+ * organisation. No status filtering: suspended and cancelled accreditations
+ * are indexed too. A registered-only registration contributes nothing.
  *
  * @param {Organisation[]} organisations
+ * @param {{ includeTestOrganisations?: boolean }} [options]
  * @returns {Map<string, AccreditationContext>}
  */
-export const indexAccreditationsByLedger = (organisations) => {
+export const indexAccreditationsByLedger = (
+  organisations,
+  { includeTestOrganisations = false } = {}
+) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   for (const organisation of organisations) {
-    if (isTestOrganisation(organisation)) {
+    if (!includeTestOrganisations && isTestOrganisation(organisation)) {
       continue
     }
     for (const context of linkedAccreditations(organisation)) {
