@@ -20,6 +20,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
+import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
@@ -170,6 +171,14 @@ const devEndpointsRepositoryConfigs = [
   {
     name: 'nonProdDataReset',
     createDefault: createInMemoryNonProdDataResetPlugin
+  },
+  {
+    name: 'externalAccreditationsRepository',
+    createDefault: () =>
+      createRepositoryPlugin(
+        'externalAccreditationsRepository',
+        createMockExternalAccreditationsRepository()
+      )
   }
 ]
 

@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
@@ -223,7 +223,7 @@ const checkRegistration = (organisation, registration, context) => {
   const { registrationNumber, address, accreditations } = served
   const identity = {
     orgId: organisation.orgId,
-    testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
+    testOrganisation: isTestOrganisation(organisation),
     registrationNumber
   }
 

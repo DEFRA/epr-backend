@@ -3,7 +3,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toNumber } from '#common/helpers/decimal-utils.js'
 import { getMonthRange } from '#common/helpers/date-formatter.js'
 import { capitalize } from '#common/helpers/formatters.js'
@@ -18,7 +18,7 @@ export const buildEffectiveMaterialStages = () => [
       }
     }
   },
-  { $match: { orgId: { $nin: [...TEST_ORGANISATION_IDS] } } },
+  { $match: { orgId: { $nin: [...TEST_ORGANISATION_NUMBERS].map(Number) } } },
   { $match: { material: { $ne: null } } },
   {
     $addFields: {
