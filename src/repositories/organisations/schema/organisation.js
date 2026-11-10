@@ -105,6 +105,9 @@ export const organisationReplaceSchema = organisationInsertSchema
       .custom(validateImmutableFields(['id']))
   })
 
+/** The orgId an organisation is stored under, which is its organisation number. */
+export const storedOrgIdSchema = Joi.number().integer().min(1).required()
+
 /**
  * Schema for organisation documents read from the database. Refuses a document
  * whose orgId is not an organisation number, and ensures array fields are
@@ -112,7 +115,7 @@ export const organisationReplaceSchema = organisationInsertSchema
  * unchanged - full validation is the responsibility of the write path.
  */
 export const organisationReadSchema = Joi.object({
-  orgId: Joi.number().integer().min(1).required(),
+  orgId: storedOrgIdSchema,
   registrations: Joi.array().default([]),
   accreditations: Joi.array().default([]),
   users: Joi.array().default([])

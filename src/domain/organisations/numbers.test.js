@@ -27,7 +27,7 @@ describe('toOrganisationNumber', () => {
 const buildOrganisation = () =>
   /** @type {Organisation} */ ({
     id: 'org-1',
-    organisationNumber: '500123',
+    organisationNumber: toOrganisationNumber('500123'),
     registrations: [
       { id: 'reg-1', registrationNumber: 'R25SR500010912PL' },
       { id: 'reg-2', registrationNumber: null }

@@ -19,6 +19,7 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const cancelledAfterApproval = [
   { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
@@ -53,7 +54,7 @@ const organisationWith = (
 }
 
 /**
- * @param {{ organisationNumber: string }} organisation
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
  * @param {string} [registrationNumber]
  */
 const eligibilityUrl = (

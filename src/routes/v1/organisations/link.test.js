@@ -24,6 +24,7 @@ import {
 } from '#test/inject-auth.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { OPERATOR_ROLE } from '#application/organisations/get-defra-user-roles.js'
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
@@ -116,7 +117,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
   })
 
   const performLink = async (
-    /** @type {{ organisationNumber: string }} */ organisation,
+    /** @type {{ organisationNumber: OrganisationNumber }} */ organisation,
     /** @type {string} */ jwtAccessToken
   ) => {
     return await server.inject({
@@ -129,7 +130,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
   }
 
   const performUnlink = async (
-    /** @type {{ organisationNumber: string }} */ organisation
+    /** @type {{ organisationNumber: OrganisationNumber }} */ organisation
   ) => {
     return await server.inject({
       method: 'DELETE',

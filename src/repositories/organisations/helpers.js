@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import {
   normaliseOrganisationFromDb,
+  parseStoredOrgId,
   validateLinkedDefraOrganisation,
   validateOrganisationUpdate,
   validateStatusHistory
@@ -427,7 +428,7 @@ export const storedOrgId = (organisationNumber) => Number(organisationNumber)
  * @returns {OrganisationNumber}
  */
 export const organisationNumberOfStored = (orgId) =>
-  toOrganisationNumber(String(orgId))
+  toOrganisationNumber(String(parseStoredOrgId(orgId)))
 
 /**
  * An organisation as it is stored, with its number as `orgId`.

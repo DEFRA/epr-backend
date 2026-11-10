@@ -5,6 +5,7 @@ import {
   organisationInsertSchema,
   organisationReadSchema,
   organisationReplaceSchema,
+  storedOrgIdSchema,
   registrationSchema,
   statusHistoryItemSchema
 } from './organisation.js'
@@ -116,3 +117,11 @@ export const validateAccreditation = (data) => {
  */
 export const normaliseOrganisationFromDb = (data) =>
   Joi.attempt(data, organisationReadSchema)
+
+/**
+ * Parses an orgId read from the database without the rest of its document.
+ * Throws when it is not an organisation number.
+ * @param {unknown} orgId
+ * @returns {number}
+ */
+export const parseStoredOrgId = (orgId) => Joi.attempt(orgId, storedOrgIdSchema)

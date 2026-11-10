@@ -9,11 +9,14 @@ describe('organisationNumberOfStored', () => {
     expect(organisationNumberOfStored(500123)).toBe('500123')
   })
 
-  it('refuses a stored orgId that is not an organisation number', () => {
-    expect(() => organisationNumberOfStored(0)).toThrow(
-      "'0' is not an organisation number"
-    )
-  })
+  it.each([0, 12.5, [123], '123abc'])(
+    'refuses a stored orgId of %j, which is not an organisation number',
+    (orgId) => {
+      expect(() =>
+        organisationNumberOfStored(/** @type {number} */ (orgId))
+      ).toThrow(/"value"/)
+    }
+  )
 })
 
 describe('statusHistoryWithChanges', () => {
