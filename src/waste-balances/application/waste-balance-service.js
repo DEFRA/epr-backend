@@ -4,7 +4,6 @@ import Boom from '@hapi/boom'
 import { submitSummaryLog as decideSummaryLog } from '../domain/commands.js'
 import { currentWasteBalance } from './current-waste-balance.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
-import { validateAccreditationId } from '../repository/validation.js'
 
 /**
  * Commits a summary-log-submitted event to a ledger, returning the appended
@@ -234,10 +233,7 @@ export const createWasteBalanceService = (
 
       await performUpdateViaLedger({
         wasteRecords,
-        accreditation: {
-          ...accreditation,
-          id: validateAccreditationId(accreditation.id)
-        },
+        accreditation,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
