@@ -296,15 +296,6 @@
  */
 
 /**
- * @typedef {Object} ReportPerPeriodKey
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {Year} year
- * @property {string} cadence
- * @property {number} period
- */
-
-/**
  * @typedef {Object.<string, ReportPerPeriod>} PeriodicReportSlots
  */
 
