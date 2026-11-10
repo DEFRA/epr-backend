@@ -111,11 +111,10 @@ const findByFileId =
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { StoredSummaryLog, SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
  * @typedef {Map<SummaryLogId, SummaryLogVersion>} SummaryLogStore
- * @typedef {{ id: SummaryLogId, summaryLog: SummaryLog }} StoredSummaryLog
  * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
  */
 
@@ -186,11 +185,19 @@ const uploads = (staleCache, matches) => {
   return found.map(({ _uploadedAt: _u, ...rest }) => rest)
 }
 
+/** @param {unknown} value */
+const isNullOrAbsent = (value) => value === null || value === undefined
+
+/** @type {SummaryLogMatch} */
+const holdsNoAccreditation = (summaryLog) =>
+  summaryLog.accreditationId === undefined &&
+  summaryLog.accreditationNumber === undefined
+
 /**
- * A summary log stored before accreditations were recorded holds no
- * accreditation id, and matches every accreditation. A registered-only
- * summary log holds a null accreditation id, whether or not it holds its null
- * number.
+ * A summary log stored before accreditations were recorded holds neither an
+ * accreditation id nor a number, and matches every accreditation. One whose
+ * accreditation had no number holds the id alone, and matches none. A
+ * registered-only summary log holds null for either or both.
  *
  * @param {SummaryLogKey['accreditationNumber']} accreditationNumber
  * @returns {SummaryLogMatch}
@@ -201,13 +208,13 @@ const matchesAccreditation = (accreditationNumber) => (summaryLog) => {
   }
   if (accreditationNumber === null) {
     return (
-      summaryLog.accreditationId === null ||
-      summaryLog.accreditationId === undefined
+      isNullOrAbsent(summaryLog.accreditationId) &&
+      isNullOrAbsent(summaryLog.accreditationNumber)
     )
   }
   return (
-    summaryLog.accreditationId === undefined ||
-    summaryLog.accreditationNumber === accreditationNumber
+    summaryLog.accreditationNumber === accreditationNumber ||
+    holdsNoAccreditation(summaryLog)
   )
 }
 

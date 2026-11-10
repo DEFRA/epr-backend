@@ -8,7 +8,7 @@ import { waitForVersion } from './contract/test-helpers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
-/** @import { StoredSummaryLog } from './inmemory.js' */
+/** @import { StoredSummaryLog } from './port.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures

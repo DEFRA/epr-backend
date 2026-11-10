@@ -17,7 +17,7 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
  *
- * @import { StoredSummaryLog } from '../inmemory.js'
+ * @import { StoredSummaryLog } from '../port.js'
  *
  * @typedef {{
  *   summaryLogsRepository: SummaryLogsRepository,
@@ -523,8 +523,8 @@ export const testFindByNaturalKey = (it) => {
       })
     })
 
-    // No writer stores these shapes now, so they are held from the start
-    // rather than inserted.
+    // The insert schema refuses some of these shapes, so the summary logs are
+    // held from the start rather than inserted.
     describe('reading summary logs whose accreditation has no number', () => {
       const year = toYear(2026)
 
@@ -574,23 +574,29 @@ export const testFindByNaturalKey = (it) => {
           { accreditationId: stored.previous.id },
           '2026-05-01T00:00:00.000Z'
         )
+        const numberWithoutId = storedWith(
+          { accreditationNumber: stored.previous.accreditationNumber },
+          '2026-06-01T00:00:00.000Z'
+        )
         return {
           legacy,
           current,
           registeredOnlyWithNullNumber,
           registeredOnlyWithoutNumber,
           unnumbered,
+          numberWithoutId,
           all: [
             legacy,
             current,
             registeredOnlyWithNullNumber,
             registeredOnlyWithoutNumber,
-            unnumbered
+            unnumbered,
+            numberWithoutId
           ]
         }
       }
 
-      it("finds the accreditation's own and legacy summary logs when read by another accreditation's number", async (/** @type {NaturalKeyFixtures} */ {
+      it("does not find another accreditation's unnumbered summary log when read by number", async (/** @type {NaturalKeyFixtures} */ {
         summaryLogsRepositoryHolding
       }) => {
         const logs = holding()
@@ -604,6 +610,24 @@ export const testFindByNaturalKey = (it) => {
 
         expect(result.map(({ id }) => id)).toEqual([
           logs.current.id,
+          logs.legacy.id
+        ])
+      })
+
+      it('finds a summary log holding a number but no accreditation id only by that number', async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findAll({
+          ...stored.key,
+          year,
+          accreditationNumber: stored.previous.accreditationNumber
+        })
+
+        expect(result.map(({ id }) => id)).toEqual([
+          logs.numberWithoutId.id,
           logs.legacy.id
         ])
       })
@@ -665,7 +689,14 @@ export const testFindByNaturalKey = (it) => {
 
         const result = await repository.findAll({ ...stored.key, year })
 
-        expect(result).toHaveLength(logs.all.length)
+        expect(result.map(({ id }) => id)).toEqual([
+          logs.numberWithoutId.id,
+          logs.unnumbered.id,
+          logs.registeredOnlyWithoutNumber.id,
+          logs.registeredOnlyWithNullNumber.id,
+          logs.current.id,
+          logs.legacy.id
+        ])
       })
     })
   })

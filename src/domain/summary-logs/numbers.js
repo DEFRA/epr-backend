@@ -4,8 +4,9 @@
 
 /**
  * The numbers a summary log stores beside the ids it holds. The accreditation
- * number is `null` for a registered-only summary log, and absent when the
- * summary log holds no accreditation id.
+ * number is `null` for a registered-only summary log. It is absent when the
+ * summary log holds no accreditation id, or when its accreditation had no
+ * number when it was stored.
  *
  * @typedef {Pick<SummaryLog, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} SummaryLogNumbers
  */

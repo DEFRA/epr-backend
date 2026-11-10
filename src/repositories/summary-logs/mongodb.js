@@ -253,19 +253,26 @@ const uploads = async (db, filter) => {
 }
 
 /**
- * A summary log stored before accreditations were recorded holds no
- * accreditation id, and matches every accreditation. A registered-only
- * summary log holds a null accreditation id, whether or not it holds its null
- * number. Matching `null` also matches an absent field.
+ * A summary log stored before accreditations were recorded holds neither an
+ * accreditation id nor a number, and matches every accreditation. One whose
+ * accreditation had no number holds the id alone, and matches none. A
+ * registered-only summary log holds null for either or both. Matching `null` also
+ * matches an absent field.
  *
  * @param {AccreditationNumber | null} accreditationNumber
  * @returns {Filter<SummaryLogDocument>}
  */
 const accreditationFilter = (accreditationNumber) =>
   accreditationNumber === null
-    ? { accreditationId: null }
+    ? { accreditationId: null, accreditationNumber: null }
     : {
-        $or: [{ accreditationNumber }, { accreditationId: { $exists: false } }]
+        $or: [
+          { accreditationNumber },
+          {
+            accreditationId: { $exists: false },
+            accreditationNumber: { $exists: false }
+          }
+        ]
       }
 
 /**

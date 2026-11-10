@@ -37,13 +37,20 @@
 /**
  * A summary log named by its organisation, registration and accreditation
  * numbers in place of their database ids. The accreditation number is absent
- * when the summary log was stored before its accreditation was recorded.
+ * when the summary log was stored before its accreditation was recorded, or
+ * before its accreditation was numbered.
  *
  * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   accreditationNumber?: AccreditationNumber | null
  * }} KeyedSummaryLog
+ */
+
+/**
+ * A summary log as it sits in the store, which may predate the insert schema.
+ *
+ * @typedef {{ id: SummaryLogId, summaryLog: SummaryLog }} StoredSummaryLog
  */
 
 /**

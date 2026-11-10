@@ -19,7 +19,7 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
  * @import { Collection } from 'mongodb'
  * @import { SummaryLogDocument, SummaryLogsS3Config } from './mongodb.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @import { StoredSummaryLog } from './inmemory.js'
+ * @import { StoredSummaryLog } from './port.js'
  * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, summaryLogsRepositoryHolding: (summaryLogs: StoredSummaryLog[]) => Promise<SummaryLogsRepository> }} SummaryLogsFixtures
  */
 
