@@ -121,7 +121,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
