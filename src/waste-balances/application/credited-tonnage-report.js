@@ -4,7 +4,11 @@ import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import {
+  indexAccreditationsByLedger,
+  ledgerKey
+} from '#waste-balances/application/accreditation-index.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
@@ -134,13 +138,13 @@ export const buildCreditedTonnageReport = async ({
   const sitesById = new Map(allSites.map((site) => [site.id, site]))
 
   // Credits only exist for accredited partitions; registered-only entries
-  // (accreditationId null) carry zero-delta submissions and never appear in
+  // (accreditationNumber null) carry zero-delta submissions and never appear in
   // this report.
   const creditedEntries = entries.filter(
-    (entry) => entry.ledgerId.accreditationId !== null
+    (entry) => entry.ledgerId.accreditationNumber !== null
   )
 
-  const { index, testOrgAccreditationIds } = indexAccreditations(organisations)
+  const index = indexAccreditationsByLedger(organisations)
 
   /** @type {CreditedTonnageRow[]} */
   const rows = []
@@ -150,18 +154,17 @@ export const buildCreditedTonnageReport = async ({
    * @returns {Promise<CreditedTonnageRow[]>}
    */
   const rowsForEntry = async ({ ledgerId, summaryLogId }) => {
-    // creditedEntries holds accredited partitions only, so `accreditationId`
-    // is non-null here despite the ledger id's wider type.
-    const accreditationId = /** @type {string} */ (ledgerId.accreditationId)
-    const context = index.get(accreditationId)
+    // creditedEntries holds accredited partitions only.
+    const accreditationNumber = String(ledgerId.accreditationNumber)
+    const context = index.get(ledgerKey(ledgerId))
     if (!context) {
-      if (!testOrgAccreditationIds.has(accreditationId)) {
+      if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationId}`,
+          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: 'credited_tonnage_ledger_entry_unmatched',
-            reference: accreditationId
+            reference: accreditationNumber
           }
         })
       }
@@ -215,7 +218,6 @@ export const buildCreditedTonnageReport = async ({
 
     const material = resolveMaterial(registration)
     const reference = String(organisation.orgId)
-    const accreditationNumber = accreditation.accreditationNumber ?? ''
 
     return months.map((month) => ({
       month: month.month,

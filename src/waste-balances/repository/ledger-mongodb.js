@@ -225,9 +225,6 @@ const performFindLatestSubmittedSummaryLogPerLedger =
         {
           $group: {
             _id: {
-              organisationId: '$organisationId',
-              registrationId: '$registrationId',
-              accreditationId: '$accreditationId',
               organisationNumber: '$organisationNumber',
               registrationNumber: '$registrationNumber',
               accreditationNumber: '$accreditationNumber'

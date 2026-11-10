@@ -10,12 +10,21 @@ import {
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
 
+const registrationNumberOf = (registrationId) => `R-${registrationId}`
+const accreditationNumberOf = (accreditationId) => `A-${accreditationId}`
+
 const createOrganisation = (id, registrations) => ({
   _id: new ObjectId(id),
   orgId: 12345,
   version: 1,
   schemaVersion: 1,
-  registrations
+  registrations,
+  accreditations: registrations
+    .filter(({ accreditationId }) => accreditationId)
+    .map(({ accreditationId }) => ({
+      id: accreditationId,
+      accreditationNumber: accreditationNumberOf(accreditationId)
+    }))
 })
 
 const createRegistration = (
@@ -25,6 +34,7 @@ const createRegistration = (
   accreditationId
 ) => ({
   id,
+  registrationNumber: registrationNumberOf(id),
   material,
   status: 'approved',
   ...(glassRecyclingProcess && { glassRecyclingProcess }),
@@ -37,8 +47,8 @@ const createLedgerEvent = (
   number,
   availableAmount
 ) => ({
-  registrationId,
-  accreditationId,
+  registrationNumber: registrationNumberOf(registrationId),
+  accreditationNumber: accreditationNumberOf(accreditationId),
   number,
   closingBalance: { amount: availableAmount, availableAmount }
 })

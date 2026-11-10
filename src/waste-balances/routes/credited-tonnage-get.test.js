@@ -8,10 +8,12 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import {
-  buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   buildRegistration,
   createOrganisationBuilders
@@ -85,6 +87,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const accreditationId = new ObjectId().toString()
     const registration = buildRegistration({
       accreditationId,
+      registrationNumber: toRegistrationNumber('REG500123'),
       wasteProcessingType: 'reprocessor',
       reprocessingType: 'input',
       material: 'plastic'
@@ -99,16 +102,20 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const linkedAccreditation = org.accreditations[0]
     linkedAccreditation.validFrom = '2026-01-01'
     linkedAccreditation.validTo = '2026-12-31'
+    linkedAccreditation.accreditationNumber = toAccreditationNumber('ACC500123')
     const ledgerId = {
       organisationId: org.id,
       registrationId: linkedRegistration.id,
-      accreditationId: linkedAccreditation.id
+      accreditationId: linkedAccreditation.id,
+      organisationNumber: toOrganisationNumber(String(org.orgId)),
+      registrationNumber: toRegistrationNumber('REG500123'),
+      accreditationNumber: linkedAccreditation.accreditationNumber
     }
 
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       [
         buildSummaryLogRowStateEntry({
           rowId: 'row-1',
@@ -144,9 +151,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          organisationId: org.id,
-          registrationId: linkedRegistration.id,
-          accreditationId: linkedAccreditation.id,
+          ...ledgerId,
           number: 1,
           payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
         })

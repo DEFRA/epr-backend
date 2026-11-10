@@ -24,7 +24,6 @@ import {
   readParamsFor,
   renderTab
 } from './published-workbook-test-helpers.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -131,22 +130,15 @@ const seedOperator = async (
   { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
   { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
-  const { organisationId, registrationId } = await insertAccreditedOperator(
+  const { ledgerId } = await insertAccreditedOperator(
     organisationsRepository,
     regulator,
     { material, validFrom }
   )
-  const { registrations } =
-    await organisationsRepository.findById(organisationId)
-  const accreditationId = registrations.find(
-    ({ id }) => id === registrationId
-  )?.accreditationId
-  assertPresent(accreditationId)
-  const ledgerId = { organisationId, registrationId, accreditationId }
-  const summaryLogId = `log-${registrationId}`
+  const summaryLogId = `log-${ledgerId.registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(ledgerId),
+    ledgerId,
     rows,
     toSummaryLogFileId(summaryLogId)
   )

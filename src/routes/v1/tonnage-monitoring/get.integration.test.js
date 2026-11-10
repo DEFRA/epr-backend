@@ -21,15 +21,23 @@ const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
 
 const orgId = '507f1f77bcf86cd799439011'
+const orgNumber = 500001
 const regId = 'REG-001'
+const regNumber = `R-${regId}`
 const summaryLogId = 'sl-REG-001'
 
 /** @param {Db} db */
 const seedOrganisation = (db) =>
   db.collection(ORGANISATIONS_COLLECTION).insertOne({
     _id: new ObjectId(orgId),
+    orgId: orgNumber,
     registrations: [
-      { id: regId, material: MATERIAL.PLASTIC, status: 'approved' }
+      {
+        id: regId,
+        registrationNumber: regNumber,
+        material: MATERIAL.PLASTIC,
+        status: 'approved'
+      }
     ]
   })
 
@@ -40,9 +48,9 @@ const seedOrganisation = (db) =>
  */
 const seedExporterRow = (db, tonnage, dateOfExport) =>
   db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId: null,
+    organisationNumber: String(orgNumber),
+    registrationNumber: regNumber,
+    accreditationNumber: null,
     rowId: 'row-1',
     wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
     processingType: PROCESSING_TYPES.EXPORTER,
@@ -61,9 +69,9 @@ const seedExporterRow = (db, tonnage, dateOfExport) =>
 /** @param {Db} db */
 const seedSubmittedSummaryLog = (db) =>
   db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertOne({
-    organisationId: orgId,
-    registrationId: regId,
-    accreditationId: null,
+    organisationNumber: String(orgNumber),
+    registrationNumber: regNumber,
+    accreditationNumber: null,
     number: 1,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     payload: { summaryLogId, creditTotal: 0 }

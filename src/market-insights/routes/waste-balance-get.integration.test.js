@@ -32,7 +32,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -138,11 +138,16 @@ const insertAccreditedOperator = async (organisationsRepository) => {
     { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
   )
 
+  const reportKey = reportKeyOf(organisation, organisation.registrations[0])
   return {
     organisationId: organisation.id,
     registrationId: registration.id,
     accreditationId,
-    reportKey: reportKeyOf(organisation, organisation.registrations[0])
+    ...reportKey,
+    accreditationNumber: toAccreditationNumber(
+      /** @type {string} */ (organisation.accreditations[0].accreditationNumber)
+    ),
+    reportKey
   }
 }
 
@@ -210,7 +215,7 @@ const submit = async (repositories, rows) => {
     period: 1
   })
   await repositories.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(ledgerId),
+    ledgerId,
     rows,
     toSummaryLogFileId(summaryLogId)
   )

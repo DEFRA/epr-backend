@@ -114,9 +114,9 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
   for (const doc of storage) {
     if (doc.summaryLogIds.some((id) => asked.has(id))) {
       yield structuredClone({
-        organisationId: doc.organisationId,
-        registrationId: doc.registrationId,
-        accreditationId: doc.accreditationId,
+        organisationNumber: doc.organisationNumber,
+        registrationNumber: doc.registrationNumber,
+        accreditationNumber: doc.accreditationNumber,
         wasteRecordType: doc.wasteRecordType,
         processingType: doc.processingType,
         data: doc.data
