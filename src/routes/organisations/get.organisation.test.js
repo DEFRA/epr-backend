@@ -423,13 +423,13 @@ describe('GET /organisations/{organisationNumber}', () => {
       })
     })
 
-    it('serves a later year the registration holds an accreditation for', async () => {
+    const accreditedEarlyForNextYear = () => {
       const accredited = accreditation({
         validFrom: '2028-01-01',
         validTo: '2028-12-31',
         statusHistory: approvedSince('2027-02-01T09:00:00.000Z')
       })
-      const organisation = buildOrganisation({
+      return buildOrganisation({
         registrations: [
           reprocessor({
             accreditationId: accredited.id,
@@ -439,10 +439,20 @@ describe('GET /organisations/{organisationNumber}', () => {
         ],
         accreditations: [accredited]
       })
+    }
 
-      expect(await regAccStatusOf(organisation)).toEqual({
+    it('serves next year accredited from an accreditation approved early, while that year is open', async () => {
+      config.set('openNextYear', true)
+
+      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
         2027: { '2027-01-10': { status: 'registeredOnly' } },
         2028: { '2028-01-01': { status: 'accredited' } }
+      })
+    })
+
+    it('leaves out next year while it is closed, even with an accreditation approved early', async () => {
+      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
+        2027: { '2027-01-10': { status: 'registeredOnly' } }
       })
     })
 

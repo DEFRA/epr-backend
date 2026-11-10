@@ -435,14 +435,16 @@ describe('regAccStatusByYear', () => {
     ).toEqual(['2024', '2026'])
   })
 
-  it('includes a later year the registration holds an accreditation for', () => {
+  it('covers the year of an accreditation up to the year of the end date', () => {
+    const withAccreditationFor2027 = partialMock(
+      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+    )
+
+    expect(regAccStatusByYear(withAccreditationFor2027, TODAY)).toEqual({
+      2026: { '2026-06-02': registeredOnly }
+    })
     expect(
-      regAccStatusByYear(
-        partialMock(
-          approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
-        ),
-        TODAY
-      )
+      regAccStatusByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
     ).toEqual({
       2026: { '2026-06-02': registeredOnly },
       2027: { '2027-01-01': accredited }
