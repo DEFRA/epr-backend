@@ -75,7 +75,7 @@ export const performUpdateViaLedger = async ({
 
   await recordWasteBalanceUpdateAudit({
     systemLogsRepository: dependencies.systemLogsRepository,
-    accreditationId: accreditation.id,
+    ledgerId,
     amount: event.closingBalance.amount,
     availableAmount: event.closingBalance.availableAmount,
     events: [event],
