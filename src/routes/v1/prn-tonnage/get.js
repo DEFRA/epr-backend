@@ -6,12 +6,30 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
 import { prnTonnageResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Material } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const prnTonnagePath = '/v1/prn-tonnage'
+
+/** @type {ReadonlySet<string>} */
+const GLASS_RECYCLING_PROCESSES = new Set(
+  Object.values(GLASS_RECYCLING_PROCESS)
+)
+
+/**
+ * The report's response names glass re-melt and glass other as plain glass.
+ *
+ * @param {Material} material
+ */
+const toReportedMaterial = (material) =>
+  GLASS_RECYCLING_PROCESSES.has(material) ? MATERIAL.GLASS : material
 
 export const getPrnTonnage = {
   method: 'GET',
@@ -57,9 +75,10 @@ export const getPrnTonnage = {
       return h
         .response({
           ...result,
-          rows: result.rows.map(({ organisationNumber, ...row }) => ({
+          rows: result.rows.map(({ organisationNumber, material, ...row }) => ({
             ...row,
-            orgId: organisationNumber
+            orgId: organisationNumber,
+            material: toReportedMaterial(material)
           }))
         })
         .code(StatusCodes.OK)

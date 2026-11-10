@@ -4,13 +4,12 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { toPrnMaterial } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/domain/model.js' */
@@ -45,7 +44,7 @@ import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
  * @property {OrganisationNumber} organisationNumber
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
- * @property {string} material
+ * @property {Material} material
  * @property {string} tonnageBand
  * @property {WasteBalanceLedgerId} ledgerId
  * @property {RegistrationProcessingTypes} registration
@@ -182,7 +181,7 @@ const toAggregatedRow = (
   organisationNumber: organisation.organisationNumber,
   registrationNumber: numbers.registrationNumber,
   accreditationNumber: numbers.accreditationNumber,
-  material: toPrnMaterial(registration.material).material,
+  material: registration.material,
   tonnageBand: accreditation.prnIssuance.tonnageBand,
   ledgerId: numbers,
   registration: processingTypesOf(registration),

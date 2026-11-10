@@ -10,6 +10,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
@@ -51,7 +52,11 @@ const ledgerId = {
 
 const contact = { email: 'contact@example.com', fullName: 'A Contact' }
 
-const storedOrganisation = () => ({
+/**
+ * @param {object} [material] the material fields an accreditation and its
+ *   registration are stored with
+ */
+const storedOrganisation = (material = { material: MATERIAL.PLASTIC }) => ({
   _id: new ObjectId(organisationId),
   orgId,
   companyDetails: { name: 'Acme Reprocessing' },
@@ -64,7 +69,7 @@ const storedOrganisation = () => ({
     {
       id: accId,
       accreditationNumber: ledgerId.accreditationNumber,
-      material: MATERIAL.PLASTIC,
+      ...material,
       prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
       statusHistory: approvedStatusHistory,
       validFrom: '2026-01-01'
@@ -78,7 +83,7 @@ const storedOrganisation = () => ({
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       statusHistory: approvedStatusHistory,
       validFrom: '2026-01-01',
-      material: MATERIAL.PLASTIC,
+      ...material,
       submittedToRegulator: 'ea',
       applicationContactDetails: contact,
       submitterContactDetails: contact,
@@ -161,4 +166,30 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
       }
     })
   })
+
+  it.for(Object.values(GLASS_RECYCLING_PROCESS))(
+    'reports %s as plain glass',
+    async (glassRecyclingProcess, { server }) => {
+      await server.db.collection(ORGANISATIONS_COLLECTION).insertOne(
+        storedOrganisation({
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [glassRecyclingProcess]
+        })
+      )
+      await server.db
+        .collection(PRNS_COLLECTION)
+        .insertOne(awaitingAcceptancePrn())
+
+      const response = await server.inject({
+        method: 'GET',
+        url: prnTonnagePath,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload).rows).toStrictEqual([
+        expect.objectContaining({ material: MATERIAL.GLASS })
+      ])
+    }
+  )
 })

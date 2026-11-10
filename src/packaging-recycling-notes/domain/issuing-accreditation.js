@@ -39,7 +39,7 @@ const GLASS_PROCESSES = new Set(Object.values(GLASS_RECYCLING_PROCESS))
  * @param {Registration['material']} material
  * @returns {Pick<IssuingAccreditation, 'material' | 'glassRecyclingProcess'>}
  */
-export const toPrnMaterial = (material) =>
+const toPrnMaterial = (material) =>
   GLASS_PROCESSES.has(material)
     ? {
         material: MATERIAL.GLASS,

@@ -723,32 +723,37 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
   })
 
-  it('reports a glass registration as glass, whatever its recycling process', async () => {
-    const organisation = organisationWithRegistration({
-      ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
-    })
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
-      ...organisation,
-      accreditations: [
-        {
-          ...organisation.accreditations[0],
-          material: MATERIAL.GLASS,
-          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
-        }
-      ]
-    })
-    await db
-      .collection(PRNS_COLLECTION)
-      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+  it.each(Object.values(GLASS_RECYCLING_PROCESS))(
+    'reports a glass registration by its settled material, %s',
+    async (glassRecyclingProcess) => {
+      const organisation = organisationWithRegistration({
+        ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [glassRecyclingProcess]
+      })
+      await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+        ...organisation,
+        accreditations: [
+          {
+            ...organisation.accreditations[0],
+            material: MATERIAL.GLASS,
+            glassRecyclingProcess: [glassRecyclingProcess]
+          }
+        ]
+      })
+      await db
+        .collection(PRNS_COLLECTION)
+        .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
 
-    const { rows } = await aggregatePrnTonnage(
-      prnRepository,
-      organisationReadRepository,
-      ledgerRepository
-    )
+      const { rows } = await aggregatePrnTonnage(
+        prnRepository,
+        organisationReadRepository,
+        ledgerRepository
+      )
 
-    expect(rows).toStrictEqual([expectedRow({ material: MATERIAL.GLASS })])
-  })
+      expect(rows).toStrictEqual([
+        expectedRow({ material: glassRecyclingProcess })
+      ])
+    }
+  )
 })
