@@ -64,6 +64,7 @@ function getLinkedAccreditation(registration, accreditations) {
     : null
 }
 
+/** @param {Pick<Organisation, 'orgId'>} org */
 function isTestOrg(org) {
   return TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org))
 }

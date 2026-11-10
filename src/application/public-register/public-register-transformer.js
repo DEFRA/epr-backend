@@ -136,6 +136,7 @@ function isAccreditationInPublishableState(item) {
   return ACCREDITATION_INCLUDED_STATUSES.has(item.status)
 }
 
+/** @param {Pick<Organisation, 'orgId'>} org */
 function isTestOrg(org) {
   return TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org))
 }
