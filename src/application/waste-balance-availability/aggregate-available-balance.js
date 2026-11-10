@@ -5,7 +5,25 @@ import {
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const ACCREDITATION_ID_FIELD = '$accreditationId'
+
+const accreditationNumberOfRegistration = {
+  $let: {
+    vars: {
+      accreditation: {
+        $arrayElemAt: [
+          {
+            $filter: {
+              input: '$accreditations',
+              cond: { $eq: ['$$this.id', '$registrations.accreditationId'] }
+            }
+          },
+          0
+        ]
+      }
+    },
+    in: '$$accreditation.accreditationNumber'
+  }
+}
 
 const buildAccreditedRegistrationStages = () => [
   { $unwind: '$registrations' },
@@ -17,8 +35,8 @@ const buildAccreditedRegistrationStages = () => [
   {
     $project: {
       _id: 0,
-      registrationId: '$registrations.id',
-      accreditationId: '$registrations.accreditationId',
+      registrationNumber: '$registrations.registrationNumber',
+      accreditationNumber: accreditationNumberOfRegistration,
       orgData: [
         {
           orgId: '$orgId',
@@ -33,14 +51,17 @@ const buildAccreditedRegistrationStages = () => [
 const buildLatestLedgerEventLookupStage = () => ({
   $lookup: {
     from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
-    let: { regId: '$registrationId', accId: ACCREDITATION_ID_FIELD },
+    let: {
+      registrationNumber: '$registrationNumber',
+      accreditationNumber: '$accreditationNumber'
+    },
     pipeline: [
       {
         $match: {
           $expr: {
             $and: [
-              { $eq: ['$registrationId', '$$regId'] },
-              { $eq: [ACCREDITATION_ID_FIELD, '$$accId'] }
+              { $eq: ['$registrationNumber', '$$registrationNumber'] },
+              { $eq: ['$accreditationNumber', '$$accreditationNumber'] }
             ]
           }
         }

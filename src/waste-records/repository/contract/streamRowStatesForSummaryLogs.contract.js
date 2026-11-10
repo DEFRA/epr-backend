@@ -55,11 +55,15 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         'log-1'
       )
 
+      const { organisationNumber, registrationNumber, accreditationNumber } =
+        withNumbers(DEFAULT_LEDGER_ID)
       expect(
         await collect(repository.streamRowStatesForSummaryLogs(['log-1']))
       ).toEqual([
         {
-          ...DEFAULT_LEDGER_ID,
+          organisationNumber,
+          registrationNumber,
+          accreditationNumber,
           wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
           data: { tonnage: 7 }
@@ -88,9 +92,9 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         repository.streamRowStatesForSummaryLogs(['log-1', 'log-3'])
       )
 
-      expect(yielded.map((rowState) => rowState.registrationId).sort()).toEqual(
-        ['reg-1', 'reg-3']
-      )
+      expect(
+        yielded.map((rowState) => rowState.registrationNumber).sort()
+      ).toEqual(['REG-reg-1', 'REG-reg-3'])
     })
 
     it('yields a row state only once however many of the asked-for logs share it', async () => {

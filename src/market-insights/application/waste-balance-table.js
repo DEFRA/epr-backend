@@ -1,6 +1,10 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import {
+  indexAccreditationsByLedger,
+  ledgerKey
+} from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
@@ -38,7 +42,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceFigures} WasteBalanceFigures
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures} PublishedWasteBalanceFigures
- * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationIndex} AccreditationIndex
+ * @typedef {import('#waste-balances/application/accreditation-index.js').AccreditationContext} AccreditationContext
  * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/registration.js').Registration} Registration
@@ -101,13 +105,6 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {{ generatedAt: string }} meta
  * @property {{ months: Record<YearMonth, PublishedMonth>, period: PublishedPeriod }} data
  */
-
-/**
- * @param {{ organisationId: string, registrationId: string, accreditationId: string | null }} ledgerId
- * @returns {string}
- */
-const partitionKey = ({ organisationId, registrationId, accreditationId }) =>
-  JSON.stringify([organisationId, registrationId, accreditationId])
 
 /**
  * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>} cell
@@ -197,47 +194,42 @@ const periodFigures = (cells, months) =>
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} accreditationId
+ * @param {string} accreditationNumber
  */
-const warnAboutUnmatchedPartition = (logger, accreditationId) => {
+const warnAboutUnmatchedPartition = (logger, accreditationNumber) => {
   logger.warn({
-    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationId}. Everything that partition reported is absent from the publication.`,
+    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationNumber}. Everything that partition reported is absent from the publication.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_partition_unmatched',
-      reference: accreditationId
+      reference: accreditationNumber
     }
   })
 }
 
 /**
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
- * @param {AccreditationIndex} accreditations
+ * @param {Map<string, AccreditationContext>} index - by `ledgerKey`
  * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Map<string, PublishedPartition>}
  */
-const resolvePublishedPartitions = (
-  entries,
-  { index, testOrgAccreditationIds },
-  sitesById,
-  logger
-) => {
+const resolvePublishedPartitions = (entries, index, sitesById, logger) => {
   /** @type {Map<string, PublishedPartition>} */
   const partitions = new Map()
   for (const { ledgerId, summaryLogId } of entries) {
-    const { accreditationId } = ledgerId
-    if (accreditationId === null) {
+    const { accreditationNumber } = ledgerId
+    if (accreditationNumber === null) {
       continue
     }
-    const context = index.get(accreditationId)
+    const context = index.get(ledgerKey(ledgerId))
     if (context === undefined) {
-      if (!testOrgAccreditationIds.has(accreditationId)) {
-        warnAboutUnmatchedPartition(logger, accreditationId)
+      if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
+        warnAboutUnmatchedPartition(logger, accreditationNumber)
       }
       continue
     }
-    partitions.set(partitionKey(ledgerId), {
+    partitions.set(ledgerKey(ledgerId), {
       summaryLogId,
       org: context.organisation,
       registration: context.registration,
@@ -257,7 +249,7 @@ const resolvePublishedPartitions = (
  * @returns {PublishedRow | null}
  */
 const publishedContribution = (rowState, partitions) => {
-  const partition = partitions.get(partitionKey(rowState))
+  const partition = partitions.get(ledgerKey(rowState))
   if (partition === undefined) {
     return null
   }
@@ -439,13 +431,13 @@ export const buildWasteBalanceTable = async ({
 
   const partitions = resolvePublishedPartitions(
     entries,
-    indexAccreditations(organisations),
+    indexAccreditationsByLedger(organisations),
     new Map(allSites.map((site) => [site.id, site])),
     logger
   )
 
   const summaryLogIds = entries
-    .filter((entry) => partitions.has(partitionKey(entry.ledgerId)))
+    .filter((entry) => partitions.has(ledgerKey(entry.ledgerId)))
     .map((entry) => entry.summaryLogId)
 
   /** @type {Set<string>} */

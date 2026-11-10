@@ -305,8 +305,8 @@ describe('reconcileStalePrnProjections', () => {
     const badIds = buildAccreditationKeys()
     const { insertedId } = await prnCollection.insertOne(
       /** @type {*} */ ({
-        registrationId: badIds.registrationId,
-        accreditation: { id: badIds.accreditationId },
+        registration: { registrationNumber: badIds.registrationNumber },
+        accreditation: { accreditationNumber: badIds.accreditationNumber },
         notAValidPrn: true
       })
     )

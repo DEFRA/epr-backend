@@ -6,10 +6,14 @@ import {
   isRegistrationActiveInYear,
   resolveAccreditationNumber,
   resolveAccreditation,
+  resolveAccreditationByNumber,
   accreditationsForRegistration,
   resolveMaterial
 } from './registration-utils.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -269,6 +273,53 @@ describe('resolveAccreditation', () => {
     const reg = buildReg({ accreditationId: 'acc-1' })
 
     expect(resolveAccreditation(reg, org)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveAccreditationByNumber
+// ---------------------------------------------------------------------------
+
+describe('resolveAccreditationByNumber', () => {
+  const number = toAccreditationNumber('ACC-1')
+  const accreditationFixture = {
+    id: 'acc-1',
+    accreditationNumber: number,
+    status: 'approved',
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    statusHistory: []
+  }
+
+  it.each(['approved', 'suspended'])(
+    'returns the %s accreditation with the number',
+    (status) => {
+      const accreditation = { ...accreditationFixture, status }
+      const org = buildOrg({ accreditations: [accreditation] })
+
+      expect(resolveAccreditationByNumber(number, org)).toBe(accreditation)
+    }
+  )
+
+  it('returns null for a registered-only ledger', () => {
+    const org = buildOrg({ accreditations: [accreditationFixture] })
+
+    expect(resolveAccreditationByNumber(null, org)).toBeNull()
+  })
+
+  it('returns null when no accreditation has the number', () => {
+    const org = buildOrg({ accreditations: [accreditationFixture] })
+
+    expect(
+      resolveAccreditationByNumber(toAccreditationNumber('ACC-2'), org)
+    ).toBeNull()
+  })
+
+  it('returns null when the accreditation with the number is cancelled', () => {
+    const cancelled = { ...accreditationFixture, status: 'cancelled' }
+    const org = buildOrg({ accreditations: [cancelled] })
+
+    expect(resolveAccreditationByNumber(number, org)).toBeNull()
   })
 })
 

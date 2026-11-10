@@ -1,7 +1,11 @@
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
+ * @typedef {import('#domain/organisations/numbers.js').RegistrationNumber} RegistrationNumber
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
@@ -16,64 +20,82 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
  */
 
 /**
- * The accreditation index plus the set of accreditation ids belonging to
- * dropped test organisations, so an unmatched ledger entry can be told apart:
- * a test-org accreditation is dropped by design, anything else is an orphan.
+ * Each registration of the organisation with the accreditation it links to.
  *
- * @typedef {Object} AccreditationIndex
- * @property {Map<string, AccreditationContext>} index
- * @property {Set<string>} testOrgAccreditationIds
+ * @param {Organisation} organisation
+ * @returns {AccreditationContext[]}
  */
+const linkedAccreditations = (organisation) => {
+  const accreditationById = new Map(
+    organisation.accreditations.map((accreditation) => [
+      accreditation.id,
+      accreditation
+    ])
+  )
+  return organisation.registrations.flatMap((registration) => {
+    const accreditation = registration.accreditationId
+      ? accreditationById.get(registration.accreditationId)
+      : undefined
+    return accreditation ? [{ organisation, registration, accreditation }] : []
+  })
+}
 
 /**
- * Index every non-test organisation's accreditations by id, carrying the linked
+ * Index every organisation's accreditations by id, carrying the linked
  * registration and owning organisation. No status filtering: suspended and
- * cancelled accreditations are indexed too — the row-level classification, not
- * the accreditation's current status, decides eligibility. A registered-only
- * registration (no accreditation) contributes nothing to the index. Test
- * organisations' accreditation ids are collected separately rather than indexed,
- * unless `includeTestOrganisations` asks for them to be indexed like any other.
+ * cancelled accreditations are indexed too. A registered-only registration (no
+ * accreditation) contributes nothing to the index.
  *
  * @param {Organisation[]} organisations
- * @param {{ includeTestOrganisations?: boolean }} [options]
- * @returns {AccreditationIndex}
+ * @returns {Map<string, AccreditationContext>}
  */
-export const indexAccreditations = (
-  organisations,
-  { includeTestOrganisations = false } = {}
-) => {
+export const indexAccreditations = (organisations) =>
+  new Map(
+    organisations
+      .flatMap(linkedAccreditations)
+      .map((context) => [context.accreditation.id, context])
+  )
+
+/**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @returns {string}
+ */
+export const ledgerKey = ({
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) =>
+  JSON.stringify([organisationNumber, registrationNumber, accreditationNumber])
+
+/**
+ * Index every non-test organisation's accreditations by the `ledgerKey` of the
+ * ledger they write to, carrying the linked registration and owning
+ * organisation. As `indexAccreditations`, no status filtering.
+ *
+ * @param {Organisation[]} organisations
+ * @returns {Map<string, AccreditationContext>}
+ */
+export const indexAccreditationsByLedger = (organisations) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
-  /** @type {Set<string>} */
-  const testOrgAccreditationIds = new Set()
   for (const organisation of organisations) {
-    if (
-      !includeTestOrganisations &&
-      TEST_ORGANISATION_IDS.has(organisation.orgId)
-    ) {
-      for (const accreditation of organisation.accreditations) {
-        testOrgAccreditationIds.add(accreditation.id)
-      }
+    if (TEST_ORGANISATION_IDS.has(organisation.orgId)) {
       continue
     }
-    const accreditationById = new Map(
-      organisation.accreditations.map((accreditation) => [
-        accreditation.id,
-        accreditation
-      ])
-    )
-    for (const registration of organisation.registrations) {
-      const accreditation = registration.accreditationId
-        ? accreditationById.get(registration.accreditationId)
-        : undefined
-      if (accreditation) {
-        index.set(accreditation.id, {
-          organisation,
-          registration,
-          accreditation
-        })
-      }
+    for (const context of linkedAccreditations(organisation)) {
+      index.set(
+        ledgerKey({
+          organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+          registrationNumber: /** @type {RegistrationNumber} */ (
+            context.registration.registrationNumber
+          ),
+          accreditationNumber: /** @type {AccreditationNumber} */ (
+            context.accreditation.accreditationNumber
+          )
+        }),
+        context
+      )
     }
   }
-  return { index, testOrgAccreditationIds }
+  return index
 }

@@ -23,8 +23,8 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -127,7 +127,14 @@ const makeOperator = ({
         }
       ]
     },
-    ledgerId: { organisationId: id, registrationId, accreditationId },
+    ledgerId: {
+      organisationId: id,
+      registrationId,
+      accreditationId,
+      organisationNumber: toOrganisationNumber(String(orgId)),
+      registrationNumber: toRegistrationNumber(`REG-${orgId}`),
+      accreditationNumber: toAccreditationNumber(`ACC-${orgId}`)
+    },
     summaryLogId: `log-${orgId}`
   }
 }
@@ -398,7 +405,7 @@ const run = async ({
 
   for (const { ledgerId, summaryLogId, rows } of submissions) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(ledgerId),
+      ledgerId,
       rows,
       summaryLogId
     )
@@ -953,7 +960,11 @@ describe('buildWasteBalanceTable', () => {
             rows: [receivedRow('row-1', '2026-02-10', 40)]
           },
           {
-            ledgerId: { ...registered.ledgerId, accreditationId: null },
+            ledgerId: {
+              ...registered.ledgerId,
+              accreditationId: null,
+              accreditationNumber: null
+            },
             summaryLogId: registered.summaryLogId,
             rows: [receivedRow('row-1', '2026-02-10', 60)]
           }
@@ -984,7 +995,8 @@ describe('buildWasteBalanceTable', () => {
             ...scottishSite,
             ledgerId: {
               ...scottishSite.ledgerId,
-              organisationId: twoNations.id
+              organisationId: twoNations.id,
+              organisationNumber: englishSite.ledgerId.organisationNumber
             },
             rows: [receivedRow('row-1', '2026-02-20', 60)]
           }
@@ -1569,10 +1581,10 @@ describe('buildWasteBalanceTable', () => {
     expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('acc-500009'),
+        message: expect.stringContaining('ACC-500009'),
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
-          reference: 'acc-500009'
+          reference: 'ACC-500009'
         })
       })
     )
@@ -1581,7 +1593,11 @@ describe('buildWasteBalanceTable', () => {
   it('leaves out a registered-only partition sharing a summary log with an accredited one', async () => {
     const operator = makeOperator({ orgId: 500010 })
     const registeredOnly = {
-      ledgerId: { ...operator.ledgerId, accreditationId: null },
+      ledgerId: {
+        ...operator.ledgerId,
+        accreditationId: null,
+        accreditationNumber: null
+      },
       summaryLogId: operator.summaryLogId
     }
 

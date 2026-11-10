@@ -320,9 +320,9 @@ const performFindRowStatesForSummaryLogFile =
  */
 const SUBMITTED_ROW_STATE_PROJECTION = {
   _id: 0,
-  organisationId: 1,
-  registrationId: 1,
-  accreditationId: 1,
+  organisationNumber: 1,
+  registrationNumber: 1,
+  accreditationNumber: 1,
   wasteRecordType: 1,
   processingType: 1,
   data: 1
@@ -333,16 +333,16 @@ const SUBMITTED_ROW_STATE_PROJECTION = {
  * @returns {import('./port.js').SubmittedRowState}
  */
 const toSubmittedRowState = ({
-  organisationId,
-  registrationId,
-  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber,
   wasteRecordType,
   processingType,
   data
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber,
   wasteRecordType,
   processingType,
   data

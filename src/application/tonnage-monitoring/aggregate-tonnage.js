@@ -150,13 +150,19 @@ const buildMaterialLookupStage = () => ({
   $lookup: {
     from: ORGANISATIONS_COLLECTION,
     let: {
-      orgId: { $toObjectId: '$_id.organisationId' },
-      regId: '$_id.registrationId'
+      organisationNumber: { $toInt: '$_id.organisationNumber' },
+      registrationNumber: '$_id.registrationNumber'
     },
     pipeline: [
-      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
+      { $match: { $expr: { $eq: ['$orgId', '$$organisationNumber'] } } },
       { $unwind: '$registrations' },
-      { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
+      {
+        $match: {
+          $expr: {
+            $eq: ['$registrations.registrationNumber', '$$registrationNumber']
+          }
+        }
+      },
       {
         $project: {
           orgId: '$orgId',
@@ -222,8 +228,8 @@ const buildDateFieldsStage = () => ({
 const buildTonnageGroupStage = () => ({
   $group: {
     _id: {
-      organisationId: '$organisationId',
-      registrationId: '$registrationId',
+      organisationNumber: '$organisationNumber',
+      registrationNumber: '$registrationNumber',
       year: '$year',
       monthNumber: '$monthNumber',
       month: '$month',

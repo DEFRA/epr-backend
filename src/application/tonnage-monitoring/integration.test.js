@@ -14,21 +14,31 @@ import {
   createMongoLedgerRepository
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
+// Row states and ledger events name their organisation by number, so each
+// organisation the tests insert needs a number of its own.
+const ORGANISATION_NUMBERS = {
+  '507f1f77bcf86cd799439011': 500001,
+  '507f1f77bcf86cd799439012': 500002,
+  '507f1f77bcf86cd799439013': 999999
+}
+
 const createOrganisation = (id, registrations) => ({
   _id: new ObjectId(id),
-  orgId: 12345,
+  orgId: ORGANISATION_NUMBERS[id],
   version: 1,
   schemaVersion: 1,
   registrations
 })
 
+const registrationNumberFor = (registrationId) => `R-${registrationId}`
+
 const createRegistration = (id, material, glassRecyclingProcess) => ({
   id,
+  registrationNumber: registrationNumberFor(id),
   material,
   status: 'approved',
   ...(glassRecyclingProcess && { glassRecyclingProcess })
@@ -46,9 +56,9 @@ const createRowState = ({
   data,
   summaryLogId
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
+  organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
+  registrationNumber: registrationNumberFor(registrationId),
+  accreditationNumber: accreditationId,
   wasteRecordType,
   rowId: `row-${Math.random()}`,
   processingType,
@@ -142,11 +152,14 @@ const createReprocessorOutputRowState = (
 const submittedSummaryLogEvent = ({
   organisationId,
   registrationId,
+  registrationNumber = registrationNumberFor(registrationId),
   accreditationId,
   summaryLogId,
   number
 }) => ({
-  ...withNumbers({ organisationId, registrationId, accreditationId }),
+  organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
+  registrationNumber,
+  accreditationNumber: accreditationId,
   number,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: { summaryLogId, creditTotal: 0 }
@@ -165,17 +178,19 @@ describe('aggregateTonnageByMaterial - Integration', () => {
   /**
    * Insert row states and record one submitted summary log per distinct ledger
    * partition, so every row's `summaryLogIds[0]` is the latest submitted summary
-   * log of its `(registrationId, accreditationId)` ledger.
+   * log of its `(registrationNumber, accreditationNumber)` ledger.
    */
   const submitRows = async (rows) => {
     await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertMany(rows)
 
     const submissions = new Map()
     for (const row of rows) {
-      submissions.set(`${row.registrationId}::${row.accreditationId}`, {
-        organisationId: row.organisationId,
-        registrationId: row.registrationId,
-        accreditationId: row.accreditationId,
+      submissions.set(`${row.registrationNumber}::${row.accreditationNumber}`, {
+        organisationId: Object.keys(ORGANISATION_NUMBERS).find(
+          (id) => String(ORGANISATION_NUMBERS[id]) === row.organisationNumber
+        ),
+        registrationNumber: row.registrationNumber,
+        accreditationId: row.accreditationNumber,
         summaryLogId: row.summaryLogIds[0]
       })
     }
