@@ -6,7 +6,7 @@ import {
   toYear,
   utcYearOf,
   yearBounds,
-  yearEndOrToday,
+  earliestOfYearEndOrDate,
   yearsFromTo
 } from './year.js'
 
@@ -72,18 +72,22 @@ describe('yearBounds', () => {
   })
 })
 
-describe('yearEndOrToday', () => {
-  const today =
+describe('earliestOfYearEndOrDate', () => {
+  const dateIn2026 =
     /** @type {import('#common/helpers/date-formatter.js').CalendarDate} */ (
       '2026-06-15'
     )
 
   it('is the last day of a year that has finished', () => {
-    expect(yearEndOrToday(toYear(2025), today)).toBe('2025-12-31')
+    expect(earliestOfYearEndOrDate(toYear(2025), dateIn2026)).toBe('2025-12-31')
   })
 
-  it('is today while the year is running', () => {
-    expect(yearEndOrToday(toYear(2026), today)).toBe('2026-06-15')
+  it('is the date while that year is running', () => {
+    expect(earliestOfYearEndOrDate(toYear(2026), dateIn2026)).toBe('2026-06-15')
+  })
+
+  it('is the date for a later year', () => {
+    expect(earliestOfYearEndOrDate(toYear(2027), dateIn2026)).toBe('2026-06-15')
   })
 })
 
