@@ -168,7 +168,7 @@ const organisationWasteBalancesGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisation } = request.app
+    const { storedOrganisation: organisation } = request.app
     const { year } = request.params
 
     const accredited = servedRegistrations(organisation).flatMap(

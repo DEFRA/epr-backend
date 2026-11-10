@@ -143,7 +143,7 @@ describe('atNaturalKeys', () => {
     await served.handler(request, h)
 
     expect(request.app).toEqual({
-      organisation: expect.objectContaining({ id: organisation.id })
+      storedOrganisation: expect.objectContaining({ id: organisation.id })
     })
   })
 
