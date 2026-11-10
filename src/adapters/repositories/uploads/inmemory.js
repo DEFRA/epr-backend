@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
+import { parseUploadUri } from './s3-uri.js'
 
 /**
  * @typedef {import('#domain/uploads/repository/port.js').InitiateSummaryLogUploadOptions} InitiateSummaryLogUploadOptions
@@ -19,7 +20,7 @@ import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
 /**
  * Creates an in-memory uploads repository for testing.
  *
- * @param {{ summaryLogsBucket?: string }} [config] - Optional configuration
+ * @param {{ orsBucket?: string, summaryLogsBucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
  *   initiateCalls: InitiateSummaryLogUploadOptions[],
@@ -28,6 +29,10 @@ import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
   const summaryLogsBucket = config.summaryLogsBucket ?? 're-ex-summary-logs'
+  const uploadBuckets = [
+    summaryLogsBucket,
+    config.orsBucket ?? 're-ex-overseas-sites'
+  ]
 
   /** @type {Map<string, Buffer>} */
   const storage = new Map()
@@ -46,10 +51,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
     orsInitiateCalls,
 
     async findByLocation(uri) {
+      parseUploadUri(uri, uploadBuckets)
       return storage.get(uri) ?? null
     },
 
     async deleteByLocation(uri) {
+      parseUploadUri(uri, uploadBuckets)
       storage.delete(uri)
     },
 

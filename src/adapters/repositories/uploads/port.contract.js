@@ -144,11 +144,25 @@ export const testUploadsRepositoryContract = (it) => {
 
     it('returns null when file does not exist', async () => {
       const result = await uploadsRepository.findByLocation(
-        's3://non-existent-bucket/non-existent-key'
+        's3://re-ex-summary-logs/non-existent-key'
       )
 
       expect(result).toBeNull()
     })
+
+    it.for([
+      { operation: 'findByLocation' },
+      { operation: 'deleteByLocation' }
+    ])(
+      'refuses $operation outside the upload buckets',
+      async ({ operation }) => {
+        await expect(
+          uploadsRepository[operation]('s3://some-other-bucket/some-key')
+        ).rejects.toThrow(
+          'Not an upload bucket: s3://some-other-bucket/some-key'
+        )
+      }
+    )
 
     it('deletes file so subsequent retrieval returns null', async () => {
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)

@@ -1,6 +1,6 @@
 import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { StatusCodes } from 'http-status-codes'
-import { parseS3Uri } from './s3-uri.js'
+import { parseUploadUri } from './s3-uri.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import {
   orsImportUploadPath,
@@ -38,7 +38,7 @@ export const createUploadsRepository = ({
   orsBucket
 }) => ({
   async findByLocation(uri) {
-    const s3Location = parseS3Uri(uri)
+    const s3Location = parseUploadUri(uri, [summaryLogsBucket, orsBucket])
 
     try {
       const command = new GetObjectCommand(s3Location)
@@ -65,7 +65,7 @@ export const createUploadsRepository = ({
   },
 
   async deleteByLocation(uri) {
-    const s3Location = parseS3Uri(uri)
+    const s3Location = parseUploadUri(uri, [summaryLogsBucket, orsBucket])
     await s3Client.send(new DeleteObjectCommand(s3Location))
   },
 
