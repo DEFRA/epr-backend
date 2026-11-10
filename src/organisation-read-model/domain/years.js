@@ -18,12 +18,12 @@ import { approvedYears } from './status-timeline.js'
  * newest first, up to and including the year of `endDate`.
  *
  * @param {Organisation} organisation
- * @param {Date} endDate
+ * @param {CalendarDate} endDate
  * @returns {Year[]}
  */
 export const organisationYears = (organisation, endDate) => {
   const years = Object.values(organisation.registrations).flatMap(
-    ({ status }) => approvedYears(status.timeline, utcCalendarDate(endDate))
+    ({ status }) => approvedYears(status.timeline, endDate)
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
@@ -84,18 +84,19 @@ export const organisationInYear = (organisation, year, statusDate) => {
 }
 
 /**
- * `regAccStatusByDate` for each year the registration was approved in up to
- * `endDate`, or holds an accreditation for, which can be a later year.
+ * `regAccStatusByDate` for each year up to the year of `endDate` that the
+ * registration was approved in or holds an accreditation for.
  *
  * @param {RegAccStatusSource} registration
  * @param {CalendarDate} endDate
  * @returns {RegAccStatusByYear}
  */
 export const regAccStatusByYear = (registration, endDate) => {
+  const lastYear = utcYearOf(endDate)
   const years = [
     ...approvedYears(registration.status.timeline, endDate),
     ...Object.keys(registration.accreditations).map(utcYearOf)
-  ]
+  ].filter((year) => year <= lastYear)
 
   return Object.fromEntries(
     years.map((year) => [year, regAccStatusByDate(registration, year)])
