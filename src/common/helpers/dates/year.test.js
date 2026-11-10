@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   currentUtcYear,
-  isFutureYear,
   nextYear,
   toYear,
   utcYearOf,
   yearBounds,
-  yearEndOrToday,
+  earliestOfYearEndOrDate,
   yearsFromTo
 } from './year.js'
 
@@ -72,33 +71,21 @@ describe('yearBounds', () => {
   })
 })
 
-describe('yearEndOrToday', () => {
-  const today =
+describe('earliestOfYearEndOrDate', () => {
+  const dateIn2026 =
     /** @type {import('#common/helpers/date-formatter.js').CalendarDate} */ (
       '2026-06-15'
     )
 
   it('is the last day of a year that has finished', () => {
-    expect(yearEndOrToday(toYear(2025), today)).toBe('2025-12-31')
+    expect(earliestOfYearEndOrDate(toYear(2025), dateIn2026)).toBe('2025-12-31')
   })
 
-  it('is today while the year is running', () => {
-    expect(yearEndOrToday(toYear(2026), today)).toBe('2026-06-15')
-  })
-})
-
-describe('isFutureYear', () => {
-  const now = new Date('2026-06-15T00:00:00.000Z')
-
-  it('is true for a year later than now', () => {
-    expect(isFutureYear(toYear(2027), now)).toBe(true)
+  it('is the date while that year is running', () => {
+    expect(earliestOfYearEndOrDate(toYear(2026), dateIn2026)).toBe('2026-06-15')
   })
 
-  it('is false for the current year', () => {
-    expect(isFutureYear(toYear(2026), now)).toBe(false)
-  })
-
-  it('is false for a past year', () => {
-    expect(isFutureYear(toYear(2025), now)).toBe(false)
+  it('is the date for a later year', () => {
+    expect(earliestOfYearEndOrDate(toYear(2027), dateIn2026)).toBe('2026-06-15')
   })
 })

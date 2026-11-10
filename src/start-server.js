@@ -18,6 +18,10 @@ async function startServer() {
   // We want the server to break early if the configuration is invalid
   validateConfig(config)
   logFeatureFlagStates(config, logger)
+  logger.info({
+    message: `Open next year: ${config.get('openNextYear')}`,
+    event: { category: LOGGING_EVENT_CATEGORIES.CONFIG }
+  })
   const auditConfig = config.get('audit')
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)

@@ -7,16 +7,17 @@ import {
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {PackagingRecyclingNote} from '#packaging-recycling-notes/domain/model.js'
  */
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {string} prnId
- * @param {Object} previous
- * @param {Object} next
+ * @param {PackagingRecyclingNote} previous
+ * @param {PackagingRecyclingNote} next
  */
 async function auditPrnStatusTransition(request, prnId, previous, next) {
-  const organisationId = next.organisation?.id
+  const { organisationNumber } = next.organisation
 
   const payload = {
     event: {
@@ -25,7 +26,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
       action: 'status-transition'
     },
     context: {
-      organisationId,
+      organisationNumber,
       prnId,
       previous,
       next
@@ -37,7 +38,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
     ? payload
     : {
         ...payload,
-        context: { organisationId, prnId }
+        context: { organisationNumber, prnId }
       }
 
   safeAudit(safeAuditingPayload)

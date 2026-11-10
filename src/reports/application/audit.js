@@ -13,6 +13,7 @@ import {
  * @import {
  *   MarkReportStaleResult,
  *   MarkSubmittedReportRequiringResubmissionResult,
+ *   RegistrationKey,
  *   Report
  * } from '#reports/repository/port.js'
  */
@@ -179,10 +180,8 @@ export async function auditReportDelete(request, params) {
  * Audits a bulk report-flag transition (mark-stale / mark-requiring-resubmission)
  * via CDP audit and system logs. Emits one CDP audit event and one system-log
  * record per report, in a single DB round-trip.
- * @param {{
+ * @param {RegistrationKey & {
  *   systemLogsRepository: SystemLogsRepository,
- *   organisationId: string,
- *   registrationId: string,
  *   action: string,
  *   field: string,
  *   results: Array<MarkReportStaleResult | MarkSubmittedReportRequiringResubmissionResult>
@@ -190,8 +189,8 @@ export async function auditReportDelete(request, params) {
  */
 async function auditReportFlagTransition({
   systemLogsRepository,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   action,
   field,
   results
@@ -204,8 +203,8 @@ async function auditReportFlagTransition({
       action
     },
     context: {
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year: result.year,
       cadence: result.cadence,
       period: result.period,
@@ -228,25 +227,23 @@ async function auditReportFlagTransition({
  * `reportsMarkedStale[].stale` set to `{ prnCancelled }`. Each result's
  * `stale` already carries only the sub-key that trigger set (never both), so
  * the audit payload naturally records just what changed.
- * @param {{
+ * @param {RegistrationKey & {
  *   systemLogsRepository: SystemLogsRepository,
- *   organisationId: string,
- *   registrationId: string,
  *   reportsMarkedStale: MarkReportStaleResult[],
  *   action: string
  * }} params
  */
 export async function auditMarkReportsStale({
   systemLogsRepository,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   reportsMarkedStale,
   action
 }) {
   await auditReportFlagTransition({
     systemLogsRepository,
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     action,
     field: 'stale',
     results: reportsMarkedStale
@@ -255,23 +252,21 @@ export async function auditMarkReportsStale({
 
 /**
  * Audits a bulk markSubmittedReportsRequiringResubmission operation.
- * @param {{
+ * @param {RegistrationKey & {
  *   systemLogsRepository: SystemLogsRepository,
- *   organisationId: string,
- *   registrationId: string,
  *   reportsRequiringResubmission: MarkSubmittedReportRequiringResubmissionResult[]
  * }} params
  */
 export async function auditMarkReportsRequiringResubmission({
   systemLogsRepository,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   reportsRequiringResubmission
 }) {
   await auditReportFlagTransition({
     systemLogsRepository,
-    organisationId,
-    registrationId,
+    organisationNumber,
+    registrationNumber,
     action: 'mark-requiring-resubmission',
     field: 'resubmissionRequired',
     results: reportsRequiringResubmission

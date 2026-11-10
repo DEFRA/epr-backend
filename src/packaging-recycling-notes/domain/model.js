@@ -184,14 +184,15 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  */
 
 /**
- * @typedef {OrganisationNameAndId & {
+ * @typedef {{
  *   organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber;
+ *   name: string;
+ *   tradingName?: string;
  * }} OrganisationSnapshot
  */
 
 /**
  * @typedef {{
- *   id: string;
  *   accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber;
  *   accreditationYear: Year;
  *   material: import('#domain/organisations/model.js').AppliedForMaterial;
@@ -247,8 +248,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   lastAppliedEventNumber?: number;
  *   prnNumber?: string | null;
  *   organisation: OrganisationSnapshot;
- *   registrationId: string;
- *   registration: { registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
+ *   registration:{ registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
  *   obligationYear: Year;
  *   issuedToOrganisation: OrganisationNameAndId;

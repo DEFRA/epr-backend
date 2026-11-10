@@ -300,9 +300,9 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$organisation.id',
-            registrationId: '$registrationId',
-            accreditationId: '$accreditation.id',
+            organisationNumber: '$organisation.organisationNumber',
+            registrationNumber: '$registration.registrationNumber',
+            accreditationNumber: '$accreditation.accreditationNumber',
             status: '$status.currentStatus'
           },
           tonnage: { $sum: '$tonnage' }
@@ -311,9 +311,9 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$_id.organisationId',
-            registrationId: '$_id.registrationId',
-            accreditationId: '$_id.accreditationId'
+            organisationNumber: '$_id.organisationNumber',
+            registrationNumber: '$_id.registrationNumber',
+            accreditationNumber: '$_id.accreditationNumber'
           },
           tonnageByStatus: { $push: { k: '$_id.status', v: '$tonnage' } }
         }
@@ -321,7 +321,7 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $project: {
           _id: 0,
-          id: '$_id',
+          numbers: '$_id',
           tonnageByStatus: { $arrayToObject: '$tonnageByStatus' }
         }
       }

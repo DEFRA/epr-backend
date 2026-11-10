@@ -31,8 +31,6 @@ const REGISTRATION_SITE = {
 }
 
 const FULL_ADDRESS_SITE = {
-  line1: '7',
-  postcode: 'SW2A 0AA',
   fullAddress: '7 Glass processing site London SW2A 0AA'
 }
 
@@ -98,7 +96,6 @@ describe('diagnosePrnSiteAddresses', () => {
       checkedRegistrations: 1,
       fullAddressOnly: 0,
       fullOnlyHeld: 0,
-      fullOnlyHeldWithLine1AndPostcode: 0,
       checkedAccreditations: 1,
       matched: 1,
       siteDiffers: 0,
@@ -182,8 +179,7 @@ describe('diagnosePrnSiteAddresses', () => {
     const organisation = accreditedReprocessor({
       registrationAddress: {
         line1: '7',
-        postcode: 'SW2A 0AA',
-        fullAddress: '7 Glass processing site London SW2A 0AA'
+        fullAddress: '7 Glass processing site London'
       }
     })
 
@@ -197,7 +193,7 @@ describe('diagnosePrnSiteAddresses', () => {
         registrationNumber: REPROCESSOR_NUMBER,
         hasLine1: true,
         hasTown: false,
-        hasPostcode: true,
+        hasPostcode: false,
         accreditations: 1,
         heldAccreditations: 1
       }
@@ -206,7 +202,6 @@ describe('diagnosePrnSiteAddresses', () => {
       checkedRegistrations: 1,
       fullAddressOnly: 1,
       fullOnlyHeld: 1,
-      fullOnlyHeldWithLine1AndPostcode: 1,
       checkedAccreditations: 0
     })
   })
@@ -300,24 +295,26 @@ describe('diagnosePrnSiteAddresses', () => {
     ])
     expect(summary).toMatchObject({
       fullAddressOnly: 1,
-      fullOnlyHeld: 0,
-      fullOnlyHeldWithLine1AndPostcode: 0
+      fullOnlyHeld: 0
     })
   })
 
-  it('does not count a held full-address registration as holding line1 and postcode when its stored postcode is missing', async () => {
+  it('compares the accreditation site of a registration the read model gives parts without a town', async () => {
     const organisation = accreditedReprocessor({
       registrationAddress: {
-        line1: '7',
-        fullAddress: '7 Glass processing site'
+        line1: '7 Glass processing site',
+        postcode: 'SW2A 0AA',
+        fullAddress: '7 Glass processing site, Unit 4, Estate, London, SW2A 0AA'
       }
     })
 
-    const { summary } = await diagnose([organisation])
+    const { rows, summary } = await diagnose([organisation])
 
+    expect(rows).toStrictEqual([])
     expect(summary).toMatchObject({
-      fullOnlyHeld: 1,
-      fullOnlyHeldWithLine1AndPostcode: 0
+      fullAddressOnly: 0,
+      checkedAccreditations: 1,
+      matched: 1
     })
   })
 

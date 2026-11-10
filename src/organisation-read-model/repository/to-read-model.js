@@ -1,5 +1,5 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
+import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -272,7 +272,7 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     regAccStatusByDate: regAccStatusByYear(
       { status: registrationStatus, accreditations },
-      calendarDate(today)
+      lastOpenDay(new Date(today))
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
@@ -494,8 +494,12 @@ function toUkAddress({
   postcode,
   fullAddress
 } = {}) {
-  if (line1 && town && postcode) {
-    return { line1, town, postcode, ...omitNullish({ line2, county }) }
+  if (line1 && postcode) {
+    return {
+      line1,
+      postcode,
+      ...omitNullish({ town, line2, county, fullAddress })
+    }
   }
   if (fullAddress) {
     return { fullAddress }

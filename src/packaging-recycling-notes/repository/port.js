@@ -19,16 +19,6 @@ export class PrnNumberConflictError extends Error {
 export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
 
 /**
- * The identity of an accreditation: the accreditation, and the registration and
- * organisation above it. A PRN belongs to an accreditation, so selecting the
- * PRNs of one names the whole chain. `RegistrationOrAccreditationId` with its
- * `accreditationId` narrowed non-null — a registration in its registered-only
- * phase has no accreditation to name.
- *
- * @typedef {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & { accreditationId: string }} AccreditationId
- */
-
-/**
  * The numbers of an accreditation and the registration and organisation above it.
  *
  * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & { accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} AccreditationNumbers
@@ -84,12 +74,12 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
 
 /**
  * One accreditation's PRN tonnage, totalled by the PRNs' current status. Keyed
- * on ids alone: a PRN carries names as they stood when it was raised, so
+ * on numbers alone: a PRN carries names as they stood when it was raised, so
  * keying on those would split one accreditation across several totals. A
  * status none of the accreditation's PRNs is in is absent, not zero.
  *
  * @typedef {Object} AccreditationTonnage
- * @property {AccreditationId} id
+ * @property {AccreditationNumbers} numbers
  * @property {Partial<Record<import('#packaging-recycling-notes/domain/model.js').PrnStatus, number>>} tonnageByStatus
  */
 

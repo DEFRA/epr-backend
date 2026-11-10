@@ -11,7 +11,18 @@ import {
 } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  TEST_ORGANISATION_NUMBER,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAccreditation,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { partialMock } from '#test/type-helpers.js'
 import {
   cognitoJwksUrl,
   setupAuthContext
@@ -28,6 +39,18 @@ const authHeaders = {
 }
 
 const listUrl = '/v1/packaging-recycling-notes'
+
+const { buildOrganisation } = createOrganisationBuilders()
+
+// The stored organisation holding the accreditation every mock PRN is raised
+// under, whose ids the external API states.
+const issuingAccreditation = buildAccreditation({
+  accreditationNumber: buildAccreditationSnapshot().accreditationNumber
+})
+const issuingOrganisation = buildOrganisation({
+  orgId: Number(TEST_ORGANISATION_NUMBER),
+  accreditations: [issuingAccreditation]
+})
 
 describe('GET /v1/packaging-recycling-notes', () => {
   setupAuthContext()
@@ -57,7 +80,9 @@ describe('GET /v1/packaging-recycling-notes', () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           wasteBalanceService: () => ({}),
-          organisationsRepository: () => ({})
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            partialMock(issuingOrganisation)
+          ])
         }
       })
     })
@@ -237,12 +262,12 @@ describe('GET /v1/packaging-recycling-notes', () => {
         const payload = JSON.parse(response.payload)
         const item = payload.items[0]
 
-        expect(item.issuedByOrganisation.id).toBe(mockPrn.organisation.id)
+        expect(item.issuedByOrganisation.id).toBe(issuingOrganisation.id)
         expect(item.issuedByOrganisation.name).toBe(mockPrn.organisation.name)
         expect(item.issuedToOrganisation.id).toBe(
           mockPrn.issuedToOrganisation.id
         )
-        expect(item.accreditation.id).toBe(mockPrn.accreditation.id)
+        expect(item.accreditation.id).toBe(issuingAccreditation.id)
         expect(item.isDecemberWaste).toBe(mockPrn.isDecemberWaste)
         expect(item.isExport).toBe(mockPrn.isExport)
         expect(item.obligationYear).toBe(mockPrn.obligationYear)
@@ -389,6 +414,43 @@ describe('GET /v1/packaging-recycling-notes', () => {
     })
 
     describe('error handling', () => {
+      it.each([
+        [
+          'no stored organisation holds',
+          {
+            organisation: {
+              ...createMockIssuedPrn().organisation,
+              organisationNumber: '500999'
+            }
+          }
+        ],
+        [
+          'the organisation holds no stored accreditation by',
+          {
+            accreditation: buildAccreditationSnapshot({
+              accreditationNumber: toAccreditationNumber('ACC-UNKNOWN')
+            })
+          }
+        ]
+      ])(
+        'returns 500 for a PRN whose number %s, as it has no ids to state',
+        async (_, overrides) => {
+          packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+            items: [createMockIssuedPrn(/** @type {*} */ (overrides))],
+            nextCursor: null,
+            hasMore: false
+          })
+
+          const response = await server.inject({
+            method: 'GET',
+            url: `${listUrl}?statuses=awaiting_acceptance`,
+            headers: authHeaders
+          })
+
+          expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+        }
+      )
+
       it('returns 500 when repository throws unexpected error', async () => {
         packagingRecyclingNotesRepository.findByStatus.mockRejectedValueOnce(
           new Error('Database connection lost')
