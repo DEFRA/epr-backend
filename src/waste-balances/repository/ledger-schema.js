@@ -135,20 +135,13 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * A ledger's ids and numbers. Row states and ledger events are written with
- * both.
- *
- * @typedef {RegistrationOrAccreditationId & WasteBalanceLedgerId} NumberedLedgerId
- */
-
-/**
  * A ledger id plus a sequence number.
  *
  * @typedef {WasteBalanceLedgerId & { number: number }} LedgerPosition
  */
 
 /**
- * @typedef {RegistrationOrAccreditationId & LedgerPosition & {
+ * @typedef {LedgerPosition & {
  *   kind: LedgerEventKind,
  *   payload: SummaryLogSubmittedPayload | PrnPayload | PrnAcceptedPayload,
  *   openingBalance: LedgerBalanceSnapshot,
@@ -160,7 +153,7 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape accepted by `WasteBalanceLedgerRepository.appendEvents`: the content of
- * an event at a `LedgerPosition`, with its ledger's ids. Mirrors
+ * an event at a `LedgerPosition`. Mirrors
  * `ledgerEventInsertSchema` — keep the two in sync; the schema is the runtime
  * gate, this typedef is the check-time gate.
  *
@@ -210,9 +203,6 @@ const numbersKeys = {
 }
 
 const ledgerEventBaseSchema = Joi.object({
-  registrationId: Joi.string().required(),
-  accreditationId: Joi.string().allow(null).required(),
-  organisationId: Joi.string().required(),
   number: Joi.number().integer().min(1).required(),
   kind: Joi.string()
     .valid(...kindValues)

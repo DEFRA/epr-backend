@@ -83,8 +83,8 @@ export const testFindAllInLedgerBehaviour = (it) => {
       )
 
       expect(result).toHaveLength(1)
-      expect(result[0].registrationId).toBe('reg-a')
-      expect(result[0].accreditationId).toBe('acc-a')
+      expect(result[0].registrationNumber).toBe('REG-reg-a')
+      expect(result[0].accreditationNumber).toBe('ACC-acc-a')
     })
 
     it('reads the ledger a registration holds with no accreditation', async () => {
@@ -104,7 +104,7 @@ export const testFindAllInLedgerBehaviour = (it) => {
       )
 
       expect(result).toHaveLength(1)
-      expect(result[0].accreditationId).toBeNull()
+      expect(result[0].accreditationNumber).toBeNull()
     })
 
     it('does not read an accreditation of the registration whose unaccredited ledger it names', async () => {

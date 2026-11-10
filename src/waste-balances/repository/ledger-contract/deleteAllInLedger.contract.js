@@ -88,7 +88,9 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
         })
       )
       expect(kept).not.toBeNull()
-      expect(kept?.registrationId).toBe('reg-keep')
+      expect(kept?.registrationNumber).toBe(
+        buildLedgerId({ registrationId: 'reg-keep' }).registrationNumber
+      )
     })
 
     it('deletes nothing from a ledger named under a different organisation', async () => {
@@ -161,7 +163,7 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
         buildLedgerId({ registrationId: 'reg-shared', accreditationId: null })
       )
       expect(registeredOnlyLedger).not.toBeNull()
-      expect(registeredOnlyLedger?.accreditationId).toBeNull()
+      expect(registeredOnlyLedger?.accreditationNumber).toBeNull()
     })
   })
 }

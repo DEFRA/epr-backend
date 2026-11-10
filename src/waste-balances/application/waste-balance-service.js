@@ -11,7 +11,7 @@ import { validateAccreditationId } from '../repository/validation.js'
  * event(s).
  *
  * @typedef {(
- *   ledgerId: import('../repository/ledger-schema.js').NumberedLedgerId,
+ *   ledgerId: import('../repository/ledger-schema.js').WasteBalanceLedgerId,
  *   submission: import('../repository/ledger-schema.js').SummaryLogSubmittedPayload,
  *   createdBy: import('../repository/ledger-schema.js').LedgerUserSummary,
  *   createdAt?: Date
@@ -81,7 +81,7 @@ const createLedgerCommands = (ledgerRepository) => {
    * defaults to now for a live command; the historical backfill supplies the
    * original submission time so replayed history is dated when it happened.
    *
-   * @param {import('../repository/ledger-schema.js').NumberedLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {number} head
    * @param {import('../domain/commands.js').BalanceEvent[]} events
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
@@ -128,7 +128,7 @@ const createLedgerCommands = (ledgerRepository) => {
    * state: whether that is a client error or corruption depends on the
    * transition, which the ledger does not know.
    *
-   * @param {import('../repository/ledger-schema.js').NumberedLedgerId} ledgerId
+   * @param {import('../repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
    * @param {import('../repository/ledger-schema.js').LedgerUserSummary} createdBy
    * @returns {Promise<BalanceForUpdate>}
    */
@@ -221,7 +221,7 @@ export const createWasteBalanceService = (
      * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {SummaryLogFileId} options.summaryLogId
-     * @param {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} options.ledgerId
+     * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (

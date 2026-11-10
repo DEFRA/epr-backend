@@ -34,7 +34,7 @@ export const validateLedgerEventRead = (data) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badImplementation(
-      `Invalid ledger event for organisation ${data.organisationId} registration ${data.registrationId} accreditation ${data.accreditationId} number ${data.number}: ${details}`
+      `Invalid ledger event for organisation ${data.organisationNumber} registration ${data.registrationNumber} accreditation ${data.accreditationNumber} number ${data.number}: ${details}`
     )
   }
 

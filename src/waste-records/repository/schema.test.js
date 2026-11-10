@@ -46,7 +46,7 @@ describe('row state insert schema', () => {
     expect(error).toBeUndefined()
   })
 
-  it('accepts accreditationId: null for registered-only streams', () => {
+  it('accepts a null accreditation number for a registered-only row state', () => {
     const { error } = validate(
       buildSummaryLogRowState({ accreditationId: null })
     )
@@ -117,8 +117,8 @@ describe('row state insert schema', () => {
       }
     )
     const missing = details.map((d) => d.path[0])
-    expect(missing).toContain('organisationId')
-    expect(missing).toContain('registrationId')
+    expect(missing).toContain('organisationNumber')
+    expect(missing).toContain('registrationNumber')
     expect(missing).toContain('rowId')
     expect(missing).toContain('wasteRecordType')
     expect(missing).toContain('data')

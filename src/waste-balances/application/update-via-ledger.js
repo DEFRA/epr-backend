@@ -28,7 +28,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
- * @param {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} params.ledgerId
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,

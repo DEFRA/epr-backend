@@ -220,7 +220,6 @@ describe('PRN status concurrency against real MongoDB', () => {
       logger: createMockLogger(),
       id: prnId,
       organisationId: ORG_ID,
-      registrationId: REG_ID,
       accreditationId: ACC_ID,
       newStatus: PRN_STATUS.CANCELLED,
       actor: PRN_ACTOR.SERVICE_MAINTAINER,

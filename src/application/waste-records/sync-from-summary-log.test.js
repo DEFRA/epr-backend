@@ -400,9 +400,6 @@ describe('syncFromSummaryLog', () => {
         overseasSites: {},
         summaryLogId: fileId,
         ledgerId: {
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          accreditationId: 'acc-1',
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
           accreditationNumber: 'ACC-1'
@@ -459,9 +456,6 @@ describe('syncFromSummaryLog', () => {
       wasteBalanceService.commitSummaryLogSubmittedEvent
     ).toHaveBeenCalledWith(
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: null,
         organisationNumber: '500001',
         registrationNumber: 'REG-1',
         accreditationNumber: null

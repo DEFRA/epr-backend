@@ -64,7 +64,7 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
       const [rowState] = await find('file-1')
 
       expect(rowState).toMatchObject({
-        ...REGISTERED_ONLY,
+        accreditationNumber: null,
         rowId: 'row-1',
         classification: {
           outcome: 'INCLUDED',
@@ -84,7 +84,9 @@ export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {
       const rowStates = await find('file-1')
 
       expect(rowStates).toHaveLength(1)
-      expect(rowStates[0].accreditationId).toBe('acc-2')
+      expect(rowStates[0].accreditationNumber).toBe(
+        withNumbers(OTHER_ACCREDITATION).accreditationNumber
+      )
     })
 
     it('returns an empty list for that file id under a different registration', async () => {

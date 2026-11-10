@@ -25,12 +25,12 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {NumberedLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {RegistrationOrAccreditationId, WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * The ledger the fixture summary log reads.
  *
- * @type {NumberedLedgerId}
+ * @type {RegistrationOrAccreditationId & WasteBalanceLedgerId}
  */
 const FIXTURE_LEDGER = {
   organisationId: 'org-123',
@@ -46,7 +46,7 @@ const FIXTURE_LEDGER = {
  * SUMMARY_LOG_SUBMITTED ledger event that resolves it as the head.
  *
  * @param {Object} params
- * @param {NumberedLedgerId} params.ledgerId
+ * @param {RegistrationOrAccreditationId & WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
  * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows

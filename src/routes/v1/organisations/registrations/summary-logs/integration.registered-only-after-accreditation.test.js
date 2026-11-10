@@ -171,7 +171,7 @@ describe('an operator accredited in July uploading their registered-only summary
       LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
     )
     expect(submittedEvent).toMatchObject({
-      accreditationId: null,
+      accreditationNumber: null,
       payload: { summaryLogId: fileId }
     })
   })

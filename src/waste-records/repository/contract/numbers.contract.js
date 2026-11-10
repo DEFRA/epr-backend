@@ -2,19 +2,13 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID,
-  withNumbers
+  DEFAULT_LEDGER_ID
 } from '../test-data.js'
 
 const NUMBERS = Object.freeze({
   organisationNumber: '500001',
   registrationNumber: 'REG-1',
   accreditationNumber: 'ACC-1'
-})
-
-const REGISTERED_ONLY_LEDGER_ID = Object.freeze({
-  ...DEFAULT_LEDGER_ID,
-  accreditationId: null
 })
 
 export const testNumbersBehaviour = (it) => {
@@ -25,24 +19,31 @@ export const testNumbersBehaviour = (it) => {
       repository = summaryLogRowStatesRepository()
     })
 
-    it('stores the numbers it is given beside the ids', async () => {
+    it('stores the numbers it is given', async () => {
+      const [state] = await repository.upsertSummaryLogRowStates(
+        NUMBERS,
+        [buildSummaryLogRowStateEntry()],
+        'log-1'
+      )
+
+      expect(state).toMatchObject(NUMBERS)
+    })
+
+    it('does not store the ids of the ledger', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
         { ...DEFAULT_LEDGER_ID, ...NUMBERS },
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )
 
-      expect(state).toMatchObject({ ...DEFAULT_LEDGER_ID, ...NUMBERS })
+      expect(state).not.toHaveProperty('organisationId')
+      expect(state).not.toHaveProperty('registrationId')
+      expect(state).not.toHaveProperty('accreditationId')
     })
 
     it('stores a null accreditation number for a registered-only row', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
-        {
-          ...REGISTERED_ONLY_LEDGER_ID,
-          organisationNumber: NUMBERS.organisationNumber,
-          registrationNumber: NUMBERS.registrationNumber,
-          accreditationNumber: null
-        },
+        { ...NUMBERS, accreditationNumber: null },
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )
@@ -53,7 +54,7 @@ export const testNumbersBehaviour = (it) => {
     it('rejects a row state without the organisation and registration numbers', async () => {
       await expect(
         repository.upsertSummaryLogRowStates(
-          { ...DEFAULT_LEDGER_ID, accreditationNumber: 'ACC-1' },
+          { accreditationNumber: 'ACC-1' },
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
@@ -62,30 +63,18 @@ export const testNumbersBehaviour = (it) => {
       )
     })
 
-    it('rejects an accredited row state without an accreditation number', async () => {
-      await expect(
-        repository.upsertSummaryLogRowStates(
-          { ...withNumbers(DEFAULT_LEDGER_ID), accreditationNumber: null },
-          [buildSummaryLogRowStateEntry()],
-          'log-1'
-        )
-      ).rejects.toThrow(
-        'Invalid row state data: "accreditationNumber" must be a string'
-      )
-    })
-
-    it('rejects an accreditation number on a registered-only row state', async () => {
+    it('rejects a row state with no accreditation number, not even null', async () => {
       await expect(
         repository.upsertSummaryLogRowStates(
           {
-            ...withNumbers(REGISTERED_ONLY_LEDGER_ID),
-            accreditationNumber: 'ACC-1'
+            organisationNumber: NUMBERS.organisationNumber,
+            registrationNumber: NUMBERS.registrationNumber
           },
           [buildSummaryLogRowStateEntry()],
           'log-1'
         )
       ).rejects.toThrow(
-        'Invalid row state data: "accreditationNumber" must be [null]'
+        'Invalid row state data: "accreditationNumber" is required'
       )
     })
   })

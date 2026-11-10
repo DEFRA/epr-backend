@@ -336,7 +336,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -375,7 +374,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.DELETED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -415,7 +413,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -473,7 +470,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -510,7 +506,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -564,7 +559,6 @@ describe('updatePrnStatus concurrency', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.CANCELLED,
       actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
@@ -626,7 +620,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.PRODUCER,
         user: { id: 'user-789', name: 'Test User' }
@@ -680,7 +673,6 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.DISCARDED,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
@@ -722,7 +714,6 @@ describe('updatePrnStatus concurrency', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
@@ -758,7 +749,6 @@ describe('updatePrnStatus concurrency', () => {
         id,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
-        registrationId: REG_ID,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }

@@ -143,8 +143,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
       )
 
       expect(result).toHaveLength(1)
-      expect(result[0].registrationId).toBe('reg-a')
-      expect(result[0].accreditationId).toBe('acc-a')
+      expect(result[0].registrationNumber).toBe('REG-reg-a')
+      expect(result[0].accreditationNumber).toBe('ACC-acc-a')
     })
 
     it('does not read a ledger named under a different organisation', async () => {

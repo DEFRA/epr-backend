@@ -24,21 +24,8 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
-/**
- * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
- */
-
-/** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-
-/**
- * @param {SummaryLogRowState} doc
- * @param {RegistrationOrAccreditationId} ids
- */
-const matchesLedgerIdentity = (doc, ids) =>
-  doc.organisationId === ids.organisationId &&
-  doc.registrationId === ids.registrationId &&
-  doc.accreditationId === ids.accreditationId
 
 /**
  * @param {SummaryLogRowState} doc
@@ -54,7 +41,7 @@ const matchesLedger = (doc, ledgerId) =>
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
-  matchesLedgerIdentity(doc, candidate) &&
+  matchesLedger(doc, candidate) &&
   doc.rowId === candidate.rowId &&
   doc.wasteRecordType === candidate.wasteRecordType
 
@@ -153,7 +140,7 @@ const toWasteRecordState = ({
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {NumberedLedgerId} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState}
@@ -189,7 +176,7 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
  */
 const repositoryOver = (storage) => ({
   /**
-   * @param {NumberedLedgerId} ledgerId
+   * @param {WasteBalanceLedgerId} ledgerId
    * @param {SummaryLogRowStateEntry[]} summaryLogRowStates
    * @param {SummaryLogFileId} summaryLogId
    */
