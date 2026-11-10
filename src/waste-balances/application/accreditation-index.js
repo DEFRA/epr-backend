@@ -58,17 +58,13 @@ export const ledgerKey = ({
  * are indexed too. A registered-only registration contributes nothing.
  *
  * @param {Organisation[]} organisations
- * @param {{ includeTestOrganisations?: boolean }} [options]
  * @returns {Map<string, AccreditationContext>}
  */
-export const indexAccreditationsByLedger = (
-  organisations,
-  { includeTestOrganisations = false } = {}
-) => {
+export const indexAccreditationsByLedger = (organisations) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   for (const organisation of organisations) {
-    if (!includeTestOrganisations && isTestOrganisation(organisation)) {
+    if (isTestOrganisation(organisation)) {
       continue
     }
     for (const context of linkedAccreditations(organisation)) {

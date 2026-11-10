@@ -1,20 +1,30 @@
 import Joi from 'joi'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  indexAccreditationsByLedger,
-  ledgerKey
-} from '#waste-balances/application/accreditation-index.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
-/** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
+
+/**
+ * The organisation, registration and accreditation a ledger belongs to, as the
+ * organisation read model serves them.
+ *
+ * @typedef {Object} AccreditationContext
+ * @property {Organisation} organisation
+ * @property {Registration} registration
+ * @property {AccreditationCommon} accreditation
+ */
 
 /**
  * The registration's own processing-type fields, the same shape
@@ -122,6 +132,57 @@ const aggregatedRowSchema = Joi.object({
   cancelledTonnage: Joi.number().required()
 })
 
+/** @type {ReadonlySet<string>} */
+const GLASS_RECYCLING_PROCESSES = new Set(
+  Object.values(GLASS_RECYCLING_PROCESS)
+)
+
+/**
+ * The read model names a glass registration by its recycling process, while
+ * the report names the material applied for.
+ *
+ * @param {Registration['material']} material
+ */
+const reportedMaterial = (material) =>
+  GLASS_RECYCLING_PROCESSES.has(material) ? MATERIAL.GLASS : material
+
+/**
+ * @param {Registration} registration
+ * @returns {RegistrationProcessingTypes}
+ */
+const processingTypesOf = (registration) =>
+  registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? {
+        wasteProcessingType: registration.wasteProcessingType,
+        reprocessingType: registration.reprocessingType
+      }
+    : { wasteProcessingType: registration.wasteProcessingType }
+
+/**
+ * Every accreditation the read model serves, by the `ledgerKey` of the ledger
+ * it writes to. An accreditation number held for more than one year resolves
+ * to its latest year.
+ *
+ * @param {Organisation[]} organisations
+ * @returns {Map<string, AccreditationContext>}
+ */
+const indexByLedger = (organisations) =>
+  new Map(
+    organisations.flatMap((organisation) =>
+      Object.entries(organisation.registrations).flatMap(
+        ([registrationNumber, registration]) =>
+          Object.values(registration.accreditations).map((accreditation) => [
+            ledgerKey({
+              organisationNumber: organisation.organisationNumber,
+              registrationNumber: toRegistrationNumber(registrationNumber),
+              accreditationNumber: accreditation.accreditationNumber
+            }),
+            { organisation, registration, accreditation }
+          ])
+      )
+    )
+  )
+
 /**
  * Joins an accreditation's PRN totals to the organisation, registration and
  * accreditation they were raised under. One no organisation holds by those
@@ -131,17 +192,14 @@ const aggregatedRowSchema = Joi.object({
  * @param {AccreditationContext | undefined} resolved
  */
 const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
-  organisationName: resolved?.organisation.companyDetails.name,
-  orgId: resolved && String(resolved.organisation.orgId),
+  organisationName: resolved?.organisation.name,
+  orgId: resolved && String(resolved.organisation.organisationNumber),
   registrationNumber: resolved && numbers.registrationNumber,
   accreditationNumber: resolved && numbers.accreditationNumber,
-  material: resolved?.accreditation.material,
-  tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
+  material: resolved && reportedMaterial(resolved.registration.material),
+  tonnageBand: resolved?.accreditation.prnIssuance.tonnageBand,
   ledgerId: resolved && numbers,
-  registration: {
-    wasteProcessingType: resolved?.registration.wasteProcessingType,
-    reprocessingType: resolved?.registration.reprocessingType ?? undefined
-  },
+  registration: resolved && processingTypesOf(resolved.registration),
   ...toTonnageColumns(tonnageByStatus)
 })
 
@@ -227,24 +285,22 @@ const buildReportRow = async (
  * Test organisations' PRNs are reported like any other.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
 export const aggregatePrnTonnage = async (
   prnRepository,
-  organisationsRepository,
+  organisationReadRepository,
   ledgerRepository
 ) => {
   const [accreditationTonnages, organisations] = await Promise.all([
     prnRepository.sumTonnageByAccreditation({
       excludeStatuses: EXCLUDED_STATUSES
     }),
-    organisationsRepository.findAll()
+    organisationReadRepository.findAll()
   ])
 
-  const index = indexAccreditationsByLedger(organisations, {
-    includeTestOrganisations: true
-  })
+  const index = indexByLedger(organisations)
 
   const aggregatedRows = accreditationTonnages
     .map((accreditationTonnage) => {

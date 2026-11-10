@@ -49,18 +49,25 @@ const ledgerId = {
   accreditationNumber: toAccreditationNumber('ACC-INTEG')
 }
 
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
 const storedOrganisation = () => ({
   _id: new ObjectId(organisationId),
   orgId,
   companyDetails: { name: 'Acme Reprocessing' },
   statusHistory: approvedStatusHistory,
+  submittedToRegulator: 'ea',
+  submitterContactDetails: contact,
+  users: [],
+  version: 1,
   accreditations: [
     {
       id: accId,
       accreditationNumber: ledgerId.accreditationNumber,
       material: MATERIAL.PLASTIC,
       prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
-      statusHistory: approvedStatusHistory
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01'
     }
   ],
   registrations: [
@@ -69,7 +76,13 @@ const storedOrganisation = () => ({
       registrationNumber: 'REG-INTEG',
       accreditationId: accId,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-      statusHistory: approvedStatusHistory
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01',
+      material: MATERIAL.PLASTIC,
+      submittedToRegulator: 'ea',
+      applicationContactDetails: contact,
+      submitterContactDetails: contact,
+      approvedPersons: []
     }
   ]
 })

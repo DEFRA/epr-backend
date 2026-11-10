@@ -34,7 +34,7 @@ export const getPrnTonnage = {
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository,
       logger
     } = request
@@ -42,7 +42,7 @@ export const getPrnTonnage = {
     try {
       const result = await aggregatePrnTonnage(
         packagingRecyclingNotesRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
 
