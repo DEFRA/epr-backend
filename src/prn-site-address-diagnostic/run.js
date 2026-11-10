@@ -1,7 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { findExternalAccreditations } from '#organisation-read-model/repository/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { diagnosePrnSiteAddresses } from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js'
+import {
+  SITE_FINDING,
+  diagnosePrnSiteAddresses
+} from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { SiteAddressRow, SiteAddressSummary } from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js' */
@@ -17,6 +20,15 @@ const findingLine = (row) =>
     `organisationNumber=${row.organisationNumber}`,
     `testOrganisation=${row.testOrganisation}`,
     `registrationNumber=${row.registrationNumber}`,
+    ...(row.finding === SITE_FINDING.FULL_ADDRESS_ONLY
+      ? [
+          `hasLine1=${row.hasLine1}`,
+          `hasTown=${row.hasTown}`,
+          `hasPostcode=${row.hasPostcode}`,
+          `accreditations=${row.accreditations}`,
+          `heldAccreditations=${row.heldAccreditations}`
+        ]
+      : []),
     ...(row.accreditationNumber
       ? [
           `accreditationNumber=${row.accreditationNumber}`,

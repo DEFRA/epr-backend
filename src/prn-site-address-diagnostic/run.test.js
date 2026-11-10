@@ -125,13 +125,13 @@ describe('runPrnSiteAddressDiagnostic', () => {
       ],
       [
         {
-          message: `PRN site address finding: finding=fullAddressOnly organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180044PL`
+          message: `PRN site address finding: finding=fullAddressOnly organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180044PL hasLine1=true hasTown=false hasPostcode=true accreditations=0 heldAccreditations=0`
         }
       ],
       [
         {
           message:
-            'PRN site address diagnostic: scannedOrganisations=1 checkedRegistrations=3 fullAddressOnly=1 checkedAccreditations=2 matched=0 siteDiffers=1 siteDiffersLine1=1 siteDiffersPostcode=0 siteDiffersBoth=0 noAccreditationSite=1'
+            'PRN site address diagnostic: scannedOrganisations=1 checkedRegistrations=3 fullAddressOnly=1 fullOnlyHeld=0 fullOnlyHeldWithLine1AndPostcode=0 checkedAccreditations=2 matched=0 siteDiffers=1 siteDiffersLine1=1 siteDiffersPostcode=0 siteDiffersBoth=0 noAccreditationSite=1'
         }
       ]
     ])

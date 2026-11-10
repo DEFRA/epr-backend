@@ -1,6 +1,7 @@
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   byRegistrationAndYear,
   toAccreditationEntry,
@@ -31,11 +32,18 @@ export const SITE_FINDING = Object.freeze({
  * @property {string} [year]
  * @property {string} [status]
  * @property {SiteDifference} [differs]
+ * @property {boolean} [hasLine1]
+ * @property {boolean} [hasTown]
+ * @property {boolean} [hasPostcode]
+ * @property {number} [accreditations]
+ * @property {number} [heldAccreditations]
  *
  * @typedef {Object} SiteAddressSummary
  * @property {number} scannedOrganisations
  * @property {number} checkedRegistrations
  * @property {number} fullAddressOnly
+ * @property {number} fullOnlyHeld
+ * @property {number} fullOnlyHeldWithLine1AndPostcode
  * @property {number} checkedAccreditations
  * @property {number} matched
  * @property {number} siteDiffers
@@ -188,6 +196,18 @@ export const diagnosePrnSiteAddresses = (
 }
 
 /**
+ * Which of the fields the read model needs the stored address holds, never
+ * their values.
+ *
+ * @param {{ line1?: string, town?: string, postcode?: string }} stored
+ */
+const storedAddressPresence = ({ line1, town, postcode }) => ({
+  hasLine1: Boolean(line1),
+  hasTown: Boolean(town),
+  hasPostcode: Boolean(postcode)
+})
+
+/**
  * One served reprocessor registration's findings and how many of its
  * accreditations were compared; none when the read model serves no
  * reprocessor registration for it.
@@ -210,9 +230,20 @@ const checkRegistration = (organisation, registration, context) => {
   }
 
   if ('fullAddress' in address) {
+    const servedAccreditationRecords = Object.values(accreditations)
     return [
       {
-        rows: [{ finding: SITE_FINDING.FULL_ADDRESS_ONLY, ...identity }],
+        rows: [
+          {
+            finding: SITE_FINDING.FULL_ADDRESS_ONLY,
+            ...identity,
+            ...storedAddressPresence(registration.site.address),
+            accreditations: servedAccreditationRecords.length,
+            heldAccreditations: servedAccreditationRecords.filter(
+              ({ status }) => HELD_ACCREDITATION_STATUSES.has(status.current)
+            ).length
+          }
+        ],
         accreditations: 0
       }
     ]
@@ -258,11 +289,18 @@ const summarise = (
     rows.filter((row) => row.differs === differs).length
   const siteDiffers = count(SITE_FINDING.SITE_DIFFERS)
   const noAccreditationSite = count(SITE_FINDING.NO_ACCREDITATION_SITE)
+  const fullOnlyHeld = rows.filter(
+    ({ heldAccreditations = 0 }) => heldAccreditations > 0
+  )
 
   return {
     scannedOrganisations,
     checkedRegistrations,
     fullAddressOnly: count(SITE_FINDING.FULL_ADDRESS_ONLY),
+    fullOnlyHeld: fullOnlyHeld.length,
+    fullOnlyHeldWithLine1AndPostcode: fullOnlyHeld.filter(
+      ({ hasLine1, hasPostcode }) => hasLine1 && hasPostcode
+    ).length,
     checkedAccreditations,
     matched: checkedAccreditations - siteDiffers - noAccreditationSite,
     siteDiffers,
