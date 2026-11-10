@@ -107,13 +107,12 @@ export const validateAccreditation = (data) => {
 }
 
 /**
- * Normalises an organisation document read from the database.
- * Ensures array fields are never undefined by applying defaults.
+ * Parses an organisation document read from the database.
+ * Throws when its orgId is not an organisation number, and ensures array
+ * fields are never undefined by applying defaults.
  * This is an internal adapter concern - callers receive data matching the port types.
  * @param {object} data - Raw document from MongoDB
  * @returns {object} Normalised document with array defaults applied
  */
-export const normaliseOrganisationFromDb = (data) => {
-  const { value } = organisationReadSchema.validate(data)
-  return value
-}
+export const normaliseOrganisationFromDb = (data) =>
+  Joi.attempt(data, organisationReadSchema)

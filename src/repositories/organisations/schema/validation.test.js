@@ -946,4 +946,15 @@ describe('normaliseOrganisationFromDb', () => {
 
     expect(result.someFutureField).toBe('should be kept')
   })
+  it.each([
+    ['missing', undefined],
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 12.5],
+    ['not a number', 'abc']
+  ])('refuses a document whose orgId is %s', (_description, orgId) => {
+    expect(() =>
+      normaliseOrganisationFromDb({ _id: new ObjectId(), orgId, version: 1 })
+    ).toThrow(/"orgId"/)
+  })
 })

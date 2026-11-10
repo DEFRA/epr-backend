@@ -22,6 +22,7 @@ import {
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
@@ -426,7 +427,7 @@ export const storedOrgId = (organisationNumber) => Number(organisationNumber)
  * @returns {OrganisationNumber}
  */
 export const organisationNumberOfStored = (orgId) =>
-  /** @type {OrganisationNumber} */ (String(orgId))
+  toOrganisationNumber(String(orgId))
 
 /**
  * An organisation as it is stored, with its number as `orgId`.

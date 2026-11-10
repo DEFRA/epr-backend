@@ -109,26 +109,6 @@ describe('numbersFor', () => {
       ]
     })
   })
-
-  for (const [description, organisationNumber] of [
-    ['no organisation number', undefined],
-    ['a number that is not an organisation number', '0']
-  ]) {
-    it(`gives no organisation number for an organisation with ${description}, and says why`, () => {
-      expect(
-        numbersFor(
-          /** @type {Organisation} */ ({
-            ...buildOrganisation(),
-            organisationNumber
-          }),
-          { registrationId: 'reg-1' }
-        )
-      ).toEqual({
-        numbers: { registrationNumber: 'R25SR500010912PL' },
-        unmapped: [`organisation org-1 has no organisation number`]
-      })
-    })
-  }
 })
 
 describe('requiredNumbersFor', () => {
