@@ -19,6 +19,7 @@ import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogKey,
+  validateSummaryLogScope,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -136,6 +137,62 @@ const update = (db, logger) => async (id, version, updates) => {
 
     const conflictError = new Error(
       `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+    )
+    logger.error({
+      err: conflictError,
+      message: `Version conflict detected for summary log ${validatedId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+        reference: validatedId
+      }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+}
+
+const WITHOUT_SCOPE = {
+  $or: [
+    { accreditationNumber: { $exists: false } },
+    { year: { $exists: false } }
+  ]
+}
+
+const findIdsWithoutScope = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(WITHOUT_SCOPE, { projection: { _id: 1 } })
+    .toArray()
+  return docs.map((doc) => doc._id)
+}
+
+const assignScope = (db, logger) => async (id, version, scope) => {
+  const validatedId = validateId(id)
+  const validatedScope = validateSummaryLogScope(scope)
+
+  const keys = Object.keys(validatedScope)
+  /** @type {any} */
+  const filter = {
+    _id: validatedId,
+    version,
+    ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
+  }
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .updateOne(filter, { $set: validatedScope, $inc: { version: 1 } })
+
+  if (result.matchedCount === 0) {
+    /** @type {any} */
+    const findFilter = { _id: validatedId }
+    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    const held = keys.filter((key) => existing[key] !== undefined)
+    const conflictError = new Error(
+      `Version conflict: attempted to assign scope with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
     )
     logger.error({
       err: conflictError,
@@ -492,6 +549,8 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     update: update(db, logger),
     findById: findById(db),
     findByFileId: findByFileId(db),
+    findIdsWithoutScope: findIdsWithoutScope(db),
+    assignScope: assignScope(db, logger),
     findLatestSubmitted: findLatestSubmitted(db),
     findAll: findAll(db),
     findAllSummaryLogStatsByRegistration:

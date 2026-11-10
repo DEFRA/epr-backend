@@ -13,6 +13,7 @@ import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogKey,
+  validateSummaryLogScope,
   validateSummaryLogUpdate
 } from './validation.js'
 
@@ -77,6 +78,51 @@ const update =
         ...existing.summaryLog,
         ...validatedUpdates
       })
+    })
+    scheduleStaleCacheSync(storage, staleCache)
+  }
+
+const findIdsWithoutScope = (storage) => async () =>
+  [...storage]
+    .filter(
+      ([, { summaryLog }]) =>
+        summaryLog.accreditationNumber === undefined ||
+        summaryLog.year === undefined
+    )
+    .map(([id]) => id)
+
+const assignScope =
+  (storage, staleCache, logger) => async (id, version, scope) => {
+    const validatedId = validateId(id)
+    const validatedScope = validateSummaryLogScope(scope)
+    const existing = storage.get(validatedId)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    const held = Object.keys(validatedScope).filter(
+      (key) => existing.summaryLog[key] !== undefined
+    )
+    if (existing.version !== version || held.length > 0) {
+      const conflictError = new Error(
+        `Version conflict: attempted to assign scope with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
+      )
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    storage.set(validatedId, {
+      version: existing.version + 1,
+      summaryLog: structuredClone({ ...existing.summaryLog, ...validatedScope })
     })
     scheduleStaleCacheSync(storage, staleCache)
   }
@@ -371,17 +417,20 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
+ * @param {SummaryLogStore} [storage] - what is stored, by id; a test seeds
+ *   here a summary log stored in a shape `insert` no longer accepts
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createInMemorySummaryLogsRepository = () => {
-  const storage = new Map()
-  const staleCache = new Map()
+export const createInMemorySummaryLogsRepository = (storage = new Map()) => {
+  const staleCache = structuredClone(storage)
 
   return (logger) => ({
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     findByFileId: findByFileId(staleCache),
+    findIdsWithoutScope: findIdsWithoutScope(storage),
+    assignScope: assignScope(storage, staleCache, logger),
     findLatestSubmitted: findLatestSubmitted(staleCache),
     findAll: findAll(staleCache),
     findAllSummaryLogStatsByRegistration:

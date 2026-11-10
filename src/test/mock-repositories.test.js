@@ -45,6 +45,8 @@ describe('mock-repositories', () => {
         'update',
         'findById',
         'findByFileId',
+        'findIdsWithoutScope',
+        'assignScope',
         'findLatestSubmitted',
         'findAll',
         'findAllSummaryLogStatsByRegistration',

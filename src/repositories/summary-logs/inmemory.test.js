@@ -8,19 +8,35 @@ import { waitForVersion } from './contract/test-helpers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
+/** @import { SummaryLogStore } from './inmemory.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {SummaryLogStore} summaryLogsStorage
+ * @property {(id: string, summaryLog: object) => Promise<void>} insertStoredSummaryLog
  */
 
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   base.extend({
     // eslint-disable-next-line no-empty-pattern
-    summaryLogsRepositoryFactory: async ({}, use) => {
-      const factory = createInMemorySummaryLogsRepository()
+    summaryLogsStorage: async ({}, use) => {
+      await use(new Map())
+    },
+
+    summaryLogsRepositoryFactory: async ({ summaryLogsStorage }, use) => {
+      const factory = createInMemorySummaryLogsRepository(summaryLogsStorage)
       await use(factory)
+    },
+
+    insertStoredSummaryLog: async ({ summaryLogsStorage }, use) => {
+      await use(async (id, summaryLog) => {
+        summaryLogsStorage.set(
+          toSummaryLogId(id),
+          /** @type {*} */ ({ version: 1, summaryLog })
+        )
+      })
     },
 
     summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {

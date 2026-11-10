@@ -31,6 +31,7 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
+    "#summary-log-scope-backfill/*": "./src/summary-log-scope-backfill/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",

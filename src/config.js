@@ -377,6 +377,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
+    },
+    summaryLogScopeBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the accreditation and year onto summary logs stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOG_SCOPE_BACKFILL'
     }
   },
   formSubmissionOverrides: {
