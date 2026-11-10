@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -72,6 +73,24 @@ describe('diagnoseNaturalKeyFormats', () => {
         recordId: organisation.registrations[0].id,
         status: 'approved'
       }
+    ])
+  })
+
+  it('marks a record held by a test organisation', () => {
+    const organisation = {
+      ...organisationHolding({
+        registrations: [{ registrationNumber: 'REG12345', status: 'approved' }]
+      }),
+      organisationNumber: toOrganisationNumber('999999')
+    }
+
+    const { rows } = diagnose([organisation])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({
+        organisationNumber: '999999',
+        testOrganisation: true
+      })
     ])
   })
 

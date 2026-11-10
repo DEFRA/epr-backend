@@ -72,6 +72,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
@@ -112,6 +113,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
@@ -162,6 +164,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
@@ -210,183 +213,20 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
   })
 
-  describe('ensureOrganisationStatusIndex', () => {
-    it('creates organisation.id compound index when no index exists', async () => {
-      const createdIndexes = []
+  it('drops the organisation id and status index no read uses', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const db = mongoClient.db(DATABASE_NAME)
+    const collection = db.collection(COLLECTION_NAME)
+    await collection.createIndex(
+      { 'organisation.id': 1, 'status.currentStatus': 1 },
+      { name: 'organisationId_status' }
+    )
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => [],
-        createIndex: async (fields, options) => {
-          createdIndexes.push({ fields, options })
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        }
-      }
+    await createPackagingRecyclingNotesRepository(db, [])
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
-
-      const orgStatusIndex = createdIndexes.find(
-        (idx) => idx.options.name === 'organisationId_status'
-      )
-      expect(orgStatusIndex).toBeDefined()
-      expect(orgStatusIndex.fields).toStrictEqual({
-        'organisation.id': 1,
-        'status.currentStatus': 1
-      })
-    })
-
-    it('drops and recreates index when existing index uses v1 organisationId key', async () => {
-      const createdIndexes = []
-      const droppedIndexes = []
-
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => [
-          {
-            name: 'organisationId_status',
-            key: { organisationId: 1, 'status.currentStatus': 1 }
-          }
-        ],
-        dropIndex: async (indexName) => {
-          droppedIndexes.push(indexName)
-        },
-        createIndex: async (fields, options) => {
-          createdIndexes.push({ fields, options })
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        }
-      }
-
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
-
-      expect(droppedIndexes).toContain('organisationId_status')
-
-      const orgStatusIndex = createdIndexes.find(
-        (idx) => idx.options.name === 'organisationId_status'
-      )
-      expect(orgStatusIndex.fields).toStrictEqual({
-        'organisation.id': 1,
-        'status.currentStatus': 1
-      })
-    })
-
-    it('does not drop index when already using v2 organisation.id key', async () => {
-      let droppedIndex = null
-
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => [
-          {
-            name: 'organisationId_status',
-            key: { 'organisation.id': 1, 'status.currentStatus': 1 }
-          }
-        ],
-        dropIndex: async (indexName) => {
-          droppedIndex = indexName
-        },
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        }
-      }
-
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
-
-      expect(droppedIndex).toBeNull()
-    })
-
-    it('handles NamespaceNotFound error when collection is new', async () => {
-      const nsError = Object.assign(new Error('ns not found'), {
-        codeName: 'NamespaceNotFound'
-      })
-
-      let indexesCalls = 0
-      const createdIndexes = []
-
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => {
-          indexesCalls++
-          if (indexesCalls === 1) {
-            throw nsError
-          }
-          return []
-        },
-        createIndex: async (fields, options) => {
-          createdIndexes.push({ fields, options })
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        }
-      }
-
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
-
-      const orgStatusIndex = createdIndexes.find(
-        (idx) => idx.options.name === 'organisationId_status'
-      )
-      expect(orgStatusIndex).toBeDefined()
-    })
-
-    it('re-throws non-NamespaceNotFound errors', async () => {
-      const connectionError = Object.assign(new Error('Connection refused'), {
-        codeName: 'NetworkError'
-      })
-
-      let indexesCalls = 0
-
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => {
-          indexesCalls++
-          if (indexesCalls === 1) {
-            throw connectionError
-          }
-          return []
-        },
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        }
-      }
-
-      await expect(
-        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
-      ).rejects.toThrow('Connection refused')
-    })
+    const names = (await collection.indexes()).map(({ name }) => name)
+    expect(names).not.toContain('organisationId_status')
   })
 
   describe('ensurePrnNumberIndex error handling', () => {
@@ -401,10 +241,10 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => {
           indexesCalls++
-          // First call (org index) succeeds, second call (prnNumber index) fails
-          if (indexesCalls === 2) {
+          if (indexesCalls === 1) {
             throw connectionError
           }
           return []
@@ -433,6 +273,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async (fields, options) => {
           createdIndexes.push({ fields, options })
@@ -470,11 +311,12 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async () => {
           createIndexCalls++
-          // Third createIndex call is the status date index
-          if (createIndexCalls === 3) {
+          // Second createIndex call is the status date index
+          if (createIndexCalls === 2) {
             throw nsError
           }
         },
@@ -505,11 +347,12 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async () => {
           createIndexCalls++
-          // Third createIndex call is the status date index
-          if (createIndexCalls === 3) {
+          // Second createIndex call is the status date index
+          if (createIndexCalls === 2) {
             throw connectionError
           }
         },
@@ -536,6 +379,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => [],
         createIndex: async (fields, options) => {
           createdIndexes.push({ fields, options })
@@ -597,7 +441,8 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
 
     it('does not drop prnNumber index when already unique', async () => {
-      let droppedIndex = null
+      /** @type {string[]} */
+      const droppedIndexes = []
 
       const mockDb = {
         collection: function () {
@@ -611,8 +456,8 @@ describe('MongoDB packaging recycling notes repository', () => {
             unique: true
           }
         ],
-        dropIndex: async (indexName) => {
-          droppedIndex = indexName
+        dropIndex: async (/** @type {string} */ indexName) => {
+          droppedIndexes.push(indexName)
         },
         createIndex: async () => {},
         findOne: async () => null,
@@ -626,7 +471,7 @@ describe('MongoDB packaging recycling notes repository', () => {
 
       await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
-      expect(droppedIndex).toBeNull()
+      expect(droppedIndexes).toStrictEqual(['organisationId_status'])
     })
 
     it('handles ns does not exist error when collection is new', async () => {
@@ -641,6 +486,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => {
           throw nsDoesNotExistError
         },
@@ -675,6 +521,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        dropIndex: async () => {},
         indexes: async () => {
           throw connectionError
         },

@@ -13,7 +13,7 @@ import { toISOString } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
@@ -60,10 +60,6 @@ function getLinkedAccreditation(registration, accreditations) {
     : null
 }
 
-function isTestOrg(org) {
-  return TEST_ORGANISATION_NUMBERS.has(org.organisationNumber)
-}
-
 /**
  * @param {Organisation[]} organisations
  * @returns {Map<string, FormattedRegistrationInfo>}
@@ -71,7 +67,7 @@ function isTestOrg(org) {
 function buildRegistrationLookup(organisations) {
   return new Map(
     organisations
-      .filter((org) => !isTestOrg(org))
+      .filter((org) => !isTestOrganisation(org))
       .flatMap((org) =>
         org.registrations.flatMap((registration) => {
           const { registrationNumber } = registration

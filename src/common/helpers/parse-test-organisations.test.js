@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { describe, test, expect, vi } from 'vitest'
 
 vi.mock('#root/config.js', () => ({
@@ -7,44 +8,44 @@ vi.mock('#root/config.js', () => ({
 }))
 
 const { config } = await import('#root/config.js')
-const { parseTestOrganisationIds } =
+const { parseTestOrganisationNumbers } =
   await import('./parse-test-organisations.js')
 
-describe('#parseTestOrganisationIds', () => {
-  test('parses valid numeric array', () => {
+describe('#parseTestOrganisationNumbers', () => {
+  test('reads the organisation number of each entry', () => {
     config.get.mockReturnValue('[999999, 888888]')
 
-    expect(parseTestOrganisationIds()).toEqual([999999, 888888])
+    expect(parseTestOrganisationNumbers()).toEqual(['999999', '888888'])
   })
 
-  test('normalises string entries to numbers', () => {
+  test('reads string entries as organisation numbers', () => {
     config.get.mockReturnValue('["999999", "888888"]')
 
-    expect(parseTestOrganisationIds()).toEqual([999999, 888888])
+    expect(parseTestOrganisationNumbers()).toEqual(['999999', '888888'])
   })
 
   test('filters out non-finite values', () => {
     config.get.mockReturnValue('[999999, "not-a-number", null]')
 
-    expect(parseTestOrganisationIds()).toEqual([999999])
+    expect(parseTestOrganisationNumbers()).toEqual(['999999'])
   })
 
   test('filters out values that are not whole numbers', () => {
     config.get.mockReturnValue('[999999, 5.5, 1e21]')
 
-    expect(parseTestOrganisationIds()).toEqual([999999])
+    expect(parseTestOrganisationNumbers()).toEqual(['999999'])
   })
 
   test('returns empty array for empty JSON array', () => {
     config.get.mockReturnValue('[]')
 
-    expect(parseTestOrganisationIds()).toEqual([])
+    expect(parseTestOrganisationNumbers()).toEqual([])
   })
 
   test('throws on malformed JSON', () => {
     config.get.mockReturnValue('not valid json')
 
-    expect(() => parseTestOrganisationIds()).toThrow(
+    expect(() => parseTestOrganisationNumbers()).toThrow(
       'Invalid testOrganisations configuration: malformed JSON'
     )
   })
@@ -54,7 +55,7 @@ describe('#parseTestOrganisationIds', () => {
 
     let thrownError
     try {
-      parseTestOrganisationIds()
+      parseTestOrganisationNumbers()
     } catch (e) {
       thrownError = e
     }
@@ -65,7 +66,7 @@ describe('#parseTestOrganisationIds', () => {
   test('throws when value is not an array', () => {
     config.get.mockReturnValue('{"key": "value"}')
 
-    expect(() => parseTestOrganisationIds()).toThrow(
+    expect(() => parseTestOrganisationNumbers()).toThrow(
       'Invalid testOrganisations configuration: not an array'
     )
   })
@@ -73,7 +74,7 @@ describe('#parseTestOrganisationIds', () => {
   test('throws when value is a number', () => {
     config.get.mockReturnValue('123')
 
-    expect(() => parseTestOrganisationIds()).toThrow(
+    expect(() => parseTestOrganisationNumbers()).toThrow(
       'Invalid testOrganisations configuration: not an array'
     )
   })
@@ -90,4 +91,27 @@ describe('TEST_ORGANISATION_NUMBERS', () => {
 
     expect(TEST_ORGANISATION_NUMBERS).toEqual(new Set(['999999', '888888']))
   })
+})
+
+describe('#isTestOrganisation', () => {
+  test.each([
+    { organisationNumber: '999999', expected: true },
+    { organisationNumber: '500001', expected: false }
+  ])(
+    'reads organisation $organisationNumber as a test organisation: $expected',
+    async ({ organisationNumber, expected }) => {
+      vi.resetModules()
+      const { config: freshConfig } = await import('#root/config.js')
+      freshConfig.get.mockReturnValue('[999999]')
+
+      const { isTestOrganisation } =
+        await import('./parse-test-organisations.js')
+
+      expect(
+        isTestOrganisation({
+          organisationNumber: toOrganisationNumber(organisationNumber)
+        })
+      ).toBe(expected)
+    }
+  )
 })

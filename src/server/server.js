@@ -16,6 +16,7 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { mongoExternalAccreditationsRepositoryPlugin } from '#external-accreditations/repository/mongodb.plugin.js'
 import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
@@ -48,6 +49,7 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runCancelledAccreditationReportsDiagnostic } from '#cancelled-accreditation-reports-diagnostic/run.js'
 import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
+import { runPrnSiteAddressDiagnostic } from '#prn-site-address-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -147,7 +149,10 @@ function getProductionPlugins(config) {
 
   /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
   if (config.get('featureFlags.devEndpoints')) {
-    plugins.push(nonProdDataResetPlugin)
+    plugins.push(
+      nonProdDataResetPlugin,
+      mongoExternalAccreditationsRepositoryPlugin
+    )
   }
 
   plugins.push(packagingRecyclingNotesRepositoryPlugin, {
@@ -228,6 +233,7 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runCancelledAccreditationReportsDiagnostic(startedServer)
     void runNaturalKeyFormatDiagnostic(startedServer)
+    void runPrnSiteAddressDiagnostic(startedServer)
   })
 
   return server

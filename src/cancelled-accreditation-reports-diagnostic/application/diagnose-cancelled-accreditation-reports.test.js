@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, beforeEach } from 'vitest'
 
@@ -130,6 +131,22 @@ describe('diagnoseCancelledAccreditationReports', () => {
           }
         ]
       }
+    ])
+  })
+
+  it('marks a cancelled accreditation held by a test organisation', async () => {
+    const organisation = buildOrganisation({
+      organisationNumber: toOrganisationNumber('999999'),
+      accreditations: [cancelledAccreditation()]
+    })
+
+    const { rows } = await diagnose([organisation])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({
+        organisationNumber: '999999',
+        testOrganisation: true
+      })
     ])
   })
 

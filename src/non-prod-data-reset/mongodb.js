@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -26,7 +27,8 @@ const COLLECTIONS = {
   OVERSEAS_SITES: 'overseas-sites',
   SYSTEM_LOGS: 'system-logs',
   WASTE_BALANCE_EVENTS: 'waste-balance-events',
-  SUMMARY_LOG_ROW_STATES: 'summary-log-row-states'
+  SUMMARY_LOG_ROW_STATES: 'summary-log-row-states',
+  EXTERNAL_ACCREDITATIONS: EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
 }
 
 const EMPTY_COUNTS = Object.freeze({
@@ -40,17 +42,29 @@ const EMPTY_COUNTS = Object.freeze({
   registration: 0,
   accreditation: 0,
   'epr-organisations': 0,
-  organisation: 0
+  organisation: 0,
+  'external-accreditations': 0
 })
 
 const toObjectId = (id) => ObjectId.createFromHexString(id)
 
+/**
+ * @param {string} field
+ * @param {unknown[]} values
+ */
+const anyOf = (field, values) =>
+  values.length === 0 ? null : { [field]: { $in: values } }
+
 /** @param {Organisation} organisation */
 const extractCascadeKeys = (organisation) => {
-  const overseasSiteIds = organisation.registrations.flatMap((reg) =>
+  const { registrations } = organisation
+  const overseasSiteIds = registrations.flatMap((reg) =>
     Object.values(reg.overseasSites ?? {}).map((entry) => entry.overseasSiteId)
   )
-  return { overseasSiteIds }
+  const registrationNumbers = registrations.flatMap(
+    (reg) => reg.registrationNumber ?? []
+  )
+  return { overseasSiteIds, registrationNumbers }
 }
 
 /**
@@ -71,9 +85,12 @@ const extractCascadeKeys = (organisation) => {
  * organisation number instead.
  *
  * @param {Organisation} organisation
- * @param {{ overseasSiteIds: string[] }} keys
+ * @param {{ overseasSiteIds: string[], registrationNumbers: string[] }} keys
  */
-const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
+const buildCascadeSteps = (
+  organisation,
+  { overseasSiteIds, registrationNumbers }
+) => {
   const { organisationNumber, id: organisationId } = organisation
   const orgId = storedOrgId(organisationNumber)
   return [
@@ -105,10 +122,12 @@ const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
     {
       label: 'overseas-sites',
       collection: COLLECTIONS.OVERSEAS_SITES,
-      filter:
-        overseasSiteIds.length === 0
-          ? null
-          : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+      filter: anyOf('_id', overseasSiteIds.map(toObjectId))
+    },
+    {
+      label: 'external-accreditations',
+      collection: COLLECTIONS.EXTERNAL_ACCREDITATIONS,
+      filter: anyOf('registrationNumber', registrationNumbers)
     },
     {
       label: 'system-logs',

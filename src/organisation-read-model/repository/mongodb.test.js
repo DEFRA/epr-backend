@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
+import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
@@ -78,10 +79,11 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
             .collection('overseas-sites')
             .insertOne(toDocument(site))
         }
+        const externalAccreditationsRepository = (
+          await createMongoExternalAccreditationsRepository(database)
+        )()
         for (const externalAccreditation of externalAccreditations) {
-          await database
-            .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-            .insertOne({ ...externalAccreditation })
+          await externalAccreditationsRepository.upsert(externalAccreditation)
         }
 
         return createOrganisationReadRepository(database)({

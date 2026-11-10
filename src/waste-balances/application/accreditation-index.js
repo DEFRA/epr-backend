@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -78,7 +78,7 @@ export const indexAccreditationsByLedger = (organisations) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   for (const organisation of organisations) {
-    if (TEST_ORGANISATION_NUMBERS.has(organisation.organisationNumber)) {
+    if (isTestOrganisation(organisation)) {
       continue
     }
     for (const context of linkedAccreditations(organisation)) {
