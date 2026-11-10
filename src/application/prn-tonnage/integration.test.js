@@ -100,9 +100,9 @@ const contact = { email: 'contact@example.com', fullName: 'A Contact' }
  * @property {string} [accreditationId]
  * @property {string} wasteProcessingType
  * @property {string | null} [reprocessingType]
- * @property {string} [material]
- * @property {string[]} [glassRecyclingProcess]
- * @property {{ address: object }} [site]
+ * @property {import('#domain/organisations/model.js').AppliedForMaterial} [material]
+ * @property {import('#domain/organisations/model.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
+ * @property {{ address: { line1: string, town: string, postcode: string } }} [site]
  */
 
 const registrationIdentity = {

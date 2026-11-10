@@ -1,11 +1,10 @@
 import Joi from 'joi'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { toPrnMaterial } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 
@@ -132,20 +131,6 @@ const aggregatedRowSchema = Joi.object({
   cancelledTonnage: Joi.number().required()
 })
 
-/** @type {ReadonlySet<string>} */
-const GLASS_RECYCLING_PROCESSES = new Set(
-  Object.values(GLASS_RECYCLING_PROCESS)
-)
-
-/**
- * The read model names a glass registration by its recycling process, while
- * the report names the material applied for.
- *
- * @param {Registration['material']} material
- */
-const reportedMaterial = (material) =>
-  GLASS_RECYCLING_PROCESSES.has(material) ? MATERIAL.GLASS : material
-
 /**
  * @param {Registration} registration
  * @returns {RegistrationProcessingTypes}
@@ -196,7 +181,7 @@ const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
   orgId: resolved && String(resolved.organisation.organisationNumber),
   registrationNumber: resolved && numbers.registrationNumber,
   accreditationNumber: resolved && numbers.accreditationNumber,
-  material: resolved && reportedMaterial(resolved.registration.material),
+  material: resolved && toPrnMaterial(resolved.registration.material).material,
   tonnageBand: resolved?.accreditation.prnIssuance.tonnageBand,
   ledgerId: resolved && numbers,
   registration: resolved && processingTypesOf(resolved.registration),
