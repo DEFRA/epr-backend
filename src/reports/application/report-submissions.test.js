@@ -21,6 +21,13 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { config } from '#root/config.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -511,9 +518,17 @@ const buildAccreditationMock = (overrides = {}) => ({
  *
  * @param {object[]} orgs
  * @param {{ warn: (...args: any[]) => void }} [logger]
+ * @param {ExternalAccreditation[]} [externalAccreditations]
  */
-const makeOrgsRepo = (orgs, logger = { warn: () => {} }) =>
-  createInMemoryOrganisationReadRepository(/** @type {any[]} */ (orgs))({
+const makeOrgsRepo = (
+  orgs,
+  logger = { warn: () => {} },
+  externalAccreditations = []
+) =>
+  createInMemoryOrganisationReadRepository(
+    /** @type {any[]} */ (orgs),
+    externalAccreditations
+  )({
     overseasSitesRepository: { findByIds: async () => [] },
     logger
   })
@@ -669,6 +684,31 @@ describe('generateReportSubmissions (edge cases)', () => {
 
     const row = result.reportSubmissions[0]
     expect(row.accreditationNumber).toBe('ACC-999')
+    expect(row.reportType).toBe('Monthly')
+  })
+
+  it('uses monthly cadence and the accreditationNumber of an accreditation held outside re-ex', async () => {
+    const org = buildOrg({
+      registrations: [buildRegistrationMock({ status: 'approved' })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org], undefined, [
+        buildExternalAccreditation({
+          registrationNumber: toRegistrationNumber('REG-001'),
+          year: toYear(2026),
+          accreditationNumber: toAccreditationNumber('ACC-EXT'),
+          status: {
+            current: 'approved',
+            timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          }
+        })
+      ]),
+      makeReportsRepo()
+    )
+
+    const row = result.reportSubmissions[0]
+    expect(row.accreditationNumber).toBe('ACC-EXT')
     expect(row.reportType).toBe('Monthly')
   })
 
