@@ -2,9 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR,
   DEFAULT_REPORT_PERIOD,
@@ -90,8 +88,6 @@ describe('onPrnCancelled', () => {
     const { id: reportId } = await repo.createReport(buildCreateReportParams())
 
     await onPrnCancelled({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
@@ -124,8 +120,6 @@ describe('onPrnCancelled', () => {
     const systemLogsRepository = buildSystemLogsRepository()
 
     await onPrnCancelled({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
@@ -137,8 +131,8 @@ describe('onPrnCancelled', () => {
     expect(mockAuditMarkReportsStale).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         systemLogsRepository,
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         action: 'mark-stale-prn-cancelled',
         reportsMarkedStale: expect.arrayContaining([
           expect.objectContaining({
@@ -158,8 +152,6 @@ describe('onPrnCancelled', () => {
     )
 
     await onPrnCancelled({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,
@@ -175,8 +167,6 @@ describe('onPrnCancelled', () => {
 
   it('does nothing when no report exists for the org/registration at all', async () => {
     await onPrnCancelled({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       prnId: PRN_ID,

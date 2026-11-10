@@ -19,7 +19,6 @@ import {
 import { RelevantYearWindowExpiredError } from './relevant-year.js'
 import { PRN_COMMAND_REJECTION } from '#waste-balances/domain/commands.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @import {PrnStatus, PrnActor} from './model.js'
@@ -35,7 +34,9 @@ const PAYLOAD = { prnId: 'prn-1', amount: 10 }
 const AMPLE = { amount: 1000, availableAmount: 1000 }
 
 const approvedAccreditation = () =>
-  buildAccreditation({ status: ACCREDITATION_STATUS.APPROVED })
+  /** @type {{ status: 'approved' }} */ ({
+    status: ACCREDITATION_STATUS.APPROVED
+  })
 
 /**
  * An actor the state machine permits for this transition, so a case about a
@@ -60,7 +61,7 @@ const permittedActor = (fromStatus, newStatus) => {
  * @param {PrnActor} [params.actor]
  * @param {LedgerBalanceSnapshot | null} [params.balance]
  * @param {Date} [params.now]
- * @param {import('#domain/organisations/accreditation.js').Accreditation} [params.accreditation]
+ * @param {{ status: 'approved' | 'suspended' | 'cancelled' }} [params.accreditation]
  */
 const decide = ({
   fromStatus,
@@ -155,7 +156,7 @@ describe('a transition the state machine refuses', () => {
       const outcome = decide({
         fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        accreditation: buildAccreditation({ status })
+        accreditation: { status }
       })
 
       expect(outcome).toEqual({ error: expect.any(AccreditationStatusError) })

@@ -4,7 +4,10 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { indexAccreditations } from '#waste-balances/application/accreditation-index.js'
+import {
+  indexAccreditationsByLedger,
+  ledgerKey
+} from '#waste-balances/application/accreditation-index.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
@@ -92,13 +95,13 @@ const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
   orgId: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().allow('').required(),
+  accreditationNumber: Joi.string().required(),
   material: Joi.string().required(),
   tonnageBand: Joi.string().required(),
   ledgerId: Joi.object({
     organisationNumber: Joi.string().required(),
     registrationNumber: Joi.string().required(),
-    accreditationNumber: Joi.string().allow(null).required()
+    accreditationNumber: Joi.string().required()
   }).required(),
   registration: Joi.object({
     wasteProcessingType: Joi.string()
@@ -120,53 +123,27 @@ const aggregatedRowSchema = Joi.object({
 })
 
 /**
- * The accreditation's context, provided the organisation and registration the
- * PRNs were raised under still hold it. Anything else leaves the row
- * unresolved, and the schema refuses to report it.
- *
- * @param {AccreditationContext | undefined} context
- * @param {{ organisationId: string, registrationId: string }} ids
- * @returns {AccreditationContext | undefined}
- */
-const heldBy = (context, { organisationId, registrationId }) =>
-  context?.organisation.id === organisationId &&
-  context.registration.id === registrationId
-    ? context
-    : undefined
-
-/**
  * Joins an accreditation's PRN totals to the organisation, registration and
- * accreditation they were raised under.
+ * accreditation they were raised under. One no organisation holds by those
+ * numbers is left unresolved, and the schema refuses to report it.
  *
  * @param {AccreditationTonnage} accreditationTonnage
- * @param {AccreditationContext | undefined} context
+ * @param {AccreditationContext | undefined} resolved
  */
-const toAggregatedRow = (
-  { id: { organisationId, registrationId }, tonnageByStatus },
-  context
-) => {
-  const resolved = heldBy(context, { organisationId, registrationId })
-
-  return {
-    organisationName: resolved?.organisation.companyDetails.name,
-    orgId: resolved && String(resolved.organisation.orgId),
-    registrationNumber: resolved?.registration.registrationNumber,
-    accreditationNumber:
-      resolved && (resolved.accreditation.accreditationNumber ?? ''),
-    material: resolved?.accreditation.material,
-    tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
-    ledgerId: resolved && {
-      organisationNumber: String(resolved.organisation.orgId),
-      registrationNumber: resolved.registration.registrationNumber,
-      accreditationNumber: resolved.accreditation.accreditationNumber ?? null
-    },
-    registration: {
-      wasteProcessingType: resolved?.registration.wasteProcessingType,
-      reprocessingType: resolved?.registration.reprocessingType ?? undefined
-    },
-    ...toTonnageColumns(tonnageByStatus)
-  }
-}
+const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
+  organisationName: resolved?.organisation.companyDetails.name,
+  orgId: resolved && String(resolved.organisation.orgId),
+  registrationNumber: resolved && numbers.registrationNumber,
+  accreditationNumber: resolved && numbers.accreditationNumber,
+  material: resolved?.accreditation.material,
+  tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
+  ledgerId: resolved && numbers,
+  registration: {
+    wasteProcessingType: resolved?.registration.wasteProcessingType,
+    reprocessingType: resolved?.registration.reprocessingType ?? undefined
+  },
+  ...toTonnageColumns(tonnageByStatus)
+})
 
 /**
  * @param {AggregatedRow} a
@@ -196,17 +173,12 @@ const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
 
 /**
  * The accreditation's balances, read from the head of its ledger. An
- * accreditation whose ledger has no events yet holds nothing, and one that has
- * lost its number names no ledger.
+ * accreditation whose ledger has no events yet holds nothing.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {WasteBalanceLedgerId} ledgerId
  */
 const balancesFor = async (ledgerRepository, ledgerId) => {
-  if (ledgerId.accreditationNumber === null) {
-    return ZERO_BALANCES
-  }
-
   const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
   if (latest === null) {
@@ -270,19 +242,21 @@ export const aggregatePrnTonnage = async (
     organisationsRepository.findAll()
   ])
 
-  const index = indexAccreditations(organisations)
+  const index = indexAccreditationsByLedger(organisations, {
+    includeTestOrganisations: true
+  })
 
   const aggregatedRows = accreditationTonnages
     .map((accreditationTonnage) => {
       const row = toAggregatedRow(
         accreditationTonnage,
-        index.get(accreditationTonnage.id.accreditationId)
+        index.get(ledgerKey(accreditationTonnage.numbers))
       )
       return /** @type {AggregatedRow} */ (
         Joi.attempt(
           row,
           aggregatedRowSchema,
-          `Unreportable PRN tonnage row for accreditation ${accreditationTonnage.id.accreditationId}:`
+          `Unreportable PRN tonnage row for accreditation ${accreditationTonnage.numbers.accreditationNumber}:`
         )
       )
     })

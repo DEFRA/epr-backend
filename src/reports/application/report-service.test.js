@@ -800,6 +800,41 @@ describe('report-service', () => {
       expect(report.siteAddress).toBe('1 Recycling Lane GR1 1AA')
     })
 
+    it('records the site address as submitted when its parts have no town', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const params = defaultParams()
+      params.reportRegistration = {
+        ...params.reportRegistration,
+        registration: readModelRegistration({
+          site: {
+            address: {
+              line1: '1 Recycling Lane',
+              postcode: 'GR1 1AA',
+              fullAddress:
+                '1 Recycling Lane, Unit 4, Greenville, Shire, GR1 1AA'
+            }
+          }
+        })
+      }
+      const { ledgerRepository, summaryLogRowStatesRepository } =
+        await seedState(params, [buildReceivedEntry()])
+      const packagingRecyclingNotesRepository = createPrnRepo()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      const report = await createReportForPeriod({
+        reportsRepository,
+        ledgerRepository,
+        summaryLogRowStatesRepository,
+        packagingRecyclingNotesRepository,
+        ...params,
+        changedBy
+      })
+
+      expect(report.siteAddress).toBe(
+        '1 Recycling Lane, Unit 4, Greenville, Shire, GR1 1AA'
+      )
+    })
+
     describe('prn', () => {
       const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }

@@ -9,8 +9,7 @@ import {
   underAccreditation
 } from './test-data.js'
 
-/** @import { AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
-/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { AccreditationNumbers, AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
 
 const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
 
@@ -19,14 +18,14 @@ const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
  * reads back only the accreditations it created.
  *
  * @param {AccreditationTonnage[]} totals
- * @param {RegistrationOrAccreditationId} id
+ * @param {AccreditationNumbers} numbers
  */
-const totalFor = (totals, id) =>
+const totalFor = (totals, numbers) =>
   totals.find(
     (total) =>
-      total.id.organisationId === id.organisationId &&
-      total.id.registrationId === id.registrationId &&
-      total.id.accreditationId === id.accreditationId
+      total.numbers.organisationNumber === numbers.organisationNumber &&
+      total.numbers.registrationNumber === numbers.registrationNumber &&
+      total.numbers.accreditationNumber === numbers.accreditationNumber
   )
 
 export const testSumTonnageByAccreditationBehaviour = (it) => {
@@ -64,10 +63,10 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
 
       expect(totalFor(totals, accreditation)).toStrictEqual({
-        id: {
-          organisationId: accreditation.organisationId,
-          registrationId: accreditation.registrationId,
-          accreditationId: accreditation.accreditationId
+        numbers: {
+          organisationNumber: accreditation.organisationNumber,
+          registrationNumber: accreditation.registrationNumber,
+          accreditationNumber: accreditation.accreditationNumber
         },
         tonnageByStatus: {
           [PRN_STATUS.DRAFT]: 10,
@@ -124,13 +123,13 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
       })
     })
 
-    it('keys on ids, not on the names a PRN snapshots', async () => {
+    it('keys on numbers, not on the names a PRN snapshots', async () => {
       const accreditation = buildAccreditationKeys()
       await repository.create(
         buildDraftPrn(
           underAccreditation(accreditation, {
             organisation: {
-              id: accreditation.organisationId,
+              organisationNumber: accreditation.organisationNumber,
               name: 'Name when raised'
             },
             tonnage: 10
@@ -141,7 +140,7 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
         buildDraftPrn(
           underAccreditation(accreditation, {
             organisation: {
-              id: accreditation.organisationId,
+              organisationNumber: accreditation.organisationNumber,
               name: 'Name after a rename'
             },
             tonnage: 20
