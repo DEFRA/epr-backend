@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
@@ -89,7 +89,7 @@ const findMismatches = (
             stored !== null && OUTSIDE_A_URL_SEGMENT.test(stored),
           organisationId: organisation.id,
           orgId: organisation.orgId,
-          testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
+          testOrganisation: isTestOrganisation(organisation),
           recordId: id,
           status
         }

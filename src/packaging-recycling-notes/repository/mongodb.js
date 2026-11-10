@@ -1,11 +1,11 @@
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
@@ -19,6 +19,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 
 export const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+const RETIRED_ORGANISATION_STATUS_INDEX_NAME = 'organisationId_status'
 
 /**
  * Ensures the prnNumber index exists with the unique constraint.
@@ -76,6 +77,8 @@ async function ensureStatusDateIndex(collection) {
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
+  await dropIndexIfPresent(collection, RETIRED_ORGANISATION_STATUS_INDEX_NAME)
+
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
   await ensurePrnNumberIndex(collection)
@@ -90,8 +93,6 @@ async function ensureCollection(db) {
     },
     { name: 'accreditationNumbers' }
   )
-
-  await dropIndexIfPresent(collection, 'organisationId_status')
 
   return collection
 }

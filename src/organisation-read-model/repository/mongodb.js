@@ -25,7 +25,7 @@ export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
  * @param {StoredOrganisation[]} stored
  * @returns {Promise<ExternalAccreditation[]>}
  */
-const findExternalAccreditations = (db, stored) =>
+export const findExternalAccreditations = (db, stored) =>
   /** @type {Collection<ExternalAccreditation>} */ (
     db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
   )
