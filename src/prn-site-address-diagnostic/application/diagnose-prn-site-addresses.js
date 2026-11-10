@@ -229,7 +229,7 @@ const checkRegistration = (organisation, registration, context) => {
   }
 
   if ('fullAddress' in address) {
-    const served = Object.values(accreditations)
+    const servedAccreditationRecords = Object.values(accreditations)
     return [
       {
         rows: [
@@ -237,9 +237,9 @@ const checkRegistration = (organisation, registration, context) => {
             finding: SITE_FINDING.FULL_ADDRESS_ONLY,
             ...identity,
             ...storedAddressPresence(registration.site.address),
-            accreditations: served.length,
-            heldAccreditations: served.filter(({ status }) =>
-              HELD_ACCREDITATION_STATUSES.has(status.current)
+            accreditations: servedAccreditationRecords.length,
+            heldAccreditations: servedAccreditationRecords.filter(
+              ({ status }) => HELD_ACCREDITATION_STATUSES.has(status.current)
             ).length
           }
         ],
