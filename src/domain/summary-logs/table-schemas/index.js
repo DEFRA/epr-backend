@@ -50,7 +50,7 @@ export const MIN_TEMPLATE_VERSIONS = {
   [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY_MIN
 }
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
@@ -63,7 +63,7 @@ export const MIN_TEMPLATE_VERSIONS = {
  * @property {string[]} requiredHeaders - Headers that must be present in the table
  * @property {Record<string, string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
- * @property {((data: Record<string, any>, context: {accreditation: Accreditation | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance. null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
+ * @property {((data: Record<string, any>, context: {accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance. null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
  */
 
 /**

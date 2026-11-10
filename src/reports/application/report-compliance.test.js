@@ -29,6 +29,10 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { config } from '#root/config.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
@@ -524,10 +528,20 @@ describe('generateReportCompliance', () => {
     /**
      * @param {object} organisation
      * @param {{ warn: (...args: any[]) => void }} [logger]
+     * @param {ExternalAccreditation[]} [externalAccreditations]
      */
-    const complianceFor = async (organisation, logger) =>
+    const complianceFor = async (
+      organisation,
+      logger,
+      externalAccreditations
+    ) =>
       generateReportCompliance(
-        (await organisationReadRepositoryOf([organisation], { logger }))(),
+        (
+          await organisationReadRepositoryOf([organisation], {
+            logger,
+            externalAccreditations
+          })
+        )(),
         createInMemoryReportsRepository()()
       )
 
@@ -554,6 +568,36 @@ describe('generateReportCompliance', () => {
           ['2026:monthly:3', null]
         ])
       )
+    })
+
+    it('owes monthly reports for an accreditation held outside re-ex', async () => {
+      const organisation = buildOrganisation({
+        registrations: [
+          {
+            ...reprocessor({
+              validFrom: '2026-01-01',
+              statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }]
+            }),
+            status: 'approved'
+          }
+        ],
+        accreditations: []
+      })
+
+      const result = await complianceFor(organisation, undefined, [
+        buildExternalAccreditation({
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2026),
+          status: {
+            current: 'approved',
+            timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          }
+        })
+      ])
+
+      expect(
+        result.entries.get(entryKeyOf(organisation))?.submittedDates
+      ).toEqual(MONTHLY_EMPTY_DATES)
     })
 
     it('has no entry for a registration the read model does not serve, logging why', async () => {

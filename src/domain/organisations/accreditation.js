@@ -104,4 +104,10 @@
  * @typedef {AccreditationApproved | AccreditationOther} Accreditation
  */
 
+/**
+ * What deciding whether a date is accredited reads of an accreditation.
+ *
+ * @typedef {StatusHistory & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
