@@ -19,7 +19,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
@@ -56,9 +56,6 @@ const prnId = '507f1f77bcf86cd799439011'
 const { orgId } = buildOrganisation()
 // The ledger under test, numbered as the served organisation numbers it.
 const LEDGER = {
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber: toOrganisationNumber(String(orgId)),
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
@@ -66,12 +63,12 @@ const LEDGER = {
 const prns = `/organisations/${orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
 /**
- * Serves the organisation with its one accreditation, approved and submitted
- * to the EA unless overridden.
+ * The read model serving the organisation with its one accreditation,
+ * approved and submitted to the EA unless overridden.
  *
  * @param {object} [overrides]
  */
-const organisationsRepositoryWith = (overrides = {}) => {
+const organisationReadRepositoryWith = async (overrides = {}) => {
   const accredited = accreditation({
     id: accreditationId,
     submittedToRegulator: REGULATOR.EA,
@@ -83,10 +80,16 @@ const organisationsRepositoryWith = (overrides = {}) => {
     statusHistory: [
       { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
     ],
-    registrations: [reprocessor({ id: registrationId, accreditationId })],
+    registrations: [
+      reprocessor({
+        id: registrationId,
+        accreditationId,
+        submittedToRegulator: accredited.submittedToRegulator
+      })
+    ],
     accreditations: [accredited]
   })
-  return createInMemoryOrganisationsRepository([partialMock(organisation)])()
+  return (await organisationReadRepositoryOf([partialMock(organisation)]))()
 }
 
 const SEED_BALANCE = { amount: 500, availableAmount: 500 }
@@ -124,14 +127,11 @@ const createMockPrn = (overrides = {}) => ({
   version: 1,
   schemaVersion: 2,
   organisation: {
-    id: organisationId,
     organisationNumber: LEDGER.organisationNumber,
     name: 'Test Organisation'
   },
-  registrationId,
   registration: { registrationNumber: LEDGER.registrationNumber },
   accreditation: buildAccreditationSnapshot({
-    id: accreditationId,
     accreditationNumber: LEDGER.accreditationNumber,
     submittedToRegulator: REGULATOR.EA
   }),
@@ -169,7 +169,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     let server
     let packagingRecyclingNotesRepository
     let ledgerRepository
-    let organisationsRepository
+    let organisationReadRepository
     const mockPrn = createMockPrn()
 
     beforeAll(async () => {
@@ -178,16 +178,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           ledgerRepository: () => ledgerRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationReadRepository: () => organisationReadRepository
         }
       })
 
       await server.initialize()
     })
 
-    beforeEach(() => {
+    beforeEach(async () => {
       vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
-      organisationsRepository = organisationsRepositoryWith()
+      organisationReadRepository = await organisationReadRepositoryWith()
       ledgerRepository = seedStream()
       packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
@@ -355,7 +355,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           awaitingAuthPrn
         )
 
-        organisationsRepository = organisationsRepositoryWith({
+        organisationReadRepository = await organisationReadRepositoryWith({
           submittedToRegulator: REGULATOR.NRW
         })
 
@@ -854,7 +854,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
             awaitingAuthPrn
           )
-          organisationsRepository = organisationsRepositoryWith({
+          organisationReadRepository = await organisationReadRepositoryWith({
             statusHistory: [
               ...granted('approved'),
               { status, updatedAt: '2026-08-01T09:00:00.000Z' }
@@ -1110,11 +1110,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         })
         expect(Object.keys(context).sort()).toEqual([
           'next',
-          'organisationId',
+          'organisationNumber',
           'previous',
           'prnId'
         ])
-        expect(context.organisationId).toBe(organisationId)
+        expect(context.organisationNumber).toBe(LEDGER.organisationNumber)
         expect(context.prnId).toBe(prnId)
         expect(context.previous.status.currentStatus).toBe(from)
         expect(context.next.status.currentStatus).toBe(to)
@@ -1225,7 +1225,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       it('authorises a draft while the accreditation is suspended, then refuses to issue it', async () => {
-        organisationsRepository = organisationsRepositoryWith({
+        organisationReadRepository = await organisationReadRepositoryWith({
           statusHistory: [
             ...granted('approved'),
             { status: 'suspended', updatedAt: '2026-08-01T09:00:00.000Z' }

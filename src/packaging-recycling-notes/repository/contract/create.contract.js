@@ -34,10 +34,9 @@ export const testCreateBehaviour = (it) => {
 
       it('stores the PRN so it can be retrieved', async () => {
         const prnInput = buildDraftPrn({
-          organisation: { id: 'org-test-123', name: 'Test Org' },
+          organisation: { name: 'Test Org' },
           tonnage: 250.75,
           accreditation: {
-            id: 'acc-glass',
             accreditationNumber: toAccreditationNumber('ACC-G1'),
             accreditationYear: toYear(2026),
             material: 'glass',
@@ -51,7 +50,7 @@ export const testCreateBehaviour = (it) => {
         const found = await repository.findById(created.id)
 
         expect(found).toBeTruthy()
-        expect(found.organisation.id).toBe('org-test-123')
+        expect(found.organisation.name).toBe('Test Org')
         expect(found.tonnage).toBe(250.75)
         expect(found.accreditation.material).toBe('glass')
       })
@@ -60,17 +59,14 @@ export const testCreateBehaviour = (it) => {
         const now = new Date()
         const prnInput = buildPrn({
           organisation: {
-            id: 'org-preserve-test',
             organisationNumber: toOrganisationNumber('500123'),
             name: 'Preserve Org',
             tradingName: 'Preserve Trading'
           },
-          registrationId: 'reg-preserve-test',
           registration: {
             registrationNumber: toRegistrationNumber('R25SR500010912PL')
           },
           accreditation: {
-            id: 'acc-preserve-test',
             accreditationNumber: toAccreditationNumber('ACC-PRESERVE'),
             accreditationYear: toYear(2026),
             material: 'paper',
@@ -94,17 +90,14 @@ export const testCreateBehaviour = (it) => {
         const found = await repository.findById(created.id)
 
         expect(found.organisation).toStrictEqual({
-          id: 'org-preserve-test',
           organisationNumber: '500123',
           name: 'Preserve Org',
           tradingName: 'Preserve Trading'
         })
-        expect(found.registrationId).toBe('reg-preserve-test')
         expect(found.registration).toStrictEqual({
           registrationNumber: 'R25SR500010912PL'
         })
         expect(found.accreditation).toStrictEqual({
-          id: 'acc-preserve-test',
           accreditationNumber: 'ACC-PRESERVE',
           accreditationYear: toYear(2026),
           material: 'paper',

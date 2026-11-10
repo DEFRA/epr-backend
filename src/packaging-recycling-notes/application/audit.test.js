@@ -1,6 +1,9 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { TEST_ORGANISATION_NUMBER } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
 
 const mockAudit = vi.fn()
 
@@ -16,23 +19,16 @@ describe('auditPrnStatusTransition', () => {
   const userEmail = 'test@example.gov.uk'
   const userScope = ['standardUser']
 
-  const previousPrn = {
-    id: prnId,
-    organisationId: 'org-456',
-    accreditationId: 'acc-789',
-    tonnage: 100,
-    material: 'plastic',
-    status: { currentStatus: 'awaiting_authorisation' }
-  }
+  const nextPrn = createMockIssuedPrn({ id: prnId })
 
-  const nextPrn = {
+  const previousPrn = createMockIssuedPrn({
     id: prnId,
-    organisation: { id: 'org-456', name: 'Test Organisation' },
-    accreditation: { id: 'acc-789', material: 'plastic' },
-    tonnage: 100,
-    status: { currentStatus: 'awaiting_acceptance' },
-    prnNumber: 'ER2600001'
-  }
+    prnNumber: null,
+    status: {
+      ...nextPrn.status,
+      currentStatus: PRN_STATUS.AWAITING_AUTHORISATION
+    }
+  })
 
   let systemLogsRepository
 
@@ -76,7 +72,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
-        organisationId: 'org-456',
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -108,7 +104,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
-        organisationId: 'org-456',
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -135,7 +131,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
-        organisationId: 'org-456',
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         prnId
       },
       user: {
@@ -148,7 +144,7 @@ describe('auditPrnStatusTransition', () => {
     // System log should still receive full payload
     const storedLog = await findStoredLog()
     expect(storedLog.context).toEqual({
-      organisationId: 'org-456',
+      organisationNumber: TEST_ORGANISATION_NUMBER,
       prnId,
       previous: largePreviousPrn,
       next: nextPrn

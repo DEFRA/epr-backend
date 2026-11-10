@@ -34,6 +34,14 @@ const dependenciesFor = ({
 })
 
 /**
+ * An organisation read repository that serves no organisations.
+ *
+ * @returns {OrganisationReadRepository}
+ */
+export const emptyOrganisationReadRepository = () =>
+  createInMemoryOrganisationReadRepository()(dependenciesFor())
+
+/**
  * An in-memory organisation read repository holding what
  * `organisationsRepository` holds now, for a test server's
  * `organisationReadRepository`. Later writes to it are not seen.

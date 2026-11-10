@@ -6,7 +6,7 @@ import {
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { isFutureYear } from '#common/helpers/dates/year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
@@ -114,10 +114,11 @@ const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
 const ukAddressSchema = Joi.alternatives().try(
   Joi.object({
     county: Joi.string(),
+    fullAddress: Joi.string(),
     line1: Joi.string().required(),
     line2: Joi.string(),
     postcode: Joi.string().required(),
-    town: Joi.string().required()
+    town: Joi.string()
   }),
   Joi.object({ fullAddress: Joi.string().required() })
 )
@@ -203,7 +204,7 @@ export const organisationListResponseSchema = Joi.object({
 })
 
 const servedYear = yearSchema().custom((year, helpers) =>
-  isFutureYear(year) ? helpers.error('any.invalid') : year
+  year > latestOpenYear(new Date()) ? helpers.error('any.invalid') : year
 )
 
 export const organisationYearsResponseSchema = Joi.object({

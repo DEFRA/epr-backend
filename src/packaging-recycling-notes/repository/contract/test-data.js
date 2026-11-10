@@ -4,7 +4,6 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { ObjectId } from 'mongodb'
 import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
@@ -50,7 +49,6 @@ const CANCELLED_ISSUED_STEP_OFFSET = 3
  * @returns {AccreditationSnapshot}
  */
 export const buildAccreditationSnapshot = (overrides = {}) => ({
-  id: `acc-${randomUUID()}`,
   accreditationNumber: toAccreditationNumber('ACC-2026-001'),
   accreditationYear: PRN_YEAR,
   material: 'plastic',
@@ -79,14 +77,13 @@ const uniqueRegistrationNumber = () =>
   toRegistrationNumber(`R26ER${uniqueNumber()}PA`)
 
 /**
- * @typedef {import('../port.js').AccreditationId & import('../port.js').AccreditationNumbers} AccreditationKeys
+ * @typedef {import('../port.js').AccreditationNumbers} AccreditationKeys
  */
 
 /**
- * Builds the identity of an accreditation, by both its ids and its numbers:
- * the accreditation, and the registration and organisation above it. Unique
- * per call — the Mongo test database is shared across the tests in a file, so
- * no two may share ids or numbers.
+ * Builds the numbers of an accreditation and the registration and organisation
+ * above it. Unique per call — the Mongo test database is shared across the
+ * tests in a file, so no two may share numbers.
  *
  * @param {Partial<AccreditationKeys>} [overrides]
  * @returns {AccreditationKeys}
@@ -94,9 +91,6 @@ const uniqueRegistrationNumber = () =>
 export const buildAccreditationKeys = (overrides = {}) => {
   const unique = uniqueNumber()
   return {
-    organisationId: new ObjectId().toHexString(),
-    registrationId: new ObjectId().toHexString(),
-    accreditationId: new ObjectId().toHexString(),
     organisationNumber: toOrganisationNumber(String(unique)),
     registrationNumber: toRegistrationNumber(`R26ER${unique}PA`),
     accreditationNumber: toAccreditationNumber(`A26ER${unique}PA`),
@@ -105,28 +99,25 @@ export const buildAccreditationKeys = (overrides = {}) => {
 }
 
 /**
- * Places a PRN under an accreditation, so that the ids and numbers the PRN
- * carries agree with the accreditation identity a reader names it by.
+ * Places a PRN under an accreditation, so that the numbers the PRN carries
+ * agree with the accreditation a reader names it by.
  *
- * @param {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & Partial<import('#domain/organisations/numbers.js').Numbers>} accreditationId
+ * @param {Partial<import('#domain/organisations/numbers.js').Numbers>} numbers
  * @param {PrnOverrides} [overrides]
  */
-export const underAccreditation = (accreditationId, overrides = {}) => ({
+export const underAccreditation = (numbers, overrides = {}) => ({
   organisation: {
-    id: accreditationId.organisationId,
     name: 'Test Organisation',
-    ...(accreditationId.organisationNumber && {
-      organisationNumber: accreditationId.organisationNumber
+    ...(numbers.organisationNumber && {
+      organisationNumber: numbers.organisationNumber
     })
   },
-  registrationId: accreditationId.registrationId,
-  ...(accreditationId.registrationNumber && {
-    registration: { registrationNumber: accreditationId.registrationNumber }
+  ...(numbers.registrationNumber && {
+    registration: { registrationNumber: numbers.registrationNumber }
   }),
   accreditation: buildAccreditationSnapshot({
-    id: /** @type {string} */ (accreditationId.accreditationId),
-    ...(accreditationId.accreditationNumber && {
-      accreditationNumber: accreditationId.accreditationNumber
+    ...(numbers.accreditationNumber && {
+      accreditationNumber: numbers.accreditationNumber
     })
   }),
   ...overrides
@@ -158,12 +149,10 @@ export const buildPrn = (overrides = {}) => {
             organisationOverride.organisationNumber ?? organisationNumber
         }
       : {
-          id: `org-${randomUUID()}`,
           organisationNumber,
           name: 'Test Organisation',
           tradingName: 'Test Trading'
         },
-    registrationId: `reg-${randomUUID()}`,
     registration: { registrationNumber: uniqueRegistrationNumber() },
     accreditation: buildAccreditationSnapshot(),
     obligationYear: PRN_YEAR,

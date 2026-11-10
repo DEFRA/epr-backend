@@ -18,6 +18,7 @@ import {
   ADMIN_CANCELLABLE_PREVIOUS_STATUSES,
   closedYearConflictFor
 } from '#packaging-recycling-notes/domain/closed-year.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
@@ -122,7 +123,7 @@ const performCancellation = async (request, previousPrn, id, h, respond) => {
   const {
     packagingRecyclingNotesRepository,
     ledgerRepository,
-    organisationsRepository,
+    organisationReadRepository,
     prnEvents,
     logger,
     auth
@@ -137,12 +138,11 @@ const performCancellation = async (request, previousPrn, id, h, respond) => {
   const updatedPrn = await updatePrnStatus({
     prnRepository: packagingRecyclingNotesRepository,
     ledgerRepository,
-    organisationsRepository,
+    organisationReadRepository,
     prnEvents,
     logger,
     id,
-    organisationId: previousPrn.organisation.id,
-    accreditationId: previousPrn.accreditation.id,
+    accreditationNumbers: prnLedgerId(previousPrn),
     newStatus: PRN_STATUS.CANCELLED,
     actor: PRN_ACTOR.SERVICE_MAINTAINER,
     user,

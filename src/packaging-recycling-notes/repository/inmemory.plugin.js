@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import Boom from '@hapi/boom'
@@ -121,13 +122,9 @@ const performSumTonnageByAccreditation =
       if (excludeStatuses.includes(status)) {
         continue
       }
-      const id = {
-        organisationId: prn.organisation.id,
-        registrationId: prn.registrationId,
-        accreditationId: prn.accreditation.id
-      }
-      const key = JSON.stringify(id)
-      const total = totals.get(key) ?? { id, tonnageByStatus: {} }
+      const numbers = prnLedgerId(prn)
+      const key = JSON.stringify(numbers)
+      const total = totals.get(key) ?? { numbers, tonnageByStatus: {} }
       total.tonnageByStatus[status] =
         (total.tonnageByStatus[status] ?? 0) + prn.tonnage
       totals.set(key, total)

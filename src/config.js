@@ -515,6 +515,12 @@ const baseConfig = {
       env: 'BASIC_AUTH_PASSWORD'
     }
   },
+  openNextYear: {
+    doc: 'Serve next year as well as this one, so data for it can be checked before it starts. Lower environments only',
+    format: Boolean,
+    default: false,
+    env: 'OPEN_NEXT_YEAR'
+  },
   decemberWaste: {
     windowStart: {
       doc: 'Recurring annual start (inclusive) of the December Waste declaration window, as MM-DDTHH:mm in UK local time (Europe/London), for the accreditation relevant year. The window always closes 31 January the year after relevantYear.',

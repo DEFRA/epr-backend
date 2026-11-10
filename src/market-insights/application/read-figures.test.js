@@ -3,7 +3,7 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -20,7 +20,7 @@ const read = (overrides = {}) =>
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     organisationsRepository: createInMemoryOrganisationsRepository([])(),
-    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+    organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
     year: toYear(2026),

@@ -177,6 +177,13 @@ describe('#startServer', () => {
       })
     })
 
+    test('Should log whether next year is open', async () => {
+      expect(mockLoggerInfo).toHaveBeenCalledWith({
+        message: 'Open next year: false',
+        event: { category: LOGGING_EVENT_CATEGORIES.CONFIG }
+      })
+    })
+
     test('Should enable auditing by default', async () => {
       expect(mockEnabledAuditing).toHaveBeenCalledWith(true)
     })
