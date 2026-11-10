@@ -460,12 +460,12 @@ describe('submitSummaryLog row-state numbers', () => {
         )
       expect(rowStates).toEqual([
         expect.objectContaining({
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: 'REG-123',
           accreditationNumber
         }),
         expect.objectContaining({
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: 'REG-123',
           accreditationNumber
         })

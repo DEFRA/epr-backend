@@ -1,5 +1,3 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
@@ -16,13 +14,13 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * typically dozens at most).
  *
  * @param {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
- * @param {Pick<Organisation, 'orgId'>} organisation
+ * @param {Pick<Organisation, 'organisationNumber'>} organisation
  * @param {Pick<Registration, 'registrationNumber'>} registration
  * @returns {Promise<Map<string, { submittedAt: string }>>}
  */
 export const loadSummaryLogMap = async (
   summaryLogsRepository,
-  { orgId },
+  { organisationNumber },
   { registrationNumber }
 ) => {
   if (!registrationNumber) {
@@ -30,7 +28,7 @@ export const loadSummaryLogMap = async (
   }
 
   const summaryLogs = await summaryLogsRepository.findAll({
-    organisationNumber: toOrganisationNumber(String(orgId)),
+    organisationNumber,
     registrationNumber
   })
 

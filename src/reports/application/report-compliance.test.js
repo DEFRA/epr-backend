@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
@@ -329,8 +330,12 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    // orgId 999999 is a test org (see parse-test-organisations config)
-    await buildApprovedOrg(orgRepo, { orgId: 999999 }, FULL_YEAR_RANGE)
+    // 999999 is a test organisation (see parse-test-organisations config)
+    await buildApprovedOrg(
+      orgRepo,
+      { organisationNumber: toOrganisationNumber('999999') },
+      FULL_YEAR_RANGE
+    )
     const normalOrg = await buildApprovedOrg(
       orgRepo,
       undefined,

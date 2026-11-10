@@ -103,7 +103,7 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
             (organisationNumber) =>
               partialMock(
                 buildOrganisation({
-                  orgId: Number(organisationNumber),
+                  organisationNumber,
                   accreditations: [
                     buildAccreditation({
                       accreditationNumber:

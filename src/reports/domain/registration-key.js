@@ -13,12 +13,12 @@ export const registrationKey = ({ organisationNumber, registrationNumber }) =>
   `${organisationNumber}::${registrationNumber}`
 
 /**
- * @param {Pick<Organisation, 'orgId'>} organisation
+ * @param {Pick<Organisation, 'organisationNumber'>} organisation
  * @param {Pick<Registration, 'registrationNumber'>} registration
  * @returns {string}
  */
 export const storedRegistrationKey = (organisation, registration) =>
   registrationKey({
-    organisationNumber: String(organisation.orgId),
+    organisationNumber: organisation.organisationNumber,
     registrationNumber: registration.registrationNumber
   })

@@ -92,8 +92,9 @@ describe('an operator accredited in July uploading their registered-only summary
       accreditationValidFrom: `${YEAR}-07-01`
     })
     const { server, organisationId, registrationId } = env
-    const { orgId } = await env.organisationsRepository.findById(organisationId)
-    const registration = `/organisations/${orgId}/registrations/REG-123`
+    const { organisationNumber } =
+      await env.organisationsRepository.findById(organisationId)
+    const registration = `/organisations/${organisationNumber}/registrations/REG-123`
 
     // Close Q1, so the quarterly split shows: January to March closed,
     // April to June open.

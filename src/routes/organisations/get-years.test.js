@@ -32,7 +32,9 @@ describe('GET /organisations/{organisationNumber}/years', () => {
   })
 
   it('lists the years the organisation held approved registrations', async () => {
-    const response = await get(`/organisations/${organisation.orgId}/years`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}/years`
+    )
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({ years: [2027, 2026] })
@@ -41,7 +43,9 @@ describe('GET /organisations/{organisationNumber}/years', () => {
   it('lists the next year while it is open', async () => {
     config.set('openNextYear', true)
 
-    const response = await get(`/organisations/${organisation.orgId}/years`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}/years`
+    )
 
     expect(body(response)).toEqual({ years: [2028, 2027, 2026] })
   })

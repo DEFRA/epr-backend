@@ -122,7 +122,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       }
     })
 
-    const registrationUrl = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+    const registrationUrl = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
     const reports =
       stream === ACCREDITED
         ? `${registrationUrl}/accreditations/${YEAR}/reports/monthly`

@@ -48,7 +48,7 @@ const issuingAccreditation = buildAccreditation({
   accreditationNumber: buildAccreditationSnapshot().accreditationNumber
 })
 const issuingOrganisation = buildOrganisation({
-  orgId: Number(TEST_ORGANISATION_NUMBER),
+  organisationNumber: TEST_ORGANISATION_NUMBER,
   accreditations: [issuingAccreditation]
 })
 

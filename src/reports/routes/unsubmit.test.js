@@ -75,7 +75,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       reportsRepository,
       /** @param {number} [submissionNumber] */
       urlFor: (submissionNumber = 1) =>
-        `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/${submissionNumber}/unsubmit`
+        `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/${submissionNumber}/unsubmit`
     }
   }
 

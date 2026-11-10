@@ -86,7 +86,7 @@ describe('organisation actions by organisation number', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: `/organisations/${organisation.orgId}/link`,
+        url: `/organisations/${organisation.organisationNumber}/link`,
         headers: { Authorization: `Bearer ${linkToken}` }
       })
 
@@ -131,7 +131,7 @@ describe('organisation actions by organisation number', () => {
 
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${organisation.orgId}/user`,
+        url: `/organisations/${organisation.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${generateValidTokenWith(newUser)}` }
       })
 
@@ -152,7 +152,7 @@ describe('organisation actions by organisation number', () => {
 
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${other.orgId}/user`,
+        url: `/organisations/${other.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${defraIdMockAuthTokens.validToken}` }
       })
 

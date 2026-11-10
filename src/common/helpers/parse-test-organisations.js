@@ -1,9 +1,5 @@
 import { config } from '#root/config.js'
-import {
-  ORGANISATION_NUMBER_PATTERN,
-  organisationNumberOf,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -34,12 +30,6 @@ export function parseTestOrganisationNumbers() {
 /** @type {ReadonlySet<OrganisationNumber>} */
 export const TEST_ORGANISATION_NUMBERS = new Set(parseTestOrganisationNumbers())
 
-/**
- * An organisation without a valid organisation number is never a test
- * organisation, so a bad stored `orgId` cannot fail the caller's whole read.
- *
- * @param {Pick<Organisation, 'orgId'>} organisation
- */
+/** @param {Pick<Organisation, 'organisationNumber'>} organisation */
 export const isTestOrganisation = (organisation) =>
-  ORGANISATION_NUMBER_PATTERN.test(String(organisation.orgId)) &&
-  TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(organisation))
+  TEST_ORGANISATION_NUMBERS.has(organisation.organisationNumber)

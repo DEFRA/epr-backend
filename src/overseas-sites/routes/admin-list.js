@@ -1,3 +1,5 @@
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
@@ -78,7 +80,7 @@ const mapMappingToRow = (
   }
 
   return {
-    orgId: nullable(organisation.orgId),
+    orgId: toWireOrgId(organisation.organisationNumber),
     registrationNumber: nullable(registration.registrationNumber),
     accreditationNumber: getAccreditationNumber(organisation, registration),
     orsId,
@@ -89,7 +91,7 @@ const mapMappingToRow = (
 
 /**
  * @typedef {Object} OrganisationsOverseasSitesAdminListItem
- * @property {number} [orgId]
+ * @property {OrganisationNumber} [organisationNumber]
  * @property {Array<{
  *   material?: string,
  *   registrationNumber: string | null,

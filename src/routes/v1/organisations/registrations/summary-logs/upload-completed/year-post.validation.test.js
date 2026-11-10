@@ -17,7 +17,7 @@ const organisation = buildOrganisation({
 const organisationId = organisation.id
 
 const buildPostUrl = (summaryLogId) =>
-  `/organisations/${organisation.orgId}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly

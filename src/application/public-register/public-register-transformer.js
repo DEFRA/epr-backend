@@ -78,7 +78,7 @@ function transformRegAcc(
     type: capitalize(registration.wasteProcessingType),
     businessName: org.companyDetails.name,
     companiesHouseNumber: org.companyDetails?.companiesHouseNumber || '',
-    orgId: org.orgId,
+    organisationNumber: org.organisationNumber,
     registeredOffice: formatAddress(
       org.companyDetails.registeredAddress || org.companyDetails.address
     ),

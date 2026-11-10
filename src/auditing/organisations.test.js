@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { auditOrganisationUpdate } from './organisations.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -62,9 +63,10 @@ describe('auditOrganisationUpdate', () => {
   }
 
   describe('large payload handling', () => {
+    const organisationNumber = toOrganisationNumber('500001')
     it('records context.previous and context.next in both the audit and the stored system log for small payloads', async () => {
-      const previous = { version: '1' }
-      const next = { version: '2' }
+      const previous = { version: '1', organisationNumber }
+      const next = { version: '2', organisationNumber }
 
       await auditOrganisationUpdate(
         createRequest(),
@@ -76,21 +78,29 @@ describe('auditOrganisationUpdate', () => {
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           event: expectedEvent,
-          context: { organisationId, previous, next }
+          context: {
+            organisationId,
+            previous: { version: '1', orgId: 500001 },
+            next: { version: '2', orgId: 500001 }
+          }
         })
       )
 
       const storedLogs = await findStoredLogs()
       expect(storedLogs).toHaveLength(1)
       expect(storedLogs[0].event).toEqual(expectedEvent)
-      expect(storedLogs[0].context).toEqual({ organisationId, previous, next })
+      expect(storedLogs[0].context).toEqual({
+        organisationId,
+        previous: { version: '1', orgId: 500001 },
+        next: { version: '2', orgId: 500001 }
+      })
       expect(storedLogs[0].createdAt).toEqual(now)
     })
 
     it('omits context.previous and context.next from the audit event but keeps them in the stored system log for large payloads', async () => {
       const veryLongString = randomBytes(1e6).toString('hex')
-      const previous = { version: '1', veryLongString }
-      const next = { version: '2', veryLongString }
+      const previous = { version: '1', veryLongString, organisationNumber }
+      const next = { version: '2', veryLongString, organisationNumber }
 
       await auditOrganisationUpdate(
         createRequest(),
@@ -109,7 +119,11 @@ describe('auditOrganisationUpdate', () => {
       const storedLogs = await findStoredLogs()
       expect(storedLogs).toHaveLength(1)
       expect(storedLogs[0].event).toEqual(expectedEvent)
-      expect(storedLogs[0].context).toEqual({ organisationId, previous, next })
+      expect(storedLogs[0].context).toEqual({
+        organisationId,
+        previous: { version: '1', veryLongString, orgId: 500001 },
+        next: { version: '2', veryLongString, orgId: 500001 }
+      })
     })
   })
 })

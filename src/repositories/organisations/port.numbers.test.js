@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
@@ -55,7 +54,7 @@ describe('the organisations port names records by their numbers', () => {
 
   it('finds the organisation by its number, and its other numbers in use', async () => {
     const found = await repository.findByOrganisationNumber(
-      toOrganisationNumber(String(organisation.orgId))
+      organisation.organisationNumber
     )
 
     expect(found?.id).toBe(organisation.id)
@@ -79,11 +78,13 @@ describe('the organisations port names records by their numbers', () => {
   })
 
   it('takes no number of another kind, or a bare value', async () => {
+    const bareNumber = Number(organisation.organisationNumber)
+    const bareString = String(organisation.organisationNumber)
     const found = [
-      // @ts-expect-error the stored orgId is not an organisation number
-      await repository.findByOrganisationNumber(organisation.orgId),
+      // @ts-expect-error a bare number is not an organisation number
+      await repository.findByOrganisationNumber(bareNumber),
       // @ts-expect-error a bare string is not an organisation number
-      await repository.findByOrganisationNumber(String(organisation.orgId))
+      await repository.findByOrganisationNumber(bareString)
     ]
 
     expect(found.map((match) => match?.id)).toEqual([

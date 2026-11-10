@@ -57,7 +57,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       await organisationsRepository.insert(org)
       return {
         method: 'PUT',
-        url: `/organisations/${org.orgId}/user`
+        url: `/organisations/${org.organisationNumber}/user`
       }
     }
   })
@@ -108,7 +108,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
         const org = await buildActiveOrg(organisationsRepository)
         const response = await server.inject({
           method: 'PUT',
-          url: `/organisations/${org.orgId}/user`,
+          url: `/organisations/${org.organisationNumber}/user`,
           headers: { Authorization: `Bearer ${token}` }
         })
         expect(response.statusCode).toBe(expectedStatus)
@@ -133,7 +133,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       const newUserToken = generateValidTokenWith(user)
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${orgBefore.orgId}/user`,
+        url: `/organisations/${orgBefore.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${newUserToken}` }
       })
 
@@ -214,7 +214,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -341,7 +341,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -421,7 +421,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 

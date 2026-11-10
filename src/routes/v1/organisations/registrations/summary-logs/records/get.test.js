@@ -18,10 +18,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
@@ -125,7 +122,7 @@ const createServer = async ({
         registrationId: REGISTRATION_ID,
         accreditationId
       }),
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: registration.registrationNumber
     },
     rows,
@@ -137,7 +134,7 @@ const createServer = async ({
   for (const { id, summaryLog } of summaryLogs) {
     await summaryLogsRepository.insert(id, {
       ...summaryLog,
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: registration.registrationNumber
     })
   }
@@ -156,11 +153,11 @@ const createServer = async ({
     }
   })
 
-  const { orgId } = organisation
+  const { organisationNumber } = organisation
   const { registrationNumber } = registration
   /** @param {string} [fileId] */
   const urlFor = (fileId = FILE_ID) =>
-    `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
+    `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
 
   return { server, organisation, summaryLogRowStatesRepository, urlFor }
 }

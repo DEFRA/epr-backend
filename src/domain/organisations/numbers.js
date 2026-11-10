@@ -25,13 +25,6 @@ export const toOrganisationNumber = (value) => {
 }
 
 /**
- * @param {Pick<Organisation, 'orgId'>} organisation
- * @returns {OrganisationNumber}
- */
-export const organisationNumberOf = ({ orgId }) =>
-  toOrganisationNumber(String(orgId))
-
-/**
  * @param {string} value
  * @returns {RegistrationNumber}
  */
@@ -51,7 +44,7 @@ export const toAccreditationNumber = (value) =>
  * id is `null`, and absent where no accreditation id was given.
  *
  * @typedef {{
- *   organisationNumber?: OrganisationNumber,
+ *   organisationNumber: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,
  *   accreditationNumber?: AccreditationNumber | null
  * }} Numbers
@@ -70,8 +63,7 @@ export const toAccreditationNumber = (value) =>
 
 /**
  * Reads the numbers for a registration, and optionally an accreditation, from
- * their organisation record. An organisation, registration or accreditation
- * without a number, or one the organisation no longer holds, gives no number,
+ * their organisation record. A registration or accreditation without a number, or one the organisation no longer holds, gives no number,
  * and `unmapped` says why.
  *
  * @param {Organisation} organisation
@@ -83,16 +75,9 @@ export const numbersFor = (
   { registrationId, accreditationId }
 ) => {
   /** @type {Numbers} */
-  const numbers = {}
+  const numbers = { organisationNumber: organisation.organisationNumber }
   /** @type {string[]} */
   const unmapped = []
-
-  const organisationNumber = String(organisation.orgId)
-  if (ORGANISATION_NUMBER_PATTERN.test(organisationNumber)) {
-    numbers.organisationNumber = toOrganisationNumber(organisationNumber)
-  } else {
-    unmapped.push(`organisation ${organisation.id} has no organisation number`)
-  }
 
   const registration = organisation.registrations.find(
     ({ id }) => id === registrationId
@@ -148,11 +133,7 @@ export const requiredNumbersFor = (organisation, ids, documents) => {
     numbers: { organisationNumber, registrationNumber, accreditationNumber },
     unmapped
   } = numbersFor(organisation, ids)
-  if (
-    organisationNumber === undefined ||
-    registrationNumber === undefined ||
-    accreditationNumber === undefined
-  ) {
+  if (registrationNumber === undefined || accreditationNumber === undefined) {
     throw new Error(
       `Cannot store ${documents} without their numbers: ${unmapped.join('; ')}`
     )
