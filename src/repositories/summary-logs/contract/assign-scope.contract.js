@@ -7,6 +7,7 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import { SummaryLogsRepository } from '../port.js' */
+/** @import { InsertStoredSummaryLog } from './test-data.js' */
 
 const accredited = {
   accreditationId: 'acc-scope',
@@ -18,7 +19,7 @@ const registeredOnly = { accreditationId: null, accreditationNumber: null }
 /**
  * @typedef {{
  *   summaryLogsRepository: SummaryLogsRepository,
- *   insertStoredSummaryLog: (id: string, summaryLog: object) => Promise<void>
+ *   insertStoredSummaryLog: InsertStoredSummaryLog
  * }} AssignScopeFixtures
  */
 

@@ -82,6 +82,10 @@ const update =
     scheduleStaleCacheSync(storage, staleCache)
   }
 
+/**
+ * @param {SummaryLogStore} storage
+ * @returns {() => Promise<SummaryLogId[]>}
+ */
 const findIdsWithoutScope = (storage) => async () =>
   [...storage]
     .filter(
@@ -91,6 +95,12 @@ const findIdsWithoutScope = (storage) => async () =>
     )
     .map(([id]) => id)
 
+/**
+ * @param {SummaryLogStore} storage
+ * @param {SummaryLogStore} staleCache
+ * @param {TypedLogger} logger
+ * @returns {SummaryLogsRepository['assignScope']}
+ */
 const assignScope =
   (storage, staleCache, logger) => async (id, version, scope) => {
     const validatedId = validateId(id)
@@ -102,7 +112,9 @@ const assignScope =
     }
 
     const held = Object.keys(validatedScope).filter(
-      (key) => existing.summaryLog[key] !== undefined
+      (key) =>
+        existing.summaryLog[/** @type {keyof SummaryLogScope} */ (key)] !==
+        undefined
     )
     if (existing.version !== version || held.length > 0) {
       const conflictError = new Error(
@@ -157,7 +169,8 @@ const findByFileId =
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogScope, SummaryLogsRepository, SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
  * @typedef {Map<SummaryLogId, SummaryLogVersion>} SummaryLogStore

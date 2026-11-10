@@ -16,10 +16,16 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { backfillSummaryLogScope } from './backfill.js'
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogStore } from '#repositories/summary-logs/inmemory.js' */
+/** @import { StoredSummaryLog } from '#repositories/summary-logs/contract/test-data.js' */
+/** @import { SummaryLogsRepository, SummaryLogVersion } from '#repositories/summary-logs/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -75,19 +81,22 @@ const registeredOnlyMeta = {
 describe('backfillSummaryLogScope', () => {
   /** @type {SummaryLogStore} */
   let storage
-  /** @type {*} */
+  /** @type {SystemLogsRepository} */
   let systemLogsRepository
-  /** @type {*} */
+  /** @type {OrganisationsRepository} */
   let organisationsRepository
-  /** @type {*} */
+  /** @type {TypedLogger} */
   let logger
 
-  /** @param {Record<string, object>} summaryLogs */
+  /** @param {Record<string, StoredSummaryLog>} summaryLogs */
   const store = (summaryLogs) => {
     for (const [id, summaryLog] of Object.entries(summaryLogs)) {
+      // Holds what the store's type refuses, as the stored data does
       storage.set(
         toSummaryLogId(id),
-        /** @type {*} */ ({ version: 1, summaryLog })
+        /** @type {SummaryLogVersion} */ (
+          /** @type {unknown} */ ({ version: 1, summaryLog })
+        )
       )
     }
   }
@@ -103,7 +112,7 @@ describe('backfillSummaryLogScope', () => {
 
   const run = async (
     /** @type {boolean} */ isDryRun,
-    /** @type {object} */ summaryLogsOverrides = {}
+    /** @type {Partial<SummaryLogsRepository>} */ summaryLogsOverrides = {}
   ) => {
     const summaryLogsRepository = {
       ...createInMemorySummaryLogsRepository(storage)(logger),
@@ -120,16 +129,22 @@ describe('backfillSummaryLogScope', () => {
     )
   }
 
-  const versionOf = (/** @type {string} */ id) =>
-    /** @type {*} */ (storage.get(toSummaryLogId(id)))
+  const versionOf = (/** @type {string} */ id) => {
+    const held = storage.get(toSummaryLogId(id))
+    if (!held) {
+      throw new Error(`Nothing stored under ${id}`)
+    }
+    return held
+  }
 
   const stored = (/** @type {string} */ id) => versionOf(id).summaryLog
 
   const unmappedLines = () =>
-    logger.info.mock.calls
-      .map(([{ message }]) => message)
+    vi
+      .mocked(logger.info)
+      .mock.calls.map(([{ message }]) => message)
       .filter((message) =>
-        message.startsWith('Summary log accreditation unmapped')
+        message?.startsWith('Summary log accreditation unmapped')
       )
 
   it('records the accreditation the spreadsheet names, and the year, auditing each as the system user', async () => {
@@ -240,9 +255,7 @@ describe('backfillSummaryLogScope', () => {
     ],
     [
       'no organisation id',
-      (({ organisationId: _o, ...rest }) => rest)(
-        unscoped(uploadedFor(accreditedMeta))
-      ),
+      unscoped({ ...uploadedFor(accreditedMeta), organisationId: undefined }),
       'summary log holds no organisation id'
     ]
   ])(
@@ -331,7 +344,9 @@ describe('backfillSummaryLogScope', () => {
   it('counts as failed a summary log whose organisation cannot be read', async () => {
     store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
     const error = new Error('database unavailable')
-    organisationsRepository = { findById: vi.fn().mockRejectedValue(error) }
+    organisationsRepository = partialMock({
+      findById: vi.fn().mockRejectedValue(error)
+    })
 
     expect(await run(false)).toMatchObject({ mapped: 0, failed: 1 })
     expect(stored('accredited')).not.toHaveProperty('year')
@@ -363,7 +378,7 @@ describe('backfillSummaryLogScope', () => {
   it('counts a summary log written but not audited, logging what was written', async () => {
     store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
     const error = new Error('audit failed')
-    systemLogsRepository.insert.mockRejectedValue(error)
+    vi.mocked(systemLogsRepository.insert).mockRejectedValue(error)
 
     expect(await run(false)).toMatchObject({ mapped: 1, auditFailed: 1 })
     expect(logger.error).toHaveBeenCalledWith({

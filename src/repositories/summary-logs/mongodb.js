@@ -158,39 +158,49 @@ const WITHOUT_SCOPE = {
   ]
 }
 
+/**
+ * @param {Db} db
+ * @returns {() => Promise<SummaryLogId[]>}
+ */
 const findIdsWithoutScope = (db) => async () => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
+  const docs = await summaryLogs(db)
     .find(WITHOUT_SCOPE, { projection: { _id: 1 } })
     .toArray()
   return docs.map((doc) => doc._id)
 }
 
+/**
+ * @param {Db} db
+ * @param {TypedLogger} logger
+ * @returns {SummaryLogsRepository['assignScope']}
+ */
 const assignScope = (db, logger) => async (id, version, scope) => {
   const validatedId = validateId(id)
   const validatedScope = validateSummaryLogScope(scope)
 
   const keys = Object.keys(validatedScope)
-  /** @type {any} */
+  /** @type {Filter<SummaryLogDocument>} */
   const filter = {
     _id: validatedId,
     version,
     ...Object.fromEntries(keys.map((key) => [key, { $exists: false }]))
   }
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .updateOne(filter, { $set: validatedScope, $inc: { version: 1 } })
+  const result = await summaryLogs(db).updateOne(filter, {
+    $set: validatedScope,
+    $inc: { version: 1 }
+  })
 
   if (result.matchedCount === 0) {
-    /** @type {any} */
-    const findFilter = { _id: validatedId }
-    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+    const existing = await summaryLogs(db).findOne({ _id: validatedId })
 
     if (!existing) {
       throw Boom.notFound(`Summary log with id ${validatedId} not found`)
     }
 
-    const held = keys.filter((key) => existing[key] !== undefined)
+    const held = keys.filter(
+      (key) =>
+        existing[/** @type {keyof SummaryLogScope} */ (key)] !== undefined
+    )
     const conflictError = new Error(
       `Version conflict: attempted to assign scope with version ${version} but current version is ${existing.version}, already holds ${held.join(', ') || 'none'}`
     )
@@ -211,7 +221,8 @@ const assignScope = (db, logger) => async (id, version, scope) => {
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { SummaryLogScope, SummaryLogsRepository, SummaryLogVersion, SummaryLogWithId } from './port.js'
+ * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
  * @typedef {SummaryLog & { _id: SummaryLogId, version: number }} SummaryLogDocument

@@ -17,8 +17,11 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
+ * @import { InsertStoredSummaryLog, StoredSummaryLog } from './contract/test-data.js'
+ * @import { Collection } from 'mongodb'
+ * @import { SummaryLogId } from '#domain/summary-logs/ids.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, insertStoredSummaryLog: (id: string, summaryLog: object) => Promise<void> }} SummaryLogsFixtures
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, insertStoredSummaryLog: InsertStoredSummaryLog }} SummaryLogsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -57,13 +60,12 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
     },
 
     insertStoredSummaryLog: async ({ mongoClient }, use) => {
+      /** @type {Collection<StoredSummaryLog & { _id: SummaryLogId, version: number }>} */
       const collection = mongoClient
         .db(DATABASE_NAME)
         .collection(COLLECTION_NAME)
       await use(async (id, summaryLog) => {
-        await collection.insertOne(
-          /** @type {any} */ ({ _id: id, version: 1, ...summaryLog })
-        )
+        await collection.insertOne({ _id: id, version: 1, ...summaryLog })
       })
     }
   })

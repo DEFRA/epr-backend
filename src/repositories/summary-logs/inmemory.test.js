@@ -7,15 +7,16 @@ import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
+/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory, SummaryLogVersion } from './port.js' */
 /** @import { SummaryLogStore } from './inmemory.js' */
+/** @import { InsertStoredSummaryLog } from './contract/test-data.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {SummaryLogStore} summaryLogsStorage
- * @property {(id: string, summaryLog: object) => Promise<void>} insertStoredSummaryLog
+ * @property {InsertStoredSummaryLog} insertStoredSummaryLog
  */
 
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
@@ -32,9 +33,12 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
 
     insertStoredSummaryLog: async ({ summaryLogsStorage }, use) => {
       await use(async (id, summaryLog) => {
+        // Holds what the store's type refuses, as the stored data does
         summaryLogsStorage.set(
-          toSummaryLogId(id),
-          /** @type {*} */ ({ version: 1, summaryLog })
+          id,
+          /** @type {SummaryLogVersion} */ (
+            /** @type {unknown} */ ({ version: 1, summaryLog })
+          )
         )
       })
     },

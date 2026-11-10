@@ -68,7 +68,7 @@
  * @typedef {(
  *   | { accreditationId: string, accreditationNumber: AccreditationNumber }
  *   | { accreditationId: null, accreditationNumber: null }
- *   | {}
+ *   | { accreditationId?: never, accreditationNumber?: never }
  * ) & { year?: Year }} SummaryLogScope
  */
 
