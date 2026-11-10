@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { findExternalAccreditations } from '#organisation-read-model/repository/mongodb.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
@@ -23,6 +24,9 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
+}))
+vi.mock('#organisation-read-model/repository/mongodb.js', () => ({
+  findExternalAccreditations: vi.fn()
 }))
 
 describe('runPrnSiteAddressDiagnostic', () => {
@@ -47,6 +51,7 @@ describe('runPrnSiteAddressDiagnostic', () => {
     })
 
     storeOrganisations([])
+    vi.mocked(findExternalAccreditations).mockResolvedValue([])
   })
 
   it('acquires a lock scoped to the diagnostic and releases it afterwards', async () => {
@@ -102,6 +107,9 @@ describe('runPrnSiteAddressDiagnostic', () => {
 
     await runPrnSiteAddressDiagnostic(server)
 
+    expect(findExternalAccreditations).toHaveBeenCalledWith(server.db, [
+      expect.objectContaining({ orgId: organisation.orgId })
+    ])
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {

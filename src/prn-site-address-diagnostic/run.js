@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { findExternalAccreditations } from '#organisation-read-model/repository/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { diagnosePrnSiteAddresses } from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js'
 
@@ -38,8 +39,10 @@ const runDiagnostic = async (server) => {
     await createOrganisationsRepository(server.db)
   )()
 
+  const organisations = await organisationsRepository.findAll()
   const { rows, summary } = diagnosePrnSiteAddresses(
-    await organisationsRepository.findAll(),
+    organisations,
+    await findExternalAccreditations(server.db, organisations),
     new Date().toISOString().slice(0, 10)
   )
 

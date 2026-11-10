@@ -1,3 +1,8 @@
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
@@ -11,6 +16,8 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnosePrnSiteAddresses } from './diagnose-prn-site-addresses.js'
+
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -26,12 +33,14 @@ const REGISTRATION_SITE = {
  * The organisations as the repository reads them, with their statuses.
  *
  * @param {ReturnType<typeof buildOrganisation>[]} organisations
+ * @param {ExternalAccreditation[]} [externalAccreditations]
  */
-const diagnose = async (organisations) =>
+const diagnose = async (organisations, externalAccreditations = []) =>
   diagnosePrnSiteAddresses(
     await createInMemoryOrganisationsRepository(
       organisations.map((organisation) => partialMock(organisation))
     )().findAll(),
+    externalAccreditations,
     TODAY
   )
 
@@ -176,6 +185,29 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(summary).toMatchObject({
       checkedRegistrations: 1,
       fullAddressOnly: 1,
+      checkedAccreditations: 0
+    })
+  })
+
+  it('does not compare a stored accreditation whose year an external accreditation holds', async () => {
+    const organisation = accreditedReprocessor({ accreditationSite: {} })
+
+    const { rows, summary } = await diagnose(
+      [organisation],
+      [
+        {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2026),
+          accreditationNumber: toAccreditationNumber('A26ER5001180999PL'),
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: { current: 'approved', timeline: [] }
+        }
+      ]
+    )
+
+    expect(rows).toStrictEqual([])
+    expect(summary).toMatchObject({
+      checkedRegistrations: 1,
       checkedAccreditations: 0
     })
   })

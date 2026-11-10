@@ -2,11 +2,13 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
+  byRegistrationAndYear,
   toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/to-read-model.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 
@@ -88,11 +90,15 @@ const accreditationFinding = (accreditation, registrationAddress) => {
 }
 
 /**
+ * The registration's stored accreditations the read model serves, each in the
+ * year it serves it. One an external accreditation replaces is not served.
+ *
  * @param {Organisation} organisation
  * @param {Registration} registration
+ * @param {Record<string, { accreditationNumber: string }>} served - the served registration's accreditations
  * @param {ReturnType<typeof readContext>} context
  */
-const servedAccreditations = (organisation, registration, context) =>
+const servedAccreditations = (organisation, registration, served, context) =>
   accreditationsForRegistration(registration, organisation).flatMap(
     (accreditation) => {
       const entry = toAccreditationEntry(accreditation, context)
@@ -100,104 +106,134 @@ const servedAccreditations = (organisation, registration, context) =>
         return []
       }
       const [year, { accreditationNumber, status }] = entry
-      return [
-        { accreditation, year, accreditationNumber, status: status.current }
-      ]
+      return served[year]?.accreditationNumber === accreditationNumber
+        ? [{ accreditation, year, accreditationNumber, status: status.current }]
+        : []
     }
   )
 
 /**
- * The site the read model serves for a reprocessor registration, or null when
- * it serves no reprocessor registration for it.
+ * The reprocessor registration the read model serves, or null when it serves
+ * none for this stored registration.
  *
  * @param {Registration} registration
  * @param {Organisation} organisation
  * @param {ReturnType<typeof readContext>} context
  */
-const servedReprocessorSite = (registration, organisation, context) => {
-  const entry = toRegistrationEntry(registration, organisation, context)
+const servedReprocessor = (registration, organisation, context) => {
+  const entry = toRegistrationEntry(
+    registration,
+    organisation,
+    context,
+    context.externalByRegistration
+  )
   if (!entry) {
     return null
   }
   const [registrationNumber, served] = entry
   return served.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-    ? { registrationNumber, address: served.site.address }
+    ? {
+        registrationNumber,
+        address: served.site.address,
+        accreditations: served.accreditations
+      }
     : null
 }
 
-/** @param {string} today */
-const readContext = (today) => ({
+/**
+ * @param {ExternalAccreditation[]} externalAccreditations
+ * @param {string} today
+ */
+const readContext = (externalAccreditations, today) => ({
   onDrop: () => {},
   overseasSitesById: new Map(),
-  today
+  today,
+  externalByRegistration: byRegistrationAndYear(externalAccreditations)
 })
 
 /**
  * Compares the site a reprocessor PRN snapshots today (the accreditation's)
  * with the one the organisation read model serves (the registration's), over
- * every registration and accreditation the read model serves (PAE-2226).
+ * every registration and stored accreditation the read model serves, with the
+ * external accreditations applied (PAE-2226).
  *
  * @param {Organisation[]} organisations
+ * @param {ExternalAccreditation[]} externalAccreditations
  * @param {string} today - ISO 8601 date
  * @returns {{ rows: SiteAddressRow[], summary: SiteAddressSummary }}
  */
-export const diagnosePrnSiteAddresses = (organisations, today) => {
-  const context = readContext(today)
-  /** @type {SiteAddressRow[]} */
-  const rows = []
-  let checkedRegistrations = 0
-  let checkedAccreditations = 0
-
-  for (const organisation of organisations) {
-    const identity = {
-      orgId: organisation.orgId,
-      testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId)
-    }
-
-    for (const registration of organisation.registrations) {
-      const served = servedReprocessorSite(registration, organisation, context)
-      if (!served) {
-        continue
-      }
-      checkedRegistrations++
-      const { registrationNumber, address } = served
-
-      if ('fullAddress' in address) {
-        rows.push({
-          finding: SITE_FINDING.FULL_ADDRESS_ONLY,
-          ...identity,
-          registrationNumber
-        })
-        continue
-      }
-
-      for (const {
-        accreditation,
-        ...accreditationKeys
-      } of servedAccreditations(organisation, registration, context)) {
-        checkedAccreditations++
-        const finding = accreditationFinding(accreditation, address)
-        if (finding) {
-          rows.push({
-            ...finding,
-            ...identity,
-            registrationNumber,
-            ...accreditationKeys
-          })
-        }
-      }
-    }
-  }
+export const diagnosePrnSiteAddresses = (
+  organisations,
+  externalAccreditations,
+  today
+) => {
+  const context = readContext(externalAccreditations, today)
+  const checked = organisations.flatMap((organisation) =>
+    organisation.registrations.flatMap((registration) =>
+      checkRegistration(organisation, registration, context)
+    )
+  )
+  const rows = checked.flatMap((registration) => registration.rows)
 
   return {
     rows,
     summary: summarise(
       rows,
       organisations.length,
-      checkedRegistrations,
-      checkedAccreditations
+      checked.length,
+      checked.reduce((total, { accreditations }) => total + accreditations, 0)
     )
   }
+}
+
+/**
+ * One served reprocessor registration's findings and how many of its
+ * accreditations were compared; none when the read model serves no
+ * reprocessor registration for it.
+ *
+ * @param {Organisation} organisation
+ * @param {Registration} registration
+ * @param {ReturnType<typeof readContext>} context
+ * @returns {{ rows: SiteAddressRow[], accreditations: number }[]}
+ */
+const checkRegistration = (organisation, registration, context) => {
+  const served = servedReprocessor(registration, organisation, context)
+  if (!served) {
+    return []
+  }
+  const { registrationNumber, address, accreditations } = served
+  const identity = {
+    orgId: organisation.orgId,
+    testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
+    registrationNumber
+  }
+
+  if ('fullAddress' in address) {
+    return [
+      {
+        rows: [{ finding: SITE_FINDING.FULL_ADDRESS_ONLY, ...identity }],
+        accreditations: 0
+      }
+    ]
+  }
+
+  const held = servedAccreditations(
+    organisation,
+    registration,
+    accreditations,
+    context
+  )
+  return [
+    {
+      rows: held.flatMap(({ accreditation, ...accreditationKeys }) => {
+        const finding = accreditationFinding(accreditation, address)
+        return finding
+          ? [{ ...finding, ...identity, ...accreditationKeys }]
+          : []
+      }),
+      accreditations: held.length
+    }
+  ]
 }
 
 /**
