@@ -6,7 +6,7 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
@@ -41,18 +41,23 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
  * @param {YearMonth[]} months
  * @returns {ReadMarketInsightsFiguresParams}
  */
-export const readParamsFor = (months) => ({
-  ledgerRepository: createInMemoryLedgerRepository()(),
-  summaryLogRowStatesRepository:
-    createInMemorySummaryLogRowStatesRepository()(),
-  organisationsRepository: createInMemoryOrganisationsRepository([])(),
-  overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-  reportsRepository: createInMemoryReportsRepository()(),
-  logger: createMockLogger(),
-  year: toYear(2026),
-  months,
-  now: PUBLISHED_EXTRACTION
-})
+export const readParamsFor = (months) => {
+  const organisationsRepository = createInMemoryOrganisationsRepository([])()
+  return {
+    ledgerRepository: createInMemoryLedgerRepository()(),
+    summaryLogRowStatesRepository:
+      createInMemorySummaryLogRowStatesRepository()(),
+    organisationsRepository,
+    organisationReadRepository: organisationReadRepositoryOver(
+      organisationsRepository
+    ),
+    reportsRepository: createInMemoryReportsRepository()(),
+    logger: createMockLogger(),
+    year: toYear(2026),
+    months,
+    now: PUBLISHED_EXTRACTION
+  }
+}
 
 /**
  * What a tab that carries figures is given for a period.

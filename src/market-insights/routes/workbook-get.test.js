@@ -197,7 +197,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
           ledgerRepository: register.ledgerRepository,
           summaryLogRowStatesRepository: register.summaryLogRowStatesRepository,
           organisationsRepository: register.organisationsRepository,
-          overseasSitesRepository: register.overseasSitesRepository,
+          organisationReadRepository: register.organisationReadRepository,
           reportsRepository: register.reportsRepository
         }
       })

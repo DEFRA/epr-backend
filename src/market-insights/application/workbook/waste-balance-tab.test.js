@@ -43,7 +43,7 @@ const FIRST_FIGURE_COLUMN = 3
 
 /**
  * @typedef {Pick<ReadMarketInsightsFiguresParams,
- *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'overseasSitesRepository' | 'reportsRepository'
+ *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'organisationReadRepository' | 'reportsRepository'
  * >} Register
  */
 
@@ -53,14 +53,14 @@ const emptyRegister = () => {
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     reportsRepository
   } = readParamsFor([])
   return {
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationsRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     reportsRepository
   }
 }
