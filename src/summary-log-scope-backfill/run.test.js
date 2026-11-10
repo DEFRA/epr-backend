@@ -38,11 +38,9 @@ describe('runSummaryLogScopeBackfill', () => {
     server = { db: {}, locker: { lock: vi.fn().mockResolvedValue(lock) } }
     vi.mocked(backfillSummaryLogScope).mockResolvedValue({
       missing: 3,
-      inFlight: 1,
       mapped: 2,
       unmapped: 1,
       yearSet: 2,
-      linkDiffers: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -58,7 +56,7 @@ describe('runSummaryLogScopeBackfill', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Summary log scope backfill (dry-run): missing=3 inFlight=1 mapped=2 unmapped=1 yearSet=2 linkDiffers=0 failed=0 auditFailed=0'
+        'Summary log scope backfill (dry-run): missing=3 mapped=2 unmapped=1 yearSet=2 failed=0 auditFailed=0'
     })
     expect(lock.free).toHaveBeenCalled()
   })

@@ -4,13 +4,12 @@ import { StatusCodes } from 'http-status-codes'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { REGISTERED_ONLY_PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { metaText } from '#domain/summary-logs/stored-meta.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { auditSummaryLogScopeBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
-/** @import { SummaryLogStatus } from '#domain/summary-logs/status.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { SummaryLogScope, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -18,11 +17,9 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 /**
  * @typedef {Object} BackfillResult
  * @property {number} missing - summary logs lacking an accreditation or a year when the run started
- * @property {number} inFlight - left for a later run while a worker may be writing them
  * @property {number} mapped - given their accreditation (would be, on a dry run)
  * @property {number} unmapped - left without an accreditation, each logged with the reason
  * @property {number} yearSet - given their year
- * @property {number} linkDiffers - given an accreditation other than the one their registration links to now, each logged
  * @property {number} failed - not written; retried on the next run
  * @property {number} auditFailed - written but not audited
  */
@@ -41,80 +38,51 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 const ONLY_ACCREDITATION_YEAR_BEFORE_SCOPING = utcYearOf('2026-01-01')
 
 /**
- * A worker writes these summary logs back at the version it read, so a
- * version bump here would fail its write. Each settles or expires.
- *
- * @type {ReadonlySet<SummaryLogStatus>}
+ * @param {OrganisationsRepository} organisationsRepository
+ * @param {string} organisationId
  */
-const IN_FLIGHT_STATUSES = new Set([
-  SUMMARY_LOG_STATUS.PREPROCESSING,
-  SUMMARY_LOG_STATUS.VALIDATING,
-  SUMMARY_LOG_STATUS.SUBMITTING
-])
-
-/** @typedef {Pick<OrganisationsRepository, 'findById'>} OrganisationLookup */
-
-/**
- * Reads each organisation once for the run.
- *
- * @param {OrganisationLookup} organisationsRepository
- * @returns {OrganisationLookup}
- */
-const readingEachOrganisationOnce = (organisationsRepository) => {
-  /** @type {Map<string, ReturnType<OrganisationLookup['findById']>>} */
-  const read = new Map()
-  return {
-    findById: (id) => {
-      if (!read.has(id)) {
-        read.set(id, organisationsRepository.findById(id))
-      }
-      return /** @type {ReturnType<OrganisationLookup['findById']>} */ (
-        read.get(id)
-      )
+const findOrganisation = async (organisationsRepository, organisationId) => {
+  try {
+    return await organisationsRepository.findById(organisationId)
+  } catch (error) {
+    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
+      return null
     }
+    throw error
   }
 }
 
 /**
- * The accreditation a summary log was uploaded for, read from the number its
- * spreadsheet names and checked against its organisation, with the
- * accreditation its registration links to now when that is another.
+ * The accreditation whose number is stored with the summary log, checked
+ * against its organisation.
  *
- * @param {OrganisationLookup} organisationsRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLog} summaryLog
- * @returns {Promise<{ scope: SummaryLogScope, linked?: string | null } | { unmapped: string }>}
+ * @returns {Promise<{ scope: SummaryLogScope } | { unmapped: string }>}
  */
 const lookUpAccreditation = async (
   organisationsRepository,
-  { organisationId, registrationId, meta }
+  { organisationId, meta }
 ) => {
   const processingType = meta?.PROCESSING_TYPE
-  if (!processingType) {
-    return { unmapped: 'spreadsheet names no processing type' }
-  }
-  if (REGISTERED_ONLY_PROCESSING_TYPES.has(processingType)) {
+  if (processingType && REGISTERED_ONLY_PROCESSING_TYPES.has(processingType)) {
     return { scope: { accreditationId: null, accreditationNumber: null } }
   }
 
   const accreditationNumber = metaText(meta?.ACCREDITATION_NUMBER)
   if (!accreditationNumber) {
-    return { unmapped: 'spreadsheet names no accreditation number' }
-  }
-  if (!organisationId) {
-    return { unmapped: 'summary log holds no organisation id' }
+    return { unmapped: 'no accreditation number stored with the summary log' }
   }
 
-  let organisation
-  try {
-    organisation = await organisationsRepository.findById(organisationId)
-  } catch (error) {
-    if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
-      return { unmapped: `organisation ${organisationId} not found` }
-    }
-    throw error
+  const organisation =
+    organisationId &&
+    (await findOrganisation(organisationsRepository, organisationId))
+  if (!organisation) {
+    return { unmapped: `organisation ${organisationId} not found` }
   }
 
   const accreditation = organisation.accreditations.find(
+    /** @returns {held is typeof held & { accreditationNumber: AccreditationNumber }} */
     (held) => held.accreditationNumber === accreditationNumber
   )
   if (!accreditation) {
@@ -122,23 +90,21 @@ const lookUpAccreditation = async (
       unmapped: `organisation ${organisationId} holds no accreditation ${accreditationNumber}`
     }
   }
-  const scope = {
-    accreditationId: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber
+  return {
+    scope: {
+      accreditationId: accreditation.id,
+      accreditationNumber: accreditation.accreditationNumber
+    }
   }
-  const linked = organisation.registrations.find(
-    (registration) => registration.id === registrationId
-  )?.accreditationId
-  return linked === accreditation.id ? { scope } : { scope, linked }
 }
 
 /**
  * The scope a summary log lacks, and why its accreditation cannot be given
  * when it cannot.
  *
- * @param {OrganisationLookup} organisationsRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @param {SummaryLog} summaryLog
- * @returns {Promise<{ lacking: SummaryLogScope, unmapped?: string, linked?: string | null }>}
+ * @returns {Promise<{ lacking: SummaryLogScope, unmapped?: string }>}
  */
 const scopeLacking = async (organisationsRepository, summaryLog) => {
   const year =
@@ -148,12 +114,6 @@ const scopeLacking = async (organisationsRepository, summaryLog) => {
   if (summaryLog.accreditationNumber !== undefined) {
     return { lacking: year }
   }
-  if (summaryLog.accreditationId !== undefined) {
-    return {
-      lacking: year,
-      unmapped: `summary log holds accreditation id ${summaryLog.accreditationId} but no number`
-    }
-  }
 
   const accreditation = await lookUpAccreditation(
     organisationsRepository,
@@ -162,10 +122,7 @@ const scopeLacking = async (organisationsRepository, summaryLog) => {
   if ('unmapped' in accreditation) {
     return { lacking: year, unmapped: accreditation.unmapped }
   }
-  return {
-    lacking: { ...accreditation.scope, ...year },
-    ...('linked' in accreditation && { linked: accreditation.linked })
-  }
+  return { lacking: { ...accreditation.scope, ...year } }
 }
 
 /**
@@ -186,31 +143,12 @@ const reportUnmapped = (
 }
 
 /**
- * @param {SummaryLogId} id
- * @param {SummaryLog} summaryLog
- * @param {SummaryLogScope} lacking
- * @param {string | null | undefined} linked
- * @param {TypedLogger} logger
- */
-const reportLinkDiffers = (
-  id,
-  { organisationId, registrationId },
-  lacking,
-  linked,
-  logger
-) => {
-  logger.info({
-    message: `Summary log accreditation differs from its registration's: summaryLogId=${id} organisationId=${organisationId} registrationId=${registrationId} accreditationId=${lacking.accreditationId} registrationAccreditationId=${linked}`
-  })
-}
-
-/**
  * Each summary log is read at its current version, given the scope it lacks
  * through the repository's version check, then audited. Once written, an
  * audit failure is logged with the scope and versions for reconciliation and
  * counted apart from write failures.
  *
- * @param {Omit<Repositories, 'organisationsRepository'> & { organisationsRepository: OrganisationLookup }} repositories
+ * @param {Repositories} repositories
  * @param {SummaryLogId} id
  * @param {boolean} isDryRun
  * @param {TypedLogger} logger
@@ -227,32 +165,20 @@ const backfillOne = async (
     return null
   }
   const { summaryLog, version } = before
-  const outcome = {
-    inFlight: 0,
-    mapped: 0,
-    unmapped: 0,
-    yearSet: 0,
-    linkDiffers: 0,
-    auditFailed: 0
-  }
-  if (IN_FLIGHT_STATUSES.has(summaryLog.status)) {
-    return { ...outcome, inFlight: 1 }
-  }
 
-  const { lacking, unmapped, ...link } = await scopeLacking(
+  const { lacking, unmapped } = await scopeLacking(
     organisationsRepository,
     summaryLog
   )
   if (unmapped) {
     reportUnmapped(id, summaryLog, unmapped, logger)
-    outcome.unmapped = 1
   }
-  if ('linked' in link) {
-    reportLinkDiffers(id, summaryLog, lacking, link.linked, logger)
-    outcome.linkDiffers = 1
+  const outcome = {
+    mapped: Number('accreditationNumber' in lacking),
+    unmapped: Number(Boolean(unmapped)),
+    yearSet: Number('year' in lacking),
+    auditFailed: 0
   }
-  outcome.mapped = Number('accreditationNumber' in lacking)
-  outcome.yearSet = Number('year' in lacking)
   if (Object.keys(lacking).length === 0 || isDryRun) {
     return outcome
   }
@@ -280,8 +206,8 @@ const backfillOne = async (
 
 /**
  * Gives each summary log stored before summary logs were scoped by
- * accreditation and year the accreditation its spreadsheet names and the
- * year it was uploaded in. Logs one line for each summary log whose
+ * accreditation and year the accreditation whose number is stored with it
+ * and the year it is for. Logs one line for each summary log whose
  * accreditation it cannot give, saying why.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
@@ -289,31 +215,23 @@ const backfillOne = async (
  * @returns {Promise<BackfillResult>}
  */
 export const backfillSummaryLogScope = async (
-  { logger, organisationsRepository, ...repositories },
+  { logger, ...repositories },
   { isDryRun }
 ) => {
-  const reading = {
-    ...repositories,
-    organisationsRepository: readingEachOrganisationOnce(
-      organisationsRepository
-    )
-  }
   const ids = await repositories.summaryLogsRepository.findIdsWithoutScope()
   /** @type {BackfillResult} */
   const result = {
     missing: ids.length,
-    inFlight: 0,
     mapped: 0,
     unmapped: 0,
     yearSet: 0,
-    linkDiffers: 0,
     failed: 0,
     auditFailed: 0
   }
 
   for (const id of ids) {
     try {
-      const outcome = await backfillOne(reading, id, isDryRun, logger) // NOSONAR(javascript:S9382) one at a time, to spare the database
+      const outcome = await backfillOne(repositories, id, isDryRun, logger) // NOSONAR(javascript:S9382) one at a time, to spare the database
       for (const [count, value] of Object.entries(outcome ?? {})) {
         result[/** @type {keyof BackfillResult} */ (count)] += value
       }

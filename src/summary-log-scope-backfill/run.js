@@ -34,28 +34,20 @@ const runBackfill = async (server) => {
     logger
   )
 
-  const {
-    missing,
-    inFlight,
-    mapped,
-    unmapped,
-    yearSet,
-    linkDiffers,
-    failed,
-    auditFailed
-  } = await backfillSummaryLogScope(
-    {
-      summaryLogsRepository,
-      systemLogsRepository,
-      organisationsRepository,
-      logger
-    },
-    { isDryRun }
-  )
+  const { missing, mapped, unmapped, yearSet, failed, auditFailed } =
+    await backfillSummaryLogScope(
+      {
+        summaryLogsRepository,
+        systemLogsRepository,
+        organisationsRepository,
+        logger
+      },
+      { isDryRun }
+    )
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Summary log scope backfill (${mode}): missing=${missing} inFlight=${inFlight} mapped=${mapped} unmapped=${unmapped} yearSet=${yearSet} linkDiffers=${linkDiffers} failed=${failed} auditFailed=${auditFailed}`
+    message: `Summary log scope backfill (${mode}): missing=${missing} mapped=${mapped} unmapped=${unmapped} yearSet=${yearSet} failed=${failed} auditFailed=${auditFailed}`
   })
 }
 

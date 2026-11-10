@@ -147,16 +147,14 @@ describe('backfillSummaryLogScope', () => {
         message?.startsWith('Summary log accreditation unmapped')
       )
 
-  it('records the accreditation the spreadsheet names, and the year, auditing each as the system user', async () => {
+  it('records the accreditation whose number is stored with the summary log, and the year, auditing each as the system user', async () => {
     store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
 
     expect(await run(false)).toEqual({
       missing: 1,
-      inFlight: 0,
       mapped: 1,
       unmapped: 0,
       yearSet: 1,
-      linkDiffers: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -245,19 +243,14 @@ describe('backfillSummaryLogScope', () => {
       `organisation ${organisationId} holds no accreditation 500123`
     ],
     [
-      'an accreditation id stored without its number',
-      { ...unscoped(uploadedFor(accreditedMeta)), accreditationId },
-      `summary log holds accreditation id ${accreditationId} but no number`
-    ],
-    [
       'no accreditation number for an accredited processing type',
       unscoped(uploadedFor({ PROCESSING_TYPE: PROCESSING_TYPES.EXPORTER })),
-      'spreadsheet names no accreditation number'
+      'no accreditation number stored with the summary log'
     ],
     [
       'no processing type',
-      unscoped(uploadedFor({ ACCREDITATION_NUMBER: 'ACC500123' })),
-      'spreadsheet names no processing type'
+      unscoped(uploadedFor({})),
+      'no accreditation number stored with the summary log'
     ],
     [
       'an organisation that has gone',
@@ -270,7 +263,7 @@ describe('backfillSummaryLogScope', () => {
     [
       'no organisation id',
       unscoped({ ...uploadedFor(accreditedMeta), organisationId: undefined }),
-      'summary log holds no organisation id'
+      'organisation undefined not found'
     ]
   ])(
     'records only the year, and reports the accreditation unmapped, for %s',
@@ -317,11 +310,9 @@ describe('backfillSummaryLogScope', () => {
 
     expect(await run(true)).toEqual({
       missing: 2,
-      inFlight: 0,
       mapped: 1,
       unmapped: 1,
       yearSet: 2,
-      linkDiffers: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -330,62 +321,6 @@ describe('backfillSummaryLogScope', () => {
     expect(stored('accredited')).not.toHaveProperty('year')
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
     expect(unmappedLines()).toHaveLength(1)
-  })
-
-  it('records an accreditation other than the one its registration links to now, and reports it', async () => {
-    const otherAccreditationId = '6512a0c2f1e4b8a9d0c3e444'
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      /** @type {*} */ ({
-        ...organisation,
-        accreditations: [
-          ...organisation.accreditations,
-          buildAccreditation({
-            id: otherAccreditationId,
-            accreditationNumber: toAccreditationNumber('ACC500999')
-          })
-        ]
-      })
-    ])()
-    store({
-      relinked: unscoped(
-        uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 'ACC500999' })
-      )
-    })
-
-    expect(await run(false)).toMatchObject({ mapped: 1, linkDiffers: 1 })
-
-    expect(stored('relinked')).toMatchObject({
-      accreditationId: otherAccreditationId
-    })
-    expect(logger.info).toHaveBeenCalledWith({
-      message: `Summary log accreditation differs from its registration's: summaryLogId=relinked organisationId=${organisationId} registrationId=${registrationId} accreditationId=${otherAccreditationId} registrationAccreditationId=${accreditationId}`
-    })
-  })
-
-  it('reads each organisation once', async () => {
-    store({
-      first: unscoped(uploadedFor(accreditedMeta)),
-      second: unscoped(uploadedFor(accreditedMeta))
-    })
-    const findById = vi.spyOn(organisationsRepository, 'findById')
-
-    expect(await run(false)).toMatchObject({ mapped: 2 })
-    expect(findById).toHaveBeenCalledTimes(1)
-  })
-
-  it('leaves alone a summary log that a worker may be writing, and counts it', async () => {
-    store({
-      preprocessing: unscoped({ status: 'preprocessing' }),
-      validating: unscoped({ status: 'validating' }),
-      submitting: unscoped({ status: 'submitting' })
-    })
-
-    expect(await run(false)).toMatchObject({
-      missing: 3,
-      inFlight: 3,
-      mapped: 0
-    })
-    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
   it('records only the year on a summary log that holds its accreditation', async () => {
