@@ -16,7 +16,8 @@ import {
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
- * @import { SummaryLogsS3Config } from './mongodb.js'
+ * @import { Collection } from 'mongodb'
+ * @import { SummaryLogDocument, SummaryLogsS3Config } from './mongodb.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
  * @import { StoredSummaryLog } from './inmemory.js'
  * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, summaryLogsRepositoryHolding: (summaryLogs: StoredSummaryLog[]) => Promise<SummaryLogsRepository> }} SummaryLogsFixtures
@@ -62,16 +63,17 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
       use
     ) => {
       await use(async (summaryLogs) => {
-        await mongoClient
+        /** @type {Collection<SummaryLogDocument>} */
+        const collection = mongoClient
           .db(DATABASE_NAME)
           .collection(COLLECTION_NAME)
-          .insertMany(
-            summaryLogs.map(({ id, summaryLog }) => ({
-              _id: id,
-              version: 1,
-              ...summaryLog
-            }))
-          )
+        await collection.insertMany(
+          summaryLogs.map(({ id, summaryLog }) => ({
+            _id: id,
+            version: 1,
+            ...summaryLog
+          }))
+        )
         return summaryLogsRepository
       })
     }
