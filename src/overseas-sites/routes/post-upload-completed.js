@@ -11,6 +11,7 @@ import {
   orsImportUploadPath
 } from '#domain/uploads/upload-locations.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { config } from '#root/config.js'
 
 import {
@@ -83,7 +84,7 @@ export const orsUploadCompleted = {
   method: 'POST',
   path: orsUploadCompletedPath,
   options: {
-    auth: false,
+    auth: { strategies: [UPLOAD_CALLBACK] },
     validate: {
       payload: orsUploadCompletedPayloadSchema
     }

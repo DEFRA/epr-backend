@@ -7,6 +7,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -18,7 +19,9 @@ const organisationId = organisation.id
 const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/upload-1/file-1`
 
 const buildPostUrl = (summaryLogId) =>
-  `/organisations/${organisation.orgId}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  signedCallback(
+    `/organisations/${organisation.orgId}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  )
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly

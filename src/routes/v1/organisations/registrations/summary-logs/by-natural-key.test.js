@@ -209,7 +209,7 @@ describe('summary-log routes by natural key', () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `${uploads}/${summaryLogId}/upload-completed`,
+          url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
           payload: uploadCompletedFor(registration.id)
         })
 
@@ -310,7 +310,9 @@ describe('summary-log routes by natural key', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      url: signedCallback(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
+      ),
       payload: uploadCompletedFor(accreditedRegistration.id)
     })
 
@@ -334,7 +336,9 @@ describe('summary-log routes by natural key', () => {
 
     await server.inject({
       method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      url: signedCallback(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
+      ),
       payload: uploadCompletedFor(accreditedRegistration.id)
     })
 
@@ -477,7 +481,9 @@ describe('summary-log routes by natural key', () => {
     [
       'completing an upload under a registration with no accreditation',
       'POST',
-      `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`,
+      signedCallback(
+        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
+      ),
       uploadCompletedFor(registeredOnlyRegistration.id)
     ],
     [

@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { orsUploadCompletedPath } from './post-upload-completed.js'
@@ -13,6 +14,11 @@ const fileId = 'file-456'
 const filename = 'sites.xlsx'
 const s3Bucket = 're-ex-overseas-sites'
 const s3Key = '/overseas-sites/imports/import-123/upload-1/file-456'
+
+const uploadCompletedPath = (id) =>
+  `/v1/overseas-sites/imports/${id}/upload-completed`
+
+const uploadCompletedUrl = (id) => signedCallback(uploadCompletedPath(id))
 
 const createPayload = (overrides = {}) => ({
   form: {
@@ -92,7 +98,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload()
     })
 
@@ -108,7 +114,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload()
     })
 
@@ -130,7 +136,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createMultipleFilesPayload()
     })
 
@@ -156,7 +162,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload()
     })
 
@@ -175,7 +181,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload({
         fileStatus: 'rejected',
         s3Bucket: undefined,
@@ -195,7 +201,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload({
         fileStatus: 'rejected',
         s3Bucket: undefined,
@@ -216,7 +222,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: {
         form: {
           orsUpload: [
@@ -255,7 +261,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: {
         form: {
           orsUpload: [
@@ -330,7 +336,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+          url: uploadCompletedUrl(importId),
           payload: { form: { orsUpload } }
         })
 
@@ -345,10 +351,43 @@ describe(`${orsUploadCompletedPath} route`, () => {
     )
   })
 
+  describe('when the callback is not signed for its path', () => {
+    it.for([
+      { description: 'no signature', url: uploadCompletedPath(importId) },
+      {
+        description: "another import's signature",
+        url: uploadCompletedUrl('import-999').replace('import-999', importId)
+      }
+    ])(
+      'refuses $description, and leaves the import untouched',
+      async ({ url }) => {
+        await orsImportsRepository.create({
+          _id: importId,
+          status: ORS_IMPORT_STATUS.PREPROCESSING,
+          files: []
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url,
+          payload: createPayload()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+        const doc = await orsImportsRepository.findById(importId)
+        expect(doc).toMatchObject({
+          status: ORS_IMPORT_STATUS.PREPROCESSING,
+          files: []
+        })
+        expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
+      }
+    )
+  })
+
   it('returns 404 when import does not exist', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/nonexistent/upload-completed`,
+      url: uploadCompletedUrl('nonexistent'),
       payload: createPayload()
     })
 
@@ -358,7 +397,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
   it('returns 422 when payload is missing form.orsUpload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: { uploadStatus: 'ready' }
     })
 
@@ -368,7 +407,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
   it('returns 422 when file is complete but missing s3 info', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      url: uploadCompletedUrl(importId),
       payload: createPayload({ s3Bucket: undefined, s3Key: undefined })
     })
 
@@ -385,7 +424,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
       await server.inject({
         method: 'POST',
-        url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+        url: uploadCompletedUrl(importId),
         payload: createPayload()
       })
 
@@ -421,7 +460,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
       const response = await failServer.inject({
         method: 'POST',
-        url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+        url: uploadCompletedUrl(importId),
         payload: createPayload()
       })
 

@@ -31,6 +31,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
+import { signedCallback } from '#test/upload-callback.js'
 
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
@@ -516,13 +517,15 @@ export const buildGetUrl = (summaryLogId) =>
  * @param {{ accredited?: boolean }} [options]
  */
 export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
-  uploadCompletedPath({
-    organisationNumber: String(TEST_ORGANISATION_NUMBER),
-    registrationNumber: TEST_REGISTRATION_NUMBER,
-    year: UPLOAD_YEAR,
-    accredited,
-    summaryLogId
-  })
+  signedCallback(
+    uploadCompletedPath({
+      organisationNumber: String(TEST_ORGANISATION_NUMBER),
+      registrationNumber: TEST_REGISTRATION_NUMBER,
+      year: UPLOAD_YEAR,
+      accredited,
+      summaryLogId
+    })
+  )
 
 /** @param {string} summaryLogId */
 export const buildSubmitUrl = (summaryLogId) =>

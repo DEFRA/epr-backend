@@ -15,6 +15,7 @@ import {
   summaryLogUploadPath
 } from '#domain/uploads/upload-locations.js'
 import { config } from '#root/config.js'
+import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
   formatS3Info,
@@ -88,7 +89,7 @@ const isUploadedForRegistration = (upload, ids) =>
 export const summaryLogsUploadCompletedYear = {
   method: 'POST',
   options: {
-    auth: false,
+    auth: { strategies: [UPLOAD_CALLBACK] },
     validate: {
       payload: uploadCompletedPayloadSchema
     }

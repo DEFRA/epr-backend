@@ -17,6 +17,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -55,8 +56,11 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
   numberOfRejectedFiles: 0
 })
 
-const uploadCompletedUrl = (year, summaryLogId) =>
+const uploadCompletedPath = (year, summaryLogId) =>
   `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
+
+const uploadCompletedUrl = (year, summaryLogId) =>
+  signedCallback(uploadCompletedPath(year, summaryLogId))
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
@@ -71,7 +75,6 @@ const createTestOrganisationsRepository = () =>
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
-  // but the route itself is unauthenticated.
   setupAuthContext()
 
   let server
@@ -199,7 +202,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: signedCallback(
+          `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+        ),
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -237,7 +242,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: signedCallback(
+          `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+        ),
         payload: createCompletePayload('file-unnumbered')
       })
 
@@ -367,6 +374,35 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
       }
     )
+  })
+
+  describe('when the callback is not signed for its path', () => {
+    it.for([
+      {
+        description: 'no signature',
+        urlFor: (summaryLogId) => uploadCompletedPath(2026, summaryLogId)
+      },
+      {
+        description: "another summary log's signature",
+        urlFor: (summaryLogId) =>
+          uploadCompletedUrl(2026, 'another-summary-log').replace(
+            'another-summary-log',
+            summaryLogId
+          )
+      }
+    ])('refuses $description, and stores nothing', async ({ urlFor }) => {
+      const summaryLogId = randomUUID()
+
+      const response = await server.inject({
+        method: 'POST',
+        url: urlFor(summaryLogId),
+        payload: createCompletePayload()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+      expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
+    })
   })
 
   it.each([
