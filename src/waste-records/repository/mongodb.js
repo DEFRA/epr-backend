@@ -124,7 +124,7 @@ const hashSummaryLogRowState = (candidate) =>
 
 /**
  * Builds the content-addressed identity filter for a row state — exactly the
- * fields of the unique `summary_log_row_state_identity` index. Using the unique
+ * fields of the unique `summary_log_row_state_identity_by_number` index. Using the unique
  * key as the upsert filter is what makes concurrent writers converge on a
  * single document: MongoDB retries the upsert against the winning insert
  * instead of surfacing a duplicate-key error.
