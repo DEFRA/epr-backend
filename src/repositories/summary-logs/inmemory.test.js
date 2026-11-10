@@ -16,6 +16,7 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {SummaryLogStore} summaryLogsStorage
+ * @property {SummaryLogStore} summaryLogsStaleCache
  * @property {InsertStoredSummaryLog} insertStoredSummaryLog
  */
 
@@ -26,20 +27,33 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
       await use(new Map())
     },
 
-    summaryLogsRepositoryFactory: async ({ summaryLogsStorage }, use) => {
-      const factory = createInMemorySummaryLogsRepository(summaryLogsStorage)
+    // eslint-disable-next-line no-empty-pattern
+    summaryLogsStaleCache: async ({}, use) => {
+      await use(new Map())
+    },
+
+    summaryLogsRepositoryFactory: async (
+      { summaryLogsStorage, summaryLogsStaleCache },
+      use
+    ) => {
+      const factory = createInMemorySummaryLogsRepository(
+        summaryLogsStorage,
+        summaryLogsStaleCache
+      )
       await use(factory)
     },
 
-    insertStoredSummaryLog: async ({ summaryLogsStorage }, use) => {
+    insertStoredSummaryLog: async (
+      { summaryLogsStorage, summaryLogsStaleCache },
+      use
+    ) => {
       await use(async (id, summaryLog) => {
         // Holds what the store's type refuses, as the stored data does
-        summaryLogsStorage.set(
-          id,
-          /** @type {SummaryLogVersion} */ (
-            /** @type {unknown} */ ({ version: 1, summaryLog })
-          )
+        const stored = /** @type {SummaryLogVersion} */ (
+          /** @type {unknown} */ ({ version: 1, summaryLog })
         )
+        summaryLogsStorage.set(id, stored)
+        summaryLogsStaleCache.set(id, structuredClone(stored))
       })
     },
 

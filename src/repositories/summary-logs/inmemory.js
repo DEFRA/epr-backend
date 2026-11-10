@@ -432,11 +432,14 @@ const transitionToSubmittingExclusive =
  *
  * @param {SummaryLogStore} [storage] - what is stored, by id; a test seeds
  *   here a summary log stored in a shape `insert` no longer accepts
+ * @param {SummaryLogStore} [staleCache] - what reads see; a test seeding
+ *   after the factory is made seeds here too
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createInMemorySummaryLogsRepository = (storage = new Map()) => {
-  const staleCache = structuredClone(storage)
-
+export const createInMemorySummaryLogsRepository = (
+  storage = new Map(),
+  staleCache = structuredClone(storage)
+) => {
   return (logger) => ({
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),

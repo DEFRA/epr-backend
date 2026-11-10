@@ -155,6 +155,8 @@ describe('backfillSummaryLogScope', () => {
       inFlight: 0,
       mapped: 1,
       unmapped: 0,
+      yearSet: 1,
+      linkDiffers: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -236,6 +238,18 @@ describe('backfillSummaryLogScope', () => {
       `organisation ${organisationId} holds no accreditation ACC999999`
     ],
     [
+      'an accreditation number stored as a number',
+      unscoped(
+        uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 500123 })
+      ),
+      `organisation ${organisationId} holds no accreditation 500123`
+    ],
+    [
+      'an accreditation id stored without its number',
+      { ...unscoped(uploadedFor(accreditedMeta)), accreditationId },
+      `summary log holds accreditation id ${accreditationId} but no number`
+    ],
+    [
       'no accreditation number for an accredited processing type',
       unscoped(uploadedFor({ PROCESSING_TYPE: PROCESSING_TYPES.EXPORTER })),
       'spreadsheet names no accreditation number'
@@ -263,7 +277,12 @@ describe('backfillSummaryLogScope', () => {
     async (_description, summaryLog, reason) => {
       store({ unmapped: summaryLog })
 
-      expect(await run(false)).toMatchObject({ mapped: 1, unmapped: 1 })
+      expect(await run(false)).toMatchObject({
+        mapped: 0,
+        unmapped: 1,
+        yearSet: 1,
+        failed: 0
+      })
 
       expect(stored('unmapped').year).toBe(2026)
       expect(stored('unmapped')).not.toHaveProperty('accreditationNumber')
@@ -299,8 +318,10 @@ describe('backfillSummaryLogScope', () => {
     expect(await run(true)).toEqual({
       missing: 2,
       inFlight: 0,
-      mapped: 2,
+      mapped: 1,
       unmapped: 1,
+      yearSet: 2,
+      linkDiffers: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -309,6 +330,47 @@ describe('backfillSummaryLogScope', () => {
     expect(stored('accredited')).not.toHaveProperty('year')
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
     expect(unmappedLines()).toHaveLength(1)
+  })
+
+  it('records an accreditation other than the one its registration links to now, and reports it', async () => {
+    const otherAccreditationId = '6512a0c2f1e4b8a9d0c3e444'
+    organisationsRepository = createInMemoryOrganisationsRepository([
+      /** @type {*} */ ({
+        ...organisation,
+        accreditations: [
+          ...organisation.accreditations,
+          buildAccreditation({
+            id: otherAccreditationId,
+            accreditationNumber: toAccreditationNumber('ACC500999')
+          })
+        ]
+      })
+    ])()
+    store({
+      relinked: unscoped(
+        uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 'ACC500999' })
+      )
+    })
+
+    expect(await run(false)).toMatchObject({ mapped: 1, linkDiffers: 1 })
+
+    expect(stored('relinked')).toMatchObject({
+      accreditationId: otherAccreditationId
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: `Summary log accreditation differs from its registration's: summaryLogId=relinked organisationId=${organisationId} registrationId=${registrationId} accreditationId=${otherAccreditationId} registrationAccreditationId=${accreditationId}`
+    })
+  })
+
+  it('reads each organisation once', async () => {
+    store({
+      first: unscoped(uploadedFor(accreditedMeta)),
+      second: unscoped(uploadedFor(accreditedMeta))
+    })
+    const findById = vi.spyOn(organisationsRepository, 'findById')
+
+    expect(await run(false)).toMatchObject({ mapped: 2 })
+    expect(findById).toHaveBeenCalledTimes(1)
   })
 
   it('leaves alone a summary log that a worker may be writing, and counts it', async () => {

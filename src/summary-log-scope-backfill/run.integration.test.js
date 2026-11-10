@@ -126,7 +126,7 @@ describe('runSummaryLogScopeBackfill (mongo)', () => {
     expect(await database.collection('system-logs').countDocuments()).toBe(0)
     expect(infoLines()).toEqual(
       expect.arrayContaining([
-        'Summary log scope backfill (dry-run): missing=3 inFlight=0 mapped=3 unmapped=1 failed=0 auditFailed=0',
+        'Summary log scope backfill (dry-run): missing=3 inFlight=0 mapped=2 unmapped=1 yearSet=3 linkDiffers=0 failed=0 auditFailed=0',
         expect.stringMatching(
           /^Summary log accreditation unmapped: summaryLogId=organisation-gone .* reason="organisation \w+ not found"$/
         )
@@ -171,8 +171,8 @@ describe('runSummaryLogScopeBackfill (mongo)', () => {
 
     expect(infoLines()).toEqual(
       expect.arrayContaining([
-        'Summary log scope backfill (backfill): missing=3 inFlight=0 mapped=3 unmapped=1 failed=0 auditFailed=0',
-        'Summary log scope backfill (backfill): missing=1 inFlight=0 mapped=0 unmapped=1 failed=0 auditFailed=0'
+        'Summary log scope backfill (backfill): missing=3 inFlight=0 mapped=2 unmapped=1 yearSet=3 linkDiffers=0 failed=0 auditFailed=0',
+        'Summary log scope backfill (backfill): missing=1 inFlight=0 mapped=0 unmapped=1 yearSet=0 linkDiffers=0 failed=0 auditFailed=0'
       ])
     )
   })
