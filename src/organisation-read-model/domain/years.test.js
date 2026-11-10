@@ -25,6 +25,7 @@ const approvedFrom = (date, accreditations = {}) => ({
 })
 
 const MARCH_15TH_2027 = new Date('2027-03-15T10:00:00.000Z')
+const END_DATE = calendarDate('2027-03-15')
 
 describe('organisationYears', () => {
   it('lists the current year for a registration approved this year', () => {
@@ -32,7 +33,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2027-01-10T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([2027])
+    expect(organisationYears(organisation, END_DATE)).toEqual([2027])
   })
 
   it('lists every year from approval to now while it stays approved', () => {
@@ -40,7 +41,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2025-02-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([
+    expect(organisationYears(organisation, END_DATE)).toEqual([
       2027, 2026, 2025
     ])
   })
@@ -51,9 +52,7 @@ describe('organisationYears', () => {
       { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([
-      2026, 2025
-    ])
+    expect(organisationYears(organisation, END_DATE)).toEqual([2026, 2025])
   })
 
   it('does not list the year when cancelled on the first of January', () => {
@@ -62,7 +61,7 @@ describe('organisationYears', () => {
       { status: 'cancelled', at: '2026-01-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([2025])
+    expect(organisationYears(organisation, END_DATE)).toEqual([2025])
   })
 
   it('skips the years between a cancellation and a reinstatement', () => {
@@ -72,7 +71,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2026-09-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([
+    expect(organisationYears(organisation, END_DATE)).toEqual([
       2027, 2026, 2024
     ])
   })
@@ -82,7 +81,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2028-01-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toEqual([])
+    expect(organisationYears(organisation, END_DATE)).toEqual([])
   })
 
   it('merges registrations without duplicates, newest first', () => {
@@ -94,14 +93,14 @@ describe('organisationYears', () => {
       ]
     )
 
-    expect(organisationYears(organisation, MARCH_15TH_2027)).toStrictEqual([
+    expect(organisationYears(organisation, END_DATE)).toStrictEqual([
       2027, 2026, 2025
     ])
   })
 
   it('lists nothing when there are no registrations', () => {
     expect(
-      organisationYears(partialMock({ registrations: {} }), MARCH_15TH_2027)
+      organisationYears(partialMock({ registrations: {} }), END_DATE)
     ).toEqual([])
   })
 })
@@ -436,14 +435,16 @@ describe('regAccStatusByYear', () => {
     ).toEqual(['2024', '2026'])
   })
 
-  it('includes a later year the registration holds an accreditation for', () => {
+  it('covers the year of an accreditation up to the year of the end date', () => {
+    const withAccreditationFor2027 = partialMock(
+      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+    )
+
+    expect(regAccStatusByYear(withAccreditationFor2027, TODAY)).toEqual({
+      2026: { '2026-06-02': registeredOnly }
+    })
     expect(
-      regAccStatusByYear(
-        partialMock(
-          approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
-        ),
-        TODAY
-      )
+      regAccStatusByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
     ).toEqual({
       2026: { '2026-06-02': registeredOnly },
       2027: { '2027-01-01': accredited }
