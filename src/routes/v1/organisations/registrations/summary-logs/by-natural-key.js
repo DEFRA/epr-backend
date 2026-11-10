@@ -1,8 +1,7 @@
 import Joi from 'joi'
 
-import { signedUploadCallbackPath } from '#common/helpers/auth/upload-callback-signature.js'
+import { uploadCallbackUrl } from '#common/helpers/auth/upload-callback-signature.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { config } from '#root/config.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
@@ -55,8 +54,7 @@ const callbackToNaturalKeys = (accredited) => (request) => {
       request.app
     )
   app.summaryLogCallbackUrl = (id) =>
-    `${config.get('appBaseUrl')}${signedUploadCallbackPath(
-      config.get('cdpUploader.callbackHmacKey'),
+    uploadCallbackUrl(
       uploadCompletedPath({
         organisationNumber,
         registrationNumber,
@@ -64,7 +62,7 @@ const callbackToNaturalKeys = (accredited) => (request) => {
         accredited,
         summaryLogId: id
       })
-    )}`
+    )
 }
 
 /**

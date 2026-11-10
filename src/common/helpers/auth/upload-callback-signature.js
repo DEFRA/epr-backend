@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
+import { config } from '#root/config.js'
+
 /**
  * @param {string} key - 64 hex characters
  * @param {string} path
@@ -18,6 +20,16 @@ const signatureFor = (key, path) =>
  */
 export const signedUploadCallbackPath = (key, path) =>
   `${path}?signature=${signatureFor(key, path).toString('hex')}`
+
+/**
+ * The URL to give CDP Uploader for an upload's callback: this service's base
+ * URL and the signed path.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+export const uploadCallbackUrl = (path) =>
+  `${config.get('appBaseUrl')}${signedUploadCallbackPath(config.get('cdpUploader.callbackHmacKey'), path)}`
 
 /**
  * @param {string} key - 64 hex characters
