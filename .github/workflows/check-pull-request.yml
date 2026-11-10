@@ -98,8 +98,8 @@ jobs:
 
   # The one context the branch ruleset requires from this workflow, so every
   # blocking job must appear in `needs` below. Left out on purpose: test-journey,
-  # because `Run Journey Tests` is required separately, and journey-summary and
-  # typecheck-burndown, because they are advisory.
+  # because `Run Journey Tests` is required separately, and journey-summary,
+  # typecheck-burndown and database-id-count, because they are advisory.
   pr-checks:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest
@@ -144,6 +144,34 @@ jobs:
       pull-requests: write
     steps:
       - uses: DEFRA/epr-re-ex-service/.github/actions/typecheck-burndown@main
+
+  database-id-count:
+    name: Database ids outside the MongoDB adapters
+    runs-on: ubuntu-latest
+    needs: pr-prep
+    if: needs.pr-prep.outputs.docs-only != 'true'
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Count database ids
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/database-id-count.mjs . base "$BASE_REF" | tee "$RUNNER_TEMP/database-id-count.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: database-id-count
+          path: ${{ runner.temp }}/database-id-count.md
 
   dependency-review:
     name: Dependency Review
