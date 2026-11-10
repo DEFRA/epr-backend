@@ -26,7 +26,7 @@ const findingLine = (row) =>
           `hasTown=${row.hasTown}`,
           `hasPostcode=${row.hasPostcode}`,
           `accreditations=${row.accreditations}`,
-          `approvedAccreditations=${row.approvedAccreditations}`
+          `heldAccreditations=${row.heldAccreditations}`
         ]
       : []),
     ...(row.accreditationNumber

@@ -1,6 +1,7 @@
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   byRegistrationAndYear,
   toAccreditationEntry,
@@ -34,14 +35,14 @@ export const SITE_FINDING = Object.freeze({
  * @property {boolean} [hasTown]
  * @property {boolean} [hasPostcode]
  * @property {number} [accreditations]
- * @property {number} [approvedAccreditations]
+ * @property {number} [heldAccreditations]
  *
  * @typedef {Object} SiteAddressSummary
  * @property {number} scannedOrganisations
  * @property {number} checkedRegistrations
  * @property {number} fullAddressOnly
- * @property {number} fullOnlyApproved
- * @property {number} fullOnlyApprovedWithLine1AndPostcode
+ * @property {number} fullOnlyHeld
+ * @property {number} fullOnlyHeldWithLine1AndPostcode
  * @property {number} checkedAccreditations
  * @property {number} matched
  * @property {number} siteDiffers
@@ -227,14 +228,8 @@ const checkRegistration = (organisation, registration, context) => {
     registrationNumber
   }
 
-  const held = servedAccreditations(
-    organisation,
-    registration,
-    accreditations,
-    context
-  )
-
   if ('fullAddress' in address) {
+    const served = Object.values(accreditations)
     return [
       {
         rows: [
@@ -242,9 +237,9 @@ const checkRegistration = (organisation, registration, context) => {
             finding: SITE_FINDING.FULL_ADDRESS_ONLY,
             ...identity,
             ...storedAddressPresence(registration.site.address),
-            accreditations: held.length,
-            approvedAccreditations: held.filter(
-              ({ status }) => status === 'approved'
+            accreditations: served.length,
+            heldAccreditations: served.filter(({ status }) =>
+              HELD_ACCREDITATION_STATUSES.has(status.current)
             ).length
           }
         ],
@@ -253,6 +248,12 @@ const checkRegistration = (organisation, registration, context) => {
     ]
   }
 
+  const held = servedAccreditations(
+    organisation,
+    registration,
+    accreditations,
+    context
+  )
   return [
     {
       rows: held.flatMap(({ accreditation, ...accreditationKeys }) => {
@@ -287,16 +288,16 @@ const summarise = (
     rows.filter((row) => row.differs === differs).length
   const siteDiffers = count(SITE_FINDING.SITE_DIFFERS)
   const noAccreditationSite = count(SITE_FINDING.NO_ACCREDITATION_SITE)
-  const fullOnlyApproved = rows.filter(
-    ({ approvedAccreditations = 0 }) => approvedAccreditations > 0
+  const fullOnlyHeld = rows.filter(
+    ({ heldAccreditations = 0 }) => heldAccreditations > 0
   )
 
   return {
     scannedOrganisations,
     checkedRegistrations,
     fullAddressOnly: count(SITE_FINDING.FULL_ADDRESS_ONLY),
-    fullOnlyApproved: fullOnlyApproved.length,
-    fullOnlyApprovedWithLine1AndPostcode: fullOnlyApproved.filter(
+    fullOnlyHeld: fullOnlyHeld.length,
+    fullOnlyHeldWithLine1AndPostcode: fullOnlyHeld.filter(
       ({ hasLine1, hasPostcode }) => hasLine1 && hasPostcode
     ).length,
     checkedAccreditations,

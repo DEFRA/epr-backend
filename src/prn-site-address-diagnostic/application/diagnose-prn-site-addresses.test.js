@@ -11,6 +11,7 @@ import {
   accreditation,
   exporter,
   exporterAccreditation,
+  granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -27,6 +28,12 @@ const REGISTRATION_SITE = {
   line1: '7 Glass processing site',
   town: 'London',
   postcode: 'SW2A 0AA'
+}
+
+const FULL_ADDRESS_SITE = {
+  line1: '7',
+  postcode: 'SW2A 0AA',
+  fullAddress: '7 Glass processing site London SW2A 0AA'
 }
 
 /**
@@ -51,6 +58,7 @@ const diagnose = async (organisations, externalAccreditations = []) =>
  * @param {{
  *   registrationAddress?: object,
  *   accreditationSite?: object,
+ *   accreditationStatus?: 'approved' | 'suspended' | 'cancelled',
  *   orgId?: number
  * }} [options]
  */
@@ -59,9 +67,14 @@ const accreditedReprocessor = ({
   accreditationSite = {
     address: { line1: '7 Glass processing site', postcode: 'SW2A 0AA' }
   },
+  accreditationStatus = 'approved',
   orgId
 } = {}) => {
-  const held = accreditation({ site: accreditationSite })
+  const held = accreditation({
+    site: accreditationSite,
+    status: accreditationStatus,
+    statusHistory: granted(accreditationStatus)
+  })
   const registration = reprocessor({ accreditationId: held.id })
   return buildOrganisation({
     ...(orgId && { orgId }),
@@ -84,8 +97,8 @@ describe('diagnosePrnSiteAddresses', () => {
       scannedOrganisations: 1,
       checkedRegistrations: 1,
       fullAddressOnly: 0,
-      fullOnlyApproved: 0,
-      fullOnlyApprovedWithLine1AndPostcode: 0,
+      fullOnlyHeld: 0,
+      fullOnlyHeldWithLine1AndPostcode: 0,
       checkedAccreditations: 1,
       matched: 1,
       siteDiffers: 0,
@@ -186,16 +199,82 @@ describe('diagnosePrnSiteAddresses', () => {
         hasTown: false,
         hasPostcode: true,
         accreditations: 1,
-        approvedAccreditations: 1
+        heldAccreditations: 1
       }
     ])
     expect(summary).toMatchObject({
       checkedRegistrations: 1,
       fullAddressOnly: 1,
-      fullOnlyApproved: 1,
-      fullOnlyApprovedWithLine1AndPostcode: 1,
+      fullOnlyHeld: 1,
+      fullOnlyHeldWithLine1AndPostcode: 1,
       checkedAccreditations: 0
     })
+  })
+
+  it.each([
+    ['an approved', 'approved', 1],
+    ['a suspended', 'suspended', 1],
+    ['a cancelled', 'cancelled', 0]
+  ])(
+    'counts %s accreditation of a full-address registration as held only when it is not cancelled',
+    async (_description, accreditationStatus, held) => {
+      const organisation = accreditedReprocessor({
+        registrationAddress: FULL_ADDRESS_SITE,
+        accreditationStatus:
+          /** @type {'approved' | 'suspended' | 'cancelled'} */ (
+            accreditationStatus
+          )
+      })
+
+      const { rows, summary } = await diagnose([organisation])
+
+      expect(rows).toMatchObject([
+        { accreditations: 1, heldAccreditations: held }
+      ])
+      expect(summary).toMatchObject({ fullOnlyHeld: held })
+    }
+  )
+
+  it('counts the external accreditation that replaces a stored one, not the stored one', async () => {
+    const organisation = accreditedReprocessor({
+      registrationAddress: FULL_ADDRESS_SITE
+    })
+
+    const { rows } = await diagnose(
+      [organisation],
+      [
+        {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2026),
+          accreditationNumber: toAccreditationNumber('A26ER5001180999PL'),
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: { current: 'cancelled', timeline: [] }
+        }
+      ]
+    )
+
+    expect(rows).toMatchObject([{ accreditations: 1, heldAccreditations: 0 }])
+  })
+
+  it('counts a year only an external accreditation holds', async () => {
+    const organisation = accreditedReprocessor({
+      registrationAddress: FULL_ADDRESS_SITE
+    })
+
+    const { rows } = await diagnose(
+      [organisation],
+      [
+        {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2027),
+          accreditationNumber: toAccreditationNumber('A27ER5001180999PL'),
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: { current: 'approved', timeline: [] }
+        }
+      ]
+    )
+
+    expect(rows).toMatchObject([{ accreditations: 2, heldAccreditations: 2 }])
   })
 
   it('reports a full-address registration holding only a full address and no accreditation', async () => {
@@ -216,17 +295,17 @@ describe('diagnosePrnSiteAddresses', () => {
         hasTown: false,
         hasPostcode: false,
         accreditations: 0,
-        approvedAccreditations: 0
+        heldAccreditations: 0
       }
     ])
     expect(summary).toMatchObject({
       fullAddressOnly: 1,
-      fullOnlyApproved: 0,
-      fullOnlyApprovedWithLine1AndPostcode: 0
+      fullOnlyHeld: 0,
+      fullOnlyHeldWithLine1AndPostcode: 0
     })
   })
 
-  it('does not count an approved full-address registration as holding line1 and postcode when its stored postcode is missing', async () => {
+  it('does not count a held full-address registration as holding line1 and postcode when its stored postcode is missing', async () => {
     const organisation = accreditedReprocessor({
       registrationAddress: {
         line1: '7',
@@ -237,8 +316,8 @@ describe('diagnosePrnSiteAddresses', () => {
     const { summary } = await diagnose([organisation])
 
     expect(summary).toMatchObject({
-      fullOnlyApproved: 1,
-      fullOnlyApprovedWithLine1AndPostcode: 0
+      fullOnlyHeld: 1,
+      fullOnlyHeldWithLine1AndPostcode: 0
     })
   })
 
