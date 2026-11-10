@@ -20,6 +20,8 @@ const acceptedDate = new Date('2026-01-20T10:00:00Z')
 const rejectedDate = new Date('2026-01-22T10:00:00Z')
 const cancelledDate = new Date('2026-01-25T10:00:00Z')
 
+const EXTERNAL_IDS = { organisationId: 'org-123', accreditationId: 'acc-789' }
+
 const creator = { id: 'user-123', name: 'Test User' }
 const issuer = { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
 const producer = { id: 'user-producer', name: 'Producer User' }
@@ -34,15 +36,12 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   version: 1,
   prnNumber: 'ER2600001',
   organisation: {
-    id: 'org-123',
     organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Reprocessor Ltd',
     tradingName: 'Reprocessor Trading'
   },
-  registrationId: 'reg-456',
   registration: TEST_REGISTRATION,
   accreditation: {
-    id: 'acc-789',
     accreditationNumber: toAccreditationNumber('A26ER1075628626-PL'),
     accreditationYear: toYear(2026),
     material: 'plastic',
@@ -84,7 +83,7 @@ describe('mapToExternalPrn', () => {
   it('maps all required fields for an awaiting_acceptance PRN', () => {
     const prn = buildAwaitingAcceptancePrn()
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result).toEqual({
       id: '507f1f77bcf86cd799439011',
@@ -119,6 +118,20 @@ describe('mapToExternalPrn', () => {
     })
   })
 
+  it('states the ids it is given, not those a PRN raised before PAE-2226 stores', () => {
+    const prn = buildAwaitingAcceptancePrn()
+    const stored = {
+      ...prn,
+      organisation: { ...prn.organisation, id: 'stored-org' },
+      accreditation: { ...prn.accreditation, id: 'stored-acc' }
+    }
+
+    const result = mapToExternalPrn(stored, EXTERNAL_IDS)
+
+    expect(result.issuedByOrganisation.id).toBe('org-123')
+    expect(result.accreditation.id).toBe('acc-789')
+  })
+
   it('maps acceptedAt from the accepted status slot', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
@@ -131,7 +144,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status.acceptedAt).toEqual(acceptedDate)
   })
@@ -148,7 +161,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status.rejectedAt).toEqual(rejectedDate)
   })
@@ -166,7 +179,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status.cancelledAt).toEqual(cancelledDate)
   })
@@ -181,7 +194,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status).toEqual({
       currentStatus: PRN_STATUS.AWAITING_AUTHORISATION
@@ -200,7 +213,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status.authorisedBy).toEqual({
       fullName: 'Issuer User'
@@ -219,7 +232,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.status.authorisedBy).toEqual({})
     expect('fullName' in result.status.authorisedBy).toBe(false)
@@ -235,7 +248,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.issuedToOrganisation.registrationType).toBe('LARGE_PRODUCER')
   })
@@ -243,7 +256,7 @@ describe('mapToExternalPrn', () => {
   it('omits registrationType when not present on organisations', () => {
     const prn = buildAwaitingAcceptancePrn()
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.issuedToOrganisation).not.toHaveProperty('registrationType')
     expect(result.issuedByOrganisation).not.toHaveProperty('registrationType')
@@ -252,14 +265,13 @@ describe('mapToExternalPrn', () => {
   it('omits tradingName when not present on organisations', () => {
     const prn = buildAwaitingAcceptancePrn({
       organisation: {
-        id: 'org-123',
         organisationNumber: TEST_ORGANISATION_NUMBER,
         name: 'Reprocessor Ltd'
       },
       issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Corp' }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.issuedByOrganisation).toEqual({
       id: 'org-123',
@@ -282,7 +294,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.prnNumber).toBeUndefined()
   })
@@ -290,7 +302,7 @@ describe('mapToExternalPrn', () => {
   it('omits issuerNotes when notes are absent', () => {
     const prn = buildAwaitingAcceptancePrn({ notes: undefined })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.issuerNotes).toBeUndefined()
   })
@@ -298,7 +310,6 @@ describe('mapToExternalPrn', () => {
   it('includes glassRecyclingProcess when present on accreditation', () => {
     const prn = buildAwaitingAcceptancePrn({
       accreditation: {
-        id: 'acc-789',
         accreditationNumber: toAccreditationNumber('A26ER1075628626-GL'),
         accreditationYear: toYear(2026),
         material: 'glass',
@@ -307,7 +318,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.accreditation.glassRecyclingProcess).toBe('glass_re_melt')
   })
@@ -323,7 +334,6 @@ describe('mapToExternalPrn', () => {
     }
     const prn = buildAwaitingAcceptancePrn({
       accreditation: {
-        id: 'acc-789',
         accreditationNumber: toAccreditationNumber('A26ER1075628626-PL'),
         accreditationYear: toYear(2026),
         material: 'plastic',
@@ -332,7 +342,7 @@ describe('mapToExternalPrn', () => {
       }
     })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.accreditation.siteAddress).toEqual(siteAddress)
   })
@@ -340,7 +350,7 @@ describe('mapToExternalPrn', () => {
   it('maps an export PRN correctly', () => {
     const prn = buildAwaitingAcceptancePrn({ isExport: true })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result.isExport).toBe(true)
   })
@@ -348,7 +358,7 @@ describe('mapToExternalPrn', () => {
   it('omits the internal lastAppliedEventNumber watermark', () => {
     const prn = buildAwaitingAcceptancePrn({ lastAppliedEventNumber: 7 })
 
-    const result = mapToExternalPrn(prn)
+    const result = mapToExternalPrn(prn, EXTERNAL_IDS)
 
     expect(result).not.toHaveProperty('lastAppliedEventNumber')
   })

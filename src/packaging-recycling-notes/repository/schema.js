@@ -18,7 +18,12 @@ const organisationNameAndIdSchema = Joi.object({
   registrationType: Joi.string().optional()
 })
 
+// PRNs raised before PAE-2226 also hold their organisation, registration and
+// accreditation database ids; nothing reads them.
+const storedIdSchema = Joi.string().optional()
+
 const organisationSnapshotSchema = organisationNameAndIdSchema.keys({
+  id: storedIdSchema,
   organisationNumber: Joi.string().required()
 })
 
@@ -32,7 +37,7 @@ const siteAddressSchema = Joi.object({
 })
 
 const accreditationSchema = Joi.object({
-  id: Joi.string().required(),
+  id: storedIdSchema,
   accreditationNumber: Joi.string().required(),
   accreditationYear: Joi.number().integer().required(),
   material: Joi.string()
@@ -95,7 +100,7 @@ export const prnInsertSchema = Joi.object({
   lastAppliedEventNumber: Joi.number().integer().min(1).optional(),
   prnNumber: Joi.string().allow(null).optional(),
   organisation: organisationSnapshotSchema.required(),
-  registrationId: Joi.string().required(),
+  registrationId: storedIdSchema,
   registration: Joi.object({
     registrationNumber: Joi.string().required()
   }).required(),

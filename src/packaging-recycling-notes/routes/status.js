@@ -25,6 +25,7 @@ import { writeConflictRefusal } from './write-conflict-refusal.js'
  * @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { HapiRequest, TypedLogger } from '#common/hapi-types.js'
  * @import { OnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
+ * @import { PrnKeys } from './at-prn-keys.js'
  */
 
 const UPDATE_STATUS_FAILURE = 'Failure updating a PRN status'
@@ -122,7 +123,7 @@ export const updatePrnStatusHandler =
   /**
    * @param {HapiRequest<{ status: PrnStatus }> & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   params: { organisationId: string, registrationId: string, accreditationId: string, id: string },
+   *   params: PrnKeys & { id: string },
    *   prnEvents: { onCancelled: OnPrnCancelled }
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -131,14 +132,15 @@ export const updatePrnStatusHandler =
     const {
       packagingRecyclingNotesRepository,
       ledgerRepository,
-      organisationsRepository,
+      organisationReadRepository,
       prnEvents,
       params,
       payload,
       logger,
       auth
     } = request
-    const { organisationId, accreditationId, id } = params
+    const { organisationNumber, registrationNumber, accreditationNumber, id } =
+      params
     const { status: newStatus } = payload
     const user = buildUser(auth)
 
@@ -157,12 +159,15 @@ export const updatePrnStatusHandler =
       const updatedPrn = await updatePrnStatus({
         prnRepository: packagingRecyclingNotesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents,
         logger,
         id,
-        organisationId,
-        accreditationId,
+        accreditationNumbers: {
+          organisationNumber,
+          registrationNumber,
+          accreditationNumber
+        },
         newStatus,
         actor,
         user,

@@ -114,10 +114,11 @@ const keyedByYear = (schema) => Joi.object().pattern(yearKey, schema).required()
 const ukAddressSchema = Joi.alternatives().try(
   Joi.object({
     county: Joi.string(),
+    fullAddress: Joi.string(),
     line1: Joi.string().required(),
     line2: Joi.string(),
     postcode: Joi.string().required(),
-    town: Joi.string().required()
+    town: Joi.string()
   }),
   Joi.object({ fullAddress: Joi.string().required() })
 )

@@ -14,23 +14,23 @@ import {
 const DEFAULT_CONFIG = { windowStart: '12-01T00:00' }
 
 const outputReprocessor = {
-  id: 'acc-output',
+  accreditationNumber: 'A26ER0000000001PA',
+  accreditationYear: toYear(2026),
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  reprocessingType: REPROCESSING_TYPE.OUTPUT,
-  validFrom: '2026-01-01'
+  reprocessingType: REPROCESSING_TYPE.OUTPUT
 }
 
 const inputReprocessor = {
-  id: 'acc-input',
+  accreditationNumber: 'A26ER0000000002PA',
+  accreditationYear: toYear(2026),
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  reprocessingType: REPROCESSING_TYPE.INPUT,
-  validFrom: '2026-01-01'
+  reprocessingType: REPROCESSING_TYPE.INPUT
 }
 
 const exporter = {
-  id: 'acc-exporter',
-  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-  validFrom: '2026-01-01'
+  accreditationNumber: 'A26EX0000000003PA',
+  accreditationYear: toYear(2026),
+  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
 }
 
 describe('isWithinDecemberWasteWindow', () => {

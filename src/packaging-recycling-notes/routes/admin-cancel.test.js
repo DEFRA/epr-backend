@@ -106,7 +106,6 @@ const buildAcceptedPrn = ({
   registrationId,
   registration: { registrationNumber: DEFAULT_REG_NUMBER },
   accreditation: buildAccreditationSnapshot({
-    id: accreditationId,
     accreditationNumber: LEDGER.accreditationNumber,
     accreditationYear
   }),

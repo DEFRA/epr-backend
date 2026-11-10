@@ -494,8 +494,12 @@ function toUkAddress({
   postcode,
   fullAddress
 } = {}) {
-  if (line1 && town && postcode) {
-    return { line1, town, postcode, ...omitNullish({ line2, county }) }
+  if (line1 && postcode) {
+    return {
+      line1,
+      postcode,
+      ...omitNullish({ town, line2, county, fullAddress })
+    }
   }
   if (fullAddress) {
     return { fullAddress }

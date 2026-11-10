@@ -31,7 +31,7 @@ export const testFindBehaviour = (it) => {
 
       it('retrieves a PRN by id after create', async () => {
         const prnInput = buildDraftPrn({
-          organisation: { id: 'org-find-test', name: 'Find Test Org' },
+          organisation: { name: 'Find Test Org' },
           tonnage: 123.45
         })
 
@@ -40,25 +40,25 @@ export const testFindBehaviour = (it) => {
 
         expect(found).toBeTruthy()
         expect(found.id).toBe(created.id)
-        expect(found.organisation.id).toBe('org-find-test')
+        expect(found.organisation.name).toBe('Find Test Org')
         expect(found.tonnage).toBe(123.45)
       })
 
       it('does not return PRNs with different ids', async () => {
         const prn1 = await repository.create(
           buildDraftPrn({
-            organisation: { id: 'org-A', name: 'Org A' }
+            organisation: { name: 'Org A' }
           })
         )
         await repository.create(
           buildDraftPrn({
-            organisation: { id: 'org-B', name: 'Org B' }
+            organisation: { name: 'Org B' }
           })
         )
 
         const found = await repository.findById(prn1.id)
 
-        expect(found.organisation.id).toBe('org-A')
+        expect(found.organisation.name).toBe('Org A')
       })
     })
 
@@ -181,7 +181,9 @@ export const testFindBehaviour = (it) => {
         const result = await repository.findByAccreditation(accreditationA)
 
         expect(result).toHaveLength(1)
-        expect(result[0].organisation.id).toBe(accreditationA.organisationId)
+        expect(result[0].organisation.organisationNumber).toBe(
+          accreditationA.organisationNumber
+        )
       })
 
       it('reads nothing for the same accreditation under a different organisation', async () => {

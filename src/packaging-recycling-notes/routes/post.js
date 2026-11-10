@@ -8,7 +8,6 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
@@ -19,6 +18,10 @@ import {
   closedYearConflict,
   closedYearRefusal
 } from '#packaging-recycling-notes/domain/closed-year.js'
+import {
+  toIssuingAccreditation,
+  toPrnSiteAddress
+} from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
@@ -26,21 +29,17 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { processingTypeFor } from '#waste-balances/domain/credited-tonnage.js'
 import { availableForPool } from '#waste-balances/domain/pool-balances.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
-import { findOrganisationAndRegistrationReadModels } from '#root/routes/organisations/natural-keys.js'
 
 /**
- * @import { Accreditation, AccreditationAddress } from '#domain/organisations/accreditation.js'
- * @import { Actor, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { Actor, AccreditationSnapshot, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { IssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue } from '#domain/organisations/model.js'
- * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { AccreditationContext } from '#waste-balances/domain/credited-tonnage.js'
- * @import { AccreditationParams } from './by-natural-key.js'
+ * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/domain/model.js'
+ * @import { PrnKeys, PrnRecords } from './at-prn-keys.js'
  */
 
 /**
@@ -62,62 +61,39 @@ const CREATE_PRN_FAILURE = 'Failure creating a PRN'
 const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
 
 /**
- * @typedef {{
- *   id: string,
- *   accreditationNumber: AccreditationNumber,
- *   accreditationYear: Year,
- *   material: AppliedForMaterial,
- *   submittedToRegulator: RegulatorValue,
- *   glassRecyclingProcess?: GlassRecyclingProcess
- *   siteAddress?: AccreditationAddress
- * }} SnapshotAccreditation
+ * The accreditation as it stands when the PRN is raised, which the PRN states
+ * as a certificate does.
+ *
+ * @param {IssuingAccreditation} accreditation
+ * @param {AccreditationSnapshot['siteAddress']} siteAddress
+ * @returns {AccreditationSnapshot}
  */
-
-/**
- * Build PRN data for creation
- * @param {Accreditation} accreditation
- * @return {SnapshotAccreditation}
- */
-const snapshotAccreditation = (accreditation) => {
-  /**
-   * @type {SnapshotAccreditation}
-   */
-  const snapshot = {
-    id: accreditation.id,
-    // Only an approved accreditation has a number; the insert schema refuses a
-    // PRN snapshot without one.
-    accreditationNumber: /** @type {AccreditationNumber} */ (
-      accreditation.accreditationNumber
-    ),
-    accreditationYear: deriveAccreditationYear(accreditation),
-    material: accreditation.material,
-    submittedToRegulator: /** @type {RegulatorValue} */ (
-      accreditation.submittedToRegulator
-    )
-  }
-
-  if (
-    accreditation.material === 'glass' &&
-    accreditation.glassRecyclingProcess?.[0]
-  ) {
-    snapshot.glassRecyclingProcess = accreditation.glassRecyclingProcess[0]
-  }
-
-  if (accreditation.site?.address) {
-    snapshot.siteAddress = accreditation.site.address
-  }
-
-  return snapshot
-}
+const snapshotAccreditation = (
+  {
+    accreditationNumber,
+    accreditationYear,
+    material,
+    submittedToRegulator,
+    glassRecyclingProcess
+  },
+  siteAddress
+) => ({
+  accreditationNumber,
+  accreditationYear,
+  material,
+  submittedToRegulator,
+  ...(glassRecyclingProcess && { glassRecyclingProcess }),
+  ...(siteAddress && { siteAddress })
+})
 
 /**
  * Build PRN data for creation
  *
  * @param {{
  *   organisation: OrganisationSnapshot,
- *   registrationId: string,
  *   registrationNumber: RegistrationNumber,
- *   accreditation: Accreditation,
+ *   accreditation: IssuingAccreditation,
+ *   siteAddress: AccreditationSnapshot['siteAddress'],
  *   payload: PackagingRecyclingNotesCreatePayload,
  *   user: Actor,
  *   isExport: boolean,
@@ -126,21 +102,23 @@ const snapshotAccreditation = (accreditation) => {
  */
 const buildPrnData = ({
   organisation,
-  registrationId,
   registrationNumber,
   accreditation,
+  siteAddress,
   payload,
   user,
   isExport,
   now
 }) => {
-  const accreditationSnapshot = snapshotAccreditation(accreditation)
+  const accreditationSnapshot = snapshotAccreditation(
+    accreditation,
+    siteAddress
+  )
 
   return {
     schemaVersion: 2,
     version: 1,
     organisation,
-    registrationId,
     registration: { registrationNumber },
     accreditation: accreditationSnapshot,
     obligationYear: accreditationSnapshot.accreditationYear,
@@ -212,7 +190,7 @@ const throwCreatePrnError = (error, logger) => {
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.tonnage
  * @param {boolean} params.isDecemberWaste
- * @param {Accreditation} params.accreditation
+ * @param {IssuingAccreditation} params.accreditation
  */
 const assertSufficientAvailableBalance = async ({
   ledgerRepository,
@@ -245,17 +223,20 @@ const assertSufficientAvailableBalance = async ({
 }
 
 /**
- * @param {Accreditation} accreditation
+ * @param {IssuingAccreditation} accreditation
  * @param {Date} now
  */
 const assertRelevantYearOpen = (accreditation, now) => {
   const refusal = closedYearRefusal({
-    accreditationYear: deriveAccreditationYear(accreditation),
+    accreditationYear: accreditation.accreditationYear,
     newStatus: PRN_STATUS.DRAFT,
     now
   })
   if (refusal) {
-    throw closedYearConflict(refusal, `accreditationId=${accreditation.id}`)
+    throw closedYearConflict(
+      refusal,
+      `accreditationNumber=${accreditation.accreditationNumber}`
+    )
   }
 }
 
@@ -263,7 +244,7 @@ const assertRelevantYearOpen = (accreditation, now) => {
  * The rules a draft must satisfy before it is created.
  *
  * @param {Object} params
- * @param {Accreditation} params.accreditation
+ * @param {IssuingAccreditation} params.accreditation
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
@@ -300,33 +281,22 @@ const assertCreatable = async ({
 
 /**
  * @param {Object} params
- * @param {Accreditation} params.accreditation
+ * @param {IssuingAccreditation} params.accreditation
  * @param {boolean} params.isDecemberWaste
  */
 const recordPrnCreatedMetric = async ({ accreditation, isDecemberWaste }) => {
   await prnMetrics.recordCreated({
     material: accreditation.material,
     isDecemberWaste,
-    processingType: processingTypeFor(
-      /** @type {AccreditationContext} */ (accreditation)
-    )
+    processingType: processingTypeFor(accreditation)
   })
 }
 
 /**
- * @param {Object} params
- * @param {string} params.organisationId
- * @param {OrganisationNumber} params.organisationNumber
- * @param {string} params.name
- * @param {string} [params.tradingName]
+ * @param {ReadModelOrganisation} organisation
+ * @returns {OrganisationSnapshot}
  */
-const buildOrganisationSnapshot = ({
-  organisationId,
-  organisationNumber,
-  name,
-  tradingName
-}) => ({
-  id: organisationId,
+const snapshotOrganisation = ({ organisationNumber, name, tradingName }) => ({
   organisationNumber,
   name,
   ...(tradingName && { tradingName })
@@ -341,23 +311,21 @@ export const createPrn =
   (respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
-   *   organisationsRepository: OrganisationsRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   params: { organisationId: string, registrationId: string, accreditationId: string } & AccreditationParams
+   *   params: PrnKeys,
+   *   app: PrnRecords
    * }} request
    * @param {HapiResponseToolkit} h
    */
   async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      organisationsRepository,
       ledgerRepository,
       params,
       payload,
       logger,
       auth
     } = request
-    const { organisationId, registrationId, accreditationId } = params
     const user = {
       id: auth.credentials?.id ?? 'unknown',
       name: auth.credentials?.name ?? 'unknown'
@@ -365,9 +333,11 @@ export const createPrn =
     const now = new Date()
 
     try {
-      const accreditation = await organisationsRepository.findAccreditationById(
-        organisationId,
-        accreditationId
+      const { organisation, registration } = request.app
+      const accreditation = toIssuingAccreditation(
+        registration,
+        request.app.accreditation,
+        params.year
       )
 
       await assertCreatable({
@@ -382,30 +352,20 @@ export const createPrn =
         now
       })
 
-      const isExport =
-        accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-
-      const { organisation: readOrganisation } =
-        await findOrganisationAndRegistrationReadModels(request)
-
-      const organisation = buildOrganisationSnapshot({
-        organisationId,
-        organisationNumber: params.organisationNumber,
-        name: readOrganisation.name,
-        tradingName: readOrganisation.tradingName
-      })
-
-      const prnData = buildPrnData({
-        organisation,
-        registrationId,
-        registrationNumber: params.registrationNumber,
-        accreditation,
-        payload,
-        user,
-        isExport,
-        now
-      })
-      const prn = await packagingRecyclingNotesRepository.create(prnData)
+      const prn = await packagingRecyclingNotesRepository.create(
+        buildPrnData({
+          organisation: snapshotOrganisation(organisation),
+          registrationNumber: params.registrationNumber,
+          accreditation,
+          siteAddress: toPrnSiteAddress(registration),
+          payload,
+          user,
+          isExport:
+            accreditation.wasteProcessingType ===
+            WASTE_PROCESSING_TYPE.EXPORTER,
+          now
+        })
+      )
 
       await recordPrnCreatedMetric({
         accreditation,
