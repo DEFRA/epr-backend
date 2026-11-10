@@ -18,6 +18,32 @@ import { parseUploadUri } from './s3-uri.js'
  */
 
 /**
+ * Calls back the way CDP Uploader does once a file is scanned and stored.
+ *
+ * @param {string} callbackUrl
+ * @param {{ s3Bucket: string, s3Key: string }} location
+ */
+const postCompletedCallback = async (callbackUrl, { s3Bucket, s3Key }) => {
+  await fetch(callbackUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      form: {
+        file: {
+          fileId: randomUUID(),
+          filename: 'summary-log.xlsx',
+          fileStatus: 'complete',
+          s3Bucket,
+          s3Key
+        }
+      }
+    })
+  })
+}
+
+/**
  * Creates an in-memory uploads repository for testing.
  *
  * @param {{ orsBucket?: string, summaryLogsBucket?: string }} [config] - Optional configuration
@@ -107,24 +133,9 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
 
-      const payload = {
-        form: {
-          file: {
-            fileId: randomUUID(),
-            filename: 'summary-log.xlsx',
-            fileStatus: 'complete',
-            s3Bucket: summaryLogsBucket,
-            s3Key
-          }
-        }
-      }
-
-      await fetch(callbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+      await postCompletedCallback(callbackUrl, {
+        s3Bucket: summaryLogsBucket,
+        s3Key
       })
 
       return { s3Uri }
