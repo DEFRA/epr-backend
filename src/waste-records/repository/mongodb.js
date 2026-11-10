@@ -19,10 +19,6 @@ import { createHash } from 'node:crypto'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/**
- * @typedef {import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId} NumberedLedgerId
- */
-
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
@@ -64,15 +60,17 @@ export async function ensureSummaryLogRowStatesCollection(db) {
 
   await collection.createIndex(
     {
-      organisationId: 1,
-      registrationId: 1,
-      accreditationId: 1,
+      organisationNumber: 1,
+      registrationNumber: 1,
+      accreditationNumber: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     },
-    { name: 'summary_log_row_state_identity', unique: true }
+    { name: 'summary_log_row_state_identity_by_number', unique: true }
   )
+
+  await dropIndexIfPresent(collection, 'summary_log_row_state_identity')
 
   return collection
 }
@@ -126,7 +124,7 @@ const hashSummaryLogRowState = (candidate) =>
 
 /**
  * Builds the content-addressed identity filter for a row state — exactly the
- * fields of the unique `summary_log_row_state_identity` index. Using the unique
+ * fields of the unique `summary_log_row_state_identity_by_number` index. Using the unique
  * key as the upsert filter is what makes concurrent writers converge on a
  * single document: MongoDB retries the upsert against the winning insert
  * instead of surfacing a duplicate-key error.
@@ -135,9 +133,9 @@ const hashSummaryLogRowState = (candidate) =>
  * @param {string} contentHash
  */
 const buildIdentityFilter = (candidate, contentHash) => ({
-  organisationId: candidate.organisationId,
-  registrationId: candidate.registrationId,
-  accreditationId: candidate.accreditationId,
+  organisationNumber: candidate.organisationNumber,
+  registrationNumber: candidate.registrationNumber,
+  accreditationNumber: candidate.accreditationNumber,
   rowId: candidate.rowId,
   wasteRecordType: candidate.wasteRecordType,
   contentHash
@@ -145,9 +143,9 @@ const buildIdentityFilter = (candidate, contentHash) => ({
 
 const identityKey = (fields) =>
   JSON.stringify([
-    fields.organisationId,
-    fields.registrationId,
-    fields.accreditationId,
+    fields.organisationNumber,
+    fields.registrationNumber,
+    fields.accreditationNumber,
     fields.rowId,
     fields.wasteRecordType,
     fields.contentHash
@@ -180,9 +178,6 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
-        organisationNumber: candidate.organisationNumber,
-        registrationNumber: candidate.registrationNumber,
-        accreditationNumber: candidate.accreditationNumber,
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -194,7 +189,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
 })
 
 /**
- * @param {NumberedLedgerId} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {SummaryLogFileId} summaryLogId
  */
@@ -220,7 +215,7 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
  * their content-addressed identity.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>}
  */
 const performUpsertSummaryLogRowStates =
   (collection) => async (ledgerId, summaryLogRowStates, summaryLogId) => {

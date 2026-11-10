@@ -138,7 +138,7 @@ export const updatePrnStatusHandler =
       logger,
       auth
     } = request
-    const { organisationId, registrationId, accreditationId, id } = params
+    const { organisationId, accreditationId, id } = params
     const { status: newStatus } = payload
     const user = buildUser(auth)
 
@@ -162,7 +162,6 @@ export const updatePrnStatusHandler =
         logger,
         id,
         organisationId,
-        registrationId,
         accreditationId,
         newStatus,
         actor,

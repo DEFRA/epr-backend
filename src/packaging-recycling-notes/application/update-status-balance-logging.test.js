@@ -186,7 +186,6 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
       user: issueUser
@@ -225,7 +224,6 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -264,7 +262,6 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.DELETED,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -311,7 +308,6 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.CANCELLED,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -348,7 +344,6 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
-      registrationId: REG_ID,
       newStatus: PRN_STATUS.DISCARDED,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
       user: issueUser

@@ -445,9 +445,6 @@ describe('syncFromSummaryLog', () => {
       wasteBalanceService.commitSummaryLogSubmittedEvent
     ).toHaveBeenCalledWith(
       {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        accreditationId: null,
         organisationNumber: '500001',
         registrationNumber: 'REG-1',
         accreditationNumber: null

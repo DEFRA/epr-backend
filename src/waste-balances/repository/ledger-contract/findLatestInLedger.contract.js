@@ -113,9 +113,9 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       )
 
       expect(x.number).toBe(1)
-      expect(x.accreditationId).toBe('acc-x')
+      expect(x.accreditationNumber).toBe('ACC-acc-x')
       expect(y.number).toBe(1)
-      expect(y.accreditationId).toBe('acc-y')
+      expect(y.accreditationNumber).toBe('ACC-acc-y')
     })
 
     it('does not read a ledger named under a different organisation', async () => {
