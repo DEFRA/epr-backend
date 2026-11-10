@@ -17,7 +17,12 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
  *
- * @typedef {{ summaryLogsRepository: SummaryLogsRepository }} NaturalKeyFixtures
+ * @import { StoredSummaryLog } from '../inmemory.js'
+ *
+ * @typedef {{
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogsRepositoryHolding: (summaryLogs: StoredSummaryLog[]) => Promise<SummaryLogsRepository>
+ * }} NaturalKeyFixtures
  */
 
 /** @param {string} prefix */
@@ -515,6 +520,152 @@ export const testFindByNaturalKey = (it) => {
         })
 
         expect(result.map(({ id }) => id)).toEqual([unscopedId])
+      })
+    })
+
+    // No writer stores these shapes now, so they are held from the start
+    // rather than inserted.
+    describe('reading summary logs whose accreditation has no number', () => {
+      const year = toYear(2026)
+
+      /**
+       * A submitted summary log of the registration in the year, stored as
+       * given.
+       *
+       * @param {Record<string, unknown>} accreditation
+       * @param {string} submittedAt
+       * @returns {StoredSummaryLog}
+       */
+      const storedWith = (accreditation, submittedAt) => {
+        const {
+          accreditationId: _a,
+          accreditationNumber: _n,
+          ...summaryLog
+        } = summaryLogFactory.submitted({
+          ...stored.ids,
+          ...stored.key,
+          year,
+          submittedAt
+        })
+        return {
+          id: toSummaryLogId(new ObjectId().toString()),
+          summaryLog: /** @type {SummaryLog} */ ({
+            ...summaryLog,
+            ...accreditation
+          })
+        }
+      }
+
+      const holding = () => {
+        const legacy = storedWith({}, '2026-01-01T00:00:00.000Z')
+        const current = storedWith(
+          accredited(stored.current),
+          '2026-02-01T00:00:00.000Z'
+        )
+        const registeredOnlyWithNullNumber = storedWith(
+          registeredOnly,
+          '2026-03-01T00:00:00.000Z'
+        )
+        const registeredOnlyWithoutNumber = storedWith(
+          { accreditationId: null },
+          '2026-04-01T00:00:00.000Z'
+        )
+        const unnumbered = storedWith(
+          { accreditationId: stored.previous.id },
+          '2026-05-01T00:00:00.000Z'
+        )
+        return {
+          legacy,
+          current,
+          registeredOnlyWithNullNumber,
+          registeredOnlyWithoutNumber,
+          unnumbered,
+          all: [
+            legacy,
+            current,
+            registeredOnlyWithNullNumber,
+            registeredOnlyWithoutNumber,
+            unnumbered
+          ]
+        }
+      }
+
+      it("finds the accreditation's own and legacy summary logs when read by another accreditation's number", async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findAll({
+          ...stored.key,
+          year,
+          accreditationNumber: stored.current.accreditationNumber
+        })
+
+        expect(result.map(({ id }) => id)).toEqual([
+          logs.current.id,
+          logs.legacy.id
+        ])
+      })
+
+      it('finds the latest of its own summary logs when read by number, past a newer unnumbered one', async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findLatestSubmitted({
+          ...stored.key,
+          year,
+          accreditationNumber: stored.current.accreditationNumber
+        })
+
+        expect(result?.id).toBe(logs.current.id)
+      })
+
+      it('finds registered-only and legacy summary logs when read as registered-only', async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findAll({
+          ...stored.key,
+          year,
+          accreditationNumber: null
+        })
+
+        expect(result.map(({ id }) => id)).toEqual([
+          logs.registeredOnlyWithoutNumber.id,
+          logs.registeredOnlyWithNullNumber.id,
+          logs.legacy.id
+        ])
+      })
+
+      it('finds the latest registered-only summary log when read as registered-only, past a newer unnumbered one', async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findLatestSubmitted({
+          ...stored.key,
+          year,
+          accreditationNumber: null
+        })
+
+        expect(result?.id).toBe(logs.registeredOnlyWithoutNumber.id)
+      })
+
+      it('finds every summary log when the key names no accreditation', async (/** @type {NaturalKeyFixtures} */ {
+        summaryLogsRepositoryHolding
+      }) => {
+        const logs = holding()
+        const repository = await summaryLogsRepositoryHolding(logs.all)
+
+        const result = await repository.findAll({ ...stored.key, year })
+
+        expect(result).toHaveLength(logs.all.length)
       })
     })
   })

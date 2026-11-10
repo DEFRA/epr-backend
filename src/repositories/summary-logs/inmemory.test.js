@@ -8,11 +8,13 @@ import { waitForVersion } from './contract/test-helpers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
+/** @import { StoredSummaryLog } from './inmemory.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {(summaryLogs: StoredSummaryLog[]) => Promise<SummaryLogsRepository>} summaryLogsRepositoryHolding
  */
 
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
@@ -27,6 +29,13 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
       const mockLogger = createMockLogger()
       const repository = summaryLogsRepositoryFactory(mockLogger)
       await use(repository)
+    },
+
+    // eslint-disable-next-line no-empty-pattern
+    summaryLogsRepositoryHolding: async ({}, use) => {
+      await use(async (summaryLogs) =>
+        createInMemorySummaryLogsRepository(summaryLogs)(createMockLogger())
+      )
     }
   })
 )

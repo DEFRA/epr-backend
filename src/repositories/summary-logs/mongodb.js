@@ -154,6 +154,7 @@ const update = (db, logger) => async (id, version, updates) => {
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
@@ -252,9 +253,22 @@ const uploads = async (db, filter) => {
 }
 
 /**
- * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation.
+ * A summary log stored before accreditations were recorded holds no
+ * accreditation id, and matches every accreditation. A registered-only
+ * summary log holds a null accreditation id, whether or not it holds its null
+ * number. Matching `null` also matches an absent field.
  *
+ * @param {AccreditationNumber | null} accreditationNumber
+ * @returns {Filter<SummaryLogDocument>}
+ */
+const accreditationFilter = (accreditationNumber) =>
+  accreditationNumber === null
+    ? { accreditationId: null }
+    : {
+        $or: [{ accreditationNumber }, { accreditationId: { $exists: false } }]
+      }
+
+/**
  * @param {SummaryLogKey} key
  * @returns {Filter<SummaryLogDocument>}
  */
@@ -264,12 +278,7 @@ const keyFilter = (key) => {
   /** @type {Filter<SummaryLogDocument>[]} */
   const clauses = []
   if (accreditationNumber !== undefined) {
-    clauses.push({
-      $or: [
-        { accreditationNumber },
-        { accreditationNumber: { $exists: false } }
-      ]
-    })
+    clauses.push(accreditationFilter(accreditationNumber))
   }
   if (year !== undefined) {
     clauses.push({ year })

@@ -115,6 +115,7 @@ const findByFileId =
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
  * @typedef {Map<SummaryLogId, SummaryLogVersion>} SummaryLogStore
+ * @typedef {{ id: SummaryLogId, summaryLog: SummaryLog }} StoredSummaryLog
  * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
  */
 
@@ -186,16 +187,29 @@ const uploads = (staleCache, matches) => {
 }
 
 /**
- * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation.
+ * A summary log stored before accreditations were recorded holds no
+ * accreditation id, and matches every accreditation. A registered-only
+ * summary log holds a null accreditation id, whether or not it holds its null
+ * number.
  *
  * @param {SummaryLogKey['accreditationNumber']} accreditationNumber
  * @returns {SummaryLogMatch}
  */
-const matchesAccreditation = (accreditationNumber) => (summaryLog) =>
-  accreditationNumber === undefined ||
-  summaryLog.accreditationNumber === undefined ||
-  summaryLog.accreditationNumber === accreditationNumber
+const matchesAccreditation = (accreditationNumber) => (summaryLog) => {
+  if (accreditationNumber === undefined) {
+    return true
+  }
+  if (accreditationNumber === null) {
+    return (
+      summaryLog.accreditationId === null ||
+      summaryLog.accreditationId === undefined
+    )
+  }
+  return (
+    summaryLog.accreditationId === undefined ||
+    summaryLog.accreditationNumber === accreditationNumber
+  )
+}
 
 /**
  * @param {SummaryLogKey['year']} year
@@ -371,11 +385,19 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
+ * @param {StoredSummaryLog[]} [initialSummaryLogs=[]] - Held as given, unvalidated, as stored documents are
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createInMemorySummaryLogsRepository = () => {
-  const storage = new Map()
-  const staleCache = new Map()
+export const createInMemorySummaryLogsRepository = (
+  initialSummaryLogs = []
+) => {
+  const storage = new Map(
+    initialSummaryLogs.map(({ id, summaryLog }) => [
+      id,
+      { version: 1, summaryLog: structuredClone(summaryLog) }
+    ])
+  )
+  const staleCache = structuredClone(storage)
 
   return (logger) => ({
     insert: insert(storage, staleCache),

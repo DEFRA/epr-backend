@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { createSummaryLogsRepository } from './mongodb.js'
+import { COLLECTION_NAME, createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
@@ -18,7 +18,8 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
+ * @import { StoredSummaryLog } from './inmemory.js'
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, summaryLogsRepositoryHolding: (summaryLogs: StoredSummaryLog[]) => Promise<SummaryLogsRepository> }} SummaryLogsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -54,6 +55,25 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
     summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
       const repository = summaryLogsRepositoryFactory(createMockLogger())
       await use(repository)
+    },
+
+    summaryLogsRepositoryHolding: async (
+      { mongoClient, summaryLogsRepository },
+      use
+    ) => {
+      await use(async (summaryLogs) => {
+        await mongoClient
+          .db(DATABASE_NAME)
+          .collection(COLLECTION_NAME)
+          .insertMany(
+            summaryLogs.map(({ id, summaryLog }) => ({
+              _id: id,
+              version: 1,
+              ...summaryLog
+            }))
+          )
+        return summaryLogsRepository
+      })
     }
   })
 )
