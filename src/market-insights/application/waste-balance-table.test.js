@@ -1621,6 +1621,55 @@ describe('buildWasteBalanceTable', () => {
     )
   })
 
+  it.each([
+    {
+      when: 'the registration number is not the organisation’s',
+      registration: { registrationNumber: 'REG-OTHER' },
+      accreditation: {}
+    },
+    {
+      when: 'the accreditation number is not the organisation’s',
+      registration: {},
+      accreditation: { accreditationNumber: 'ACC-OTHER' }
+    },
+    {
+      when: 'the registration links to a different accreditation',
+      registration: { accreditationId: 'acc-other' },
+      accreditation: {}
+    }
+  ])(
+    'leaves out a partition when $when',
+    async ({ registration, accreditation }) => {
+      const operator = makeOperator({ orgId: 500051 })
+      const organisation = {
+        ...operator.organisation,
+        registrations: [
+          { ...operator.organisation.registrations[0], ...registration }
+        ],
+        accreditations: [
+          { ...operator.organisation.accreditations[0], ...accreditation }
+        ]
+      }
+
+      const { table, logger } = await run({
+        organisations: [organisation],
+        submissions: [
+          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+        ]
+      })
+
+      expect(reported(table)).toEqual([])
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            action: 'market_insights_partition_unmatched',
+            reference: 'ACC-500051'
+          })
+        })
+      )
+    }
+  )
+
   it('leaves out a registered-only partition sharing a summary log with an accredited one', async () => {
     const operator = makeOperator({ orgId: 500010 })
     const registeredOnly = {

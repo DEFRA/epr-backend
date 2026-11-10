@@ -102,9 +102,10 @@ export const indexAccreditationsByLedger = (organisations) => {
 
 /**
  * Find the accreditation a ledger is kept for, with its registration and
- * owning organisation, by the numbers the ledger id carries. A test
- * organisation's ledgers find nothing. As `indexAccreditations`, no status
- * filtering.
+ * owning organisation, by the numbers the ledger id carries. The registration
+ * must still link to the accreditation by id, unless neither carries one. A
+ * test organisation's ledgers find nothing. As `indexAccreditations`, no
+ * status filtering.
  *
  * @param {Organisation[]} organisations
  * @returns {(ledgerId: WasteBalanceLedgerId) => AccreditationContext | undefined}
@@ -123,7 +124,10 @@ export const accreditationForLedger = (organisations) => {
     const accreditation = organisation?.accreditations.find(
       (candidate) => candidate.accreditationNumber === accreditationNumber
     )
-    return organisation && registration && accreditation
+    return organisation &&
+      registration &&
+      accreditation &&
+      registration.accreditationId === accreditation.id
       ? { organisation, registration, accreditation }
       : undefined
   }
