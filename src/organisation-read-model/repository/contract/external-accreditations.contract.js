@@ -1,6 +1,7 @@
-import { describe, expect } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { config } from '#root/config.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -52,6 +53,15 @@ const accreditedIn2026 = () => {
 /** @param {OrganisationReadRepositoryContractIt} it */
 export const testExternalAccreditationsBehaviour = (it) => {
   describe('stored and external accreditations together', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      config.reset('openNextYear')
+    })
+
     it("serves a registration's stored and external accreditations side by side, each by its year", async ({
       organisationReadRepositoryWith
     }) => {
@@ -77,6 +87,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
     it('dates the status of each year from the accreditation held for it', async ({
       organisationReadRepositoryWith
     }) => {
+      config.set('openNextYear', true)
       const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
@@ -97,6 +108,27 @@ export const testExternalAccreditationsBehaviour = (it) => {
         },
         2027: { '2027-01-01': { status: 'accredited' } }
       })
+    })
+
+    it('leaves out the status dates of an accreditation for a year not yet open', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = accreditedIn2026()
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+
+      expect(
+        Object.keys(
+          organisation.registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+        )
+      ).toEqual(['2026'])
     })
 
     it('serves the external accreditation for a year both hold, and logs the stored one it drops', async ({
