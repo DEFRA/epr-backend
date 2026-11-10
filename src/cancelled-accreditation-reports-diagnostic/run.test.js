@@ -125,7 +125,7 @@ describe('runCancelledAccreditationReportsDiagnostic', () => {
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `Cancelled accreditation: organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=A26RE000001PA material=paper validFrom=2026-01-01 validTo=2026-12-31 cancelledAt=2026-08-14T10:30:00.000Z linkedRegistrations=1 reports=1 monthlyReports=1 quarterlyReports=0`
+          message: `Cancelled accreditation: organisationId=${organisation.id} organisationNumber=${organisation.organisationNumber} testOrganisation=false accreditationId=${accreditation.id} accreditationNumber=A26RE000001PA material=paper validFrom=2026-01-01 validTo=2026-12-31 cancelledAt=2026-08-14T10:30:00.000Z linkedRegistrations=1 reports=1 monthlyReports=1 quarterlyReports=0`
         }
       ],
       [

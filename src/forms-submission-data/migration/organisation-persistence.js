@@ -5,6 +5,7 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { auditIncrementalFormMigration } from '#auditing/incremental-form-migration.js'
+import { toRepositoryOrganisation } from './organisation-number.js'
 
 /**
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
@@ -32,7 +33,7 @@ function partitionResults(results) {
 
 function insertOrganisation(organisationsRepository, item) {
   return organisationsRepository
-    .insert(removeUndefinedValues(item.value))
+    .insert(toRepositoryOrganisation(removeUndefinedValues(item.value)))
     .then(
       () =>
         /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
@@ -74,7 +75,7 @@ async function updateOrganisation(
     await organisationsRepository.replace(
       id,
       version,
-      removeUndefinedValues(orgWithoutIdAndVersion)
+      toRepositoryOrganisation(removeUndefinedValues(orgWithoutIdAndVersion))
     )
     const next = await organisationsRepository.findById(id, version + 1)
     await auditIncrementalFormMigration(

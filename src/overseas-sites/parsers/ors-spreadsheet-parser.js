@@ -11,6 +11,13 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
+/**
+ * @template {{ orgId: unknown }} T
+ * @param {T} metadata
+ * @returns {Omit<T, 'orgId'>}
+ */
+const withoutOrgId = ({ orgId: _, ...rest }) => rest
+
 const ORS_SHEET_NAME = 'ORS ID Log'
 
 /** Column indices (1-based, matching Excel columns B-K) */
@@ -240,8 +247,8 @@ export const parse = async (buffer) => {
 
   return {
     metadata: {
-      ...metadata,
-      orgId: toOrganisationNumber(metadata.orgId),
+      ...withoutOrgId(metadata),
+      organisationNumber: toOrganisationNumber(metadata.orgId),
       registrationNumber: toRegistrationNumber(metadata.registrationNumber)
     },
     sites,

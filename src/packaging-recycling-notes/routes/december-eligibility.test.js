@@ -53,11 +53,14 @@ const organisationWith = (
 }
 
 /**
- * @param {{ orgId: number }} organisation
+ * @param {{ organisationNumber: string }} organisation
  * @param {string} [registrationNumber]
  */
-const eligibilityUrl = ({ orgId }, registrationNumber = REPROCESSOR_NUMBER) =>
-  `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/2026/packaging-recycling-notes/december-prn-eligibility`
+const eligibilityUrl = (
+  { organisationNumber },
+  registrationNumber = REPROCESSOR_NUMBER
+) =>
+  `/organisations/${organisationNumber}/registrations/${registrationNumber}/accreditations/2026/packaging-recycling-notes/december-prn-eligibility`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes/december-prn-eligibility', () => {
   setupAuthContext()

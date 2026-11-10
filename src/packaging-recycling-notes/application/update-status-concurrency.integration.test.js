@@ -11,7 +11,6 @@ import {
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
@@ -47,7 +46,7 @@ const LEDGER = {
   organisationId: ORG_ID,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
   accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
 }

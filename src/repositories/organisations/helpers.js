@@ -201,11 +201,13 @@ export const duplicateKeyConflict = ({
     }
   )
 
+/** @returns {Organisation} */
 export const mapDocumentWithCurrentStatuses = (org) => {
-  const normalised = /** @type {WithId<Omit<Organisation, 'id'>>} */ (
-    normaliseOrganisationFromDb(org)
-  )
-  const { _id, ...rest } = normalised
+  const normalised =
+    /** @type {WithId<Omit<Organisation, 'id' | 'organisationNumber'> & { orgId: number }>} */ (
+      normaliseOrganisationFromDb(org)
+    )
+  const { _id, orgId, ...rest } = normalised
 
   rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
 
@@ -222,7 +224,11 @@ export const mapDocumentWithCurrentStatuses = (org) => {
     item.accreditationNumber = item.accreditationNumber ?? null
   }
 
-  return { id: _id.toString(), ...rest }
+  return {
+    id: _id.toString(),
+    organisationNumber: organisationNumberOfStored(orgId),
+    ...rest
+  }
 }
 
 function prepareRegAccForReplace(validated, existing) {
@@ -285,7 +291,7 @@ const withStatusFromExisting = (existingItems, itemUpdates) => {
 export const prepareForReplace = (existing, updates) => {
   const validated = validateOrganisationUpdate(
     {
-      ...updates,
+      ...toStoredFields(updates),
       registrations: withStatusFromExisting(
         existing.registrations,
         updates.registrations
@@ -377,7 +383,7 @@ export const escapeRegex = (string) =>
  * An organisation as it is stored, before the read path maps `_id` to `id` and
  * derives the current statuses. The in-memory adapter keeps `_id` as the plain
  * id string.
- * @typedef {Omit<Organisation, 'id'|'status'> & { _id: string }} StoredOrganisation
+ * @typedef {Omit<Organisation, 'id'|'status'|'organisationNumber'> & { _id: string, orgId: number }} StoredOrganisation
  */
 
 const INTEGER_PATTERN = /^\d+$/
@@ -412,6 +418,41 @@ export const parseOrgIdCriterion = (value) =>
  * @returns {number}
  */
 export const storedOrgId = (organisationNumber) => Number(organisationNumber)
+
+/**
+ * The organisation number an organisation stored under `orgId` holds.
+ *
+ * @param {number} orgId
+ * @returns {OrganisationNumber}
+ */
+export const organisationNumberOfStored = (orgId) =>
+  /** @type {OrganisationNumber} */ (String(orgId))
+
+/**
+ * An organisation as it is stored, with its number as `orgId`.
+ *
+ * @template {{ organisationNumber: OrganisationNumber }} T
+ * @param {T} organisation
+ * @returns {Omit<T, 'organisationNumber'> & { orgId: number }}
+ */
+export const toStoredOrganisation = ({ organisationNumber, ...rest }) => ({
+  ...rest,
+  orgId: storedOrgId(organisationNumber)
+})
+
+/**
+ * An insert's or a replacement's fields as they are stored, with any number as
+ * `orgId`. Without a number they carry no `orgId`, so validation reports it
+ * missing.
+ *
+ * @template {{ organisationNumber?: OrganisationNumber }} T
+ * @param {T} fields
+ * @returns {Omit<T, 'organisationNumber'> & { orgId?: number }}
+ */
+export const toStoredFields = ({ organisationNumber, ...rest }) =>
+  organisationNumber === undefined
+    ? rest
+    : { ...rest, orgId: storedOrgId(organisationNumber) }
 
 /**
  * The pattern both adapters match numbers with: the whole value, escaped.

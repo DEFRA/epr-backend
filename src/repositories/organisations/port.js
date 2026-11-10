@@ -49,7 +49,7 @@
 /**
  * An organisation as the lookups that only name it return it, without its
  * registrations, accreditations or users.
- * @typedef {Pick<Organisation, 'id' | 'orgId' | 'status'> & {
+ * @typedef {Pick<Organisation, 'id' | 'organisationNumber' | 'status'> & {
  *   companyDetails: Pick<Organisation['companyDetails'], 'name'>
  * }} OrganisationSummary
  */

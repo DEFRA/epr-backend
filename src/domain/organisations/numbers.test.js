@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   numbersFor,
-  organisationNumberOf,
   requiredNumbersFor,
   toOrganisationNumber
 } from './numbers.js'
@@ -24,17 +23,11 @@ describe('toOrganisationNumber', () => {
   )
 })
 
-describe('organisationNumberOf', () => {
-  it("reads an organisation's number from its stored orgId", () => {
-    expect(organisationNumberOf({ orgId: 500001 })).toBe('500001')
-  })
-})
-
 /** @returns {Organisation} */
 const buildOrganisation = () =>
   /** @type {Organisation} */ ({
     id: 'org-1',
-    orgId: 500123,
+    organisationNumber: '500123',
     registrations: [
       { id: 'reg-1', registrationNumber: 'R25SR500010912PL' },
       { id: 'reg-2', registrationNumber: null }
@@ -117,14 +110,17 @@ describe('numbersFor', () => {
     })
   })
 
-  for (const [description, orgId] of [
-    ['no orgId', undefined],
-    ['an orgId that is not an organisation number', 0]
+  for (const [description, organisationNumber] of [
+    ['no organisation number', undefined],
+    ['a number that is not an organisation number', '0']
   ]) {
     it(`gives no organisation number for an organisation with ${description}, and says why`, () => {
       expect(
         numbersFor(
-          /** @type {Organisation} */ ({ ...buildOrganisation(), orgId }),
+          /** @type {Organisation} */ ({
+            ...buildOrganisation(),
+            organisationNumber
+          }),
           { registrationId: 'reg-1' }
         )
       ).toEqual({

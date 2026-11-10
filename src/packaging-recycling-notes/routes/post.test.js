@@ -35,7 +35,6 @@ import {
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -50,7 +49,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
 const accreditationId = new ObjectId().toString()
-const { orgId } = buildOrganisation()
+const { organisationNumber } = buildOrganisation()
 
 /**
  * The served accreditation's ledger, under the reprocessor or exporter
@@ -62,7 +61,7 @@ const ledgerUnder = (registrationNumber) => ({
   organisationId,
   registrationId,
   accreditationId,
-  organisationNumber: toOrganisationNumber(String(orgId)),
+  organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 })
@@ -164,7 +163,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     )({ id: registrationId, accreditationId })
     const organisation = buildOrganisation({
       id: organisationId,
-      orgId,
+      organisationNumber,
       statusHistory: [
         { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
       ],
@@ -191,7 +190,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const year = new Date(/** @type {string} */ (accredited.validFrom))
     registrationNumber = registration.registrationNumber
-    url = `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
+    url = `/organisations/${organisationNumber}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
   }
 
   /** The PRN data the route first passed to the repository's create. */
@@ -304,7 +303,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       )
       expect(stored?.organisation).toMatchObject({
         id: organisationId,
-        organisationNumber: String(orgId)
+        organisationNumber
       })
       expect(stored).toMatchObject({
         registrationId,

@@ -3,7 +3,6 @@ import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
@@ -11,8 +10,10 @@ import {
   duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
+  organisationNumberOfStored,
   prepareForReplace,
   storedOrgId,
+  toStoredFields,
   UNIQUE_NUMBER_FIELDS,
   versionConflict
 } from './helpers.js'
@@ -72,7 +73,7 @@ async function ensureCollection(db) {
 }
 
 const performInsert = (db) => async (organisation) => {
-  const validated = validateOrganisationInsert(organisation)
+  const validated = validateOrganisationInsert(toStoredFields(organisation))
   const { id, ...orgFields } = validated
 
   const registrations =
@@ -212,7 +213,7 @@ const LINKED_ORG_PROJECTION = {
 /** @returns {import('./port.js').OrganisationSummary} */
 const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
-  orgId: doc.orgId,
+  organisationNumber: organisationNumberOfStored(doc.orgId),
   companyDetails: { name: doc.companyDetails.name },
   status: getCurrentStatus(doc)
 })
@@ -371,7 +372,7 @@ const performFindHighestOrganisationNumber = (db) => async () => {
     .sort({ orgId: -1 })
     .limit(1)
     .toArray()
-  return doc ? organisationNumberOf({ orgId: doc.orgId }) : null
+  return doc ? organisationNumberOfStored(doc.orgId) : null
 }
 
 /**

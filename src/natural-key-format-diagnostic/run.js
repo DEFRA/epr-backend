@@ -15,7 +15,7 @@ const formatMismatchLine = (row) =>
     `number=${JSON.stringify(row.number)}`,
     `breaksUrlSegment=${row.breaksUrlSegment}`,
     `organisationId=${row.organisationId}`,
-    `orgId=${row.orgId}`,
+    `organisationNumber=${row.organisationNumber}`,
     `testOrganisation=${row.testOrganisation}`,
     `recordId=${row.recordId}`,
     `status=${row.status}`

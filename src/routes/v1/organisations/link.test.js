@@ -116,12 +116,12 @@ describe('POST /organisations/{organisationNumber}/link', () => {
   })
 
   const performLink = async (
-    /** @type {{ orgId: number }} */ organisation,
+    /** @type {{ organisationNumber: string }} */ organisation,
     /** @type {string} */ jwtAccessToken
   ) => {
     return await server.inject({
       method: 'POST',
-      url: `/organisations/${organisation.orgId}/link`,
+      url: `/organisations/${organisation.organisationNumber}/link`,
       headers: {
         Authorization: `Bearer ${jwtAccessToken}`
       }
@@ -129,11 +129,11 @@ describe('POST /organisations/{organisationNumber}/link', () => {
   }
 
   const performUnlink = async (
-    /** @type {{ orgId: number }} */ organisation
+    /** @type {{ organisationNumber: string }} */ organisation
   ) => {
     return await server.inject({
       method: 'DELETE',
-      url: `/organisations/${organisation.orgId}/link`,
+      url: `/organisations/${organisation.organisationNumber}/link`,
       ...asServiceMaintainerWrite()
     })
   }
@@ -145,7 +145,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
       await organisationsRepository.insert(org1)
       return {
         method: 'POST',
-        url: `/organisations/${org1.orgId}/link`
+        url: `/organisations/${org1.organisationNumber}/link`
       }
     }
   })
@@ -219,7 +219,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
                     /** @type {import('#domain/organisations/registration.js').RegistrationOther} */ (
                       org.registrations[0]
                     ).cbduNumber || 'CBDU123456',
-                  registrationNumber: `REG${org.orgId}`,
+                  registrationNumber: `REG${org.organisationNumber}`,
                   validFrom: VALID_FROM,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
@@ -324,7 +324,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
         // add user 2 to organisation
         const addUser2Response = await server.inject({
           method: 'PUT',
-          url: `/organisations/${org.orgId}/user`,
+          url: `/organisations/${org.organisationNumber}/user`,
           headers: {
             Authorization: `Bearer ${user2DefraIdToken}`
           }
@@ -452,7 +452,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
           const systemLogsResponse = await server.inject({
             method: 'GET',
-            url: `/v1/system-logs/search?organisationNumber=${finalOrgVersion.orgId}`,
+            url: `/v1/system-logs/search?organisationNumber=${finalOrgVersion.organisationNumber}`,
             ...asServiceMaintainer()
           })
 
@@ -578,7 +578,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
           const response = await unreadableServer.inject({
             method: 'POST',
-            url: `/organisations/${org.orgId}/link`,
+            url: `/organisations/${org.organisationNumber}/link`,
             headers: {
               Authorization: `Bearer ${defraIdJwtTokenWith({ email: userEmail })}`
             }

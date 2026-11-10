@@ -3,6 +3,7 @@ import {
   safeAudit,
   SYSTEM_USER
 } from './helpers.js'
+import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -32,8 +33,8 @@ async function auditIncrementalFormMigration(
     },
     context: {
       organisationId,
-      previous,
-      next
+      previous: toOrganisationWire(previous),
+      next: toOrganisationWire(next)
     },
     user: SYSTEM_USER
   }

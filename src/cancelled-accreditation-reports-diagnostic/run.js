@@ -22,7 +22,7 @@ const formatAccreditationLine = (row) =>
   [
     'Cancelled accreditation:',
     `organisationId=${row.organisationId}`,
-    `orgId=${row.orgId}`,
+    `organisationNumber=${row.organisationNumber}`,
     `testOrganisation=${row.testOrganisation}`,
     `accreditationId=${row.accreditationId}`,
     `accreditationNumber=${row.accreditationNumber ?? 'none'}`,

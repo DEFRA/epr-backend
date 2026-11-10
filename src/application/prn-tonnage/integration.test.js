@@ -140,7 +140,7 @@ const organisationWithRegistration = (
 
 const expectedRow = (overrides = {}) => ({
   organisationName: 'Acme Reprocessing',
-  orgId: String(orgId),
+  organisationNumber: String(orgId),
   registrationNumber: 'REG-1',
   registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT,
   accreditationNumber: 'ACC-1',
@@ -278,7 +278,9 @@ describe('aggregatePrnTonnage - Integration', () => {
       ledgerRepository
     )
 
-    expect(rows).toStrictEqual([expectedRow({ orgId: String(testOrgId) })])
+    expect(rows).toStrictEqual([
+      expectedRow({ organisationNumber: String(testOrgId) })
+    ])
   })
 
   it('sorts rows by organisation name, then accreditation number', async () => {

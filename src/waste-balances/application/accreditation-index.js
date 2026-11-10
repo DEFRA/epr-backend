@@ -1,5 +1,4 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -79,13 +78,13 @@ export const indexAccreditationsByLedger = (organisations) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   for (const organisation of organisations) {
-    if (TEST_ORGANISATION_IDS.has(organisation.orgId)) {
+    if (TEST_ORGANISATION_NUMBERS.has(organisation.organisationNumber)) {
       continue
     }
     for (const context of linkedAccreditations(organisation)) {
       index.set(
         ledgerKey({
-          organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: /** @type {RegistrationNumber} */ (
             context.registration.registrationNumber
           ),

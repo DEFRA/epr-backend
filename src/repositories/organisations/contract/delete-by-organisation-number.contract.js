@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { OrganisationBuilders } from './test-data.js' */
@@ -39,14 +38,14 @@ export const testDeleteByOrganisationNumberBehaviour = (it) => {
       await repository.insert(kept)
 
       await expect(
-        repository.deleteByOrganisationNumber(organisationNumberOf(deleted))
+        repository.deleteByOrganisationNumber(deleted.organisationNumber)
       ).resolves.toBe(1)
 
       await expect(
-        repository.findByOrganisationNumber(organisationNumberOf(deleted))
+        repository.findByOrganisationNumber(deleted.organisationNumber)
       ).resolves.toBeNull()
       await expect(
-        repository.findByOrganisationNumber(organisationNumberOf(kept))
+        repository.findByOrganisationNumber(kept.organisationNumber)
       ).resolves.toMatchObject({ id: kept.id })
     })
 
@@ -56,11 +55,11 @@ export const testDeleteByOrganisationNumberBehaviour = (it) => {
       await repository.insert(kept)
 
       await expect(
-        repository.deleteByOrganisationNumber(organisationNumberOf(unheld))
+        repository.deleteByOrganisationNumber(unheld.organisationNumber)
       ).resolves.toBe(0)
 
       await expect(
-        repository.findByOrganisationNumber(organisationNumberOf(kept))
+        repository.findByOrganisationNumber(kept.organisationNumber)
       ).resolves.toMatchObject({ id: kept.id })
     })
   })

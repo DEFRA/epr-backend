@@ -87,7 +87,7 @@ describe('runNaturalKeyFormatDiagnostic', () => {
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `Page URL number format mismatch: recordType=registration number="EPR/AB1234CD/R1" breaksUrlSegment=true organisationId=${organisation.id} orgId=${organisation.orgId} testOrganisation=false recordId=${organisation.registrations[0].id} status=approved`
+          message: `Page URL number format mismatch: recordType=registration number="EPR/AB1234CD/R1" breaksUrlSegment=true organisationId=${organisation.id} organisationNumber=${organisation.organisationNumber} testOrganisation=false recordId=${organisation.registrations[0].id} status=approved`
         }
       ],
       [

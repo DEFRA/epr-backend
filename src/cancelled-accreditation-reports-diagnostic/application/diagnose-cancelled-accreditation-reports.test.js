@@ -91,7 +91,7 @@ describe('diagnoseCancelledAccreditationReports', () => {
     expect(rows).toStrictEqual([
       {
         organisationId: organisation.id,
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         accreditationId: accreditation.id,
         accreditationNumber: 'A26RE000001PA',

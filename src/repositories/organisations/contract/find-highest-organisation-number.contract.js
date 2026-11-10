@@ -40,12 +40,14 @@ export const testFindHighestOrganisationNumberBehaviour = (it) => {
     it('returns the highest number any organisation holds', async () => {
       const lower = buildOrganisation()
       const higher = buildOrganisation()
-      expect(higher.orgId).toBeGreaterThan(lower.orgId)
+      expect(Number(higher.organisationNumber)).toBeGreaterThan(
+        Number(lower.organisationNumber)
+      )
       await repository.insert(higher)
       await repository.insert(lower)
 
       await expect(repository.findHighestOrganisationNumber()).resolves.toBe(
-        String(higher.orgId)
+        higher.organisationNumber
       )
     })
   })

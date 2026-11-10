@@ -4,6 +4,7 @@ import {
   isPayloadSmallEnoughToAudit,
   safeAudit
 } from './helpers.js'
+import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -29,8 +30,8 @@ async function auditOrganisationUpdate(
     },
     context: {
       organisationId,
-      previous,
-      next
+      previous: toOrganisationWire(previous),
+      next: toOrganisationWire(next)
     },
     user: extractUserDetails(request)
   }

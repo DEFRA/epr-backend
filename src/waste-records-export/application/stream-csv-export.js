@@ -1,7 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { resolveAccreditationByNumber } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -312,7 +312,7 @@ export async function* streamCsvExport(deps) {
         entries:
           entriesByRegistration.get(
             registrationKey(
-              String(org.orgId),
+              org.organisationNumber,
               String(registration.registrationNumber)
             )
           ) ?? [],
@@ -368,7 +368,7 @@ const groupByRegistration = (entries) => {
 async function findExportableOrgs(organisationsRepository) {
   const orgs = await organisationsRepository.findAll()
   return orgs
-    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
+    .filter((org) => !TEST_ORGANISATION_NUMBERS.has(org.organisationNumber))
     .sort(sortById)
 }
 

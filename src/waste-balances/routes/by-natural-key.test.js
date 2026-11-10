@@ -40,6 +40,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
@@ -90,7 +92,7 @@ const sharedNumberOrganisation = buildOrganisation({
   ]
 })
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const registeredOnlyLedger = (year) =>
   `${registrations}/${REGISTERED_ONLY_NUMBER}/ledger/${year}`
 const accreditationPath = (year) =>
@@ -233,7 +235,7 @@ describe('ledger and waste balance routes by natural key', () => {
     it('returns 404 for a registration that belongs to another organisation', async () => {
       const underItsOwner = await get(registeredOnlyLedger(2026))
       const underAnother = await get(
-        `/organisations/${sharedNumberOrganisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
+        `/organisations/${sharedNumberOrganisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
@@ -428,7 +430,7 @@ describe('ledger and waste balance routes by natural key', () => {
 
   describe('GET /organisations/{organisationNumber}/waste-balances/{year}', () => {
     const wasteBalances = (year) =>
-      `/organisations/${organisation.orgId}/waste-balances/${year}`
+      `/organisations/${organisation.organisationNumber}/waste-balances/${year}`
 
     it('serves a balance for each accreditation in the year, keyed by accreditation number, leaving out a registration with no number', async () => {
       await server.app.ledgerRepository.appendEvents([
@@ -475,7 +477,7 @@ describe('ledger and waste balance routes by natural key', () => {
 
     it('leaves out registrations that share a number', async () => {
       const response = await get(
-        `/organisations/${sharedNumberOrganisation.orgId}/waste-balances/2026`
+        `/organisations/${sharedNumberOrganisation.organisationNumber}/waste-balances/2026`
       )
 
       expect(body(response)).toEqual({
@@ -513,9 +515,9 @@ const buildAccessServer = async () => {
     []
   )
   const repository = organisationsRepositoryFactory()
-  /** @param {{ orgId: number }} org */
-  const accreditationOf = ({ orgId }) =>
-    `/organisations/${orgId}/registrations/REG${orgId}/accreditations/${new Date().getUTCFullYear()}`
+  /** @param {{ organisationNumber: OrganisationNumber }} org */
+  const accreditationOf = ({ organisationNumber }) =>
+    `/organisations/${organisationNumber}/registrations/REG${organisationNumber}/accreditations/${new Date().getUTCFullYear()}`
   const own = accreditationOf(await buildActiveOrg(repository))
   const other = accreditationOf(
     await buildActiveOrg(repository, {

@@ -67,7 +67,7 @@ describe('diagnoseNaturalKeyFormats', () => {
         number: 'REG12345',
         breaksUrlSegment: false,
         organisationId: organisation.id,
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         recordId: organisation.registrations[0].id,
         status: 'approved'

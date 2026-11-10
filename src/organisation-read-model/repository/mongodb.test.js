@@ -2,6 +2,7 @@ import { MongoClient, ObjectId } from 'mongodb'
 
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
@@ -19,6 +20,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import { TestAPI } from 'vitest' */
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -65,7 +67,11 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
         for (const organisation of organisations) {
           await database
             .collection('epr-organisations')
-            .insertOne(toDocument(organisation))
+            .insertOne(
+              toDocument(
+                toStoredOrganisation(/** @type {Organisation} */ (organisation))
+              )
+            )
         }
         for (const site of overseasSites) {
           await database
@@ -116,7 +122,7 @@ describe('organisation read repository over MongoDB repositories', () => {
 
     const organisation = await findOrganisation(
       repository,
-      String(stored.orgId)
+      stored.organisationNumber
     )
 
     expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(

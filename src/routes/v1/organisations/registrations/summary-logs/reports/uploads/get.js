@@ -48,7 +48,17 @@ export const getSummaryLogUploadsReport = {
         }
       })
 
-      return h.response(reportData).code(StatusCodes.OK)
+      return h
+        .response({
+          ...reportData,
+          summaryLogUploads: reportData.summaryLogUploads.map(
+            ({ organisationNumber, ...row }) => ({
+              ...row,
+              orgId: Number(organisationNumber)
+            })
+          )
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,

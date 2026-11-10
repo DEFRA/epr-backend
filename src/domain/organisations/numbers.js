@@ -25,13 +25,6 @@ export const toOrganisationNumber = (value) => {
 }
 
 /**
- * @param {Pick<Organisation, 'orgId'>} organisation
- * @returns {OrganisationNumber}
- */
-export const organisationNumberOf = ({ orgId }) =>
-  toOrganisationNumber(String(orgId))
-
-/**
  * @param {string} value
  * @returns {RegistrationNumber}
  */
@@ -87,9 +80,8 @@ export const numbersFor = (
   /** @type {string[]} */
   const unmapped = []
 
-  const organisationNumber = String(organisation.orgId)
-  if (ORGANISATION_NUMBER_PATTERN.test(organisationNumber)) {
-    numbers.organisationNumber = toOrganisationNumber(organisationNumber)
+  if (ORGANISATION_NUMBER_PATTERN.test(organisation.organisationNumber)) {
+    numbers.organisationNumber = organisation.organisationNumber
   } else {
     unmapped.push(`organisation ${organisation.id} has no organisation number`)
   }

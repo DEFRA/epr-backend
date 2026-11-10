@@ -87,7 +87,7 @@ const makeAccreditation = ({
   }
   const organisation = {
     id,
-    orgId,
+    organisationNumber: String(orgId),
     registrations: [registration],
     accreditations: [accreditation]
   }
@@ -600,7 +600,7 @@ describe('buildCreditedTonnageReport', () => {
     }
     const twoAccreditationOrg = {
       id: 'org-uuid-500005',
-      orgId: 500005,
+      organisationNumber: '500005',
       registrations: [
         {
           id: 'reg-a',

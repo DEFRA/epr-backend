@@ -1,10 +1,11 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
 /** @import { Organisation, RegOrAccStatus } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * The formats epr-frontend recognises in a page URL (PAE-2041).
@@ -35,7 +36,7 @@ const ADDRESSED_ACCREDITATION_STATUSES = new Set([
  * @property {string | null} number - as stored
  * @property {boolean} breaksUrlSegment - holds a slash or whitespace
  * @property {string} organisationId
- * @property {number} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} recordId
  * @property {RegOrAccStatus} status
@@ -88,8 +89,10 @@ const findMismatches = (
           breaksUrlSegment:
             stored !== null && OUTSIDE_A_URL_SEGMENT.test(stored),
           organisationId: organisation.id,
-          orgId: organisation.orgId,
-          testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
+          testOrganisation: TEST_ORGANISATION_NUMBERS.has(
+            organisation.organisationNumber
+          ),
           recordId: id,
           status
         }

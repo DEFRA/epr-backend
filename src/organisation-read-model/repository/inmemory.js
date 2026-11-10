@@ -1,6 +1,5 @@
 import Boom from '@hapi/boom'
 
-import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { findPage } from '#repositories/organisations/inmemory-find.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
@@ -44,7 +43,7 @@ export const createInMemoryOrganisationReadRepository = (
   return (dependencies) => ({
     findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
       const found = stored.find(
-        ({ orgId }) => orgId === storedOrgId(organisationNumber)
+        (organisation) => organisation.organisationNumber === organisationNumber
       )
       if (!found) {
         return null

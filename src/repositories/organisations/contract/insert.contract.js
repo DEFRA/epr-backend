@@ -91,11 +91,13 @@ export const testInsertBehaviour = (it) => {
         })
       })
 
-      it('refuses an organisation whose orgId another organisation holds', async () => {
+      it('refuses an organisation whose number another organisation holds', async () => {
         const first = buildOrganisation()
         await repository.insert(first)
 
-        const second = buildOrganisation({ orgId: first.orgId })
+        const second = buildOrganisation({
+          organisationNumber: first.organisationNumber
+        })
 
         await expect(repository.insert(second)).rejects.toMatchObject({
           isBoom: true,
@@ -118,9 +120,11 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects insert with missing orgId', async () => {
-          const orgWithoutOrgId = buildOrganisation({ orgId: undefined })
-          await expect(repository.insert(orgWithoutOrgId)).rejects.toThrow(
+        it('rejects insert with missing organisation number', async () => {
+          const orgWithoutNumber = buildOrganisation({
+            organisationNumber: undefined
+          })
+          await expect(repository.insert(orgWithoutNumber)).rejects.toThrow(
             'Invalid organisation data: orgId: "orgId" is required'
           )
         })
@@ -218,7 +222,7 @@ export const testInsertBehaviour = (it) => {
           const result = await repository.findById(minimalOrg.id)
 
           expect(result).toBeTruthy()
-          expect(result.orgId).toBe(minimalOrg.orgId)
+          expect(result.organisationNumber).toBe(minimalOrg.organisationNumber)
         })
 
         it('defaults registrations and accreditations to empty arrays when not provided', async () => {

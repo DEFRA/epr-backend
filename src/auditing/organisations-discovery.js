@@ -41,7 +41,7 @@ function toAuditLinked(linkedOrg) {
   return {
     id: linkedOrg.id,
     name: linkedOrg.linkedDefraOrganisation.orgName,
-    orgId: linkedOrg.orgId,
+    orgId: Number(linkedOrg.organisationNumber),
     status: linkedOrg.status,
     linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
     linkedAt: new Date(linkedOrg.linkedDefraOrganisation.linkedAt).toISOString()
@@ -56,7 +56,7 @@ function toAuditUnlinked(linkableOrgs) {
   return linkableOrgs.map((org) => ({
     id: org.id,
     name: org.companyDetails.name,
-    orgId: org.orgId,
+    orgId: Number(org.organisationNumber),
     status: org.status
   }))
 }

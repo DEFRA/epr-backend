@@ -1,9 +1,8 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
-/** @import { NumberHolder, WriteOperation } from './helpers.js' */
+/** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
@@ -13,8 +12,11 @@ import {
   createInitialStatusHistory,
   duplicateKeyConflict,
   mapDocumentWithCurrentStatuses,
+  organisationNumberOfStored,
   prepareForReplace,
   storedOrgId,
+  toStoredFields,
+  toStoredOrganisation,
   UNIQUE_NUMBER_FIELDS,
   versionConflict
 } from './helpers.js'
@@ -101,7 +103,7 @@ const assertOrgIdUnheldElsewhere = (storage, id, orgId, operation) => {
 }
 
 const performInsert = (storage, staleCache) => async (organisation) => {
-  const validated = validateOrganisationInsert(organisation)
+  const validated = validateOrganisationInsert(toStoredFields(organisation))
   const { id, ...orgFields } = validated
 
   const existing = storage.find((o) => o._id === id)
@@ -233,18 +235,19 @@ const performFindAll = (staleCache) => async () => {
 }
 
 const performFind =
-  (staleCache) => async (/** @type {FindParams} */ params) => {
-    const { items, ...page } = findPage(staleCache, params)
-    return {
-      ...page,
-      items: items.map((org) => mapDocumentWithCurrentStatuses(org))
-    }
-  }
+  (/** @type {StoredOrganisation[]} */ staleCache) =>
+  async (/** @type {FindParams} */ params) =>
+    findPage(
+      structuredClone(staleCache).map((org) =>
+        mapDocumentWithCurrentStatuses(org)
+      ),
+      params
+    )
 
 /** @returns {import('./port.js').OrganisationSummary} */
 const toOrganisationSummary = (org) => ({
   id: org._id.toString(),
-  orgId: org.orgId,
+  organisationNumber: organisationNumberOfStored(org.orgId),
   companyDetails: { name: org.companyDetails.name },
   status: getCurrentStatus(org)
 })
@@ -406,9 +409,9 @@ const performFindHighestOrganisationNumber = (storage) => async () => {
   if (storage.length === 0) {
     return null
   }
-  return organisationNumberOf({
-    orgId: Math.max(...storage.map(({ orgId }) => orgId))
-  })
+  return organisationNumberOfStored(
+    Math.max(...storage.map(({ orgId }) => orgId))
+  )
 }
 
 /**
@@ -488,7 +491,7 @@ export const createInMemoryOrganisationsRepository = (
 ) => {
   const storage = initialOrganisations.map(({ id, ...rest }) => ({
     _id: id,
-    ...rest
+    ...toStoredOrganisation(rest)
   }))
   storage.forEach(({ _id, orgId }, index) =>
     assertOrgIdUnheldElsewhere(storage.slice(0, index), _id, orgId, 'inserting')

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 
@@ -230,8 +231,8 @@ export const testFindWithCriteriaBehaviour = (it) => {
     })
 
     describe('criteria', () => {
-      const HOLDER_ORG_ID = 700001
-      const OTHER_ORG_ID = 700002
+      const HOLDER_ORGANISATION_NUMBER = toOrganisationNumber('700001')
+      const OTHER_ORGANISATION_NUMBER = toOrganisationNumber('700002')
 
       let holder
       let other
@@ -239,13 +240,13 @@ export const testFindWithCriteriaBehaviour = (it) => {
       beforeEach(async () => {
         holder = buildOrgWithCriteria({
           name: 'Holder Ltd',
-          orgId: HOLDER_ORG_ID,
+          organisationNumber: HOLDER_ORGANISATION_NUMBER,
           registrationNumber: 'REG001',
           accreditationNumber: 'ACC001'
         })
         other = buildOrgWithCriteria({
           name: 'Other Ltd',
-          orgId: OTHER_ORG_ID,
+          organisationNumber: OTHER_ORGANISATION_NUMBER,
           registrationNumber: 'REG002',
           accreditationNumber: 'ACC444'
         })
@@ -255,7 +256,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it('finds the organisation holding the numeric orgId', async () => {
         const result = await repository.find({
-          orgId: String(HOLDER_ORG_ID),
+          orgId: HOLDER_ORGANISATION_NUMBER,
           page: 1,
           pageSize: 50
         })
@@ -443,7 +444,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
         const found = result.items[0]
         expect(found.id).toBe(org.id)
-        expect(found.orgId).toBe(org.orgId)
+        expect(found.organisationNumber).toBe(org.organisationNumber)
         expect(found.companyDetails.name).toBe('Acme Ltd')
         expect(found.status).toBeDefined()
       })

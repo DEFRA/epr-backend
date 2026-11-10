@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
+import { storedOrgId } from '#repositories/organisations/helpers.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -74,8 +74,8 @@ const extractCascadeKeys = (organisation) => {
  * @param {{ overseasSiteIds: string[] }} keys
  */
 const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
-  const { orgId, id: organisationId } = organisation
-  const organisationNumber = organisationNumberOf(organisation)
+  const { organisationNumber, id: organisationId } = organisation
+  const orgId = storedOrgId(organisationNumber)
   return [
     {
       label: 'packaging-recycling-notes',

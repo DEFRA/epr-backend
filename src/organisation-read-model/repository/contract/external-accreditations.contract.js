@@ -63,7 +63,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -85,7 +85,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -119,7 +119,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -148,11 +148,11 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
       const otherOrganisation = await findOrganisation(
         repository,
-        String(other.orgId)
+        other.organisationNumber
       )
 
       expect(
@@ -174,7 +174,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(Object.keys(organisation.registrations)).toStrictEqual([
@@ -198,7 +198,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(Object.keys(organisation.registrations)).toStrictEqual([
@@ -218,7 +218,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -241,7 +241,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
       })
 
       const { items } = await repository.find({
-        organisationNumber: String(stored.orgId),
+        organisationNumber: stored.organisationNumber,
         page: 1,
         pageSize: 10
       })

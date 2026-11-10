@@ -1,4 +1,8 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  fromOrganisationWire,
+  toOrganisationWire
+} from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
@@ -358,7 +362,7 @@ export const makePutOrganisationHandler =
     const { version: _v, id: _, ...sanitisedFragment } = updateFragment
 
     /** @type {OrganisationReplacement} */
-    const updates = sanitisedFragment
+    const updates = fromOrganisationWire(sanitisedFragment)
 
     const initial = await organisationsRepository.findById(id)
     if (!devSeeding) {
@@ -376,7 +380,7 @@ export const makePutOrganisationHandler =
     if (!devSeeding) {
       await auditOrganisationUpdate(request, id, initial, updated)
     }
-    return h.response(updated).code(StatusCodes.OK)
+    return h.response(toOrganisationWire(updated)).code(StatusCodes.OK)
   }
 
 export const organisationsPutById = {

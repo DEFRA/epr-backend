@@ -1,7 +1,6 @@
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -10,6 +9,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PeriodicReport, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { ReportStatus } from '#reports/domain/report-status.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Object} CancelledAccreditationReportRow
@@ -25,7 +25,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 /**
  * @typedef {Object} CancelledAccreditationRow
  * @property {string} organisationId
- * @property {number} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} accreditationId
  * @property {string | null} accreditationNumber
@@ -121,9 +121,7 @@ export const diagnoseCancelledAccreditationReports = async (
       const registrations = organisation.registrations.filter(
         ({ accreditationId }) => accreditationId === accreditation.id
       )
-      const organisationNumber = toOrganisationNumber(
-        String(organisation.orgId)
-      )
+      const { organisationNumber } = organisation
       // A registration without a number was never approved, so has no reports.
       const periodicReports = await Promise.all(
         registrations
@@ -137,8 +135,8 @@ export const diagnoseCancelledAccreditationReports = async (
 
       rows.push({
         organisationId: organisation.id,
-        orgId: organisation.orgId,
-        testOrganisation: TEST_ORGANISATION_IDS.has(organisation.orgId),
+        organisationNumber,
+        testOrganisation: TEST_ORGANISATION_NUMBERS.has(organisationNumber),
         accreditationId: accreditation.id,
         accreditationNumber: accreditation.accreditationNumber ?? null,
         material: accreditation.material,

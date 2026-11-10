@@ -8,6 +8,7 @@ import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testRegulatorCanRead } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -88,11 +89,13 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
     await serve(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: organisation.organisationNumber,
       name: 'ACME ltd',
       displayName: 'ACME ltd',
       status: { current: 'created' },
@@ -123,7 +126,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
     await serve(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].status.timeline).toEqual([
@@ -141,7 +146,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     const organisation = approvedThenCancelled()
     await serve(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.status.timeline).toEqual(approvedThenCancelledTimeline)
@@ -151,7 +158,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     const organisation = reinstatedThenCancelledOnNewYearsDay()
     await serve(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2025].status.timeline).toEqual([
@@ -178,7 +187,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
     await serve(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].status.timeline).toEqual([
@@ -196,7 +207,9 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
     await serveStored(organisation)
 
-    const response = await get(`/organisations/${organisation.orgId}`)
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}`
+    )
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response).linkedDefraOrganisation.linkedAt).toBe(
@@ -213,7 +226,9 @@ describe('GET /organisations/{organisationNumber}', () => {
         companyDetails: { ...base.companyDetails, ...companyDetails }
       }
       await serve(organisation)
-      return body(await get(`/organisations/${organisation.orgId}`))
+      return body(
+        await get(`/organisations/${organisation.organisationNumber}`)
+      )
     }
 
     it('is the trading name when the organisation has one', async () => {
@@ -254,7 +269,9 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   it('returns 404 for an unknown organisation number', async () => {
-    await serve(buildOrganisation({ orgId: 500001 }))
+    await serve(
+      buildOrganisation({ organisationNumber: toOrganisationNumber('500001') })
+    )
 
     const response = await get('/organisations/500002')
 
@@ -270,7 +287,9 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   it('rejects an organisation number with a leading zero', async () => {
-    const organisation = buildOrganisation({ orgId: 500001 })
+    const organisation = buildOrganisation({
+      organisationNumber: toOrganisationNumber('500001')
+    })
     await serve(organisation)
 
     const response = await get('/organisations/0500001')
@@ -282,7 +301,10 @@ describe('GET /organisations/{organisationNumber}', () => {
     const organisation = buildAccreditedOrganisation()
     const request = async () => {
       await serve(organisation)
-      return { method: 'GET', url: `/organisations/${organisation.orgId}` }
+      return {
+        method: 'GET',
+        url: `/organisations/${organisation.organisationNumber}`
+      }
     }
 
     it('shows an operator their own organisation', async () => {
@@ -347,7 +369,9 @@ describe('GET /organisations/{organisationNumber}', () => {
         })
         await serve(organisation)
 
-        const response = await get(`/organisations/${organisation.orgId}`)
+        const response = await get(
+          `/organisations/${organisation.organisationNumber}`
+        )
 
         const registration = body(response).registrations[REPROCESSOR_NUMBER]
         expect(registration.accreditations[2026].prns).toStrictEqual({ open })
@@ -363,7 +387,9 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     const regAccStatusOf = async (organisation, query = '') => {
       await serve(organisation)
-      const response = await get(`/organisations/${organisation.orgId}${query}`)
+      const response = await get(
+        `/organisations/${organisation.organisationNumber}${query}`
+      )
       return body(response).registrations[REPROCESSOR_NUMBER].regAccStatusByDate
     }
 
@@ -438,7 +464,7 @@ describe('GET /organisations/{organisationNumber}', () => {
 
   describe('with a year', () => {
     const urlFor = (organisation, year) =>
-      `/organisations/${organisation.orgId}?year=${year}`
+      `/organisations/${organisation.organisationNumber}?year=${year}`
 
     /** @param {typeof reprocessorResponse | typeof exporterResponse} registration */
     const closed = (registration) => ({

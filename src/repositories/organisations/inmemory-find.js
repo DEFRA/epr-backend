@@ -2,24 +2,25 @@ import {
   anchoredPattern,
   escapeRegex,
   normaliseCriteria,
-  parseOrgIdCriterion
+  parseOrgIdCriterion,
+  storedOrgId
 } from './helpers.js'
 
 /** @import { FindParams, SearchCriteria } from './port.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * How organisations are searched in memory. The in-memory organisations
  * repository and the in-memory organisation read repository both search
- * organisations as they are stored, and share this search so they find the
- * same ones.
+ * organisations as the repository returns them, and share this search so
+ * they find the same ones.
  */
 
 /**
- * The fields a search reads. Stored documents and the organisations the
- * repository returns both have them.
+ * The fields a search reads.
  *
  * @typedef {{
- *   orgId: number
+ *   organisationNumber: OrganisationNumber
  *   companyDetails: { name: string }
  *   registrations: Array<{ registrationNumber?: string | null }>
  *   accreditations: Array<{ accreditationNumber?: string | null }>
@@ -56,7 +57,7 @@ const buildFindMatcher = (criteria) => {
   }
   if (orgId !== '') {
     const wantedOrgId = parseOrgIdCriterion(orgId)
-    checks.push((org) => org.orgId === wantedOrgId)
+    checks.push((org) => storedOrgId(org.organisationNumber) === wantedOrgId)
   }
   if (registrationNumber !== '') {
     const matchesNumber = anchoredMatcher(registrationNumber)

@@ -23,7 +23,7 @@ import {
 import { formatDate } from '#common/helpers/date-formatter.js'
 import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import chunk from 'lodash.chunk'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
 // A registration's own status can never be suspended (suspension is an
@@ -78,7 +78,7 @@ function transformRegAcc(
     type: capitalize(registration.wasteProcessingType),
     businessName: org.companyDetails.name,
     companiesHouseNumber: org.companyDetails?.companiesHouseNumber || '',
-    orgId: org.orgId,
+    organisationNumber: org.organisationNumber,
     registeredOffice: formatAddress(
       org.companyDetails.registeredAddress || org.companyDetails.address
     ),
@@ -136,7 +136,7 @@ function isAccreditationInPublishableState(item) {
 }
 
 function isTestOrg(org) {
-  return TEST_ORGANISATION_IDS.has(org.orgId)
+  return TEST_ORGANISATION_NUMBERS.has(org.organisationNumber)
 }
 
 /**

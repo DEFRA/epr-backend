@@ -1,6 +1,5 @@
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
@@ -69,7 +68,7 @@ const ownIds = {
   organisationId: organisation.id,
   registrationId: registration.id,
   accreditationId: accredited.id,
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: registration.registrationNumber,
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
@@ -154,11 +153,11 @@ const idsOf = (response) =>
   body(response).items.map((/** @type {{ id: string }} */ { id }) => id)
 
 const issuingOrganisation = {
-  organisationNumber: String(organisation.orgId),
+  organisationNumber: organisation.organisationNumber,
   name: 'Test Organisation'
 }
 
-const prns = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
+const prns = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
 describe('PRN routes by natural key', () => {
   setupAuthContext()
@@ -338,7 +337,7 @@ describe('PRN routes by natural key', () => {
 
       expect(body(response).items[2]).toMatchObject({
         issuer: {
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           name: 'Test Organisation',
           tradingName: 'Test Trading',
           registration: {
@@ -589,7 +588,7 @@ describe('PRN routes by natural key', () => {
         },
         issuedToOrganisation: { id: 'producer-2', name: 'Producer Two' },
         issuer: expect.objectContaining({
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           registration: {
             registrationNumber: REPROCESSOR_NUMBER,
             accreditation: expect.objectContaining({

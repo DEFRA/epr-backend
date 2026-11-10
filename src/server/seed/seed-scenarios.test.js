@@ -8,7 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 import {
   createEprOrganisationScenarios,
-  SCENARIO_ORG_IDS
+  SCENARIO_ORGANISATION_NUMBERS
 } from './seed-scenarios.js'
 
 /**
@@ -16,8 +16,8 @@ import {
  * The repository uses setImmediate for cache updates.
  *
  * Note: We can't use waitForVersion here because createEprOrganisationScenarios
- * doesn't return the created org IDs, and we query using findAll() with orgId
- * filtering rather than findById().
+ * doesn't return the created organisations, and we query using findAll() with
+ * organisation number filtering rather than findById().
  */
 const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 
@@ -34,8 +34,10 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(repository)
 
       const orgs = await repository.findAll()
-      const orgIds = /** @type {number[]} */ (Object.values(SCENARIO_ORG_IDS))
-      const scenarioOrgs = orgs.filter((org) => orgIds.includes(org.orgId))
+      const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      const scenarioOrgs = orgs.filter((org) =>
+        numbers.includes(org.organisationNumber)
+      )
 
       expect(scenarioOrgs).toHaveLength(3)
     })
@@ -55,15 +57,17 @@ describe('seed-scenarios', () => {
       // Verify all scenarios were created successfully
       await waitForCacheSync()
       const orgs = await repository.findAll()
-      const orgIds = /** @type {number[]} */ (Object.values(SCENARIO_ORG_IDS))
-      const scenarioOrgs = orgs.filter((org) => orgIds.includes(org.orgId))
+      const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      const scenarioOrgs = orgs.filter((org) =>
+        numbers.includes(org.organisationNumber)
+      )
 
       expect(scenarioOrgs).toHaveLength(3)
 
       // Verify each has required fields populated correctly
       for (const org of scenarioOrgs) {
         expect(org.id).toBeDefined()
-        expect(org.orgId).toBeDefined()
+        expect(org.organisationNumber).toBeDefined()
         expect(org.version).toBeGreaterThanOrEqual(1)
         expect(org.statusHistory).toBeDefined()
         expect(org.statusHistory.length).toBeGreaterThan(0)
@@ -78,7 +82,8 @@ describe('seed-scenarios', () => {
 
       const orgs = await repository.findAll()
       const approvedOrg = orgs.find(
-        (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
+        (org) =>
+          org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
       )
       assertPresent(approvedOrg)
 
@@ -107,7 +112,8 @@ describe('seed-scenarios', () => {
 
       const orgs = await repository.findAll()
       const approvedOrg = orgs.find(
-        (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
+        (org) =>
+          org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
       )
       assertPresent(approvedOrg)
 
@@ -125,7 +131,7 @@ describe('seed-scenarios', () => {
 
       const orgs = await repository.findAll()
       const activeOrg = orgs.find(
-        (org) => org.orgId === SCENARIO_ORG_IDS.ACTIVE
+        (org) => org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.ACTIVE
       )
       assertPresent(activeOrg)
 
@@ -151,7 +157,8 @@ describe('seed-scenarios', () => {
       const orgs = await repository.findAll()
       const mixedOrg = orgs.find(
         (org) =>
-          org.orgId === SCENARIO_ORG_IDS.ACTIVE_WITH_SUSPENDED_ACCREDITATION
+          org.organisationNumber ===
+          SCENARIO_ORGANISATION_NUMBERS.ACTIVE_WITH_SUSPENDED_ACCREDITATION
       )
       assertPresent(mixedOrg)
 
@@ -178,7 +185,8 @@ describe('seed-scenarios', () => {
 
         const orgs = await repository.findAll()
         const activeOrg = orgs.find(
-          (org) => org.orgId === SCENARIO_ORG_IDS.ACTIVE
+          (org) =>
+            org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.ACTIVE
         )
         assertPresent(activeOrg)
 
@@ -205,7 +213,8 @@ describe('seed-scenarios', () => {
 
         const orgs = await repository.findAll()
         const approvedOrg = orgs.find(
-          (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
+          (org) =>
+            org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
         )
         assertPresent(approvedOrg)
 

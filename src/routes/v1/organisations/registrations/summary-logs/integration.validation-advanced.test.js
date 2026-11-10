@@ -401,7 +401,7 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -600,7 +600,7 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -886,7 +886,7 @@ describe('Advanced validation scenarios', () => {
         /** @type {Organisation} */ (
           buildOrganisation({
             id: organisationId,
-            orgId: TEST_ORGANISATION_NUMBER,
+            organisationNumber: TEST_ORGANISATION_NUMBER,
             registrations: [
               servedTestRegistration({
                 id: registrationId,

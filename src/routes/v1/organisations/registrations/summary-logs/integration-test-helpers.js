@@ -38,6 +38,7 @@ import assert from 'node:assert/strict'
 import {
   requiredNumbersFor,
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -500,7 +501,7 @@ export const createUploadPayload = (
 })
 
 /** The natural keys every organisation these helpers build is served under. */
-export const TEST_ORGANISATION_NUMBER = 500999
+export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
 export const TEST_REGISTRATION_NUMBER = 'REG-123'
 const UPLOAD_YEAR = toYear(2025)
 
@@ -517,7 +518,7 @@ export const buildGetUrl = (summaryLogId) =>
  */
 export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
   uploadCompletedPath({
-    organisationNumber: String(TEST_ORGANISATION_NUMBER),
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     registrationNumber: TEST_REGISTRATION_NUMBER,
     year: UPLOAD_YEAR,
     accredited,
@@ -1013,7 +1014,7 @@ const buildComplexTestOrg = ({
   }
 
   return buildReadOrganisation({
-    orgId: TEST_ORGANISATION_NUMBER,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     status: 'active',
     registrations: [servedTestRegistration(registration)],
     accreditations: accredited

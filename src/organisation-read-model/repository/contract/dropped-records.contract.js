@@ -29,7 +29,7 @@ export const testDroppedRecordsBehaviour = (it) => {
   describe('records the model cannot represent', () => {
     /**
      * @param {OrganisationReadRepositoryWith} organisationReadRepositoryWith
-     * @param {{ orgId: number }} stored
+     * @param {{ organisationNumber: string }} stored
      */
     const registrationsOf = async (organisationReadRepositoryWith, stored) => {
       const logger = { warn: vi.fn() }
@@ -40,7 +40,7 @@ export const testDroppedRecordsBehaviour = (it) => {
       })
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
       return { registrations: organisation.registrations, logger }
     }

@@ -1,6 +1,6 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { notFound, numberOf, versionConflict } from './test-data.js'
+import { notFound, versionConflict } from './test-data.js'
 
 /** @import { CollatedUser } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from './test-data.js' */
@@ -50,7 +50,7 @@ export const testReplaceUsersBehaviour = (it) => {
       it('stores exactly the users given', async () => {
         const org = await insertOrg()
 
-        await repository.replaceUsers(numberOf(org), 1, [aUser])
+        await repository.replaceUsers(org.organisationNumber, 1, [aUser])
 
         const { users } = await repository.findById(org.id, 2)
         expect(users).toEqual([aUser])
@@ -59,7 +59,7 @@ export const testReplaceUsersBehaviour = (it) => {
       it('changes nothing else on the organisation', async () => {
         const org = await insertOrg()
 
-        await repository.replaceUsers(numberOf(org), 1, [aUser])
+        await repository.replaceUsers(org.organisationNumber, 1, [aUser])
 
         const {
           users: _users,
@@ -73,9 +73,12 @@ export const testReplaceUsersBehaviour = (it) => {
 
       it('removes a user left out of the list', async () => {
         const org = await insertOrg()
-        await repository.replaceUsers(numberOf(org), 1, [aUser, anotherUser])
+        await repository.replaceUsers(org.organisationNumber, 1, [
+          aUser,
+          anotherUser
+        ])
 
-        await repository.replaceUsers(numberOf(org), 2, [anotherUser])
+        await repository.replaceUsers(org.organisationNumber, 2, [anotherUser])
 
         const { users } = await repository.findById(org.id, 3)
         expect(users).toEqual([anotherUser])
@@ -85,7 +88,7 @@ export const testReplaceUsersBehaviour = (it) => {
         const org = await insertOrg()
 
         await expect(
-          repository.replaceUsers(numberOf(org), 1, [
+          repository.replaceUsers(org.organisationNumber, 1, [
             { ...aUser, email: 'not-an-email' }
           ])
         ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 422 } })
@@ -93,11 +96,11 @@ export const testReplaceUsersBehaviour = (it) => {
 
       it('rejects a stale version and leaves the users', async () => {
         const org = await insertOrg()
-        await repository.replaceUsers(numberOf(org), 1, [aUser])
+        await repository.replaceUsers(org.organisationNumber, 1, [aUser])
         await repository.findById(org.id, 2)
 
         await expect(
-          repository.replaceUsers(numberOf(org), 1, [])
+          repository.replaceUsers(org.organisationNumber, 1, [])
         ).rejects.toMatchObject(versionConflict(1, 2))
 
         const unchanged = await repository.findById(org.id)
@@ -107,7 +110,9 @@ export const testReplaceUsersBehaviour = (it) => {
 
       it('rejects an organisation that does not exist', async () => {
         await expect(
-          repository.replaceUsers(numberOf(buildOrganisation()), 1, [aUser])
+          repository.replaceUsers(buildOrganisation().organisationNumber, 1, [
+            aUser
+          ])
         ).rejects.toMatchObject(notFound)
       })
     })

@@ -3,6 +3,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const mockAudit = vi.fn()
 
@@ -52,7 +53,7 @@ describe('auditOrganisationsDiscovery', () => {
   /** @type {import('#repositories/organisations/port.js').LinkedOrganisationSummary} */
   const linkedOrg = {
     id: 'epr-org-1',
-    orgId: 1001,
+    organisationNumber: toOrganisationNumber('1001'),
     status: 'approved',
     companyDetails: { name: 'Linked Ltd' },
     linkedDefraOrganisation: {
@@ -111,7 +112,7 @@ describe('auditOrganisationsDiscovery', () => {
     const linkableOrgs = [
       {
         id: 'epr-org-2',
-        orgId: 2002,
+        organisationNumber: toOrganisationNumber('2002'),
         status: 'approved',
         companyDetails: { name: 'Unlinked Corp' }
       }
