@@ -36,74 +36,78 @@ export const createUploadsRepository = ({
   cdpUploaderUrl,
   summaryLogsBucket,
   orsBucket
-}) => ({
-  async findByLocation(uri) {
-    const s3Location = parseUploadUri(uri, [summaryLogsBucket, orsBucket])
+}) => {
+  const uploadBuckets = [summaryLogsBucket, orsBucket]
 
-    try {
-      const command = new GetObjectCommand(s3Location)
+  return {
+    async findByLocation(uri) {
+      const s3Location = parseUploadUri(uri, uploadBuckets)
 
-      const response = await s3Client.send(command)
+      try {
+        const command = new GetObjectCommand(s3Location)
 
-      if (!response.Body) {
-        throw new Error(`S3 GetObject returned no body for ${uri}`)
+        const response = await s3Client.send(command)
+
+        if (!response.Body) {
+          throw new Error(`S3 GetObject returned no body for ${uri}`)
+        }
+
+        const buffer = await response.Body.transformToByteArray()
+
+        return Buffer.from(buffer)
+      } catch (error) {
+        if (
+          error.name === 'NoSuchKey' ||
+          error.$metadata?.httpStatusCode === StatusCodes.NOT_FOUND
+        ) {
+          return null
+        }
+
+        throw error
       }
+    },
 
-      const buffer = await response.Body.transformToByteArray()
+    async deleteByLocation(uri) {
+      const s3Location = parseUploadUri(uri, uploadBuckets)
+      await s3Client.send(new DeleteObjectCommand(s3Location))
+    },
 
-      return Buffer.from(buffer)
-    } catch (error) {
-      if (
-        error.name === 'NoSuchKey' ||
-        error.$metadata?.httpStatusCode === StatusCodes.NOT_FOUND
-      ) {
-        return null
-      }
+    async initiateSummaryLogUpload({
+      organisationId,
+      registrationId,
+      summaryLogId,
+      redirectUrl,
+      callbackUrl
+    }) {
+      const s3Path = summaryLogUploadPath({ organisationId, registrationId })
 
-      throw error
+      return fetchJson(`${cdpUploaderUrl}/initiate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          redirect: redirectUrl,
+          callback: callbackUrl,
+          s3Bucket: summaryLogsBucket,
+          s3Path,
+          mimeTypes: SUMMARY_LOG_MIME_TYPES,
+          metadata: { summaryLogId }
+        })
+      })
+    },
+
+    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
+      const s3Path = orsImportUploadPath(importId)
+
+      return fetchJson(`${cdpUploaderUrl}/initiate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          redirect: redirectUrl,
+          callback: callbackUrl,
+          s3Bucket: orsBucket,
+          s3Path,
+          mimeTypes: ORS_MIME_TYPES,
+          metadata: { importId }
+        })
+      })
     }
-  },
-
-  async deleteByLocation(uri) {
-    const s3Location = parseUploadUri(uri, [summaryLogsBucket, orsBucket])
-    await s3Client.send(new DeleteObjectCommand(s3Location))
-  },
-
-  async initiateSummaryLogUpload({
-    organisationId,
-    registrationId,
-    summaryLogId,
-    redirectUrl,
-    callbackUrl
-  }) {
-    const s3Path = summaryLogUploadPath({ organisationId, registrationId })
-
-    return fetchJson(`${cdpUploaderUrl}/initiate`, {
-      method: 'POST',
-      body: JSON.stringify({
-        redirect: redirectUrl,
-        callback: callbackUrl,
-        s3Bucket: summaryLogsBucket,
-        s3Path,
-        mimeTypes: SUMMARY_LOG_MIME_TYPES,
-        metadata: { summaryLogId }
-      })
-    })
-  },
-
-  async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-    const s3Path = orsImportUploadPath(importId)
-
-    return fetchJson(`${cdpUploaderUrl}/initiate`, {
-      method: 'POST',
-      body: JSON.stringify({
-        redirect: redirectUrl,
-        callback: callbackUrl,
-        s3Bucket: orsBucket,
-        s3Path,
-        mimeTypes: ORS_MIME_TYPES,
-        metadata: { importId }
-      })
-    })
   }
-})
+}
