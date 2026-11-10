@@ -22,6 +22,19 @@ export const buildLedgerId = (overrides = {}) =>
   })
 
 /**
+ * The numbers alone of the ledger `buildLedgerId` builds from the same
+ * overrides.
+ *
+ * @param {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
+ * @returns {import('./ledger-schema.js').WasteBalanceLedgerId}
+ */
+export const buildLedgerNumbers = (overrides = {}) => {
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    buildLedgerId(overrides)
+  return { organisationNumber, registrationNumber, accreditationNumber }
+}
+
+/**
  * Build a valid ledger event (insert shape — no `id`).
  * Defaults to a summary-log-submitted event, with the numbers of whichever
  * ledger the overrides name.

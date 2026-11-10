@@ -118,4 +118,31 @@ describe('createDriftQuery', () => {
     expect(flagged).toEqual([drifter.id])
     expect(flagged).not.toContain(level.id)
   })
+
+  it('finds a PRN behind its ledger by the numbers, whatever ids the events carry', async (/** @type {*} */ {
+    prnRepository,
+    ledgerCollection,
+    findDrifting
+  }) => {
+    const keys = buildAccreditationKeys()
+    const drifter = await prnRepository.create(
+      buildAwaitingAcceptancePrn({
+        ...underAccreditation(keys),
+        lastAppliedEventNumber: 1
+      })
+    )
+    await ledgerCollection.insertOne(
+      buildPrnRejectedEvent({
+        ...keys,
+        registrationId: 'another-registration-id',
+        accreditationId: 'another-accreditation-id',
+        number: 2,
+        payload: { prnId: drifter.id, amount: 50 }
+      })
+    )
+
+    const { driftingIds } = await findDrifting()
+
+    expect(driftingIds.map((id) => id.toHexString())).toEqual([drifter.id])
+  })
 })

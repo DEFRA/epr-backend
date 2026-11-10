@@ -26,28 +26,6 @@ describe('reading a waste balance ledger', () => {
     noteReader = noteReaderHolding([])
   })
 
-  it('names the ledger the events belong to', async () => {
-    const result = await readLedger(
-      ledgerRepository,
-      noteReader,
-      buildLedgerId()
-    )
-
-    expect(result.ledger).toEqual({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    })
-  })
-
-  it('names a registered-only ledger by its null accreditation', async () => {
-    const ledgerId = buildLedgerId({ accreditationId: null })
-
-    const result = await readLedger(ledgerRepository, noteReader, ledgerId)
-
-    expect(result.ledger.accreditationId).toBeNull()
-  })
-
   it('returns no events for a ledger that holds none', async () => {
     const result = await readLedger(
       ledgerRepository,

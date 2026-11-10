@@ -1,6 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {NumberedLedgerId} from './ledger-schema.js' */
 /**
  * Storage-level port for the waste balance event ledger.
  *
@@ -106,12 +105,12 @@ export class LedgerSequenceError extends Error {
  */
 
 /**
- * One ledger partition's latest submitted summary log: its ledger's ids and
- * numbers, and the `summaryLogId` carried by the highest-numbered `summary log
- * submitted` event in that partition.
+ * One ledger partition's latest submitted summary log: its ledger, and the
+ * `summaryLogId` carried by the highest-numbered `summary log submitted` event
+ * in that partition.
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
- * @property {NumberedLedgerId} ledgerId
+ * @property {WasteBalanceLedgerId} ledgerId
  * @property {SummaryLogFileId} summaryLogId
  */
 
@@ -140,7 +139,7 @@ export class LedgerSequenceError extends Error {
  *   Return one entry per ledger partition that has at least one
  *   `summary log submitted` event: the partition's ledger and the `summaryLogId` of
  *   the highest-numbered such event in that partition. Registered-only
- *   partitions appear with `accreditationId: null`; partitions with no
+ *   partitions appear with `accreditationNumber: null`; partitions with no
  *   submitted summary log never appear. Order is unspecified.
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.

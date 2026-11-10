@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import {
   buildLedgerEvent,
-  buildLedgerId,
+  buildLedgerNumbers,
   buildPrnCreatedEvent
 } from '../ledger-test-data.js'
 
@@ -11,7 +11,11 @@ import {
  * @param {string} accreditationId
  */
 const entryFor = (entries, accreditationId) =>
-  entries.find((entry) => entry.ledgerId.accreditationId === accreditationId)
+  entries.find(
+    (entry) =>
+      entry.ledgerId.accreditationNumber ===
+      buildLedgerNumbers({ accreditationId }).accreditationNumber
+  )
 
 export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
   describe('findLatestSubmittedSummaryLogPerLedger', () => {
@@ -63,7 +67,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: buildLedgerId({
+          ledgerId: buildLedgerNumbers({
             registrationId: 'reg-latest',
             accreditationId: 'acc-latest'
           }),
@@ -93,12 +97,43 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: buildLedgerId({
+          ledgerId: buildLedgerNumbers({
             registrationId: 'reg-mixed',
             accreditationId: 'acc-mixed'
           }),
           summaryLogId: 'log-submitted'
         }
+      ])
+    })
+
+    it('names a ledger by its numbers, whatever ids its events carry', async () => {
+      const numbers = buildLedgerNumbers({
+        registrationId: 'reg-shared',
+        accreditationId: 'acc-shared'
+      })
+      await repository.appendEvents([
+        buildLedgerEvent({
+          registrationId: 'reg-first',
+          accreditationId: 'acc-first',
+          ...numbers,
+          number: 1,
+          payload: { summaryLogId: 'log-first', creditTotal: 100 }
+        })
+      ])
+      await repository.appendEvents([
+        buildLedgerEvent({
+          registrationId: 'reg-second',
+          accreditationId: 'acc-second',
+          ...numbers,
+          number: 2,
+          payload: { summaryLogId: 'log-second', creditTotal: 200 }
+        })
+      ])
+
+      const result = await repository.findLatestSubmittedSummaryLogPerLedger()
+
+      expect(result).toEqual([
+        { ledgerId: numbers, summaryLogId: 'log-second' }
       ])
     })
 
@@ -127,7 +162,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
       expect(entryFor(result, 'acc-b')).toMatchObject({ summaryLogId: 'log-b' })
     })
 
-    it('includes registered-only partitions (accreditationId null) as their own entries', async () => {
+    it('includes registered-only partitions (accreditationNumber null) as their own entries', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
           registrationId: 'reg-accredited',
@@ -149,7 +184,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toHaveLength(2)
       expect(result).toContainEqual({
-        ledgerId: buildLedgerId({
+        ledgerId: buildLedgerNumbers({
           registrationId: 'reg-registered-only',
           accreditationId: null
         }),
@@ -178,7 +213,7 @@ export const testFindLatestSubmittedSummaryLogPerLedgerBehaviour = (it) => {
 
       expect(result).toEqual([
         {
-          ledgerId: buildLedgerId({
+          ledgerId: buildLedgerNumbers({
             registrationId: 'reg-submitted',
             accreditationId: 'acc-submitted'
           }),
