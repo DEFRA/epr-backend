@@ -11,7 +11,7 @@ import {
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 const WASTE_BALANCE_CONTENT_FIELDS = [
   FIELDS.DATE_LOAD_LEFT_SITE,
@@ -35,7 +35,9 @@ export const SENT_ON_LOADS = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
+    /** @type {{ accreditation: AccreditationValidity | null }} */ {
+      accreditation
+    }
   ) => {
     const missingResult = checkRequiredFields(
       data,
