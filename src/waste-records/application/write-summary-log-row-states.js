@@ -9,7 +9,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * Persists the committed waste-record state of a summary-log submission — one
  * idempotent upsert per row, keyed by row identity, carrying the coerced data
  * and waste-balance classification. Runs for every submission regardless of
- * processing type or accreditation: the ledger's `accreditationId` is null
+ * processing type or accreditation: the ledger's `accreditationNumber` is null
  * for registered-only and no-accreditation registrations, and rows whose schema
  * has no waste balance classify as NOT_APPLICABLE with no contribution.
  *
@@ -20,7 +20,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
- * @param {{ id: string, validFrom?: string, validTo?: string } | null} params.accreditation
+ * @param {{ validFrom?: string, validTo?: string } | null} params.accreditation
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
