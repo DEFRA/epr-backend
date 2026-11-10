@@ -183,7 +183,6 @@ describe('writeSummaryLogRowStates', () => {
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
       accreditation: {
-        id: 'acc-1',
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
@@ -211,7 +210,6 @@ describe('writeSummaryLogRowStates', () => {
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
       accreditation: {
-        id: 'acc-1',
         validFrom: '2023-01-01',
         validTo: '2030-12-31'
       },
