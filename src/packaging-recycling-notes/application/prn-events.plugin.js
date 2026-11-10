@@ -53,7 +53,7 @@ export const prnEventsPlugin = {
             if (result.status === 'rejected') {
               logger.error({
                 err: result.reason,
-                message: `prnEvents.onCancelled handler[${index}] failed for organisationId=${params.organisationId} registrationId=${params.registrationId} prnId=${params.prnId}`,
+                message: `prnEvents.onCancelled handler[${index}] failed for organisationNumber=${params.organisationNumber} registrationNumber=${params.registrationNumber} prnId=${params.prnId}`,
                 event: { reference: params.prnId }
               })
             }

@@ -65,20 +65,23 @@ export const LOG_OPERATION_BY_EVENT_KIND = Object.freeze({
  * the rejection as data; the contextual HTTP-shaped error is built here, where
  * the ledger identity is in hand.
  *
- * @type {Record<import('#packaging-recycling-notes/domain/prn-transition.js').PrnLedgerRejection, (accreditationId: string, refusal: PrnLedgerRejectionError) => Error>}
+ * @type {Record<import('#packaging-recycling-notes/domain/prn-transition.js').PrnLedgerRejection, (accreditationNumber: string, refusal: PrnLedgerRejectionError) => Error>}
  */
 const REJECTION_TO_ERROR = Object.freeze({
-  [PRN_COMMAND_REJECTION.NO_LEDGER]: (accreditationId) =>
+  [PRN_COMMAND_REJECTION.NO_LEDGER]: (accreditationNumber) =>
     Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
+      `No waste balance found for accreditation: ${accreditationNumber}`
     ),
   [PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE]: () =>
     Boom.conflict('Insufficient available waste balance'),
   [PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE]: () =>
     Boom.conflict('Insufficient total waste balance'),
-  [LEDGER_MISSING_AFTER_ISSUE]: (accreditationId, { fromStatus, newStatus }) =>
+  [LEDGER_MISSING_AFTER_ISSUE]: (
+    accreditationNumber,
+    { fromStatus, newStatus }
+  ) =>
     Boom.badImplementation(
-      `${fromStatus} -> ${newStatus} reached a missing waste balance ledger for accreditation ${accreditationId}; a created and issued PRN must have an open ledger`
+      `${fromStatus} -> ${newStatus} reached a missing waste balance ledger for accreditation ${accreditationNumber}; a created and issued PRN must have an open ledger`
     )
 })
 
@@ -88,12 +91,12 @@ const REJECTION_TO_ERROR = Object.freeze({
  * the classes the routes already map, and pass through untouched.
  *
  * @param {Error} error - the error the domain returned
- * @param {string} accreditationId
+ * @param {string} accreditationNumber
  * @returns {Error}
  */
-export const toTransitionError = (error, accreditationId) => {
+export const toTransitionError = (error, accreditationNumber) => {
   if (error instanceof PrnLedgerRejectionError) {
-    return REJECTION_TO_ERROR[error.reason](accreditationId, error)
+    return REJECTION_TO_ERROR[error.reason](accreditationNumber, error)
   }
   return error
 }

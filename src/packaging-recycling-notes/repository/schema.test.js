@@ -28,8 +28,20 @@ describe('PRN insert schema', () => {
 
     it('accepts without optional tradingName on organisation', () => {
       const data = buildValidPrnInsert({
-        organisation: { id: 'org-1', name: 'Org' }
+        organisation: { name: 'Org' }
       })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('accepts the database ids a PRN raised before PAE-2226 holds', () => {
+      const prn = buildValidPrnInsert()
+      const data = {
+        ...prn,
+        organisation: { ...prn.organisation, id: 'org-1' },
+        registrationId: 'reg-1',
+        accreditation: { ...prn.accreditation, id: 'acc-1' }
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeUndefined()
     })
@@ -55,13 +67,14 @@ describe('PRN insert schema', () => {
     })
 
     it('accepts optional registrationType on organisation', () => {
-      const data = buildValidPrnInsert({
+      const prn = buildValidPrnInsert()
+      const data = {
+        ...prn,
         organisation: {
-          id: 'org-1',
-          name: 'Org',
+          ...prn.organisation,
           registrationType: 'COMPLIANCE_SCHEME'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeUndefined()
     })
@@ -88,7 +101,6 @@ describe('PRN insert schema', () => {
     it('accepts glassRecyclingProcess when material is glass', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
@@ -104,7 +116,6 @@ describe('PRN insert schema', () => {
     it('accepts siteAddress for reprocessors', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
@@ -122,7 +133,6 @@ describe('PRN insert schema', () => {
     it('accepts siteAddress with all optional fields', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
@@ -180,7 +190,7 @@ describe('PRN insert schema', () => {
       expect(error).toBeDefined()
     })
 
-    it('rejects when organisation.id is missing', () => {
+    it('rejects when organisation.organisationNumber is missing', () => {
       const data = {
         ...buildValidPrnInsert(),
         organisation: { name: 'Org' }
@@ -190,16 +200,13 @@ describe('PRN insert schema', () => {
     })
 
     it('rejects when organisation.name is missing', () => {
+      const prn = buildValidPrnInsert()
       const data = {
-        ...buildValidPrnInsert(),
-        organisation: { id: 'org-1' }
+        ...prn,
+        organisation: {
+          organisationNumber: prn.organisation.organisationNumber
+        }
       }
-      const { error } = prnInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
-    it('rejects when registrationId is missing', () => {
-      const { registrationId: _registrationId, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
@@ -216,25 +223,10 @@ describe('PRN insert schema', () => {
       expect(error).toBeDefined()
     })
 
-    it('rejects when accreditation.id is missing', () => {
-      const data = {
-        ...buildValidPrnInsert(),
-        accreditation: {
-          accreditationNumber: 'ACC-001',
-          accreditationYear: toYear(2026),
-          material: 'plastic',
-          submittedToRegulator: 'ea'
-        }
-      }
-      const { error } = prnInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
     it('rejects when accreditation.accreditationNumber is missing', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationYear: toYear(2026),
           material: 'plastic',
           submittedToRegulator: 'ea'
@@ -248,7 +240,6 @@ describe('PRN insert schema', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: 'ACC-001',
           material: 'plastic',
           submittedToRegulator: 'ea'
@@ -262,7 +253,6 @@ describe('PRN insert schema', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: toYear(2026),
           submittedToRegulator: 'ea'
@@ -276,7 +266,6 @@ describe('PRN insert schema', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: toYear(2026),
           material: 'plastic'
@@ -332,7 +321,6 @@ describe('PRN insert schema', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: toYear(2026),
           material: 'unobtainium',
@@ -359,7 +347,6 @@ describe('PRN insert schema', () => {
         const accreditation =
           material === 'glass'
             ? {
-                id: 'acc-1',
                 accreditationNumber: toAccreditationNumber('ACC-001'),
                 accreditationYear: toYear(2026),
                 material,
@@ -368,7 +355,6 @@ describe('PRN insert schema', () => {
                 siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
               }
             : {
-                id: 'acc-1',
                 accreditationNumber: toAccreditationNumber('ACC-001'),
                 accreditationYear: toYear(2026),
                 material,
@@ -388,7 +374,6 @@ describe('PRN insert schema', () => {
       const data = {
         ...buildValidPrnInsert(),
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: toYear(2026),
           material: 'glass',
@@ -403,7 +388,6 @@ describe('PRN insert schema', () => {
     it('accepts glass_other', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
@@ -421,7 +405,6 @@ describe('PRN insert schema', () => {
     it('rejects glass material without glassRecyclingProcess', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'glass',
@@ -435,7 +418,6 @@ describe('PRN insert schema', () => {
     it('rejects glassRecyclingProcess on non-glass materials', () => {
       const data = buildValidPrnInsert({
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
@@ -452,7 +434,6 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         isExport: false,
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
@@ -467,7 +448,6 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         isExport: true,
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',
@@ -482,7 +462,6 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({
         isExport: true,
         accreditation: {
-          id: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-001'),
           accreditationYear: toYear(2026),
           material: 'plastic',

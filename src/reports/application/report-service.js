@@ -104,12 +104,15 @@ export async function fetchReportBySubmissionNumber(
  * @returns {string}
  */
 function formatSiteAddress(address) {
-  if ('fullAddress' in address) {
+  if (!('line1' in address)) {
     return address.fullAddress
   }
-  return [address.line1, address.line2, address.town, address.postcode]
-    .filter(Boolean)
-    .join(', ')
+  return (
+    address.fullAddress ??
+    [address.line1, address.line2, address.town, address.postcode]
+      .filter(Boolean)
+      .join(', ')
+  )
 }
 
 /**

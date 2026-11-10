@@ -1,6 +1,5 @@
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
-import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
 import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
@@ -60,7 +59,7 @@ export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
  * permitted - so the type predicate no longer gates here.
  *
  * @param {Object} params
- * @param {{ id: string, wasteProcessingType: string, reprocessingType?: string, validFrom?: string }} params.accreditation
+ * @param {{ accreditationNumber: string, accreditationYear: Year }} params.accreditation
  * @param {boolean} params.isDecemberWaste
  * @param {Date} params.now
  * @param {{ windowStart: string }} params.config
@@ -76,11 +75,7 @@ export function assertDecemberWasteDeclarable({
   }
 
   if (
-    isWithinDecemberWasteWindow(
-      deriveAccreditationYear(accreditation),
-      now,
-      config
-    )
+    isWithinDecemberWasteWindow(accreditation.accreditationYear, now, config)
   ) {
     return
   }
@@ -91,7 +86,7 @@ export function assertDecemberWasteDeclarable({
     {
       event: {
         action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE,
-        reason: `accreditationId=${accreditation.id} rejected=${DECEMBER_WASTE_NOT_DECLARABLE_CODE}`
+        reason: `accreditationNumber=${accreditation.accreditationNumber} rejected=${DECEMBER_WASTE_NOT_DECLARABLE_CODE}`
       },
       payload: { code: DECEMBER_WASTE_NOT_DECLARABLE_CODE }
     }

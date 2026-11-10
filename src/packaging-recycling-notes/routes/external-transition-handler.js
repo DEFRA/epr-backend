@@ -14,6 +14,7 @@ import { InvalidObligationYearError } from '#packaging-recycling-notes/domain/ob
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/get-projected-prn.js'
+import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { writeConflictRefusal } from './write-conflict-refusal.js'
 
 /**
@@ -101,7 +102,7 @@ export function createExternalTransitionHandler({
       const {
         packagingRecyclingNotesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents,
         params,
         logger
@@ -129,12 +130,11 @@ export function createExternalTransitionHandler({
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
           ledgerRepository,
-          organisationsRepository,
+          organisationReadRepository,
           prnEvents,
           logger,
           id: prn.id,
-          organisationId: prn.organisation.id,
-          accreditationId: prn.accreditation.id,
+          accreditationNumbers: prnLedgerId(prn),
           newStatus,
           actor: PRN_ACTOR.PRODUCER,
           user,

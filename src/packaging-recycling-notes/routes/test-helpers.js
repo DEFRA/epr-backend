@@ -97,13 +97,11 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   version: 1,
   prnNumber,
   organisation: {
-    id: 'org-123',
     organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Organisation'
   },
-  registrationId: 'reg-456',
   registration: TEST_REGISTRATION,
-  accreditation: buildAccreditationSnapshot({ id: 'acc-789' }),
+  accreditation: buildAccreditationSnapshot(),
   obligationYear: PRN_YEAR,
   issuedToOrganisation: {
     id: 'producer-org-789',

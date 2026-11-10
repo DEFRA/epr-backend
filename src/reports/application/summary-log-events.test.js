@@ -182,8 +182,8 @@ describe('onSummaryLogUploaded', () => {
     expect(mockAuditMarkReportsStale).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         systemLogsRepository,
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         reportsMarkedStale: expect.arrayContaining([
           expect.objectContaining({
             stale: expect.objectContaining({
@@ -258,8 +258,8 @@ describe('onSummaryLogUploaded', () => {
     ).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         systemLogsRepository,
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         reportsRequiringResubmission: expect.arrayContaining([
           expect.objectContaining({
             resubmissionRequired: expect.objectContaining({

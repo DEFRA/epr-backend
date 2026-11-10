@@ -44,16 +44,12 @@ const approvedStatusHistory = [
 ]
 
 const ledgerId = {
-  organisationId,
-  registrationId,
-  accreditationId: accId,
   organisationNumber: toOrganisationNumber(String(orgId)),
   registrationNumber: toRegistrationNumber('REG-INTEG'),
   accreditationNumber: toAccreditationNumber('ACC-INTEG')
 }
 
-/** @param {string | null} accreditationNumber */
-const storedOrganisation = (accreditationNumber) => ({
+const storedOrganisation = () => ({
   _id: new ObjectId(organisationId),
   orgId,
   companyDetails: { name: 'Acme Reprocessing' },
@@ -61,7 +57,7 @@ const storedOrganisation = (accreditationNumber) => ({
   accreditations: [
     {
       id: accId,
-      accreditationNumber,
+      accreditationNumber: ledgerId.accreditationNumber,
       material: MATERIAL.PLASTIC,
       prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
       statusHistory: approvedStatusHistory
@@ -80,11 +76,13 @@ const storedOrganisation = (accreditationNumber) => ({
 
 const awaitingAcceptancePrn = () =>
   buildAwaitingAcceptancePrn({
-    registrationId,
-    organisation: { id: organisationId, name: 'Acme Reprocessing' },
+    organisation: {
+      organisationNumber: ledgerId.organisationNumber,
+      name: 'Acme Reprocessing'
+    },
+    registration: { registrationNumber: ledgerId.registrationNumber },
     accreditation: buildAccreditationSnapshot({
-      id: accId,
-      accreditationNumber: toAccreditationNumber('ACC-INTEG'),
+      accreditationNumber: ledgerId.accreditationNumber,
       material: MATERIAL.PLASTIC
     }),
     tonnage: 100
@@ -105,7 +103,7 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
   it('aggregates PRN tonnage by status via the real db', async ({ server }) => {
     await server.db
       .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(storedOrganisation('ACC-INTEG'))
+      .insertOne(storedOrganisation())
     await server.db
       .collection(PRNS_COLLECTION)
       .insertOne(awaitingAcceptancePrn())
@@ -149,27 +147,5 @@ describe(`GET ${prnTonnagePath} (integration)`, () => {
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
-  })
-
-  it('serves a blank accreditation number for an accreditation that no longer has one', async ({
-    server
-  }) => {
-    await server.db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(storedOrganisation(null))
-    await server.db
-      .collection(PRNS_COLLECTION)
-      .insertOne(awaitingAcceptancePrn())
-
-    const response = await server.inject({
-      method: 'GET',
-      url: prnTonnagePath,
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload).rows).toMatchObject([
-      { accreditationNumber: '' }
-    ])
   })
 })

@@ -177,9 +177,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository(
             prns({
-              organisationId: org.id,
-              registrationId: registration.id,
-              accreditationId: /** @type {string} */ (accreditationRecord?.id),
               organisationNumber: toOrganisationNumber(String(org.orgId)),
               registrationNumber: /** @type {RegistrationNumber} */ (
                 registration.registrationNumber
@@ -686,7 +683,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ...buildAwaitingAcceptancePrn({
             ...underAccreditation(keys),
             accreditation: buildAccreditationSnapshot({
-              id: keys.accreditationId,
               accreditationNumber: keys.accreditationNumber,
               accreditationYear: YEAR,
               material: 'glass',

@@ -6,7 +6,7 @@ import {
   AccreditationStatusError,
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
-import { ACCREDITATION_STATUS, REGULATOR } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
@@ -31,7 +31,7 @@ import {
   buildPrnAcceptedEvent,
   buildPrnCancelledAfterIssueEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -58,24 +58,11 @@ const noopLogger = () => ({
 
 const PRN_ID = '507f1f77bcf86cd799439011'
 const SECOND_PRN_ID = '507f1f77bcf86cd799439012'
-const ORG_ID = 'org-123'
-const ACC_ID = 'acc-456'
-const REG_ID = 'reg-789'
-
-const { buildOrganisationHolding } = createOrganisationBuilders()
-const organisation = buildOrganisationHolding({
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID
-})
-// The ledger under test, numbered as `buildOrganisationHolding` numbers it.
+// The ledger under test.
 const LEDGER = {
-  organisationId: ORG_ID,
-  registrationId: REG_ID,
-  accreditationId: ACC_ID,
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
-  registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
-  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+  organisationNumber: toOrganisationNumber('500123'),
+  registrationNumber: toRegistrationNumber('R26ER5001230456PA'),
+  accreditationNumber: toAccreditationNumber('A26ER5001230456PA')
 }
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
@@ -84,16 +71,13 @@ const ISSUED_AMOUNT = 950
 /** @type {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} */
 const PRN_BASE = {
   id: PRN_ID,
-  registrationId: REG_ID,
   organisation: {
-    id: ORG_ID,
     organisationNumber: LEDGER.organisationNumber,
     name: 'Test Reprocessor',
     tradingName: 'Trading Name'
   },
   registration: { registrationNumber: LEDGER.registrationNumber },
   accreditation: buildAccreditationSnapshot({
-    id: ACC_ID,
     accreditationNumber: LEDGER.accreditationNumber
   }),
   tonnage: TONNAGE
@@ -129,14 +113,8 @@ const buildAwaitingCancellationSeed = () =>
 const STARTING_TOTAL = 1000
 
 const buildBalanceSeed = (overrides = {}) => ({
-  id: 'wb-1',
-  accreditationId: ACC_ID,
-  registrationId: REG_ID,
-  organisationId: ORG_ID,
   amount: STARTING_TOTAL,
   availableAmount: STARTING_TOTAL,
-  version: 0,
-  schemaVersion: 1,
   ...overrides
 })
 
@@ -193,7 +171,7 @@ const withCompetingWriteDuringFold = (ledgerRepository, competingEvent) => {
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  */
 const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
-  /** @type {import('#domain/organisations/model.js').AccreditationStatus} */
+  /** @type {'approved' | 'suspended'} */
   let status = ACCREDITATION_STATUS.APPROVED
 
   return {
@@ -206,27 +184,19 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
         return ledgerRepository.findLatestInLedger(ledgerId)
       }
     },
-    organisationsRepository:
-      /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
-        /** @type {unknown} */ ({
-          findAccreditationById: async () => ({
-            status,
-            submittedToRegulator: REGULATOR.EA
-          })
-        })
-      )
+    organisationReadRepository: {
+      ...readRepositoryHolding(LEDGER),
+      findByOrganisationNumber: (
+        /** @type {import('#domain/organisations/numbers.js').OrganisationNumber} */ organisationNumber
+      ) =>
+        readRepositoryHolding({ ...LEDGER, status }).findByOrganisationNumber(
+          organisationNumber
+        )
+    }
   }
 }
 
-const buildOrganisationsRepository = () =>
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
-    /** @type {unknown} */ ({
-      findAccreditationById: vi.fn().mockResolvedValue({
-        status: ACCREDITATION_STATUS.APPROVED,
-        submittedToRegulator: REGULATOR.EA
-      })
-    })
-  )
+const buildOrganisationReadRepository = () => readRepositoryHolding(LEDGER)
 
 const COMMITTED_EVENT_NUMBER = 2
 
@@ -324,18 +294,17 @@ describe('updatePrnStatus concurrency', () => {
     const balanceSeed = buildBalanceSeed()
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const issue = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -362,18 +331,17 @@ describe('updatePrnStatus concurrency', () => {
     })
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.DELETED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -401,18 +369,17 @@ describe('updatePrnStatus concurrency', () => {
     })
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, balanceSeed)
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const cancel = () =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -464,12 +431,11 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -493,19 +459,18 @@ describe('updatePrnStatus concurrency', () => {
     const seeded = createInMemoryLedgerRepository()()
     await seedClosingBalance(seeded, buildBalanceSeed())
 
-    const { ledgerRepository, organisationsRepository } =
+    const { ledgerRepository, organisationReadRepository } =
       withAccreditationSuspendedDuringFold(seeded)
 
     await expect(
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -553,12 +518,11 @@ describe('updatePrnStatus concurrency', () => {
     const cancelled = await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: noopLogger(),
       id: PRN_ID,
-      organisationId: ORG_ID,
-      accreditationId: ACC_ID,
+      accreditationNumbers: LEDGER,
       newStatus: PRN_STATUS.CANCELLED,
       actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
@@ -614,12 +578,11 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository: racingLedger,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.PRODUCER,
         user: { id: 'user-789', name: 'Test User' }
@@ -667,12 +630,11 @@ describe('updatePrnStatus concurrency', () => {
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository: buildOrganisationsRepository(),
+        organisationReadRepository: buildOrganisationReadRepository(),
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id: PRN_ID,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.DISCARDED,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
@@ -708,12 +670,11 @@ describe('updatePrnStatus concurrency', () => {
     const issued = await updatePrnStatus({
       prnRepository,
       ledgerRepository,
-      organisationsRepository: buildOrganisationsRepository(),
+      organisationReadRepository: buildOrganisationReadRepository(),
       prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
       logger: noopLogger(),
       id: PRN_ID,
-      organisationId: ORG_ID,
-      accreditationId: ACC_ID,
+      accreditationNumbers: LEDGER,
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
@@ -737,18 +698,17 @@ describe('updatePrnStatus concurrency', () => {
 
     const ledgerRepository = createInMemoryLedgerRepository()()
     await seedClosingBalance(ledgerRepository, buildBalanceSeed())
-    const organisationsRepository = buildOrganisationsRepository()
+    const organisationReadRepository = buildOrganisationReadRepository()
 
     const issue = (/** @type {string} */ id) =>
       updatePrnStatus({
         prnRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationReadRepository,
         prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
         logger: noopLogger(),
         id,
-        organisationId: ORG_ID,
-        accreditationId: ACC_ID,
+        accreditationNumbers: LEDGER,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }

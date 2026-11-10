@@ -18,8 +18,6 @@ import { periodForDate } from '#reports/domain/period-for-date.js'
  * }} PrnCancelledRepositories
  *
  * @typedef {RegistrationKey & {
- *   organisationId: string,
- *   registrationId: string,
  *   prnId: string,
  *   issuedAt: string
  * }} PrnCancelledParams
@@ -42,21 +40,14 @@ import { periodForDate } from '#reports/domain/period-for-date.js'
  */
 export const createOnPrnCancelled =
   ({ reportsRepository, systemLogsRepository }) =>
-  async ({
-    organisationId,
-    registrationId,
-    organisationNumber,
-    registrationNumber,
-    prnId,
-    issuedAt
-  }) => {
+  async ({ organisationNumber, registrationNumber, prnId, issuedAt }) => {
     const { year, period } = periodForDate(issuedAt, CADENCE.monthly)
     const issuedPeriod = { year, cadence: CADENCE.monthly, period }
 
     const occurredAt = new Date().toISOString()
 
     logger.info({
-      message: `PRN cancelled, marking reports stale for ${organisationId}/${registrationId} period ${year}-${CADENCE.monthly}-${period}: ${prnId}`
+      message: `PRN cancelled, marking reports stale for ${organisationNumber}/${registrationNumber} period ${year}-${CADENCE.monthly}-${period}: ${prnId}`
     })
 
     const reportsMarkedStale =
@@ -70,19 +61,19 @@ export const createOnPrnCancelled =
 
     if (reportsMarkedStale.length === 0) {
       logger.info({
-        message: `No active report marked stale for ${organisationId}/${registrationId} prnId=${prnId} (none active, or already flagged by an earlier trigger)`
+        message: `No active report marked stale for ${organisationNumber}/${registrationNumber} prnId=${prnId} (none active, or already flagged by an earlier trigger)`
       })
       return
     }
 
     logger.info({
-      message: `Reports marked as stale for ${organisationId}/${registrationId} prnId=${prnId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+      message: `Reports marked as stale for ${organisationNumber}/${registrationNumber} prnId=${prnId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
     })
 
     await auditMarkReportsStale({
       systemLogsRepository,
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       reportsMarkedStale,
       action: MARK_STALE_ACTION.PRN_CANCELLED
     })
