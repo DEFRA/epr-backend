@@ -951,7 +951,8 @@ describe('normaliseOrganisationFromDb', () => {
     ['zero', 0],
     ['negative', -1],
     ['fractional', 12.5],
-    ['not a number', 'abc']
+    ['not a number', 'abc'],
+    ['a numeric string', '500001']
   ])('refuses a document whose orgId is %s', (_description, orgId) => {
     const _id = new ObjectId()
     expect(() =>

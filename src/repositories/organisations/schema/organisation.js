@@ -30,7 +30,11 @@ export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
 
 /** The orgId an organisation is stored under, which is its organisation number. */
-export const storedOrgIdSchema = Joi.number().integer().min(1).required()
+export const storedOrgIdSchema = Joi.number()
+  .strict()
+  .integer()
+  .min(1)
+  .required()
 
 export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array()
