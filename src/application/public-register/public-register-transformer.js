@@ -23,7 +23,8 @@ import {
 import { formatDate } from '#common/helpers/date-formatter.js'
 import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import chunk from 'lodash.chunk'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { config } from '#root/config.js'
 
 // A registration's own status can never be suspended (suspension is an
@@ -136,7 +137,7 @@ function isAccreditationInPublishableState(item) {
 }
 
 function isTestOrg(org) {
-  return TEST_ORGANISATION_IDS.has(org.orgId)
+  return TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org))
 }
 
 /**

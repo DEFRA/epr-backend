@@ -1,7 +1,8 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { linkedOrganisationsResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -38,7 +39,7 @@ export const linkedOrganisationsGetAll = {
     const organisations =
       await request.organisationsRepository.findAllLinked(filter)
     const filtered = organisations.filter(
-      (org) => !TEST_ORGANISATION_IDS.has(org.orgId)
+      (org) => !TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org))
     )
 
     return h.response(filtered).code(StatusCodes.OK)

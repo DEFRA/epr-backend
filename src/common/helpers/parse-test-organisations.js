@@ -3,7 +3,8 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
-export function parseTestOrganisationIds() {
+/** @returns {OrganisationNumber[]} */
+export function parseTestOrganisationNumbers() {
   const raw = config.get('testOrganisations')
 
   let parsed
@@ -19,12 +20,11 @@ export function parseTestOrganisationIds() {
     throw new Error('Invalid testOrganisations configuration: not an array')
   }
 
-  return parsed.map(Number).filter((n) => Number.isSafeInteger(n) && n > 0)
+  return parsed
+    .map(Number)
+    .filter((n) => Number.isSafeInteger(n) && n > 0)
+    .map((n) => toOrganisationNumber(String(n)))
 }
 
-export const TEST_ORGANISATION_IDS = new Set(parseTestOrganisationIds())
-
 /** @type {ReadonlySet<OrganisationNumber>} */
-export const TEST_ORGANISATION_NUMBERS = new Set(
-  [...TEST_ORGANISATION_IDS].map((orgId) => toOrganisationNumber(String(orgId)))
-)
+export const TEST_ORGANISATION_NUMBERS = new Set(parseTestOrganisationNumbers())
