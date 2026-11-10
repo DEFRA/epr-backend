@@ -5,6 +5,10 @@ import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -71,7 +75,8 @@ const COLLECTIONS = [
   'summary-logs',
   'overseas-sites',
   'system-logs',
-  'summary-log-row-states'
+  'summary-log-row-states',
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
@@ -89,7 +94,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { organisations: import('#repositories/organisations/port.js').OrganisationsRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/port.js').OrganisationsRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -127,8 +132,11 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       const systemLogsFactory = await createSystemLogsRepository(database)
       const summaryLogRowStatesFactory =
         await createMongoSummaryLogRowStatesRepository(database)
+      const externalAccreditationsFactory =
+        await createMongoExternalAccreditationsRepository(database)
 
       await use({
+        externalAccreditations: externalAccreditationsFactory(),
         organisations,
         prns: prnsFactory(mockLogger),
         reports: reportsFactory(),
@@ -171,6 +179,9 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
   const organisation = buildOrganisation({
     registrations: [
       buildRegistration({
+        registrationNumber: toRegistrationNumber(
+          `R${randomUUID()}`.toUpperCase()
+        ),
         wasteProcessingType: 'exporter',
         material: 'plastic',
         overseasSites: {
@@ -187,6 +198,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
     organisation,
     organisationId: organisation.id,
     registrationId: organisation.registrations[0].id,
+    registrationNumber: organisation.registrations[0].registrationNumber,
     accreditationId: organisation.accreditations[0].id,
     siteA,
     siteB
@@ -196,8 +208,18 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 const seedDownstreamForOrganisation = async (
   database,
   repositories,
-  { organisation, organisationId, registrationId, accreditationId }
+  {
+    organisation,
+    organisationId,
+    registrationId,
+    registrationNumber,
+    accreditationId
+  }
 ) => {
+  await repositories.externalAccreditations.upsert(
+    buildExternalAccreditation({ registrationNumber })
+  )
+
   await repositories.prns.create(
     buildDraftPrn({
       organisation: {
@@ -285,7 +307,8 @@ const EMPTY_COUNTS = {
   registration: 0,
   accreditation: 0,
   'epr-organisations': 0,
-  organisation: 0
+  organisation: 0,
+  'external-accreditations': 0
 }
 
 describe('non-prod data reset (mongo)', () => {
@@ -326,7 +349,8 @@ describe('non-prod data reset (mongo)', () => {
         registration: 1,
         accreditation: 1,
         'epr-organisations': 1,
-        organisation: 1
+        organisation: 1,
+        'external-accreditations': 1
       })
 
       for (const name of COLLECTIONS) {
@@ -421,6 +445,11 @@ describe('non-prod data reset (mongo)', () => {
           .collection('organisation')
           .countDocuments({ orgId: target.organisation.orgId })
       ).toBe(0)
+      expect(
+        await database
+          .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+          .countDocuments({ registrationNumber: other.registrationNumber })
+      ).toBe(1)
     })
 
     it('returns all-zero counts when the organisation does not exist', async ({
@@ -535,6 +564,31 @@ describe('non-prod data reset (mongo)', () => {
       expect(await database.collection('overseas-sites').countDocuments()).toBe(
         1
       )
+    })
+
+    it('short-circuits external-accreditations when no registration has a number', async ({
+      database,
+      repositories,
+      reset
+    }) => {
+      const organisation = buildOrganisation({
+        registrations: [buildRegistration({ registrationNumber: null })]
+      })
+      await repositories.organisations.insert(organisation)
+      await repositories.externalAccreditations.upsert(
+        buildExternalAccreditation()
+      )
+
+      const counts = await reset.deleteByOrganisationNumber(
+        organisationNumberOf(organisation)
+      )
+
+      expect(counts['external-accreditations']).toBe(0)
+      expect(
+        await database
+          .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+          .countDocuments()
+      ).toBe(1)
     })
 
     it('refuses via the plugin when the CDP environment is prod', async ({
