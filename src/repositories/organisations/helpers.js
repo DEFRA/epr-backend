@@ -29,7 +29,7 @@ import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
-/** @import { WithId } from 'mongodb' */
+/** @import { ObjectId, WithId } from 'mongodb' */
 /** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
@@ -424,7 +424,7 @@ export const storedOrgId = (organisationNumber) => Number(organisationNumber)
 /**
  * The organisation number a stored organisation holds in its `orgId`.
  *
- * @param {{ _id: unknown, orgId: unknown }} stored
+ * @param {{ _id: ObjectId | string, orgId: unknown }} stored
  * @returns {OrganisationNumber}
  */
 export const organisationNumberOfStored = (stored) =>

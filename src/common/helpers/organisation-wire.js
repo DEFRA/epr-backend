@@ -25,7 +25,7 @@ export const fromOrganisationWire = ({ orgId, ...rest }) => {
   if (orgId === undefined) {
     return rest
   }
-  if (!Number.isInteger(orgId) || Number(orgId) < 1) {
+  if (typeof orgId !== 'number' || !Number.isInteger(orgId) || orgId < 1) {
     throw Boom.badData(
       'Invalid organisation data: orgId: must be an organisation number'
     )

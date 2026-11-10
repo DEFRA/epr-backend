@@ -1,3 +1,4 @@
+/** @import { ObjectId } from 'mongodb' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
 /** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
@@ -402,7 +403,7 @@ const performFindAllIds = (staleCache) => async () => {
 }
 
 /**
- * @param {Array<{ _id: unknown, orgId: number }>} storage
+ * @param {Array<{ _id: ObjectId | string, orgId: number }>} storage
  * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
  */
 const performFindHighestOrganisationNumber = (storage) => async () => {
@@ -410,8 +411,9 @@ const performFindHighestOrganisationNumber = (storage) => async () => {
     return null
   }
   return organisationNumberOfStored(
-    storage.reduce((highest, org) =>
-      org.orgId > highest.orgId ? org : highest
+    storage.reduce(
+      (highest, org) => (org.orgId > highest.orgId ? org : highest),
+      storage[0]
     )
   )
 }
