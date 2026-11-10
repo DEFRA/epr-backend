@@ -4,14 +4,11 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
-  indexAccreditations,
+  indexAccreditationsByLedger,
   ledgerKey
 } from '#waste-balances/application/accreditation-index.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
@@ -124,31 +121,6 @@ const aggregatedRowSchema = Joi.object({
   acceptedTonnage: Joi.number().required(),
   cancelledTonnage: Joi.number().required()
 })
-
-/**
- * Every organisation's accreditations, test organisations' included, by the
- * `ledgerKey` of the numbers they hold.
- *
- * @param {Organisation[]} organisations
- * @returns {Map<string, AccreditationContext>}
- */
-const indexByNumbers = (organisations) =>
-  new Map(
-    [...indexAccreditations(organisations).values()].map((context) => [
-      ledgerKey({
-        organisationNumber: toOrganisationNumber(
-          String(context.organisation.orgId)
-        ),
-        registrationNumber: /** @type {RegistrationNumber} */ (
-          context.registration.registrationNumber
-        ),
-        accreditationNumber: /** @type {AccreditationNumber} */ (
-          context.accreditation.accreditationNumber
-        )
-      }),
-      context
-    ])
-  )
 
 /**
  * Joins an accreditation's PRN totals to the organisation, registration and
@@ -270,7 +242,9 @@ export const aggregatePrnTonnage = async (
     organisationsRepository.findAll()
   ])
 
-  const index = indexByNumbers(organisations)
+  const index = indexAccreditationsByLedger(organisations, {
+    includeTestOrganisations: true
+  })
 
   const aggregatedRows = accreditationTonnages
     .map((accreditationTonnage) => {

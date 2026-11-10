@@ -18,7 +18,10 @@ import {
   closedYearConflict,
   closedYearRefusal
 } from '#packaging-recycling-notes/domain/closed-year.js'
-import { toIssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
+import {
+  toIssuingAccreditation,
+  toPrnSiteAddress
+} from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { resolvePool } from '#packaging-recycling-notes/domain/resolve-pool.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
@@ -62,16 +65,19 @@ const INSUFFICIENT_AVAILABLE_BALANCE_CODE = 'INSUFFICIENT_AVAILABLE_BALANCE'
  * as a certificate does.
  *
  * @param {IssuingAccreditation} accreditation
+ * @param {AccreditationSnapshot['siteAddress']} siteAddress
  * @returns {AccreditationSnapshot}
  */
-const snapshotAccreditation = ({
-  accreditationNumber,
-  accreditationYear,
-  material,
-  submittedToRegulator,
-  glassRecyclingProcess,
+const snapshotAccreditation = (
+  {
+    accreditationNumber,
+    accreditationYear,
+    material,
+    submittedToRegulator,
+    glassRecyclingProcess
+  },
   siteAddress
-}) => ({
+) => ({
   accreditationNumber,
   accreditationYear,
   material,
@@ -87,6 +93,7 @@ const snapshotAccreditation = ({
  *   organisation: OrganisationSnapshot,
  *   registrationNumber: RegistrationNumber,
  *   accreditation: IssuingAccreditation,
+ *   siteAddress: AccreditationSnapshot['siteAddress'],
  *   payload: PackagingRecyclingNotesCreatePayload,
  *   user: Actor,
  *   isExport: boolean,
@@ -97,12 +104,16 @@ const buildPrnData = ({
   organisation,
   registrationNumber,
   accreditation,
+  siteAddress,
   payload,
   user,
   isExport,
   now
 }) => {
-  const accreditationSnapshot = snapshotAccreditation(accreditation)
+  const accreditationSnapshot = snapshotAccreditation(
+    accreditation,
+    siteAddress
+  )
 
   return {
     schemaVersion: 2,
@@ -346,6 +357,7 @@ export const createPrn =
           organisation: snapshotOrganisation(organisation),
           registrationNumber: params.registrationNumber,
           accreditation,
+          siteAddress: toPrnSiteAddress(registration),
           payload,
           user,
           isExport:

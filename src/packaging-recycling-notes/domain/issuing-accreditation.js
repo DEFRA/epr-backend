@@ -25,8 +25,7 @@ import {
  *   wasteProcessingType: WasteProcessingTypeValue,
  *   reprocessingType?: ReprocessingType,
  *   material: AppliedForMaterial,
- *   glassRecyclingProcess?: GlassRecyclingProcess,
- *   siteAddress?: AccreditationSnapshot['siteAddress']
+ *   glassRecyclingProcess?: GlassRecyclingProcess
  * }} IssuingAccreditation
  */
 
@@ -49,12 +48,14 @@ const toPrnMaterial = (material) =>
     : { material: /** @type {AppliedForMaterial} */ (material) }
 
 /**
+ * The reprocessor's site address a new PRN states; none for an exporter.
+ *
  * @param {Registration} registration
- * @returns {Pick<IssuingAccreditation, 'reprocessingType' | 'siteAddress'>}
+ * @returns {AccreditationSnapshot['siteAddress']}
  */
-const reprocessorSite = (registration) => {
+export const toPrnSiteAddress = (registration) => {
   if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
-    return {}
+    return undefined
   }
   const { address } = registration.site
   if (!('line1' in address)) {
@@ -64,15 +65,12 @@ const reprocessorSite = (registration) => {
   }
   const { line1, line2, town, county, postcode, country } = address
   return {
-    reprocessingType: registration.reprocessingType,
-    siteAddress: {
-      line1,
-      postcode,
-      ...(town && { town }),
-      ...(line2 && { line2 }),
-      ...(county && { county }),
-      ...(country && { country })
-    }
+    line1,
+    postcode,
+    ...(town && { town }),
+    ...(line2 && { line2 }),
+    ...(county && { county }),
+    ...(country && { country })
   }
 }
 
@@ -89,5 +87,8 @@ export const toIssuingAccreditation = (registration, accreditation, year) => ({
   submittedToRegulator: registration.submittedToRegulator.code,
   wasteProcessingType: registration.wasteProcessingType,
   ...toPrnMaterial(registration.material),
-  ...reprocessorSite(registration)
+  ...(registration.wasteProcessingType ===
+    WASTE_PROCESSING_TYPE.REPROCESSOR && {
+    reprocessingType: registration.reprocessingType
+  })
 })

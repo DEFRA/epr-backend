@@ -267,10 +267,6 @@ const toPrnOperation = ({ at, by }) => ({
  * A PRN as the accreditation serves it. Its number is a field, present once
  * the PRN is issued, and a client finds a PRN by it through the collection.
  *
- * The PRN stores the database ids of its organisation and registration, not
- * their numbers, so the numbers come from the path. Neither is ever reassigned,
- * and the route has proved the PRN is theirs.
- *
  * @param {PackagingRecyclingNote} prn
  * @param {RegistrationParams} keys
  * @param {Date} now

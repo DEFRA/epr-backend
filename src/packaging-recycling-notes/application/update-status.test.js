@@ -593,6 +593,30 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('Insufficient total waste balance')
     })
 
+    it('issues a PRN whose registration site the read model holds only as a full address', async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 },
+        accreditation: {
+          siteAddress: { fullAddress: '1 Test Street Testville SW1A 1AA' }
+        }
+      })
+
+      await callUpdate({
+        ...repositories,
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    })
+
     it.each([
       [
         'serves no such organisation',
