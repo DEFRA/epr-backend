@@ -27,7 +27,7 @@
  * @typedef {import('./schema.js').SummaryLogRowStateEntry} SummaryLogRowStateEntry
  */
 
-/** @import { NumberedLedgerId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
@@ -42,7 +42,7 @@
 
 /**
  * @typedef {Object} SummaryLogRowStatesRepository
- * @property {(ledgerId: NumberedLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogRowStates: SummaryLogRowStateEntry[], summaryLogId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} upsertSummaryLogRowStates
  *   For each row, find the existing state document for that row identity whose
  *   coerced `data` and `classification` equal the incoming entry. If one
  *   exists, `$addToSet` `summaryLogId` onto its membership; otherwise insert a

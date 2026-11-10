@@ -64,7 +64,7 @@ export { asOperator } from '#test/inject-auth.js'
  *
  * @param {LedgerEnvironment} env
  * @param {string | null} [accreditationId]
- * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').NumberedLedgerId>}
+ * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId>}
  */
 export const ledgerIdOf = async (
   env,

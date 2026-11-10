@@ -11,7 +11,7 @@ const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
  * that event belongs to.
  *
  * @param {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
- * @returns {import('./ledger-schema.js').NumberedLedgerId}
+ * @returns {import('./ledger-schema.js').RegistrationOrAccreditationId & import('./ledger-schema.js').WasteBalanceLedgerId}
  */
 export const buildLedgerId = (overrides = {}) =>
   withNumbers({
@@ -37,28 +37,37 @@ export const buildLedgerNumbers = (overrides = {}) => {
 /**
  * Build a valid ledger event (insert shape — no `id`).
  * Defaults to a summary-log-submitted event, with the numbers of whichever
- * ledger the overrides name.
+ * ledger the overrides name. An event stores numbers alone, so ids in the
+ * overrides only choose the numbers.
  * @param {object} [overrides]
  */
-export const buildLedgerEvent = (overrides = {}) => ({
-  ...withNumbers({
-    registrationId: 'reg-1',
-    accreditationId: 'acc-1',
-    organisationId: 'org-1',
+export const buildLedgerEvent = (overrides = {}) => {
+  const {
+    organisationId: _organisationId,
+    registrationId: _registrationId,
+    accreditationId: _accreditationId,
+    ...event
+  } = {
+    ...withNumbers({
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      organisationId: 'org-1',
+      ...overrides
+    }),
+    number: 1,
+    kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+    payload: {
+      summaryLogId: toSummaryLogFileId('log-1'),
+      creditTotal: 100
+    },
+    openingBalance: { amount: 0, availableAmount: 0 },
+    closingBalance: { amount: 100, availableAmount: 100 },
+    createdAt: DEFAULT_CREATED_AT,
+    createdBy: { id: 'user-1', name: 'Test User' },
     ...overrides
-  }),
-  number: 1,
-  kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-  payload: {
-    summaryLogId: toSummaryLogFileId('log-1'),
-    creditTotal: 100
-  },
-  openingBalance: { amount: 0, availableAmount: 0 },
-  closingBalance: { amount: 100, availableAmount: 100 },
-  createdAt: DEFAULT_CREATED_AT,
-  createdBy: { id: 'user-1', name: 'Test User' },
-  ...overrides
-})
+  }
+  return event
+}
 
 /**
  * Build a PRN-created event.
