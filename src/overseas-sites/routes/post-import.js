@@ -9,7 +9,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { uploadCallbackUrl } from '#common/helpers/auth/upload-callback-signature.js'
+import {
+  toUploadCallbackPath,
+  uploadCallbackUrl
+} from '#common/helpers/auth/upload-callback-signature.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { orsImportCreatePayloadSchema } from './post-import.schema.js'
@@ -46,7 +49,9 @@ export const orsImportCreate = {
     const importId = randomUUID()
     const resolvedRedirectUrl = redirectUrl.replace('{importId}', importId)
     const callbackUrl = uploadCallbackUrl(
-      `/v1/overseas-sites/imports/${importId}/upload-completed`
+      toUploadCallbackPath(
+        `/v1/overseas-sites/imports/${importId}/upload-completed`
+      )
     )
 
     try {

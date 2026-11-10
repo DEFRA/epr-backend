@@ -1,4 +1,9 @@
-/** @import { Year } from '#common/helpers/dates/year.js' */
+import { toUploadCallbackPath } from '#common/helpers/auth/upload-callback-signature.js'
+
+/**
+ * @import { UploadCallbackPath } from '#common/helpers/auth/upload-callback-signature.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
+ */
 
 /**
  * @typedef {{
@@ -16,7 +21,7 @@
  * accredited.
  *
  * @param {UploadCompletedPathArgs} args
- * @returns {string}
+ * @returns {UploadCallbackPath}
  */
 export const uploadCompletedPath = ({
   organisationNumber,
@@ -29,5 +34,5 @@ export const uploadCompletedPath = ({
   const uploads = accredited
     ? `${registration}/accreditations/${year}/summary-log`
     : `${registration}/summary-logs/${year}`
-  return `${uploads}/${summaryLogId}/upload-completed`
+  return toUploadCallbackPath(`${uploads}/${summaryLogId}/upload-completed`)
 }

@@ -1,16 +1,20 @@
 import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { signedUploadCallbackPath } from '#common/helpers/auth/upload-callback-signature.js'
+import {
+  signedUploadCallbackPath,
+  toUploadCallbackKey,
+  toUploadCallbackPath
+} from '#common/helpers/auth/upload-callback-signature.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 /** @import { TestServer } from '#test/create-test-server.js' */
 
-const key = '0'.repeat(64)
-const otherKey = 'f'.repeat(64)
-const path = '/test-upload-callback/abc/upload-completed'
+const key = toUploadCallbackKey('0'.repeat(64))
+const otherKey = toUploadCallbackKey('f'.repeat(64))
+const path = toUploadCallbackPath('/test-upload-callback/abc/upload-completed')
 
 describe('upload-callback strategy', () => {
   setupAuthContext()
@@ -46,7 +50,7 @@ describe('upload-callback strategy', () => {
       description: 'a signature for another path',
       url: signedUploadCallbackPath(
         key,
-        '/test-upload-callback/xyz/upload-completed'
+        toUploadCallbackPath('/test-upload-callback/xyz/upload-completed')
       ).replace('xyz', 'abc')
     },
     {
