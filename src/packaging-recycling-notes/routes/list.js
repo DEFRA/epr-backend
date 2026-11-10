@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
 import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
@@ -19,7 +20,7 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
 /**
  * The external API still states the database ids of each PRN's issuing
  * organisation and accreditation, which PRNs no longer store, so they are
- * looked up by number: one read per organisation on the page.
+ * looked up by number, in one read for the page.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {PackagingRecyclingNote[]} prns
@@ -30,17 +31,11 @@ const lookUpExternalIds = async (organisationsRepository, prns) => {
     ...new Set(prns.map((prn) => prn.organisation.organisationNumber))
   ]
   const organisations = new Map(
-    await Promise.all(
-      organisationNumbers.map(
-        async (organisationNumber) =>
-          /** @type {const} */ ([
-            organisationNumber,
-            await organisationsRepository.findByOrganisationNumber(
-              organisationNumber
-            )
-          ])
+    (
+      await organisationsRepository.findByOrganisationNumbers(
+        organisationNumbers
       )
-    )
+    ).map((organisation) => [organisationNumberOf(organisation), organisation])
   )
 
   return (prn) => {

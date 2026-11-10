@@ -1,7 +1,10 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
-import { toIssuingAccreditation } from './issuing-accreditation.js'
+import {
+  toIssuingAccreditation,
+  toPrnSiteAddress
+} from './issuing-accreditation.js'
 
 /** @import { AccreditationCommon, Registration } from '#organisation-read-model/domain/model.js' */
 
@@ -33,6 +36,21 @@ const reprocessorRegistration = (overrides = {}) =>
     })
   )
 
+/** @type {Registration} */
+const exporterRegistration = /** @type {Registration} */ (
+  /** @type {unknown} */ ({
+    wasteProcessingType: 'exporter',
+    material: 'plastic',
+    submittedToRegulator: { code: 'ea' },
+    overseasSites: {},
+    accreditations: {}
+  })
+)
+
+const fullAddressOnly = reprocessorRegistration({
+  site: { address: { fullAddress: '1 Mill Lane Leeds LS1 4AB' } }
+})
+
 describe('toIssuingAccreditation', () => {
   it('states what the PRN rules read about a reprocessor accreditation', () => {
     expect(
@@ -44,50 +62,7 @@ describe('toIssuingAccreditation', () => {
       submittedToRegulator: 'nrw',
       wasteProcessingType: 'reprocessor',
       reprocessingType: 'output',
-      material: 'plastic',
-      siteAddress: { line1: '1 Mill Lane', town: 'Leeds', postcode: 'LS1 4AB' }
-    })
-  })
-
-  it('keeps the optional parts of the site address', () => {
-    const address = {
-      line1: '1 Mill Lane',
-      line2: 'Unit 4',
-      town: 'Leeds',
-      county: 'West Yorkshire',
-      postcode: 'LS1 4AB',
-      country: 'England'
-    }
-
-    const { siteAddress } = toIssuingAccreditation(
-      reprocessorRegistration({
-        site: { address: { ...address, region: 'x' } }
-      }),
-      accreditation,
-      YEAR
-    )
-
-    expect(siteAddress).toStrictEqual(address)
-  })
-
-  it('states a site address without a town when the read model has none', () => {
-    const { siteAddress } = toIssuingAccreditation(
-      reprocessorRegistration({
-        site: {
-          address: {
-            line1: '1 Mill Lane',
-            postcode: 'LS1 4AB',
-            fullAddress: '1 Mill Lane, Unit 4, Leeds, Yorks, UK, LS1 4AB'
-          }
-        }
-      }),
-      accreditation,
-      YEAR
-    )
-
-    expect(siteAddress).toStrictEqual({
-      line1: '1 Mill Lane',
-      postcode: 'LS1 4AB'
+      material: 'plastic'
     })
   })
 
@@ -104,36 +79,74 @@ describe('toIssuingAccreditation', () => {
     })
   })
 
-  it('states no site or reprocessing type for an exporter', () => {
+  it('states no reprocessing type for an exporter', () => {
     const issuing = toIssuingAccreditation(
-      /** @type {Registration} */ (
-        /** @type {unknown} */ ({
-          wasteProcessingType: 'exporter',
-          material: 'plastic',
-          submittedToRegulator: { code: 'ea' },
-          overseasSites: {},
-          accreditations: {}
-        })
-      ),
+      exporterRegistration,
       accreditation,
       YEAR
     )
 
-    expect(issuing).not.toHaveProperty('siteAddress')
     expect(issuing).not.toHaveProperty('reprocessingType')
     expect(issuing.wasteProcessingType).toBe('exporter')
   })
 
-  it('refuses a reprocessor whose site the read model holds only as a full address', () => {
-    expect(() =>
-      toIssuingAccreditation(
+  it('does not read the site, so a reprocessor whose site the read model holds only as a full address can still be ruled on', () => {
+    expect(
+      toIssuingAccreditation(fullAddressOnly, accreditation, YEAR)
+    ).toMatchObject({ status: 'suspended', reprocessingType: 'output' })
+  })
+})
+
+describe('toPrnSiteAddress', () => {
+  it('states the reprocessor site address', () => {
+    expect(toPrnSiteAddress(reprocessorRegistration())).toStrictEqual({
+      line1: '1 Mill Lane',
+      town: 'Leeds',
+      postcode: 'LS1 4AB'
+    })
+  })
+
+  it('keeps the optional parts of the site address', () => {
+    const address = {
+      line1: '1 Mill Lane',
+      line2: 'Unit 4',
+      town: 'Leeds',
+      county: 'West Yorkshire',
+      postcode: 'LS1 4AB',
+      country: 'England'
+    }
+
+    expect(
+      toPrnSiteAddress(
         reprocessorRegistration({
-          site: { address: { fullAddress: '1 Mill Lane Leeds LS1 4AB' } }
-        }),
-        accreditation,
-        YEAR
+          site: { address: { ...address, region: 'x' } }
+        })
       )
-    ).toThrow(
+    ).toStrictEqual(address)
+  })
+
+  it('states a site address without a town when the read model has none', () => {
+    expect(
+      toPrnSiteAddress(
+        reprocessorRegistration({
+          site: {
+            address: {
+              line1: '1 Mill Lane',
+              postcode: 'LS1 4AB',
+              fullAddress: '1 Mill Lane, Unit 4, Leeds, Yorks, UK, LS1 4AB'
+            }
+          }
+        })
+      )
+    ).toStrictEqual({ line1: '1 Mill Lane', postcode: 'LS1 4AB' })
+  })
+
+  it('states no site for an exporter', () => {
+    expect(toPrnSiteAddress(exporterRegistration)).toBeUndefined()
+  })
+
+  it('refuses a reprocessor whose site the read model holds only as a full address', () => {
+    expect(() => toPrnSiteAddress(fullAddressOnly)).toThrow(
       'Reprocessor site address has no line1 and postcode to state on a PRN'
     )
   })

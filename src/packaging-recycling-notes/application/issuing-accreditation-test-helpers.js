@@ -16,6 +16,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  *   submittedToRegulator?: 'ea' | 'nrw' | 'sepa' | 'niea',
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output',
+ *   siteAddress?: object,
  *   withAccreditation?: boolean
  * }} HeldAccreditation
  */
@@ -31,6 +32,11 @@ const heldRegistration = ({
   submittedToRegulator = 'ea',
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = 'input',
+  siteAddress = {
+    line1: '1 Test Street',
+    town: 'Testville',
+    postcode: 'SW1A 1AA'
+  },
   withAccreditation = true
 }) => {
   const accreditations = withAccreditation
@@ -59,13 +65,7 @@ const heldRegistration = ({
             ...common,
             wasteProcessingType,
             reprocessingType,
-            site: {
-              address: {
-                line1: '1 Test Street',
-                town: 'Testville',
-                postcode: 'SW1A 1AA'
-              }
-            },
+            site: { address: siteAddress },
             accreditations
           }
     )
