@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url'
 
 const TEST_CODE =
   /\.test\.js$|\.contract\.js$|test-helpers|test-fixtures|test-data|\/contract\/|\/fixtures\/|^src\/test\//
-const MONGODB_ADAPTER = /\/repositor(y|ies)\/(.*\/)?[^/]*mongodb[^/]*\.js$/
+const REPOSITORY_FILE = /\/repositor(y|ies)\//
+const REPOSITORY_PORT = /\/([^/]*-)?port\.js$/
 
 const DATABASE_ID =
   /(organisation|registration|accreditation)Id|findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
@@ -101,14 +102,18 @@ export const MEASURES = [
 ]
 
 const SCOPE =
-  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The MongoDB repository adapters are left out too: any file under a `repository/` or `repositories/` directory whose name contains `mongodb`.'
+  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The repository adapters are left out too: any file under a `repository/` or `repositories/` directory, except a port, `port.js` or a file ending `-port.js`, because a port is the boundary these counts guard.'
+
+/** @param {string} path */
+const isRepositoryAdapter = (path) =>
+  REPOSITORY_FILE.test(path) && !REPOSITORY_PORT.test(path)
 
 /** @param {string} path */
 export const isCounted = (path) =>
   path.startsWith('src/') &&
   path.endsWith('.js') &&
   !TEST_CODE.test(path) &&
-  !MONGODB_ADAPTER.test(path)
+  !isRepositoryAdapter(path)
 
 /**
  * @param {{ path: string, source: string }[]} files
@@ -139,7 +144,7 @@ const describeChange = (change) =>
  */
 export const comment = (head, base, baseName) =>
   [
-    '## Database ids and raw documents outside the MongoDB adapters',
+    '## Database ids and raw documents outside the repository adapters',
     '',
     'Advisory only. These count the code that still handles organisations, registrations and accreditations by database id, or works with documents straight from the database. The aim for each is zero.',
     '',
