@@ -1,7 +1,8 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from './organisation-read-test-helpers.js'
 
-const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
+const { buildOrganisation, nextOrganisationNumber } =
+  createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -15,7 +16,7 @@ const named = (name, overrides = {}) =>
   buildOrganisation({
     companyDetails: { name },
     registrations: [
-      reprocessor({ registrationNumber: `R26ER${nextOrgId()}PL` })
+      reprocessor({ registrationNumber: `R26ER${nextOrganisationNumber()}PL` })
     ],
     accreditations: [],
     ...overrides
@@ -67,7 +68,7 @@ export const testFindAllBehaviour = (it) => {
       ])
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
-          `Organisation ${notYet.orgId} has status undefined`
+          `Organisation ${notYet.organisationNumber} has status undefined`
         )
       })
     })

@@ -121,7 +121,7 @@ describe('GET /v1/me/organisations', () => {
         linked: {
           id: linkedOrg.id,
           name: COMPANY_1_NAME,
-          orgId: linkedOrg.orgId,
+          orgId: Number(linkedOrg.organisationNumber),
           referenceNumber: linkedOrg.id,
           linkedBy: {
             email,
@@ -133,7 +133,7 @@ describe('GET /v1/me/organisations', () => {
           {
             id: unlinkedOrg.id,
             name: unlinkedOrg.companyDetails.name,
-            orgId: unlinkedOrg.orgId,
+            orgId: Number(unlinkedOrg.organisationNumber),
             referenceNumber: unlinkedOrg.id
           }
         ]

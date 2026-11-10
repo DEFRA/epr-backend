@@ -47,7 +47,7 @@ export const testReplaceBehaviour = (it) => {
         const result = await repository.findById(orgData.id, 2)
         expect(result).toMatchObject({
           id: orgData.id,
-          orgId: orgData.orgId,
+          organisationNumber: orgData.organisationNumber,
           wasteProcessingTypes: ['reprocessor'],
           reprocessingNations: orgData.reprocessingNations,
           businessType: orgData.businessType,
@@ -57,7 +57,7 @@ export const testReplaceBehaviour = (it) => {
         })
       })
 
-      it('refuses to give an organisation an orgId another organisation holds', async () => {
+      it('refuses to give an organisation a number another organisation holds', async () => {
         const first = buildOrganisation()
         const second = buildOrganisation()
         await repository.insert(first)
@@ -67,7 +67,9 @@ export const testReplaceBehaviour = (it) => {
           repository.replace(
             second.id,
             1,
-            prepareOrgUpdate(second, { orgId: first.orgId })
+            prepareOrgUpdate(second, {
+              organisationNumber: first.organisationNumber
+            })
           )
         ).rejects.toMatchObject({
           isBoom: true,

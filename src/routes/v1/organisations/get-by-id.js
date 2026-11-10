@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
@@ -63,6 +64,6 @@ export const organisationsGetById = {
       request.params.organisationId.trim()
     )
 
-    return h.response(organisation).code(StatusCodes.OK)
+    return h.response(toOrganisationWire(organisation)).code(StatusCodes.OK)
   }
 }

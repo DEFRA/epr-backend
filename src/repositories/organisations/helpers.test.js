@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { statusHistoryWithChanges } from './helpers.js'
+import {
+  organisationNumberOfStored,
+  statusHistoryWithChanges
+} from './helpers.js'
+
+describe('organisationNumberOfStored', () => {
+  it('reads a stored orgId as its organisation number', () => {
+    expect(organisationNumberOfStored({ _id: 'org-1', orgId: 500123 })).toBe(
+      '500123'
+    )
+  })
+
+  it.each([0, 12.5, [123], '123abc'])(
+    'refuses a stored orgId of %j, which is not an organisation number',
+    (orgId) => {
+      expect(() => organisationNumberOfStored({ _id: 'org-1', orgId })).toThrow(
+        /Stored organisation org-1 is invalid: "orgId"/
+      )
+    }
+  )
+})
 
 describe('statusHistoryWithChanges', () => {
   it('returns initial status history when existingItem is null', () => {

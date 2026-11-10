@@ -10,7 +10,6 @@ import {
   uppercaseString
 } from '#common/helpers/formatters.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -32,7 +31,7 @@ function buildLookupKey(organisationNumber, registrationNumber) {
  *   appropriateAgency: string;
  *   type: string;
  *   businessName: string;
- *   orgId: number;
+ *   organisationNumber: OrganisationNumber;
  *   registrationNumber: string;
  *   accreditationNumber: string;
  *   reprocessingSite: string;
@@ -81,17 +80,14 @@ function buildRegistrationLookup(organisations) {
           )
           return [
             [
-              buildLookupKey(
-                toOrganisationNumber(String(org.orgId)),
-                registrationNumber
-              ),
+              buildLookupKey(org.organisationNumber, registrationNumber),
               {
                 appropriateAgency: uppercaseString(
                   registration.submittedToRegulator
                 ),
                 type: capitalize(registration.wasteProcessingType),
                 businessName: org.companyDetails.name,
-                orgId: org.orgId,
+                organisationNumber: org.organisationNumber,
                 registrationNumber,
                 accreditationNumber: accreditation?.accreditationNumber || '',
                 reprocessingSite: formatAddress(registration.site?.address),

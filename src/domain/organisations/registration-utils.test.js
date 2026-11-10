@@ -12,6 +12,7 @@ import {
 } from './registration-utils.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -27,7 +28,7 @@ const userFixture = {
 /** @type {Organisation} */
 const orgFixture = {
   id: 'org-1',
-  orgId: 500001,
+  organisationNumber: toOrganisationNumber('500001'),
   accreditations: [],
   registrations: [],
   companyDetails: { name: 'Acme Ltd' },
@@ -102,9 +103,9 @@ describe('getReportableRegistrations', () => {
     }
   )
 
-  it('excludes test organisations by orgId', () => {
+  it('excludes test organisations by organisation number', () => {
     const testOrg = buildOrg({
-      orgId: 999999,
+      organisationNumber: toOrganisationNumber('999999'),
       registrations: [buildReg({ status: 'approved' })]
     })
 

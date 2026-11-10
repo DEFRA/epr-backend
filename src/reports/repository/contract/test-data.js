@@ -7,6 +7,8 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
@@ -33,11 +35,11 @@ export const DEFAULT_REG_NUMBER = uniqueRegistrationNumber()
 
 /**
  * The numbers a report for a test organisation's registration is stored under.
- * @param {{ orgId: number }} organisation
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
  * @param {{ registrationNumber?: string | null }} registration
  */
 export const reportKeyOf = (organisation, registration) => ({
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(
     /** @type {string} */ (registration.registrationNumber)
   )

@@ -86,11 +86,8 @@ export const createOrganisationReadRepository = (
       return organisation ?? null
     },
 
-    find: async ({ organisationNumber, ...params }) => {
-      const { items, ...page } = await findPage(db, {
-        ...params,
-        orgId: organisationNumber
-      })
+    find: async (params) => {
+      const { items, ...page } = await findPage(db, params)
       return {
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)

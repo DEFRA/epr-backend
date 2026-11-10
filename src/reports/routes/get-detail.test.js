@@ -151,7 +151,7 @@ const createServer = async ({
     config: { featureFlags: { reportDataValidation } }
   })
 
-  const registrationPath = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+  const registrationPath = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
 
   return {
     server,

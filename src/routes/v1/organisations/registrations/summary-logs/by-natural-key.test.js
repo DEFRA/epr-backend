@@ -57,7 +57,7 @@ const organisation = buildOrganisation({
   accreditations: [accredited]
 })
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const summaryLogs = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 
 const uploadAddresses = [

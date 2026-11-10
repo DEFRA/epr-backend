@@ -1,10 +1,13 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
+
+/** @import { ObjectId } from 'mongodb' */
 import {
   idSchema,
   organisationInsertSchema,
   organisationReadSchema,
   organisationReplaceSchema,
+  storedOrgIdSchema,
   registrationSchema,
   statusHistoryItemSchema
 } from './organisation.js'
@@ -107,13 +110,38 @@ export const validateAccreditation = (data) => {
 }
 
 /**
- * Normalises an organisation document read from the database.
- * Ensures array fields are never undefined by applying defaults.
+ * @param {ObjectId | string} documentId - the stored document's _id, which the error names
+ * @param {unknown} value
+ * @param {Joi.Schema} schema
+ */
+const parseStored = (documentId, value, schema) => {
+  const { error, value: parsed } = schema.validate(value)
+
+  if (error) {
+    throw Boom.badImplementation(
+      `Stored organisation ${documentId.toString()} is invalid: ${error.message}`
+    )
+  }
+
+  return parsed
+}
+
+/**
+ * Parses an organisation document read from the database.
+ * Throws when its orgId is not an organisation number, and ensures array
+ * fields are never undefined by applying defaults.
  * This is an internal adapter concern - callers receive data matching the port types.
- * @param {object} data - Raw document from MongoDB
+ * @param {{ _id: ObjectId | string }} data - Raw document from MongoDB
  * @returns {object} Normalised document with array defaults applied
  */
-export const normaliseOrganisationFromDb = (data) => {
-  const { value } = organisationReadSchema.validate(data)
-  return value
-}
+export const normaliseOrganisationFromDb = (data) =>
+  parseStored(data._id, data, organisationReadSchema)
+
+/**
+ * Parses an orgId read from the database without the rest of its document.
+ * Throws when it is not an organisation number.
+ * @param {{ _id: ObjectId | string, orgId: unknown }} stored
+ * @returns {number}
+ */
+export const parseStoredOrgId = ({ _id, orgId }) =>
+  parseStored(_id, orgId, storedOrgIdSchema.label('orgId'))

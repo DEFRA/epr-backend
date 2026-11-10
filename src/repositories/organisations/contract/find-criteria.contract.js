@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 
@@ -230,8 +231,8 @@ export const testFindWithCriteriaBehaviour = (it) => {
     })
 
     describe('criteria', () => {
-      const HOLDER_ORG_ID = 700001
-      const OTHER_ORG_ID = 700002
+      const HOLDER_ORGANISATION_NUMBER = toOrganisationNumber('700001')
+      const OTHER_ORGANISATION_NUMBER = toOrganisationNumber('700002')
 
       let holder
       let other
@@ -239,13 +240,13 @@ export const testFindWithCriteriaBehaviour = (it) => {
       beforeEach(async () => {
         holder = buildOrgWithCriteria({
           name: 'Holder Ltd',
-          orgId: HOLDER_ORG_ID,
+          organisationNumber: HOLDER_ORGANISATION_NUMBER,
           registrationNumber: 'REG001',
           accreditationNumber: 'ACC001'
         })
         other = buildOrgWithCriteria({
           name: 'Other Ltd',
-          orgId: OTHER_ORG_ID,
+          organisationNumber: OTHER_ORGANISATION_NUMBER,
           registrationNumber: 'REG002',
           accreditationNumber: 'ACC444'
         })
@@ -253,9 +254,9 @@ export const testFindWithCriteriaBehaviour = (it) => {
         await repository.insert(other)
       })
 
-      it('finds the organisation holding the numeric orgId', async () => {
+      it('finds the organisation holding the organisation number', async () => {
         const result = await repository.find({
-          orgId: String(HOLDER_ORG_ID),
+          organisationNumber: HOLDER_ORGANISATION_NUMBER,
           page: 1,
           pageSize: 50
         })
@@ -266,7 +267,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it("finds nothing for an organisation's document id", async () => {
         const result = await repository.find({
-          orgId: holder.id,
+          organisationNumber: holder.id,
           page: 1,
           pageSize: 50
         })
@@ -336,9 +337,9 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(mismatched.items).toEqual([])
       })
 
-      it('returns no results for an orgId that is not a number', async () => {
+      it('returns no results for a value that is not an organisation number', async () => {
         const result = await repository.find({
-          orgId: 'not-an-id',
+          organisationNumber: 'not-an-id',
           page: 1,
           pageSize: 50
         })
@@ -394,7 +395,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
       it('treats empty-string criteria as absent', async () => {
         const result = await repository.find({
           search: '',
-          orgId: '',
+          organisationNumber: '',
           registrationNumber: '',
           accreditationNumber: '',
           page: 1,
@@ -406,7 +407,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it('treats undefined criteria as absent', async () => {
         const result = await repository.find({
-          orgId: undefined,
+          organisationNumber: undefined,
           registrationNumber: undefined,
           accreditationNumber: undefined,
           page: 1,
@@ -443,7 +444,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
         const found = result.items[0]
         expect(found.id).toBe(org.id)
-        expect(found.orgId).toBe(org.orgId)
+        expect(found.organisationNumber).toBe(org.organisationNumber)
         expect(found.companyDetails.name).toBe('Acme Ltd')
         expect(found.status).toBeDefined()
       })

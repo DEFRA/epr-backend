@@ -36,7 +36,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const summaryLogId = new ObjectId().toString()
   const organisationId = organisation.id
   const registrationId = registration.id
-  const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+  const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
   const fileUrl = (logId = summaryLogId) => `${summaryLogs}/${logId}/file`
 

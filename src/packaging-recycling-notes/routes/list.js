@@ -6,7 +6,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
 import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
@@ -35,7 +34,7 @@ const lookUpExternalIds = async (organisationsRepository, prns) => {
       await organisationsRepository.findByOrganisationNumbers(
         organisationNumbers
       )
-    ).map((organisation) => [organisationNumberOf(organisation), organisation])
+    ).map((organisation) => [organisation.organisationNumber, organisation])
   )
 
   return (prn) => {
