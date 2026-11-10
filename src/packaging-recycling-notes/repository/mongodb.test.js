@@ -471,7 +471,7 @@ describe('MongoDB packaging recycling notes repository', () => {
 
       await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
-      expect(droppedIndexes).not.toContain('prnNumber')
+      expect(droppedIndexes).toStrictEqual(['organisationId_status'])
     })
 
     it('handles ns does not exist error when collection is new', async () => {
