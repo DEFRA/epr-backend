@@ -6,15 +6,17 @@ import {
 
 describe('organisationNumberOfStored', () => {
   it('reads a stored orgId as its organisation number', () => {
-    expect(organisationNumberOfStored(500123)).toBe('500123')
+    expect(organisationNumberOfStored({ _id: 'org-1', orgId: 500123 })).toBe(
+      '500123'
+    )
   })
 
   it.each([0, 12.5, [123], '123abc'])(
     'refuses a stored orgId of %j, which is not an organisation number',
     (orgId) => {
-      expect(() =>
-        organisationNumberOfStored(/** @type {number} */ (orgId))
-      ).toThrow(/"value"/)
+      expect(() => organisationNumberOfStored({ _id: 'org-1', orgId })).toThrow(
+        /Stored organisation org-1 is invalid: "orgId"/
+      )
     }
   )
 })

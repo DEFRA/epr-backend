@@ -398,6 +398,30 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
+  it.each([0, -1, 12.5, '500001', null])(
+    'rejects an orgId of %j, which is not an organisation number',
+    async (orgId) => {
+      const org = await createOrganisation()
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, orgId }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Invalid organisation data: orgId: must be an organisation number'
+      )
+    }
+  )
+
   it('rejects a registration linked to a malformed accreditation id', async () => {
     const org = await createOrganisation()
     const [firstRegistration, ...otherRegistrations] = org.registrations

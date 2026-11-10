@@ -1,3 +1,4 @@
+import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
@@ -39,10 +40,7 @@ export const linkedOrganisationsGetAll = {
       await request.organisationsRepository.findAllLinked(filter)
     const filtered = organisations
       .filter((org) => !isTestOrganisation(org))
-      .map(({ organisationNumber, ...org }) => ({
-        ...org,
-        orgId: Number(organisationNumber)
-      }))
+      .map(toOrganisationWire)
 
     return h.response(filtered).code(StatusCodes.OK)
   }

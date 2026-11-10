@@ -43,7 +43,7 @@ export const createInMemoryOrganisationReadRepository = (
   return (dependencies) => ({
     findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
       const found = stored.find(
-        (organisation) => organisation.organisationNumber === organisationNumber
+        (candidate) => candidate.organisationNumber === organisationNumber
       )
       if (!found) {
         return null
@@ -59,11 +59,8 @@ export const createInMemoryOrganisationReadRepository = (
       return organisation ?? null
     },
 
-    find: async ({ organisationNumber, ...params }) => {
-      const { items, ...page } = findPage(stored, {
-        ...params,
-        orgId: organisationNumber
-      })
+    find: async (params) => {
+      const { items, ...page } = findPage(stored, params)
       return {
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)

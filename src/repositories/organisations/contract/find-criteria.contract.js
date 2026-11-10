@@ -254,9 +254,9 @@ export const testFindWithCriteriaBehaviour = (it) => {
         await repository.insert(other)
       })
 
-      it('finds the organisation holding the numeric orgId', async () => {
+      it('finds the organisation holding the organisation number', async () => {
         const result = await repository.find({
-          orgId: HOLDER_ORGANISATION_NUMBER,
+          organisationNumber: HOLDER_ORGANISATION_NUMBER,
           page: 1,
           pageSize: 50
         })
@@ -267,7 +267,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it("finds nothing for an organisation's document id", async () => {
         const result = await repository.find({
-          orgId: holder.id,
+          organisationNumber: holder.id,
           page: 1,
           pageSize: 50
         })
@@ -337,9 +337,9 @@ export const testFindWithCriteriaBehaviour = (it) => {
         expect(mismatched.items).toEqual([])
       })
 
-      it('returns no results for an orgId that is not a number', async () => {
+      it('returns no results for a value that is not an organisation number', async () => {
         const result = await repository.find({
-          orgId: 'not-an-id',
+          organisationNumber: 'not-an-id',
           page: 1,
           pageSize: 50
         })
@@ -395,7 +395,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
       it('treats empty-string criteria as absent', async () => {
         const result = await repository.find({
           search: '',
-          orgId: '',
+          organisationNumber: '',
           registrationNumber: '',
           accreditationNumber: '',
           page: 1,
@@ -407,7 +407,7 @@ export const testFindWithCriteriaBehaviour = (it) => {
 
       it('treats undefined criteria as absent', async () => {
         const result = await repository.find({
-          orgId: undefined,
+          organisationNumber: undefined,
           registrationNumber: undefined,
           accreditationNumber: undefined,
           page: 1,

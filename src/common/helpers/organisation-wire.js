@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
@@ -17,10 +18,17 @@ export const toOrganisationWire = ({ organisationNumber, ...rest }) => ({
 
 /**
  * @template {object} T
- * @param {T & { orgId?: number }} fields
+ * @param {T & { orgId?: unknown }} fields
  * @returns {Omit<T, 'orgId'> & { organisationNumber?: OrganisationNumber }}
  */
-export const fromOrganisationWire = ({ orgId, ...rest }) =>
-  orgId === undefined
-    ? rest
-    : { ...rest, organisationNumber: toOrganisationNumber(String(orgId)) }
+export const fromOrganisationWire = ({ orgId, ...rest }) => {
+  if (orgId === undefined) {
+    return rest
+  }
+  if (!Number.isInteger(orgId) || Number(orgId) < 1) {
+    throw Boom.badData(
+      'Invalid organisation data: orgId: must be an organisation number'
+    )
+  }
+  return { ...rest, organisationNumber: toOrganisationNumber(String(orgId)) }
+}

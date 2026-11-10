@@ -247,7 +247,7 @@ const performFind =
 /** @returns {import('./port.js').OrganisationSummary} */
 const toOrganisationSummary = (org) => ({
   id: org._id.toString(),
-  organisationNumber: organisationNumberOfStored(org.orgId),
+  organisationNumber: organisationNumberOfStored(org),
   companyDetails: { name: org.companyDetails.name },
   status: getCurrentStatus(org)
 })
@@ -402,7 +402,7 @@ const performFindAllIds = (staleCache) => async () => {
 }
 
 /**
- * @param {Array<{ orgId: number }>} storage
+ * @param {Array<{ _id: unknown, orgId: number }>} storage
  * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
  */
 const performFindHighestOrganisationNumber = (storage) => async () => {
@@ -410,7 +410,9 @@ const performFindHighestOrganisationNumber = (storage) => async () => {
     return null
   }
   return organisationNumberOfStored(
-    Math.max(...storage.map(({ orgId }) => orgId))
+    storage.reduce((highest, org) =>
+      org.orgId > highest.orgId ? org : highest
+    )
   )
 }
 

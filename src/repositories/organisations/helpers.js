@@ -228,7 +228,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
 
   return {
     id: _id.toString(),
-    organisationNumber: organisationNumberOfStored(orgId),
+    organisationNumber: organisationNumberOfStored({ _id, orgId }),
     ...rest
   }
 }
@@ -396,12 +396,12 @@ const INTEGER_PATTERN = /^\d+$/
  */
 export const normaliseCriteria = ({
   search,
-  orgId,
+  organisationNumber,
   registrationNumber,
   accreditationNumber
 }) => ({
   search: (search ?? '').trim(),
-  orgId: (orgId ?? '').trim(),
+  organisationNumber: (organisationNumber ?? '').trim(),
   registrationNumber: (registrationNumber ?? '').trim(),
   accreditationNumber: (accreditationNumber ?? '').trim()
 })
@@ -422,13 +422,13 @@ export const parseOrgIdCriterion = (value) =>
 export const storedOrgId = (organisationNumber) => Number(organisationNumber)
 
 /**
- * The organisation number an organisation stored under `orgId` holds.
+ * The organisation number a stored organisation holds in its `orgId`.
  *
- * @param {number} orgId
+ * @param {{ _id: unknown, orgId: unknown }} stored
  * @returns {OrganisationNumber}
  */
-export const organisationNumberOfStored = (orgId) =>
-  toOrganisationNumber(String(parseStoredOrgId(orgId)))
+export const organisationNumberOfStored = (stored) =>
+  toOrganisationNumber(String(parseStoredOrgId(stored)))
 
 /**
  * An organisation as it is stored, with its number as `orgId`.

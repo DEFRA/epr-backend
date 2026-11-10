@@ -37,18 +37,30 @@ export const testFindHighestOrganisationNumberBehaviour = (it) => {
       )
     })
 
-    it('returns the highest number any organisation holds', async () => {
+    /** @param {boolean} higherFirst */
+    const expectHighestWhenInserted = async (higherFirst) => {
       const lower = buildOrganisation()
       const higher = buildOrganisation()
       expect(Number(higher.organisationNumber)).toBeGreaterThan(
         Number(lower.organisationNumber)
       )
-      await repository.insert(higher)
-      await repository.insert(lower)
+      for (const organisation of higherFirst
+        ? [higher, lower]
+        : [lower, higher]) {
+        await repository.insert(organisation)
+      }
 
       await expect(repository.findHighestOrganisationNumber()).resolves.toBe(
         higher.organisationNumber
       )
+    }
+
+    it('returns the highest number when the higher was inserted first', async () => {
+      await expectHighestWhenInserted(true)
+    })
+
+    it('returns the highest number when the lower was inserted first', async () => {
+      await expectHighestWhenInserted(false)
     })
   })
 }

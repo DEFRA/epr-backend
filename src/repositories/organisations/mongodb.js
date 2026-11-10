@@ -213,7 +213,7 @@ const LINKED_ORG_PROJECTION = {
 /** @returns {import('./port.js').OrganisationSummary} */
 const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
-  organisationNumber: organisationNumberOfStored(doc.orgId),
+  organisationNumber: organisationNumberOfStored(doc),
   companyDetails: { name: doc.companyDetails.name },
   status: getCurrentStatus(doc)
 })
@@ -372,7 +372,9 @@ const performFindHighestOrganisationNumber = (db) => async () => {
     .sort({ orgId: -1 })
     .limit(1)
     .toArray()
-  return doc ? organisationNumberOfStored(doc.orgId) : null
+  return doc
+    ? organisationNumberOfStored({ _id: doc._id, orgId: doc.orgId })
+    : null
 }
 
 /**

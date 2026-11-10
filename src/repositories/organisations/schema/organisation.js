@@ -29,6 +29,9 @@ import {
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
 
+/** The orgId an organisation is stored under, which is its organisation number. */
+export const storedOrgIdSchema = Joi.number().integer().min(1).required()
+
 export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array()
     .items(accreditationSchema)
@@ -46,7 +49,7 @@ export const organisationInsertSchema = Joi.object({
   id: idSchema,
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional(),
   managementContactDetails: userSchema.optional(),
-  orgId: Joi.number().required(),
+  orgId: storedOrgIdSchema,
   partnership: partnershipSchema.optional(),
   registrations: Joi.array()
     .items(registrationSchema)
@@ -104,9 +107,6 @@ export const organisationReplaceSchema = organisationInsertSchema
       .default([])
       .custom(validateImmutableFields(['id']))
   })
-
-/** The orgId an organisation is stored under, which is its organisation number. */
-export const storedOrgIdSchema = Joi.number().integer().min(1).required()
 
 /**
  * Schema for organisation documents read from the database. Refuses a document

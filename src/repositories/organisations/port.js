@@ -36,7 +36,7 @@
  * not required to describe a linked pair.
  * @typedef {Object} SearchCriteria
  * @property {string} [search] - case-insensitive substring on companyDetails.name
- * @property {string} [orgId] - the organisation number; a value that is not a number matches nothing
+ * @property {string} [organisationNumber] - a value that is not an organisation number matches nothing
  * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
  * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
  */

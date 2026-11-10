@@ -46,8 +46,12 @@ const anchoredMatcher = (value) => {
  *   satisfies every criterion
  */
 const buildFindMatcher = (criteria) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria(criteria)
+  const {
+    search,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
 
   /** @type {Array<(org: Searchable) => boolean>} */
   const checks = []
@@ -55,8 +59,8 @@ const buildFindMatcher = (criteria) => {
     const pattern = new RegExp(escapeRegex(search), 'i')
     checks.push((org) => pattern.test(org.companyDetails.name))
   }
-  if (orgId !== '') {
-    const wantedOrgId = parseOrgIdCriterion(orgId)
+  if (organisationNumber !== '') {
+    const wantedOrgId = parseOrgIdCriterion(organisationNumber)
     checks.push((org) => storedOrgId(org.organisationNumber) === wantedOrgId)
   }
   if (registrationNumber !== '') {

@@ -953,8 +953,9 @@ describe('normaliseOrganisationFromDb', () => {
     ['fractional', 12.5],
     ['not a number', 'abc']
   ])('refuses a document whose orgId is %s', (_description, orgId) => {
+    const _id = new ObjectId()
     expect(() =>
-      normaliseOrganisationFromDb({ _id: new ObjectId(), orgId, version: 1 })
-    ).toThrow(/"orgId"/)
+      normaliseOrganisationFromDb({ _id, orgId, version: 1 })
+    ).toThrow(`Stored organisation ${_id} is invalid: "orgId"`)
   })
 })

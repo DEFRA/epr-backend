@@ -217,6 +217,39 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
+  describe('a stored orgId that is not an organisation number', () => {
+    it('fails each read, naming the document', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation({
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Linked Org'
+        )
+      })
+      await repository.insert(organisation)
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .updateOne(
+          { _id: ObjectId.createFromHexString(organisation.id) },
+          { $set: { orgId: 0 } }
+        )
+      const failure = `Stored organisation ${organisation.id} is invalid: "orgId"`
+
+      await expect(repository.findAll()).rejects.toThrow(failure)
+      await expect(repository.findById(organisation.id)).rejects.toThrow(
+        failure
+      )
+      await expect(repository.findAllLinked()).rejects.toThrow(failure)
+      await expect(repository.findHighestOrganisationNumber()).rejects.toThrow(
+        failure
+      )
+    })
+  })
+
   describe('findAllLinked query filtering', () => {
     it('excludes documents where linkedDefraOrganisation exists but orgId is null', async ({
       organisationsRepository,

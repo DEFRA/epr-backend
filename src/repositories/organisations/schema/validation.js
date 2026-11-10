@@ -108,20 +108,38 @@ export const validateAccreditation = (data) => {
 }
 
 /**
+ * @param {unknown} documentId - the stored document's _id, which the error names
+ * @param {unknown} value
+ * @param {Joi.Schema} schema
+ */
+const parseStored = (documentId, value, schema) => {
+  const { error, value: parsed } = schema.validate(value)
+
+  if (error) {
+    throw Boom.badImplementation(
+      `Stored organisation ${String(documentId)} is invalid: ${error.message}`
+    )
+  }
+
+  return parsed
+}
+
+/**
  * Parses an organisation document read from the database.
  * Throws when its orgId is not an organisation number, and ensures array
  * fields are never undefined by applying defaults.
  * This is an internal adapter concern - callers receive data matching the port types.
- * @param {object} data - Raw document from MongoDB
+ * @param {{ _id: unknown }} data - Raw document from MongoDB
  * @returns {object} Normalised document with array defaults applied
  */
 export const normaliseOrganisationFromDb = (data) =>
-  Joi.attempt(data, organisationReadSchema)
+  parseStored(data._id, data, organisationReadSchema)
 
 /**
  * Parses an orgId read from the database without the rest of its document.
  * Throws when it is not an organisation number.
- * @param {unknown} orgId
+ * @param {{ _id: unknown, orgId: unknown }} stored
  * @returns {number}
  */
-export const parseStoredOrgId = (orgId) => Joi.attempt(orgId, storedOrgIdSchema)
+export const parseStoredOrgId = ({ _id, orgId }) =>
+  parseStored(_id, orgId, storedOrgIdSchema.label('orgId'))
