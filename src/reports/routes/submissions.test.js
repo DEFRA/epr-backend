@@ -6,11 +6,16 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
+  organisationReadRepositoryFrom,
+  organisationReadRepositoryOf
+} from '#vite/helpers/organisation-read-model.js'
+import {
   buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { getReportSubmissionsPath } from './submissions.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -26,14 +31,9 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     })
     const org = buildOrganisation({ registrations: [registration] })
 
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    const organisationsRepository = organisationsRepositoryFactory()
-    await organisationsRepository.insert(org)
-
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationReadRepository: await organisationReadRepositoryOf([org]),
         reportsRepository: createInMemoryReportsRepository()
       }
     })
@@ -82,8 +82,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
     await buildSubmittedReport(reportsRepository, {
-      organisationId: org.id,
-      registrationId: org.registrations[0].id,
+      ...reportKeyOf(org, org.registrations[0]),
       year,
       cadence: 'monthly',
       period: 1,
@@ -97,7 +96,9 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationReadRepository: await organisationReadRepositoryFrom(
+          organisationsRepository
+        ),
         reportsRepository: reportsRepositoryFactory
       }
     })
@@ -123,14 +124,6 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
   })
 
   it('returns 403 for a standard user', async () => {
-    const registration = buildRegistration()
-    const org = buildOrganisation({ registrations: [registration] })
-
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    const organisationsRepository = organisationsRepositoryFactory()
-    await organisationsRepository.insert(org)
-
     const server = await createServer()
 
     const response = await server.inject({

@@ -1,15 +1,14 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
-  DEFAULT_ORG_ID,
-  DEFAULT_REG_ID,
+  DEFAULT_ORG_NUMBER,
+  DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
@@ -19,8 +18,6 @@ import {
   uniqueRegistrationNumber
 } from './test-data.js'
 
-const ALT_ORG_ID = new ObjectId().toString()
-const ALT_REG_ID = new ObjectId().toString()
 const NEXT_YEAR = toYear(DEFAULT_REPORT_YEAR + 1)
 
 const TONNAGE_OVERRIDES = {
@@ -98,8 +95,8 @@ export const testFindPeriodicReportsForYearBehaviour = (it) => {
       })
 
       expect(result).toEqual({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
@@ -148,11 +145,10 @@ export const testFindPeriodicReportsForYearBehaviour = (it) => {
 
     it('returns every org/registration reporting in the year and none from another year', async () => {
       await repository.createReport(buildCreateReportParams())
+      const altOrganisationNumber = uniqueOrganisationNumber()
       await repository.createReport(
         buildCreateReportParams({
-          organisationId: ALT_ORG_ID,
-          registrationId: ALT_REG_ID,
-          organisationNumber: uniqueOrganisationNumber(),
+          organisationNumber: altOrganisationNumber,
           registrationNumber: uniqueRegistrationNumber()
         })
       )
@@ -163,8 +159,8 @@ export const testFindPeriodicReportsForYearBehaviour = (it) => {
       })
 
       expect(result).toHaveLength(2)
-      expect(result.map((r) => r.organisationId)).toEqual(
-        expect.arrayContaining([DEFAULT_ORG_ID, ALT_ORG_ID])
+      expect(result.map((r) => r.organisationNumber)).toEqual(
+        expect.arrayContaining([DEFAULT_ORG_NUMBER, altOrganisationNumber])
       )
       expect(result.every((r) => r.year === DEFAULT_REPORT_YEAR)).toBe(true)
     })

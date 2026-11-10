@@ -80,7 +80,11 @@ export const organisationReadRepositoryOver = (
   find: async (params) =>
     (
       await organisationReadRepositoryFrom(organisationsRepository, options)
-    )().find(params)
+    )().find(params),
+  findAll: async () =>
+    (
+      await organisationReadRepositoryFrom(organisationsRepository, options)
+    )().findAll()
 })
 
 /**

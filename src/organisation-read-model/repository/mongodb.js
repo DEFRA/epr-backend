@@ -2,6 +2,7 @@ import { storedOrgId } from '#repositories/organisations/helpers.js'
 import {
   DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
   DEFAULT_MAX_CONSISTENCY_RETRIES,
+  findAll,
   findOneAtMinimumVersion,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
@@ -94,6 +95,9 @@ export const createOrganisationReadRepository = (
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)
       }
-    }
+    },
+
+    findAll: async () =>
+      toReadModelOrganisations(await findAll(db), [], dependencies)
   })
 }

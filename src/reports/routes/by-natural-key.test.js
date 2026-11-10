@@ -13,7 +13,6 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
@@ -140,8 +139,6 @@ describe('report routes by natural key', () => {
     for (const { registration, cadence, periods, seeded, prn } of streams) {
       /** @param {number} period */
       const forPeriod = (period) => ({
-        organisationId: organisation.id,
-        registrationId: registration.id,
         ...numbersOf(registration),
         year: YEAR,
         cadence,
@@ -164,10 +161,6 @@ describe('report routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation),
-          partialMock(otherOrganisation)
-        ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(otherOrganisation)
@@ -291,12 +284,7 @@ describe('report routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         const { detail, ...resource } = JSON.parse(response.payload)
         expect(resource).toMatchObject({ status: REPORT_STATUS.SUBMITTED })
-        const {
-          id: _id,
-          organisationId: _organisationId,
-          registrationId: _registrationId,
-          ...held
-        } = stored
+        const { id: _id, ...held } = stored
         expect(detail).toStrictEqual({
           ...JSON.parse(JSON.stringify(held)),
           details: expect.any(Object),
@@ -549,8 +537,6 @@ describe('report routes by natural key', () => {
     const period = 10
     await reportsRepository.createReport(
       buildCreateReportParams({
-        organisationId: organisation.id,
-        registrationId: accreditedRegistration.id,
         ...numbersOf(accreditedRegistration),
         year: YEAR,
         cadence: 'monthly',
@@ -607,8 +593,6 @@ describe('report routes by natural key', () => {
     const seedQ1 = (registration, overrides = {}) =>
       reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: organisation.id,
-          registrationId: registration.id,
           ...numbersOf(registration),
           year: YEAR,
           cadence: 'quarterly',
@@ -748,8 +732,6 @@ describe('report routes by natural key', () => {
     it('leaves out a stored report for a month before the accreditation began', async () => {
       await reportsRepository.createReport(
         buildCreateReportParams({
-          organisationId: organisation.id,
-          registrationId: accreditedRegistration.id,
           ...numbersOf(accreditedRegistration),
           year: YEAR,
           cadence: 'monthly',

@@ -3,6 +3,7 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { registrationKey } from '#reports/domain/registration-key.js'
 import { legacyStaleKeys, normaliseStale } from '#reports/domain/stale.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -19,6 +20,7 @@ import { randomUUID } from 'node:crypto'
  *   PeriodicReport,
  *   PrnData,
  *   RecyclingActivitySummary,
+ *   RegistrationKey,
  *   Report,
  *   ReportPerPeriod,
  *   ReportResubmissionRequired,
@@ -205,17 +207,19 @@ const buildPeriodSummary = (periodDocs) => {
  * first. The highest-numbered report becomes `current`; all previous submitted
  * reports are collected in `previousSubmissions`.
  *
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {RegistrationKey} key
  * @param {PeriodicReportFields[]} docs
  * @returns {PeriodicReport[]}
  */
-export const groupAsPeriodicReports = (organisationId, registrationId, docs) =>
+export const groupAsPeriodicReports = (
+  { organisationNumber, registrationNumber },
+  docs
+) =>
   Object.values(Object.groupBy(docs, (doc) => doc.year))
     .filter((yearDocs) => yearDocs !== undefined)
     .map((yearDocs) => ({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       year: yearDocs[0].year,
       reports: groupTransform(
         yearDocs,
@@ -231,22 +235,18 @@ export const groupAsPeriodicReports = (organisationId, registrationId, docs) =>
 
 /**
  * Groups reports and transforms them into periodic reports.
- * @param {(PeriodicReportFields & { organisationId: string, registrationId: string })[]} reports
+ * @param {(PeriodicReportFields & RegistrationKey)[]} reports
  * @returns {PeriodicReport[]}
  */
-export const transformToPeriodicReports = (reports) => {
-  const grouped = reports.reduce((acc, report) => {
-    const key = `${report.organisationId}::${report.registrationId}`
-    acc[key] ??= []
-    acc[key].push(report)
-    return acc
-  }, {})
-
-  return Object.values(grouped).flatMap((group) => {
-    const { organisationId, registrationId } = group[0]
-    return groupAsPeriodicReports(organisationId, registrationId, group)
+export const transformToPeriodicReports = (reports) =>
+  Object.values(Object.groupBy(reports, registrationKey)).flatMap((group) => {
+    const [{ organisationNumber, registrationNumber }] =
+      /** @type {(PeriodicReportFields & RegistrationKey)[]} */ (group)
+    return groupAsPeriodicReports(
+      { organisationNumber, registrationNumber },
+      /** @type {PeriodicReportFields[]} */ (group)
+    )
   })
-}
 
 /** @type {import('./port.js').Report} */
 /**

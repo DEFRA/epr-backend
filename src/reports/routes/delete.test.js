@@ -1,4 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
@@ -6,7 +7,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -38,8 +38,6 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
     const createdReport = withReport
       ? await reportsRepository.createReport(
           buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
             ...reportKeyOf(org, registration),
             year: YEAR,
             cadence: CADENCE.quarterly,
@@ -53,7 +51,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
+        organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
         reportsRepository: reportsRepositoryFactory
@@ -64,8 +62,6 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
     return {
       server,
-      organisationId: org.id,
-      registrationId: registration.id,
       key: reportKeyOf(org, registration),
       reportId: /** @type {string} */ (createdReport?.id),
       reportsRepository,
@@ -112,16 +108,14 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
     beforeEach(() => vi.clearAllMocks())
 
     it('calls auditReportDelete with correct params on successful delete', async () => {
-      const { organisationId, registrationId, reportId, deleteReport } =
-        await createServer()
+      const { key, reportId, deleteReport } = await createServer()
 
       await deleteReport()
 
       expect(reportAudit.auditReportDelete).toHaveBeenCalledWith(
         expect.any(Object),
         {
-          organisationId,
-          registrationId,
+          ...key,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

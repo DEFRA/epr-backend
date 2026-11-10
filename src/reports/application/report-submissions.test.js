@@ -1,14 +1,16 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { logger } from '#common/helpers/logging/logger.js'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
@@ -51,8 +53,7 @@ describe('generateReportSubmissions (integration)', () => {
     const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const org1Reg = org1.registrations[0]
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org1.id,
-      registrationId: org1Reg.id,
+      ...reportKeyOf(org1, org1Reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -67,7 +68,10 @@ describe('generateReportSubmissions (integration)', () => {
     // Org 2: approved registration with no report submissions
     const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     const baseRow = {
       regulator: 'EA',
@@ -201,21 +205,22 @@ describe('generateReportSubmissions (integration)', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2025),
       cadence: 'monthly',
       period: 1
     })
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'quarterly',
       period: 1
     })
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(
       result.reportSubmissions.map(({ reportingPeriod, submittedDate }) => ({
@@ -245,7 +250,10 @@ describe('generateReportSubmissions (integration)', () => {
       VALID_TO: '2026-12-31'
     })
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
     const periods = result.reportSubmissions.map((r) => r.reportingPeriod)
 
     expect(periods).toEqual(['Feb 2026', 'Mar 2026'])
@@ -261,8 +269,7 @@ describe('generateReportSubmissions (integration)', () => {
     // Submission 1 submitted with PRN figures and a note the feed must keep
     // showing, with an in-flight submission 2 draft sitting over it
     await seedInFlightResubmission(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -275,7 +282,10 @@ describe('generateReportSubmissions (integration)', () => {
       supportingInformation: 'Submission 1 note to the regulator'
     })
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     // The in-flight draft is not submitted, so it adds no row: the period still
     // has a single row, sourced from submission 1
@@ -310,8 +320,7 @@ describe('generateReportSubmissions (integration)', () => {
     // A submitted period a service maintainer then unsubmits for correction,
     // with no newer submission: the submitted slot (date, submitter) is retained
     await buildUnsubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -324,7 +333,10 @@ describe('generateReportSubmissions (integration)', () => {
       supportingInformation: 'Submitted note retained after unsubmit'
     })
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     const byPeriod = Object.fromEntries(
       result.reportSubmissions.map((r) => [r.reportingPeriod, r])
@@ -351,8 +363,7 @@ describe('generateReportSubmissions (integration)', () => {
 
     // Submission 1: submitted, with the original PRN figures and note
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -369,8 +380,7 @@ describe('generateReportSubmissions (integration)', () => {
     // figures and note (April has not yet ended, so the period set is unchanged)
     vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,
@@ -384,7 +394,10 @@ describe('generateReportSubmissions (integration)', () => {
       supportingInformation: 'Note on the corrected submission'
     })
 
-    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+    const result = await generateReportSubmissions(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     // Advancing the clock to 18 Apr must not change the applicable period set:
     // April has not yet ended, so no Apr row appears
@@ -439,7 +452,16 @@ afterEach(() => {
 
 const buildOrg = (overrides = {}) => ({
   id: 'org-1',
+  orgId: 500010,
   companyDetails: { name: 'Acme Ltd' },
+  statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
+  submittedToRegulator: 'ea',
+  submitterContactDetails: {
+    fullName: 'Submitter',
+    email: 'submitter@example.com'
+  },
+  users: [],
+  version: 1,
   registrations: [],
   accreditations: [],
   ...overrides
@@ -483,9 +505,16 @@ const buildAccreditationMock = (overrides = {}) => ({
   ...overrides
 })
 
-const makeOrgsRepo = (orgs) =>
-  /** @type {any} */ ({
-    findAll: vi.fn().mockResolvedValue(orgs)
+/**
+ * The read model over stored organisations shaped by `buildOrg`.
+ *
+ * @param {object[]} orgs
+ * @param {{ warn: (...args: any[]) => void }} [logger]
+ */
+const makeOrgsRepo = (orgs, logger = { warn: () => {} }) =>
+  createInMemoryOrganisationReadRepository(/** @type {any[]} */ (orgs))({
+    overseasSitesRepository: { findByIds: async () => [] },
+    logger
   })
 
 const makeReportsRepo = (allPeriodicReports = []) =>
@@ -755,20 +784,19 @@ describe('generateReportSubmissions (edge cases)', () => {
   })
 
   it('skips a registration the read model does not serve, logging why', async () => {
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    const logger = { warn: vi.fn() }
     const org = buildOrg({
       registrations: [buildRegistrationMock({ validFrom: undefined })]
     })
 
     const result = await generateReportSubmissions(
-      makeOrgsRepo([org]),
+      makeOrgsRepo([org], logger),
       makeReportsRepo()
     )
 
     expect(result.reportSubmissions).toEqual([])
-    expect(warn).toHaveBeenCalledWith({
+    expect(logger.warn).toHaveBeenCalledWith({
       message: 'Registration REG-001 has no validFrom'
     })
-    warn.mockRestore()
   })
 })

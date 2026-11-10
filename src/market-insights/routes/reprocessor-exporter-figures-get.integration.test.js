@@ -11,10 +11,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import {
-  uniqueOrganisationNumber,
-  uniqueRegistrationNumber
-} from '#reports/repository/contract/test-data.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -99,13 +95,11 @@ const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
  * @param {TestServerWithRealDb['repositories']} repositories
  */
 const submitJanuaryTwice = async (repositories) => {
-  const operator = await insertAccreditedOperator(
+  const { reportKey } = await insertAccreditedOperator(
     repositories.organisationsRepository
   )
   const january = {
-    ...operator,
-    organisationNumber: uniqueOrganisationNumber(),
-    registrationNumber: uniqueRegistrationNumber(),
+    ...reportKey,
     year: toYear(2026),
     cadence: CADENCE.monthly,
     period: 1
@@ -243,9 +237,7 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
       REGULATOR.NRW
     )
     await buildSubmittedReport(server.repositories.reportsRepository, {
-      ...welsh,
-      organisationNumber: uniqueOrganisationNumber(),
-      registrationNumber: uniqueRegistrationNumber(),
+      ...welsh.reportKey,
       year: toYear(2026),
       cadence: 'monthly',
       period: 1,

@@ -15,9 +15,7 @@ import {
 } from '#domain/organisations/numbers.js'
 import {
   buildCreateReportParams,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
@@ -55,8 +53,6 @@ export const testCreateReportBehaviour = (it) => {
         version: 1,
         schemaVersion: 1,
         submissionNumber: 1,
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
         organisationNumber: DEFAULT_ORG_NUMBER,
         registrationNumber: DEFAULT_REG_NUMBER,
         accreditationNumber: expect.any(String),
@@ -101,7 +97,7 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
-    it('stores the organisation, registration and accreditation numbers beside their ids', async () => {
+    it('stores the organisation, registration and accreditation numbers', async () => {
       const { id } = await repository.createReport(
         buildCreateReportParams({
           organisationNumber: toOrganisationNumber('500123'),
@@ -111,9 +107,7 @@ export const testCreateReportBehaviour = (it) => {
       )
 
       expect(await repository.findReportById(id)).toMatchObject({
-        organisationId: DEFAULT_ORG_ID,
         organisationNumber: '500123',
-        registrationId: DEFAULT_REG_ID,
         registrationNumber: 'R25SR500010912PL',
         accreditationNumber: 'A26ER5000000001PA'
       })
@@ -241,7 +235,7 @@ export const testCreateReportBehaviour = (it) => {
 
     it('throws on missing required fields', async () => {
       await expect(
-        repository.createReport({ organisationId: DEFAULT_ORG_ID })
+        repository.createReport({ organisationNumber: DEFAULT_ORG_NUMBER })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
   })

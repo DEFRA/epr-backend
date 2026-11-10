@@ -1,16 +1,13 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_CHANGED_BY,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
@@ -20,9 +17,6 @@ import {
   uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from './test-data.js'
-
-const ALT_ORG_ID = new ObjectId().toString()
-const ALT_REG_ID = new ObjectId().toString()
 
 const TONNAGE_OVERRIDES = {
   recyclingActivity: {
@@ -84,8 +78,8 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
       const [result] = await repository.findAllPeriodicReports()
 
       expect(result).toEqual({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID,
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
@@ -134,11 +128,10 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
 
     it('returns reports across multiple org/registration pairs', async () => {
       await repository.createReport(buildCreateReportParams())
+      const altOrganisationNumber = uniqueOrganisationNumber()
       await repository.createReport(
         buildCreateReportParams({
-          organisationId: ALT_ORG_ID,
-          registrationId: ALT_REG_ID,
-          organisationNumber: uniqueOrganisationNumber(),
+          organisationNumber: altOrganisationNumber,
           registrationNumber: uniqueRegistrationNumber()
         })
       )
@@ -146,8 +139,8 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
       const result = await repository.findAllPeriodicReports()
 
       expect(result).toHaveLength(2)
-      expect(result.map((r) => r.organisationId)).toEqual(
-        expect.arrayContaining([DEFAULT_ORG_ID, ALT_ORG_ID])
+      expect(result.map((r) => r.organisationNumber)).toEqual(
+        expect.arrayContaining([DEFAULT_ORG_NUMBER, altOrganisationNumber])
       )
     })
 
@@ -276,8 +269,8 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         expect.arrayContaining([DEFAULT_REPORT_YEAR, NEXT_YEAR])
       )
       result.forEach((doc) => {
-        expect(doc.organisationId).toBe(DEFAULT_ORG_ID)
-        expect(doc.registrationId).toBe(DEFAULT_REG_ID)
+        expect(doc.organisationNumber).toBe(DEFAULT_ORG_NUMBER)
+        expect(doc.registrationNumber).toBe(DEFAULT_REG_NUMBER)
         expect(Object.keys(doc.reports.monthly)).toContain(
           String(MONTHLY_PERIODS.January)
         )

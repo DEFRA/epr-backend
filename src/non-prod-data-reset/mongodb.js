@@ -1,17 +1,22 @@
 import { ObjectId } from 'mongodb'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
 /** @import { Db } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 
 /**
  * @typedef {{
- *   deleteByOrgId: (orgId: number) => Promise<Record<string, number>>
+ *   deleteByOrganisationNumber: (
+ *     organisationNumber: OrganisationNumber
+ *   ) => Promise<Record<string, number>>
  * }} NonProdDataReset
  */
 
 const COLLECTIONS = {
-  ORGANISATIONS: 'epr-organisations',
   ORGANISATION: 'organisation',
   REGISTRATION: 'registration',
   ACCREDITATION: 'accreditation',
@@ -40,19 +45,9 @@ const EMPTY_COUNTS = Object.freeze({
 
 const toObjectId = (id) => ObjectId.createFromHexString(id)
 
-/**
- * Looks up the organisation by its numeric orgId (the stable identifier used
- * by journey tests and upstream systems), not the Mongo _id. Shape validation
- * for the incoming id lives at the route layer.
- *
- * @param {Db} db
- * @param {number} orgId
- */
-const findOrganisationForCleanup = async (db, orgId) =>
-  db.collection(COLLECTIONS.ORGANISATIONS).findOne({ orgId })
-
+/** @param {Organisation} organisation */
 const extractCascadeKeys = (organisation) => {
-  const overseasSiteIds = (organisation.registrations ?? []).flatMap((reg) =>
+  const overseasSiteIds = organisation.registrations.flatMap((reg) =>
     Object.values(reg.overseasSites ?? {}).map((entry) => entry.overseasSiteId)
   )
   return { overseasSiteIds }
@@ -69,74 +64,78 @@ const extractCascadeKeys = (organisation) => {
  * so there are no ordering constraints between steps.
  *
  * Two different id shapes drive the filters. Most collections store the
- * epr-organisations _id hex on the document, so they join against mongoIdHex.
- * The 'organisation' collection (written by the journey-test apply path) is
- * keyed by the numeric orgId, so its filter joins against orgId directly.
+ * organisation's id, so they join against organisationId. The
+ * 'registration', 'accreditation' and 'organisation' collections (written by
+ * the journey-test apply path) are keyed by the numeric orgId. PRNs, reports
+ * and report system logs carry the organisation number instead.
  *
- * @param {number} orgId
- * @param {string} mongoIdHex
+ * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[] }} keys
  */
-const buildCascadeSteps = (orgId, mongoIdHex, { overseasSiteIds }) => [
-  {
-    label: 'packaging-recycling-notes',
-    collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
-    filter: { 'organisation.id': mongoIdHex }
-  },
-  {
-    label: 'waste-balance-events',
-    collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
-    filter: { organisationId: mongoIdHex }
-  },
-  {
-    label: 'summary-log-row-states',
-    collection: COLLECTIONS.SUMMARY_LOG_ROW_STATES,
-    filter: { organisationId: mongoIdHex }
-  },
-  {
-    label: 'reports',
-    collection: COLLECTIONS.REPORTS,
-    filter: { organisationId: mongoIdHex }
-  },
-  {
-    label: 'summary-logs',
-    collection: COLLECTIONS.SUMMARY_LOGS,
-    filter: { organisationId: mongoIdHex }
-  },
-  {
-    label: 'overseas-sites',
-    collection: COLLECTIONS.OVERSEAS_SITES,
-    filter:
-      overseasSiteIds.length === 0
-        ? null
-        : { _id: { $in: overseasSiteIds.map(toObjectId) } }
-  },
-  {
-    label: 'system-logs',
-    collection: COLLECTIONS.SYSTEM_LOGS,
-    filter: { 'context.organisationId': mongoIdHex }
-  },
-  {
-    label: 'registration',
-    collection: COLLECTIONS.REGISTRATION,
-    filter: { orgId }
-  },
-  {
-    label: 'accreditation',
-    collection: COLLECTIONS.ACCREDITATION,
-    filter: { orgId }
-  },
-  {
-    label: 'epr-organisations',
-    collection: COLLECTIONS.ORGANISATIONS,
-    filter: { _id: toObjectId(mongoIdHex) }
-  },
-  {
-    label: 'organisation',
-    collection: COLLECTIONS.ORGANISATION,
-    filter: { orgId }
-  }
-]
+const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
+  const { orgId, id: organisationId } = organisation
+  const organisationNumber = organisationNumberOf(organisation)
+  return [
+    {
+      label: 'packaging-recycling-notes',
+      collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
+      filter: { 'organisation.organisationNumber': organisationNumber }
+    },
+    {
+      label: 'waste-balance-events',
+      collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
+      filter: { organisationId }
+    },
+    {
+      label: 'summary-log-row-states',
+      collection: COLLECTIONS.SUMMARY_LOG_ROW_STATES,
+      filter: { organisationId }
+    },
+    {
+      label: 'reports',
+      collection: COLLECTIONS.REPORTS,
+      filter: { organisationNumber }
+    },
+    {
+      label: 'summary-logs',
+      collection: COLLECTIONS.SUMMARY_LOGS,
+      filter: { organisationId }
+    },
+    {
+      label: 'overseas-sites',
+      collection: COLLECTIONS.OVERSEAS_SITES,
+      filter:
+        overseasSiteIds.length === 0
+          ? null
+          : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+    },
+    {
+      label: 'system-logs',
+      collection: COLLECTIONS.SYSTEM_LOGS,
+      filter: {
+        $or: [
+          { 'context.organisationId': organisationId },
+          { 'context.organisationNumber': organisationNumber }
+        ]
+      }
+    },
+    {
+      label: 'registration',
+      collection: COLLECTIONS.REGISTRATION,
+      filter: { orgId }
+    },
+    {
+      label: 'accreditation',
+      collection: COLLECTIONS.ACCREDITATION,
+      filter: { orgId }
+    },
+    {
+      label: 'organisation',
+      collection: COLLECTIONS.ORGANISATION,
+      filter: { orgId }
+    }
+  ]
+}
 
 /**
  * Executes cascade steps in parallel. deleteMany is idempotent and each
@@ -168,29 +167,41 @@ const runCascade = async (db, steps) => {
  * means the capability does not exist on the request object in production,
  * providing runtime defence beyond the router-level route gate.
  *
- * As a final safety net, deleteByOrgId refuses to run when isProduction is
- * true and logs an error.
+ * As a final safety net, the reset refuses to run when isProduction is true
+ * and logs an error.
+ *
+ * The organisation goes last, so a reset that fails part way can be retried.
  *
  * @param {Db} db
+ * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber' | 'deleteByOrganisationNumber'>} organisationsRepository
  * @param {{ isProduction?: boolean }} [options]
  * @returns {NonProdDataReset}
  */
-export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
-  async deleteByOrgId(orgId) {
+export const createNonProdDataReset = (
+  db,
+  organisationsRepository,
+  { isProduction = false } = {}
+) => ({
+  async deleteByOrganisationNumber(organisationNumber) {
     if (isProduction) {
       logger.error({
         message:
           'Refusing to run non-prod cascade delete in production environment.',
-        event: { reference: `organisationId=${orgId}` }
+        event: { reference: `organisationNumber=${organisationNumber}` }
       })
       throw new Error('Non-prod data reset is disabled in production.')
     }
-    const organisation = await findOrganisationForCleanup(db, orgId)
+    const organisation =
+      await organisationsRepository.findByOrganisationNumber(organisationNumber)
     if (!organisation) {
       return { ...EMPTY_COUNTS }
     }
-    const mongoIdHex = organisation._id.toHexString()
     const keys = extractCascadeKeys(organisation)
-    return runCascade(db, buildCascadeSteps(orgId, mongoIdHex, keys))
+    const counts = await runCascade(db, buildCascadeSteps(organisation, keys))
+    const deletedOrganisations =
+      await organisationsRepository.deleteByOrganisationNumber(
+        organisationNumber
+      )
+    return { ...counts, 'epr-organisations': deletedOrganisations }
   }
 })

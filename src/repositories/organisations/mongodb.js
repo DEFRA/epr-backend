@@ -3,6 +3,7 @@ import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
+import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
@@ -27,6 +28,7 @@ import {
   COLLECTION_NAME,
   DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
   DEFAULT_MAX_CONSISTENCY_RETRIES,
+  findAll,
   findOneAtMinimumVersion,
   findPage
 } from './mongodb-find.js'
@@ -192,10 +194,7 @@ const performFindById =
     return found
   }
 
-const performFindAll = (db) => async () => {
-  const docs = await db.collection(COLLECTION_NAME).find().toArray()
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
+const performFindAll = (db) => () => findAll(db)
 const performFind = (db) => (/** @type {FindParams} */ params) =>
   findPage(db, params)
 
@@ -361,6 +360,32 @@ const performFindByOrganisationNumber =
       minimumVersion
     )
 
+/**
+ * @param {Db} db
+ * @returns {import('./port.js').OrganisationsRepository['findHighestOrganisationNumber']}
+ */
+const performFindHighestOrganisationNumber = (db) => async () => {
+  const [doc] = await db
+    .collection(COLLECTION_NAME)
+    .find({}, { projection: { orgId: 1 } })
+    .sort({ orgId: -1 })
+    .limit(1)
+    .toArray()
+  return doc ? organisationNumberOf({ orgId: doc.orgId }) : null
+}
+
+/**
+ * @param {Db} db
+ * @returns {import('./port.js').OrganisationsRepository['deleteByOrganisationNumber']}
+ */
+const performDeleteByOrganisationNumber =
+  (db) => async (organisationNumber) => {
+    const { deletedCount } = await db
+      .collection(COLLECTION_NAME)
+      .deleteOne({ orgId: storedOrgId(organisationNumber) })
+    return deletedCount
+  }
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -461,6 +486,8 @@ export const createOrganisationsRepository = async (
         maxRetries,
         retryDelayMs
       ),
+      findHighestOrganisationNumber: performFindHighestOrganisationNumber(db),
+      deleteByOrganisationNumber: performDeleteByOrganisationNumber(db),
       replaceRegistrationOverseasSites:
         performReplaceRegistrationOverseasSites(db)
     }

@@ -7,6 +7,12 @@ import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
+import { reportKeyOf } from '#reports/repository/contract/test-data.js'
+import { registrationKey } from '#reports/domain/registration-key.js'
+import {
+  organisationReadRepositoryOf,
+  organisationReadRepositoryOver
+} from '#vite/helpers/organisation-read-model.js'
 import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
@@ -22,7 +28,6 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { logger } from '#common/helpers/logging/logger.js'
 import { config } from '#root/config.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -148,16 +153,17 @@ describe('generateReportCompliance', () => {
     const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
@@ -172,17 +178,18 @@ describe('generateReportCompliance', () => {
     const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     // EXPECTED_PERIODS has Mar 2026 (index 14) before Q1 2026 (index 15)
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
@@ -198,23 +205,23 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 1
     })
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: new Map([
               ['2026:monthly:1', SUBMITTED_DATE],
               ['2026:monthly:2', null],
@@ -234,23 +241,23 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'quarterly',
       period: 1
     })
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: new Map([['2026:quarterly:1', SUBMITTED_DATE]])
           }
         ]
@@ -265,16 +272,17 @@ describe('generateReportCompliance', () => {
     const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const reg = org.registrations[0]
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
@@ -289,24 +297,23 @@ describe('generateReportCompliance', () => {
     const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
     const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          org1.registrations[0].id,
+          registrationKey(reportKeyOf(org1, org1.registrations[0])),
           {
-            registrationId: org1.registrations[0].id,
-            organisationId: org1.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ],
         [
-          org2.registrations[0].id,
+          registrationKey(reportKeyOf(org2, org2.registrations[0])),
           {
-            registrationId: org2.registrations[0].id,
-            organisationId: org2.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
@@ -327,16 +334,17 @@ describe('generateReportCompliance', () => {
     )
     const normalReg = normalOrg.registrations[0]
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          normalReg.id,
+          registrationKey(reportKeyOf(normalOrg, normalReg)),
           {
-            registrationId: normalReg.id,
-            organisationId: normalOrg.id,
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
@@ -352,23 +360,23 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await buildSubmittedReport(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: toYear(2026),
       cadence: 'monthly',
       period: 2
     })
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: new Map([
               ['2026:monthly:1', null],
               ['2026:monthly:2', SUBMITTED_DATE],
@@ -424,23 +432,23 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     await seed(reportsRepo, {
-      organisationId: org.id,
-      registrationId: reg.id,
+      ...reportKeyOf(org, reg),
       year: 2026,
       cadence: 'monthly',
       period: 1
     })
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     expect(result).toEqual({
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: new Map([
               ['2026:monthly:1', SUBMITTED_DATE],
               ['2026:monthly:2', null],
@@ -464,16 +472,17 @@ describe('generateReportCompliance', () => {
     })
     const reg = org.registrations[0]
 
-    const result = await generateReportCompliance(orgRepo, reportsRepo)
+    const result = await generateReportCompliance(
+      organisationReadRepositoryOver(orgRepo),
+      reportsRepo
+    )
 
     // Jan absent, only Feb and Mar remain as obligations.
     expect(result.entries).toEqual(
       new Map([
         [
-          reg.id,
+          registrationKey(reportKeyOf(org, reg)),
           {
-            registrationId: reg.id,
-            organisationId: org.id,
             submittedDates: new Map([
               ['2026:monthly:2', null],
               ['2026:monthly:3', null]
@@ -514,12 +523,17 @@ describe('generateReportCompliance', () => {
 
     /**
      * @param {object} organisation
+     * @param {{ warn: (...args: any[]) => void }} [logger]
      */
-    const complianceFor = (organisation) =>
+    const complianceFor = async (organisation, logger) =>
       generateReportCompliance(
-        /** @type {any} */ ({ findAll: async () => [organisation] }),
+        (await organisationReadRepositoryOf([organisation], { logger }))(),
         createInMemoryReportsRepository()()
       )
+
+    /** @param {any} organisation */
+    const entryKeyOf = (organisation) =>
+      registrationKey(reportKeyOf(organisation, organisation.registrations[0]))
 
     afterEach(() => {
       config.reset('featureFlags.midYearStatusTransition')
@@ -532,7 +546,7 @@ describe('generateReportCompliance', () => {
       const result = await complianceFor(organisation)
 
       expect(
-        result.entries.get(organisation.registrations[0].id)?.submittedDates
+        result.entries.get(entryKeyOf(organisation))?.submittedDates
       ).toEqual(
         new Map([
           ['2026:quarterly:1', null],
@@ -543,17 +557,17 @@ describe('generateReportCompliance', () => {
     })
 
     it('has no entry for a registration the read model does not serve, logging why', async () => {
-      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+      const logger = { warn: vi.fn() }
 
       const result = await complianceFor(
-        organisationWith({ validFrom: undefined })
+        organisationWith({ validFrom: undefined }),
+        logger
       )
 
       expect(result.entries).toEqual(new Map())
-      expect(warn).toHaveBeenCalledWith({
+      expect(logger.warn).toHaveBeenCalledWith({
         message: `Registration ${REPROCESSOR_NUMBER} has no validFrom`
       })
-      warn.mockRestore()
     })
   })
 })

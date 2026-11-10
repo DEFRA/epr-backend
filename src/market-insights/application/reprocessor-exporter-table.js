@@ -1,9 +1,13 @@
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
+import {
+  registrationKey,
+  storedRegistrationKey
+} from '#reports/domain/registration-key.js'
 import {
   getReportableRegistrations,
   resolveAccreditation,
@@ -117,12 +121,6 @@ const totalKey = ({ accreditationType, month }) =>
  * @param {string} figure
  */
 const figureKey = (key, figure) => `${key}::${figure}`
-
-/**
- * @param {{ organisationId: string, registrationId: string }} ref
- */
-const registrationKey = ({ organisationId, registrationId }) =>
-  `${organisationId}::${registrationId}`
 
 /**
  * The submission that counts for a period: the highest submission number, as
@@ -326,17 +324,9 @@ const measuresByCell = ({
 }) => {
   const registrations = new Map(
     getReportableRegistrations(organisations).map((entry) => [
-      registrationKey({
-        organisationId: entry.org.id,
-        registrationId: entry.registration.id
-      }),
+      storedRegistrationKey(entry.org, entry.registration),
       entry
     ])
-  )
-  const testOrganisationIds = new Set(
-    organisations
-      .filter((org) => TEST_ORGANISATION_IDS.has(org.orgId))
-      .map((org) => org.id)
   )
 
   /**
@@ -347,7 +337,7 @@ const measuresByCell = ({
     const key = registrationKey(periodicReport)
     const entry = registrations.get(key)
     if (entry === undefined) {
-      if (!testOrganisationIds.has(periodicReport.organisationId)) {
+      if (!TEST_ORGANISATION_NUMBERS.has(periodicReport.organisationNumber)) {
         warnAboutUnmatchedReport(logger, key)
       }
       return undefined

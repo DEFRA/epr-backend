@@ -18,7 +18,6 @@ import {
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,
@@ -38,46 +37,52 @@ import { CADENCE } from '#reports/domain/cadence.js'
 const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
 
 /**
- * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
+ * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
  */
 
 const SUMMARY_LOG_ID = 'sl-1'
 const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
 
-/**
- * @param {Partial<Registration>} [overrides]
- * @returns {Registration}
- */
-const buildRegistration = (overrides = {}) => {
-  const hasAccreditationIdOverride = 'accreditationId' in overrides
-  const accreditationId = hasAccreditationIdOverride
-    ? overrides.accreditationId
-    : new ObjectId().toString()
-  const defaultAccreditation = accreditationId ? { status: 'approved' } : null
-  const accreditation =
-    'accreditation' in overrides
-      ? overrides.accreditation
-      : defaultAccreditation
-  const { accreditation: _a, accreditationId: _b, ...rest } = overrides
-  return /** @type {Registration} */ (
-    /** @type {unknown} */ ({
-      id: new ObjectId().toString(),
-      accreditationId,
-      accreditation,
-      material: 'plastic',
-      wasteProcessingType: 'reprocessor',
-      site: {
-        address: {
-          line1: '1 Recycling Lane',
-          town: 'Greenville',
-          postcode: 'GR1 1AA'
-        }
-      },
-      ...rest
-    })
-  )
+// The ledger and PRNs are still stored under ids.
+const LEDGER_IDS = {
+  organisationId: new ObjectId().toString(),
+  registrationId: new ObjectId().toString(),
+  accreditationId: new ObjectId().toString()
 }
+
+/**
+ * @param {AccreditationNumber} [accreditationNumber]
+ * @returns {ReprocessorAccreditation}
+ */
+const readModelAccreditation = (
+  accreditationNumber = ACCREDITATION_NUMBER
+) => ({
+  accreditationNumber,
+  prnIssuance: { tonnageBand: 'over_10000' },
+  status: { current: 'approved', timeline: [] }
+})
+
+/**
+ * @param {Partial<ReprocessorRegistration>} [overrides]
+ * @returns {ReprocessorRegistration}
+ */
+const readModelRegistration = (overrides = {}) =>
+  partialMock({
+    material: 'plastic',
+    wasteProcessingType: 'reprocessor',
+    site: {
+      address: {
+        line1: '1 Recycling Lane',
+        town: 'Greenville',
+        postcode: 'GR1 1AA'
+      }
+    },
+    accreditations: { 2024: readModelAccreditation() },
+    ...overrides
+  })
 
 const buildReceivedEntry = (overrides = {}) =>
   buildSummaryLogRowStateEntry({
@@ -105,18 +110,12 @@ const buildReceivedEntry = (overrides = {}) =>
  * The ledger report creation reads: the report key's numbers and the
  * registration's current accreditation.
  */
-const reportLedger = ({ organisationId, key, registration }) => {
-  const accreditationNumber =
-    registration.accreditation?.accreditationNumber ?? null
-  return {
-    organisationId,
-    registrationId: registration.id,
-    accreditationId:
-      accreditationNumber === null ? null : registration.accreditationId,
-    ...key,
-    accreditationNumber
-  }
-}
+const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
+  ...LEDGER_IDS,
+  accreditationId: accreditation === null ? null : LEDGER_IDS.accreditationId,
+  ...key,
+  accreditationNumber: accreditation?.accreditationNumber ?? null
+})
 
 const seedState = async (params, entries) => {
   const ledgerId = reportLedger(params)
@@ -150,18 +149,19 @@ const createPrnRepo = (initialData = []) =>
   )
 
 const defaultParams = () => {
-  const organisationId = new ObjectId().toString()
-  const registration = buildRegistration()
+  const registration = readModelRegistration()
   const key = {
     organisationNumber: toOrganisationNumber('500123'),
     registrationNumber: toRegistrationNumber('R25SR500010912PL')
   }
   return {
-    organisationId,
-    registrationId: registration.id,
     key,
     numbers: key,
-    registration,
+    /** @type {ReportRegistration} */
+    reportRegistration: {
+      registration,
+      accreditation: registration.accreditations[2024]
+    },
     year: toYear(2024),
     cadenceAccreditation: {
       cadence: CADENCE.monthly,
@@ -169,8 +169,7 @@ const defaultParams = () => {
     },
     period: 1,
     submissionNumber: 1,
-    requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2024)),
-    overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+    requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2024))
   }
 }
 
@@ -297,8 +296,6 @@ describe('report-service', () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await reportsRepository.createReport({
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
         ...params.key,
         accreditationNumber: ACCREDITATION_NUMBER,
         year: toYear(2024),
@@ -354,8 +351,6 @@ describe('report-service', () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const baseReport = {
-        organisationId: params.organisationId,
-        registrationId: params.registrationId,
         ...params.key,
         accreditationNumber: ACCREDITATION_NUMBER,
         year: toYear(2024),
@@ -534,8 +529,6 @@ describe('report-service', () => {
         const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
         await reportsRepository.createReport({
-          organisationId: params.organisationId,
-          registrationId: params.registrationId,
           ...params.key,
           accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2024),
@@ -583,8 +576,6 @@ describe('report-service', () => {
 
   describe('fetchReportBySubmissionNumber', () => {
     const baseReportFields = (params, changedBy) => ({
-      organisationId: params.organisationId,
-      registrationId: params.registrationId,
       ...params.key,
       accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2024),
@@ -739,13 +730,13 @@ describe('report-service', () => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
-    it('resolves glass material to glass recycling process', async () => {
+    it('records the material the registration is read as, a glass recycling process for glass', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()
-      params.registration = buildRegistration({
-        material: 'glass',
-        glassRecyclingProcess: ['glass_re_melt']
-      })
+      params.reportRegistration = {
+        ...params.reportRegistration,
+        registration: readModelRegistration({ material: 'glass_re_melt' })
+      }
       const { ledgerRepository, summaryLogRowStatesRepository } =
         await seedState(params, [buildReceivedEntry()])
       const packagingRecyclingNotesRepository = createPrnRepo()
@@ -783,21 +774,39 @@ describe('report-service', () => {
       expect(report.siteAddress).toBe('1 Recycling Lane, Greenville, GR1 1AA')
     })
 
+    it('records the site address as submitted when its town could not be found', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const params = defaultParams()
+      params.reportRegistration = {
+        ...params.reportRegistration,
+        registration: readModelRegistration({
+          site: { address: { fullAddress: '1 Recycling Lane GR1 1AA' } }
+        })
+      }
+      const { ledgerRepository, summaryLogRowStatesRepository } =
+        await seedState(params, [buildReceivedEntry()])
+      const packagingRecyclingNotesRepository = createPrnRepo()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      const report = await createReportForPeriod({
+        reportsRepository,
+        ledgerRepository,
+        summaryLogRowStatesRepository,
+        packagingRecyclingNotesRepository,
+        ...params,
+        changedBy
+      })
+
+      expect(report.siteAddress).toBe('1 Recycling Lane GR1 1AA')
+    })
+
     describe('prn', () => {
       const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       /** @param {ReturnType<typeof defaultParams>} params */
-      const accreditationOf = ({
-        organisationId,
-        registrationId,
-        numbers,
-        registration,
-        cadenceAccreditation
-      }) => ({
-        organisationId,
-        registrationId,
-        accreditationId: registration.accreditationId,
+      const accreditationOf = ({ numbers, cadenceAccreditation }) => ({
+        ...LEDGER_IDS,
         ...numbers,
         accreditationNumber: cadenceAccreditation.accreditationNumber
       })
@@ -824,7 +833,10 @@ describe('report-service', () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = {
           ...defaultParams(),
-          registration: buildRegistration({ accreditationId: undefined }),
+          reportRegistration: {
+            registration: readModelRegistration({ accreditations: {} }),
+            accreditation: null
+          },
           cadenceAccreditation: {
             cadence: CADENCE.quarterly,
             accreditationNumber: null
@@ -892,14 +904,18 @@ describe('report-service', () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const currentAccreditationNumber =
           toAccreditationNumber('A25ER5000000002PL')
+        const reportAccreditation = readModelAccreditation()
         const params = {
           ...defaultParams(),
-          registration: buildRegistration({
-            accreditation: partialMock({
-              status: 'approved',
-              accreditationNumber: currentAccreditationNumber
-            })
-          })
+          reportRegistration: {
+            registration: readModelRegistration({
+              accreditations: {
+                2024: reportAccreditation,
+                2025: readModelAccreditation(currentAccreditationNumber)
+              }
+            }),
+            accreditation: reportAccreditation
+          }
         }
         const { ledgerRepository, summaryLogRowStatesRepository } =
           await seedState(params, [buildReceivedEntry()])
@@ -955,7 +971,7 @@ describe('createReportsService', () => {
 
   it('delegates findPeriodicReports to the repository and returns its result', async () => {
     const periodicReports = [
-      { organisationId: 'org-1', registrationId: 'reg-1' }
+      { organisationNumber: '500123', registrationNumber: 'R25SR500010912PL' }
     ]
     const reportsRepository = /** @type {any} */ ({
       hasReportSubmittedSince: vi.fn(),

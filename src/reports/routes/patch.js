@@ -8,11 +8,13 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { assertNotStale } from '#reports/domain/stale.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import {
+  OPERATOR_CATEGORY,
+  reportOperatorCategory
+} from '#reports/domain/operator-category.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { extractChangedBy, findRegistrationForReport } from './shared.js'
+import { extractChangedBy } from './shared.js'
 
 const MAX_SUPPORTING_INFO_LENGTH = 2000
 
@@ -60,9 +62,9 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
  * Guards against updates to report data fields when the report is not in progress.
  * @param {ReportPatchPayload} payload
  * @param {Report} report
- * @param {Registration} registration
+ * @param {ReportRegistration} reportRegistration
  */
-function guardReportDataFields(payload, report, registration) {
+function guardReportDataFields(payload, report, reportRegistration) {
   const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
 
   if (hasPrnFields && !report.prn) {
@@ -81,15 +83,14 @@ function guardReportDataFields(payload, report, registration) {
     )
   }
 
-  if ('tonnageNotExported' in payload) {
-    const isRegisteredOnlyExporter =
-      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER &&
-      !isRegistrationAccredited(registration)
-    if (!isRegisteredOnlyExporter) {
-      throw Boom.badRequest(
-        'tonnageNotExported can only be set for registered-only exporters'
-      )
-    }
+  if (
+    'tonnageNotExported' in payload &&
+    reportOperatorCategory(reportRegistration) !==
+      OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
+  ) {
+    throw Boom.badRequest(
+      'tonnageNotExported can only be set for registered-only exporters'
+    )
   }
 }
 
@@ -145,27 +146,24 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & {
-   *   params: PeriodWithSubmissionPathParams,
+   * @param {ReportRequest & {
+   *   payload: ReportPatchPayload,
    *   reportsRepository: ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository, reportsRepository, params } = request
+    const { reportsRepository, params } = request
     const { cadence, year, period, submissionNumber } = params
 
-    const [registration, report] = await Promise.all([
-      findRegistrationForReport(organisationsRepository, params),
-      fetchReportBySubmissionNumber(
-        reportsRepository,
-        params,
-        year,
-        cadence,
-        period,
-        submissionNumber
-      )
-    ])
+    const report = await fetchReportBySubmissionNumber(
+      reportsRepository,
+      params,
+      year,
+      cadence,
+      period,
+      submissionNumber
+    )
 
     if (!report) {
       throw Boom.notFound(
@@ -198,7 +196,7 @@ export const reportsPatch = {
       )
     }
 
-    guardReportDataFields(request.payload, report, registration)
+    guardReportDataFields(request.payload, report, request.app)
 
     const fields = buildUpdateFields(request.payload, report)
 
@@ -214,10 +212,10 @@ export const reportsPatch = {
 }
 
 /**
- * @import { Registration } from '#domain/organisations/registration.js'
+ * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { PrnData, Report, ReportsRepository, UpdateReportParams } from '#reports/repository/port.js'
- * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { PeriodWithSubmissionPathParams } from './shared.js'
+ * @import { HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { ReportRequest } from './shared.js'
  */
 
 /**
