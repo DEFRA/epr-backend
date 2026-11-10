@@ -3,7 +3,7 @@ import {
   MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 
@@ -28,7 +28,7 @@ const REPORTABLE_STATUSES = new Set([
  */
 export function getReportableRegistrations(orgs) {
   return orgs
-    .filter((org) => !TEST_ORGANISATION_IDS.has(org.orgId))
+    .filter((org) => !isTestOrganisation(org))
     .flatMap((org) =>
       org.registrations
         .filter((registration) => REPORTABLE_STATUSES.has(registration.status))
