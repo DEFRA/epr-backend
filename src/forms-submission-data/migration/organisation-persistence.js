@@ -32,8 +32,12 @@ function partitionResults(results) {
 }
 
 function insertOrganisation(organisationsRepository, item) {
-  return organisationsRepository
-    .insert(toRepositoryOrganisation(removeUndefinedValues(item.value)))
+  return Promise.resolve()
+    .then(() =>
+      organisationsRepository.insert(
+        toRepositoryOrganisation(removeUndefinedValues(item.value))
+      )
+    )
     .then(
       () =>
         /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
