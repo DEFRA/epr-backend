@@ -2,7 +2,7 @@ import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import {
-  indexAccreditationsByLedger,
+  accreditationForLedger,
   ledgerKey
 } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
@@ -209,12 +209,17 @@ const warnAboutUnmatchedPartition = (logger, accreditationNumber) => {
 
 /**
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
- * @param {Map<string, AccreditationContext>} index - by `ledgerKey`
+ * @param {ReturnType<typeof accreditationForLedger>} accreditationOf
  * @param {Map<string, import('#overseas-sites/repository/port.js').OverseasSite>} sitesById
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Map<string, PublishedPartition>}
  */
-const resolvePublishedPartitions = (entries, index, sitesById, logger) => {
+const resolvePublishedPartitions = (
+  entries,
+  accreditationOf,
+  sitesById,
+  logger
+) => {
   /** @type {Map<string, PublishedPartition>} */
   const partitions = new Map()
   for (const { ledgerId, summaryLogId } of entries) {
@@ -222,7 +227,7 @@ const resolvePublishedPartitions = (entries, index, sitesById, logger) => {
     if (accreditationNumber === null) {
       continue
     }
-    const context = index.get(ledgerKey(ledgerId))
+    const context = accreditationOf(ledgerId)
     if (context === undefined) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         warnAboutUnmatchedPartition(logger, accreditationNumber)
@@ -431,7 +436,7 @@ export const buildWasteBalanceTable = async ({
 
   const partitions = resolvePublishedPartitions(
     entries,
-    indexAccreditationsByLedger(organisations),
+    accreditationForLedger(organisations),
     new Map(allSites.map((site) => [site.id, site])),
     logger
   )

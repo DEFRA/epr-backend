@@ -1186,6 +1186,37 @@ describe('buildWasteBalanceTable', () => {
     ])
   })
 
+  it('publishes the figures of an accreditation stored with its number and no database id', async () => {
+    const operator = makeOperator({ orgId: 500015 })
+    const [registration] = operator.organisation.registrations
+    const [accreditation] = operator.organisation.accreditations
+    const storedByNumberOnly = {
+      ...operator.organisation,
+      registrations: [{ ...registration, accreditationId: undefined }],
+      accreditations: [{ ...accreditation, id: undefined }]
+    }
+
+    const { table, logger } = await run({
+      organisations: [storedByNumberOnly],
+      submissions: [
+        { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+      ]
+    })
+
+    expect(reported(table)).toEqual([
+      {
+        material: MATERIAL.PLASTIC,
+        accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        month: '2026-02',
+        totalCredited: 40,
+        eligibleForWasteBalance: 40,
+        sentOnDeductions: 0,
+        netCredit: 40
+      }
+    ])
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+
   it('derives eligibility against the accreditation as it stands, not the stamp the row carries', async () => {
     const operator = makeOperator({
       orgId: 500003,

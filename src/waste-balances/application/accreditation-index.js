@@ -99,3 +99,32 @@ export const indexAccreditationsByLedger = (organisations) => {
   }
   return index
 }
+
+/**
+ * Find the accreditation a ledger is kept for, with its registration and
+ * owning organisation, by the numbers the ledger id carries. A test
+ * organisation's ledgers find nothing. As `indexAccreditations`, no status
+ * filtering.
+ *
+ * @param {Organisation[]} organisations
+ * @returns {(ledgerId: WasteBalanceLedgerId) => AccreditationContext | undefined}
+ */
+export const accreditationForLedger = (organisations) => {
+  const organisationByNumber = new Map(
+    organisations
+      .filter((organisation) => !isTestOrganisation(organisation))
+      .map((organisation) => [organisationNumberOf(organisation), organisation])
+  )
+  return ({ organisationNumber, registrationNumber, accreditationNumber }) => {
+    const organisation = organisationByNumber.get(organisationNumber)
+    const registration = organisation?.registrations.find(
+      (candidate) => candidate.registrationNumber === registrationNumber
+    )
+    const accreditation = organisation?.accreditations.find(
+      (candidate) => candidate.accreditationNumber === accreditationNumber
+    )
+    return organisation && registration && accreditation
+      ? { organisation, registration, accreditation }
+      : undefined
+  }
+}
