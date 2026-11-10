@@ -26,7 +26,7 @@ import { wasteBalanceSchema } from './response.schema.js'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ResolvedParams, ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { NumberedLedgerId } from '#waste-balances/repository/ledger-schema.js'
+ * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
@@ -55,19 +55,13 @@ const ledgerOptions = {
  * one when the path names no accreditation.
  *
  * @param {ResolvedParams} params
- * @returns {NumberedLedgerId}
+ * @returns {WasteBalanceLedgerId}
  */
 const ledgerIdOf = ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber: accreditationNumber ?? null

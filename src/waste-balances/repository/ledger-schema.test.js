@@ -159,8 +159,8 @@ describe('ledger event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
-  it('accepts accreditationId: null for registered-only ledgers', () => {
-    const { error } = validate(buildLedgerEvent({ accreditationId: null }))
+  it('accepts accreditationNumber: null for registered-only ledgers', () => {
+    const { error } = validate(buildLedgerEvent({ accreditationNumber: null }))
     expect(error).toBeUndefined()
   })
 
@@ -179,29 +179,10 @@ describe('ledger event insert schema', () => {
     ])
   })
 
-  it('rejects an accreditation number on a registered-only event', () => {
+  it('rejects PRN kinds when accreditationNumber is null', () => {
     const { error } = validate(
       buildLedgerEvent({
-        accreditationId: null,
-        accreditationNumber: 'ACC-acc-1'
-      })
-    )
-    expect(error?.details.map((d) => d.path[0])).toEqual([
-      'accreditationNumber'
-    ])
-  })
-
-  it('rejects a null accreditation number on an accredited event', () => {
-    const { error } = validate(buildLedgerEvent({ accreditationNumber: null }))
-    expect(error?.details.map((d) => d.path[0])).toEqual([
-      'accreditationNumber'
-    ])
-  })
-
-  it('rejects PRN kinds when accreditationId is null', () => {
-    const { error } = validate(
-      buildLedgerEvent({
-        accreditationId: null,
+        accreditationNumber: null,
         kind: LEDGER_EVENT_KIND.PRN_CREATED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
@@ -209,10 +190,10 @@ describe('ledger event insert schema', () => {
     expect(error).toBeDefined()
   })
 
-  it('rejects prn-accepted when accreditationId is null', () => {
+  it('rejects prn-accepted when accreditationNumber is null', () => {
     const { error } = validate(
       buildLedgerEvent({
-        accreditationId: null,
+        accreditationNumber: null,
         kind: LEDGER_EVENT_KIND.PRN_ACCEPTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
@@ -220,10 +201,10 @@ describe('ledger event insert schema', () => {
     expect(error).toBeDefined()
   })
 
-  it('rejects prn-rejected when accreditationId is null', () => {
+  it('rejects prn-rejected when accreditationNumber is null', () => {
     const { error } = validate(
       buildLedgerEvent({
-        accreditationId: null,
+        accreditationNumber: null,
         kind: LEDGER_EVENT_KIND.PRN_REJECTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })

@@ -22,7 +22,7 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { withNumbersHeldBy } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
@@ -44,6 +44,7 @@ const buildRegistration = (overrides = {}) => {
   return {
     ...exporterRegistration,
     id: 'reg-1',
+    registrationNumber: toRegistrationNumber(`REG-${overrides.id ?? 'reg-1'}`),
     material: 'plastic',
     submittedToRegulator: 'ea',
     accreditation: null,
@@ -121,13 +122,19 @@ const createServerWithRepos = async ({
     findAll: vi.fn().mockResolvedValue(organisations)
   }
 
+  /** @param {LedgerSeed} seed */
+  const ledgerIdOf = (seed) =>
+    withNumbersHeldBy(organisations, {
+      organisationId: seed.organisationId ?? 'org-1',
+      registrationId: seed.registrationId ?? 'reg-1',
+      accreditationId: seed.accreditationId ?? null
+    })
+
   const ledgerRepository = createInMemoryLedgerRepository(
     /** @type {LedgerEvent[]} */ (
       seeds.map((seed) =>
         buildLedgerEvent({
-          organisationId: seed.organisationId ?? 'org-1',
-          registrationId: seed.registrationId ?? 'reg-1',
-          accreditationId: seed.accreditationId ?? null,
+          ...ledgerIdOf(seed),
           number: 1,
           payload: {
             summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID,
@@ -142,11 +149,7 @@ const createServerWithRepos = async ({
     createInMemorySummaryLogRowStatesRepository()()
   for (const seed of seeds) {
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers({
-        organisationId: seed.organisationId ?? 'org-1',
-        registrationId: seed.registrationId ?? 'reg-1',
-        accreditationId: seed.accreditationId ?? null
-      }),
+      ledgerIdOf(seed),
       seed.rows ?? [],
       toSummaryLogFileId(seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_ID)
     )
