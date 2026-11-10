@@ -12,6 +12,7 @@ import {
   prepareOrgUpdate,
   createOrganisationBuilders
 } from './contract/test-data.js'
+import { toStoredOrganisation } from './helpers.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
@@ -131,7 +132,7 @@ describe('MongoDB organisations repository', () => {
     it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
       const existingOrg = buildOrganisation()
       const existingDoc = {
-        ...existingOrg,
+        ...toStoredOrganisation(existingOrg),
         _id: ObjectId.createFromHexString(existingOrg.id),
         version: 1,
         schemaVersion: 1,
@@ -182,7 +183,7 @@ describe('MongoDB organisations repository', () => {
     it('falls back to "unknown" in the dup-key message from replace when keyPattern is absent', async () => {
       const existingOrg = buildOrganisation()
       const existingDoc = {
-        ...existingOrg,
+        ...toStoredOrganisation(existingOrg),
         _id: ObjectId.createFromHexString(existingOrg.id),
         version: 1,
         schemaVersion: 1,
@@ -213,6 +214,39 @@ describe('MongoDB organisations repository', () => {
           }
         }
       })
+    })
+  })
+
+  describe('a stored orgId that is not an organisation number', () => {
+    it('fails each read, naming the document', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation({
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Linked Org'
+        )
+      })
+      await repository.insert(organisation)
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .updateOne(
+          { _id: ObjectId.createFromHexString(organisation.id) },
+          { $set: { orgId: 0 } }
+        )
+      const failure = `Stored organisation ${organisation.id} is invalid: "orgId"`
+
+      await expect(repository.findAll()).rejects.toThrow(failure)
+      await expect(repository.findById(organisation.id)).rejects.toThrow(
+        failure
+      )
+      await expect(repository.findAllLinked()).rejects.toThrow(failure)
+      await expect(repository.findHighestOrganisationNumber()).rejects.toThrow(
+        failure
+      )
     })
   })
 

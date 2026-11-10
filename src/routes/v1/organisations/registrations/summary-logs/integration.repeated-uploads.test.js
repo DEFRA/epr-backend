@@ -37,7 +37,6 @@ import {
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -85,7 +84,7 @@ describe('Repeated uploads of identical data', () => {
       // Set up organisation with registration
       accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -398,9 +397,7 @@ describe('Repeated uploads of identical data', () => {
       { timeout: 60000 },
       async () => {
         const ledgerId = {
-          organisationNumber: toOrganisationNumber(
-            String(TEST_ORGANISATION_NUMBER)
-          ),
+          organisationNumber: TEST_ORGANISATION_NUMBER,
           registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
           accreditationNumber: toAccreditationNumber('ACC-2025-001')
         }

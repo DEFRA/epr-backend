@@ -154,13 +154,13 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
 
 const resolveRegistration = async (organisationsRepository, metadata) => {
   const org = await organisationsRepository.findByOrganisationNumber(
-    metadata.orgId
+    metadata.organisationNumber
   )
   if (!org) {
     return {
       error: {
         field: 'orgId',
-        message: `Organisation with orgId ${metadata.orgId} not found`
+        message: `Organisation with orgId ${metadata.organisationNumber} not found`
       }
     }
   }
@@ -172,7 +172,7 @@ const resolveRegistration = async (organisationsRepository, metadata) => {
     return {
       error: {
         field: 'registrationNumber',
-        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
+        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.organisationNumber}`
       }
     }
   }

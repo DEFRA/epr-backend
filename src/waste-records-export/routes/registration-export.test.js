@@ -24,7 +24,7 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const ORGANISATION_ID = 'org-1'
-const ORGANISATION_NUMBER = 500123
+const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 const REGISTRATION_ID = 'reg-1'
 const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
@@ -34,7 +34,7 @@ const REGISTERED_ONLY_LEDGER = {
   organisationId: ORGANISATION_ID,
   registrationId: REGISTRATION_ID,
   accreditationId: null,
-  organisationNumber: toOrganisationNumber(String(ORGANISATION_NUMBER)),
+  organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
   accreditationNumber: null
 }
@@ -93,7 +93,7 @@ const createServer = async ({
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
-    orgId: ORGANISATION_NUMBER,
+    organisationNumber: ORGANISATION_NUMBER,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
     registrations: [/** @type {any} */ (buildRegistration())]
@@ -116,7 +116,7 @@ const createServer = async ({
         findById: vi.fn(() => Promise.reject(new Error('read again'))),
         findByOrganisationNumber: vi.fn((organisationNumber) =>
           Promise.resolve(
-            organisationNumber === String(organisation.orgId)
+            organisationNumber === organisation.organisationNumber
               ? organisation
               : null
           )

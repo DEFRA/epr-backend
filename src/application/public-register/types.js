@@ -1,3 +1,5 @@
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {Object} PublicRegisterRowBase
  * @property {string} type - Waste processing type (e.g., 'Reprocessor', 'Exporter')
@@ -6,7 +8,7 @@
  * @property {string} appropriateAgency - Appropriate agency (e.g., 'Ea', 'Sepa')
  * @property {string} registrationNumber - Registration number (CBDU number)
  * @property {string} companiesHouseNumber - Companies House Number (empty string if not set)
- * @property {number} orgId - Organisation ID
+ * @property {OrganisationNumber} organisationNumber - Organisation number
  * @property {string} tradingName - Trading name (empty string if not set)
  * @property {string} reprocessingSite - Reprocessing site address (empty string if not applicable)
  * @property {string} packagingWasteCategory - Packaging waste category

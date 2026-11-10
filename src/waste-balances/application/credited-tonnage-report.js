@@ -217,7 +217,7 @@ export const buildCreditedTonnageReport = async ({
     }
 
     const material = resolveMaterial(registration)
-    const reference = String(organisation.orgId)
+    const reference = organisation.organisationNumber
 
     return months.map((month) => ({
       month: month.month,

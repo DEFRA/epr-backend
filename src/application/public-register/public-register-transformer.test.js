@@ -18,7 +18,10 @@ import {
 } from '#domain/organisations/model.js'
 import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
 import { invalidArg, partialMock } from '#test/type-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -118,7 +121,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
         companiesHouseNumber: '12345678',
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R12345678PL',
@@ -162,7 +165,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
         companiesHouseNumber: '12345678',
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'SEPA',
         registrationNumber: 'R12345678PL',
@@ -200,7 +203,7 @@ describe('transform', () => {
         {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
-          orgId: org.orgId,
+          organisationNumber: org.organisationNumber,
           companiesHouseNumber: '12345678',
           registeredOffice: '1 Waste Road, London, N1 1AA',
           appropriateAgency: 'EA',
@@ -274,7 +277,7 @@ describe('transform', () => {
         {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
-          orgId: org.orgId,
+          organisationNumber: org.organisationNumber,
           companiesHouseNumber: '12345678',
           registeredOffice: '1 Waste Road, London, N1 1AA',
           appropriateAgency: 'EA',
@@ -372,7 +375,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
         companiesHouseNumber: '',
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
@@ -487,7 +490,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
         companiesHouseNumber: '',
-        orgId: org1.orgId,
+        organisationNumber: org1.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
@@ -505,7 +508,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
         companiesHouseNumber: '',
-        orgId: org1.orgId,
+        organisationNumber: org1.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R22222222PL',
@@ -523,7 +526,7 @@ describe('transform', () => {
         type: 'Exporter',
         businessName: 'Exporter Ltd',
         companiesHouseNumber: '',
-        orgId: org2.orgId,
+        organisationNumber: org2.organisationNumber,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R44444444AL',
@@ -556,7 +559,7 @@ describe('transform', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].businessName).toBe('Test Company Ltd')
     expect(rows[0].companiesHouseNumber).toBe('AC987654')
-    expect(rows[0].orgId).toBe(org.orgId)
+    expect(rows[0].organisationNumber).toBe(org.organisationNumber)
   })
 
   it('should default companiesHouseNumber to empty string when missing', async () => {
@@ -574,7 +577,7 @@ describe('transform', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].businessName).toBe('Test Company Ltd')
     expect(rows[0].companiesHouseNumber).toBe('')
-    expect(rows[0].orgId).toBe(org.orgId)
+    expect(rows[0].organisationNumber).toBe(org.organisationNumber)
   })
 
   describe('compliance fields', () => {
@@ -630,11 +633,11 @@ describe('transform', () => {
   })
 
   it('should filter out test organisations from results', async () => {
-    const testOrgId = 999999
-    const normalOrgId = 500001
+    const testOrganisationNumber = toOrganisationNumber('999999')
+    const normalOrganisationNumber = toOrganisationNumber('500001')
 
     const testOrg = buildReadOrganisation({
-      orgId: testOrgId,
+      organisationNumber: testOrganisationNumber,
       companyDetails: {
         name: 'Test Organisation',
         registeredAddress: baseAddress
@@ -655,7 +658,7 @@ describe('transform', () => {
     })
 
     const normalOrg = buildReadOrganisation({
-      orgId: normalOrgId,
+      organisationNumber: normalOrganisationNumber,
       companyDetails: {
         name: 'Normal Organisation',
         registeredAddress: baseAddress

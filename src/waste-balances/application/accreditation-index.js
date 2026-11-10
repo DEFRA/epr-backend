@@ -1,5 +1,4 @@
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
@@ -70,7 +69,7 @@ export const indexAccreditationsByLedger = (organisations) => {
     for (const context of linkedAccreditations(organisation)) {
       index.set(
         ledgerKey({
-          organisationNumber: organisationNumberOf(organisation),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: /** @type {RegistrationNumber} */ (
             context.registration.registrationNumber
           ),

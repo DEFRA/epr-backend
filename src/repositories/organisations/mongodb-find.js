@@ -98,8 +98,12 @@ const buildOrgIdFilter = (value) => {
  * @returns {object} - a filter matching organisations satisfying every criterion
  */
 const buildFindFilter = (criteria) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria(criteria)
+  const {
+    search,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
 
   const conditions = []
   if (search !== '') {
@@ -107,8 +111,8 @@ const buildFindFilter = (criteria) => {
       'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
     })
   }
-  if (orgId !== '') {
-    conditions.push(buildOrgIdFilter(orgId))
+  if (organisationNumber !== '') {
+    conditions.push(buildOrgIdFilter(organisationNumber))
   }
   if (registrationNumber !== '') {
     conditions.push({

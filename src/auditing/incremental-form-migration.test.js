@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { auditIncrementalFormMigration } from './incremental-form-migration.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -44,6 +45,7 @@ describe('auditIncrementalFormMigration', () => {
   })
 
   const organisationId = new ObjectId().toString()
+  const organisationNumber = toOrganisationNumber('500001')
   const systemUser = { id: 'system', email: 'system', scope: [], role: null }
 
   const findStoredLog = async () => {
@@ -52,7 +54,7 @@ describe('auditIncrementalFormMigration', () => {
   }
 
   it('logs full previous/next state to both CDP audit and system log', async () => {
-    const previous = {
+    const previousFields = {
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' }
       ],
@@ -60,7 +62,7 @@ describe('auditIncrementalFormMigration', () => {
         { id: new ObjectId().toString(), accreditationNumber: 'ACC-2025-01' }
       ]
     }
-    const next = {
+    const nextFields = {
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' },
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-02' }
@@ -70,6 +72,9 @@ describe('auditIncrementalFormMigration', () => {
         { id: new ObjectId().toString(), accreditationNumber: 'ACC-2025-02' }
       ]
     }
+
+    const previous = { ...previousFields, organisationNumber }
+    const next = { ...nextFields, organisationNumber }
 
     await auditIncrementalFormMigration(
       systemLogsRepository,
@@ -87,8 +92,8 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
-        previous,
-        next
+        previous: { ...previousFields, orgId: 500001 },
+        next: { ...nextFields, orgId: 500001 }
       },
       user: systemUser
     })
@@ -105,8 +110,8 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
-        previous,
-        next
+        previous: { ...previousFields, orgId: 500001 },
+        next: { ...nextFields, orgId: 500001 }
       }
     })
   })
@@ -114,7 +119,7 @@ describe('auditIncrementalFormMigration', () => {
   it('sends reduced context to CDP audit but full state to system log when payload is too large', async () => {
     // Create a large payload that exceeds the size limit
     const largeData = 'x'.repeat(15000)
-    const previous = {
+    const previousFields = {
       registrations: [
         {
           id: new ObjectId().toString(),
@@ -124,7 +129,7 @@ describe('auditIncrementalFormMigration', () => {
       ],
       accreditations: []
     }
-    const next = {
+    const nextFields = {
       registrations: [
         {
           id: new ObjectId().toString(),
@@ -139,6 +144,9 @@ describe('auditIncrementalFormMigration', () => {
       ],
       accreditations: []
     }
+
+    const previous = { ...previousFields, organisationNumber }
+    const next = { ...nextFields, organisationNumber }
 
     await auditIncrementalFormMigration(
       systemLogsRepository,
@@ -170,8 +178,8 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
-        previous,
-        next
+        previous: { ...previousFields, orgId: 500001 },
+        next: { ...nextFields, orgId: 500001 }
       }
     })
   })

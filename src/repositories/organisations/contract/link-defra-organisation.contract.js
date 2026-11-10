@@ -9,7 +9,6 @@ import {
   buildLinkedDefraOrg,
   getValidDateRange,
   notFound,
-  numberOf,
   prepareOrgUpdate,
   versionConflict
 } from './test-data.js'
@@ -50,7 +49,7 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
             {
               ...org.registrations[0],
               status: REGISTRATION_STATUS.APPROVED,
-              registrationNumber: `REG${org.orgId}`,
+              registrationNumber: `REG${org.organisationNumber}`,
               validFrom: VALID_FROM,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
@@ -73,7 +72,11 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
         const approved = await insertApprovedOrg()
         const link = aLink()
 
-        await repository.linkDefraOrganisation(numberOf(approved), 2, link)
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          link
+        )
 
         const linked = await repository.findById(approved.id, 3)
         expect(linked.status).toBe(ORGANISATION_STATUS.ACTIVE)
@@ -91,7 +94,11 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
       it('changes nothing else on the organisation', async () => {
         const approved = await insertApprovedOrg()
 
-        await repository.linkDefraOrganisation(numberOf(approved), 2, aLink())
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          aLink()
+        )
 
         const {
           linkedDefraOrganisation: _link,
@@ -112,11 +119,19 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
 
       it('re-links an active, unlinked organisation without a new status entry', async () => {
         const approved = await insertApprovedOrg()
-        await repository.linkDefraOrganisation(numberOf(approved), 2, aLink())
-        await repository.unlinkDefraOrganisation(numberOf(approved), 3)
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          aLink()
+        )
+        await repository.unlinkDefraOrganisation(approved.organisationNumber, 3)
         const link = aLink()
 
-        await repository.linkDefraOrganisation(numberOf(approved), 4, link)
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          4,
+          link
+        )
 
         const relinked = await repository.findById(approved.id, 5)
         expect(relinked.status).toBe(ORGANISATION_STATUS.ACTIVE)
@@ -129,7 +144,7 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
         await repository.insert(org)
 
         await expect(
-          repository.linkDefraOrganisation(numberOf(org), 1, aLink())
+          repository.linkDefraOrganisation(org.organisationNumber, 1, aLink())
         ).rejects.toMatchObject({
           isBoom: true,
           output: {
@@ -145,7 +160,7 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
         const approved = await insertApprovedOrg()
 
         await expect(
-          repository.linkDefraOrganisation(numberOf(approved), 2, {
+          repository.linkDefraOrganisation(approved.organisationNumber, 2, {
             ...aLink(),
             orgId: 'not-a-uuid'
           })
@@ -156,7 +171,11 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
         const approved = await insertApprovedOrg()
 
         await expect(
-          repository.linkDefraOrganisation(numberOf(approved), 1, aLink())
+          repository.linkDefraOrganisation(
+            approved.organisationNumber,
+            1,
+            aLink()
+          )
         ).rejects.toMatchObject(versionConflict(1, 2))
 
         const unchanged = await repository.findById(approved.id)
@@ -167,7 +186,7 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
       it('rejects an organisation that does not exist', async () => {
         await expect(
           repository.linkDefraOrganisation(
-            numberOf(buildOrganisation()),
+            buildOrganisation().organisationNumber,
             1,
             aLink()
           )
@@ -178,9 +197,13 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
     describe('unlinkDefraOrganisation', () => {
       it('removes the link and leaves the organisation active', async () => {
         const approved = await insertApprovedOrg()
-        await repository.linkDefraOrganisation(numberOf(approved), 2, aLink())
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          aLink()
+        )
 
-        await repository.unlinkDefraOrganisation(numberOf(approved), 3)
+        await repository.unlinkDefraOrganisation(approved.organisationNumber, 3)
 
         const unlinked = await repository.findById(approved.id, 4)
         expect(unlinked.linkedDefraOrganisation).toBeUndefined()
@@ -191,9 +214,13 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
       it('makes the organisation linkable again', async () => {
         const approved = await insertApprovedOrg()
         const link = aLink()
-        await repository.linkDefraOrganisation(numberOf(approved), 2, link)
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          link
+        )
 
-        await repository.unlinkDefraOrganisation(numberOf(approved), 3)
+        await repository.unlinkDefraOrganisation(approved.organisationNumber, 3)
         await repository.findById(approved.id, 4)
 
         expect(await repository.findByLinkedDefraOrgId(link.orgId)).toBeNull()
@@ -202,11 +229,15 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
       it('rejects a stale version and keeps the link', async () => {
         const approved = await insertApprovedOrg()
         const link = aLink()
-        await repository.linkDefraOrganisation(numberOf(approved), 2, link)
+        await repository.linkDefraOrganisation(
+          approved.organisationNumber,
+          2,
+          link
+        )
         await repository.findById(approved.id, 3)
 
         await expect(
-          repository.unlinkDefraOrganisation(numberOf(approved), 2)
+          repository.unlinkDefraOrganisation(approved.organisationNumber, 2)
         ).rejects.toMatchObject(versionConflict(2, 3))
 
         const unchanged = await repository.findById(approved.id)
@@ -216,7 +247,10 @@ export const testLinkDefraOrganisationBehaviour = (it) => {
 
       it('rejects an organisation that does not exist', async () => {
         await expect(
-          repository.unlinkDefraOrganisation(numberOf(buildOrganisation()), 1)
+          repository.unlinkDefraOrganisation(
+            buildOrganisation().organisationNumber,
+            1
+          )
         ).rejects.toMatchObject(notFound)
       })
     })

@@ -11,7 +11,8 @@ import {
   reprocessor
 } from './organisation-read-test-helpers.js'
 
-const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
+const { buildOrganisation, nextOrganisationNumber } =
+  createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -25,7 +26,7 @@ const named = (name, overrides = {}) =>
   buildOrganisation({
     companyDetails: { name },
     registrations: [
-      reprocessor({ registrationNumber: `R26ER${nextOrgId()}PL` })
+      reprocessor({ registrationNumber: `R26ER${nextOrganisationNumber()}PL` })
     ],
     accreditations: [],
     ...overrides
@@ -75,7 +76,7 @@ export const testFindBehaviour = (it) => {
       })
 
       const { items } = await repository.find({
-        organisationNumber: String(wanted.orgId),
+        organisationNumber: wanted.organisationNumber,
         page: 1,
         pageSize: 10
       })
@@ -102,7 +103,7 @@ export const testFindBehaviour = (it) => {
 
       expect(items).toHaveLength(1)
       expect(items[0]).toMatchObject({
-        organisationNumber: String(stored.orgId),
+        organisationNumber: stored.organisationNumber,
         name: 'Acme Recycling',
         submittedToRegulator: { code: 'ea' }
       })
@@ -154,7 +155,7 @@ export const testFindBehaviour = (it) => {
       expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
-          `Organisation ${notYet.orgId} has status undefined`
+          `Organisation ${notYet.organisationNumber} has status undefined`
         )
       })
     })

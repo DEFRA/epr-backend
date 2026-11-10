@@ -21,6 +21,7 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from '../port.contract.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @param {OrganisationReadRepositoryContractIt} it
@@ -29,7 +30,7 @@ export const testDroppedRecordsBehaviour = (it) => {
   describe('records the model cannot represent', () => {
     /**
      * @param {OrganisationReadRepositoryWith} organisationReadRepositoryWith
-     * @param {{ orgId: number }} stored
+     * @param {{ organisationNumber: OrganisationNumber }} stored
      */
     const registrationsOf = async (organisationReadRepositoryWith, stored) => {
       const logger = { warn: vi.fn() }
@@ -40,7 +41,7 @@ export const testDroppedRecordsBehaviour = (it) => {
       })
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
       return { registrations: organisation.registrations, logger }
     }

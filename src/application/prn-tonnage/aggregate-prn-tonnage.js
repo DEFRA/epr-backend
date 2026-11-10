@@ -11,6 +11,7 @@ import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
@@ -41,7 +42,7 @@ import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
  *
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
- * @property {string} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
  * @property {string} material
@@ -101,7 +102,7 @@ const toTonnageColumns = (tonnageByStatus) =>
  */
 const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
-  orgId: Joi.string().required(),
+  organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
   material: Joi.string().required(),
@@ -178,7 +179,7 @@ const toAggregatedRow = (
   { organisation, registration, accreditation }
 ) => ({
   organisationName: organisation.name,
-  orgId: String(organisation.organisationNumber),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: numbers.registrationNumber,
   accreditationNumber: numbers.accreditationNumber,
   material: toPrnMaterial(registration.material).material,
@@ -265,7 +266,7 @@ const buildReportRow = async (
     ledgerId,
     registration,
     organisationName,
-    orgId,
+    organisationNumber,
     registrationNumber,
     accreditationNumber,
     material,
@@ -274,7 +275,7 @@ const buildReportRow = async (
   }
 ) => ({
   organisationName,
-  orgId,
+  organisationNumber,
   registrationNumber,
   registrationType: registrationTypeFor(registration),
   accreditationNumber,

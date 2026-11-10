@@ -14,7 +14,7 @@ export async function generateCsv(rows, periods = []) {
     ['type', 'Type'],
     ['businessName', 'Business name'],
     ['companiesHouseNumber', 'Companies House Number'],
-    ['orgId', 'Org ID'],
+    ['organisationNumber', 'Org ID'],
     [
       'registeredOffice',
       'Registered office\nHead office\nMain place of business in UK'

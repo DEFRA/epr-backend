@@ -54,7 +54,15 @@ export const getPrnTonnage = {
         }
       })
 
-      return h.response(result).code(StatusCodes.OK)
+      return h
+        .response({
+          ...result,
+          rows: result.rows.map(({ organisationNumber, ...row }) => ({
+            ...row,
+            orgId: organisationNumber
+          }))
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,
