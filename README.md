@@ -77,7 +77,7 @@ docker compose --profile stub up
 - cdp-uploader (file upload service)
 - cdp-defra-id-stub (authentication stub, `--profile stub`)
 
-**Note:** Running the backend requires `GOVUK_NOTIFY_API_KEY` environment variable.
+**Note:** Running the backend requires the `GOVUK_NOTIFY_API_KEY` environment variable. Compose supplies a dev `CDP_UPLOADER_CALLBACK_HMAC_KEY`; outside compose, set it yourself ([see contributing](./CONTRIBUTING.md#development)).
 
 ## Contributing
 

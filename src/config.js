@@ -3,9 +3,11 @@ import convictFormatWithValidator from 'convict-format-with-validator'
 
 import { convictValidateMongoUri } from '#common/helpers/convict/validate-mongo-uri.js'
 import { convictValidateDecemberWasteWindowBound } from '#common/helpers/convict/validate-december-waste-window-bound.js'
+import { convictValidateHex256BitKey } from '#common/helpers/convict/validate-hex-256-bit-key.js'
 
 convict.addFormat(convictValidateMongoUri)
 convict.addFormat(convictValidateDecemberWasteWindowBound)
+convict.addFormat(convictValidateHex256BitKey)
 convict.addFormats(convictFormatWithValidator)
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -238,6 +240,13 @@ const baseConfig = {
       format: String,
       default: 're-ex-overseas-sites',
       env: 'CDP_UPLOADER_S3_BUCKET_ORS'
+    },
+    callbackHmacKey: {
+      doc: 'HMAC-SHA256 key for signing CDP Uploader callback URLs; generate with openssl rand -hex 32',
+      format: 'hex-256-bit-key',
+      sensitive: true,
+      default: null,
+      env: 'CDP_UPLOADER_CALLBACK_HMAC_KEY'
     }
   },
   regulator: {
