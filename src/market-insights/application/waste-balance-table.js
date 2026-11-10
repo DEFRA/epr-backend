@@ -274,8 +274,12 @@ const validityOf = ({ registration, year }) => {
   const timeline = registration.accreditations[year].status.timeline.filter(
     isAccreditationChange
   )
+  const lastCreated = timeline.findLastIndex(
+    ({ status }) => status === ACCREDITATION_STATUS.CREATED
+  )
   const approvedAt = timeline.find(
-    ({ status }) => status === ACCREDITATION_STATUS.APPROVED
+    ({ status }, index) =>
+      index > lastCreated && status === ACCREDITATION_STATUS.APPROVED
   )?.at
   return {
     statusHistory: timeline.map(({ status, at }) => ({

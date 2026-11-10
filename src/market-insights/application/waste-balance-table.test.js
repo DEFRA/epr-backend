@@ -745,7 +745,7 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('keeps expecting reports across the window after an approval is reverted, as the figures keep its loads', async () => {
+    it('keeps expecting reports across the window after an approval is reverted', async () => {
       const operator = makeOperator({ orgId: 500029 })
 
       const { table } = await run({
@@ -1416,6 +1416,45 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('an accreditation whose approval was reverted and given again', () => {
+    it('is eligible only from the approval that holds', async () => {
+      const operator = makeOperator({ orgId: 500066, validFrom: '2026-05-01' })
+
+      const { table } = await run({
+        organisations: [
+          withAccreditationStatus(
+            operator.organisation,
+            ACCREDITATION_STATUS.APPROVED,
+            [
+              { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' },
+              { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-04-20' }
+            ]
+          )
+        ],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-03-10', 50),
+              receivedRow('row-2', '2026-06-10', 70)
+            ]
+          }
+        ]
+      })
+
+      expect(
+        table.data.period.figures[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual({
+        totalCredited: 120,
+        eligibleForWasteBalance: 70,
+        sentOnDeductions: 0,
+        netCredit: 70
+      })
+    })
+  })
+
   describe('a registration the stored organisations do not hold yet', () => {
     it('publishes its figures without counting its operator as submitting', async () => {
       const operator = makeOperator({ orgId: 500062 })
@@ -1769,6 +1808,27 @@ describe('buildWasteBalanceTable', () => {
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
           reference: 'ACC-500009'
+        })
+      })
+    )
+  })
+
+  it('leaves out and names the partition of an accreditation whose approval was reverted, as the read model does not serve it', async () => {
+    const operator = makeOperator({ orgId: 500067 })
+
+    const { table, logger } = await run({
+      organisations: [approvalReverted(operator)],
+      submissions: [
+        { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
+      ]
+    })
+
+    expect(reported(table)).toEqual([])
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          action: 'market_insights_partition_unmatched',
+          reference: 'ACC-500067'
         })
       })
     )
