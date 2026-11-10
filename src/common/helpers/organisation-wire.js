@@ -7,10 +7,9 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * The API and the audit trail carry an organisation number as the numeric
  * `orgId`.
  *
- * @param {OrganisationNumber} organisationNumber
- * @returns {number}
+ * @type {(organisationNumber: OrganisationNumber) => number}
  */
-export const toWireOrgId = (organisationNumber) => Number(organisationNumber)
+export const toWireOrgId = Number
 
 /**
  * The admin API and the audit trail carry a whole organisation with its number
