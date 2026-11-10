@@ -23,8 +23,7 @@ import {
 import { formatDate } from '#common/helpers/date-formatter.js'
 import { storedRegistrationKey } from '#reports/domain/registration-key.js'
 import chunk from 'lodash.chunk'
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
 // A registration's own status can never be suspended (suspension is an
@@ -136,11 +135,6 @@ function isAccreditationInPublishableState(item) {
   return ACCREDITATION_INCLUDED_STATUSES.has(item.status)
 }
 
-/** @param {Pick<Organisation, 'orgId'>} org */
-function isTestOrg(org) {
-  return TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org))
-}
-
 /**
  * @param {Organisation[]} batch
  * @param {ReportComplianceData} reportComplianceData
@@ -149,7 +143,7 @@ function isTestOrg(org) {
 function processBatch(batch, reportComplianceData) {
   const { periods, entries } = reportComplianceData
   return batch
-    .filter((org) => !isTestOrg(org))
+    .filter((org) => !isTestOrganisation(org))
     .flatMap((org) =>
       org.registrations
         .filter(isRegistrationInPublishableState)

@@ -91,3 +91,24 @@ describe('TEST_ORGANISATION_NUMBERS', () => {
     expect(TEST_ORGANISATION_NUMBERS).toEqual(new Set(['999999', '888888']))
   })
 })
+
+describe('#isTestOrganisation', () => {
+  test.each([
+    { orgId: 999999, expected: true },
+    { orgId: 500001, expected: false },
+    { orgId: 0, expected: false },
+    { orgId: 5.5, expected: false }
+  ])(
+    'reads orgId $orgId as a test organisation: $expected',
+    async ({ orgId, expected }) => {
+      vi.resetModules()
+      const { config: freshConfig } = await import('#root/config.js')
+      freshConfig.get.mockReturnValue('[999999]')
+
+      const { isTestOrganisation } =
+        await import('./parse-test-organisations.js')
+
+      expect(isTestOrganisation({ orgId })).toBe(expected)
+    }
+  )
+})

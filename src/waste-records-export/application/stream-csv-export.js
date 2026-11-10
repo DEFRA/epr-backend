@@ -1,8 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { resolveAccreditationByNumber } from '#domain/organisations/registration-utils.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -368,9 +367,7 @@ const groupByRegistration = (entries) => {
  */
 async function findExportableOrgs(organisationsRepository) {
   const orgs = await organisationsRepository.findAll()
-  return orgs
-    .filter((org) => !TEST_ORGANISATION_NUMBERS.has(organisationNumberOf(org)))
-    .sort(sortById)
+  return orgs.filter((org) => !isTestOrganisation(org)).sort(sortById)
 }
 
 /**

@@ -75,6 +75,21 @@ describe('diagnoseNaturalKeyFormats', () => {
     ])
   })
 
+  it('marks a record held by a test organisation', () => {
+    const organisation = {
+      ...organisationHolding({
+        registrations: [{ registrationNumber: 'REG12345', status: 'approved' }]
+      }),
+      orgId: 999999
+    }
+
+    const { rows } = diagnose([organisation])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({ orgId: 999999, testOrganisation: true })
+    ])
+  })
+
   it('reports an accreditation number in another format', () => {
     const { rows } = diagnose([
       organisationHolding({
