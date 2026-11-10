@@ -4,6 +4,15 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 /** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
 /**
+ * The API and the audit trail carry an organisation number as the numeric
+ * `orgId`.
+ *
+ * @param {OrganisationNumber} organisationNumber
+ * @returns {number}
+ */
+export const toWireOrgId = (organisationNumber) => Number(organisationNumber)
+
+/**
  * The admin API and the audit trail carry a whole organisation with its number
  * as the numeric `orgId`, as the admin frontend reads and writes it.
  *
@@ -13,7 +22,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  */
 export const toOrganisationWire = ({ organisationNumber, ...rest }) => ({
   ...rest,
-  orgId: Number(organisationNumber)
+  orgId: toWireOrgId(organisationNumber)
 })
 
 /**

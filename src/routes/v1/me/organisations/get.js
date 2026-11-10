@@ -1,3 +1,4 @@
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
 import {
@@ -150,7 +151,7 @@ export const organisationsLinkedGetAll = {
       ? {
           id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,
-          orgId: Number(linkedOrg.organisationNumber),
+          orgId: toWireOrgId(linkedOrg.organisationNumber),
           referenceNumber: linkedOrg.id,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
           linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
@@ -160,7 +161,7 @@ export const organisationsLinkedGetAll = {
     const unlinked = linkableOrgs.map((unlinkedOrg) => ({
       id: unlinkedOrg.id,
       name: unlinkedOrg.companyDetails.name,
-      orgId: Number(unlinkedOrg.organisationNumber),
+      orgId: toWireOrgId(unlinkedOrg.organisationNumber),
       referenceNumber: unlinkedOrg.id
     }))
 
