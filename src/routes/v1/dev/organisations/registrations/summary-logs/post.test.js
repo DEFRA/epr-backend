@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -272,22 +272,26 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   })
 
   it.each([
-    { held: 'registrations', number: 'registrationNumber' },
-    { held: 'accreditations', number: 'accreditationNumber' }
+    { number: 'registrationNumber', owner: (/** @type {*} */ r) => r },
+    {
+      number: 'accreditationNumber',
+      owner: (/** @type {*} */ r) => r.accreditation
+    }
   ])(
     'refuses a summary log, storing nothing, when the $number is missing',
-    async ({ held, number }) => {
+    async ({ number, owner }) => {
       const env = await createEnvironment()
       const { organisationsRepository } = env
       const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
-      const findById = organisationsRepository.findById
-      vi.spyOn(organisationsRepository, 'findById').mockImplementation(
-        async (id) => {
-          const organisation = /** @type {*} */ (await findById(id))
-          delete organisation[held][0][number]
-          return organisation
-        }
-      )
+      const findRegistrationById = organisationsRepository.findRegistrationById
+      vi.spyOn(
+        organisationsRepository,
+        'findRegistrationById'
+      ).mockImplementation(async (...args) => {
+        const registration = await findRegistrationById(...args)
+        delete owner(registration)[number]
+        return registration
+      })
 
       const response = await submit(
         env,

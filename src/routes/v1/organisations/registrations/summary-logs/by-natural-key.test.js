@@ -13,7 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import {
   summaryLogFactory,
   withoutAccreditationId

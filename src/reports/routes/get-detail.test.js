@@ -12,7 +12,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
+import { requiredNumbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'

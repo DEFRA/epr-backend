@@ -35,8 +35,8 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+import { requiredNumbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import {
-  requiredNumbersFor,
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'

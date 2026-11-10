@@ -27,10 +27,8 @@ import {
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import {
-  numbersFor,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,

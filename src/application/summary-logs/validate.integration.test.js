@@ -11,7 +11,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
+import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
