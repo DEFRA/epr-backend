@@ -6,6 +6,7 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -155,6 +156,7 @@ const setupSubmit = async ({
     registrationId,
     ...reportKey,
     accreditationId,
+    ...numbersFor(organisation, { registrationId, accreditationId }).numbers,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
