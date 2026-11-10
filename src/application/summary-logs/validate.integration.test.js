@@ -11,12 +11,10 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { numbersFor } from '#domain/organisations/numbers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import {
-  summaryLogFactory,
-  withoutAccreditationId
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -101,12 +99,15 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg, accreditationId) =>
-    summaryLogFactory.validating({
+  const createSummaryLog = (testOrg, accreditationId) => {
+    const registrationId = testOrg.registrations[0].id
+    return summaryLogFactory.validating({
       organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      accreditationId
+      registrationId,
+      accreditationId,
+      ...numbersFor(testOrg, { registrationId, accreditationId }).numbers
     })
+  }
 
   /**
    * @typedef {{
@@ -119,7 +120,6 @@ describe('SummaryLogsValidator integration', () => {
    *   summaryLogExtractor?: SummaryLogExtractor;
    *   testOrg?: ReturnType<typeof createTestOrg>;
    *   storedAccreditationId?: string | null;
-   *   legacy?: boolean;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -137,19 +137,12 @@ describe('SummaryLogsValidator integration', () => {
       accreditationNumber,
       reprocessingType
     ),
-    storedAccreditationId = testOrg.registrations[0].accreditationId ?? null,
-    legacy = false
+    storedAccreditationId = testOrg.registrations[0].accreditationId ?? null
   }) => {
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
-    const yearScopedSummaryLog = createSummaryLog(
-      testOrg,
-      storedAccreditationId
-    )
-    const summaryLog = legacy
-      ? withoutAccreditationId(yearScopedSummaryLog)
-      : yearScopedSummaryLog
+    const summaryLog = createSummaryLog(testOrg, storedAccreditationId)
     const summaryLogId = randomUUID()
 
     const extractor =
@@ -875,19 +868,6 @@ describe('SummaryLogsValidator integration', () => {
           expect.objectContaining({ code: 'ACCREDITATION_MISMATCH' })
         ])
       )
-    })
-
-    it('validates a legacy summary log against the registration’s current accreditation', async () => {
-      const { updated } = await runValidation({
-        registrationType: 'exporter',
-        registrationWRN: 'REG-456',
-        accreditationNumber: '11111111',
-        legacy: true,
-        metadata: exporterMetadata('EXPORTER', '11111111')
-      })
-
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
     it('fails with a system error when the stored accreditation cannot be found', async () => {

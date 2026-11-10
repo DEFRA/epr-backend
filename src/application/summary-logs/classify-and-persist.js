@@ -173,7 +173,7 @@ export const resolveOverseasSitesContext = async ({
     ? resolveOverseasSites(
         organisationsRepository,
         overseasSitesRepository,
-        summaryLog.organisationId,
-        summaryLog.registrationId
+        summaryLog.organisationNumber,
+        summaryLog.registrationNumber
       )
     : ORS_VALIDATION_DISABLED

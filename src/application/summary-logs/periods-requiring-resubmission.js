@@ -332,7 +332,7 @@ export const withPeriodsRequiringResubmission = async ({
       closedPeriods: loadsByReportingPeriod.closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
-      ledgerId: ledgerIdFor(summaryLog, params.registration)
+      ledgerId: ledgerIdFor(summaryLog)
     })
 
   return { ...loadsByReportingPeriod, periodsRequiringResubmission }

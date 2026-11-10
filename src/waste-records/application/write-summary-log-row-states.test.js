@@ -15,8 +15,6 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
  * @returns {WasteRecord}
  */
 const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
   rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
@@ -30,8 +28,6 @@ const buildRegisteredOnlyRecord = ({ rowId, tonnage }) => ({
  * @returns {WasteRecord}
  */
 const buildReceivedRecord = ({ rowId, tonnage }) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
   rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
@@ -45,8 +41,6 @@ const buildReceivedRecord = ({ rowId, tonnage }) => ({
  * @returns {WasteRecord}
  */
 const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
   rowId,
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
