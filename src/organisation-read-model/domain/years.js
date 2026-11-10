@@ -85,15 +85,15 @@ export const organisationInYear = (organisation, year, statusDate) => {
 
 /**
  * `regAccStatusByDate` for each year the registration was approved in up to
- * `today`, or holds an accreditation for, which can be a later year.
+ * `endDate`, or holds an accreditation for, which can be a later year.
  *
  * @param {RegAccStatusSource} registration
- * @param {CalendarDate} today
+ * @param {CalendarDate} endDate
  * @returns {RegAccStatusByYear}
  */
-export const regAccStatusByYear = (registration, today) => {
+export const regAccStatusByYear = (registration, endDate) => {
   const years = [
-    ...approvedYears(registration.status.timeline, today),
+    ...approvedYears(registration.status.timeline, endDate),
     ...Object.keys(registration.accreditations).map(utcYearOf)
   ]
 
