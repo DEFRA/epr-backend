@@ -94,8 +94,6 @@ describe('runPrnSiteAddressDiagnostic', () => {
           registrationNumber: 'R26ER5001180044PL',
           site: {
             address: {
-              line1: '7',
-              postcode: 'SW2A 0AA',
               fullAddress: '7 Glass processing site London SW2A 0AA'
             }
           }

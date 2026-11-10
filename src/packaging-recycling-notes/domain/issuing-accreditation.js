@@ -57,7 +57,7 @@ const reprocessorSite = (registration) => {
     return {}
   }
   const { address } = registration.site
-  if ('fullAddress' in address) {
+  if (!('line1' in address)) {
     throw Boom.badImplementation(
       'Reprocessor site address has no line1 and postcode to state on a PRN'
     )
@@ -67,8 +67,8 @@ const reprocessorSite = (registration) => {
     reprocessingType: registration.reprocessingType,
     siteAddress: {
       line1,
-      town,
       postcode,
+      ...(town && { town }),
       ...(line2 && { line2 }),
       ...(county && { county }),
       ...(country && { country })

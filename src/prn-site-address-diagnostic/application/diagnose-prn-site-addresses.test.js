@@ -166,8 +166,6 @@ describe('diagnosePrnSiteAddresses', () => {
   it('reports a registration whose site the read model holds only as a full address, without comparing its accreditations', async () => {
     const organisation = accreditedReprocessor({
       registrationAddress: {
-        line1: '7',
-        postcode: 'SW2A 0AA',
         fullAddress: '7 Glass processing site London SW2A 0AA'
       }
     })

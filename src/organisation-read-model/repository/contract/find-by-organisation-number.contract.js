@@ -256,7 +256,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       ).toEqual(['2027'])
     })
 
-    it('gives the site address as submitted when ingest could not find its town, with its country and region', async ({
+    it('gives the site address parts without a town, and as submitted, when ingest could not find its town', async ({
       organisationReadRepositoryWith
     }) => {
       const fullAddress =
@@ -283,7 +283,37 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
         'site',
-        { address: { fullAddress, country: 'UK', region: 'London' } }
+        {
+          address: {
+            line1: '7 Glass site',
+            postcode: 'SW2A 0AA',
+            fullAddress,
+            country: 'UK',
+            region: 'London'
+          }
+        }
+      )
+    })
+
+    it('gives only the site address as submitted when ingest could not split it', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const fullAddress = '7 Glass site SW2A 0AA'
+      const stored = buildOrganisation({
+        registrations: [reprocessorAt({ fullAddress, country: 'UK' })]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        String(stored.orgId)
+      )
+
+      expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
+        'site',
+        { address: { fullAddress, country: 'UK' } }
       )
     })
 

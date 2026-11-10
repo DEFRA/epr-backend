@@ -70,6 +70,27 @@ describe('toIssuingAccreditation', () => {
     expect(siteAddress).toStrictEqual(address)
   })
 
+  it('states a site address without a town when the read model has none', () => {
+    const { siteAddress } = toIssuingAccreditation(
+      reprocessorRegistration({
+        site: {
+          address: {
+            line1: '1 Mill Lane',
+            postcode: 'LS1 4AB',
+            fullAddress: '1 Mill Lane, Unit 4, Leeds, Yorks, UK, LS1 4AB'
+          }
+        }
+      }),
+      accreditation,
+      YEAR
+    )
+
+    expect(siteAddress).toStrictEqual({
+      line1: '1 Mill Lane',
+      postcode: 'LS1 4AB'
+    })
+  })
+
   it('states a glass registration as glass and its recycling process', () => {
     expect(
       toIssuingAccreditation(

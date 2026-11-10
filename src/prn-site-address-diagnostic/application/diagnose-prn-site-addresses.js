@@ -208,7 +208,7 @@ const checkRegistration = (organisation, registration, context) => {
     registrationNumber
   }
 
-  if ('fullAddress' in address) {
+  if (!('line1' in address)) {
     return [
       {
         rows: [{ finding: SITE_FINDING.FULL_ADDRESS_ONLY, ...identity }],

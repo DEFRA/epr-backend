@@ -86,10 +86,11 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * @typedef {
  *   | {
  *       county?: string
+ *       fullAddress?: string
  *       line1: string
  *       line2?: string
  *       postcode: string
- *       town: string
+ *       town?: string
  *     }
  *   | { fullAddress: string }
  * } UkAddress
