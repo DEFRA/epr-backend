@@ -13,7 +13,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
@@ -26,6 +29,15 @@ const REGISTRATION_ID = 'reg-1'
 const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
+
+const REGISTERED_ONLY_LEDGER = {
+  organisationId: ORGANISATION_ID,
+  registrationId: REGISTRATION_ID,
+  accreditationId: null,
+  organisationNumber: toOrganisationNumber(String(ORGANISATION_NUMBER)),
+  registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
+  accreditationNumber: null
+}
 
 const buildRegistration = () => {
   const [, exporterRegistration] = buildReadOrganisation().registrations
@@ -74,9 +86,7 @@ const submittedLog = (fileId, submittedAt) => ({
 const createServer = async ({
   ledgerEvents = /** @type {LedgerEvent[]} */ ([
     buildLedgerEvent({
-      organisationId: ORGANISATION_ID,
-      registrationId: REGISTRATION_ID,
-      accreditationId: null,
+      ...REGISTERED_ONLY_LEDGER,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
     })
   ])
@@ -92,11 +102,7 @@ const createServer = async ({
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers({
-      organisationId: ORGANISATION_ID,
-      registrationId: REGISTRATION_ID,
-      accreditationId: null
-    }),
+    REGISTERED_ONLY_LEDGER,
     [receivedRowState()],
     toSummaryLogFileId(FILE_ID)
   )

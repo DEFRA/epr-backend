@@ -42,12 +42,12 @@ const approvedHistory = [
  *   glassRecyclingProcess?: string[],
  *   wasteProcessingType?: string,
  *   reprocessingType?: string,
- *   accreditationNumber?: string | null,
+ *   accreditationNumber?: string,
  *   status?: string,
  *   statusHistory?: { status: string, updatedAt: string }[],
  *   validFrom?: string,
  *   validTo?: string
- * }} options - pass `accreditationNumber: null` to omit it entirely
+ * }} options
  */
 const makeAccreditation = ({
   orgId,
@@ -55,7 +55,7 @@ const makeAccreditation = ({
   glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = REPROCESSING_TYPE.INPUT,
-  accreditationNumber,
+  accreditationNumber = `ACC-${orgId}`,
   status = 'approved',
   statusHistory = approvedHistory,
   validFrom = ACCREDITED_FROM,
@@ -63,9 +63,11 @@ const makeAccreditation = ({
 }) => {
   const id = `org-uuid-${orgId}`
   const registrationId = `reg-${orgId}`
+  const registrationNumber = `REG-${orgId}`
   const accreditationId = `acc-${orgId}`
   const registration = {
     id: registrationId,
+    registrationNumber,
     accreditationId,
     material,
     glassRecyclingProcess,
@@ -81,9 +83,7 @@ const makeAccreditation = ({
     material,
     wasteProcessingType,
     reprocessingType,
-    ...(accreditationNumber !== null && {
-      accreditationNumber: accreditationNumber ?? `ACC-${orgId}`
-    })
+    accreditationNumber
   }
   const organisation = {
     id,
@@ -96,9 +96,9 @@ const makeAccreditation = ({
     accreditationId,
     ledgerEntry: {
       ledgerId: {
-        organisationId: id,
-        registrationId,
-        accreditationId
+        organisationNumber: String(orgId),
+        registrationNumber,
+        accreditationNumber
       },
       summaryLogId: `log-${orgId}`
     }
@@ -230,8 +230,16 @@ const run = ({
   }
   const summaryLogRowStatesRepository = {
     findWasteRecordStatesForSummaryLog: async (
-      /** @type {{ accreditationId: string }} */ ledgerId
-    ) => rowStatesByAccreditationId[ledgerId.accreditationId] ?? []
+      /** @type {{ accreditationNumber: string }} */ ledgerId
+    ) => {
+      const accreditation = organisations
+        .flatMap((organisation) => organisation.accreditations)
+        .find(
+          (candidate) =>
+            candidate.accreditationNumber === ledgerId.accreditationNumber
+        )
+      return rowStatesByAccreditationId[accreditation?.id] ?? []
+    }
   }
   const organisationsRepository = { findAll: async () => organisations }
   const overseasSitesRepository =
@@ -402,6 +410,7 @@ describe('buildCreditedTonnageReport', () => {
       registrations: [
         {
           id: 'reg-500008',
+          registrationNumber: 'REG-500008',
           accreditationId: 'acc-dangling',
           material: MATERIAL.PLASTIC,
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -416,9 +425,9 @@ describe('buildCreditedTonnageReport', () => {
       entries: [
         {
           ledgerId: {
-            organisationId: 'org-uuid-500008',
-            registrationId: 'reg-500008',
-            accreditationId: 'acc-dangling'
+            organisationNumber: '500008',
+            registrationNumber: 'REG-500008',
+            accreditationNumber: 'ACC-DANGLING'
           },
           summaryLogId: 'log-dangling'
         }
@@ -429,31 +438,9 @@ describe('buildCreditedTonnageReport', () => {
     expect(logger.warn).toHaveBeenCalledTimes(1)
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: expect.objectContaining({ reference: 'acc-dangling' })
+        event: expect.objectContaining({ reference: 'ACC-DANGLING' })
       })
     )
-  })
-
-  it('emits an empty accreditationNumber when the accreditation has none', async () => {
-    const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
-      orgId: 500001,
-      status: 'cancelled',
-      accreditationNumber: null
-    })
-
-    const { report } = run({
-      organisations: [organisation],
-      entries: [ledgerEntry],
-      rowStatesByAccreditationId: {
-        [accreditationId]: [receivedRow('2026-02-10', 10)]
-      }
-    })
-
-    expect(
-      (await report).data.every(
-        (r) => r.accreditation.accreditationNumber === ''
-      )
-    ).toBe(true)
   })
 
   it('uses the Europe/London calendar month for the upper bound', async () => {
@@ -615,8 +602,18 @@ describe('buildCreditedTonnageReport', () => {
       id: 'org-uuid-500005',
       orgId: 500005,
       registrations: [
-        { id: 'reg-a', accreditationId: 'acc-a', ...commonFields },
-        { id: 'reg-b', accreditationId: 'acc-b', ...commonFields }
+        {
+          id: 'reg-a',
+          registrationNumber: 'REG-A',
+          accreditationId: 'acc-a',
+          ...commonFields
+        },
+        {
+          id: 'reg-b',
+          registrationNumber: 'REG-B',
+          accreditationId: 'acc-b',
+          ...commonFields
+        }
       ],
       accreditations: [
         {
@@ -639,17 +636,17 @@ describe('buildCreditedTonnageReport', () => {
       entries: [
         {
           ledgerId: {
-            organisationId: 'org-uuid-500005',
-            registrationId: 'reg-a',
-            accreditationId: 'acc-a'
+            organisationNumber: '500005',
+            registrationNumber: 'REG-A',
+            accreditationNumber: 'ACC-A'
           },
           summaryLogId: 'log-a'
         },
         {
           ledgerId: {
-            organisationId: 'org-uuid-500005',
-            registrationId: 'reg-b',
-            accreditationId: 'acc-b'
+            organisationNumber: '500005',
+            registrationNumber: 'REG-B',
+            accreditationNumber: 'ACC-B'
           },
           summaryLogId: 'log-b'
         }
@@ -870,15 +867,15 @@ describe('buildCreditedTonnageReport', () => {
     })
   })
 
-  it('excludes registered-only ledger entries (accreditationId null) without warning', async () => {
+  it('excludes registered-only ledger entries (accreditationNumber null) without warning', async () => {
     const { organisation, accreditationId, ledgerEntry } = makeAccreditation({
       orgId: 500001
     })
     const registeredOnlyEntry = {
       ledgerId: {
-        organisationId: 'org-registered-only',
-        registrationId: 'reg-registered-only',
-        accreditationId: null
+        organisationNumber: '500001',
+        registrationNumber: 'REG-500001',
+        accreditationNumber: null
       },
       summaryLogId: 'log-registered-only'
     }

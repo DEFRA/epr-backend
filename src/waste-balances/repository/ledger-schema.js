@@ -206,11 +206,7 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
 const numbersKeys = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.when('accreditationId', {
-    is: null,
-    then: Joi.valid(null).required(),
-    otherwise: Joi.string().required()
-  })
+  accreditationNumber: Joi.string().allow(null).required()
 }
 
 const ledgerEventBaseSchema = Joi.object({
@@ -244,10 +240,10 @@ const ledgerEventBaseSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.required()
 }).custom((value, helpers) => {
-  if (value.accreditationId === null && PRN_KINDS.has(value.kind)) {
+  if (value.accreditationNumber === null && PRN_KINDS.has(value.kind)) {
     return helpers.error('any.custom', {
       message:
-        'PRN events are invalid in registered-only ledgers (accreditationId is null)'
+        'PRN events are invalid in registered-only ledgers (accreditationNumber is null)'
     })
   }
   return value

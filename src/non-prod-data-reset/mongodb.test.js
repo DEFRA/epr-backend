@@ -229,17 +229,18 @@ const seedDownstreamForOrganisation = async (
     buildSystemLog({ organisationNumber: String(organisation.orgId) })
   )
 
-  await database.collection('waste-balance-events').insertOne(
-    buildLedgerEvent({
-      registrationId,
-      accreditationId,
-      organisationId,
-      number: 1
-    })
-  )
+  // The ledger and its row states name the organisation by number.
+  const ledgerId = {
+    ...withNumbers({ organisationId, registrationId, accreditationId }),
+    organisationNumber: organisationNumberOf(organisation)
+  }
+
+  await database
+    .collection('waste-balance-events')
+    .insertOne(buildLedgerEvent({ ...ledgerId, number: 1 }))
 
   await repositories.summaryLogRowStates.upsertSummaryLogRowStates(
-    withNumbers({ organisationId, registrationId, accreditationId }),
+    ledgerId,
     [buildSummaryLogRowStateEntry()],
     `summary-log-${randomUUID()}`
   )
@@ -366,9 +367,9 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('summary-log-row-states')
-          .countDocuments({ organisationId: other.organisationId })
+        await database.collection('summary-log-row-states').countDocuments({
+          organisationNumber: organisationNumberOf(other.organisation)
+        })
       ).toBe(1)
       expect(
         await database
