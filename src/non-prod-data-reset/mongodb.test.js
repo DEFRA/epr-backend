@@ -1,5 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
+/** @import { Db } from 'mongodb' */
 import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
@@ -201,6 +202,7 @@ const seedDownstreamForOrganisation = async (
     buildDraftPrn({
       organisation: {
         id: organisationId,
+        organisationNumber: organisationNumberOf(organisation),
         name: 'Target',
         tradingName: 'Target Trading'
       }
@@ -302,6 +304,7 @@ describe('non-prod data reset (mongo)', () => {
         buildDraftPrn({
           organisation: {
             id: seeded.organisationId,
+            organisationNumber: organisationNumberOf(seeded.organisation),
             name: 'Target',
             tradingName: 'Target Trading'
           }
@@ -354,9 +357,9 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       expect(
-        await database
-          .collection('packaging-recycling-notes')
-          .countDocuments({ 'organisation.id': other.organisationId })
+        await database.collection('packaging-recycling-notes').countDocuments({
+          'organisation.organisationNumber': String(other.organisation.orgId)
+        })
       ).toBe(1)
       expect(
         await database.collection('reports').countDocuments({
@@ -471,6 +474,42 @@ describe('non-prod data reset (mongo)', () => {
       expect(second).toEqual(EMPTY_COUNTS)
     })
 
+    it('keeps the organisation when a cascade step fails, so the reset can be retried', async ({
+      database,
+      repositories
+    }) => {
+      const seeded = await seedOrganisationWithOverseasSites(repositories)
+      const databaseWithFailingReports = /** @type {Db} */ (
+        /** @type {unknown} */ ({
+          collection: (/** @type {string} */ name) =>
+            name === 'reports'
+              ? {
+                  deleteMany: () =>
+                    new Promise((_resolve, reject) =>
+                      setTimeout(() => reject(new Error('reports down')), 50)
+                    )
+                }
+              : database.collection(name)
+        })
+      )
+      const failingReset = createNonProdDataReset(
+        databaseWithFailingReports,
+        repositories.organisations
+      )
+
+      await expect(
+        failingReset.deleteByOrganisationNumber(
+          organisationNumberOf(seeded.organisation)
+        )
+      ).rejects.toThrow('reports down')
+
+      await expect(
+        repositories.organisations.findByOrganisationNumber(
+          organisationNumberOf(seeded.organisation)
+        )
+      ).resolves.toMatchObject({ id: seeded.organisationId })
+    })
+
     it('short-circuits overseas-sites when the organisation has no overseas sites', async ({
       database,
       repositories,
@@ -528,9 +567,9 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('packaging-recycling-notes')
-          .countDocuments({ 'organisation.id': seeded.organisationId })
+        await database.collection('packaging-recycling-notes').countDocuments({
+          'organisation.organisationNumber': String(seeded.organisation.orgId)
+        })
       ).toBe(1)
     })
 

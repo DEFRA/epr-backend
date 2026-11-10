@@ -34,9 +34,11 @@ const createOrganisation = (id, registrations) => ({
   registrations
 })
 
+const registrationNumberFor = (registrationId) => `R-${registrationId}`
+
 const createRegistration = (id, material, glassRecyclingProcess) => ({
   id,
-  registrationNumber: id,
+  registrationNumber: registrationNumberFor(id),
   material,
   status: 'approved',
   ...(glassRecyclingProcess && { glassRecyclingProcess })
@@ -55,7 +57,7 @@ const createRowState = ({
   summaryLogId
 }) => ({
   organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
-  registrationNumber: registrationId,
+  registrationNumber: registrationNumberFor(registrationId),
   accreditationNumber: accreditationId,
   wasteRecordType,
   rowId: `row-${Math.random()}`,
@@ -150,12 +152,13 @@ const createReprocessorOutputRowState = (
 const submittedSummaryLogEvent = ({
   organisationId,
   registrationId,
+  registrationNumber = registrationNumberFor(registrationId),
   accreditationId,
   summaryLogId,
   number
 }) => ({
   organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
-  registrationNumber: registrationId,
+  registrationNumber,
   accreditationNumber: accreditationId,
   number,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -186,7 +189,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         organisationId: Object.keys(ORGANISATION_NUMBERS).find(
           (id) => String(ORGANISATION_NUMBERS[id]) === row.organisationNumber
         ),
-        registrationId: row.registrationNumber,
+        registrationNumber: row.registrationNumber,
         accreditationId: row.accreditationNumber,
         summaryLogId: row.summaryLogIds[0]
       })

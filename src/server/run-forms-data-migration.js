@@ -26,11 +26,15 @@ export const runFormsDataMigration = async (server) => {
       return
     }
     try {
-      const formSubmissionsRepository = (
-        await createFormSubmissionsRepository(server.db, logger)
-      )()
       const organisationsRepository = (
         await createOrganisationsRepository(server.db)
+      )()
+      const formSubmissionsRepository = (
+        await createFormSubmissionsRepository(
+          server.db,
+          logger,
+          organisationsRepository
+        )
       )()
       const systemLogsRepository = (
         await createSystemLogsRepository(server.db)
