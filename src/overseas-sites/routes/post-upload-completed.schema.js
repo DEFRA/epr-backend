@@ -1,10 +1,6 @@
 import Joi from 'joi'
 
-const UPLOAD_FILE_STATUS = {
-  COMPLETE: 'complete',
-  REJECTED: 'rejected',
-  PENDING: 'pending'
-}
+import { UPLOAD_FILE_STATUS } from '#domain/uploads/upload-locations.js'
 
 const fileSchema = Joi.object({
   fileId: Joi.string().required(),
@@ -46,5 +42,3 @@ export const orsUploadCompletedPayloadSchema = Joi.object({
     'any.required': '{#label} is required',
     'string.empty': '{#label} cannot be empty'
   })
-
-export { UPLOAD_FILE_STATUS }

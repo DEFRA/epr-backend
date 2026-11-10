@@ -7,17 +7,15 @@ import {
 } from '#common/enums/index.js'
 
 import {
-  isUploadedTo,
-  orsImportUploadPath
+  isInUploadLocation,
+  orsImportUploadPath,
+  UPLOAD_FILE_STATUS
 } from '#domain/uploads/upload-locations.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { config } from '#root/config.js'
 
-import {
-  orsUploadCompletedPayloadSchema,
-  UPLOAD_FILE_STATUS
-} from './post-upload-completed.schema.js'
+import { orsUploadCompletedPayloadSchema } from './post-upload-completed.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
@@ -57,15 +55,12 @@ const toFileRecord = (upload) => ({
 })
 
 /**
- * Only a completed file names an S3 location to check.
- *
  * @param {OrsUploadFile} upload
  * @param {string} importId
  * @returns {boolean}
  */
 const isUploadedForImport = (upload, importId) =>
-  upload.fileStatus !== UPLOAD_FILE_STATUS.COMPLETE ||
-  isUploadedTo(upload, {
+  isInUploadLocation(upload, {
     bucket: config.get('cdpUploader.orsBucket'),
     path: orsImportUploadPath(importId)
   })

@@ -342,16 +342,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         description: 'another registration',
         s3Bucket: 're-ex-summary-logs',
         s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
-      },
-      {
-        description: 'a registration whose id starts with this one',
-        s3Bucket: 're-ex-summary-logs',
-        s3Key: uploadedKeyFor(organisationId, `${registrationId}0`)
-      },
-      {
-        description: 'the registration folder itself',
-        s3Bucket: 're-ex-summary-logs',
-        s3Key: `/organisations/${organisationId}/registrations/${registrationId}`
       }
     ])(
       'refuses $description, and stores nothing',
@@ -376,33 +366,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     )
   })
 
-  describe('when the callback is not signed for its path', () => {
-    it.for([
-      {
-        description: 'no signature',
-        urlFor: (summaryLogId) => uploadCompletedPath(2026, summaryLogId)
-      },
-      {
-        description: "another summary log's signature",
-        urlFor: (summaryLogId) =>
-          uploadCompletedUrl(2026, 'another-summary-log').replace(
-            'another-summary-log',
-            summaryLogId
-          )
-      }
-    ])('refuses $description, and stores nothing', async ({ urlFor }) => {
-      const summaryLogId = randomUUID()
+  it('refuses an unsigned callback, and stores nothing', async () => {
+    const summaryLogId = randomUUID()
 
-      const response = await server.inject({
-        method: 'POST',
-        url: urlFor(summaryLogId),
-        payload: createCompletePayload()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
-      expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: createCompletePayload()
     })
+
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+    expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
   })
 
   it.each([

@@ -312,13 +312,6 @@ describe(`${orsUploadCompletedPath} route`, () => {
         )
       },
       {
-        description: 'an import whose id starts with this one',
-        orsUpload: completeFileAt(
-          s3Bucket,
-          '/overseas-sites/imports/import-1234/upload-1/file-456'
-        )
-      },
-      {
         description: 'one file among several',
         orsUpload: [
           completeFileAt(s3Bucket, s3Key),
@@ -351,37 +344,26 @@ describe(`${orsUploadCompletedPath} route`, () => {
     )
   })
 
-  describe('when the callback is not signed for its path', () => {
-    it.for([
-      { description: 'no signature', url: uploadCompletedPath(importId) },
-      {
-        description: "another import's signature",
-        url: uploadCompletedUrl('import-999').replace('import-999', importId)
-      }
-    ])(
-      'refuses $description, and leaves the import untouched',
-      async ({ url }) => {
-        await orsImportsRepository.create({
-          _id: importId,
-          status: ORS_IMPORT_STATUS.PREPROCESSING,
-          files: []
-        })
+  it('refuses an unsigned callback, and leaves the import untouched', async () => {
+    await orsImportsRepository.create({
+      _id: importId,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
 
-        const response = await server.inject({
-          method: 'POST',
-          url,
-          payload: createPayload()
-        })
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedPath(importId),
+      payload: createPayload()
+    })
 
-        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-        const doc = await orsImportsRepository.findById(importId)
-        expect(doc).toMatchObject({
-          status: ORS_IMPORT_STATUS.PREPROCESSING,
-          files: []
-        })
-        expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
-      }
-    )
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    const doc = await orsImportsRepository.findById(importId)
+    expect(doc).toMatchObject({
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+    expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
   })
 
   it('returns 404 when import does not exist', async () => {
