@@ -1337,6 +1337,11 @@ describe('buildWasteBalanceTable', () => {
         sentOnDeductions: 0,
         netCredit: 100
       })
+      expect(
+        table.data.period.operatorCounts[MATERIAL.PLASTIC][
+          WASTE_PROCESSING_TYPE.REPROCESSOR
+        ]
+      ).toEqual({ operatorCount: 0, submittingOperatorCount: 1 })
     })
   })
 
@@ -1456,10 +1461,10 @@ describe('buildWasteBalanceTable', () => {
   })
 
   describe('a registration the stored organisations do not hold yet', () => {
-    it('publishes its figures without counting its operator as submitting', async () => {
+    it('publishes its figures without counting its operator as submitting, and names the registration', async () => {
       const operator = makeOperator({ orgId: 500062 })
 
-      const { table } = await run({
+      const { table, logger } = await run({
         organisations: [],
         readModelOrganisations: [operator.organisation],
         submissions: [
@@ -1477,6 +1482,14 @@ describe('buildWasteBalanceTable', () => {
         eligibleForWasteBalance: 40,
         netCredit: 40
       })
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            action: 'market_insights_registration_uncounted',
+            reference: operator.ledgerId.registrationNumber
+          })
+        })
+      )
     })
   })
 

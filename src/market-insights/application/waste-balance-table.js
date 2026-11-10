@@ -449,9 +449,6 @@ const movesNetCredit = ({ eligibleForWasteBalance, sentOnDeductions }) =>
   eligibleForWasteBalance !== 0 || sentOnDeductions !== 0
 
 /**
- * Operator counts read the stored organisations, so a published row is
- * counted against the stored registration with its number.
- *
  * @typedef {Map<string, Omit<Contribution, 'month'>>} StoredRegistrations
  */
 
@@ -474,6 +471,7 @@ const storedRegistrationsByNumber = (organisations) =>
  * @property {Map<string, WasteBalanceCell>} cells
  * @property {Map<string, Contribution>} contributions - one per registration and month whose tonnage the net credit includes
  * @property {StoredRegistrations} storedRegistrations
+ * @property {Set<string>} uncountedRegistrations - registration numbers whose operator no submitting count includes, as the stored organisations do not hold them
  * @property {UndatedTally} undated
  * @property {(month: string) => month is YearMonth} isPublishedMonth
  */
@@ -483,7 +481,14 @@ const storedRegistrationsByNumber = (organisations) =>
  * @param {PublishedRow} published
  */
 const recordRow = (
-  { cells, contributions, storedRegistrations, undated, isPublishedMonth },
+  {
+    cells,
+    contributions,
+    storedRegistrations,
+    uncountedRegistrations,
+    undated,
+    isPublishedMonth
+  },
   { registrationNumber, registration, contribution }
 ) => {
   const { month, figures } = contribution
@@ -495,9 +500,31 @@ const recordRow = (
     return
   }
   foldIntoCell(cells, registration, month, figures)
+  if (!movesNetCredit(figures)) {
+    return
+  }
   const stored = storedRegistrations.get(registrationNumber)
-  if (movesNetCredit(figures) && stored !== undefined) {
-    contributions.set(`${registrationNumber}::${month}`, { month, ...stored })
+  if (stored === undefined) {
+    uncountedRegistrations.add(registrationNumber)
+    return
+  }
+  contributions.set(`${registrationNumber}::${month}`, { month, ...stored })
+}
+
+/**
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {Set<string>} registrationNumbers
+ */
+const warnAboutUncountedRegistrations = (logger, registrationNumbers) => {
+  for (const registrationNumber of registrationNumbers) {
+    logger.warn({
+      message: `Market insights waste balance published figures for registration ${registrationNumber} without counting its operator as submitting, as the stored organisations do not hold the registration.`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: 'market_insights_registration_uncounted',
+        reference: registrationNumber
+      }
+    })
   }
 }
 
@@ -577,6 +604,7 @@ export const buildWasteBalanceTable = async ({
     cells: new Map(),
     contributions: new Map(),
     storedRegistrations: storedRegistrationsByNumber(organisations),
+    uncountedRegistrations: new Set(),
     undated: newUndatedTally(),
     isPublishedMonth: /** @returns {month is YearMonth} */ (month) =>
       publishedMonths.has(month)
@@ -593,6 +621,7 @@ export const buildWasteBalanceTable = async ({
   }
 
   warnAboutUndatedRows(logger, into.undated)
+  warnAboutUncountedRegistrations(logger, into.uncountedRegistrations)
 
   const owedReports = [
     ...owedMonthlyReports({ organisations, periodicReports, months })
