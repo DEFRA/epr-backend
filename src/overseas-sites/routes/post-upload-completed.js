@@ -6,7 +6,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
+import {
+  isUploadedTo,
+  orsImportUploadPath
+} from '#domain/uploads/upload-locations.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+import { config } from '#root/config.js'
 
 import {
   orsUploadCompletedPayloadSchema,
@@ -51,6 +56,20 @@ const toFileRecord = (upload) => ({
 })
 
 /**
+ * Only a completed file names an S3 location to check.
+ *
+ * @param {OrsUploadFile} upload
+ * @param {string} importId
+ * @returns {boolean}
+ */
+const isUploadedForImport = (upload, importId) =>
+  upload.fileStatus !== UPLOAD_FILE_STATUS.COMPLETE ||
+  isUploadedTo(upload, {
+    bucket: config.get('cdpUploader.orsBucket'),
+    path: orsImportUploadPath(importId)
+  })
+
+/**
  * @param {OrsUploadFile[]} uploads
  * @returns {boolean}
  */
@@ -90,6 +109,13 @@ export const orsUploadCompleted = {
       }
 
       const uploads = normaliseToArray(payload.form.orsUpload)
+
+      if (!uploads.every((upload) => isUploadedForImport(upload, id))) {
+        throw Boom.badData(
+          'Upload is not in the upload location for this import'
+        )
+      }
+
       const completedFiles = uploads
         .filter((u) => u.fileStatus === UPLOAD_FILE_STATUS.COMPLETE)
         .map(toFileRecord)

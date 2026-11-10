@@ -11,8 +11,8 @@ import { orsUploadCompletedPath } from './post-upload-completed.js'
 const importId = 'import-123'
 const fileId = 'file-456'
 const filename = 'sites.xlsx'
-const s3Bucket = 'test-bucket'
-const s3Key = 'overseas-sites/imports/import-123/file-456'
+const s3Bucket = 're-ex-overseas-sites'
+const s3Key = '/overseas-sites/imports/import-123/upload-1/file-456'
 
 const createPayload = (overrides = {}) => ({
   form: {
@@ -34,15 +34,15 @@ const createMultipleFilesPayload = () => ({
         fileId: 'file-1',
         filename: 'sites-a.xlsx',
         fileStatus: 'complete',
-        s3Bucket: 'test-bucket',
-        s3Key: 'path/file-1'
+        s3Bucket: 're-ex-overseas-sites',
+        s3Key: '/overseas-sites/imports/import-123/upload-1/file-1'
       },
       {
         fileId: 'file-2',
         filename: 'sites-b.xlsx',
         fileStatus: 'complete',
-        s3Bucket: 'test-bucket',
-        s3Key: 'path/file-2'
+        s3Bucket: 're-ex-overseas-sites',
+        s3Key: '/overseas-sites/imports/import-123/upload-1/file-2'
       }
     ]
   }
@@ -263,8 +263,8 @@ describe(`${orsUploadCompletedPath} route`, () => {
               fileId: 'file-1',
               filename: 'sites-a.xlsx',
               fileStatus: 'complete',
-              s3Bucket: 'test-bucket',
-              s3Key: 'path/file-1'
+              s3Bucket: 're-ex-overseas-sites',
+              s3Key: '/overseas-sites/imports/import-123/upload-1/file-1'
             },
             {
               fileId: 'file-2',
@@ -281,6 +281,67 @@ describe(`${orsUploadCompletedPath} route`, () => {
     expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(
       importId,
       createdBy
+    )
+  })
+
+  describe('when a file is not where this import sends its uploads', () => {
+    const completeFileAt = (fileBucket, fileKey) => ({
+      fileId,
+      filename,
+      fileStatus: 'complete',
+      s3Bucket: fileBucket,
+      s3Key: fileKey
+    })
+
+    it.for([
+      {
+        description: 'another bucket',
+        orsUpload: completeFileAt('some-other-bucket', s3Key)
+      },
+      {
+        description: 'another import',
+        orsUpload: completeFileAt(
+          s3Bucket,
+          '/overseas-sites/imports/import-999/upload-1/file-456'
+        )
+      },
+      {
+        description: 'an import whose id starts with this one',
+        orsUpload: completeFileAt(
+          s3Bucket,
+          '/overseas-sites/imports/import-1234/upload-1/file-456'
+        )
+      },
+      {
+        description: 'one file among several',
+        orsUpload: [
+          completeFileAt(s3Bucket, s3Key),
+          completeFileAt('some-other-bucket', s3Key)
+        ]
+      }
+    ])(
+      'refuses $description, and leaves the import untouched',
+      async ({ orsUpload }) => {
+        await orsImportsRepository.create({
+          _id: importId,
+          status: ORS_IMPORT_STATUS.PREPROCESSING,
+          files: []
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+          payload: { form: { orsUpload } }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const doc = await orsImportsRepository.findById(importId)
+        expect(doc).toMatchObject({
+          status: ORS_IMPORT_STATUS.PREPROCESSING,
+          files: []
+        })
+        expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
+      }
     )
   })
 
