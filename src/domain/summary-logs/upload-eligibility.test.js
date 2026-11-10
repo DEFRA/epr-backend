@@ -2,7 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import { checkSummaryLogUploadEligibility } from './upload-eligibility.js'
 
-const NOW = new Date('2026-06-15T00:00:00.000Z')
+const LATEST_OPEN_YEAR = toYear(2026)
 
 /**
  * @param {{ validFrom?: string }} [overrides]
@@ -14,11 +14,11 @@ const buildRegistration = (overrides = {}) => ({
 })
 
 describe('checkSummaryLogUploadEligibility', () => {
-  it('refuses a future year', () => {
+  it('refuses a year after the latest open year', () => {
     const result = checkSummaryLogUploadEligibility({
       registration: buildRegistration(),
       year: toYear(2027),
-      now: NOW
+      latestOpenYear: LATEST_OPEN_YEAR
     })
     expect(result).toEqual({ eligible: false, reason: expect.any(String) })
   })
@@ -28,7 +28,7 @@ describe('checkSummaryLogUploadEligibility', () => {
     const result = checkSummaryLogUploadEligibility({
       registration,
       year: toYear(2026),
-      now: NOW
+      latestOpenYear: LATEST_OPEN_YEAR
     })
     expect(result).toEqual({ eligible: false, reason: expect.any(String) })
   })
@@ -37,7 +37,7 @@ describe('checkSummaryLogUploadEligibility', () => {
     const result = checkSummaryLogUploadEligibility({
       registration: buildRegistration(),
       year: toYear(2026),
-      now: NOW
+      latestOpenYear: LATEST_OPEN_YEAR
     })
     expect(result).toEqual({ eligible: true })
   })

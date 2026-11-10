@@ -18,12 +18,12 @@ import { approvedYears } from './status-timeline.js'
  * newest first, up to and including the year of `endDate`.
  *
  * @param {Organisation} organisation
- * @param {Date} endDate
+ * @param {CalendarDate} endDate
  * @returns {Year[]}
  */
 export const organisationYears = (organisation, endDate) => {
   const years = Object.values(organisation.registrations).flatMap(
-    ({ status }) => approvedYears(status.timeline, utcCalendarDate(endDate))
+    ({ status }) => approvedYears(status.timeline, endDate)
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
