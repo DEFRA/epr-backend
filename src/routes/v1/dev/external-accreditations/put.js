@@ -57,11 +57,12 @@ export const devExternalAccreditationPut = {
     const timeline = status.timeline.toSorted((a, b) =>
       a.at.localeCompare(b.at)
     )
+    const [latest] = timeline.slice(-1)
     const stored = await request.externalAccreditationsRepository.upsert({
       ...fields,
       registrationNumber,
       year,
-      status: { current: timeline[timeline.length - 1].status, timeline }
+      status: { current: latest.status, timeline }
     })
     return h.response(stored).code(StatusCodes.OK)
   }
