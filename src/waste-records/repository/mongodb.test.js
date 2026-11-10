@@ -336,9 +336,6 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
   // is reported as an endless phantom adjustment.
   /** @type {import('#domain/waste-records/model.js').WasteRecord} */
   const zeroTonnageSentOn = {
-    organisationId: DEFAULT_LEDGER_ID.organisationId,
-    registrationId: DEFAULT_LEDGER_ID.registrationId,
-    accreditationId: DEFAULT_LEDGER_ID.accreditationId,
     rowId: '5000',
     type: WASTE_RECORD_TYPE.SENT_ON,
     data: {

@@ -88,24 +88,17 @@ const extractSummaryLog = async ({
 }
 
 /**
- * The accreditation a summary log is validated against: the one it stored
- * (`null` = registered-only), or the registration's current one for a legacy
- * summary log that stored none.
+ * The accreditation a summary log is validated against: the one it stored,
+ * or none for a registered-only summary log.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SubmittedSummaryLog} summaryLog
- * @param {Registration} registration
  * @returns {Promise<Registration['accreditation']>}
  */
 const accreditationFor = async (
   organisationsRepository,
-  { organisationId, accreditationId },
-  registration
+  { organisationId, accreditationId }
 ) => {
-  if (accreditationId === undefined) {
-    return registration.accreditation
-  }
-
   return accreditationId === null
     ? null
     : organisationsRepository.findAccreditationById(
@@ -136,11 +129,7 @@ const fetchRegistration = async ({
     )
   const registration = {
     ...currentRegistration,
-    accreditation: await accreditationFor(
-      organisationsRepository,
-      summaryLog,
-      currentRegistration
-    )
+    accreditation: await accreditationFor(organisationsRepository, summaryLog)
   }
 
   logger.info({
@@ -339,7 +328,6 @@ const performValidationChecks = async ({
     const dataResult = await transformAndValidateData({
       summaryLog,
       validatedData,
-      registration,
       summaryLogRowStatesRepository,
       ledgerRepository
     })
@@ -532,19 +520,17 @@ const persistValidationResult = async ({
  * @param {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
- *   summaryLog: SubmittedSummaryLog,
- *   registration: Registration | undefined
+ *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<Map<string, import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState>>}
  */
 const loadSubmittedRowStatesByKey = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  summaryLog,
-  registration
+  summaryLog
 }) => {
   const submittedRowStates = await summaryLogRowStatesForRegistration({
-    ...ledgerIdFor(summaryLog, registration),
+    ...ledgerIdFor(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
   })
@@ -596,8 +582,7 @@ const classifyAndPersistResult = async ({
   const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
     ledgerRepository,
     summaryLogRowStatesRepository,
-    summaryLog,
-    registration
+    summaryLog
   })
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
