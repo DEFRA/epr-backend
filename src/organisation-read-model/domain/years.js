@@ -1,5 +1,9 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { utcYearOf, yearEndOrToday } from '#common/helpers/dates/year.js'
+import {
+  utcYearOf,
+  earliestOfYearEndOrDate,
+  yearBounds
+} from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
 import { regAccStatusByDate } from './reg-acc-status-by-date.js'
 import { approvedYears } from './status-timeline.js'
@@ -11,16 +15,15 @@ import { approvedYears } from './status-timeline.js'
 
 /**
  * The calendar years in which the organisation held an approved registration,
- * newest first, up to and including the current year.
+ * newest first, up to and including the year of `endDate`.
  *
  * @param {Organisation} organisation
- * @param {Date} now
+ * @param {Date} endDate
  * @returns {Year[]}
  */
-export const organisationYears = (organisation, now) => {
-  const today = utcCalendarDate(now)
+export const organisationYears = (organisation, endDate) => {
   const years = Object.values(organisation.registrations).flatMap(
-    ({ status }) => approvedYears(status.timeline, today)
+    ({ status }) => approvedYears(status.timeline, utcCalendarDate(endDate))
   )
   return [...new Set(years)].sort((a, b) => b - a)
 }
@@ -40,15 +43,19 @@ const accreditationIn = (accreditations, year) =>
  *
  * @param {Organisation} organisation
  * @param {Year} year
- * @param {Date} now
+ * @param {Date} statusDate
  * @returns {Organisation}
  */
-export const organisationInYear = (organisation, year, now) => {
-  const today = utcCalendarDate(now)
-  const day = yearEndOrToday(year, today)
+export const organisationInYear = (organisation, year, statusDate) => {
+  const { end: endOfYear } = yearBounds(year)
+
+  const statusCalendarDate = earliestOfYearEndOrDate(
+    year,
+    utcCalendarDate(statusDate)
+  )
   const registrations = Object.entries(organisation.registrations)
     .filter(([, { status }]) =>
-      approvedYears(status.timeline, today).includes(year)
+      approvedYears(status.timeline, endOfYear).includes(year)
     )
     .map(([number, registration]) => [
       number,
@@ -56,7 +63,7 @@ export const organisationInYear = (organisation, year, now) => {
         ...registration,
         status: {
           ...registration.status,
-          current: statusOn(registration.status.timeline, day)
+          current: statusOn(registration.status.timeline, statusCalendarDate)
         },
         accreditations: accreditationIn(registration.accreditations, year),
         regAccStatusByDate: { [year]: registration.regAccStatusByDate[year] }
@@ -68,7 +75,7 @@ export const organisationInYear = (organisation, year, now) => {
     status: {
       ...organisation.status,
       current: /** @type {Organisation['status']['current']} */ (
-        statusOn(organisation.status.timeline, day) ??
+        statusOn(organisation.status.timeline, statusCalendarDate) ??
           organisation.status.current
       )
     },
@@ -78,15 +85,15 @@ export const organisationInYear = (organisation, year, now) => {
 
 /**
  * `regAccStatusByDate` for each year the registration was approved in up to
- * `today`, or holds an accreditation for, which can be a later year.
+ * `endDate`, or holds an accreditation for, which can be a later year.
  *
  * @param {RegAccStatusSource} registration
- * @param {CalendarDate} today
+ * @param {CalendarDate} endDate
  * @returns {RegAccStatusByYear}
  */
-export const regAccStatusByYear = (registration, today) => {
+export const regAccStatusByYear = (registration, endDate) => {
   const years = [
-    ...approvedYears(registration.status.timeline, today),
+    ...approvedYears(registration.status.timeline, endDate),
     ...Object.keys(registration.accreditations).map(utcYearOf)
   ]
 

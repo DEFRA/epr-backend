@@ -26,23 +26,23 @@ const yearsIn = ({ from, to }) => yearsFromTo(utcYearOf(from), utcYearOf(to))
 
 /**
  * @param {DailyTimeline} daily
- * @param {CalendarDate} today
+ * @param {CalendarDate} date
  * @returns {CalendarDate[]}
  */
-const datesUpTo = (daily, today) =>
+const datesUpTo = (daily, date) =>
   Object.keys(daily)
     .map(calendarDate)
-    .filter((date) => date.localeCompare(today) <= 0)
+    .filter((candidate) => candidate.localeCompare(date) <= 0)
 
 /**
  * A status holds until the day before the next one starts; the latest status
- * holds until today.
+ * holds until `date`.
  *
  * @param {CalendarDate | undefined} nextDate
- * @param {CalendarDate} today
+ * @param {CalendarDate} date
  * @returns {CalendarDate}
  */
-const rangeEnd = (nextDate, today) => (nextDate ? dayBefore(nextDate) : today)
+const rangeEnd = (nextDate, date) => (nextDate ? dayBefore(nextDate) : date)
 
 /**
  * The status at the end of each UTC day with a change.
@@ -56,22 +56,24 @@ export const dailyTimeline = (timeline) =>
   )
 
 /**
- * The date ranges each status was held, keyed by status.
+ * The date ranges each status was held, keyed by status. The { to } date in the latest status
+ * is given by the passed `endDate`. Statuses in the timeline after the passed `endDate` are
+ * not included in the result.
  *
  * @param {StatusTimeline} timeline
- * @param {CalendarDate} today
+ * @param {CalendarDate} endDate
  * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
-export const statusRanges = (timeline, today) => {
+export const statusRanges = (timeline, endDate) => {
   const daily = dailyTimeline(timeline)
-  const dates = datesUpTo(daily, today)
+  const dates = datesUpTo(daily, endDate)
 
   /** @type {Partial<Record<string, CalendarDateRange[]>>} */
   const ranges = {}
 
   for (let i = 0; i < dates.length; i++) {
     const from = dates[i]
-    const to = rangeEnd(dates[i + 1], today)
+    const to = rangeEnd(dates[i + 1], endDate)
     const { status } = daily[from]
 
     ranges[status] ??= []
@@ -86,10 +88,10 @@ export const statusRanges = (timeline, today) => {
  * spent wholly cancelled are left out.
  *
  * @param {StatusTimeline} timeline
- * @param {CalendarDate} today
+ * @param {CalendarDate} endDate
  * @returns {Year[]}
  */
-export const approvedYears = (timeline, today) => {
-  const approvedRanges = statusRanges(timeline, today).approved ?? []
+export const approvedYears = (timeline, endDate) => {
+  const approvedRanges = statusRanges(timeline, endDate).approved ?? []
   return [...new Set(approvedRanges.flatMap(yearsIn))]
 }
