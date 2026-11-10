@@ -1,4 +1,3 @@
-import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
@@ -894,22 +893,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(
         grantedRegistration.accreditation?.accreditationNumber
       ).toBeUndefined()
-
-      // Scenario 9: a summary log submitted against this registration
-      // appends to a registered-only ledger stream — accreditation number null —
-      // which rejects PRN events (application/summary-logs/ledger-id.js;
-      // waste-balances/repository/ledger-schema.js:173).
-      const ledgerId = ledgerIdFor(
-        /** @type {import('#application/summary-logs/validate-issue-logging.js').SubmittedSummaryLog} */ (
-          /** @type {unknown} */ ({
-            organisationId: fixture.id,
-            registrationId: registration.id,
-            file: { id: 'file-1', name: 'file.xlsx' }
-          })
-        ),
-        grantedRegistration
-      )
-      expect(ledgerId.accreditationNumber).toBeNull()
     })
   })
 

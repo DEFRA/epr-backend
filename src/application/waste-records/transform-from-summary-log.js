@@ -47,13 +47,6 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @property {string} wasteRecordType - The waste record type (e.g. received, exported, sentOn)
  */
 
-/**
- * @typedef {Object} SummaryLogContext
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null} [accreditationId]
- */
-
 const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
 
 /**
@@ -64,18 +57,15 @@ const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
  *
  * @param {ValidatedTableSection} tableData - Table data with rows
  * @param {(row: Record<string, any>) => {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
- * @param {SummaryLogContext} context - Registration context for the waste records
  * @param {{ tableName: string, wasteRecordType: WasteRecordType }} tableMeta
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 const transformTable = (
   tableData,
   rowTransformer,
-  context,
   { tableName, wasteRecordType: tableWasteRecordType }
 ) => {
   const { rows } = tableData
-  const { organisationId, registrationId, accreditationId } = context
 
   return rows.map((row) => {
     const { data: rowData, issues, outcome } = row
@@ -84,15 +74,9 @@ const transformTable = (
 
     /** @type {WasteRecord} */
     const wasteRecord = {
-      organisationId,
-      registrationId,
       rowId,
       type: wasteRecordType,
       data
-    }
-
-    if (accreditationId) {
-      wasteRecord.accreditationId = accreditationId
     }
 
     /** @type {ValidatedWasteRecord} */
@@ -116,10 +100,9 @@ const transformTable = (
  * flow through to the output.
  *
  * @param {ValidatedSummaryLog} parsedData - Validated summary log with TransformableRow[] in each table
- * @param {SummaryLogContext} summaryLogContext - Registration context for the waste records
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
-export const transformFromSummaryLog = (parsedData, summaryLogContext) => {
+export const transformFromSummaryLog = (parsedData) => {
   // Check for unknown processing type
   const processingType = parsedData.meta.PROCESSING_TYPE?.value
   if (processingType && !KNOWN_PROCESSING_TYPES.includes(processingType)) {
@@ -138,7 +121,7 @@ export const transformFromSummaryLog = (parsedData, summaryLogContext) => {
       return []
     }
 
-    return transformTable(tableData, schema.rowTransformer, summaryLogContext, {
+    return transformTable(tableData, schema.rowTransformer, {
       tableName,
       wasteRecordType: schema.wasteRecordType
     })

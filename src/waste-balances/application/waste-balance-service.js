@@ -221,12 +221,12 @@ export const createWasteBalanceService = (
      * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {SummaryLogFileId} options.summaryLogId
-     * @param {import('#domain/organisations/numbers.js').RequiredNumbers} options.numbers
+     * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId, numbers }
+      { user, accreditation, overseasSites, summaryLogId, ledgerId }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -243,7 +243,7 @@ export const createWasteBalanceService = (
         user,
         overseasSites,
         summaryLogId,
-        numbers
+        ledgerId
       })
     },
 

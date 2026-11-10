@@ -28,8 +28,7 @@ import {
 /** @import {RegistrationOrAccreditationId, WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 
 /**
- * The ledger the fixture summary log reads: a legacy summary log, holding no
- * accreditation id, reads its registration's current accreditation's ledger.
+ * The ledger the fixture summary log reads.
  *
  * @type {RegistrationOrAccreditationId & WasteBalanceLedgerId}
  */
@@ -233,6 +232,9 @@ describe('SummaryLogsValidator', () => {
     }
 
     organisationsRepository = {
+      findByOrganisationNumber: vi.fn().mockResolvedValue({
+        registrations: [{ registrationNumber: 'REG12345', overseasSites: {} }]
+      }),
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -250,15 +252,10 @@ describe('SummaryLogsValidator', () => {
           ]
         }
       }),
-      findAccreditationById: vi.fn().mockResolvedValue({
-        accreditationNumber: 'ACC12345',
-        validFrom: '2025-01-01T00:00:00.000Z',
-        validTo: '2025-12-31T23:59:59.999Z',
-        statusHistory: [
-          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-        ]
-      })
+      findAccreditationById: vi.fn(
+        async () =>
+          (await organisationsRepository.findRegistrationById()).accreditation
+      )
     }
 
     summaryLogId = 'summary-log-123'
@@ -267,8 +264,10 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
+      accreditationId: FIXTURE_LEDGER.accreditationId,
       organisationNumber: FIXTURE_LEDGER.organisationNumber,
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
+      accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
       file: {
         id: 'file-123',
         name: 'test.xlsx',
