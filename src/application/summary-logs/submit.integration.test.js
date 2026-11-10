@@ -475,12 +475,12 @@ describe('submitSummaryLog row-state numbers', () => {
 })
 
 describe('submitSummaryLog for an accreditation stored by number only', () => {
-  it('credits its ledger and stores its row states by number', async () => {
-    const { deps, summaryLogId, summaryLog, organisation, reportKey } =
-      await setupSubmit({
-        reportsRepository: createInMemoryReportsRepository()(),
-        accreditationStoredByNumberOnly: true
-      })
+  /** @param {boolean} accreditationStoredByNumberOnly */
+  const submitAndRead = async (accreditationStoredByNumberOnly) => {
+    const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()(),
+      accreditationStoredByNumberOnly
+    })
 
     await submitSummaryLog(summaryLogId, deps)
 
@@ -489,15 +489,39 @@ describe('submitSummaryLog for an accreditation stored by number only', () => {
       registrationNumber: reportKey.registrationNumber,
       accreditationNumber: toAccreditationNumber('ACC-123')
     })
-    expect(balance?.amount).toBeGreaterThan(0)
     const rowStates =
       await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
         reportKey.organisationNumber,
         reportKey.registrationNumber,
         summaryLog.file.id
       )
+    return { balance, rowStates, reportKey }
+  }
+
+  it('credits its ledger and classifies its rows as it would with an id', async () => {
+    const withId = await submitAndRead(false)
+    const byNumberOnly = await submitAndRead(true)
+
+    expect(byNumberOnly.balance?.amount).toBeGreaterThan(0)
+    expect(byNumberOnly.balance?.amount).toBe(withId.balance?.amount)
+    expect(
+      byNumberOnly.rowStates.map(({ rowId, classification }) => ({
+        rowId,
+        classification
+      }))
+    ).toEqual(
+      withId.rowStates.map(({ rowId, classification }) => ({
+        rowId,
+        classification
+      }))
+    )
+  })
+
+  it('stores its row states by number', async () => {
+    const { rowStates, reportKey } = await submitAndRead(true)
+
     const numbers = {
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: reportKey.organisationNumber,
       registrationNumber: 'REG-123',
       accreditationNumber: 'ACC-123'
     }
