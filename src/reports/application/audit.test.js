@@ -5,6 +5,10 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -312,6 +316,9 @@ const resubmissionRequired = {
   }
 }
 
+const ORGANISATION_NUMBER = toOrganisationNumber('500001')
+const REGISTRATION_NUMBER = toRegistrationNumber('R25SR500000001PA')
+
 const flaggedReport = {
   reportId: 'rep-1',
   year: toYear(2025),
@@ -329,8 +336,8 @@ describe.each([
     run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
       auditMarkReportsStale({
         systemLogsRepository,
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: ORGANISATION_NUMBER,
+        registrationNumber: REGISTRATION_NUMBER,
         reportsMarkedStale: [
           { ...flaggedReport, stale: { summaryLogChanged } }
         ],
@@ -345,8 +352,8 @@ describe.each([
     run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
       auditMarkReportsStale({
         systemLogsRepository,
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: ORGANISATION_NUMBER,
+        registrationNumber: REGISTRATION_NUMBER,
         reportsMarkedStale: [{ ...flaggedReport, stale: { prnCancelled } }],
         action: MARK_STALE_ACTION.PRN_CANCELLED
       })
@@ -359,8 +366,8 @@ describe.each([
     run: (/** @type {SystemLogsRepository} */ systemLogsRepository) =>
       auditMarkReportsRequiringResubmission({
         systemLogsRepository,
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
+        organisationNumber: ORGANISATION_NUMBER,
+        registrationNumber: REGISTRATION_NUMBER,
         reportsRequiringResubmission: [
           { ...flaggedReport, resubmissionRequired }
         ]
@@ -373,8 +380,8 @@ describe.each([
 
   const context = {
     ...flaggedReport,
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
+    organisationNumber: ORGANISATION_NUMBER,
+    registrationNumber: REGISTRATION_NUMBER,
     previous: { [field]: null },
     next: { [field]: flag }
   }

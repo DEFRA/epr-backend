@@ -54,10 +54,11 @@ const mapOrganisation = (org) => {
 
 /**
  * @param {PackagingRecyclingNote['accreditation']} accreditation
+ * @param {string} accreditationId
  */
-const mapAccreditation = (accreditation) => {
+const mapAccreditation = (accreditation, accreditationId) => {
   const mapped = {
-    id: accreditation.id,
+    id: accreditationId,
     accreditationNumber: accreditation.accreditationNumber,
     accreditationYear: accreditation.accreditationYear,
     material: accreditation.material,
@@ -76,18 +77,29 @@ const mapAccreditation = (accreditation) => {
 }
 
 /**
+ * The database ids the external API states for a PRN's issuing organisation
+ * and accreditation. A PRN does not store them.
+ *
+ * @typedef {{ organisationId: string, accreditationId: string }} ExternalPrnIds
+ */
+
+/**
  * Maps an internal PackagingRecyclingNote to the external API schema
  * defined in external-manage-prns.yaml.
  *
  * @param {PackagingRecyclingNote} prn
+ * @param {ExternalPrnIds} ids
  */
-export function mapToExternalPrn(prn) {
+export function mapToExternalPrn(prn, { organisationId, accreditationId }) {
   const mapped = {
     id: prn.id,
     status: mapStatus(prn.status),
-    issuedByOrganisation: mapOrganisation(prn.organisation),
+    issuedByOrganisation: mapOrganisation({
+      ...prn.organisation,
+      id: organisationId
+    }),
     issuedToOrganisation: mapOrganisation(prn.issuedToOrganisation),
-    accreditation: mapAccreditation(prn.accreditation),
+    accreditation: mapAccreditation(prn.accreditation, accreditationId),
     isDecemberWaste: prn.isDecemberWaste,
     isExport: prn.isExport,
     obligationYear: prn.obligationYear,

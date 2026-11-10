@@ -154,13 +154,11 @@ const buildPrn = (currentStatus = PRN_STATUS.AWAITING_ACCEPTANCE) => ({
   version: 1,
   prnNumber,
   organisation: {
-    id: organisationId,
     organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Organisation'
   },
-  registrationId,
   registration: TEST_REGISTRATION,
-  accreditation: buildAccreditationSnapshot({ id: accreditationId }),
+  accreditation: buildAccreditationSnapshot(),
   obligationYear: toYear(2026),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,

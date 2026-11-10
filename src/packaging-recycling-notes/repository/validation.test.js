@@ -8,7 +8,7 @@ describe('validatePrnInsert', () => {
     const data = buildValidPrnInsert()
     const result = validatePrnInsert(data)
     expect(result.schemaVersion).toBe(2)
-    expect(result.organisation.id).toBe(data.organisation.id)
+    expect(result.organisation).toStrictEqual(data.organisation)
   })
 
   it('strips unknown fields', () => {

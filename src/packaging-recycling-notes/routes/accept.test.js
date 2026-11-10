@@ -131,14 +131,11 @@ const buildPrn = (
   version: 1,
   prnNumber,
   organisation: {
-    id: organisationId,
     organisationNumber: TEST_ORGANISATION_NUMBER,
     name: 'Test Organisation'
   },
-  registrationId,
   registration: TEST_REGISTRATION,
   accreditation: buildAccreditationSnapshot({
-    id: accreditationId,
     accreditationYear: toYear(2026)
   }),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },

@@ -17,7 +17,6 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams
@@ -35,6 +34,7 @@ import {
   updatePrnStatusHandler
 } from './status.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+import { atPrnKeys } from './at-prn-keys.js'
 import { createStatusesValidator } from './validation.js'
 
 /**
@@ -46,7 +46,8 @@ import { createStatusesValidator } from './validation.js'
  * } from '#domain/organisations/model.js'
  * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
- * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
+ * @import { PrnKeyedRequest } from './at-prn-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
@@ -233,7 +234,7 @@ const toAccreditationSnapshot = ({ accreditation, isExport }) => {
       ? WASTE_PROCESSING_TYPE.EXPORTER
       : WASTE_PROCESSING_TYPE.REPROCESSOR,
     material: resolveMaterial({
-      id: accreditation.id,
+      id: accreditation.accreditationNumber,
       material: accreditation.material,
       glassRecyclingProcess: glassRecyclingProcess && [glassRecyclingProcess]
     }),
@@ -413,18 +414,16 @@ const prnGet = {
   }
 }
 
-const accredited = { accredited: true }
-
 /**
  * The existing PRN commands name the PRN `id`.
  *
- * @param {ResolvedRequest & { params: { prnId: string, id?: string } }} request
+ * @param {PrnKeyedRequest & { params: { prnId: string, id?: string } }} request
  */
 const namingPrnId = (request) => {
   request.params.id = request.params.prnId
 }
 
-const namedPrn = { ...accredited, before: namingPrnId }
+const namedPrn = { before: namingPrnId }
 
 /**
  * @param {{ params: RegistrationParams }} request
@@ -484,27 +483,25 @@ const decemberEligibilitySchema = Joi.object({
 })
 
 export const prnRoutesByNaturalKey = [
-  atNaturalKeys(prnsList, prnsPath, accreditationParams, accredited),
-  atNaturalKeys(
+  atPrnKeys(prnsList, prnsPath, accreditationParams),
+  atPrnKeys(
     declaringResponse(
       { ...packagingRecyclingNotesCreate, handler: createServingPrn },
       prnSchema
     ),
     prnsPath,
-    accreditationParams,
-    accredited
+    accreditationParams
   ),
-  atNaturalKeys(
+  atPrnKeys(
     declaringResponse(
       packagingRecyclingNotesDecemberEligibility,
       decemberEligibilitySchema
     ),
     `${prnsPath}/december-prn-eligibility`,
-    accreditationParams,
-    accredited
+    accreditationParams
   ),
-  atNaturalKeys(prnGet, prnPath, prnParams, accredited),
-  atNaturalKeys(
+  atPrnKeys(prnGet, prnPath, prnParams),
+  atPrnKeys(
     declaringResponse(
       {
         ...packagingRecyclingNotesUpdateStatus,
@@ -518,7 +515,7 @@ export const prnRoutesByNaturalKey = [
   )
 ]
 
-export const prnCancelByNaturalKey = atNaturalKeys(
+export const prnCancelByNaturalKey = atPrnKeys(
   declaringResponse(
     { ...adminPackagingRecyclingNotesCancel, handler: cancelOwnPrn },
     prnSchema

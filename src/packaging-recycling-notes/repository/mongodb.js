@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
@@ -50,34 +51,6 @@ async function ensurePrnNumberIndex(collection) {
 }
 
 /**
- * Ensures the organisation_status compound index uses the v2 field path.
- * Handles migration from v1 (organisationId) to v2 (organisation.id).
- *
- * @param {Collection} collection
- */
-async function ensureOrganisationStatusIndex(collection) {
-  const indexName = 'organisationId_status'
-
-  try {
-    const indexes = await collection.indexes()
-    const existingIndex = indexes.find((idx) => idx.name === indexName)
-
-    if (existingIndex?.key?.organisationId) {
-      await collection.dropIndex(indexName)
-    }
-  } catch (error) {
-    if (error.codeName !== 'NamespaceNotFound') {
-      throw error
-    }
-  }
-
-  await collection.createIndex(
-    { 'organisation.id': 1, 'status.currentStatus': 1 },
-    { name: indexName }
-  )
-}
-
-/**
  * Ensures the status_currentStatusAt compound index exists.
  * Covers findByStatus queries: status + date range + cursor pagination.
  *
@@ -103,8 +76,6 @@ async function ensureStatusDateIndex(collection) {
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
-  await ensureOrganisationStatusIndex(collection)
-
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
   await ensurePrnNumberIndex(collection)
@@ -119,6 +90,8 @@ async function ensureCollection(db) {
     },
     { name: 'accreditationNumbers' }
   )
+
+  await dropIndexIfPresent(collection, 'organisationId_status')
 
   return collection
 }
@@ -326,9 +299,9 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$organisation.id',
-            registrationId: '$registrationId',
-            accreditationId: '$accreditation.id',
+            organisationNumber: '$organisation.organisationNumber',
+            registrationNumber: '$registration.registrationNumber',
+            accreditationNumber: '$accreditation.accreditationNumber',
             status: '$status.currentStatus'
           },
           tonnage: { $sum: '$tonnage' }
@@ -337,9 +310,9 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $group: {
           _id: {
-            organisationId: '$_id.organisationId',
-            registrationId: '$_id.registrationId',
-            accreditationId: '$_id.accreditationId'
+            organisationNumber: '$_id.organisationNumber',
+            registrationNumber: '$_id.registrationNumber',
+            accreditationNumber: '$_id.accreditationNumber'
           },
           tonnageByStatus: { $push: { k: '$_id.status', v: '$tonnage' } }
         }
@@ -347,7 +320,7 @@ const performSumTonnageByAccreditation = async (db, { excludeStatuses }) => {
       {
         $project: {
           _id: 0,
-          id: '$_id',
+          numbers: '$_id',
           tonnageByStatus: { $arrayToObject: '$tonnageByStatus' }
         }
       }
