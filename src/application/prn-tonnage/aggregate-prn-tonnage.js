@@ -19,7 +19,7 @@ import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
  * The organisation, registration and accreditation a ledger belongs to, as the
  * organisation read model serves them.
  *
- * @typedef {Object} AccreditationContext
+ * @typedef {Object} ServedAccreditation
  * @property {Organisation} organisation
  * @property {Registration} registration
  * @property {AccreditationCommon} accreditation
@@ -96,9 +96,8 @@ const toTonnageColumns = (tonnageByStatus) =>
   )
 
 /**
- * What a row must carry to be reportable. A row missing its ledger id would be
- * reported as a balance of zero, which a regulator cannot tell apart from an
- * operator holding nothing — so the report fails rather than publishes it.
+ * What a row must carry to be reportable. The read model passes stored fields
+ * such as the tonnage band through unchecked, so the report checks them here.
  */
 const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
@@ -145,11 +144,10 @@ const processingTypesOf = (registration) =>
 
 /**
  * Every accreditation the read model serves, by the `ledgerKey` of the ledger
- * it writes to. An accreditation number held for more than one year resolves
- * to its latest year.
+ * it writes to.
  *
  * @param {Organisation[]} organisations
- * @returns {Map<string, AccreditationContext>}
+ * @returns {Map<string, ServedAccreditation>}
  */
 const indexByLedger = (organisations) =>
   new Map(
@@ -170,23 +168,43 @@ const indexByLedger = (organisations) =>
 
 /**
  * Joins an accreditation's PRN totals to the organisation, registration and
- * accreditation they were raised under. One no organisation holds by those
- * numbers is left unresolved, and the schema refuses to report it.
+ * accreditation they were raised under.
  *
  * @param {AccreditationTonnage} accreditationTonnage
- * @param {AccreditationContext | undefined} resolved
+ * @param {ServedAccreditation} served
  */
-const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
-  organisationName: resolved?.organisation.name,
-  orgId: resolved && String(resolved.organisation.organisationNumber),
-  registrationNumber: resolved && numbers.registrationNumber,
-  accreditationNumber: resolved && numbers.accreditationNumber,
-  material: resolved && toPrnMaterial(resolved.registration.material).material,
-  tonnageBand: resolved?.accreditation.prnIssuance.tonnageBand,
-  ledgerId: resolved && numbers,
-  registration: resolved && processingTypesOf(resolved.registration),
+const toAggregatedRow = (
+  { numbers, tonnageByStatus },
+  { organisation, registration, accreditation }
+) => ({
+  organisationName: organisation.name,
+  orgId: String(organisation.organisationNumber),
+  registrationNumber: numbers.registrationNumber,
+  accreditationNumber: numbers.accreditationNumber,
+  material: toPrnMaterial(registration.material).material,
+  tonnageBand: accreditation.prnIssuance.tonnageBand,
+  ledgerId: numbers,
+  registration: processingTypesOf(registration),
   ...toTonnageColumns(tonnageByStatus)
 })
+
+/**
+ * PRN totals the report cannot place would publish a balance of zero, which a
+ * regulator cannot tell apart from an operator holding nothing.
+ *
+ * @param {Map<string, ServedAccreditation>} index
+ * @param {WasteBalanceLedgerId} numbers
+ * @returns {ServedAccreditation}
+ */
+const servedAccreditationFor = (index, numbers) => {
+  const served = index.get(ledgerKey(numbers))
+  if (!served) {
+    throw new Error(
+      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber}`
+    )
+  }
+  return served
+}
 
 /**
  * @param {AggregatedRow} a
@@ -291,7 +309,7 @@ export const aggregatePrnTonnage = async (
     .map((accreditationTonnage) => {
       const row = toAggregatedRow(
         accreditationTonnage,
-        index.get(ledgerKey(accreditationTonnage.numbers))
+        servedAccreditationFor(index, accreditationTonnage.numbers)
       )
       return /** @type {AggregatedRow} */ (
         Joi.attempt(

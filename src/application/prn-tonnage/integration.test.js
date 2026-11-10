@@ -273,7 +273,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a row whose accreditation another organisation holds', async () => {
@@ -292,7 +294,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('includes prns raised by test organisations', async () => {
@@ -415,7 +419,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a reprocessor registration with no reprocessing type', async () => {
@@ -432,7 +438,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a row whose accreditation no longer has its number', async () => {
@@ -463,7 +471,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('reports one row per accreditation when its prns snapshot different organisation names', async () => {
@@ -663,14 +673,70 @@ describe('aggregatePrnTonnage - Integration', () => {
     ])
   })
 
-  it('reports a glass registration as glass, whatever its recycling process', async () => {
-    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
-      organisationWithRegistration({
-        ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+  it('reports a stored accreditation beside a later one known only by its number', async () => {
+    const laterLedgerId = {
+      ...ledgerId,
+      accreditationNumber: toAccreditationNumber('ACC-2027')
+    }
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+      buildExternalAccreditation({
+        registrationNumber: ledgerId.registrationNumber,
+        year: toYear(2027),
+        accreditationNumber: laterLedgerId.accreditationNumber,
+        prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_10000 },
+        status: {
+          current: 'approved',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+        }
       })
     )
+    const laterPrn = prnWithStatus(PRN_STATUS.ACCEPTED, 15)
+    await db.collection(PRNS_COLLECTION).insertMany([
+      prnWithStatus(PRN_STATUS.ACCEPTED, 40),
+      {
+        ...laterPrn,
+        accreditation: {
+          ...laterPrn.accreditation,
+          accreditationNumber: laterLedgerId.accreditationNumber
+        }
+      }
+    ])
+
+    const { rows } = await aggregatePrnTonnage(
+      prnRepository,
+      organisationReadRepository,
+      ledgerRepository
+    )
+
+    expect(rows).toStrictEqual([
+      expectedRow(),
+      expectedRow({
+        accreditationNumber: 'ACC-2027',
+        tonnageBand: TONNAGE_BAND.UP_TO_10000,
+        acceptedTonnage: 15
+      })
+    ])
+  })
+
+  it('reports a glass registration as glass, whatever its recycling process', async () => {
+    const organisation = organisationWithRegistration({
+      ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+    })
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisation,
+      accreditations: [
+        {
+          ...organisation.accreditations[0],
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        }
+      ]
+    })
     await db
       .collection(PRNS_COLLECTION)
       .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
