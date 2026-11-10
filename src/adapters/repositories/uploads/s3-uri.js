@@ -12,18 +12,18 @@ export const parseS3Uri = (uri) => {
     throw new Error(`Not an s3:// URI: ${uri}`)
   }
 
-  const [Bucket, ...keySegments] = uri.slice(S3_SCHEME.length).split('/')
-  const Key = keySegments.join('/')
+  const [bucket, ...keySegments] = uri.slice(S3_SCHEME.length).split('/')
+  const key = keySegments.join('/')
 
-  if (!Bucket) {
+  if (!bucket) {
     throw new Error(`Missing bucket in S3 URI: ${uri}`)
   }
 
-  if (!Key) {
+  if (!key) {
     throw new Error(`Missing key in S3 URI: ${uri}`)
   }
 
-  return { Bucket, Key }
+  return { Bucket: bucket, Key: key }
 }
 
 /**
