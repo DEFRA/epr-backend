@@ -495,20 +495,6 @@ describe('createWasteBalanceService', () => {
   })
 
   describe('submitSummaryLog', () => {
-    it('refuses an accreditation without an id, touching no ledger', async () => {
-      await expect(
-        service.submitSummaryLog([/** @type {*} */ ({})], {
-          user: createdBy,
-          accreditation: /** @type {*} */ ({ id: undefined }),
-          overseasSites: /** @type {*} */ (new Map()),
-          summaryLogId: 'log-A',
-          numbers: ledgerId
-        })
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 422 } })
-
-      expect(await ledgerRepository.findAllInLedger(ledgerId)).toHaveLength(0)
-    })
-
     it('does not touch the ledger when there are no waste records to credit', async () => {
       await service.submitSummaryLog([], {
         user: createdBy,

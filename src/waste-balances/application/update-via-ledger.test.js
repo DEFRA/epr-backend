@@ -72,7 +72,6 @@ const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
 /** @type {Accreditation} */
 const accreditation = partialMock({
-  id: accreditationId,
   validFrom: '2023-01-01',
   validTo: '2030-12-31'
 })
@@ -291,11 +290,30 @@ describe('performUpdateViaLedger', () => {
         action: 'update'
       })
       expect(entry.context).toEqual({
-        accreditationId,
+        ...numbers,
         amount: 150,
         availableAmount: 150,
         events: [latest]
       })
+    })
+
+    it("lists the entry in its organisation's system log", async () => {
+      await performUpdateViaLedger({
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
+        accreditation,
+        commitSummaryLogSubmittedEvent,
+        ledgerId,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites,
+        summaryLogId: toSummaryLogFileId('log-A')
+      })
+
+      const { systemLogs } = await systemLogsRepository.find({
+        organisationNumber,
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
     })
   })
 

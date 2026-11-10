@@ -133,6 +133,19 @@ describe('diagnoseCancelledAccreditationReports', () => {
     ])
   })
 
+  it('marks a cancelled accreditation held by a test organisation', async () => {
+    const organisation = buildOrganisation({
+      orgId: 999999,
+      accreditations: [cancelledAccreditation()]
+    })
+
+    const { rows } = await diagnose([organisation])
+
+    expect(rows).toStrictEqual([
+      expect.objectContaining({ orgId: 999999, testOrganisation: true })
+    ])
+  })
+
   it('orders reports by year, cadence, period and submission', async () => {
     const accreditation = cancelledAccreditation()
     const registration = buildRegistration({

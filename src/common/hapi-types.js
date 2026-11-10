@@ -5,6 +5,7 @@
  * @import {LockManager} from 'mongo-locks'
  * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
+ * @import {ExternalAccreditationsRepository} from '#external-accreditations/repository/port.js'
  * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
  * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
  * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
@@ -132,6 +133,7 @@
  * Adding a `registerDependency` call means adding its name here too.
  *
  * @typedef {{
+ *   externalAccreditationsRepository: ExternalAccreditationsRepository,
  *   formSubmissionsRepository: FormSubmissionsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   nonProdDataReset: NonProdDataReset,

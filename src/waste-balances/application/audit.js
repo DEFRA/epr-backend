@@ -7,7 +7,7 @@ import { safeAudit } from '#root/auditing/helpers.js'
  *
  * @param {Object} params
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.systemLogsRepository]
- * @param {string} params.accreditationId
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.amount
  * @param {number} params.availableAmount
  * @param {Array<Object>} params.events
@@ -15,7 +15,7 @@ import { safeAudit } from '#root/auditing/helpers.js'
  */
 export const recordWasteBalanceUpdateAudit = async ({
   systemLogsRepository,
-  accreditationId,
+  ledgerId: { organisationNumber, registrationNumber, accreditationNumber },
   amount,
   availableAmount,
   events,
@@ -28,7 +28,9 @@ export const recordWasteBalanceUpdateAudit = async ({
       action: 'update'
     },
     context: {
-      accreditationId,
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber,
       amount,
       availableAmount,
       events
