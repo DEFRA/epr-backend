@@ -1,4 +1,4 @@
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { organisationNumberOf } from '#domain/organisations/numbers.js'
@@ -136,7 +136,7 @@ export const diagnoseCancelledAccreditationReports = async (
       rows.push({
         organisationId: organisation.id,
         orgId: organisation.orgId,
-        testOrganisation: TEST_ORGANISATION_NUMBERS.has(organisationNumber),
+        testOrganisation: isTestOrganisation(organisation),
         accreditationId: accreditation.id,
         accreditationNumber: accreditation.accreditationNumber ?? null,
         material: accreditation.material,
