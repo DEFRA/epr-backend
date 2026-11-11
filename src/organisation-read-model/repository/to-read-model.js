@@ -11,7 +11,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
-import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
+import { standingByYear } from '#organisation-read-model/domain/years.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -269,7 +269,7 @@ export function toRegistrationEntry(
     applicationContactDetails: toContact(applicationContactDetails),
     approvedPersons: registration.approvedPersons.map(toContact),
     material: resolveMaterial(registration),
-    regAccStatusByDate: regAccStatusByYear(
+    standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
       lastOpenDay(new Date(today))
     ),

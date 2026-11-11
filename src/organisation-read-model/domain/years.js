@@ -5,13 +5,13 @@ import {
   yearBounds
 } from '#common/helpers/dates/year.js'
 import { statusOn } from './model.js'
-import { regAccStatusByDate } from './reg-acc-status-by-date.js'
+import { standingByDate } from './standing-by-date.js'
 import { approvedYears } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation, RegAccStatusByYear, Registration } from './model.js' */
-/** @import { RegAccStatusSource } from './reg-acc-status-by-date.js' */
+/** @import { Organisation, StandingByYear, Registration } from './model.js' */
+/** @import { StandingSource } from './standing-by-date.js' */
 
 /**
  * The calendar years in which the organisation held an approved registration,
@@ -66,7 +66,7 @@ export const organisationInYear = (organisation, year, statusDate) => {
           current: statusOn(registration.status.timeline, statusCalendarDate)
         },
         accreditations: accreditationIn(registration.accreditations, year),
-        regAccStatusByDate: { [year]: registration.regAccStatusByDate[year] }
+        standingByDate: { [year]: registration.standingByDate[year] }
       }
     ])
 
@@ -84,14 +84,14 @@ export const organisationInYear = (organisation, year, statusDate) => {
 }
 
 /**
- * `regAccStatusByDate` for each year up to the year of `endDate` that the
+ * `standingByDate` for each year up to the year of `endDate` that the
  * registration was approved in or holds an accreditation for.
  *
- * @param {RegAccStatusSource} registration
+ * @param {StandingSource} registration
  * @param {CalendarDate} endDate
- * @returns {RegAccStatusByYear}
+ * @returns {StandingByYear}
  */
-export const regAccStatusByYear = (registration, endDate) => {
+export const standingByYear = (registration, endDate) => {
   const lastYear = utcYearOf(endDate)
   const years = [
     ...approvedYears(registration.status.timeline, endDate),
@@ -99,6 +99,6 @@ export const regAccStatusByYear = (registration, endDate) => {
   ].filter((year) => year <= lastYear)
 
   return Object.fromEntries(
-    years.map((year) => [year, regAccStatusByDate(registration, year)])
+    years.map((year) => [year, standingByDate(registration, year)])
   )
 }
