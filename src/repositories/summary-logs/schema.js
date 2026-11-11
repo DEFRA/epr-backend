@@ -101,21 +101,6 @@ export const summaryLogInsertSchema = Joi.object({
   })
 }).messages(commonMessages)
 
-// The accreditation a summary log was uploaded for and the year it covers,
-// written onto one stored before summary logs were scoped by them.
-export const summaryLogScopeSchema = Joi.object({
-  accreditationId: Joi.string().allow(null),
-  accreditationNumber: Joi.when('accreditationId', {
-    is: null,
-    then: Joi.valid(null),
-    otherwise: Joi.string()
-  }),
-  year: yearSchema()
-})
-  .and('accreditationId', 'accreditationNumber')
-  .min(1)
-  .messages({ 'object.min': 'scope must contain at least one field' })
-
 export const summaryLogKeySchema = Joi.object({
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),

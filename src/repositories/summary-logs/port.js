@@ -1,5 +1,4 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {SummaryLogKey} from '#domain/summary-logs/numbers.js' */
@@ -61,25 +60,11 @@
  */
 
 /**
- * The fields a summary log stored before summary logs were scoped by
- * accreditation and year may lack. An accreditation is given by its id and
- * number together, both `null` for a registered-only registration.
- *
- * @typedef {(
- *   | { accreditationId: string, accreditationNumber: AccreditationNumber }
- *   | { accreditationId: null, accreditationNumber: null }
- *   | { accreditationId?: never, accreditationNumber?: never }
- * ) & { year?: Year }} SummaryLogScope
- */
-
-/**
  * @typedef {Object} SummaryLogsRepository
  * @property {(id: SummaryLogId, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
- * @property {() => Promise<SummaryLogId[]>} findIdsWithoutScope - ids of summary logs lacking an accreditation number or a year
- * @property {(id: SummaryLogId, version: number, scope: SummaryLogScope) => Promise<void>} assignScope - writes the scope a summary log lacks, refusing to overwrite a field it holds
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration

@@ -54,8 +54,6 @@ export const createMockSummaryLogsRepository = (overrides = {}) => ({
   update: vi.fn(),
   findById: vi.fn(),
   findByFileId: vi.fn(),
-  findIdsWithoutScope: vi.fn(),
-  assignScope: vi.fn(),
   findLatestSubmitted: vi.fn(),
   findAll: vi.fn(),
   findAllSummaryLogStatsByRegistration: vi.fn(),

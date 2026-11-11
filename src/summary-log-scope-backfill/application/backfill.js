@@ -11,7 +11,7 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { SummaryLogScope, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { SummaryLogScope, UnscopedSummaryLogs } from '../mongodb.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 /**
@@ -26,7 +26,7 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 
 /**
  * @typedef {Object} Repositories
- * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {UnscopedSummaryLogs} summaryLogs
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {OrganisationsRepository} organisationsRepository
  */
@@ -155,12 +155,12 @@ const reportUnmapped = (
  * @returns {Promise<Omit<BackfillResult, 'missing' | 'failed'> | null>} null if gone
  */
 const backfillOne = async (
-  { summaryLogsRepository, systemLogsRepository, organisationsRepository },
+  { summaryLogs, systemLogsRepository, organisationsRepository },
   id,
   isDryRun,
   logger
 ) => {
-  const before = await summaryLogsRepository.findById(id)
+  const before = await summaryLogs.findById(id)
   if (!before) {
     return null
   }
@@ -183,7 +183,7 @@ const backfillOne = async (
     return outcome
   }
 
-  await summaryLogsRepository.assignScope(id, version, lacking)
+  await summaryLogs.assignScope(id, version, lacking)
 
   try {
     await auditSummaryLogScopeBackfill(systemLogsRepository, {
@@ -218,7 +218,7 @@ export const backfillSummaryLogScope = async (
   { logger, ...repositories },
   { isDryRun }
 ) => {
-  const ids = await repositories.summaryLogsRepository.findIdsWithoutScope()
+  const ids = await repositories.summaryLogs.findIdsWithoutScope()
   /** @type {BackfillResult} */
   const result = {
     missing: ids.length,

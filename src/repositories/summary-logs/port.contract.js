@@ -7,7 +7,6 @@ import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistration } from './contract/find-all-stats.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 import { testFindByNaturalKey } from './contract/find-by-natural-key.contract.js'
-import { testAssignScope } from './contract/assign-scope.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -20,6 +19,5 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testFindAllSummaryLogStatsByRegistration(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
     testFindByNaturalKey(repositoryFactory)
-    testAssignScope(repositoryFactory)
   })
 }

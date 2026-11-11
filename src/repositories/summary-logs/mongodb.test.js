@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { COLLECTION_NAME, createSummaryLogsRepository } from './mongodb.js'
+import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
@@ -17,11 +17,8 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
- * @import { InsertStoredSummaryLog, StoredSummaryLog } from './contract/test-data.js'
- * @import { Collection } from 'mongodb'
- * @import { SummaryLogId } from '#domain/summary-logs/ids.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
- * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository, insertStoredSummaryLog: InsertStoredSummaryLog }} SummaryLogsFixtures
+ * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
  */
 
 const DATABASE_NAME = 'epr-backend'
@@ -57,16 +54,6 @@ const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
     summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
       const repository = summaryLogsRepositoryFactory(createMockLogger())
       await use(repository)
-    },
-
-    insertStoredSummaryLog: async ({ mongoClient }, use) => {
-      /** @type {Collection<StoredSummaryLog & { _id: SummaryLogId, version: number }>} */
-      const collection = mongoClient
-        .db(DATABASE_NAME)
-        .collection(COLLECTION_NAME)
-      await use(async (id, summaryLog) => {
-        await collection.insertOne({ _id: id, version: 1, ...summaryLog })
-      })
     }
   })
 )

@@ -12,26 +12,6 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
-/** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
-
-/**
- * A summary log as stored before summary logs were scoped by accreditation
- * and year, a shape `insert` no longer accepts.
- *
- * @typedef {Omit<SummaryLog, 'year' | 'accreditationId' | 'accreditationNumber'> & {
- *   year?: Year,
- *   accreditationId?: string | null,
- *   accreditationNumber?: string | null
- * }} StoredSummaryLog
- */
-
-/**
- * Stores a summary log as it stands, bypassing what `insert` checks.
- *
- * @typedef {(id: SummaryLogId, summaryLog: StoredSummaryLog) => Promise<void>} InsertStoredSummaryLog
- */
 
 export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 

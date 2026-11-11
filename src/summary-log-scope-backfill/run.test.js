@@ -9,11 +9,8 @@ import { runSummaryLogScopeBackfill } from './run.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
-vi.mock('#common/helpers/s3/s3-client.js', () => ({
-  createS3Client: vi.fn()
-}))
-vi.mock('#repositories/summary-logs/mongodb.js', () => ({
-  createSummaryLogsRepository: vi.fn(async () => () => ({}))
+vi.mock('./mongodb.js', () => ({
+  createUnscopedSummaryLogs: vi.fn(() => ({}))
 }))
 vi.mock('#repositories/system-logs/mongodb.js', () => ({
   createSystemLogsRepository: vi.fn(async () => () => ({}))

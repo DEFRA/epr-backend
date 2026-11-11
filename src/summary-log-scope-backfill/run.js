@@ -1,17 +1,14 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { backfillSummaryLogScope } from '#summary-log-scope-backfill/application/backfill.js'
+import { createUnscopedSummaryLogs } from '#summary-log-scope-backfill/mongodb.js'
 
 import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 
 const LOCK_NAME = 'summary-log-scope-backfill'
-// Required by the repository factory; the backfill never generates download URLs.
-const PRE_SIGNED_URL_EXPIRY_SECONDS = 60
 
 /** @param {StartedServer} server */
 const runBackfill = async (server) => {
@@ -20,16 +17,6 @@ const runBackfill = async (server) => {
   const organisationsRepository = (
     await createOrganisationsRepository(server.db)
   )()
-  const summaryLogsRepository = (
-    await createSummaryLogsRepository(server.db, {
-      s3Client: createS3Client({
-        region: config.get('awsRegion'),
-        endpoint: config.get('s3Endpoint'),
-        forcePathStyle: config.get('isDevelopment')
-      }),
-      preSignedUrlExpiry: PRE_SIGNED_URL_EXPIRY_SECONDS
-    })
-  )(logger)
   const systemLogsRepository = (await createSystemLogsRepository(server.db))(
     logger
   )
@@ -37,7 +24,7 @@ const runBackfill = async (server) => {
   const { missing, mapped, unmapped, yearSet, failed, auditFailed } =
     await backfillSummaryLogScope(
       {
-        summaryLogsRepository,
+        summaryLogs: createUnscopedSummaryLogs(server.db),
         systemLogsRepository,
         organisationsRepository,
         logger
@@ -54,8 +41,7 @@ const runBackfill = async (server) => {
 /**
  * Startup backfill of the accreditation and year on summary logs stored
  * before summary logs were scoped by them. Flag off (the default) only
- * reports what it would add; on writes them
- * through the summary logs repository, auditing each change. Both modes log
+ * reports what it would add; on writes them, auditing each change. Both modes log
  * each summary log it cannot map. Idempotent, so safe to leave enabled
  * across restarts.
  *

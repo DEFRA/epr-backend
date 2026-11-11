@@ -7,54 +7,20 @@ import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory, SummaryLogVersion } from './port.js' */
-/** @import { SummaryLogStore } from './inmemory.js' */
-/** @import { InsertStoredSummaryLog } from './contract/test-data.js' */
+/** @import { SummaryLogsRepository, SummaryLogsRepositoryFactory } from './port.js' */
 
 /**
  * @typedef {object} SummaryLogsFixtures
  * @property {SummaryLogsRepositoryFactory} summaryLogsRepositoryFactory
  * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {SummaryLogStore} summaryLogsStorage
- * @property {SummaryLogStore} summaryLogsStaleCache
- * @property {InsertStoredSummaryLog} insertStoredSummaryLog
  */
 
 const it = /** @type {import('vitest').TestAPI<SummaryLogsFixtures>} */ (
   base.extend({
     // eslint-disable-next-line no-empty-pattern
-    summaryLogsStorage: async ({}, use) => {
-      await use(new Map())
-    },
-
-    // eslint-disable-next-line no-empty-pattern
-    summaryLogsStaleCache: async ({}, use) => {
-      await use(new Map())
-    },
-
-    summaryLogsRepositoryFactory: async (
-      { summaryLogsStorage, summaryLogsStaleCache },
-      use
-    ) => {
-      const factory = createInMemorySummaryLogsRepository(
-        summaryLogsStorage,
-        summaryLogsStaleCache
-      )
+    summaryLogsRepositoryFactory: async ({}, use) => {
+      const factory = createInMemorySummaryLogsRepository()
       await use(factory)
-    },
-
-    insertStoredSummaryLog: async (
-      { summaryLogsStorage, summaryLogsStaleCache },
-      use
-    ) => {
-      await use(async (id, summaryLog) => {
-        // Holds what the store's type refuses, as the stored data does
-        const stored = /** @type {SummaryLogVersion} */ (
-          /** @type {unknown} */ ({ version: 1, summaryLog })
-        )
-        summaryLogsStorage.set(id, stored)
-        summaryLogsStaleCache.set(id, structuredClone(stored))
-      })
     },
 
     summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {

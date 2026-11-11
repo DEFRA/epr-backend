@@ -1,7 +1,7 @@
 import { safeAudit, SYSTEM_USER } from '#auditing/helpers.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#auditing/summary-logs.js'
 
-/** @import { SummaryLogScope } from '#repositories/summary-logs/port.js' */
+/** @import { SummaryLogScope } from '../mongodb.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const SCOPE_BACKFILL_ACTION = 'scope-backfill-migration'

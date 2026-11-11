@@ -1,13 +1,11 @@
 import Boom from '@hapi/boom'
 
 /** @import { SummaryLogKey } from '#domain/summary-logs/numbers.js' */
-/** @import { SummaryLogScope } from './port.js' */
 
 import {
   idSchema,
   summaryLogInsertSchema,
   summaryLogKeySchema,
-  summaryLogScopeSchema,
   summaryLogUpdateSchema
 } from './schema.js'
 
@@ -49,23 +47,6 @@ export const validateSummaryLogUpdate = (updates) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badData(`Invalid update data: ${details}`)
-  }
-
-  return value
-}
-
-/**
- * @param {SummaryLogScope} scope
- * @returns {SummaryLogScope}
- */
-export const validateSummaryLogScope = (scope) => {
-  const { error, value } = summaryLogScopeSchema.validate(scope, {
-    abortEarly: false
-  })
-
-  if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid summary log scope: ${details}`)
   }
 
   return value

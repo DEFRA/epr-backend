@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { MongoClient } from 'mongodb'
+import { describe, expect, vi } from 'vitest'
 
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 import {
   summaryLogFactory,
   withoutAccreditationId
@@ -13,19 +15,17 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
+import { createUnscopedSummaryLogs } from '../mongodb.js'
 import { backfillSummaryLogScope } from './backfill.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import { SummaryLogStore } from '#repositories/summary-logs/inmemory.js' */
-/** @import { StoredSummaryLog } from '#repositories/summary-logs/contract/test-data.js' */
-/** @import { SummaryLogsRepository, SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { UnscopedSummaryLogs } from '../mongodb.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -67,6 +67,12 @@ const unscoped = (overrides = {}) => {
   return summaryLog
 }
 
+const withoutOrganisationId = (/** @type {object} */ summaryLog) => {
+  const { organisationId: _, ...rest } =
+    /** @type {{ organisationId?: unknown }} */ (summaryLog)
+  return rest
+}
+
 const uploadedFor = (/** @type {object} */ meta) => ({ meta })
 
 const accreditedMeta = {
@@ -78,77 +84,86 @@ const registeredOnlyMeta = {
   PROCESSING_TYPE: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
 }
 
-describe('backfillSummaryLogScope', () => {
-  /** @type {SummaryLogStore} */
-  let storage
-  /** @type {SystemLogsRepository} */
-  let systemLogsRepository
-  /** @type {OrganisationsRepository} */
-  let organisationsRepository
-  /** @type {TypedLogger} */
-  let logger
+/**
+ * @typedef {Object} Backfill
+ * @property {UnscopedSummaryLogs} summaryLogs
+ * @property {(summaryLogs: Record<string, object>) => Promise<void>} store
+ * @property {(id: string) => Promise<any>} stored
+ * @property {SystemLogsRepository} systemLogsRepository
+ * @property {TypedLogger} logger
+ * @property {() => string[]} unmappedLines
+ * @property {(isDryRun: boolean, overrides?: { summaryLogs?: Partial<UnscopedSummaryLogs>, organisationsRepository?: OrganisationsRepository }) => ReturnType<typeof backfillSummaryLogScope>} run
+ */
 
-  /** @param {Record<string, StoredSummaryLog>} summaryLogs */
-  const store = (summaryLogs) => {
-    for (const [id, summaryLog] of Object.entries(summaryLogs)) {
-      // Holds what the store's type refuses, as the stored data does
-      storage.set(
-        toSummaryLogId(id),
-        /** @type {SummaryLogVersion} */ (
-          /** @type {unknown} */ ({ version: 1, summaryLog })
-        )
-      )
-    }
-  }
+const it = /** @type {import('vitest').TestAPI<{ backfill: Backfill }>} */ (
+  mongoIt.extend({
+    backfill: async (/** @type {*} */ { db }, use) => {
+      const client = await MongoClient.connect(db)
+      const database = client.db('epr-backend')
+      /** @type {import('mongodb').Collection<any>} */
+      const collection = database.collection(COLLECTION_NAME)
+      await collection.deleteMany({})
 
-  beforeEach(() => {
-    logger = createMockLogger()
-    storage = new Map()
-    systemLogsRepository = createMockSystemLogsRepository()
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      /** @type {*} */ (organisation)
-    ])()
-  })
+      const summaryLogs = createUnscopedSummaryLogs(database)
+      const logger = createMockLogger()
+      const systemLogsRepository = createMockSystemLogsRepository()
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        /** @type {*} */ (organisation)
+      ])()
 
-  const run = async (
-    /** @type {boolean} */ isDryRun,
-    /** @type {Partial<SummaryLogsRepository>} */ summaryLogsOverrides = {}
-  ) => {
-    const summaryLogsRepository = {
-      ...createInMemorySummaryLogsRepository(storage)(logger),
-      ...summaryLogsOverrides
-    }
-    return backfillSummaryLogScope(
-      {
-        summaryLogsRepository,
+      /** @type {Backfill} */
+      const backfill = {
+        summaryLogs,
+        store: async (stored) => {
+          await collection.insertMany(
+            Object.entries(stored).map(([id, summaryLog]) => ({
+              _id: id,
+              version: 1,
+              ...summaryLog
+            }))
+          )
+        },
+        stored: async (id) => {
+          const held = await collection.findOne({ _id: id })
+          if (!held) {
+            throw new Error(`Nothing stored under ${id}`)
+          }
+          return held
+        },
         systemLogsRepository,
-        organisationsRepository,
-        logger
-      },
-      { isDryRun }
-    )
-  }
+        logger,
+        unmappedLines: () =>
+          vi
+            .mocked(logger.info)
+            .mock.calls.flatMap(([{ message }]) =>
+              message?.startsWith('Summary log accreditation unmapped')
+                ? [message]
+                : []
+            ),
+        run: (isDryRun, overrides = {}) =>
+          backfillSummaryLogScope(
+            {
+              summaryLogs: { ...summaryLogs, ...overrides.summaryLogs },
+              systemLogsRepository,
+              organisationsRepository:
+                overrides.organisationsRepository ?? organisationsRepository,
+              logger
+            },
+            { isDryRun }
+          )
+      }
 
-  const versionOf = (/** @type {string} */ id) => {
-    const held = storage.get(toSummaryLogId(id))
-    if (!held) {
-      throw new Error(`Nothing stored under ${id}`)
+      await use(backfill)
+      await client.close()
     }
-    return held
-  }
+  })
+)
 
-  const stored = (/** @type {string} */ id) => versionOf(id).summaryLog
-
-  const unmappedLines = () =>
-    vi
-      .mocked(logger.info)
-      .mock.calls.map(([{ message }]) => message)
-      .filter((message) =>
-        message?.startsWith('Summary log accreditation unmapped')
-      )
-
-  it('records the accreditation whose number is stored with the summary log, and the year, auditing each as the system user', async () => {
-    store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
+describe('backfillSummaryLogScope (mongo)', () => {
+  it('records the accreditation whose number is stored with the summary log, and the year, auditing each as the system user', async ({
+    backfill: { store, run, stored, systemLogsRepository, unmappedLines }
+  }) => {
+    await store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
 
     expect(await run(false)).toEqual({
       missing: 1,
@@ -159,10 +174,11 @@ describe('backfillSummaryLogScope', () => {
       auditFailed: 0
     })
 
-    expect(stored('accredited')).toMatchObject({
+    expect(await stored('accredited')).toMatchObject({
       accreditationId,
       accreditationNumber: 'ACC500123',
-      year: 2026
+      year: 2026,
+      version: 2
     })
     expect(systemLogsRepository.insert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -185,20 +201,26 @@ describe('backfillSummaryLogScope', () => {
     expect(unmappedLines()).toEqual([])
   })
 
-  it('records no accreditation for a registered-only processing type', async () => {
-    store({ 'registered-only': unscoped(uploadedFor(registeredOnlyMeta)) })
+  it('records no accreditation for a registered-only processing type', async ({
+    backfill: { store, run, stored }
+  }) => {
+    await store({
+      'registered-only': unscoped(uploadedFor(registeredOnlyMeta))
+    })
 
     await run(false)
 
-    expect(stored('registered-only')).toMatchObject({
+    expect(await stored('registered-only')).toMatchObject({
       accreditationId: null,
       accreditationNumber: null,
       year: 2026
     })
   })
 
-  it('records only the accreditation on a summary log that holds its year', async () => {
-    store({
+  it('records only the accreditation on a summary log that holds its year', async ({
+    backfill: { store, run, stored, systemLogsRepository }
+  }) => {
+    await store({
       'holds-year': withoutAccreditationId(
         summaryLogFactory.submitted({
           ...ids,
@@ -210,7 +232,7 @@ describe('backfillSummaryLogScope', () => {
 
     await run(false)
 
-    expect(stored('holds-year')).toMatchObject({
+    expect(await stored('holds-year')).toMatchObject({
       accreditationNumber: 'ACC500123',
       year: 2027
     })
@@ -227,48 +249,53 @@ describe('backfillSummaryLogScope', () => {
     )
   })
 
-  it.each([
-    [
-      'an accreditation number its organisation does not hold',
-      unscoped(
-        uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 'ACC999999' })
-      ),
-      `organisation ${organisationId} holds no accreditation ACC999999`
-    ],
-    [
-      'an accreditation number stored as a number',
-      unscoped(
-        uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 500123 })
-      ),
-      `organisation ${organisationId} holds no accreditation 500123`
-    ],
-    [
-      'no accreditation number for an accredited processing type',
-      unscoped(uploadedFor({ PROCESSING_TYPE: PROCESSING_TYPES.EXPORTER })),
-      'no accreditation number stored with the summary log'
-    ],
-    [
-      'no processing type',
-      unscoped(uploadedFor({})),
-      'no accreditation number stored with the summary log'
-    ],
-    [
-      'an organisation that has gone',
-      unscoped({
-        organisationId: missingOrganisationId,
-        ...uploadedFor(accreditedMeta)
-      }),
-      `organisation ${missingOrganisationId} not found`
-    ],
-    [
-      'no organisation id',
-      unscoped({ ...uploadedFor(accreditedMeta), organisationId: undefined }),
-      'organisation undefined not found'
-    ]
-  ])(
+  it.for(
+    /** @type {[string, object, string][]} */ ([
+      [
+        'an accreditation number its organisation does not hold',
+        unscoped(
+          uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 'ACC999999' })
+        ),
+        `organisation ${organisationId} holds no accreditation ACC999999`
+      ],
+      [
+        'an accreditation number stored as a number',
+        unscoped(
+          uploadedFor({ ...accreditedMeta, ACCREDITATION_NUMBER: 500123 })
+        ),
+        `organisation ${organisationId} holds no accreditation 500123`
+      ],
+      [
+        'no accreditation number for an accredited processing type',
+        unscoped(uploadedFor({ PROCESSING_TYPE: PROCESSING_TYPES.EXPORTER })),
+        'no accreditation number stored with the summary log'
+      ],
+      [
+        'no processing type',
+        unscoped(uploadedFor({})),
+        'no accreditation number stored with the summary log'
+      ],
+      [
+        'an organisation that has gone',
+        unscoped({
+          organisationId: missingOrganisationId,
+          ...uploadedFor(accreditedMeta)
+        }),
+        `organisation ${missingOrganisationId} not found`
+      ],
+      [
+        'no organisation id',
+        withoutOrganisationId(unscoped(uploadedFor(accreditedMeta))),
+        'organisation undefined not found'
+      ]
+    ])
+  )(
     'records only the year, and reports the accreditation unmapped, for %s',
-    async (_description, summaryLog, reason) => {
-      store({ unmapped: summaryLog })
+    async (
+      [_description, summaryLog, reason],
+      { backfill: { store, run, stored, unmappedLines } }
+    ) => {
+      await store({ unmapped: summaryLog })
 
       expect(await run(false)).toMatchObject({
         mapped: 0,
@@ -277,8 +304,9 @@ describe('backfillSummaryLogScope', () => {
         failed: 0
       })
 
-      expect(stored('unmapped').year).toBe(2026)
-      expect(stored('unmapped')).not.toHaveProperty('accreditationNumber')
+      const written = await stored('unmapped')
+      expect(written.year).toBe(2026)
+      expect(written).not.toHaveProperty('accreditationNumber')
       expect(unmappedLines()).toEqual([
         expect.stringContaining(`summaryLogId=unmapped`)
       ])
@@ -286,8 +314,10 @@ describe('backfillSummaryLogScope', () => {
     }
   )
 
-  it('leaves alone a summary log it can neither map nor give a year', async () => {
-    store({
+  it('leaves alone a summary log it can neither map nor give a year', async ({
+    backfill: { store, run, stored, systemLogsRepository }
+  }) => {
+    await store({
       'holds-year': withoutAccreditationId(
         summaryLogFactory.submitted({
           ...ids,
@@ -298,12 +328,14 @@ describe('backfillSummaryLogScope', () => {
 
     expect(await run(false)).toMatchObject({ mapped: 0, unmapped: 1 })
 
-    expect(versionOf('holds-year').version).toBe(1)
+    expect((await stored('holds-year')).version).toBe(1)
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
-  it('reports what it would record without writing or auditing on a dry run', async () => {
-    store({
+  it('reports what it would record without writing or auditing on a dry run', async ({
+    backfill: { store, run, stored, systemLogsRepository, unmappedLines }
+  }) => {
+    await store({
       accredited: unscoped(uploadedFor(accreditedMeta)),
       gone: unscoped({ organisationId: missingOrganisationId })
     })
@@ -317,63 +349,75 @@ describe('backfillSummaryLogScope', () => {
       auditFailed: 0
     })
 
-    expect(versionOf('accredited').version).toBe(1)
-    expect(stored('accredited')).not.toHaveProperty('year')
+    const accredited = await stored('accredited')
+    expect(accredited.version).toBe(1)
+    expect(accredited).not.toHaveProperty('year')
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
     expect(unmappedLines()).toHaveLength(1)
   })
 
-  it('records only the year on a summary log that holds its accreditation', async () => {
+  it('records only the year on a summary log that holds its accreditation', async ({
+    backfill: { store, run, stored }
+  }) => {
     const { year: _year, ...holdsAccreditation } = summaryLogFactory.submitted({
       ...ids,
       accreditationId: null
     })
-    store({ 'holds-accreditation': holdsAccreditation })
+    await store({ 'holds-accreditation': holdsAccreditation })
 
     await run(false)
 
-    expect(stored('holds-accreditation')).toMatchObject({
+    expect(await stored('holds-accreditation')).toMatchObject({
       accreditationNumber: null,
       year: 2026
     })
   })
 
-  it('counts as failed a summary log whose organisation cannot be read', async () => {
-    store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
-    const error = new Error('database unavailable')
-    organisationsRepository = partialMock({
-      findById: vi.fn().mockRejectedValue(error)
+  it('counts as failed a summary log whose organisation cannot be read', async ({
+    backfill: { store, run, stored }
+  }) => {
+    await store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
+    const organisationsRepository = partialMock({
+      findById: vi.fn().mockRejectedValue(new Error('database unavailable'))
     })
 
-    expect(await run(false)).toMatchObject({ mapped: 0, failed: 1 })
-    expect(stored('accredited')).not.toHaveProperty('year')
+    expect(await run(false, { organisationsRepository })).toMatchObject({
+      mapped: 0,
+      failed: 1
+    })
+    expect(await stored('accredited')).not.toHaveProperty('year')
   })
 
-  it('counts a failed write and carries on with the rest', async () => {
-    store({
+  it('counts as failed a summary log that changed after it was read, and carries on with the rest', async ({
+    backfill: { summaryLogs, store, run, stored, logger }
+  }) => {
+    await store({
       first: unscoped(uploadedFor(accreditedMeta)),
       second: unscoped(uploadedFor(registeredOnlyMeta))
     })
-    const error = new Error('write failed')
-    const real = createInMemorySummaryLogsRepository(storage)(logger)
-    const assignScope = vi
-      .fn()
-      .mockRejectedValueOnce(error)
-      .mockImplementation(real.assignScope)
+    const readBeforeAChange = async (/** @type {*} */ id) => {
+      const read = await summaryLogs.findById(id)
+      return id === 'first' && read ? { ...read, version: 0 } : read
+    }
 
-    expect(await run(false, { assignScope })).toMatchObject({
-      mapped: 1,
-      failed: 1
-    })
+    expect(
+      await run(false, { summaryLogs: { findById: readBeforeAChange } })
+    ).toMatchObject({ mapped: 1, failed: 1 })
     expect(logger.error).toHaveBeenCalledWith({
-      err: error,
+      err: expect.objectContaining({
+        message:
+          'Summary log first is no longer at version 0 without accreditationId, accreditationNumber, year'
+      }),
       message: 'Failed to backfill the scope of summary log first'
     })
-    expect(stored('second')).toMatchObject({ accreditationNumber: null })
+    expect(await stored('first')).not.toHaveProperty('year')
+    expect(await stored('second')).toMatchObject({ accreditationNumber: null })
   })
 
-  it('counts a summary log written but not audited, logging what was written', async () => {
-    store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
+  it('counts a summary log written but not audited, logging what was written', async ({
+    backfill: { store, run, systemLogsRepository, logger }
+  }) => {
+    await store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
     const error = new Error('audit failed')
     vi.mocked(systemLogsRepository.insert).mockRejectedValue(error)
 
@@ -384,11 +428,15 @@ describe('backfillSummaryLogScope', () => {
     })
   })
 
-  it('skips a summary log that has gone since it was listed', async () => {
-    store({ gone: unscoped(uploadedFor(accreditedMeta)) })
+  it('skips a summary log that has gone since it was listed', async ({
+    backfill: { run }
+  }) => {
+    const listedThenRemoved = async () => [/** @type {*} */ ('gone')]
 
     expect(
-      await run(false, { findById: vi.fn().mockResolvedValue(null) })
+      await run(false, {
+        summaryLogs: { findIdsWithoutScope: listedThenRemoved }
+      })
     ).toMatchObject({ missing: 1, mapped: 0, failed: 0 })
   })
 })
