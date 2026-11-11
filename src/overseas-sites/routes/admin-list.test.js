@@ -124,7 +124,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
   })
 
   it('filters by registrationNumber before pagination is applied', async () => {
-    const organisationsRepository = {
+    const organisationAdministrationRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
           organisationNumber: '42',
@@ -184,7 +184,8 @@ const defineResponseAndAccessTests = ({ getServer }) => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         overseasSitesRepository: () => overseasSitesRepository
       }
     })
@@ -274,7 +275,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
   it('returns the default empty page size when all=true and there are no rows', async () => {
     const emptyServer = await createTestServer({
       repositories: {
-        organisationsRepository: () => ({
+        organisationAdministrationRepository: () => ({
           findAll: vi.fn().mockResolvedValue([])
         }),
         overseasSitesRepository: () => ({
@@ -296,11 +297,12 @@ const defineResponseAndAccessTests = ({ getServer }) => {
   })
 
   it('resolves accreditationNumber from matched accreditation when registration values are missing', async () => {
-    const organisationsRepository = getServer().app.organisationsRepository
+    const organisationAdministrationRepository =
+      getServer().app.organisationAdministrationRepository
     const overseasSitesRepository = getServer().app.overseasSitesRepository
     const [existingSite] = await overseasSitesRepository.findAll()
 
-    await organisationsRepository.insert(
+    await organisationAdministrationRepository.insert(
       asOrganisation(
         buildOrganisation({
           registrations: [
@@ -399,8 +401,9 @@ const defineErrorHandlingTests = ({
 
 const defineMappingEdgeCaseTests = ({ getServer }) => {
   it('skips mappings that reference unknown overseas site ids', async () => {
-    const organisationsRepository = getServer().app.organisationsRepository
-    await organisationsRepository.insert(
+    const organisationAdministrationRepository =
+      getServer().app.organisationAdministrationRepository
+    await organisationAdministrationRepository.insert(
       buildOrganisation({
         registrations: [
           buildRegistration({
@@ -435,7 +438,8 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
 
     const malformedServer = await createTestServer({
       repositories: {
-        organisationsRepository: () => malformedOrganisationsRepository,
+        organisationAdministrationRepository: () =>
+          malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       }
     })
@@ -455,7 +459,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
 
 const defineBlankRegistrationNumberFilterTest = () => {
   it('treats blank registrationNumber filters as undefined', async () => {
-    const organisationsRepository = {
+    const organisationAdministrationRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
           organisationNumber: '42',
@@ -491,7 +495,8 @@ const defineBlankRegistrationNumberFilterTest = () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         overseasSitesRepository: () => overseasSitesRepository
       }
     })
@@ -549,7 +554,8 @@ const defineMissingOverseasSiteMappingsTest = () => {
 
     const malformedServer = await createTestServer({
       repositories: {
-        organisationsRepository: () => malformedOrganisationsRepository,
+        organisationAdministrationRepository: () =>
+          malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       }
     })
@@ -569,7 +575,7 @@ const defineMissingOverseasSiteMappingsTest = () => {
 
 const defineMissingMaterialAndOrgIdTest = () => {
   it('uses null defaults when material and orgId are missing', async () => {
-    const organisationsRepository = {
+    const organisationAdministrationRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
           registrations: [
@@ -600,7 +606,8 @@ const defineMissingMaterialAndOrgIdTest = () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         overseasSitesRepository: () => overseasSitesRepository
       }
     })
@@ -656,7 +663,8 @@ const defineMissingRegistrationsPropertyTest = () => {
 
     const malformedServer = await createTestServer({
       repositories: {
-        organisationsRepository: () => malformedOrganisationsRepository,
+        organisationAdministrationRepository: () =>
+          malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       }
     })
@@ -725,10 +733,10 @@ const createExporterRegistration = ({ siteOne, siteTwo }) => {
 }
 
 const insertBaseOrganisation = async (
-  organisationsRepository,
+  organisationAdministrationRepository,
   registration
 ) => {
-  await organisationsRepository.insert(
+  await organisationAdministrationRepository.insert(
     asOrganisation(
       buildOrganisation({
         registrations: [registration],
@@ -740,18 +748,21 @@ const insertBaseOrganisation = async (
 
 const setupFeatureFlagEnabledScenario = async () => {
   const organisationsRepositoryFactory = createInMemoryOrganisationsRepository()
-  const organisationsRepository = organisationsRepositoryFactory()
+  const organisationAdministrationRepository = organisationsRepositoryFactory()
 
   const overseasSitesRepository = createInMemoryOverseasSitesRepository()()
   vi.spyOn(overseasSitesRepository, 'findAll')
 
   const sites = await seedOverseasSites(overseasSitesRepository)
   const registration = createExporterRegistration(sites)
-  await insertBaseOrganisation(organisationsRepository, registration)
+  await insertBaseOrganisation(
+    organisationAdministrationRepository,
+    registration
+  )
 
   const server = await createTestServer({
     repositories: {
-      organisationsRepository: organisationsRepositoryFactory,
+      organisationAdministrationRepository: organisationsRepositoryFactory,
       overseasSitesRepository: () => overseasSitesRepository
     }
   })

@@ -26,11 +26,15 @@ export const nonProdDataResetPlugin = {
   ) => {
     const db = options?.db ?? server.db
     server.dependency('organisationsRepository', async () => {
-      const { organisationsRepository } =
+      const { organisationAdministrationRepository } =
         /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
-      const reset = createNonProdDataReset(db, organisationsRepository, {
-        isProduction: isProductionEnvironment()
-      })
+      const reset = createNonProdDataReset(
+        db,
+        organisationAdministrationRepository,
+        {
+          isProduction: isProductionEnvironment()
+        }
+      )
       registerDependency(server, 'nonProdDataReset', () => reset)
     })
   }

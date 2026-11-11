@@ -143,10 +143,11 @@ describe('GET registration overseas-sites', () => {
     server = await createTestServer({
       config,
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          organisation,
-          ...otherOrganisations
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([
+            organisation,
+            ...otherOrganisations
+          ]),
         overseasSitesRepository: createInMemoryOverseasSitesRepository(sites)
       }
     })
@@ -416,7 +417,7 @@ describe('GET registration overseas-sites', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => ({
+        organisationAdministrationRepository: () => ({
           findRegistrationById: () =>
             Promise.reject(new Error('database unavailable'))
         })

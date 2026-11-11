@@ -273,7 +273,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     submissionNumber = 1
   ) => {
     const organisationReadRepository = await organisationReadRepositoryFrom(
-      env.organisationsRepository,
+      env.organisationAdministrationRepository,
       { overseasSitesRepository: env.overseasSitesRepository }
     )
     const organisation =

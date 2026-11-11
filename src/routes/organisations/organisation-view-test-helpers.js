@@ -114,17 +114,17 @@ export const useViewServer = () => {
   })
 
   /**
-   * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
+   * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationAdministrationRepository
    */
-  const start = async (organisationsRepository) => {
+  const start = async (organisationAdministrationRepository) => {
     const overseasSitesRepository =
       createInMemoryOverseasSitesRepository(overseasSites)
     server = await createTestServer({
       repositories: {
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository,
         organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository(),
+          organisationAdministrationRepository(),
           { overseasSitesRepository: overseasSitesRepository() }
         )
       }
@@ -143,9 +143,12 @@ export const useViewServer = () => {
    * @param {object} organisation
    */
   const serveStored = async (organisation) => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])
-    await organisationsRepository().insert(partialMock(organisation))
-    await start(organisationsRepository)
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])
+    await organisationAdministrationRepository().insert(
+      partialMock(organisation)
+    )
+    await start(organisationAdministrationRepository)
   }
 
   /**

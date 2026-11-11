@@ -111,7 +111,7 @@ const accreditedExporter = ({
 
 /**
  * @typedef {Object} Register
- * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationsRepository} organisationAdministrationRepository
  * @property {OrganisationReadRepository} organisationReadRepository
  * @property {ReportsRepository} reportsRepository
  */
@@ -123,13 +123,14 @@ const accreditedExporter = ({
  * @returns {Register}
  */
 const newRegister = (exporters = []) => {
-  const organisationsRepository = createInMemoryOrganisationsRepository(
-    exporters.map(({ organisation }) => partialMock(organisation))
-  )()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository(
+      exporters.map(({ organisation }) => partialMock(organisation))
+    )()
   return {
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository: organisationReadRepositoryOver(
-      organisationsRepository
+      organisationAdministrationRepository
     ),
     reportsRepository: createInMemoryReportsRepository()()
   }
@@ -142,9 +143,14 @@ const newRegister = (exporters = []) => {
  * @param {AccreditedFor & { regulator?: RegulatorValue }} operator
  */
 const seedOperator = (
-  { organisationsRepository },
+  { organisationAdministrationRepository },
   { regulator, ...accreditedFor }
-) => insertAccreditedOperator(organisationsRepository, regulator, accreditedFor)
+) =>
+  insertAccreditedOperator(
+    organisationAdministrationRepository,
+    regulator,
+    accreditedFor
+  )
 
 /**
  * Submits the operator's monthly report for one month of 2026.

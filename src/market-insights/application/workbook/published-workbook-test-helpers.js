@@ -38,20 +38,21 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 /**
  * What the shared read is given for a period, over an empty register, taken
  * when the published figures were. Tests seed the register through
- * `organisationsRepository`, which the read model reads back on every read.
+ * `organisationAdministrationRepository`, which the read model reads back on every read.
  *
  * @param {YearMonth[]} months
- * @returns {ReadMarketInsightsFiguresParams & { organisationsRepository: OrganisationsRepository }}
+ * @returns {ReadMarketInsightsFiguresParams & { organisationAdministrationRepository: OrganisationsRepository }}
  */
 export const readParamsFor = (months) => {
-  const organisationsRepository = createInMemoryOrganisationsRepository([])()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository([])()
   return {
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository: organisationReadRepositoryOver(
-      organisationsRepository
+      organisationAdministrationRepository
     ),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),

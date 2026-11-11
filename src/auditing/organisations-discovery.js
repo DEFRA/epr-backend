@@ -1,4 +1,4 @@
-/** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/port.js' */
+/** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/linking-port.js' */
 /** @import {DefraIdRelationship} from '#common/helpers/auth/types.js' */
 /** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 

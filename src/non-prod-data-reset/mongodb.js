@@ -7,7 +7,7 @@ import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-mode
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /**
  * @typedef {{
@@ -193,13 +193,13 @@ const runCascade = async (db, steps) => {
  * The organisation goes last, so a reset that fails part way can be retried.
  *
  * @param {Db} db
- * @param {Pick<OrganisationsRepository, 'findByOrganisationNumber' | 'deleteByOrganisationNumber'>} organisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findByOrganisationNumber' | 'deleteByOrganisationNumber'>} organisationAdministrationRepository
  * @param {{ isProduction?: boolean }} [options]
  * @returns {NonProdDataReset}
  */
 export const createNonProdDataReset = (
   db,
-  organisationsRepository,
+  organisationAdministrationRepository,
   { isProduction = false } = {}
 ) => ({
   async deleteByOrganisationNumber(organisationNumber) {
@@ -212,14 +212,16 @@ export const createNonProdDataReset = (
       throw new Error('Non-prod data reset is disabled in production.')
     }
     const organisation =
-      await organisationsRepository.findByOrganisationNumber(organisationNumber)
+      await organisationAdministrationRepository.findByOrganisationNumber(
+        organisationNumber
+      )
     if (!organisation) {
       return { ...EMPTY_COUNTS }
     }
     const keys = extractCascadeKeys(organisation)
     const counts = await runCascade(db, buildCascadeSteps(organisation, keys))
     const deletedOrganisations =
-      await organisationsRepository.deleteByOrganisationNumber(
+      await organisationAdministrationRepository.deleteByOrganisationNumber(
         organisationNumber
       )
     return { ...counts, 'epr-organisations': deletedOrganisations }

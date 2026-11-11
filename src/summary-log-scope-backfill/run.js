@@ -14,7 +14,7 @@ const LOCK_NAME = 'summary-log-scope-backfill'
 const runBackfill = async (server) => {
   const isDryRun = !config.get('featureFlags.summaryLogScopeBackfill')
 
-  const organisationsRepository = (
+  const organisationAdministrationRepository = (
     await createOrganisationsRepository(server.db)
   )()
   const systemLogsRepository = (await createSystemLogsRepository(server.db))(
@@ -26,7 +26,7 @@ const runBackfill = async (server) => {
       {
         summaryLogs: createUnscopedSummaryLogs(server.db),
         systemLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         logger
       },
       { isDryRun }

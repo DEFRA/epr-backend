@@ -50,7 +50,7 @@ describe('auditOrganisationsDiscovery', () => {
     action: 'organisations-discovered'
   }
 
-  /** @type {import('#repositories/organisations/port.js').LinkedOrganisationSummary} */
+  /** @type {import('#repositories/organisations/linking-port.js').LinkedOrganisationSummary} */
   const linkedOrg = {
     id: 'epr-org-1',
     organisationNumber: toOrganisationNumber('1001'),

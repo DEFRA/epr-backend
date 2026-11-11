@@ -37,7 +37,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /**
  * Well-known organisation numbers for seed scenarios.
@@ -183,12 +183,12 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
 /**
  * Creates an approved organisation with approved registration and accreditation
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {Partial<Organisation>} overrides
  * @returns {Promise<Organisation>}
  */
 async function buildApprovedOrgForSeed(
-  organisationsRepository,
+  organisationAdministrationRepository,
   overrides = {}
 ) {
   const org = buildOrganisation({
@@ -197,7 +197,7 @@ async function buildApprovedOrgForSeed(
   })
 
   const INITIAL_VERSION = 1
-  await organisationsRepository.insert(org)
+  await organisationAdministrationRepository.insert(org)
 
   const dateRange = getValidDateRange()
   const approvedTesterEmail = getApprovedTesterEmail()
@@ -220,7 +220,7 @@ async function buildApprovedOrgForSeed(
     dateRange
   )
 
-  await organisationsRepository.replace(
+  await organisationAdministrationRepository.replace(
     org.id,
     INITIAL_VERSION,
     prepareOrgUpdate(org, {
@@ -230,7 +230,11 @@ async function buildApprovedOrgForSeed(
     })
   )
 
-  return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
+  return waitForVersion(
+    organisationAdministrationRepository,
+    org.id,
+    INITIAL_VERSION + 1
+  )
 }
 
 /**
@@ -240,13 +244,19 @@ async function buildApprovedOrgForSeed(
  * Note: Registrations and accreditations remain in APPROVED status.
  * They do NOT transition to ACTIVE when the organisation becomes active.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {Partial<Organisation>} overrides
  * @returns {Promise<Organisation>}
  */
-async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
+async function buildActiveOrgForSeed(
+  organisationAdministrationRepository,
+  overrides = {}
+) {
   const testerEmail = getTesterEmail()
-  const org = await buildApprovedOrgForSeed(organisationsRepository, overrides)
+  const org = await buildApprovedOrgForSeed(
+    organisationAdministrationRepository,
+    overrides
+  )
 
   const linkedDefraOrg = {
     orgId: crypto.randomUUID(),
@@ -260,7 +270,7 @@ async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
 
   const currentVersion = org.version
 
-  await organisationsRepository.replace(
+  await organisationAdministrationRepository.replace(
     org.id,
     currentVersion,
     prepareOrgUpdate(org, {
@@ -276,7 +286,11 @@ async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
     })
   )
 
-  return waitForVersion(organisationsRepository, org.id, currentVersion + 1)
+  return waitForVersion(
+    organisationAdministrationRepository,
+    org.id,
+    currentVersion + 1
+  )
 }
 
 /**
@@ -286,15 +300,18 @@ async function buildActiveOrgForSeed(organisationsRepository, overrides = {}) {
  * Note: APPROVED → SUSPENDED is a valid status transition for accreditations.
  * APPROVED → REJECTED is NOT valid (REJECTED can only come from CREATED).
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {Partial<Organisation>} overrides
  * @returns {Promise<Organisation>}
  */
 async function buildActiveOrgWithSuspendedAccreditation(
-  organisationsRepository,
+  organisationAdministrationRepository,
   overrides = {}
 ) {
-  const org = await buildActiveOrgForSeed(organisationsRepository, overrides)
+  const org = await buildActiveOrgForSeed(
+    organisationAdministrationRepository,
+    overrides
+  )
 
   // Find the first approved registration's material to match with accreditation
   const approvedReg = org.registrations.find(
@@ -316,7 +333,7 @@ async function buildActiveOrgWithSuspendedAccreditation(
 
   const currentVersion = org.version
 
-  await organisationsRepository.replace(
+  await organisationAdministrationRepository.replace(
     org.id,
     currentVersion,
     prepareOrgUpdate(org, {
@@ -324,13 +341,17 @@ async function buildActiveOrgWithSuspendedAccreditation(
     })
   )
 
-  return waitForVersion(organisationsRepository, org.id, currentVersion + 1)
+  return waitForVersion(
+    organisationAdministrationRepository,
+    org.id,
+    currentVersion + 1
+  )
 }
 
 /**
  * Scenario definitions for seed data
  *
- * @type {Record<string, {organisationNumber: OrganisationNumber, description: string, build: (repo: OrganisationsRepository) => Promise<object>}>}
+ * @type {Record<string, {organisationNumber: OrganisationNumber, description: string, build: (repo: OrganisationAdministrationRepository) => Promise<object>}>}
  */
 const SEED_SCENARIOS = {
   approved_organisation: {
@@ -372,16 +393,18 @@ const SEED_SCENARIOS = {
  * Only seeds if the scenarios don't already exist in the database.
  * Uses fixed organisation numbers to enable idempotent seeding.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @returns {Promise<void>}
  */
-export async function createEprOrganisationScenarios(organisationsRepository) {
+export async function createEprOrganisationScenarios(
+  organisationAdministrationRepository
+) {
   const scenarioOrganisationNumbers = Object.values(SEED_SCENARIOS).map(
     ({ organisationNumber }) => organisationNumber
   )
 
   const existingScenarios =
-    await organisationsRepository.findByOrganisationNumbers(
+    await organisationAdministrationRepository.findByOrganisationNumbers(
       scenarioOrganisationNumbers
     )
 
@@ -398,7 +421,7 @@ export async function createEprOrganisationScenarios(organisationsRepository) {
 
   for (const [name, scenario] of Object.entries(SEED_SCENARIOS)) {
     try {
-      await scenario.build(organisationsRepository)
+      await scenario.build(organisationAdministrationRepository)
       logger.info({
         message: `Seed scenarios: created ${name} (organisationNumber: ${scenario.organisationNumber})`
       })

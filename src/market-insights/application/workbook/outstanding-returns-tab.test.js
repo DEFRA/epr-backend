@@ -67,7 +67,7 @@ const BAND_LABELLED = {
 
 /**
  * @typedef {{
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationAdministrationRepository: OrganisationsRepository,
  *   organisationReadRepository: OrganisationReadRepository,
  *   reportsRepository: ReportsRepository
  * }} Register
@@ -75,11 +75,12 @@ const BAND_LABELLED = {
 
 /** @returns {Register} */
 const emptyRegister = () => {
-  const organisationsRepository = createInMemoryOrganisationsRepository()()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository()()
   return {
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository: organisationReadRepositoryOver(
-      organisationsRepository
+      organisationAdministrationRepository
     ),
     reportsRepository: createInMemoryReportsRepository()()
   }
@@ -93,11 +94,11 @@ const emptyRegister = () => {
  * @param {AccreditedFor & { regulator?: RegulatorValue, submitted?: number[] }} operator
  */
 const seedOperator = async (
-  { organisationsRepository, reportsRepository },
+  { organisationAdministrationRepository, reportsRepository },
   { regulator = REGULATOR.EA, submitted = [], ...accreditedFor }
 ) => {
   const { reportKey } = await insertAccreditedOperator(
-    organisationsRepository,
+    organisationAdministrationRepository,
     regulator,
     accreditedFor
   )

@@ -288,11 +288,12 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
   let server
 
   beforeAll(async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository()()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository()()
     const reportsRepository = createInMemoryReportsRepository()()
     for (const { regulator, issuedTonnage } of NATIONS) {
       const operator = await insertAccreditedOperator(
-        organisationsRepository,
+        organisationAdministrationRepository,
         regulator
       )
       await buildSubmittedReport(
@@ -302,9 +303,9 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
     }
     server = await createTestServer({
       repositories: {
-        organisationsRepository,
+        organisationAdministrationRepository,
         organisationReadRepository: organisationReadRepositoryOver(
-          organisationsRepository
+          organisationAdministrationRepository
         ),
         reportsRepository
       }

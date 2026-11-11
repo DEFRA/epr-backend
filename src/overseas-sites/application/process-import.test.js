@@ -16,7 +16,7 @@ describe('processOrsImport', () => {
   let orsImportsRepository
   let uploadsRepository
   let overseasSitesRepository
-  let organisationsRepository
+  let organisationAdministrationRepository
   let systemLogsRepository
   let user
   let logger
@@ -37,7 +37,7 @@ describe('processOrsImport', () => {
     }
 
     overseasSitesRepository = {}
-    organisationsRepository = {}
+    organisationAdministrationRepository = {}
     systemLogsRepository = { insert: vi.fn() }
     user = {
       id: 'user-123',
@@ -63,7 +63,7 @@ describe('processOrsImport', () => {
     orsImportsRepository,
     uploadsRepository,
     overseasSitesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     logger,
     orsImportMetrics,
@@ -547,7 +547,7 @@ describe('processOrsImport', () => {
 
     expect(processImportFile).toHaveBeenCalledWith(Buffer.from('data'), {
       overseasSitesRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       systemLogsRepository,
       logger,
       user

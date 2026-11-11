@@ -188,7 +188,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
       const { reportKey } = await insertAccreditedOperator(
-        register.organisationsRepository
+        register.organisationAdministrationRepository
       )
       vi.useRealTimers()
       await buildSubmittedReport(register.reportsRepository, {
@@ -201,7 +201,8 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
         repositories: {
           ledgerRepository: register.ledgerRepository,
           summaryLogRowStatesRepository: register.summaryLogRowStatesRepository,
-          organisationsRepository: register.organisationsRepository,
+          organisationAdministrationRepository:
+            register.organisationAdministrationRepository,
           organisationReadRepository: register.organisationReadRepository,
           reportsRepository: register.reportsRepository
         }

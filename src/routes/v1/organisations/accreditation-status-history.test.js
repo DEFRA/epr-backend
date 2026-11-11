@@ -211,7 +211,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -1152,13 +1152,12 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
      * @param {*} fixture
      */
     const servingStored = (fixture) => {
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        fixture
-      ])
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([fixture])
       return {
-        organisationsRepository,
+        organisationAdministrationRepository,
         organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository())
+          organisationReadRepositoryOver(organisationAdministrationRepository())
       }
     }
 
