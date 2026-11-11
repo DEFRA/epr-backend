@@ -1,10 +1,10 @@
-const HEX_256_BIT_KEY = /^[0-9a-f]{64}$/
+import { isHex256Bit } from '#common/helpers/is-hex-256-bit.js'
 
 /**
  * @param {unknown} value
  */
 const validateHex256BitKey = (value) => {
-  if (typeof value !== 'string' || !HEX_256_BIT_KEY.test(value)) {
+  if (!isHex256Bit(value)) {
     throw new Error(
       'must be 64 lowercase hex characters (openssl rand -hex 32)'
     )

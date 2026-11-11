@@ -58,6 +58,17 @@ describe('upload-callback strategy', () => {
       url: signedUploadCallbackPath(otherKey, path)
     },
     {
+      description: 'a valid signature followed by non-hex characters',
+      url: `${signedUploadCallbackPath(key, path)}zzzz`
+    },
+    {
+      description: 'a valid signature in upper case',
+      url: signedUploadCallbackPath(key, path).replace(
+        /signature=(.*)$/,
+        (_, signature) => `signature=${signature.toUpperCase()}`
+      )
+    },
+    {
       description: 'two signatures',
       url: `${signedUploadCallbackPath(key, path)}&signature=00`
     }

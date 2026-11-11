@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
+import { isHex256Bit } from '#common/helpers/is-hex-256-bit.js'
 import { config } from '#root/config.js'
 
 /** @import {Brand} from '#common/helpers/brand.js' */
@@ -67,11 +68,6 @@ export const uploadCallbackUrl = (path) =>
  * @param {unknown} signature
  * @returns {boolean}
  */
-export const isUploadCallbackSignatureValid = (key, path, signature) => {
-  if (typeof signature !== 'string') {
-    return false
-  }
-  const expected = signatureFor(key, path)
-  const given = Buffer.from(signature, 'hex')
-  return given.length === expected.length && timingSafeEqual(given, expected)
-}
+export const isUploadCallbackSignatureValid = (key, path, signature) =>
+  isHex256Bit(signature) &&
+  timingSafeEqual(Buffer.from(signature, 'hex'), signatureFor(key, path))
