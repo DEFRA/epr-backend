@@ -173,7 +173,7 @@ describe('standingByYear', () => {
   const approvedFrom = (date, accreditations = {}) => ({
     status: {
       current: /** @type {const} */ ('approved'),
-      timeline: [{ status: 'approved', at: date }]
+      timeline: [approvedOn(date)]
     },
     accreditations
   })
@@ -190,9 +190,9 @@ describe('standingByYear', () => {
 
   it('leaves out a year spent wholly cancelled', () => {
     const timeline = [
-      { status: 'approved', at: '2024-06-02' },
-      { status: 'cancelled', at: '2024-09-01' },
-      { status: 'approved', at: '2026-03-01' }
+      approvedOn('2024-06-02'),
+      cancelledOn('2024-09-01'),
+      approvedOn('2026-03-01')
     ]
 
     expect(
@@ -222,7 +222,7 @@ describe('standingByYear', () => {
   })
 
   it('is empty for a registration never approved', () => {
-    const timeline = [{ status: 'created', at: '2026-06-02' }]
+    const timeline = [createdOn('2026-06-02')]
 
     expect(
       standingByYear(
