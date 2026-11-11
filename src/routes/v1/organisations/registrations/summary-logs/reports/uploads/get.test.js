@@ -8,6 +8,7 @@ import { summaryLogUploadsReportPath } from './get.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
@@ -30,7 +31,8 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
