@@ -50,6 +50,14 @@ export const signedUploadCallbackPath = (key, path) =>
   `${path}?signature=${signatureFor(key, path).toString('hex')}`
 
 /**
+ * The key this service signs and checks upload callbacks with.
+ *
+ * @returns {UploadCallbackKey}
+ */
+export const uploadCallbackKey = () =>
+  toUploadCallbackKey(config.get('cdpUploader.callbackHmacKey'))
+
+/**
  * The URL to give CDP Uploader for an upload's callback: this service's base
  * URL and the signed path.
  *
@@ -57,10 +65,7 @@ export const signedUploadCallbackPath = (key, path) =>
  * @returns {string}
  */
 export const uploadCallbackUrl = (path) =>
-  `${config.get('appBaseUrl')}${signedUploadCallbackPath(
-    toUploadCallbackKey(config.get('cdpUploader.callbackHmacKey')),
-    path
-  )}`
+  `${config.get('appBaseUrl')}${signedUploadCallbackPath(uploadCallbackKey(), path)}`
 
 /**
  * @param {UploadCallbackKey} key

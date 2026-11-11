@@ -293,10 +293,7 @@ export async function createTestServer(options = {}) {
       plugin: externalApiAuthPlugin.plugin,
       options: { config }
     },
-    {
-      plugin: uploadCallbackAuthPlugin.plugin,
-      options: { config }
-    },
+    uploadCallbackAuthPlugin,
     authFailureLogger,
     boomErrorLogger,
     externalApiErrorFormatter,

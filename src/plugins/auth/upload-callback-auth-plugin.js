@@ -2,13 +2,12 @@ import Boom from '@hapi/boom'
 
 import {
   isUploadCallbackSignatureValid,
-  toUploadCallbackKey,
-  toUploadCallbackPath
+  toUploadCallbackPath,
+  uploadCallbackKey
 } from '#common/helpers/auth/upload-callback-signature.js'
 
 /**
  * @import { Server } from '@hapi/hapi'
- * @import { Config } from 'convict'
  * @import { MachineCredentials } from '#common/hapi-types.js'
  */
 
@@ -28,10 +27,9 @@ export const uploadCallbackAuthPlugin = {
     version: '1.0.0',
     /**
      * @param {Server} server
-     * @param {{ config: Config<{ cdpUploader: { callbackHmacKey: string } }> }} options
      */
-    register: (server, { config }) => {
-      const key = toUploadCallbackKey(config.get('cdpUploader.callbackHmacKey'))
+    register: (server) => {
+      const key = uploadCallbackKey()
 
       server.auth.scheme(SCHEME_NAME, () => ({
         authenticate: (request, h) =>

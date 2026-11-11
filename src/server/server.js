@@ -203,10 +203,7 @@ async function createServer(options = {}) {
       plugin: externalApiAuthPlugin.plugin,
       options: { config }
     },
-    {
-      plugin: uploadCallbackAuthPlugin.plugin,
-      options: { config }
-    },
+    uploadCallbackAuthPlugin,
     authFailureLogger,
     boomErrorLogger,
     externalApiErrorFormatter
