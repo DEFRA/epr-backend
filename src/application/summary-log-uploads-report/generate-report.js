@@ -1,14 +1,16 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
 /** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 import {
   capitalize,
   formatAddress,
-  formatMaterial,
+  formatResolvedMaterial,
   uppercaseString
 } from '#common/helpers/formatters.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
@@ -54,10 +56,25 @@ function transformRow(formattedInfo, summaryLogStats) {
   }
 }
 
-function getLinkedAccreditation(registration, accreditations) {
-  return registration.accreditationId
-    ? accreditations.find((acc) => acc.id === registration.accreditationId)
-    : null
+// TODO: make this year aware before 1 January 2027, or the accreditation column goes blank
+const REPORT_YEAR = '2026'
+
+/**
+ * @param {Registration['accreditations']} accreditations
+ * @returns {string}
+ */
+function accreditationNumberOf(accreditations) {
+  return accreditations[REPORT_YEAR]?.accreditationNumber ?? ''
+}
+
+/**
+ * @param {Registration} registration
+ * @returns {string}
+ */
+function reprocessingSiteOf(registration) {
+  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? formatAddress(registration.site.address)
+    : ''
 }
 
 /**
@@ -69,36 +86,30 @@ function buildRegistrationLookup(organisations) {
     organisations
       .filter((org) => !isTestOrganisation(org))
       .flatMap((org) =>
-        org.registrations.flatMap((registration) => {
-          const { registrationNumber } = registration
-          if (!registrationNumber) {
-            return []
-          }
-          const accreditation = getLinkedAccreditation(
-            registration,
-            org.accreditations
-          )
-          return [
-            [
-              buildLookupKey(org.organisationNumber, registrationNumber),
-              {
-                appropriateAgency: uppercaseString(
-                  registration.submittedToRegulator
-                ),
-                type: capitalize(registration.wasteProcessingType),
-                businessName: org.companyDetails.name,
-                organisationNumber: org.organisationNumber,
-                registrationNumber,
-                accreditationNumber: accreditation?.accreditationNumber || '',
-                reprocessingSite: formatAddress(registration.site?.address),
-                packagingWasteCategory: formatMaterial(
-                  registration.material,
-                  registration.glassRecyclingProcess
-                )
-              }
-            ]
+        Object.entries(org.registrations).map(
+          ([registrationNumber, registration]) => [
+            buildLookupKey(
+              org.organisationNumber,
+              toRegistrationNumber(registrationNumber)
+            ),
+            {
+              appropriateAgency: uppercaseString(
+                registration.submittedToRegulator.code
+              ),
+              type: capitalize(registration.wasteProcessingType),
+              businessName: org.name,
+              organisationNumber: org.organisationNumber,
+              registrationNumber,
+              accreditationNumber: accreditationNumberOf(
+                registration.accreditations
+              ),
+              reprocessingSite: reprocessingSiteOf(registration),
+              packagingWasteCategory: formatResolvedMaterial(
+                registration.material
+              )
+            }
           ]
-        })
+        )
       )
   )
 }
@@ -136,12 +147,12 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 }
 
 /**
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationRepo - Organisation repository
+ * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
  * @returns {Promise<{summaryLogUploads: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */
 export async function generateSummaryLogUploadsReport(
-  organisationRepo,
+  organisationReadRepository,
   summaryLogsRepo
 ) {
   const generatedAt = new Date().toISOString()
@@ -153,17 +164,9 @@ export async function generateSummaryLogUploadsReport(
     message: `Retrieved stats for ${summaryLogsStatsList.length} registrations from repository`
   })
 
-  const organisationNumbers = [
-    ...new Set(summaryLogsStatsList.map((stats) => stats.organisationNumber))
-  ]
+  const organisations = await organisationReadRepository.findAll()
   logger.info({
-    message: `Found ${organisationNumbers.length} organisations with summary log uploads`
-  })
-
-  const organisations =
-    await organisationRepo.findByOrganisationNumbers(organisationNumbers)
-  logger.info({
-    message: `Retrieved ${organisations.length} organisations from repository`
+    message: `Retrieved ${organisations.length} organisations from the read model`
   })
 
   const registrationLookup = buildRegistrationLookup(organisations)
