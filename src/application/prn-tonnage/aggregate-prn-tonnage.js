@@ -243,9 +243,7 @@ export const aggregatePrnTonnage = async (
     organisationsRepository.findAll()
   ])
 
-  const index = indexAccreditationsByLedger(organisations, {
-    includeTestOrganisations: true
-  })
+  const index = indexAccreditationsByLedger(organisations)
 
   const aggregatedRows = accreditationTonnages
     .map((accreditationTonnage) => {
