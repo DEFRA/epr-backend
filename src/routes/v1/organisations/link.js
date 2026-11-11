@@ -8,8 +8,8 @@ import { linkedDefraOrganisationViewSchema } from '#routes/organisations/respons
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
+import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/to-read-model.js'
 
-/** @import { StoredLinkedDefraOrganisation } from '#domain/organisations/model.js' */
 /** @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 
 const linkedOrganisationSchema = Joi.object({
@@ -17,15 +17,6 @@ const linkedOrganisationSchema = Joi.object({
     .valid(...ORGANISATION_STATUSES)
     .required(),
   linkedDefraOrganisation: linkedDefraOrganisationViewSchema.required()
-})
-
-/**
- * @param {StoredLinkedDefraOrganisation} linked
- */
-const toLinkedDefraOrganisationView = (linked) => ({
-  defraOrganisation: { id: linked.orgId, name: linked.orgName },
-  linkedAt: new Date(linked.linkedAt).toISOString(),
-  linkedBy: { email: linked.linkedBy.email }
 })
 
 /**
@@ -123,7 +114,7 @@ export const organisationsLink = {
     return h
       .response({
         status: updatedOrganisation.status,
-        linkedDefraOrganisation: toLinkedDefraOrganisationView(
+        linkedDefraOrganisation: toLinkedDefraOrganisation(
           updatedOrganisation.linkedDefraOrganisation
         )
       })

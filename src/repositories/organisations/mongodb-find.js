@@ -56,17 +56,21 @@ export const findOneAtMinimumVersion = async (
   filter,
   minimumVersion
 ) => {
+  if (minimumVersion === undefined) {
+    return findOne(db, filter)
+  }
+
   for (let i = 0; i < maxRetries; i++) {
     const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
     const isLastRetry = i === maxRetries - 1
 
     if (doc) {
-      if (minimumVersion === undefined || doc.version >= minimumVersion) {
+      if (doc.version >= minimumVersion) {
         return mapDocumentWithCurrentStatuses(doc)
       }
       // Document exists but version too low - will retry
-    } else if (minimumVersion === undefined || isLastRetry) {
+    } else if (isLastRetry) {
       return null
     } else {
       // Document not found but have retries left - will retry
