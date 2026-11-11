@@ -139,7 +139,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
       ).toEqual(['2026'])
     })
 
-    it('serves neither accreditation for a year both hold, and logs the clash', async ({
+    it('serves the external accreditation for a year both hold, and logs the stored one it drops', async ({
       organisationReadRepositoryWith
     }) => {
       const stored2027 = accreditation({
@@ -164,9 +164,9 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations
-      ).toStrictEqual({})
+      ).toStrictEqual({ 2027: externalAccreditation2027 })
       expect(logger.warn).toHaveBeenCalledWith({
-        message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 is shared by more than one record`
+        message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 is held as an external accreditation, so stored accreditation ${ACCREDITATION_NUMBER} is dropped`
       })
     })
 

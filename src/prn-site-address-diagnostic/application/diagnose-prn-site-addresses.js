@@ -100,7 +100,7 @@ const accreditationFinding = (accreditation, registrationAddress) => {
 
 /**
  * The registration's stored accreditations the read model serves, each in the
- * year it serves it.
+ * year it serves it. One an external accreditation replaces is not served.
  *
  * @param {Organisation} organisation
  * @param {Registration} registration

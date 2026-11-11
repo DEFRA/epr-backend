@@ -234,7 +234,7 @@ describe('diagnosePrnSiteAddresses', () => {
     }
   )
 
-  it('counts neither accreditation for a year an external and a stored one share', async () => {
+  it('counts the external accreditation that replaces a stored one, not the stored one', async () => {
     const organisation = accreditedReprocessor({
       registrationAddress: FULL_ADDRESS_SITE
     })
@@ -247,12 +247,12 @@ describe('diagnosePrnSiteAddresses', () => {
           year: toYear(2026),
           accreditationNumber: toAccreditationNumber('A26ER5001180999PL'),
           prnIssuance: { tonnageBand: 'up_to_500' },
-          status: { current: 'approved', timeline: [] }
+          status: { current: 'cancelled', timeline: [] }
         }
       ]
     )
 
-    expect(rows).toMatchObject([{ accreditations: 0, heldAccreditations: 0 }])
+    expect(rows).toMatchObject([{ accreditations: 1, heldAccreditations: 0 }])
   })
 
   it('counts a year only an external accreditation holds', async () => {

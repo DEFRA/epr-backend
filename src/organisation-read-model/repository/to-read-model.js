@@ -249,19 +249,22 @@ export function toRegistrationEntry(
     return null
   }
 
-  /** @type {([string, ReprocessorAccreditation | ExporterAccreditation] | null)[]} */
-  const accreditationEntries = [
-    ...accreditationsForRegistration(registration, organisation).map(
-      (accreditation) => toAccreditationEntry(accreditation, context)
-    ),
-    ...Object.entries(externalByRegistration.get(registrationNumber) ?? {})
-  ]
-  const accreditations = keyedRecords(
-    accreditationEntries,
-    (entry) => entry,
+  const storedAccreditations = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
+  const externalAccreditations =
+    externalByRegistration.get(registrationNumber) ?? {}
+  Object.keys(externalAccreditations)
+    .filter((year) => Object.hasOwn(storedAccreditations, year))
+    .forEach((year) =>
+      onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+      )
+    )
+  const accreditations = { ...storedAccreditations, ...externalAccreditations }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
