@@ -40,12 +40,12 @@ const registrationWasteRecordsExport = {
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
-   *   app: { organisation: Organisation }
+   *   app: { storedOrganisation: Organisation }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisation } = request.app
+    const { storedOrganisation: organisation } = request.app
     const { registrationNumber } = request.params
 
     // No single submission stands behind this export, so it is stamped with
