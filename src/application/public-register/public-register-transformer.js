@@ -1,52 +1,52 @@
 /**
- * Transforms organisation entities into public register row objects
+ * Transforms read-model organisations into public register row objects
  */
 
-/** @import {AccreditationStatus, Organisation, RegistrationStatus} from '#domain/organisations/model.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {AppliedForMaterial, Material, TonnageBand} from '#domain/organisations/model.js' */
+/** @import {Organisation, Registration, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
-/** @import {ReportComplianceData} from '#reports/application/report-compliance.js' */
+/** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
 
 import {
   ACCREDITATION_STATUS,
-  REGISTRATION_STATUS
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
   capitalize,
   formatAddress,
-  formatMaterial,
+  formatResolvedMaterial,
   formatTonnageBand,
   getAnnexIIProcess,
   uppercaseString
 } from '#common/helpers/formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
-import { storedRegistrationKey } from '#reports/domain/registration-key.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import chunk from 'lodash.chunk'
-import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
-
-// A registration's own status can never be suspended (suspension is an
-// accreditation-only concept), so suspended is excluded here.
-/** @type {Set<RegistrationStatus>} */
-const REGISTRATION_INCLUDED_STATUSES = new Set([
-  REGISTRATION_STATUS.APPROVED,
-  REGISTRATION_STATUS.CANCELLED
-])
-
-// Cancelled and suspended accreditations remain on the public register (BR-E8).
-/** @type {Set<AccreditationStatus>} */
-const ACCREDITATION_INCLUDED_STATUSES = new Set([
-  ACCREDITATION_STATUS.APPROVED,
-  ACCREDITATION_STATUS.SUSPENDED,
-  ACCREDITATION_STATUS.CANCELLED
-])
 
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
+/** @type {ReadonlySet<string>} */
+const GLASS_RECYCLING_PROCESSES = new Set(
+  Object.values(GLASS_RECYCLING_PROCESS)
+)
+
 /**
- * A registration with no compliance entry, as the read model does not serve it,
- * has no submittedDates, so every period is 'N/A'.
+ * Annex II lists glass by the material applied for, whatever its process.
+ *
+ * @param {Material} material
+ * @returns {AppliedForMaterial}
+ */
+const appliedForMaterial = (material) =>
+  GLASS_RECYCLING_PROCESSES.has(material)
+    ? MATERIAL.GLASS
+    : /** @type {AppliedForMaterial} */ (material)
+
+/**
+ * A period missing from submittedDates has no reporting obligation, so is 'N/A'.
  */
 function buildReportComplianceFields(periods, submittedDates) {
   return Object.fromEntries(
@@ -61,78 +61,67 @@ function buildReportComplianceFields(periods, submittedDates) {
 }
 
 /**
- * @param {Organisation} org
- * @param {*} registration
- * @param {*} accreditation
- * @param {Record<string, string>} reportComplianceFields
+ * @param {StatusTimeline} timeline
+ * @returns {string | undefined}
+ */
+const firstApprovedAt = (timeline) =>
+  timeline.find(({ status }) => status === ACCREDITATION_STATUS.APPROVED)?.at
 
+/**
+ * @param {StatusTimeline} timeline
+ * @returns {string | undefined}
+ */
+const lastRecordedAt = (timeline) =>
+  timeline
+    .map(({ updatedAt }) => updatedAt)
+    .toSorted((one, other) => one.localeCompare(other))
+    .at(-1)
+
+/**
+ * @param {Organisation} organisation
+ * @param {string} registrationNumber
+ * @param {Registration} registration
+ * @param {Record<string, string>} reportComplianceFields
  * @returns {PublicRegisterRow}
  */
 function transformRegAcc(
-  org,
+  organisation,
+  registrationNumber,
   registration,
-  accreditation,
   reportComplianceFields
 ) {
+  const accreditation = registration.accreditations[currentUtcYear()]
+  const timeline = accreditation?.status.timeline ?? []
   return {
     type: capitalize(registration.wasteProcessingType),
-    businessName: org.companyDetails.name,
-    companiesHouseNumber: org.companyDetails?.companiesHouseNumber || '',
-    organisationNumber: org.organisationNumber,
+    businessName: organisation.name,
+    companiesHouseNumber: organisation.companiesHouseNumber ?? '',
+    organisationNumber: organisation.organisationNumber,
     registeredOffice: formatAddress(
-      org.companyDetails.registeredAddress || org.companyDetails.address
+      organisation.registeredAddress ?? organisation.address
     ),
-    appropriateAgency: uppercaseString(registration.submittedToRegulator),
-    registrationNumber: registration.registrationNumber,
-    tradingName: org.companyDetails.tradingName || '',
-    reprocessingSite: formatAddress(registration.site?.address),
-    packagingWasteCategory: formatMaterial(
-      registration.material,
-      registration.glassRecyclingProcess
+    appropriateAgency: uppercaseString(registration.submittedToRegulator.code),
+    registrationNumber,
+    tradingName: organisation.tradingName ?? '',
+    reprocessingSite:
+      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+        ? formatAddress(registration.site.address)
+        : '',
+    packagingWasteCategory: formatResolvedMaterial(registration.material),
+    annexIIProcess: getAnnexIIProcess(
+      appliedForMaterial(registration.material)
     ),
-    annexIIProcess: getAnnexIIProcess(registration.material),
-    accreditationStatus: accreditation ? capitalize(accreditation.status) : '',
-    accreditationNo: accreditation?.accreditationNumber || '',
-    tonnageBand: formatTonnageBand(accreditation?.prnIssuance?.tonnageBand),
-    activeDate: formatDate(accreditation?.validFrom),
-    dateLastChanged: formatDate(getLastStatusUpdateDate(accreditation)),
+    accreditationStatus: accreditation
+      ? capitalize(accreditation.status.current)
+      : '',
+    accreditationNo: accreditation?.accreditationNumber ?? '',
+    tonnageBand: formatTonnageBand(
+      /** @type {TonnageBand} */ (accreditation?.prnIssuance.tonnageBand)
+    ),
+    activeDate: formatDate(firstApprovedAt(timeline)),
+    dateLastChanged: formatDate(lastRecordedAt(timeline)),
     ...reportComplianceFields
   }
-}
-
-function getLastStatusUpdateDate(item) {
-  const statusHistory = item?.statusHistory
-  return statusHistory
-    ? statusHistory[statusHistory.length - 1].updatedAt
-    : null
-}
-
-/**
- * @param {Registration} registration
- * @param {Accreditation[]} accreditations
- * @returns {Accreditation | null}
- */
-function getLinkedAccreditation(registration, accreditations) {
-  if (!registration.accreditationId) {
-    return null
-  }
-  return (
-    accreditations.find(
-      (acc) =>
-        acc.id === registration.accreditationId &&
-        isAccreditationInPublishableState(acc)
-    ) ?? null
-  )
-}
-
-/** @param {{ status: RegistrationStatus }} item */
-function isRegistrationInPublishableState(item) {
-  return REGISTRATION_INCLUDED_STATUSES.has(item.status)
-}
-
-/** @param {{ status: AccreditationStatus }} item */
-function isAccreditationInPublishableState(item) {
-  return ACCREDITATION_INCLUDED_STATUSES.has(item.status)
 }
 
 /**
@@ -140,38 +129,26 @@ function isAccreditationInPublishableState(item) {
  * @param {ReportComplianceData} reportComplianceData
  * @returns {PublicRegisterRow[]}
  */
-function processBatch(batch, reportComplianceData) {
-  const { periods, entries } = reportComplianceData
-  return batch
-    .filter((org) => !isTestOrganisation(org))
-    .flatMap((org) =>
-      org.registrations
-        .filter(isRegistrationInPublishableState)
-        .map((registration) => {
-          const accreditation = getLinkedAccreditation(
-            registration,
-            org.accreditations
-          )
-          const reportComplianceFields = buildReportComplianceFields(
-            periods,
-            entries.get(storedRegistrationKey(org, registration))
-              ?.submittedDates ?? new Map()
-          )
-          return transformRegAcc(
-            org,
-            registration,
-            accreditation,
-            reportComplianceFields
-          )
-        })
-    )
+function processBatch(batch, { periods, entries }) {
+  return reportableRegistrations(batch).map(
+    ({ organisation, registrationNumber, registration, key }) =>
+      transformRegAcc(
+        organisation,
+        registrationNumber,
+        registration,
+        buildReportComplianceFields(
+          periods,
+          /** @type {ReportComplianceEntry} */ (entries.get(key)).submittedDates
+        )
+      )
+  )
 }
 
 /**
  * Transforms organisations into public register row objects
  * Processes in chunks to avoid blocking event loop
- * @param {Organisation[]} organisations - Array of organisation entities
- * @param {ReportComplianceData} reportComplianceData - Compliance data to populate period columns
+ * @param {Organisation[]} organisations - Organisations as the read model serves them
+ * @param {ReportComplianceData} reportComplianceData - Compliance data for the same organisations, to populate period columns
  * @returns {Promise<PublicRegisterRow[]>} - Array of row objects ready for CSV export
  */
 export async function transform(organisations, reportComplianceData) {
