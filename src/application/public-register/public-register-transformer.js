@@ -3,7 +3,7 @@
  */
 
 /** @import {AppliedForMaterial, Material, TonnageBand} from '#domain/organisations/model.js' */
-/** @import {AccreditationCommon, Organisation, Registration, StatusTimeline} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
 
@@ -22,6 +22,7 @@ import {
   uppercaseString
 } from '#common/helpers/formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
@@ -60,15 +61,6 @@ function buildReportComplianceFields(periods, submittedDates) {
 }
 
 /**
- * @param {Registration} registration
- * @returns {AccreditationCommon | undefined}
- */
-const latestYearsAccreditation = ({ accreditations }) =>
-  Object.entries(accreditations)
-    .toSorted(([year], [otherYear]) => year.localeCompare(otherYear))
-    .at(-1)?.[1]
-
-/**
  * @param {StatusTimeline} timeline
  * @returns {string | undefined}
  */
@@ -98,7 +90,7 @@ function transformRegAcc(
   registration,
   reportComplianceFields
 ) {
-  const accreditation = latestYearsAccreditation(registration)
+  const accreditation = registration.accreditations[currentUtcYear()]
   const timeline = accreditation?.status.timeline ?? []
   return {
     type: capitalize(registration.wasteProcessingType),

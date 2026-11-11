@@ -3,7 +3,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { partialMock } from '#test/type-helpers.js'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
 
 /** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
@@ -123,6 +123,15 @@ const rowFor = async (registration) => {
 }
 
 describe('transform', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-01T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('produces a row with every field for an accredited reprocessor', async () => {
     const served = organisation({
       registrations: {
@@ -204,21 +213,24 @@ describe('transform', () => {
     }
   )
 
-  it("shows the latest year's accreditation", async () => {
+  it("shows the current year's accreditation, not next year's", async () => {
     const row = await rowFor(
       reprocessor({
         accreditations: {
-          2027: accreditation({
-            accreditationNumber: /** @type {any} */ ('A27')
+          2025: accreditation({
+            accreditationNumber: /** @type {any} */ ('A25')
           }),
           2026: accreditation({
             accreditationNumber: /** @type {any} */ ('A26')
+          }),
+          2027: accreditation({
+            accreditationNumber: /** @type {any} */ ('A27')
           })
         }
       })
     )
 
-    expect(row.accreditationNo).toBe('A27')
+    expect(row.accreditationNo).toBe('A26')
   })
 
   it('dates the accreditation active from its first approval', async () => {
