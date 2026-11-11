@@ -1,6 +1,3 @@
-import { onTestFinished } from 'vitest'
-
-import { config } from '#root/config.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
@@ -259,8 +256,6 @@ describe('diagnosePrnSiteAddresses', () => {
   })
 
   it('counts a year only an external accreditation holds', async () => {
-    config.set('openNextYear', true)
-    onTestFinished(() => config.reset('openNextYear'))
     const organisation = accreditedReprocessor({
       registrationAddress: FULL_ADDRESS_SITE
     })
@@ -270,8 +265,8 @@ describe('diagnosePrnSiteAddresses', () => {
       [
         {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          year: toYear(2027),
-          accreditationNumber: toAccreditationNumber('A27ER5001180999PL'),
+          year: toYear(2025),
+          accreditationNumber: toAccreditationNumber('A25ER5001180999PL'),
           prnIssuance: { tonnageBand: 'up_to_500' },
           status: { current: 'approved', timeline: [] }
         }

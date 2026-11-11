@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { config } from '#root/config.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -62,13 +61,11 @@ const accreditedIn2026 = () => {
 export const testExternalAccreditationsBehaviour = (it) => {
   describe('stored and external accreditations together', () => {
     beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
-      config.set('openNextYear', true)
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
     })
 
     afterEach(() => {
       vi.useRealTimers()
-      config.reset('openNextYear')
     })
 
     it("serves a registration's stored and external accreditations side by side, each by its year", async ({
@@ -121,7 +118,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
     it('leaves out an accreditation for a year not yet open, and its status dates', async ({
       organisationReadRepositoryWith
     }) => {
-      config.set('openNextYear', false)
+      vi.setSystemTime(new Date('2026-11-10'))
       const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],

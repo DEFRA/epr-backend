@@ -1,6 +1,3 @@
-import { onTestFinished } from 'vitest'
-
-import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -78,14 +75,13 @@ describe('runPrnSiteAddressDiagnostic', () => {
   })
 
   it('logs each finding, then the summary', async () => {
-    config.set('openNextYear', true)
-    onTestFinished(() => config.reset('openNextYear'))
     const differing = accreditation({
       site: { address: { line1: '7', postcode: 'SW2A 0AA' } }
     })
     const withoutSite = accreditation({
-      accreditationNumber: 'A27ER5001180114PL',
-      validFrom: '2027-01-01',
+      accreditationNumber: 'A25ER5001180114PL',
+      validFrom: '2025-01-01',
+      validTo: '2025-12-31',
       site: {}
     })
     const organisation = buildOrganisation({
@@ -123,7 +119,7 @@ describe('runPrnSiteAddressDiagnostic', () => {
       ],
       [
         {
-          message: `PRN site address finding: finding=noAccreditationSite organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180043PL accreditationNumber=A27ER5001180114PL year=2027 status=approved`
+          message: `PRN site address finding: finding=noAccreditationSite organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180043PL accreditationNumber=A25ER5001180114PL year=2025 status=approved`
         }
       ],
       [
