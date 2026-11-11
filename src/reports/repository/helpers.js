@@ -62,19 +62,25 @@ import { randomUUID } from 'node:crypto'
  */
 
 /**
- * Normalises a report's `stale` field to the current nested shape on read.
- * Logs at info when the document still carries the legacy flat shape, so the
- * number of un-migrated documents is observable — the back-compat branch in
- * `normaliseStale` is safe to remove once this stops firing (PAE-1755). Info,
- * not warn: old documents are expected, so this must not raise alerts.
+ * Normalises a stored report on read: drops the legacy database ids and
+ * brings `stale` to the current nested shape. Logs at info when the legacy
+ * flat `stale` shape is found, so the number of un-migrated documents is
+ * observable — the back-compat branch in `normaliseStale` is safe to remove
+ * once this stops firing (PAE-1755). Info, not warn: old documents are
+ * expected, so this must not raise alerts.
  *
  * @template {{ id?: string, stale?: Record<string, unknown> }} T
- * @param {T} report
+ * @param {T} stored
  * @returns {T}
  */
-export const mapReport = (report) => {
+export const mapReport = (stored) => {
+  const {
+    organisationId: _organisationId,
+    registrationId: _registrationId,
+    ...report
+  } = /** @type {Record<string, any>} */ (stored)
   if (!report.stale) {
-    return report
+    return /** @type {T} */ (report)
   }
   const strippedKeys = legacyStaleKeys(report.stale)
   if (strippedKeys.length > 0) {
@@ -87,7 +93,7 @@ export const mapReport = (report) => {
       }
     })
   }
-  return { ...report, stale: normaliseStale(report.stale) }
+  return /** @type {T} */ ({ ...report, stale: normaliseStale(report.stale) })
 }
 
 /**
