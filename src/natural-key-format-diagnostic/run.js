@@ -23,12 +23,12 @@ const formatMismatchLine = (row) =>
 
 /** @param {StartedServer} server */
 const runDiagnostic = async (server) => {
-  const organisationsRepository = (
+  const organisationAdministrationRepository = (
     await createOrganisationsRepository(server.db)
   )()
 
   const { rows, summary } = diagnoseNaturalKeyFormats(
-    await organisationsRepository.findAll()
+    await organisationAdministrationRepository.findAll()
   )
 
   for (const row of rows) {

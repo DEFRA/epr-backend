@@ -25,7 +25,7 @@ export const organisationsUnlink = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationLinkingRepository } = request
     const { organisationId, organisationNumber } = request.params
     const { version: currentVersion, linkedDefraOrganisation: linkedOrg } =
       request.app.storedOrganisation
@@ -34,7 +34,7 @@ export const organisationsUnlink = {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
-    await organisationsRepository.unlinkDefraOrganisation(
+    await organisationLinkingRepository.unlinkDefraOrganisation(
       organisationNumber,
       currentVersion
     )

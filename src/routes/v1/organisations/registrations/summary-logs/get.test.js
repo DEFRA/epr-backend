@@ -36,9 +36,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         summaryLogsRepository: summaryLogsRepositoryFactory
       }
     })

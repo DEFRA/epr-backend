@@ -185,7 +185,7 @@ const run = async ({
 
   const logger = { info: vi.fn(), warn: vi.fn() }
   const table = await buildReprocessorExporterTable({
-    organisationsRepository: createInMemoryOrganisationsRepository(
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
       organisations.map((organisation) => partialMock(organisation))
     )(),
     reportsRepository,

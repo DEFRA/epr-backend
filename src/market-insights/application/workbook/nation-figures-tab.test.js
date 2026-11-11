@@ -44,7 +44,7 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
@@ -105,7 +105,7 @@ const accreditedExporter = ({
 
 /**
  * @typedef {Object} Register
- * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @property {ReportsRepository} reportsRepository
  */
 
@@ -116,7 +116,7 @@ const accreditedExporter = ({
  * @returns {Register}
  */
 const newRegister = (exporters = []) => ({
-  organisationsRepository: createInMemoryOrganisationsRepository(
+  organisationAdministrationRepository: createInMemoryOrganisationsRepository(
     exporters.map(({ organisation }) => partialMock(organisation))
   )(),
   reportsRepository: createInMemoryReportsRepository()()
@@ -129,9 +129,14 @@ const newRegister = (exporters = []) => ({
  * @param {AccreditedFor & { regulator?: RegulatorValue }} operator
  */
 const seedOperator = (
-  { organisationsRepository },
+  { organisationAdministrationRepository },
   { regulator, ...accreditedFor }
-) => insertAccreditedOperator(organisationsRepository, regulator, accreditedFor)
+) =>
+  insertAccreditedOperator(
+    organisationAdministrationRepository,
+    regulator,
+    accreditedFor
+  )
 
 /**
  * Submits the operator's monthly report for one month of 2026.

@@ -19,26 +19,26 @@ describe('GET /v1/system-logs/search', () => {
   let server
   /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */
   let systemLogsRepository
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  /** @type {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} */
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const systemLogsRepositoryFactory = createSystemLogsRepository()
     systemLogsRepository = systemLogsRepositoryFactory(logger)
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
     server = await createTestServer({
       repositories: {
         systemLogsRepository: systemLogsRepositoryFactory,
-        organisationsRepository: organisationsRepositoryFactory
+        organisationAdministrationRepository: organisationsRepositoryFactory
       }
     })
   })
 
   const addOrganisation = async () => {
     const organisation = buildOrganisation()
-    await organisationsRepository.insert(organisation)
+    await organisationAdministrationRepository.insert(organisation)
     return organisation
   }
 

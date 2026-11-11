@@ -66,6 +66,18 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
  */
 
 /**
+ * Resolves a repository override for a request: a factory is called with the
+ * request's logger, an instance is returned as it is.
+ *
+ * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
+ * @returns {(request: {logger: import('#common/hapi-types.js').TypedLogger}) => any}
+ */
+const resolveOverride = (repositoryOrFactory) => (request) =>
+  typeof repositoryOrFactory === 'function'
+    ? repositoryOrFactory(request.logger)
+    : repositoryOrFactory
+
+/**
  * Creates a plugin that wraps a repository for request access.
  * Supports both factory functions (per-request instantiation) and direct instances.
  *
@@ -74,19 +86,35 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
  * @returns {import('@hapi/hapi').Plugin<void>}
  */
 function createRepositoryPlugin(name, repositoryOrFactory) {
-  const isFactory = typeof repositoryOrFactory === 'function'
-
   return {
     name,
     register: (server) => {
-      registerDependency(server, name, (request) => {
-        if (isFactory) {
-          // Factory: call with logger (ignored if factory doesn't need it)
-          return repositoryOrFactory(request.logger)
-        }
-        // Direct instance
-        return repositoryOrFactory
-      })
+      registerDependency(server, name, resolveOverride(repositoryOrFactory))
+    }
+  }
+}
+
+/**
+ * Serves one organisations store through both of its ports, so a test that
+ * seeds organisations through one port reads them through the other.
+ *
+ * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
+ * @returns {import('@hapi/hapi').Plugin<void>}
+ */
+function createOrganisationsRepositoryPlugin(repositoryOrFactory) {
+  return {
+    name: 'organisationsRepository',
+    register: (server) => {
+      registerDependency(
+        server,
+        'organisationAdministrationRepository',
+        resolveOverride(repositoryOrFactory)
+      )
+      registerDependency(
+        server,
+        'organisationLinkingRepository',
+        resolveOverride(repositoryOrFactory)
+      )
     }
   }
 }
@@ -106,11 +134,20 @@ const createDbPlugin = (db) => ({
   }
 })
 
-/** @type {{name: keyof ServerApp, createDefault: Function}[]} */
+/**
+ * @typedef {{
+ *   name: keyof ServerApp,
+ *   createDefault: Function,
+ *   createOverride?: (repositoryOrFactory: Function|Object) => import('@hapi/hapi').Plugin<void>
+ * }} RepositoryConfig
+ */
+
+/** @type {RepositoryConfig[]} */
 const repositoryConfigs = [
   {
-    name: 'organisationsRepository',
-    createDefault: createInMemoryOrganisationsRepositoryPlugin
+    name: 'organisationAdministrationRepository',
+    createDefault: createInMemoryOrganisationsRepositoryPlugin,
+    createOverride: createOrganisationsRepositoryPlugin
   },
   {
     name: 'summaryLogsRepository',
@@ -166,7 +203,7 @@ const repositoryConfigs = [
   }
 ]
 
-/** @type {{name: keyof ServerApp, createDefault: Function}[]} */
+/** @type {RepositoryConfig[]} */
 const devEndpointsRepositoryConfigs = [
   {
     name: 'nonProdDataReset',
@@ -184,16 +221,18 @@ const devEndpointsRepositoryConfigs = [
 
 /**
  * Builds repository plugins from config, applying any overrides.
- * @param {{name: keyof ServerApp, createDefault: Function}[]} configs - Repository configurations
- * @param {Object} repoOverrides - Repository overrides keyed by name
+ * @param {RepositoryConfig[]} configs - Repository configurations
+ * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
  * @returns {import('@hapi/hapi').Plugin<void>[]}
  */
 function buildRepositoryPlugins(configs, repoOverrides) {
-  return configs.map(({ name, createDefault }) => {
-    if (repoOverrides[name]) {
-      return createRepositoryPlugin(name, repoOverrides[name])
+  return configs.map(({ name, createDefault, createOverride }) => {
+    if (!repoOverrides[name]) {
+      return createDefault()
     }
-    return createDefault()
+    return createOverride
+      ? createOverride(repoOverrides[name])
+      : createRepositoryPlugin(name, repoOverrides[name])
   })
 }
 

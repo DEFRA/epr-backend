@@ -89,9 +89,8 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       server = await createTestServer({
         config: { featureFlags: { devEndpoints: true } },
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([fixture]),
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -196,9 +195,8 @@ describe('PUT /v1/dev/organisations/{id}', () => {
     const server = await createTestServer({
       config: { featureFlags: { devEndpoints: true } },
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(fixture)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(fixture)]),
         systemLogsRepository: createSystemLogsRepository()
       }
     })

@@ -21,7 +21,7 @@ import {
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
@@ -159,19 +159,19 @@ export const fetchPeriodicReports = async ({
  * @param {Object} params
  * @param {ProcessingType} params.processingType
  * @param {SubmittedSummaryLog} params.summaryLog
- * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OrganisationAdministrationRepository} params.organisationAdministrationRepository
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
  */
 export const resolveOverseasSitesContext = async ({
   processingType,
   summaryLog,
-  organisationsRepository,
+  organisationAdministrationRepository,
   overseasSitesRepository
 }) =>
   processingType === PROCESSING_TYPES.EXPORTER
     ? resolveOverseasSites(
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository,
         summaryLog.organisationNumber,
         summaryLog.registrationNumber

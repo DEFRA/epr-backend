@@ -10,9 +10,9 @@ const REPOSITORY_FILE = /\/repositor(y|ies)\//
 const REPOSITORY_PORT = /\/([^/]*-)?port\.js$/
 
 const DATABASE_ID =
-  /(organisation|registration|accreditation)Id|\b(organisationsRepository|organisationRepo)\.findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
+  /(organisation|registration|accreditation)Id|\b(organisations?(Administration|Linking)?Repository|organisationRepo)\.findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
 const LEGACY_FIND_ALL =
-  /\b(organisationsRepository|organisationRepo)\.findAll\(/
+  /\b(organisations?(Administration|Linking)?Repository|organisationRepo)\.findAll\(/
 const BUILDS_LEGACY_REPOSITORY = /\bcreateOrganisationsRepository\(/
 const FIND_ALL = /\.findAll\(/
 const ROUTE_PATH_PARAMETER =
@@ -105,7 +105,7 @@ export const MEASURES = [
   },
   {
     label: 'Files reading every organisation through the legacy repository',
-    rule: 'A file counts when it calls `findAll(` on the organisations repository, as `organisationsRepository.findAll(` or `organisationRepo.findAll(`, or when it builds that repository with `createOrganisationsRepository(` and calls `findAll(` on anything. Reads of one organisation and writes through the repository are not counted.',
+    rule: 'A file counts when it calls `findAll(` on the organisations repository, through either of its ports, such as `organisationAdministrationRepository.findAll(`, or when it builds that repository with `createOrganisationsRepository(` and calls `findAll(` on anything. Reads of one organisation and writes through the repository are not counted.',
     count: (source) =>
       LEGACY_FIND_ALL.test(source) ||
       (BUILDS_LEGACY_REPOSITORY.test(source) && FIND_ALL.test(source))

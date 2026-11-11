@@ -135,7 +135,8 @@ const startServer = async (
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository: organisationsRepositoryHolding(ledgerIds),
+      organisationAdministrationRepository:
+        organisationsRepositoryHolding(ledgerIds),
       reportsRepository: reportsRepositoryFactory
     }
   })
@@ -402,7 +403,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             throw new Error('Database connection lost')
           }
         }),
-        organisationsRepository: () => ({})
+        organisationAdministrationRepository: () => ({})
       }
     })
 
