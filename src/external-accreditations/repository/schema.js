@@ -24,6 +24,7 @@ export const externalAccreditationSchema = Joi.object({
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
+          updatedAt: isoDateTimeString().required(),
           status: accreditationStatusSchema.required()
         })
       )

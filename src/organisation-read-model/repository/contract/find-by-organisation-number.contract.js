@@ -75,7 +75,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           timeline: [
             {
               status: 'created',
-              at: new Date(stored.statusHistory[0].updatedAt).toISOString()
+              at: new Date(stored.statusHistory[0].updatedAt).toISOString(),
+              updatedAt: new Date(
+                stored.statusHistory[0].updatedAt
+              ).toISOString()
             }
           ]
         },
