@@ -25,6 +25,18 @@ export const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
 export const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
 
 /**
+ * Reads the organisation document matching `filter` once.
+ *
+ * @param {Db} db
+ * @param {Filter<Document>} filter
+ * @returns {Promise<Organisation | null>}
+ */
+export const findOne = async (db, filter) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+  return doc ? mapDocumentWithCurrentStatuses(doc) : null
+}
+
+/**
  * Reads the one organisation `filter` matches, retrying until its version is
  * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
  * null when no organisation matches, and throws 500 when the version never
@@ -44,17 +56,21 @@ export const findOneAtMinimumVersion = async (
   filter,
   minimumVersion
 ) => {
+  if (minimumVersion === undefined) {
+    return findOne(db, filter)
+  }
+
   for (let i = 0; i < maxRetries; i++) {
     const doc = await db.collection(COLLECTION_NAME).findOne(filter)
 
     const isLastRetry = i === maxRetries - 1
 
     if (doc) {
-      if (minimumVersion === undefined || doc.version >= minimumVersion) {
+      if (doc.version >= minimumVersion) {
         return mapDocumentWithCurrentStatuses(doc)
       }
       // Document exists but version too low - will retry
-    } else if (minimumVersion === undefined || isLastRetry) {
+    } else if (isLastRetry) {
       return null
     } else {
       // Document not found but have retries left - will retry

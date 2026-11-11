@@ -30,6 +30,7 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
+    "#summary-log-scope-backfill/*": "./src/summary-log-scope-backfill/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",
@@ -119,23 +120,23 @@
     "uuid": "14.0.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "5.1.0",
     "@vitest/eslint-plugin": "1.6.28",
     "eslint": "9.39.2",
     "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-import-x": "4.17.1",
     "eslint-plugin-n": "18.5.0",
     "husky": "9.1.7",
-    "knip": "6.44.0",
+    "knip": "6.44.1",
     "lint-staged": "17.6.0",
     "msw": "3.0.3",
     "neostandard": "0.14.1",
     "nodemon": "3.1.14",
     "prettier": "3.9.10",
     "testcontainers": "12.2.1",
-    "tinybench": "6.2.2",
+    "tinybench": "6.2.3",
     "typescript": "7.0.2",
-    "vitest": "5.0.5",
+    "vitest": "5.1.0",
     "vitest-mongodb": "1.0.3"
   }
 }

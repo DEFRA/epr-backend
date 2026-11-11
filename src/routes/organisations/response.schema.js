@@ -10,6 +10,10 @@ import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
+  accreditedOverseasSitesSchema,
+  orsIdKey
+} from '#common/validation/overseas-site-schema.js'
+import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
@@ -29,7 +33,6 @@ const regulatorSchema = Joi.object({
 }).required()
 
 const yearKey = Joi.string().pattern(/^\d{4}$/)
-const orsIdKey = Joi.string().pattern(/^\d{3}$/)
 
 const isoDate = isoDateString()
 
@@ -52,22 +55,16 @@ const overseasSitesViewSchema = Joi.object()
   .pattern(orsIdKey, overseasSiteViewSchema)
   .required()
 
-const accreditedOverseasSiteViewSchema = Joi.alternatives().try(
-  Joi.object({ status: Joi.string().valid('pending').required() }),
-  Joi.object({
-    approvedOn: isoDate.required(),
-    status: Joi.string().valid('approved').required()
-  })
-)
-
-const accreditedOverseasSitesViewSchema = Joi.object()
-  .pattern(orsIdKey, accreditedOverseasSiteViewSchema)
-  .required()
+const accreditedOverseasSitesViewSchema =
+  accreditedOverseasSitesSchema.required()
 
 const statusTimelineSchema = Joi.array()
   .items(
     Joi.object({
-      at: isoDateTime.required(),
+      at: isoDateTime.required().description('When the change takes effect.'),
+      updatedAt: isoDateTime
+        .required()
+        .description('When the change was recorded.'),
       status: Joi.string().required()
     })
   )

@@ -18,6 +18,7 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnosePrnSiteAddresses } from './diagnose-prn-site-addresses.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
@@ -25,7 +26,7 @@ import { diagnosePrnSiteAddresses } from './diagnose-prn-site-addresses.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const TODAY = '2026-11-10'
+const TODAY = toCalendarDate(new Date('2026-11-10'))
 
 const REGISTRATION_SITE = {
   line1: '7 Glass processing site',

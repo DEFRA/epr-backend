@@ -19,7 +19,7 @@ const organisationOf = (...timelines) =>
 const approvedFrom = (date, accreditations = {}) => ({
   status: {
     current: /** @type {const} */ ('approved'),
-    timeline: [{ status: 'approved', at: date }]
+    timeline: [{ status: 'approved', at: date, updatedAt: date }]
   },
   accreditations
 })

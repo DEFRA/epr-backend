@@ -38,8 +38,8 @@ const accreditationIn = (accreditations, year) =>
 /**
  * The organisation as it stood in `year`: registrations approved at any point
  * in it, each with only that year's accreditation and status dates.
- * Organisation and registration statuses are those at the end of the year, or
- * today while the year is current.
+ * Organisation and registration statuses are those at the earlier point in time
+ * of the end of the `year` or the provided `statusDate`.
  *
  * @param {Organisation} organisation
  * @param {Year} year
