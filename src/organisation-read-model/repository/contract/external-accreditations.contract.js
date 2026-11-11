@@ -417,6 +417,35 @@ export const testExternalAccreditationsBehaviour = (it) => {
       })
     })
 
+    it("drops the overseas sites from a reprocessor's external accreditation, and logs it", async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation({ registrations: [reprocessor()] })
+      const logger = { warn: vi.fn() }
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        externalAccreditations: [
+          buildExternalAccreditation({
+            registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+            overseasSites: { '001': { status: 'pending' } }
+          })
+        ],
+        logger
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
+      ).toStrictEqual(externalAccreditation2027)
+      expect(logger.warn).toHaveBeenCalledWith({
+        message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 lists overseas sites, but a reprocessor has none`
+      })
+    })
+
     it('serves only stored accreditations from find, which does not read external ones yet', async ({
       organisationReadRepositoryWith
     }) => {

@@ -338,8 +338,34 @@ function toReprocessorRegistration(
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
     site: { address },
-    accreditations
+    accreditations: withoutOverseasSites(
+      accreditations,
+      registrationNumber,
+      onDrop
+    )
   }
+}
+
+/**
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {StoredRegistration['registrationNumber']} registrationNumber
+ * @param {OnDrop} onDrop
+ * @returns {Record<string, ReprocessorAccreditation>}
+ */
+function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
+  return Object.fromEntries(
+    Object.entries(accreditations).map(([year, accreditation]) => {
+      if (!('overseasSites' in accreditation)) {
+        return [year, accreditation]
+      }
+      onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} lists overseas sites, but a reprocessor has none`
+      )
+      const { overseasSites: _overseasSites, ...reprocessorAccreditation } =
+        accreditation
+      return [year, reprocessorAccreditation]
+    })
+  )
 }
 
 /**
