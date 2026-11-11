@@ -13,6 +13,7 @@ import {
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 
 export const SITE_FINDING = Object.freeze({
   FULL_ADDRESS_ONLY: 'fullAddressOnly',
@@ -150,7 +151,7 @@ const servedReprocessor = (registration, organisation, context) => {
 
 /**
  * @param {ExternalAccreditation[]} externalAccreditations
- * @param {string} today
+ * @param {CalendarDate} today
  */
 const readContext = (externalAccreditations, today) => ({
   onDrop: () => {},
@@ -167,7 +168,7 @@ const readContext = (externalAccreditations, today) => ({
  *
  * @param {Organisation[]} organisations
  * @param {ExternalAccreditation[]} externalAccreditations
- * @param {string} today - ISO 8601 date
+ * @param {CalendarDate} today - ISO 8601 date
  * @returns {{ rows: SiteAddressRow[], summary: SiteAddressSummary }}
  */
 export const diagnosePrnSiteAddresses = (
