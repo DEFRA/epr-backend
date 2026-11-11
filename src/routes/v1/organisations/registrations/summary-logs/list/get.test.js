@@ -5,10 +5,9 @@ import { ObjectId } from 'mongodb'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import {
@@ -52,8 +51,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
+        organisationReadRepository: await organisationReadRepositoryOf([
+          organisation
+        ]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })

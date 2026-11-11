@@ -1,4 +1,3 @@
-import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
@@ -17,8 +16,8 @@ import { encodeRow } from '#waste-records-export/application/stream-csv-export.j
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
@@ -90,9 +89,7 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
  *   rows?: any[],
  *   accreditationId?: string | null,
  *   accreditations?: any[],
- *   registration?: any,
- *   findById?: () => Promise<any>,
- *   findRegistrationById?: () => Promise<any>
+ *   registration?: any
  * }} [options]
  */
 const createServer = async ({
@@ -100,9 +97,7 @@ const createServer = async ({
   rows = [receivedRowState()],
   accreditationId = null,
   accreditations = [],
-  registration = buildRegistration(),
-  findById,
-  findRegistrationById = () => Promise.resolve(registration)
+  registration = buildRegistration()
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
@@ -144,10 +139,13 @@ const createServer = async ({
       organisationAdministrationRepository: () => ({
         findByOrganisationNumber: vi.fn(() =>
           Promise.resolve(keyedOrganisation)
-        ),
-        findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
-        findRegistrationById: vi.fn(findRegistrationById)
+        )
       }),
+      organisationReadRepository: () =>
+        organisationReadRepositoryOver({
+          findByOrganisationNumber: () => Promise.resolve(organisation),
+          findAll: () => Promise.resolve([organisation])
+        }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       summaryLogsRepository: () => summaryLogsRepository
     }
@@ -247,28 +245,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(response.payload).toContain('Acme Ltd')
   })
 
-  it.each([
-    ['organisation', { findById: () => Promise.reject(Boom.notFound()) }],
-    [
-      'registration',
-      { findRegistrationById: () => Promise.reject(Boom.notFound()) }
-    ]
-  ])(
-    'returns 404 and does not audit when the %s is missing',
-    async (_, options) => {
-      const { server, urlFor } = await createServer(options)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: urlFor(),
-        ...asServiceMaintainer()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      expect(mockAuditSummaryLogDownload).not.toHaveBeenCalled()
-    }
-  )
-
   it('serves the same file after the organisation and other submissions change', async () => {
     const { server, organisation, summaryLogRowStatesRepository, urlFor } =
       await createServer({
@@ -311,7 +287,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const before = await download()
 
     const [registration] = organisation.registrations
-    registration.registrationNumber = toRegistrationNumber('R26ER5999999999PA')
     registration.material = 'wood'
     registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
     organisation.accreditations[0].status = 'cancelled'

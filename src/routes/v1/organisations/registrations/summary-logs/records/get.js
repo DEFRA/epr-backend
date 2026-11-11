@@ -5,11 +5,11 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { metaText } from '#domain/summary-logs/stored-meta.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { ResolvedParams } from '#routes/organisations/at-natural-keys.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -49,7 +49,6 @@ export const summaryLogRecordsCsv = {
   /**
    * @param {HapiRequest & {
    *   params: ResolvedParams & { fileId: SummaryLogFileId },
-   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
@@ -78,12 +77,8 @@ export const summaryLogRecordsCsv = {
       throw Boom.notFound('Summary log file not found')
     }
 
-    const [org, registration, rowStates] = await Promise.all([
-      request.organisationAdministrationRepository.findById(organisationId),
-      request.organisationAdministrationRepository.findRegistrationById(
-        organisationId,
-        registrationId
-      ),
+    const [{ organisation, registration }, rowStates] = await Promise.all([
+      findOrganisationAndRegistrationReadModels(request),
       request.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
         organisationNumber,
         registrationNumber,
@@ -103,7 +98,7 @@ export const summaryLogRecordsCsv = {
     const response = h
       .response(
         streamSubmissionCsvToReadable({
-          org,
+          org: organisation,
           registration,
           meta: summaryLog.meta,
           submittedAt: summaryLog.submittedAt,

@@ -8,14 +8,13 @@ import {
 } from '#common/enums/index.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import {
-  findRegistrationByNumber,
+  findOrganisationAndRegistrationReadModels,
   registrationParams,
   registrationPath
 } from '#routes/organisations/natural-keys.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -42,27 +41,16 @@ export const summaryLogsList = {
    * @param {HapiRequest & {
    *   params: RegistrationParams,
    *   query: { year: Year },
-   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const {
-      organisationAdministrationRepository,
-      summaryLogsRepository,
-      params,
-      query,
-      logger
-    } = request
+    const { summaryLogsRepository, params, query, logger } = request
     const { organisationNumber, registrationNumber } = params
     const { year } = query
 
-    await findRegistrationByNumber(
-      organisationAdministrationRepository,
-      organisationNumber,
-      registrationNumber
-    )
+    await findOrganisationAndRegistrationReadModels(request)
 
     try {
       const summaryLogs = await summaryLogsRepository.findAll({
