@@ -47,21 +47,10 @@ export const processImportFile = async (
     user
   }
 ) => {
-  let metadata
-  let sites
-  let errors
+  const { metadata, sites, errors } = await parseSpreadsheet(buffer, logger)
 
-  try {
-    ;({ metadata, sites, errors } = await parse(buffer))
-  } catch (err) {
-    if (err instanceof SpreadsheetValidationError) {
-      logger.warn({
-        err,
-        message: `Invalid ORS spreadsheet structure: ${err.message}`
-      })
-      return failureResult(null, [{ field: 'file', message: err.message }])
-    }
-    throw err
+  if (!metadata) {
+    return failureResult(null, errors)
   }
 
   if (errors.length > 0) {
@@ -121,6 +110,32 @@ export const processImportFile = async (
     mappingsUpdated,
     registrationNumber: metadata.registrationNumber,
     errors: []
+  }
+}
+
+/**
+ * Parses the spreadsheet, reporting a file whose structure is invalid as a
+ * file error without metadata.
+ *
+ * @param {Buffer} buffer
+ * @param {TypedLogger} logger
+ */
+const parseSpreadsheet = async (buffer, logger) => {
+  try {
+    return await parse(buffer)
+  } catch (err) {
+    if (err instanceof SpreadsheetValidationError) {
+      logger.warn({
+        err,
+        message: `Invalid ORS spreadsheet structure: ${err.message}`
+      })
+      return {
+        metadata: null,
+        sites: [],
+        errors: [{ field: 'file', message: err.message }]
+      }
+    }
+    throw err
   }
 }
 
