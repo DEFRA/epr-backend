@@ -171,6 +171,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('a year the read model holds as an external accreditation', () => {
+    const STORED_ONLY_NUMBER = 'R26ER5001189999PL'
     const stored2027 = accreditation({
       validFrom: '2027-01-01',
       validTo: '2027-12-31'
@@ -187,6 +188,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       validTo: '2029-12-31'
     })
     /** @type {Organisation} */
+    const storedOnlyOrganisation = partialMock(
+      buildOrganisation({
+        registrations: [
+          reprocessor({
+            registrationNumber: STORED_ONLY_NUMBER,
+            accreditationId: stored2027.id
+          })
+        ],
+        accreditations: [stored2027]
+      })
+    )
+    /** @type {Organisation} */
     const notYetOpenOrganisation = partialMock(
       buildOrganisation({
         registrations: [reprocessor({ accreditationId: stored2029.id })],
@@ -202,12 +215,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            organisation,
-            notYetOpenOrganisation
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([
+              organisation,
+              storedOnlyOrganisation,
+              notYetOpenOrganisation
+            ]),
           organisationReadRepository: await organisationReadRepositoryOf(
-            [organisation, notYetOpenOrganisation],
+            [organisation, storedOnlyOrganisation, notYetOpenOrganisation],
             {
               externalAccreditations: [
                 buildExternalAccreditation({
@@ -226,6 +241,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     afterAll(async () => {
       await server.stop()
       vi.useRealTimers()
+    })
+
+    it('accepts an accredited upload where no external accreditation overlays the stored one', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/organisations/${storedOnlyOrganisation.organisationNumber}/registrations/${STORED_ONLY_NUMBER}/accreditations/2027/summary-log`,
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('refuses an accredited upload over the stored accreditation', async () => {

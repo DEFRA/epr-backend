@@ -259,6 +259,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrations: [reprocessor({ accreditationId: stored2027.id })],
       accreditations: [stored2027]
     })
+    const STORED_ONLY_NUMBER = 'R26ER5001189999PL'
+    const storedOnlyOrganisation = buildOrganisation({
+      registrations: [
+        reprocessor({
+          registrationNumber: STORED_ONLY_NUMBER,
+          accreditationId: stored2027.id
+        })
+      ],
+      accreditations: [stored2027]
+    })
 
     let overlaidServer
     let overlaidSummaryLogsRepository
@@ -272,11 +282,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       overlaidServer = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            partialMock(overlaidOrganisation)
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([
+              partialMock(overlaidOrganisation),
+              partialMock(storedOnlyOrganisation)
+            ]),
           organisationReadRepository: await organisationReadRepositoryOf(
-            [overlaidOrganisation],
+            [overlaidOrganisation, storedOnlyOrganisation],
             {
               externalAccreditations: [
                 buildExternalAccreditation({
@@ -295,6 +307,27 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     afterAll(async () => {
       await overlaidServer.stop()
       vi.useRealTimers()
+    })
+
+    it('stores an accredited upload where no external accreditation overlays the stored one', async () => {
+      const summaryLogId = randomUUID()
+
+      const response = await overlaidServer.inject({
+        method: 'POST',
+        url: `/organisations/${storedOnlyOrganisation.organisationNumber}/registrations/${STORED_ONLY_NUMBER}/accreditations/2027/summary-log/${summaryLogId}/upload-completed`,
+        payload: createCompletePayload('file-stored-only')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+      const stored = await waitForVersion(
+        overlaidSummaryLogsRepository,
+        summaryLogId,
+        1
+      )
+      expect(stored.summaryLog).toMatchObject({
+        year: 2027,
+        accreditationNumber: ACCREDITATION_NUMBER
+      })
     })
 
     it('refuses the accredited upload over the stored accreditation, and stores nothing', async () => {
