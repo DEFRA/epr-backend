@@ -21,27 +21,26 @@ function formatDateYYYYMMDD(date) {
 /**
  * Generates the public register by processing organisation data and storing it
  *
- * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationRepo - Organisation repository
- * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model, for the report compliance columns
+ * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
  * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepo - Public register repository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository - Reports repository
  * @returns {Promise<import('#domain/public-register/repository/port.js').PresignedUrlResult>} Pre-signed URL with expiry info for the generated public register file
  */
 export async function generatePublicRegister(
-  organisationRepo,
   organisationReadRepository,
   publicRegisterRepo,
   reportsRepository
 ) {
   logger.info({ message: 'Public register generation started' })
 
-  const [organisations, complianceData] = await Promise.all([
-    organisationRepo.findAll(),
-    generateReportCompliance(organisationReadRepository, reportsRepository)
-  ])
+  const organisations = await organisationReadRepository.findAll()
   logger.info({
-    message: `Retrieved ${organisations.length} organisations from repository`
+    message: `Retrieved ${organisations.length} organisations from the read model`
   })
+  const complianceData = await generateReportCompliance(
+    organisations,
+    reportsRepository
+  )
 
   logger.info({
     message: 'Starting transformation of organisations to public register rows'

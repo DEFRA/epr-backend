@@ -172,7 +172,11 @@ export const accreditationStatusHistory = {
       id,
       version + 1
     )
-    await auditOrganisationUpdate(request, id, initial, updated)
+    await auditOrganisationUpdate(request, id, initial, updated, {
+      registrationNumber: registration.registrationNumber,
+      accreditationNumber:
+        grant?.accreditationNumber ?? accreditation.accreditationNumber
+    })
 
     return h.response({ status: toStatus }).code(StatusCodes.OK)
   }

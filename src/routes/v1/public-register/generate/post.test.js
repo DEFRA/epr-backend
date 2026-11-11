@@ -10,6 +10,10 @@ import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/p
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import {
+  emptyOrganisationReadRepository,
+  organisationReadRepositoryFrom
+} from '#vite/helpers/organisation-read-model.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -26,9 +30,6 @@ const { validToken, readOnlyMaintainerToken } = entraIdMockAuthTokens
 describe(`POST ${publicRegisterGeneratePath}`, () => {
   setupAuthContext()
   let server
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let inMemoryOrganisationsRepository
-  let inMemoryOrganisationsRepositoryFactory
 
   /** @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
   let inMemoryPublicRegisterRepository
@@ -36,14 +37,13 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   beforeEach(async () => {
     mockAuditPublicRegisterGenerate.mockClear()
     inMemoryPublicRegisterRepository = createInMemoryPublicRegisterRepository()
-    inMemoryOrganisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    inMemoryOrganisationsRepository = inMemoryOrganisationsRepositoryFactory()
-    await buildApprovedOrg(inMemoryOrganisationsRepository)
+    const organisationsRepository = createInMemoryOrganisationsRepository()()
+    await buildApprovedOrg(organisationsRepository)
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          inMemoryOrganisationsRepositoryFactory,
+        organisationReadRepository: await organisationReadRepositoryFrom(
+          organisationsRepository
+        ),
         publicRegisterRepository: inMemoryPublicRegisterRepository
       }
     })
@@ -100,9 +100,8 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
 
   describe('error handling', () => {
     it('returns 500 when public register generation fails', async () => {
-      // Create a factory that returns a repository that throws an error
-      const failingOrganisationsRepositoryFactory = () => ({
-        ...inMemoryOrganisationsRepository,
+      const failingOrganisationReadRepository = () => ({
+        ...emptyOrganisationReadRepository(),
         findAll: async () => {
           throw new Error('Database error')
         }
@@ -110,8 +109,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
 
       server = await createTestServer({
         repositories: {
-          organisationAdministrationRepository:
-            failingOrganisationsRepositoryFactory,
+          organisationReadRepository: failingOrganisationReadRepository,
           publicRegisterRepository: inMemoryPublicRegisterRepository
         }
       })

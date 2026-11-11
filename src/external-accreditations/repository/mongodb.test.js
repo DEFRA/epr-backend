@@ -141,6 +141,22 @@ describe('mongodb external accreditations repository', () => {
 
       expect(await held()).toStrictEqual([buildExternalAccreditation()])
     })
+
+    it("holds an exporter accreditation's overseas sites", async ({
+      externalAccreditationsRepository,
+      held
+    }) => {
+      const exporterAccreditation = buildExternalAccreditation({
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2027-01-01' },
+          '002': { status: 'pending' }
+        }
+      })
+
+      await externalAccreditationsRepository.upsert(exporterAccreditation)
+
+      expect(await held()).toStrictEqual([exporterAccreditation])
+    })
   })
 
   describe('remove', () => {
@@ -267,6 +283,20 @@ describe('mongodb external accreditations repository', () => {
         description: 'an unknown tonnage band',
         accreditation: buildExternalAccreditation({
           prnIssuance: { tonnageBand: 'lots' }
+        })
+      },
+      {
+        description: 'an approved overseas site without its approval date',
+        accreditation: buildExternalAccreditation({
+          overseasSites: {
+            '001': /** @type {any} */ ({ status: 'approved' })
+          }
+        })
+      },
+      {
+        description: 'an overseas site keyed by something other than an ORS id',
+        accreditation: buildExternalAccreditation({
+          overseasSites: { abc: { status: 'pending' } }
         })
       }
     ])(

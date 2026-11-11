@@ -197,13 +197,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
     it('keys an accreditation by the year of its validFrom', async ({
       organisationReadRepositoryWith
     }) => {
-      const granted2027 = accreditation({
-        validFrom: '2027-01-01',
-        validTo: '2027-12-31'
+      const granted2025 = accreditation({
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31'
       })
       const stored = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: granted2027.id })],
-        accreditations: [granted2027]
+        registrations: [reprocessor({ accreditationId: granted2025.id })],
+        accreditations: [granted2025]
       })
       const repository = await organisationReadRepositoryWith({
         organisations: [stored]
@@ -218,7 +218,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         Object.keys(
           organisation.registrations[REPROCESSOR_NUMBER].accreditations
         )
-      ).toEqual(['2027'])
+      ).toEqual(['2025'])
     })
 
     it('gives the site address parts without a town, and as submitted, when ingest could not find its town', async ({
@@ -355,6 +355,31 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       )
 
       expect(organisation).toMatchObject({ registeredAddress, address })
+    })
+
+    it('gives a non-UK organisation address that has no postcode', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const address = {
+        line1: '3 Rue de Rivoli',
+        town: 'Paris',
+        region: 'Île-de-France',
+        country: 'France'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', address }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation.address).toStrictEqual(address)
     })
 
     it('gives the registered address only as submitted, with its country, when ingest could not split it', async ({

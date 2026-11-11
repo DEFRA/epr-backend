@@ -6,8 +6,11 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   MATERIAL,
-  GLASS_RECYCLING_PROCESS
+  GLASS_RECYCLING_PROCESS,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME,
@@ -26,11 +29,22 @@ const ORGANISATION_NUMBERS = {
   '507f1f77bcf86cd799439013': 999999
 }
 
+const approvedStatusHistory = [
+  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+]
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
 const createOrganisation = (id, registrations) => ({
   _id: new ObjectId(id),
   orgId: ORGANISATION_NUMBERS[id],
+  companyDetails: { name: `Organisation ${ORGANISATION_NUMBERS[id]}` },
+  statusHistory: approvedStatusHistory,
+  submittedToRegulator: 'ea',
+  submitterContactDetails: contact,
+  users: [],
   version: 1,
   schemaVersion: 1,
+  accreditations: [],
   registrations
 })
 
@@ -39,8 +53,14 @@ const registrationNumberFor = (registrationId) => `R-${registrationId}`
 const createRegistration = (id, material, glassRecyclingProcess) => ({
   id,
   registrationNumber: registrationNumberFor(id),
+  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
   material,
-  status: 'approved',
+  statusHistory: approvedStatusHistory,
+  validFrom: '2026-01-01',
+  submittedToRegulator: 'ea',
+  applicationContactDetails: contact,
+  submitterContactDetails: contact,
+  approvedPersons: [],
   ...(glassRecyclingProcess && { glassRecyclingProcess })
 })
 
@@ -174,6 +194,10 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
   let db
   let ledgerRepository
+  let organisationReadRepository
+
+  const aggregate = () =>
+    aggregateTonnageByMaterial(db, ledgerRepository, organisationReadRepository)
 
   /**
    * Insert row states and record one submitted summary log per distinct ledger
@@ -217,6 +241,10 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).deleteMany({})
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
       ledgerRepository = (await createMongoLedgerRepository(db))()
+      organisationReadRepository = createOrganisationReadRepository(db)({
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: { warn: () => {} }
+      })
     }
   )
 
@@ -238,7 +266,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterRowState(orgId1, regId1, 50, '2026-01-16')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     // Verify plastic Exporter has data
     expect(result.materials).toContainEqual({
@@ -317,7 +345,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterInterimSiteRowState(orgId1, regId1, 25, '2026-01-16')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
@@ -348,7 +376,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterRowState(orgId1, regId1, 40, '2026-01-16')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
@@ -379,7 +407,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createReprocessorInputRowState(orgId1, regId1, 80, '2026-01-11')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
@@ -415,7 +443,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterRowState(orgId1, regId4, 75, '2026-01-15')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
@@ -452,7 +480,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createReprocessorInputRowState(orgId1, regId1, 300, '2026-01-11')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PAPER,
@@ -479,7 +507,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createReprocessorOutputRowState(orgId1, regId1, 50, '2026-01-21')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.STEEL,
@@ -515,7 +543,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createReprocessorInputRowState(orgId2, regId3, 200, '2026-01-15')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -548,6 +576,38 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       ]
     })
     expect(result.total).toBe(350)
+  })
+
+  it('sums tonnage across registrations of the same material', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertMany([
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC)
+        ]),
+        createOrganisation(orgId2, [
+          createRegistration(regId2, MATERIAL.PLASTIC)
+        ])
+      ])
+
+    await submitRows([
+      createExporterRowState(orgId1, regId1, 100, '2026-01-15'),
+      createExporterRowState(orgId2, regId2, 40, '2026-01-20')
+    ])
+
+    const result = await aggregate()
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 140 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
+    })
+    expect(result.total).toBe(140)
   })
 
   it('includes only the row states from the latest submitted summary log, excluding superseded states', async () => {
@@ -586,7 +646,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       })
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -614,7 +674,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
       .insertOne(createExporterRowState(orgId1, regId1, 100, '2026-01-15'))
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.total).toBe(0)
   })
@@ -650,7 +710,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       }
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.total).toBe(100)
   })
@@ -706,7 +766,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       })
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.total).toBe(130)
   })
@@ -734,7 +794,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       })
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.ALUMINIUM,
@@ -777,7 +837,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       })
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -804,7 +864,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterRowState(orgId1, regId1, 0, '2026-01-16')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.WOOD,
@@ -820,7 +880,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
   })
 
   it('returns zero tonnage rows by material and type when no data exists', async () => {
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     // With pivoted structure: 8 materials × 2 types = 16 entries (each with months array)
     const expectedCount = 8 * 2
@@ -837,7 +897,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
   it('returns generatedAt timestamp', async () => {
     const before = new Date().toISOString()
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
     const after = new Date().toISOString()
 
     expect(result.generatedAt).toBeDefined()
@@ -868,7 +928,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       })
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.FIBRE,
@@ -902,7 +962,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       createExporterRowState(orgId1, regId1, 100, '2026-01-15')
     ])
 
-    const result = await aggregateTonnageByMaterial(db, ledgerRepository)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,

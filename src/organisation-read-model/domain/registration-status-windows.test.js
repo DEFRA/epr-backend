@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { standingByDate } from './standing-by-date.js'
+import { standingByDate } from './registration-standing.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 
 import { buildSystemLog } from './contract/test-data.js'
 
-/** @import {SystemLogsRepository} from './port.js' */
+/** @import {SystemLog, SystemLogsRepository} from './port.js' */
 
 const DEFAULT_LIMIT = 100
 
@@ -692,5 +692,42 @@ export const testSystemLogsRepositoryContract = (it) => {
 
       await expect(repository.insertMany([])).resolves.toBeUndefined()
     })
+  })
+
+  describe('a context field left undefined', () => {
+    /**
+     * @param {string} userId
+     * @returns {SystemLog}
+     */
+    const withUndefinedNumber = (userId) => {
+      const log = buildSystemLog({ userId })
+      return {
+        ...log,
+        context: { ...log.context, accreditationNumber: undefined }
+      }
+    }
+
+    /** @type {Array<[string, (repository: SystemLogsRepository, log: SystemLog) => Promise<void>]>} */
+    const writes = [
+      ['insert', (repository, log) => repository.insert(log)],
+      ['insertMany', (repository, log) => repository.insertMany([log])]
+    ]
+
+    it.for(writes)(
+      'is not recorded as null by %s',
+      async ([, write], { systemLogsRepository }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+        const userId = randomUUID()
+
+        await write(repository, withUndefinedNumber(userId))
+
+        const { systemLogs } = await repository.find({
+          userId,
+          limit: DEFAULT_LIMIT
+        })
+        expect(systemLogs[0].context.accreditationNumber).toBeUndefined()
+      }
+    )
   })
 }

@@ -94,7 +94,10 @@ export const summaryLogRecordsCsv = {
     await auditSummaryLogDownload(request, {
       summaryLogId: fileId,
       organisationId,
-      registrationId
+      registrationId,
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber: summaryLog.accreditationNumber
     })
 
     const response = h

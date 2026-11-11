@@ -8,6 +8,7 @@ import { summaryLogUploadsReportPath } from './get.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
@@ -21,18 +22,17 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
 
   let server
-  let organisationAdministrationRepository
+  let organisationsRepository
   let summaryLogsRepository
 
   beforeAll(async () => {
-    organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository()()
+    organisationsRepository = createInMemoryOrganisationsRepository()()
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository: () =>
-          organisationAdministrationRepository,
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -47,7 +47,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   describe('successful requests', () => {
     it('returns 200 with summary log uploads report data', async () => {
       const organisationNumber = nextOrganisationNumber()
-      const org = await buildApprovedOrg(organisationAdministrationRepository, {
+      const org = await buildApprovedOrg(organisationsRepository, {
         organisationNumber
       })
       const registration = org.registrations[0]

@@ -5,6 +5,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  */
@@ -103,6 +104,7 @@ export const processImportFile = async (
   await recordImportSystemLog(systemLogsRepository, logger, {
     user,
     organisationId: org.id,
+    organisationNumber: org.organisationNumber,
     registrationId: registration.id,
     registrationNumber: metadata.registrationNumber,
     sitesCreated,
@@ -187,12 +189,26 @@ const resolveRegistration = async (
   return { org, registration }
 }
 
+/**
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {TypedLogger} logger
+ * @param {{
+ *   user: SystemLogHumanActor
+ *   organisationId: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationId: string
+ *   registrationNumber: string
+ *   sitesCreated: number
+ *   mappingsUpdated: number
+ * }} importCompleted
+ */
 const recordImportSystemLog = async (
   systemLogsRepository,
   logger,
   {
     user,
     organisationId,
+    organisationNumber,
     registrationId,
     registrationNumber,
     sitesCreated,
@@ -210,6 +226,7 @@ const recordImportSystemLog = async (
       },
       context: {
         organisationId,
+        organisationNumber,
         registrationId,
         registrationNumber,
         sitesCreated,

@@ -8,6 +8,7 @@ import {
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
@@ -45,6 +46,7 @@ export const MARK_STALE_ACTION = Object.freeze({
  * @param {object} params
  * @param {string} params.organisationNumber
  * @param {string} params.registrationNumber
+ * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -57,6 +59,7 @@ export async function auditReportStatusTransition(request, params) {
   const {
     organisationNumber,
     registrationNumber,
+    accreditationNumber,
     year,
     cadence,
     period,
@@ -77,6 +80,7 @@ export async function auditReportStatusTransition(request, params) {
     context: {
       organisationNumber,
       registrationNumber,
+      accreditationNumber,
       year,
       cadence,
       period,
@@ -95,6 +99,7 @@ export async function auditReportStatusTransition(request, params) {
         context: {
           organisationNumber,
           registrationNumber,
+          accreditationNumber,
           year,
           cadence,
           period,
@@ -116,6 +121,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {object} params
  * @param {string} params.organisationNumber
  * @param {string} params.registrationNumber
+ * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -127,6 +133,7 @@ export async function auditReportDelete(request, params) {
   const {
     organisationNumber,
     registrationNumber,
+    accreditationNumber,
     year,
     cadence,
     period,
@@ -146,6 +153,7 @@ export async function auditReportDelete(request, params) {
     context: {
       organisationNumber,
       registrationNumber,
+      accreditationNumber,
       year,
       cadence,
       period,
@@ -163,6 +171,7 @@ export async function auditReportDelete(request, params) {
         context: {
           organisationNumber,
           registrationNumber,
+          accreditationNumber,
           year,
           cadence,
           period,
@@ -205,6 +214,7 @@ async function auditReportFlagTransition({
     context: {
       organisationNumber,
       registrationNumber,
+      accreditationNumber: result.accreditationNumber,
       year: result.year,
       cadence: result.cadence,
       period: result.period,
@@ -279,6 +289,7 @@ export async function auditMarkReportsRequiringResubmission({
  * @param {object} params
  * @param {string} params.organisationNumber
  * @param {string} params.registrationNumber
+ * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -290,6 +301,7 @@ export async function auditReportCreate(request, params) {
   const {
     organisationNumber,
     registrationNumber,
+    accreditationNumber,
     year,
     cadence,
     period,
@@ -307,6 +319,7 @@ export async function auditReportCreate(request, params) {
     context: {
       organisationNumber,
       registrationNumber,
+      accreditationNumber,
       year,
       cadence,
       period,
@@ -329,6 +342,7 @@ export async function auditReportCreate(request, params) {
  * @param {object} params
  * @param {string} params.organisationNumber
  * @param {string} params.registrationNumber
+ * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
  * @param {number} params.period
@@ -340,6 +354,7 @@ export async function auditReportRequestResubmission(request, params) {
   const {
     organisationNumber,
     registrationNumber,
+    accreditationNumber,
     year,
     cadence,
     period,
@@ -357,6 +372,7 @@ export async function auditReportRequestResubmission(request, params) {
     context: {
       organisationNumber,
       registrationNumber,
+      accreditationNumber,
       year,
       cadence,
       period,

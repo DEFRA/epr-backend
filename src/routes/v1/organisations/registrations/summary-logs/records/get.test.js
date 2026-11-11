@@ -335,8 +335,20 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     )
   })
 
-  it('audits the download', async () => {
-    const { server, urlFor } = await createServer()
+  it('audits the download by the numbers of its organisation, registration and accreditation', async () => {
+    const accredited = submittedLog(FILE_ID, SUBMITTED_AT)
+    const { server, organisation, urlFor } = await createServer({
+      summaryLogs: [
+        {
+          ...accredited,
+          summaryLog: {
+            ...accredited.summaryLog,
+            accreditationId: 'acc-1',
+            accreditationNumber: 'A26ER5000000002PA'
+          }
+        }
+      ]
+    })
 
     await server.inject({
       method: 'GET',
@@ -349,7 +361,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       {
         summaryLogId: FILE_ID,
         organisationId: ORGANISATION_ID,
-        registrationId: REGISTRATION_ID
+        registrationId: REGISTRATION_ID,
+        organisationNumber: organisation.organisationNumber,
+        registrationNumber: 'R26ER5000000002PA',
+        accreditationNumber: 'A26ER5000000002PA'
       }
     )
   })

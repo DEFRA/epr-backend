@@ -225,10 +225,15 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     throw Boom.conflict('Waste records have changed since validation.')
   }
 
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    summaryLogKeyOf(transition.summaryLog)
   await auditSummaryLogSubmit(request, {
     summaryLogId,
     organisationId,
-    registrationId
+    registrationId,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
   })
 
   await waitForVersion(summaryLogsRepository, summaryLogId, transition.version)

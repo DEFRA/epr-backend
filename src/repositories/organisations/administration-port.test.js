@@ -44,8 +44,6 @@ const ADMINISTRATION_PORT_MODULES = [
 
   // Domain code that still reads the legacy organisation shape. Each leaves
   // this list once it reads through the organisation read repository.
-  'src/application/public-register/generate-public-register.js',
-  'src/application/summary-log-uploads-report/generate-report.js',
   'src/application/summary-logs/classify-and-persist.js',
   'src/application/summary-logs/submit.js',
   'src/application/summary-logs/validate.js',
@@ -67,8 +65,6 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/organisations/natural-keys.js',
   'src/routes/v1/organisations/registrations/summary-logs/list/get.js',
   'src/routes/v1/organisations/registrations/summary-logs/records/get.js',
-  'src/routes/v1/organisations/registrations/summary-logs/reports/uploads/get.js',
-  'src/routes/v1/public-register/generate/post.js',
   'src/server/queue-consumer/summary-log-commands.js',
   'src/server/queue-consumer/summary-log-handler-deps.js'
 ]

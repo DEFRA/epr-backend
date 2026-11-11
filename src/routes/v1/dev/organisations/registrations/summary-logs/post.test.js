@@ -129,7 +129,12 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(systemLogs).toMatchObject([
       {
         event: { action: 'submit' },
-        context: { summaryLogId: body.summaryLogId }
+        context: {
+          summaryLogId: body.summaryLogId,
+          organisationNumber: env.organisationNumber,
+          registrationNumber: env.registrationNumber,
+          accreditationNumber: env.accreditationNumber
+        }
       }
     ])
   })

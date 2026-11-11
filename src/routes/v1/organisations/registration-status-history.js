@@ -122,7 +122,10 @@ export const registrationStatusHistory = {
       id,
       version + 1
     )
-    await auditOrganisationUpdate(request, id, initial, updated)
+    await auditOrganisationUpdate(request, id, initial, updated, {
+      registrationNumber:
+        grant?.registrationNumber ?? registration.registrationNumber
+    })
 
     return h.response({ status: toStatus }).code(StatusCodes.OK)
   }

@@ -10,7 +10,7 @@ import Boom from '@hapi/boom'
 import { summaryLogUploadsReportResponseSchema } from './response.schema.js'
 
 /**
- * @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
  */
 
@@ -30,18 +30,15 @@ export const getSummaryLogUploadsReport = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationAdministrationRepository: OrganisationAdministrationRepository, summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationReadRepository: OrganisationReadRepository, summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const {
-      organisationAdministrationRepository,
-      summaryLogsRepository,
-      logger
-    } = request
+    const { organisationReadRepository, summaryLogsRepository, logger } =
+      request
     try {
       const reportData = await generateSummaryLogUploadsReport(
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogsRepository
       )
 

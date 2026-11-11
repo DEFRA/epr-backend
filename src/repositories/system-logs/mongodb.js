@@ -42,10 +42,13 @@ async function ensureCollection(db) {
 
 const performInsert = (db, logger) => async (systemLog) => {
   try {
-    await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertOne({
-      schemaVersion: 1,
-      ...systemLog
-    })
+    await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertOne(
+      {
+        schemaVersion: 1,
+        ...systemLog
+      },
+      { ignoreUndefined: true }
+    )
   } catch (error) {
     logger.error({
       err: error,
@@ -63,7 +66,8 @@ const performInsertMany = (db, logger) => async (systemLogs) => {
     await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertMany(
       systemLogs.map((log) => ({ schemaVersion: 1, ...log })),
       {
-        ordered: false
+        ordered: false,
+        ignoreUndefined: true
       }
     )
   } catch (error) {

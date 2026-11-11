@@ -199,6 +199,12 @@ const backfillOne = async (
       summaryLogId: id,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber,
+      accreditationNumber:
+        'accreditationNumber' in lacking
+          ? lacking.accreditationNumber
+          : summaryLog.accreditationNumber,
       previous: { version },
       next: { ...lacking, version: version + 1 }
     })

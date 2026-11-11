@@ -98,10 +98,14 @@ export const organisationsLink = {
       linkedDefraOrg
     )
 
-    await auditOrganisationLinking(request, organisationId, {
-      id: linkedDefraOrg.orgId,
-      name: linkedDefraOrg.orgName
-    })
+    await auditOrganisationLinking(
+      request,
+      { organisationId, organisationNumber },
+      {
+        id: linkedDefraOrg.orgId,
+        name: linkedDefraOrg.orgName
+      }
+    )
     await organisationLinkingMetrics.organisationLinked()
 
     const updatedOrganisation =
