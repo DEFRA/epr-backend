@@ -8,10 +8,11 @@ import {
 } from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
-  servesOrganisation,
+  servesOrganisationOn,
   toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/to-read-model.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -50,7 +51,7 @@ export const registrationParams = {
 const lookupContext = () => ({
   onDrop: () => {},
   overseasSitesById: new Map(),
-  today: new Date().toISOString().slice(0, 10)
+  today: toCalendarDate(new Date())
 })
 
 /**
@@ -69,7 +70,7 @@ export async function findOrganisationByNumber(
     await organisationsRepository.findByOrganisationNumber(organisationNumber)
   if (
     !organisation ||
-    !servesOrganisation(organisation, lookupContext().today)
+    !servesOrganisationOn(organisation, lookupContext().today)
   ) {
     throw Boom.notFound('Organisation not found')
   }
