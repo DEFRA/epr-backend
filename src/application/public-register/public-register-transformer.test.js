@@ -1,598 +1,424 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { describe, expect, it } from 'vitest'
-import { ObjectId } from 'mongodb'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
+import { partialMock } from '#test/type-helpers.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
-import { storedRegistrationKey } from '#reports/domain/registration-key.js'
-import {
-  buildAccreditation,
-  buildRegistration,
-  getValidDateRange,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import {
-  ACCREDITATION_STATUS,
-  MATERIAL,
-  REGISTRATION_STATUS,
-  REGULATOR,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import { calendarDate, formatDate } from '#common/helpers/date-formatter.js'
-import { invalidArg, partialMock } from '#test/type-helpers.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
 
-const { buildReadOrganisation } = createOrganisationBuilders()
+/** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+
+const REGISTRATION_NUMBER = 'R26ER5000010001PL'
+
+const registeredAddress = {
+  line1: '1 Waste Road',
+  town: 'London',
+  postcode: 'N1 1AA',
+  country: 'UK'
+}
+
+const siteAddress = {
+  line1: '2 Waste Site',
+  town: 'London',
+  postcode: 'EC1 1AA',
+  country: 'UK',
+  region: 'Greater London'
+}
+
+/**
+ * @param {string} status
+ * @param {string} at
+ * @param {string} [updatedAt]
+ * @returns {StatusTimeline[number]}
+ */
+const change = (status, at, updatedAt = at) => ({ status, at, updatedAt })
+
+/** @type {StatusTimeline} */
+const approvedTimeline = [
+  change('created', '2025-11-03T09:00:00.000Z'),
+  change('approved', '2026-01-01T00:00:00.000Z', '2026-01-05T09:12:00.000Z')
+]
+
+/**
+ * @param {Partial<AccreditationCommon>} [overrides]
+ * @returns {AccreditationCommon}
+ */
+const accreditation = (overrides = {}) => ({
+  accreditationNumber: /** @type {any} */ ('A26ER5000010001PL'),
+  prnIssuance: { tonnageBand: 'up_to_10000' },
+  status: { current: 'approved', timeline: approvedTimeline },
+  ...overrides
+})
+
+/**
+ * @param {Partial<ReprocessorRegistration>} [overrides]
+ * @returns {Registration}
+ */
+const reprocessor = (overrides = {}) =>
+  partialMock({
+    material: 'plastic',
+    status: { current: 'approved', timeline: approvedTimeline },
+    submittedToRegulator: { code: 'ea' },
+    wasteProcessingType: 'reprocessor',
+    site: { address: siteAddress },
+    accreditations: {},
+    ...overrides
+  })
+
+/**
+ * @param {Partial<ExporterRegistration>} [overrides]
+ * @returns {Registration}
+ */
+const exporter = (overrides = {}) =>
+  partialMock({
+    material: 'aluminium',
+    status: { current: 'approved', timeline: approvedTimeline },
+    submittedToRegulator: { code: 'nrw' },
+    wasteProcessingType: 'exporter',
+    overseasSites: {},
+    accreditations: {},
+    ...overrides
+  })
+
+/**
+ * @param {Partial<Organisation>} [overrides]
+ * @returns {Organisation}
+ */
+const organisation = (overrides = {}) =>
+  partialMock({
+    organisationNumber: toOrganisationNumber('500001'),
+    name: 'Waste Ltd',
+    tradingName: 'Waste Recovery',
+    companiesHouseNumber: '12345678',
+    registeredAddress,
+    registrations: { [REGISTRATION_NUMBER]: reprocessor() },
+    ...overrides
+  })
+
+/**
+ * Compliance data for no periods, as generateReportCompliance builds it.
+ *
+ * @param {Organisation[]} organisations
+ */
+const noPeriods = (organisations) => ({
+  periods: [],
+  entries: new Map(
+    reportableRegistrations(organisations).map(({ key }) => [
+      key,
+      { submittedDates: new Map() }
+    ])
+  )
+})
+
+/** @param {Organisation[]} organisations */
+const rowsFor = (organisations) =>
+  transform(organisations, noPeriods(organisations))
+
+/** @param {Registration} registration */
+const rowFor = async (registration) => {
+  const [row] = await rowsFor([
+    organisation({ registrations: { [REGISTRATION_NUMBER]: registration } })
+  ])
+  return row
+}
 
 describe('transform', () => {
-  const baseAddress = {
-    line1: '1 Waste Road',
-    town: 'London',
-    postcode: 'N1 1AA'
-  }
-
-  const baseSiteAddress = {
-    line1: '2 Waste Site',
-    town: 'London',
-    postcode: 'EC1 1AA'
-  }
-
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
-
-  const TODAY = new Date(Date.now())
-  const CREATED_DATE = new Date(TODAY.getTime() - 24 * 60 * 60 * 1000)
-
-  const EXPECTED_ACTIVE_DATE = formatDate(VALID_FROM)
-  const EXPECTED_DATE_LAST_CHANGED = formatDate(TODAY)
-
-  const createTestRegistration = (overrides = {}) => {
-    return buildRegistration({
-      status: REGISTRATION_STATUS.APPROVED,
-      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      material: MATERIAL.PLASTIC,
-      registrationNumber: 'R12345678PL',
-      validFrom: VALID_FROM,
-      site: { address: baseSiteAddress },
-      ...overrides
-    })
-  }
-
-  const createTestAccreditation = (overrides = {}) => {
-    const id = new ObjectId().toString()
-    const status = overrides.status || ACCREDITATION_STATUS.APPROVED
-    return buildAccreditation({
-      id,
-      status,
-      material: MATERIAL.PLASTIC,
-      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-      validFrom: VALID_FROM,
-      validTo: VALID_TO,
-      formSubmission: { id, time: new Date('2025-12-15') },
-      prnIssuance: {
-        tonnageBand: 'up_to_10000',
-        incomeBusinessPlan: [],
-        signatories: []
-      },
-      statusHistory: [
-        { status: ACCREDITATION_STATUS.CREATED, updatedAt: CREATED_DATE },
-        { status, updatedAt: TODAY }
-      ],
-      ...overrides
-    })
-  }
-
-  const createTestOrganisation = (overrides = {}) => {
-    return buildReadOrganisation({
-      companyDetails: {
-        name: 'Waste Ltd',
-        tradingName: 'Waste Recovery',
-        companiesHouseNumber: '12345678',
-        registeredAddress: baseAddress
-      },
-      submittedToRegulator: 'ea',
-      registrations: [],
-      accreditations: [],
-      ...overrides
-    })
-  }
-
-  it('should produce complete row object with all fields', async () => {
-    const accreditationId = new ObjectId()
-
-    const accreditation = createTestAccreditation({
-      id: accreditationId.toString(),
-      accreditationNumber: 'A123456PL'
-    })
-
-    const registration = createTestRegistration({
-      accreditationId: accreditationId.toString()
-    })
-
-    const org = createTestOrganisation({
-      registrations: [registration],
-      accreditations: [accreditation]
-    })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toStrictEqual([
-      {
-        type: 'Reprocessor',
-        businessName: 'Waste Ltd',
-        companiesHouseNumber: '12345678',
-        organisationNumber: org.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'EA',
-        registrationNumber: 'R12345678PL',
-        tradingName: 'Waste Recovery',
-        reprocessingSite: '2 Waste Site, London, EC1 1AA',
-        packagingWasteCategory: 'Plastic',
-        annexIIProcess: 'R3',
-        accreditationStatus: 'Approved',
-        accreditationNo: 'A123456PL',
-        tonnageBand: 'Up to 10,000 tonnes',
-        activeDate: EXPECTED_ACTIVE_DATE,
-        dateLastChanged: EXPECTED_DATE_LAST_CHANGED
-      }
-    ])
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-01T12:00:00Z'))
   })
 
-  it('should use regulator info from registration for populating appropriate agency', async () => {
-    const accreditationId = new ObjectId()
-
-    const accreditation = createTestAccreditation({
-      id: accreditationId.toString(),
-      accreditationNumber: 'A123456PL',
-      submittedToRegulator: REGULATOR.SEPA
-    })
-
-    const registration = createTestRegistration({
-      accreditationId: accreditationId.toString(),
-      submittedToRegulator: REGULATOR.SEPA
-    })
-
-    const org = createTestOrganisation({
-      submittedToRegulator: REGULATOR.EA,
-      registrations: [registration],
-      accreditations: [accreditation]
-    })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toStrictEqual([
-      {
-        type: 'Reprocessor',
-        businessName: 'Waste Ltd',
-        companiesHouseNumber: '12345678',
-        organisationNumber: org.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'SEPA',
-        registrationNumber: 'R12345678PL',
-        tradingName: 'Waste Recovery',
-        reprocessingSite: '2 Waste Site, London, EC1 1AA',
-        packagingWasteCategory: 'Plastic',
-        annexIIProcess: 'R3',
-        accreditationStatus: 'Approved',
-        accreditationNo: 'A123456PL',
-        tonnageBand: 'Up to 10,000 tonnes',
-        activeDate: EXPECTED_ACTIVE_DATE,
-        dateLastChanged: EXPECTED_DATE_LAST_CHANGED
-      }
-    ])
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
-  it.each([
-    {
-      status: REGISTRATION_STATUS.APPROVED,
-      expectedStatus: 'Approved'
-    },
-    {
-      status: REGISTRATION_STATUS.CANCELLED,
-      expectedStatus: 'Cancelled'
-    }
-  ])(
-    'should transform registration with status $expectedStatus without accreditation',
-    async ({ status }) => {
-      const registration = createTestRegistration({ status })
-      const org = createTestOrganisation({ registrations: [registration] })
-
-      const rows = await transform([org], { periods: [], entries: new Map() })
-
-      expect(rows).toEqual([
-        {
-          type: 'Reprocessor',
-          businessName: 'Waste Ltd',
-          organisationNumber: org.organisationNumber,
-          companiesHouseNumber: '12345678',
-          registeredOffice: '1 Waste Road, London, N1 1AA',
-          appropriateAgency: 'EA',
-          registrationNumber: 'R12345678PL',
-          tradingName: 'Waste Recovery',
-          reprocessingSite: '2 Waste Site, London, EC1 1AA',
-          packagingWasteCategory: 'Plastic',
-          annexIIProcess: 'R3',
-          accreditationStatus: '',
-          accreditationNo: '',
-          tonnageBand: '',
-          activeDate: '',
-          dateLastChanged: ''
-        }
-      ])
-    }
-  )
-
-  it.each([
-    {
-      status: ACCREDITATION_STATUS.APPROVED,
-      expectedStatus: 'Approved',
-      accreditationNumber: 'A123456PL',
-      tonnageBand: 'up_to_10000',
-      expectedTonnageBand: 'Up to 10,000 tonnes'
-    },
-    {
-      status: ACCREDITATION_STATUS.SUSPENDED,
-      expectedStatus: 'Suspended',
-      accreditationNumber: 'A234567PL',
-      tonnageBand: 'up_to_5000',
-      expectedTonnageBand: 'Up to 5,000 tonnes'
-    },
-    {
-      status: ACCREDITATION_STATUS.CANCELLED,
-      expectedStatus: 'Cancelled',
-      accreditationNumber: 'A345678PL',
-      tonnageBand: 'up_to_500',
-      expectedTonnageBand: 'Up to 500 tonnes'
-    }
-  ])(
-    'should transform registration with $expectedStatus accreditation',
-    async ({
-      status,
-      expectedStatus,
-      accreditationNumber,
-      tonnageBand,
-      expectedTonnageBand
-    }) => {
-      const accreditationId = new ObjectId()
-
-      const accreditation = createTestAccreditation({
-        id: accreditationId.toString(),
-        status,
-        accreditationNumber,
-        prnIssuance: { tonnageBand }
-      })
-
-      const registration = createTestRegistration({
-        accreditationId: accreditationId.toString()
-      })
-
-      const org = createTestOrganisation({
-        registrations: [registration],
-        accreditations: [accreditation]
-      })
-
-      const rows = await transform([org], { periods: [], entries: new Map() })
-
-      expect(rows).toEqual([
-        {
-          type: 'Reprocessor',
-          businessName: 'Waste Ltd',
-          organisationNumber: org.organisationNumber,
-          companiesHouseNumber: '12345678',
-          registeredOffice: '1 Waste Road, London, N1 1AA',
-          appropriateAgency: 'EA',
-          registrationNumber: 'R12345678PL',
-          tradingName: 'Waste Recovery',
-          reprocessingSite: '2 Waste Site, London, EC1 1AA',
-          packagingWasteCategory: 'Plastic',
-          annexIIProcess: 'R3',
-          accreditationStatus: expectedStatus,
-          accreditationNo: accreditationNumber,
-          tonnageBand: expectedTonnageBand,
-          activeDate: EXPECTED_ACTIVE_DATE,
-          dateLastChanged: EXPECTED_DATE_LAST_CHANGED
-        }
-      ])
-    }
-  )
-
-  it('should filter out registrations with unapproved statuses', async () => {
-    const org = buildReadOrganisation({
-      companyDetails: {
-        name: 'Waste Ltd',
-        registeredAddress: baseAddress
-      },
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'R11111111PL',
-            validFrom: VALID_FROM
-          })
-        ),
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.CREATED,
-            registrationNumber: 'R22222222PL'
-          })
-        ),
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.REJECTED,
-            registrationNumber: 'R33333333PL'
-          })
-        )
-      ]
-    })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0].registrationNumber).toBe('R11111111PL')
-  })
-
-  it('should filter out accreditations with unapproved statuses', async () => {
-    const accreditationId = new ObjectId()
-
-    const org = buildReadOrganisation({
-      companyDetails: {
-        name: 'Waste Ltd',
-        registeredAddress: baseAddress
-      },
-      submittedToRegulator: 'ea',
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'R11111111PL',
-            validFrom: VALID_FROM,
-            accreditationId: accreditationId.toString(),
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.PLASTIC,
-            site: {
-              address: {
-                line1: '2 Waste Site',
-                town: 'London',
-                postcode: 'EC1 1AA'
-              }
-            }
-          })
-        )
-      ],
-      accreditations: [
-        buildAccreditation({
-          id: accreditationId.toString(),
-          status: ACCREDITATION_STATUS.CREATED,
-          accreditationNumber: toAccreditationNumber('A999999PL')
+  it('produces a row with every field for an accredited reprocessor', async () => {
+    const served = organisation({
+      registrations: {
+        [REGISTRATION_NUMBER]: reprocessor({
+          accreditations: { 2026: accreditation() }
         })
-      ]
+      }
     })
 
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toEqual([
+    expect(await rowsFor([served])).toStrictEqual([
       {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
-        companiesHouseNumber: '',
-        organisationNumber: org.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
+        companiesHouseNumber: '12345678',
+        organisationNumber: served.organisationNumber,
+        registeredOffice: '1 Waste Road, London, N1 1AA, UK',
         appropriateAgency: 'EA',
-        registrationNumber: 'R11111111PL',
-        tradingName: '',
-        reprocessingSite: '2 Waste Site, London, EC1 1AA',
+        registrationNumber: REGISTRATION_NUMBER,
+        tradingName: 'Waste Recovery',
+        reprocessingSite: '2 Waste Site, London, EC1 1AA, Greater London, UK',
         packagingWasteCategory: 'Plastic',
         annexIIProcess: 'R3',
-        accreditationStatus: '',
-        accreditationNo: '',
-        tonnageBand: '',
-        activeDate: '',
-        dateLastChanged: ''
+        accreditationStatus: 'Approved',
+        accreditationNo: 'A26ER5000010001PL',
+        tonnageBand: 'Up to 10,000 tonnes',
+        activeDate: '01/01/2026',
+        dateLastChanged: '05/01/2026'
       }
     ])
   })
 
-  it('should not return any rows for organisations with no registrations', async () => {
-    const org = buildReadOrganisation({
-      registrations: [],
-      accreditations: []
+  it('leaves the accreditation columns blank for a registration with no accreditation', async () => {
+    expect(await rowFor(reprocessor())).toMatchObject({
+      accreditationStatus: '',
+      accreditationNo: '',
+      tonnageBand: '',
+      activeDate: '',
+      dateLastChanged: ''
     })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toHaveLength(0)
   })
 
-  it('should handle mixed scenarios with multiple organisations', async () => {
-    const org1 = buildReadOrganisation({
-      companyDetails: {
-        name: 'Multi Material Ltd',
-        registeredAddress: baseAddress
-      },
-      submittedToRegulator: 'ea',
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.PLASTIC,
-            registrationNumber: 'R11111111PL',
-            validFrom: VALID_FROM,
-            site: {
-              address: {
-                line1: '2 Waste Site',
-                town: 'London',
-                postcode: 'EC1 1AA'
+  it("gives the agency the registration was submitted to, not the organisation's", async () => {
+    const row = await rowFor(
+      reprocessor({ submittedToRegulator: { code: 'sepa' } })
+    )
+
+    expect(row.appropriateAgency).toBe('SEPA')
+  })
+
+  it.each([
+    {
+      current: 'suspended',
+      tonnageBand: 'up_to_5000',
+      expected: ['Suspended', 'Up to 5,000 tonnes']
+    },
+    {
+      current: 'cancelled',
+      tonnageBand: 'up_to_500',
+      expected: ['Cancelled', 'Up to 500 tonnes']
+    }
+  ])(
+    'gives a $current accreditation its status and tonnage band',
+    async ({ current, tonnageBand, expected }) => {
+      const row = await rowFor(
+        reprocessor({
+          accreditations: {
+            2026: accreditation({
+              prnIssuance: { tonnageBand },
+              status: {
+                current: /** @type {any} */ (current),
+                timeline: approvedTimeline
               }
+            })
+          }
+        })
+      )
+
+      expect([row.accreditationStatus, row.tonnageBand]).toEqual(expected)
+    }
+  )
+
+  it("shows the current year's accreditation, not next year's", async () => {
+    const row = await rowFor(
+      reprocessor({
+        accreditations: {
+          2025: accreditation({
+            accreditationNumber: /** @type {any} */ ('A25')
+          }),
+          2026: accreditation({
+            accreditationNumber: /** @type {any} */ ('A26')
+          }),
+          2027: accreditation({
+            accreditationNumber: /** @type {any} */ ('A27')
+          })
+        }
+      })
+    )
+
+    expect(row.accreditationNo).toBe('A26')
+  })
+
+  it('dates the accreditation active from its first approval', async () => {
+    const row = await rowFor(
+      reprocessor({
+        accreditations: {
+          2026: accreditation({
+            status: {
+              current: 'approved',
+              timeline: [
+                change('approved', '2026-02-01T00:00:00.000Z'),
+                change('cancelled', '2026-03-10T09:00:00.000Z'),
+                change('approved', '2026-03-30T09:00:00.000Z')
+              ]
             }
           })
-        ),
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.PAPER,
-            registrationNumber: 'R22222222PL',
-            validFrom: VALID_FROM,
-            site: {
-              address: {
-                line1: '2 Waste Site',
-                town: 'London',
-                postcode: 'EC1 1AA'
-              }
+        }
+      })
+    )
+
+    expect(row.activeDate).toBe('01/02/2026')
+  })
+
+  it('leaves the active date blank for an accreditation never approved', async () => {
+    const row = await rowFor(
+      reprocessor({
+        accreditations: {
+          2026: accreditation({
+            status: {
+              current: 'suspended',
+              timeline: [change('suspended', '2026-02-01T00:00:00.000Z')]
             }
           })
-        ),
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.CREATED,
-            material: MATERIAL.STEEL,
-            registrationNumber: 'R33333333PL'
+        }
+      })
+    )
+
+    expect(row.activeDate).toBe('')
+  })
+
+  it('dates the last change when it was recorded, not when it takes effect', async () => {
+    const row = await rowFor(
+      reprocessor({
+        accreditations: {
+          2026: accreditation({
+            status: {
+              current: 'suspended',
+              timeline: [
+                change(
+                  'approved',
+                  '2026-01-01T00:00:00.000Z',
+                  '2026-03-20T09:00:00.000Z'
+                ),
+                change('suspended', '2026-03-01T09:00:00.000Z')
+              ]
+            }
           })
-        )
-      ]
-    })
+        }
+      })
+    )
 
-    const org2 = buildReadOrganisation({
-      companyDetails: {
-        name: 'Exporter Ltd',
-        tradingName: invalidArg(null),
-        registeredAddress: invalidArg(null),
-        address: baseAddress
-      },
-      submittedToRegulator: 'sepa',
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.ALUMINIUM,
-            registrationNumber: 'R44444444AL',
-            validFrom: VALID_FROM,
-            site: null
-          })
-        )
-      ]
-    })
+    expect(row.dateLastChanged).toBe('20/03/2026')
+  })
 
-    const org3 = buildReadOrganisation({
-      registrations: [],
-      accreditations: []
-    })
+  it('falls back to the organisation address when there is no registered office', async () => {
+    const [row] = await rowsFor([
+      organisation({
+        registeredAddress: undefined,
+        address: {
+          line1: '2 Depot Lane',
+          town: 'Leeds',
+          postcode: 'LS1 1AA',
+          region: 'Yorkshire',
+          country: 'UK'
+        }
+      })
+    ])
 
-    const rows = await transform([org1, org2, org3], {
-      periods: [],
-      entries: new Map()
-    })
+    expect(row.registeredOffice).toBe(
+      '2 Depot Lane, Leeds, LS1 1AA, Yorkshire, UK'
+    )
+  })
 
-    expect(rows).toEqual([
-      {
-        type: 'Reprocessor',
-        businessName: 'Multi Material Ltd',
-        companiesHouseNumber: '',
-        organisationNumber: org1.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'EA',
-        registrationNumber: 'R11111111PL',
-        tradingName: '',
-        reprocessingSite: '2 Waste Site, London, EC1 1AA',
-        packagingWasteCategory: 'Plastic',
-        annexIIProcess: 'R3',
-        accreditationStatus: '',
-        accreditationNo: '',
-        tonnageBand: '',
-        activeDate: '',
-        dateLastChanged: ''
-      },
-      {
-        type: 'Reprocessor',
-        businessName: 'Multi Material Ltd',
-        companiesHouseNumber: '',
-        organisationNumber: org1.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'EA',
-        registrationNumber: 'R22222222PL',
-        tradingName: '',
-        reprocessingSite: '2 Waste Site, London, EC1 1AA',
-        packagingWasteCategory: 'Paper and board',
-        annexIIProcess: 'R3',
-        accreditationStatus: '',
-        accreditationNo: '',
-        tonnageBand: '',
-        activeDate: '',
-        dateLastChanged: ''
-      },
-      {
-        type: 'Exporter',
-        businessName: 'Exporter Ltd',
-        companiesHouseNumber: '',
-        organisationNumber: org2.organisationNumber,
-        registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'EA',
-        registrationNumber: 'R44444444AL',
-        tradingName: '',
-        reprocessingSite: '',
-        packagingWasteCategory: 'Aluminium',
-        annexIIProcess: 'R4',
-        accreditationStatus: '',
-        accreditationNo: '',
-        tonnageBand: '',
-        activeDate: '',
-        dateLastChanged: ''
-      }
+  it('gives a non-UK registered office that has no postcode', async () => {
+    const [row] = await rowsFor([
+      organisation({
+        registeredAddress: undefined,
+        address: {
+          line1: '3 Rue de Rivoli',
+          town: 'Paris',
+          region: 'Île-de-France',
+          country: 'France'
+        }
+      })
+    ])
+
+    expect(row.registeredOffice).toBe(
+      '3 Rue de Rivoli, Paris, Île-de-France, France'
+    )
+  })
+
+  it('leaves the registered office blank when the organisation has no address', async () => {
+    const [row] = await rowsFor([
+      organisation({ registeredAddress: undefined })
+    ])
+
+    expect(row.registeredOffice).toBe('')
+  })
+
+  it('leaves out an address held only as submitted, keeping its country', async () => {
+    const [row] = await rowsFor([
+      organisation({
+        registeredAddress: { fullAddress: '1 Waste Road N1 1AA', country: 'UK' }
+      })
+    ])
+
+    expect(row.registeredOffice).toBe('UK')
+  })
+
+  it('gives an exporter no reprocessing site', async () => {
+    const row = await rowFor(exporter())
+
+    expect(row).toMatchObject({
+      type: 'Exporter',
+      appropriateAgency: 'NRW',
+      reprocessingSite: '',
+      packagingWasteCategory: 'Aluminium',
+      annexIIProcess: 'R4'
+    })
+  })
+
+  it.each([
+    { material: 'glass_re_melt', category: 'Glass-remelt' },
+    { material: 'glass_other', category: 'Glass-other' }
+  ])(
+    'gives $material glass its recycling process and the glass Annex II process',
+    async ({ material, category }) => {
+      const row = await rowFor(
+        reprocessor({ material: /** @type {any} */ (material) })
+      )
+
+      expect([row.packagingWasteCategory, row.annexIIProcess]).toEqual([
+        category,
+        'R5'
+      ])
+    }
+  )
+
+  it('leaves the trading name and Companies House number blank when the organisation has none', async () => {
+    const [row] = await rowsFor([
+      organisation({ tradingName: undefined, companiesHouseNumber: undefined })
+    ])
+
+    expect([row.tradingName, row.companiesHouseNumber]).toEqual(['', ''])
+  })
+
+  it('gives a row for each registration of each organisation', async () => {
+    const rows = await rowsFor([
+      organisation({
+        registrations: { R1: reprocessor(), R2: exporter() }
+      }),
+      organisation({
+        organisationNumber: toOrganisationNumber('500002'),
+        registrations: { R3: reprocessor() }
+      }),
+      organisation({
+        organisationNumber: toOrganisationNumber('500003'),
+        registrations: {}
+      })
+    ])
+
+    expect(rows.map((row) => row.registrationNumber)).toEqual([
+      'R1',
+      'R2',
+      'R3'
     ])
   })
 
-  it('should include companiesHouseNumber when present', async () => {
-    const registration = createTestRegistration()
-    const org = createTestOrganisation({
-      companyDetails: {
-        name: 'Test Company Ltd',
-        companiesHouseNumber: 'AC987654',
-        registeredAddress: baseAddress
-      },
-      registrations: [registration]
-    })
+  it('leaves out test organisations', async () => {
+    const rows = await rowsFor([
+      organisation({ organisationNumber: toOrganisationNumber('999999') }),
+      organisation()
+    ])
 
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0].businessName).toBe('Test Company Ltd')
-    expect(rows[0].companiesHouseNumber).toBe('AC987654')
-    expect(rows[0].organisationNumber).toBe(org.organisationNumber)
-  })
-
-  it('should default companiesHouseNumber to empty string when missing', async () => {
-    const registration = createTestRegistration()
-    const org = createTestOrganisation({
-      companyDetails: {
-        name: 'Test Company Ltd',
-        registeredAddress: baseAddress
-      },
-      registrations: [registration]
-    })
-
-    const rows = await transform([org], { periods: [], entries: new Map() })
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0].businessName).toBe('Test Company Ltd')
-    expect(rows[0].companiesHouseNumber).toBe('')
-    expect(rows[0].organisationNumber).toBe(org.organisationNumber)
+    expect(rows.map((row) => row.organisationNumber)).toEqual(['500001'])
   })
 
   describe('compliance fields', () => {
-    const buildEntry = (submittedDates) => {
-      const registration = createTestRegistration()
-      const org = createTestOrganisation({ registrations: [registration] })
-      const entries = new Map([
-        [
-          storedRegistrationKey(org, /** @type {any} */ (registration)),
-          { submittedDates }
-        ]
-      ])
-      return { org, entries }
-    }
-
     const period = {
       key: '2026:monthly:1',
       cadence: 'monthly',
@@ -603,95 +429,30 @@ describe('transform', () => {
       endDate: calendarDate('2026-01-31'),
       dueDate: calendarDate('2026-02-28')
     }
-    const periods = [period]
+
+    /** @param {Map<string, string | null>} submittedDates */
+    const janReport = async (submittedDates) => {
+      const served = [organisation()]
+      const [{ key }] = reportableRegistrations(served)
+      const [row] = await transform(served, {
+        periods: /** @type {any} */ ([period]),
+        entries: new Map([[key, { submittedDates }]])
+      })
+      return row['Jan Report']
+    }
 
     it("returns 'N/A' when the period key is absent from submittedDates", async () => {
-      const { org, entries } = buildEntry(new Map())
-      const rows = await transform([org], { periods, entries })
-      expect(rows[0]['Jan Report']).toBe('N/A')
+      expect(await janReport(new Map())).toBe('N/A')
     })
 
     it("returns '' when the period key is present but not yet submitted", async () => {
-      const { org, entries } = buildEntry(new Map([['2026:monthly:1', null]]))
-      const rows = await transform([org], { periods, entries })
-      expect(rows[0]['Jan Report']).toBe('')
-    })
-
-    it("returns 'N/A' for a registration with no entry", async () => {
-      const { org } = buildEntry(new Map())
-      const rows = await transform([org], { periods, entries: new Map() })
-      expect(rows[0]['Jan Report']).toBe('N/A')
+      expect(await janReport(new Map([['2026:monthly:1', null]]))).toBe('')
     })
 
     it('returns formatted date when the period has been submitted', async () => {
-      const { org, entries } = buildEntry(
-        new Map([['2026:monthly:1', '2026-01-15']])
+      expect(await janReport(new Map([['2026:monthly:1', '2026-01-15']]))).toBe(
+        '15/01/2026'
       )
-      const rows = await transform([org], { periods, entries })
-      expect(rows[0]['Jan Report']).toBe('15/01/2026')
     })
-  })
-
-  it('should filter out test organisations from results', async () => {
-    const testOrganisationNumber = toOrganisationNumber('999999')
-    const normalOrganisationNumber = toOrganisationNumber('500001')
-
-    const testOrg = buildReadOrganisation({
-      organisationNumber: testOrganisationNumber,
-      companyDetails: {
-        name: 'Test Organisation',
-        registeredAddress: baseAddress
-      },
-      submittedToRegulator: 'ea',
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'R99999999PL',
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.PLASTIC,
-            validFrom: VALID_FROM,
-            site: { address: baseSiteAddress }
-          })
-        )
-      ]
-    })
-
-    const normalOrg = buildReadOrganisation({
-      organisationNumber: normalOrganisationNumber,
-      companyDetails: {
-        name: 'Normal Organisation',
-        registeredAddress: baseAddress
-      },
-      submittedToRegulator: 'ea',
-      registrations: [
-        partialMock(
-          buildRegistration({
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber: 'R50000100PL',
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.PLASTIC,
-            validFrom: VALID_FROM,
-            site: { address: baseSiteAddress }
-          })
-        )
-      ]
-    })
-
-    const rows = await transform([testOrg, normalOrg], {
-      periods: [],
-      entries: new Map()
-    })
-
-    // Only the normal org should be in results, test org should be filtered out
-    expect(rows).toHaveLength(1)
-    expect(rows[0].businessName).toBe('Normal Organisation')
-    expect(rows[0].registrationNumber).toBe('R50000100PL')
-
-    // Verify test org is not in results
-    const testOrgInResults = rows.find(
-      (row) => row.businessName === 'Test Organisation'
-    )
-    expect(testOrgInResults).toBeUndefined()
   })
 })

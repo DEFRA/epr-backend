@@ -357,6 +357,31 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(organisation).toMatchObject({ registeredAddress, address })
     })
 
+    it('gives a non-UK organisation address that has no postcode', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const address = {
+        line1: '3 Rue de Rivoli',
+        town: 'Paris',
+        region: 'Île-de-France',
+        country: 'France'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', address }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation.address).toStrictEqual(address)
+    })
+
     it('gives the registered address only as submitted, with its country, when ingest could not split it', async ({
       organisationReadRepositoryWith
     }) => {

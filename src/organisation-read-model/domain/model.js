@@ -6,7 +6,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * The organisation read model (ADR-0052).
  *
  * @typedef {{
- *   address?: UkAddress
+ *   address?: OrganisationAddress
  *   companiesHouseNumber?: string
  *   linkedDefraOrganisation?: {
  *     defraOrganisation: { id: string, name: string }
@@ -18,7 +18,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   }
  *   name: string
  *   organisationNumber: OrganisationNumber
- *   registeredAddress?: UkAddress
+ *   registeredAddress?: OrganisationAddress
  *   registrations: Record<string, Registration>
  *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
  *   submittedToRegulator: Regulator
@@ -91,6 +91,20 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *     }
  *   | { fullAddress: string }
  * )} UkAddress
+ *
+ * A non-UK organisation may have no postcode.
+ *
+ * @typedef {{ country?: string, region?: string } & (
+ *   | {
+ *       county?: string
+ *       fullAddress?: string
+ *       line1: string
+ *       line2?: string
+ *       postcode?: string
+ *       town?: string
+ *     }
+ *   | { fullAddress: string }
+ * )} OrganisationAddress
  *
  * @typedef {{
  *   country: string
