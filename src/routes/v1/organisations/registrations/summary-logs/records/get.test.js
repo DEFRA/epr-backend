@@ -89,7 +89,8 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
  *   rows?: any[],
  *   accreditationId?: string | null,
  *   accreditations?: any[],
- *   registration?: any
+ *   registration?: any,
+ *   readModelHolds?: (organisation: any) => any
  * }} [options]
  */
 const createServer = async ({
@@ -97,7 +98,8 @@ const createServer = async ({
   rows = [receivedRowState()],
   accreditationId = null,
   accreditations = [],
-  registration = buildRegistration()
+  registration = buildRegistration(),
+  readModelHolds = (organisation) => organisation
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
@@ -143,8 +145,8 @@ const createServer = async ({
       }),
       organisationReadRepository: () =>
         organisationReadRepositoryOver({
-          findByOrganisationNumber: () => Promise.resolve(organisation),
-          findAll: () => Promise.resolve([organisation])
+          findByOrganisationNumber: async () => readModelHolds(organisation),
+          findAll: async () => [readModelHolds(organisation)].filter(Boolean)
         }),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       summaryLogsRepository: () => summaryLogsRepository
@@ -244,6 +246,25 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(response.headers['content-disposition']).toBeUndefined()
     expect(response.payload).toContain('Acme Ltd')
   })
+
+  it.each([
+    ['organisation', () => null],
+    ['registration', (organisation) => ({ ...organisation, registrations: [] })]
+  ])(
+    'returns 404 and does not audit when the read model no longer holds the %s',
+    async (_, readModelHolds) => {
+      const { server, urlFor } = await createServer({ readModelHolds })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: urlFor(),
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(mockAuditSummaryLogDownload).not.toHaveBeenCalled()
+    }
+  )
 
   it('serves the same file after the organisation and other submissions change', async () => {
     const { server, organisation, summaryLogRowStatesRepository, urlFor } =
