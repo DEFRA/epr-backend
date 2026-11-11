@@ -6,6 +6,7 @@ import {
   REGISTRATION_TYPE
 } from './aggregate-prn-tonnage.js'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REPROCESSING_TYPE,
   TONNAGE_BAND,
@@ -17,7 +18,13 @@ import {
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import {
+  createOrganisationReadRepository,
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
+} from '#organisation-read-model/repository/mongodb.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -80,6 +87,8 @@ const prnWithStatus = (currentStatus, tonnage) =>
     status: withStatus(currentStatus)
   })
 
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
 /**
  * A registration as the database holds one. The organisation schema defaults
  * `registrationNumber` and `reprocessingType` to null until the registration is
@@ -88,16 +97,25 @@ const prnWithStatus = (currentStatus, tonnage) =>
  * @typedef {Object} StoredRegistration
  * @property {string} id
  * @property {string | null} registrationNumber
- * @property {string} accreditationId
+ * @property {string} [accreditationId]
  * @property {string} wasteProcessingType
  * @property {string | null} [reprocessingType]
+ * @property {import('#domain/organisations/model.js').AppliedForMaterial} [material]
+ * @property {import('#domain/organisations/model.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
+ * @property {{ address: { line1: string, town: string, postcode: string } }} [site]
  */
 
 const registrationIdentity = {
   id: registrationId,
   registrationNumber: 'REG-1',
   accreditationId: accId,
-  statusHistory: approvedStatusHistory
+  statusHistory: approvedStatusHistory,
+  validFrom: '2026-01-01',
+  material: MATERIAL.PLASTIC,
+  submittedToRegulator: 'ea',
+  applicationContactDetails: contact,
+  submitterContactDetails: contact,
+  approvedPersons: []
 }
 
 /**
@@ -107,7 +125,10 @@ const registrationIdentity = {
 const reprocessorRegistration = (reprocessingType) => ({
   ...registrationIdentity,
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  reprocessingType
+  reprocessingType,
+  site: {
+    address: { line1: '1 Test Street', town: 'Testville', postcode: 'SW1A 1AA' }
+  }
 })
 
 /** @type {StoredRegistration} */
@@ -124,13 +145,18 @@ const organisationWithRegistration = (
   orgId,
   companyDetails: { name: 'Acme Reprocessing' },
   statusHistory: approvedStatusHistory,
+  submittedToRegulator: 'ea',
+  submitterContactDetails: contact,
+  users: [],
+  version: 1,
   accreditations: [
     {
       id: accId,
       accreditationNumber: 'ACC-1',
       material: MATERIAL.PLASTIC,
       prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
-      statusHistory: approvedStatusHistory
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01'
     }
   ],
   registrations: [registration]
@@ -159,8 +185,8 @@ describe('aggregatePrnTonnage - Integration', () => {
   let db
   /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  let organisationReadRepository
   /** @type {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} */
   let prnRepository
 
@@ -172,12 +198,18 @@ describe('aggregatePrnTonnage - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationsRepository = (await createOrganisationsRepository(db))()
+      organisationReadRepository = createOrganisationReadRepository(db)({
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: { warn: () => {} }
+      })
       prnRepository = (await createPackagingRecyclingNotesRepository(db, []))(
         createMockLogger()
       )
       await db.collection(PRNS_COLLECTION).deleteMany({})
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      await db
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
       await ledgerRepository.deleteAllInLedger(ledgerId)
       await ledgerRepository.deleteAllInLedger(otherLedgerId)
     }
@@ -199,7 +231,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -223,7 +255,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -238,10 +270,12 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(
       aggregatePrnTonnage(
         prnRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a row whose accreditation another organisation holds', async () => {
@@ -257,10 +291,12 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(
       aggregatePrnTonnage(
         prnRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('includes prns raised by test organisations', async () => {
@@ -277,7 +313,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -352,7 +388,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -382,10 +418,12 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(
       aggregatePrnTonnage(
         prnRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a reprocessor registration with no reprocessing type', async () => {
@@ -399,10 +437,12 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(
       aggregatePrnTonnage(
         prnRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('registration.reprocessingType')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('refuses to report a row whose accreditation no longer has its number', async () => {
@@ -430,10 +470,12 @@ describe('aggregatePrnTonnage - Integration', () => {
     await expect(
       aggregatePrnTonnage(
         prnRepository,
-        organisationsRepository,
+        organisationReadRepository,
         ledgerRepository
       )
-    ).rejects.toThrow('Unreportable PRN tonnage row for accreditation ACC-1')
+    ).rejects.toThrow(
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+    )
   })
 
   it('reports one row per accreditation when its prns snapshot different organisation names', async () => {
@@ -459,7 +501,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -495,7 +537,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -520,7 +562,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -541,7 +583,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -560,7 +602,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -583,7 +625,7 @@ describe('aggregatePrnTonnage - Integration', () => {
 
     const { rows } = await aggregatePrnTonnage(
       prnRepository,
-      organisationsRepository,
+      organisationReadRepository,
       ledgerRepository
     )
 
@@ -591,4 +633,127 @@ describe('aggregatePrnTonnage - Integration', () => {
       expectedRow({ registrationType: REGISTRATION_TYPE.REPROCESSOR_INPUT })
     ])
   })
+
+  it('reports an accreditation known only by its number', async () => {
+    const { accreditationId: _, ...registration } = reprocessorRegistration(
+      REPROCESSING_TYPE.INPUT
+    )
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+      ...organisationWithRegistration(registration),
+      accreditations: []
+    })
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+      buildExternalAccreditation({
+        registrationNumber: ledgerId.registrationNumber,
+        year: toYear(2026),
+        accreditationNumber: ledgerId.accreditationNumber,
+        prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
+        status: {
+          current: 'approved',
+          timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+        }
+      })
+    )
+    await db
+      .collection(PRNS_COLLECTION)
+      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        closingBalance: { amount: 250, availableAmount: 125 }
+      })
+    ])
+
+    const { rows } = await aggregatePrnTonnage(
+      prnRepository,
+      organisationReadRepository,
+      ledgerRepository
+    )
+
+    expect(rows).toStrictEqual([
+      expectedRow({ wasteBalance: 250, availableWasteBalance: 125 })
+    ])
+  })
+
+  it('reports a stored accreditation beside a later one known only by its number', async () => {
+    const laterLedgerId = {
+      ...ledgerId,
+      accreditationNumber: toAccreditationNumber('ACC-2027')
+    }
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(organisationWithRegistration())
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+      buildExternalAccreditation({
+        registrationNumber: ledgerId.registrationNumber,
+        year: toYear(2027),
+        accreditationNumber: laterLedgerId.accreditationNumber,
+        prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_10000 },
+        status: {
+          current: 'approved',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+        }
+      })
+    )
+    const laterPrn = prnWithStatus(PRN_STATUS.ACCEPTED, 15)
+    await db.collection(PRNS_COLLECTION).insertMany([
+      prnWithStatus(PRN_STATUS.ACCEPTED, 40),
+      {
+        ...laterPrn,
+        accreditation: {
+          ...laterPrn.accreditation,
+          accreditationNumber: laterLedgerId.accreditationNumber
+        }
+      }
+    ])
+
+    const { rows } = await aggregatePrnTonnage(
+      prnRepository,
+      organisationReadRepository,
+      ledgerRepository
+    )
+
+    expect(rows).toStrictEqual([
+      expectedRow(),
+      expectedRow({
+        accreditationNumber: 'ACC-2027',
+        tonnageBand: TONNAGE_BAND.UP_TO_10000,
+        acceptedTonnage: 15
+      })
+    ])
+  })
+
+  it.each(Object.values(GLASS_RECYCLING_PROCESS))(
+    'reports a glass registration by its settled material, %s',
+    async (glassRecyclingProcess) => {
+      const organisation = organisationWithRegistration({
+        ...reprocessorRegistration(REPROCESSING_TYPE.INPUT),
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [glassRecyclingProcess]
+      })
+      await db.collection(ORGANISATIONS_COLLECTION).insertOne({
+        ...organisation,
+        accreditations: [
+          {
+            ...organisation.accreditations[0],
+            material: MATERIAL.GLASS,
+            glassRecyclingProcess: [glassRecyclingProcess]
+          }
+        ]
+      })
+      await db
+        .collection(PRNS_COLLECTION)
+        .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+
+      const { rows } = await aggregatePrnTonnage(
+        prnRepository,
+        organisationReadRepository,
+        ledgerRepository
+      )
+
+      expect(rows).toStrictEqual([
+        expectedRow({ material: glassRecyclingProcess })
+      ])
+    }
+  )
 })
