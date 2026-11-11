@@ -68,9 +68,21 @@ const approvedThenCancelled = () =>
   })
 
 const approvedThenCancelledTimeline = [
-  { status: 'created', at: '2025-01-01T09:00:00.000Z' },
-  { status: 'approved', at: '2025-03-01T00:00:00.000Z' },
-  { status: 'cancelled', at: '2026-03-01T09:00:00.000Z' }
+  {
+    status: 'created',
+    at: '2025-01-01T09:00:00.000Z',
+    updatedAt: '2025-01-01T09:00:00.000Z'
+  },
+  {
+    status: 'approved',
+    at: '2025-03-01T00:00:00.000Z',
+    updatedAt: '2025-04-01T09:00:00.000Z'
+  },
+  {
+    status: 'cancelled',
+    at: '2026-03-01T09:00:00.000Z',
+    updatedAt: '2026-03-01T09:00:00.000Z'
+  }
 ]
 
 describe('GET /organisations/{organisationNumber}', () => {
@@ -133,13 +145,33 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].status.timeline).toEqual([
-      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-      { status: 'suspended', at: '2026-05-01T09:00:00.000Z' },
-      { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
+      {
+        status: 'created',
+        at: '2026-01-01T09:00:00.000Z',
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: 'suspended',
+        at: '2026-05-01T09:00:00.000Z',
+        updatedAt: '2026-05-01T09:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      }
     ])
     expect(registration.status.timeline).toEqual([
-      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-      { status: 'approved', at: '2026-02-01T00:00:00.000Z' }
+      {
+        status: 'created',
+        at: '2026-01-01T09:00:00.000Z',
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: '2026-02-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      }
     ])
   })
 
@@ -165,11 +197,31 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2025].status.timeline).toEqual([
-      { status: 'created', at: '2025-01-01T09:00:00.000Z' },
-      { status: 'approved', at: '2025-07-01T00:00:00.000Z' },
-      { status: 'cancelled', at: '2026-01-01T09:00:00.000Z' },
-      { status: 'approved', at: '2026-01-01T12:00:00.000Z' },
-      { status: 'cancelled', at: '2026-01-01T15:00:00.000Z' }
+      {
+        status: 'created',
+        at: '2025-01-01T09:00:00.000Z',
+        updatedAt: '2025-01-01T09:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: '2025-07-01T00:00:00.000Z',
+        updatedAt: '2025-02-01T09:00:00.000Z'
+      },
+      {
+        status: 'cancelled',
+        at: '2026-01-01T09:00:00.000Z',
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: '2026-01-01T12:00:00.000Z',
+        updatedAt: '2026-01-01T12:00:00.000Z'
+      },
+      {
+        status: 'cancelled',
+        at: '2026-01-01T15:00:00.000Z',
+        updatedAt: '2026-01-01T15:00:00.000Z'
+      }
     ])
   })
 
@@ -194,10 +246,26 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     const registration = body(response).registrations[REPROCESSOR_NUMBER]
     expect(registration.accreditations[2026].status.timeline).toEqual([
-      { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-      { status: 'suspended', at: '2026-03-01T12:00:00.000Z' },
-      { status: 'cancelled', at: '2026-03-01T15:00:00.000Z' },
-      { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
+      {
+        status: 'created',
+        at: '2026-01-01T09:00:00.000Z',
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: 'suspended',
+        at: '2026-03-01T12:00:00.000Z',
+        updatedAt: '2026-03-01T12:00:00.000Z'
+      },
+      {
+        status: 'cancelled',
+        at: '2026-03-01T15:00:00.000Z',
+        updatedAt: '2026-03-01T15:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      }
     ])
   })
 
@@ -591,8 +659,16 @@ describe('GET /organisations/{organisationNumber}', () => {
       const registration = body(response).registrations[REPROCESSOR_NUMBER]
       expect(registration.status.current).toBe('approved')
       expect(registration.accreditations[2026].status.timeline).toEqual([
-        { status: 'created', at: '2026-01-01T00:00:00.000Z' },
-        { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-10-14T14:30:47.171Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-10-14T14:30:47.204Z'
+        }
       ])
     })
 

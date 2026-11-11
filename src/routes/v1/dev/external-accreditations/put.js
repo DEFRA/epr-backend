@@ -15,7 +15,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams
  *
  * @typedef {Omit<ExternalAccreditation, 'registrationNumber' | 'year' | 'status'> & {
- *   status: { timeline: { status: ExternalAccreditation['status']['current'], at: string }[] }
+ *   status: { timeline: { status: ExternalAccreditation['status']['current'], at: string, updatedAt: string }[] }
  * }} ExternalAccreditationPayload
  *
  * @typedef {HapiRequest & {
