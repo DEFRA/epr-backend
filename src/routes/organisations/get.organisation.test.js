@@ -550,6 +550,34 @@ describe('GET /organisations/{organisationNumber}', () => {
       })
     })
 
+    const servedYearsOf = async (organisation) => {
+      await serve(organisation)
+      const response = await get(
+        `/organisations/${organisation.organisationNumber}`
+      )
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      return {
+        accreditations: Object.keys(registration.accreditations),
+        standingByDate: Object.keys(registration.standingByDate)
+      }
+    }
+
+    it("serves next year's accreditation alongside its status dates while that year is open", async () => {
+      config.set('openNextYear', true)
+
+      expect(await servedYearsOf(accreditedEarlyForNextYear())).toEqual({
+        accreditations: ['2028'],
+        standingByDate: ['2027', '2028']
+      })
+    })
+
+    it("leaves out next year's accreditation along with its status dates while that year is closed", async () => {
+      expect(await servedYearsOf(accreditedEarlyForNextYear())).toEqual({
+        accreditations: [],
+        standingByDate: ['2027']
+      })
+    })
+
     it('serves a registration cancelled part way through a year', async () => {
       expect(await standingOf(approvedThenCancelled())).toEqual({
         2025: { '2025-03-01': { standing: 'registeredOnly' } },
