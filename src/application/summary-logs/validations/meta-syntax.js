@@ -3,7 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import { MIN_TEMPLATE_VERSIONS } from '#domain/summary-logs/table-schemas/index.js'
+import { TEMPLATES } from '#domain/summary-logs/table-schemas/index.js'
 import { createMetaSchema } from './meta-syntax.schema.js'
 
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
@@ -29,6 +29,12 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
     },
     'number.min': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    },
+    'templateVersion.unsupported': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    },
+    'templateVersion.year': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_YEAR_INVALID
     },
     'number.base': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
@@ -61,9 +67,7 @@ export const validateMetaSyntax = ({ parsed }) => {
     metaLocations[fieldName] = fieldData?.location
   }
 
-  const schema = createMetaSchema({
-    minTemplateVersions: MIN_TEMPLATE_VERSIONS
-  })
+  const schema = createMetaSchema({ templates: TEMPLATES })
 
   const { error } = schema.validate(metaValues, { abortEarly: false })
 

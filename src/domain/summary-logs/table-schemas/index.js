@@ -20,6 +20,8 @@ import {
   MIN_TEMPLATE_VERSION as EXPORTER_REGISTERED_ONLY_MIN
 } from './exporter-registered-only/index.js'
 
+/** @import {Year} from '#common/helpers/dates/year.js' */
+
 /**
  * Registry mapping processing types to their table schemas
  *
@@ -41,15 +43,6 @@ export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY
 }
 
-export const MIN_TEMPLATE_VERSIONS = {
-  [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT_MIN,
-  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT_MIN,
-  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
-    REPROCESSOR_REGISTERED_ONLY_MIN,
-  [PROCESSING_TYPES.EXPORTER]: EXPORTER_MIN,
-  [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY_MIN
-}
-
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
@@ -61,10 +54,63 @@ export const MIN_TEMPLATE_VERSIONS = {
  * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * @property {(rowData: Record<string, any>, rowIndex: number) => {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
  * @property {string[]} requiredHeaders - Headers that must be present in the table
- * @property {Record<string, string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
+ * @property {Record<string, readonly string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
- * @property {((data: Record<string, any>, context: {accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance. null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
+ * @property {((data: Record<string, any>, context: {accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} [classifyForWasteBalance] - Classifies a row for waste balance. Absent or null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
  */
+
+/**
+ * @typedef {Object} Template
+ * @property {number} minVersion - The lowest template version accepted
+ * @property {Record<string, TableSchema>} tables - Table schemas by table name
+ */
+
+/**
+ * Summary log templates by year, then processing type (ADR 0055). A year
+ * missing here has no template, so uploads for it are rejected.
+ *
+ * @type {Record<number, Record<string, Template>>}
+ */
+export const TEMPLATES = {
+  2026: {
+    [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
+      minVersion: REPROCESSOR_INPUT_MIN,
+      tables: REPROCESSOR_INPUT
+    },
+    [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
+      minVersion: REPROCESSOR_OUTPUT_MIN,
+      tables: REPROCESSOR_OUTPUT
+    },
+    [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]: {
+      minVersion: REPROCESSOR_REGISTERED_ONLY_MIN,
+      tables: REPROCESSOR_REGISTERED_ONLY
+    },
+    [PROCESSING_TYPES.EXPORTER]: {
+      minVersion: EXPORTER_MIN,
+      tables: EXPORTER
+    },
+    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: {
+      minVersion: EXPORTER_REGISTERED_ONLY_MIN,
+      tables: EXPORTER_REGISTERED_ONLY
+    }
+  }
+}
+
+/**
+ * The template for a year and processing type. Callers must have validated
+ * both, so a missing template is a programming error.
+ *
+ * @param {Year} year
+ * @param {string} processingType
+ * @returns {Template}
+ */
+export const getTemplate = (year, processingType) => {
+  const template = TEMPLATES[year]?.[processingType]
+  if (!template) {
+    throw new Error(`No ${processingType} summary log template for ${year}`)
+  }
+  return template
+}
 
 /**
  * Finds a table schema by processing type and waste record type

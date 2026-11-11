@@ -1,6 +1,7 @@
 import { validateMetaSyntax } from './meta-syntax.js'
 import {
   VALIDATION_CATEGORY,
+  VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
@@ -418,6 +419,90 @@ describe('validateMetaSyntax', () => {
 
       expect(result.isValid()).toBe(true)
       expect(result.isFatal()).toBe(false)
+    })
+  })
+
+  describe('template year', () => {
+    const validateVersion = (version, processingType = 'REPROCESSOR_INPUT') =>
+      validateMetaSyntax({
+        parsed: {
+          meta: {
+            ...createValidMeta(),
+            PROCESSING_TYPE: { value: processingType },
+            TEMPLATE_VERSION: {
+              value: version,
+              location: { sheet: 'Cover', row: 3, column: 'C' }
+            }
+          }
+        }
+      })
+
+    it.each([5, 2026.01])(
+      'accepts %s as a 2026 template version',
+      (version) => {
+        expect(validateVersion(version).isValid()).toBe(true)
+      }
+    )
+
+    it.each([2027.01, 2025.01])(
+      'rejects %s, a year with no template, as TEMPLATE_YEAR_INVALID',
+      (version) => {
+        const fatals = validateVersion(version).getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
+        )
+
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0]).toMatchObject({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          code: VALIDATION_CODE.TEMPLATE_YEAR_INVALID,
+          message:
+            "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
+          context: {
+            actual: version,
+            location: {
+              sheet: 'Cover',
+              row: 3,
+              column: 'C',
+              field: 'TEMPLATE_VERSION'
+            }
+          }
+        })
+      }
+    )
+
+    it('rejects a version below the minimum for its processing type as TEMPLATE_VERSION_INVALID', () => {
+      const fatals = validateVersion(4).getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0]).toMatchObject({
+        code: VALIDATION_CODE.TEMPLATE_VERSION_INVALID,
+        message: "Invalid meta field 'TEMPLATE_VERSION': must be at least 5"
+      })
+    })
+
+    it('rejects only the processing type when it is unknown and the version meets every minimum', () => {
+      const fatals = validateVersion(5, 'UNKNOWN').getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe(VALIDATION_CODE.PROCESSING_TYPE_INVALID)
+    })
+
+    it('rejects a version below the highest minimum when the processing type is unknown', () => {
+      const fatals = validateVersion(4, 'UNKNOWN').getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+
+      expect(fatals.map((f) => f.code)).toEqual([
+        VALIDATION_CODE.PROCESSING_TYPE_INVALID,
+        VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+      ])
+      expect(fatals[1].message).toBe(
+        "Invalid meta field 'TEMPLATE_VERSION': must be a supported template version"
+      )
     })
   })
 })

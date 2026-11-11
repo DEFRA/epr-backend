@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   PROCESSING_TYPE_TABLES,
+  TEMPLATES,
   aggregateUnfilledValues,
+  getTemplate,
   findSchemaByWasteRecordType,
   findSchemaForProcessingType
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -380,6 +383,51 @@ describe('table-schemas', () => {
       expect(result.WAS_THE_WASTE_REFUSED).toContain('Choose option')
       expect(result.WAS_THE_WASTE_STOPPED).toContain('Choose option')
       expect(result.OSR_COUNTRY).toContain('Choose option')
+    })
+  })
+
+  describe('TEMPLATES', () => {
+    it('has templates for 2026 only', () => {
+      expect(Object.keys(TEMPLATES)).toEqual(['2026'])
+    })
+
+    it.each([
+      [PROCESSING_TYPES.EXPORTER, 5],
+      [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY, 2.1],
+      [PROCESSING_TYPES.REPROCESSOR_INPUT, 5],
+      [PROCESSING_TYPES.REPROCESSOR_OUTPUT, 5],
+      [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY, 2.1]
+    ])(
+      'has a 2026 %s template with minimum version %s and its tables',
+      (processingType, minVersion) => {
+        expect(TEMPLATES[2026][processingType]).toEqual({
+          minVersion,
+          tables: PROCESSING_TYPE_TABLES[processingType]
+        })
+      }
+    )
+  })
+
+  describe('getTemplate', () => {
+    it('returns the template for a year and processing type', () => {
+      expect(
+        getTemplate(DEFAULT_TEMPLATE_YEAR, PROCESSING_TYPES.EXPORTER)
+      ).toBe(TEMPLATES[2026][PROCESSING_TYPES.EXPORTER])
+    })
+
+    it('throws for a year with no templates', () => {
+      expect(() =>
+        getTemplate(
+          /** @type {import('#common/helpers/dates/year.js').Year} */ (2027),
+          PROCESSING_TYPES.EXPORTER
+        )
+      ).toThrow('No EXPORTER summary log template for 2027')
+    })
+
+    it('throws for an unknown processing type', () => {
+      expect(() => getTemplate(DEFAULT_TEMPLATE_YEAR, 'UNKNOWN')).toThrow(
+        'No UNKNOWN summary log template for 2026'
+      )
     })
   })
 })
