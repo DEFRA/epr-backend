@@ -42,8 +42,13 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 
 const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 
+/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
+
 /**
- * @param {string} accreditationNumber
+ * @param {AccreditationNumber} accreditationNumber
+ * @returns {AccreditationCommon}
  */
 const accreditationNumbered = (accreditationNumber) => ({
   accreditationNumber,
@@ -56,7 +61,11 @@ const accreditationNumbered = (accreditationNumber) => ({
   }
 })
 
-/** The validity the waste balance reads for ACC-1, held for 2023. */
+/**
+ * The validity the waste balance reads for ACC-1, held for 2023.
+ *
+ * @type {AccreditationValidity}
+ */
 const ACCREDITATION_VALIDITY = {
   statusHistory: [{ status: 'approved', updatedAt: APPROVED_FROM }],
   validFrom: '2023-01-01',
@@ -67,18 +76,20 @@ const ACCREDITATION_VALIDITY = {
  * An organisation as the read model serves it, holding REG-1 and REG-2. REG-1
  * holds ACC-1 for 2023 unless `registration` replaces its accreditations.
  *
- * @param {{ registration?: object }} [options]
+ * @param {{ registration?: Partial<ReprocessorRegistration | ExporterRegistration> }} [options]
  */
 const organisationWith = ({ registration = {} } = {}) => ({
   organisationNumber: ORGANISATION_NUMBER,
   registrations: {
     'REG-2': {
       wasteProcessingType: 'reprocessor',
-      accreditations: { 2022: accreditationNumbered('ACC-2') }
+      accreditations: {
+        2022: accreditationNumbered(toAccreditationNumber('ACC-2'))
+      }
     },
     'REG-1': {
       wasteProcessingType: 'reprocessor',
-      accreditations: { 2023: accreditationNumbered('ACC-1') },
+      accreditations: { 2023: accreditationNumbered(ACCREDITATION_NUMBER) },
       ...registration
     }
   }
@@ -433,7 +444,7 @@ describe('syncFromSummaryLog', () => {
           wasteProcessingType: 'exporter',
           accreditations: {
             2023: {
-              ...accreditationNumbered('ACC-1'),
+              ...accreditationNumbered(ACCREDITATION_NUMBER),
               overseasSites: {
                 '001': { status: 'approved', approvedOn: '2024-01-01' },
                 '002': { status: 'pending' }
