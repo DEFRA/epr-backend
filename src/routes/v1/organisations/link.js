@@ -8,7 +8,9 @@ import { linkedDefraOrganisationViewSchema } from '#routes/organisations/respons
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
-import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
+import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/to-read-model.js'
+
+/** @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 
 const linkedOrganisationSchema = Joi.object({
   status: Joi.string()
@@ -34,14 +36,14 @@ export const organisationsLink = {
     }
   },
   /**
-   * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest} request
+   * @param {ResolvedRequest & { app: ResolvedRecords }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, organisationReadRepository } = request
+    const { organisationsRepository } = request
     const { organisationId, organisationNumber } = request.params
-    const { version: currentVersion } = await findOrganisationReadModel(request)
+    const { version: currentVersion } = request.app.storedOrganisation
     const {
       decoded: { payload: tokenPayload }
     } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
@@ -105,18 +107,20 @@ export const organisationsLink = {
     await organisationLinkingMetrics.organisationLinked()
 
     const updatedOrganisation =
-      await organisationReadRepository.findByOrganisationNumber(
+      await organisationsRepository.findByOrganisationNumber(
         organisationNumber,
         currentVersion + 1
       )
-    if (!updatedOrganisation) {
+    if (!updatedOrganisation?.linkedDefraOrganisation) {
       throw Boom.internal('Linked organisation could not be read back')
     }
 
     return h
       .response({
-        status: updatedOrganisation.status.current,
-        linkedDefraOrganisation: updatedOrganisation.linkedDefraOrganisation
+        status: updatedOrganisation.status,
+        linkedDefraOrganisation: toLinkedDefraOrganisation(
+          updatedOrganisation.linkedDefraOrganisation
+        )
       })
       .code(StatusCodes.OK)
   }

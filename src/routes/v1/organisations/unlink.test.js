@@ -8,7 +8,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import {
   asServiceMaintainerRead,
   asServiceMaintainerWrite,
@@ -69,8 +68,6 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })

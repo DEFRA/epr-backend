@@ -134,7 +134,7 @@ export async function findOrganisationAndRegistrationReadModels(request) {
  * @param {HapiRequest & { params: OrganisationParams }} request
  * @returns {Promise<ReadModelOrganisation>}
  */
-export async function findOrganisationReadModel({
+async function findOrganisationReadModel({
   organisationReadRepository,
   params: { organisationNumber }
 }) {

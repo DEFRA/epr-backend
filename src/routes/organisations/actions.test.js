@@ -14,7 +14,6 @@ import {
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
@@ -43,20 +42,7 @@ describe('organisation actions by organisation number', () => {
 
     server = await createTestServer({
       repositories: {
-        // The organisation the number resolved to is the one acted on, so
-        // only a read of the write's own result reaches findById.
-        organisationsRepository: () => {
-          const repository = organisationsRepositoryFactory()
-          return {
-            ...repository,
-            findById: (id, minimumVersion) =>
-              minimumVersion === undefined
-                ? Promise.reject(new Error('read again'))
-                : repository.findById(id, minimumVersion)
-          }
-        },
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+        organisationsRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })

@@ -1,5 +1,3 @@
-import Boom from '@hapi/boom'
-
 import { findPage } from '#repositories/organisations/inmemory-find.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
@@ -24,8 +22,6 @@ import { toReadModelOrganisations } from './to-read-model.js'
  * the read model's shape. An organisation the model leaves out still counts
  * towards `totalItems`, so its page comes back short.
  *
- * Nothing writes to it, so a version below `minimumVersion` can never arrive.
- *
  * @param {StoredOrganisation[]} [organisations]
  * @param {ExternalAccreditation[]} [externalAccreditations]
  * @returns {(dependencies: {
@@ -41,15 +37,12 @@ export const createInMemoryOrganisationReadRepository = (
   const external = structuredClone(externalAccreditations)
 
   return (dependencies) => ({
-    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
+    findByOrganisationNumber: async (organisationNumber) => {
       const found = stored.find(
         (candidate) => candidate.organisationNumber === organisationNumber
       )
       if (!found) {
         return null
-      }
-      if (minimumVersion !== undefined && found.version < minimumVersion) {
-        throw Boom.internal('Consistency timeout waiting for minimum version')
       }
       const [organisation] = await toReadModelOrganisations(
         [structuredClone(found)],
