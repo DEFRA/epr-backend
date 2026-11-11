@@ -205,8 +205,6 @@
  * @property {number} version
  * @property {number} schemaVersion
  * @property {number} submissionNumber
- * @property {string} [organisationId] - only on reports created before they were keyed by number
- * @property {string} [registrationId] - only on reports created before they were keyed by number
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
