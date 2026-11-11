@@ -222,7 +222,7 @@ const devEndpointsRepositoryConfigs = [
 /**
  * Builds repository plugins from config, applying any overrides.
  * @param {RepositoryConfig[]} configs - Repository configurations
- * @param {Object} repoOverrides - Repository overrides keyed by name
+ * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
  * @returns {import('@hapi/hapi').Plugin<void>[]}
  */
 function buildRepositoryPlugins(configs, repoOverrides) {

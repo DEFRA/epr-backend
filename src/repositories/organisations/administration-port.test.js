@@ -7,7 +7,7 @@ const NOT_PRODUCTION_CODE =
   /\.test\.js$|\.contract\.js$|test-helpers\.js$|\/contract\/|^src\/test\//
 
 const USES_ADMINISTRATION_PORT =
-  /organisationAdministrationRepository|organisations\/administration-port\.js/
+  /organisationAdministrationRepository|organisations\/(administration-)?port\.js/
 
 const ADMINISTRATION_PORT_MODULES = [
   // Wiring

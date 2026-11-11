@@ -16,8 +16,8 @@
  *
  * Organisation-level statusHistory is server-owned and is omitted here, but the
  * Registration and Accreditation item types carry their own statusHistory and
- * replace() honours it for an existing item whose status is unchanged
- * (PAE-1809 — admins correcting updatedAt dates).
+ * replace() honours it for an existing item whose status is unchanged, so an
+ * admin can correct its updatedAt dates.
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'statusHistory'>>} OrganisationReplacement
  */
 
