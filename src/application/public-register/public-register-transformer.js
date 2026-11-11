@@ -82,7 +82,7 @@ const firstApprovedAt = (timeline) =>
 const lastRecordedAt = (timeline) =>
   timeline
     .map(({ updatedAt }) => updatedAt)
-    .toSorted()
+    .toSorted((one, other) => one.localeCompare(other))
     .at(-1)
 
 /**
