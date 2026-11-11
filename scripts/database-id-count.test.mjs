@@ -216,6 +216,24 @@ describe('files reading every organisation through the legacy repository', () =>
     expect(countsFor(source)[5]).toBe(0)
   })
 
+  it('counts a file that builds the repository and reads every organisation under another name', () => {
+    const source = [
+      'const repository = (await createOrganisationsRepository(server.db))()',
+      'const organisations = await repository.findAll()'
+    ].join('\n')
+
+    expect(countsFor(source)[5]).toBe(1)
+  })
+
+  it('leaves out a file that builds the repository without reading every organisation', () => {
+    const source = [
+      'const factory = await createOrganisationsRepository(db)',
+      'await overseasSitesRepository.findByIds(ids)'
+    ].join('\n')
+
+    expect(countsFor(source)[5]).toBe(0)
+  })
+
   it('counts a file once however many times it reads every organisation', () => {
     const source = [
       'await organisationsRepository.findAll()',
