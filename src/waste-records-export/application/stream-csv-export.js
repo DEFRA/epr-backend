@@ -6,8 +6,9 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 import {
-  ledgerAccreditationOf,
+  indexByLedger,
   overseasSitesOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
@@ -29,6 +30,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
+/** @import {LedgerAccreditation} from '#waste-balances/application/read-model-accreditations.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
@@ -120,31 +122,22 @@ const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
  * since-cancelled accreditation or a registered-only period render as not
  * accredited but are still exported.
  *
- * @param {RegistrationNumber} registrationNumber
- * @param {Registration} registration
- * @param {AccreditationNumber | null} accreditationNumber
+ * @param {Map<string, LedgerAccreditation>} ledgerIndex - by `ledgerKey`
+ * @param {WasteBalanceLedgerId} ledgerId
  * @returns {{ accreditationNumber: AccreditationNumber | null, context: ReclassificationContext }}
  */
-const heldAccreditation = (
-  registrationNumber,
-  registration,
-  accreditationNumber
-) => {
-  const ledgerAccreditation = ledgerAccreditationOf(
-    registrationNumber,
-    registration,
-    accreditationNumber
-  )
+const heldAccreditation = (ledgerIndex, ledgerId) => {
+  const ledgerAccreditation = ledgerIndex.get(ledgerKey(ledgerId))
   if (
     !ledgerAccreditation ||
     !HELD_ACCREDITATION_STATUSES.has(
-      registration.accreditations[ledgerAccreditation.year].status.current
+      ledgerAccreditation.accreditation.status.current
     )
   ) {
     return { accreditationNumber: null, context: NOT_ACCREDITED }
   }
   return {
-    accreditationNumber,
+    accreditationNumber: ledgerAccreditation.accreditation.accreditationNumber,
     context: {
       accreditation: validityOf(ledgerAccreditation),
       overseasSites: overseasSitesOf(ledgerAccreditation)
@@ -160,6 +153,7 @@ const heldAccreditation = (
  * @param {Organisation} input.org
  * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
+ * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
  * @param {WasteBalanceLedgerId} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
@@ -170,15 +164,15 @@ async function* streamPartitionRows({
   org,
   registrationNumber,
   registration,
+  ledgerIndex,
   ledgerId,
   rowStates,
   summaryLogEntry,
   dataFieldColumns
 }) {
   const { accreditationNumber, context } = heldAccreditation(
-    registrationNumber,
-    registration,
-    ledgerId.accreditationNumber
+    ledgerIndex,
+    ledgerId
   )
 
   for (const rowState of [...rowStates].sort(sortRowStates)) {
@@ -204,6 +198,7 @@ async function* streamPartitionRows({
  * @property {Organisation} org
  * @property {RegistrationNumber} registrationNumber
  * @property {Registration} registration
+ * @property {Map<string, LedgerAccreditation>} ledgerIndex
  * @property {Map<string, { submittedAt: string }>} summaryLogMap
  * @property {string[]} dataFieldColumns
  */
@@ -253,6 +248,7 @@ async function* streamLatestSubmissionRows({
  * @param {Organisation} input.org
  * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
+ * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
  * @param {string[]} input.dataFieldColumns
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
@@ -263,6 +259,7 @@ async function* streamRegistrationRows({
   org,
   registrationNumber,
   registration,
+  ledgerIndex,
   entries,
   dataFieldColumns,
   summaryLogRowStatesRepository,
@@ -276,6 +273,7 @@ async function* streamRegistrationRows({
     org,
     registrationNumber,
     registration,
+    ledgerIndex,
     dataFieldColumns,
     summaryLogMap: await loadSummaryLogMap(summaryLogsRepository, org, {
       registrationNumber
@@ -345,6 +343,10 @@ export async function* streamCsvExport(deps) {
   const orgsSorted = organisation
     ? [organisation]
     : await findExportableOrgs(organisationReadRepository)
+  // Test organisations are already left out of a full export.
+  const ledgerIndex = indexByLedger(orgsSorted, {
+    includeTestOrganisations: true
+  })
   for (const org of orgsSorted) {
     for (const [registrationNumber, registration] of registrationsInOrder(
       org,
@@ -354,6 +356,7 @@ export async function* streamCsvExport(deps) {
         org,
         registrationNumber,
         registration,
+        ledgerIndex,
         entries:
           entriesByRegistration.get(
             registrationKey(org.organisationNumber, registrationNumber)
