@@ -1,12 +1,12 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
+import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
-import { statusRanges } from './status-timeline.js'
+import { approvedYears, statusRanges } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Standing, Registration, StatusTimeline } from './model.js' */
+/** @import { Standing, StandingByYear, Registration, StatusTimeline } from './model.js' */
 
 /**
  * @typedef {Pick<Registration, 'status' | 'accreditations'>} StandingSource
@@ -108,4 +108,24 @@ export const standingByDate = (registration, year) => {
   }
 
   return byDate
+}
+
+/**
+ * `standingByDate` for each year up to the year of `endDate` that the
+ * registration was approved in or holds an accreditation for.
+ *
+ * @param {StandingSource} registration
+ * @param {CalendarDate} endDate
+ * @returns {StandingByYear}
+ */
+export const standingByYear = (registration, endDate) => {
+  const lastYear = utcYearOf(endDate)
+  const years = [
+    ...approvedYears(registration.status.timeline, endDate),
+    ...Object.keys(registration.accreditations).map(utcYearOf)
+  ].filter((year) => year <= lastYear)
+
+  return Object.fromEntries(
+    years.map((year) => [year, standingByDate(registration, year)])
+  )
 }

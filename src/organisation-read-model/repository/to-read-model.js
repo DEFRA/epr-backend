@@ -1,6 +1,7 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -12,7 +13,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
-import { standingByYear } from '#organisation-read-model/domain/years.js'
+import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -266,7 +267,13 @@ export function toRegistrationEntry(
         `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
     )
-  const accreditations = { ...storedAccreditations, ...externalAccreditations }
+  const openYear = latestOpenYear(new Date(today))
+  const accreditations = Object.fromEntries(
+    Object.entries({
+      ...storedAccreditations,
+      ...externalAccreditations
+    }).filter(([year]) => Number(year) <= openYear)
+  )
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
@@ -276,7 +283,7 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
-      lastOpenDay(new Date(today))
+      yearBounds(openYear).end
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
