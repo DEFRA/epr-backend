@@ -125,6 +125,9 @@ export class LedgerSequenceError extends Error {
  * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
  *   Return the highest-numbered event for the ledger, or `null`
  *   if none exist.
+ * @property {(ledgerIds: WasteBalanceLedgerId[]) => Promise<LedgerEvent[]>} findLatestInLedgers
+ *   Return the highest-numbered event of each named ledger that has events.
+ *   Order is unspecified.
  * @property {(ledgerId: WasteBalanceLedgerId, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
  *   Return the highest-numbered event of the given kind for the ledger,
  *   or `null` if none of that kind exist.
