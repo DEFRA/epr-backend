@@ -72,6 +72,9 @@ const isUploadedForImport = (upload, importId) =>
 const hasCompletedFiles = (uploads) =>
   uploads.some((u) => u.fileStatus === UPLOAD_FILE_STATUS.COMPLETE)
 
+const OUT_OF_LOCATION_MESSAGE =
+  'Upload is not in the upload location for this import'
+
 export const orsUploadCompletedPath =
   '/v1/overseas-sites/imports/{id}/upload-completed'
 
@@ -107,9 +110,16 @@ export const orsUploadCompleted = {
       const uploads = normaliseToArray(payload.form.orsUpload)
 
       if (!uploads.every((upload) => isUploadedForImport(upload, id))) {
-        throw Boom.badData(
-          'Upload is not in the upload location for this import'
-        )
+        logger.error({
+          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+            reference: id
+          }
+        })
+        await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
+        throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
       }
 
       const completedFiles = uploads

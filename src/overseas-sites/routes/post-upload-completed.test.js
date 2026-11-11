@@ -319,7 +319,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
         ]
       }
     ])(
-      'refuses $description, and leaves the import untouched',
+      'refuses $description, fails the import without its files, and logs an error',
       async ({ orsUpload }) => {
         await orsImportsRepository.create({
           _id: importId,
@@ -336,10 +336,16 @@ describe(`${orsUploadCompletedPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const doc = await orsImportsRepository.findById(importId)
         expect(doc).toMatchObject({
-          status: ORS_IMPORT_STATUS.PREPROCESSING,
+          status: ORS_IMPORT_STATUS.FAILED,
           files: []
         })
         expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
+        expect(server.loggerMocks.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: `Upload is not in the upload location for this import: importId=${importId}`,
+            event: expect.objectContaining({ reference: importId })
+          })
+        )
       }
     )
   })
