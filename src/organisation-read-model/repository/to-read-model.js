@@ -1,6 +1,9 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
+import {
+  lastOpenDay,
+  latestOpenYear
+} from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -264,7 +267,13 @@ export function toRegistrationEntry(
         `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
     )
-  const accreditations = { ...storedAccreditations, ...externalAccreditations }
+  const openYear = latestOpenYear(new Date(today))
+  const accreditations = Object.fromEntries(
+    Object.entries({
+      ...storedAccreditations,
+      ...externalAccreditations
+    }).filter(([year]) => Number(year) <= openYear)
+  )
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */

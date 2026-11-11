@@ -1,3 +1,6 @@
+import { onTestFinished } from 'vitest'
+
+import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -75,6 +78,8 @@ describe('runPrnSiteAddressDiagnostic', () => {
   })
 
   it('logs each finding, then the summary', async () => {
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
     const differing = accreditation({
       site: { address: { line1: '7', postcode: 'SW2A 0AA' } }
     })

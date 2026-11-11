@@ -1,3 +1,6 @@
+import { onTestFinished } from 'vitest'
+
+import { config } from '#root/config.js'
 import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
@@ -197,6 +200,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
     it('keys an accreditation by the year of its validFrom', async ({
       organisationReadRepositoryWith
     }) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
       const granted2027 = accreditation({
         validFrom: '2027-01-01',
         validTo: '2027-12-31'

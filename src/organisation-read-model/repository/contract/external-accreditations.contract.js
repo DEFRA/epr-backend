@@ -63,6 +63,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
   describe('stored and external accreditations together', () => {
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
+      config.set('openNextYear', true)
     })
 
     afterEach(() => {
@@ -95,7 +96,6 @@ export const testExternalAccreditationsBehaviour = (it) => {
     it('dates the status of each year from the accreditation held for it', async ({
       organisationReadRepositoryWith
     }) => {
-      config.set('openNextYear', true)
       const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
@@ -118,9 +118,10 @@ export const testExternalAccreditationsBehaviour = (it) => {
       })
     })
 
-    it('leaves out the status dates of an accreditation for a year not yet open', async ({
+    it('leaves out an accreditation for a year not yet open, and its status dates', async ({
       organisationReadRepositoryWith
     }) => {
+      config.set('openNextYear', false)
       const stored = accreditedIn2026()
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
@@ -132,11 +133,9 @@ export const testExternalAccreditationsBehaviour = (it) => {
         stored.organisationNumber
       )
 
-      expect(
-        Object.keys(
-          organisation.registrations[REPROCESSOR_NUMBER].standingByDate
-        )
-      ).toEqual(['2026'])
+      const registration = organisation.registrations[REPROCESSOR_NUMBER]
+      expect(Object.keys(registration.accreditations)).toEqual(['2026'])
+      expect(Object.keys(registration.standingByDate)).toEqual(['2026'])
     })
 
     it('serves the external accreditation for a year both hold, and logs the stored one it drops', async ({
