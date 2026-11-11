@@ -23,8 +23,11 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { requiredNumbersFor } from '#domain/organisations/numbers-test-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -133,23 +136,35 @@ const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
   `/organisations/${orgId}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
 
 /**
+ * The numbers of the organisation's registration and the accreditation it
+ * links to, which buildOrgWithAccreditationStatus puts first.
+ * @param {import('#domain/organisations/model.js').Organisation} organisation
+ */
+const numbersOf = ({
+  orgId,
+  registrations: [registration],
+  accreditations: [accreditation]
+}) => ({
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber(
+    /** @type {string} */ (registration.registrationNumber)
+  ),
+  accreditationNumber: toAccreditationNumber(
+    /** @type {string} */ (accreditation.accreditationNumber)
+  )
+})
+
+/**
  * A PRN awaiting authorisation under the organisation's accreditation.
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  * @param {string} prnId
  */
-const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) => {
-  const [registration] = organisation.registrations
-  const ids = {
-    registrationId: registration.id,
-    accreditationId: /** @type {string} */ (registration.accreditationId)
-  }
-  return createInMemoryPackagingRecyclingNotesRepository([
+const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) =>
+  createInMemoryPackagingRecyclingNotesRepository([
     /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
       id: prnId,
       ...buildAwaitingAuthorisationPrn(
-        underAccreditation(
-          requiredNumbersFor(organisation, ids, 'the test PRN')
-        )
+        underAccreditation(numbersOf(organisation))
       )
     })
   ])({
@@ -161,7 +176,6 @@ const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) => {
     fatal: vi.fn(),
     child: vi.fn()
   })
-}
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
@@ -1200,11 +1214,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
-            ...requiredNumbersFor(
-              partialMock(fixture),
-              { registrationId: registration.id, accreditationId },
-              'the test ledger'
-            ),
+            ...numbersOf(fixture),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },
@@ -1309,11 +1319,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
             organisationId: fixture.id,
             registrationId: registration.id,
             accreditationId,
-            ...requiredNumbersFor(
-              partialMock(fixture),
-              { registrationId: registration.id, accreditationId },
-              'the test ledger'
-            ),
+            ...numbersOf(fixture),
             number: 1,
             payload: { summaryLogId: 'log-1', creditTotal: 500 },
             openingBalance: { amount: 0, availableAmount: 0 },

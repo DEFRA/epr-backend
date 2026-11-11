@@ -27,7 +27,6 @@ import {
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -82,18 +81,21 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   ]
 
   /**
-   * @param {{ id: string }} org
+   * @param {{ id: string, orgId: number }} org
    * @param {Record<string, any>} registration
+   * @param {{ id: string, accreditationNumber: AccreditationNumber | null } | undefined} accreditationRecord
    * @param {SummaryLogRowStateEntry[]} [rows]
    */
-  const seedRepositories = async (org, registration, rows = DEFAULT_ROWS) => {
-    const accreditationId = registration.accreditationId ?? null
-    const ids = { registrationId: registration.id, accreditationId }
+  const seedRepositories = async (
+    org,
+    registration,
+    accreditationRecord,
+    rows = DEFAULT_ROWS
+  ) => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
-    const { numbers, unmapped } = numbersFor(partialMock(org), ids)
     // An accreditation without its number holds no ledger.
-    if (unmapped.length > 0) {
+    if (accreditationRecord && !accreditationRecord.accreditationNumber) {
       return {
         ledgerRepository: createInMemoryLedgerRepository()(),
         summaryLogRowStatesRepository
@@ -101,10 +103,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     }
     const ledgerId = {
       organisationId: org.id,
-      ...ids,
-      .../** @type {import('#domain/organisations/numbers.js').RequiredNumbers} */ (
-        numbers
-      )
+      registrationId: registration.id,
+      accreditationId: accreditationRecord?.id ?? null,
+      ...reportKeyOf(org, registration),
+      accreditationNumber: accreditationRecord?.accreditationNumber ?? null
     }
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       ledgerId,
@@ -161,7 +163,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     const { ledgerRepository, summaryLogRowStatesRepository } =
-      await seedRepositories(org, registration, rows)
+      await seedRepositories(org, registration, accreditationRecord, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
     const server = await createTestServer({

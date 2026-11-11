@@ -35,7 +35,8 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationNumber, OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationApproved } from '#domain/organisations/accreditation.js' */
+/** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -134,14 +135,22 @@ const naming = (error, summaryLogId) => {
  * @returns {RequiredNumbers}
  */
 const requiredNumbersOf = (organisationNumber, registration) => {
-  const accreditationNumber = isRegistrationAccredited(registration)
-    ? /** @type {{ accreditation: { accreditationNumber?: AccreditationNumber } }} */ (
-        registration
-      ).accreditation.accreditationNumber
-    : null
   const { registrationNumber } = registration
-  if (!registrationNumber || accreditationNumber === undefined) {
-    throw new Error('Cannot store summary logs without their numbers')
+  if (!registrationNumber) {
+    throw new Error(
+      'Cannot store summary logs without their numbers: the registration has no registration number'
+    )
+  }
+  if (!isRegistrationAccredited(registration)) {
+    return { organisationNumber, registrationNumber, accreditationNumber: null }
+  }
+  const { accreditationNumber } = /** @type {AccreditationApproved} */ (
+    registration.accreditation
+  )
+  if (!accreditationNumber) {
+    throw new Error(
+      'Cannot store summary logs without their numbers: its accreditation has no accreditation number'
+    )
   }
   return { organisationNumber, registrationNumber, accreditationNumber }
 }

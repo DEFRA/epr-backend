@@ -9,8 +9,11 @@ import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers-test-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
@@ -97,20 +100,24 @@ const accreditationPath = (year) =>
   `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${year}`
 
 /**
- * A ledger of the test organisation, with the numbers its record gives it.
+ * A ledger of the test organisation, under its registration's and
+ * accreditation's ids and numbers.
  *
- * @param {{ registrationId: string, accreditationId: string | null }} ids
+ * @param {Record<string, any>} registration
+ * @param {Record<string, any> | null} accreditation
  */
-const numbered = (ids) => ({
+const numbered = (registration, accreditation) => ({
   organisationId: organisation.id,
-  ...ids,
-  ...requiredNumbersFor(partialMock(organisation), ids, 'the test ledger')
+  registrationId: registration.id,
+  accreditationId: accreditation?.id ?? null,
+  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  registrationNumber: toRegistrationNumber(registration.registrationNumber),
+  accreditationNumber: accreditation
+    ? toAccreditationNumber(accreditation.accreditationNumber)
+    : null
 })
 
-const accreditedLedgerId = numbered({
-  registrationId: accreditedRegistration.id,
-  accreditationId: accredited.id
-})
+const accreditedLedgerId = numbered(accreditedRegistration, accredited)
 
 const issuedNote = createMockIssuedPrn({
   id: 'prn-numbered',
@@ -131,7 +138,7 @@ const body = (response) => JSON.parse(response.payload)
 /** @param {object} overrides */
 const registeredOnlyEvent = (overrides) =>
   buildLedgerEvent({
-    ...numbered({ registrationId: registeredOnly.id, accreditationId: null }),
+    ...numbered(registeredOnly, null),
     ...overrides
   })
 
@@ -456,10 +463,7 @@ describe('ledger and waste balance routes by natural key', () => {
       ])
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent({
-          ...numbered({
-            registrationId: accreditedExporter.id,
-            accreditationId: accreditedExport.id
-          }),
+          ...numbered(accreditedExporter, accreditedExport),
           closingBalance: {
             amount: 120,
             availableAmount: 100,

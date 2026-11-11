@@ -13,7 +13,11 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { numbersFor } from '#domain/organisations/numbers-test-helpers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   summaryLogFactory,
   withoutAccreditationId
@@ -56,6 +60,22 @@ const organisation = buildOrganisation({
   registrations: [registeredOnlyRegistration, accreditedRegistration],
   accreditations: [accredited]
 })
+
+const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+const registeredOnlyLog = {
+  registrationId: registeredOnlyRegistration.id,
+  accreditationId: null,
+  organisationNumber,
+  registrationNumber: toRegistrationNumber(REGISTERED_ONLY_NUMBER),
+  accreditationNumber: null
+}
+const accreditedLog = {
+  registrationId: accreditedRegistration.id,
+  accreditationId: accredited.id,
+  organisationNumber,
+  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+}
 
 const registrations = `/organisations/${organisation.orgId}/registrations`
 const summaryLogs = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
@@ -131,9 +151,7 @@ describe('summary-log routes by natural key', () => {
   })
 
   /**
-   * @typedef {{
-   *   registrationId: string,
-   *   accreditationId?: string | null,
+   * @typedef {(typeof registeredOnlyLog | typeof accreditedLog) & {
    *   [field: string]: unknown
    * }} SeedOverrides
    */
@@ -147,16 +165,11 @@ describe('summary-log routes by natural key', () => {
    */
   const seed = async (overrides, build) => {
     const summaryLogId = toSummaryLogId(randomUUID())
-    const { numbers } = numbersFor(partialMock(organisation), {
-      accreditationId: null,
-      ...overrides
-    })
     await summaryLogsRepository.insert(
       summaryLogId,
-      partialMock({
-        ...build({ organisationId: organisation.id, year: YEAR, ...overrides }),
-        ...numbers
-      })
+      partialMock(
+        build({ organisationId: organisation.id, year: YEAR, ...overrides })
+      )
     )
     return {
       summaryLogId,
@@ -230,23 +243,26 @@ describe('summary-log routes by natural key', () => {
   describe.each([
     {
       kind: 'registered-only',
-      accreditationId: null,
+      log: {
+        ...accreditedLog,
+        accreditationId: null,
+        accreditationNumber: null
+      },
       ledgerAccreditation: { kind: 'registeredOnly' }
     },
     {
       kind: 'accredited',
-      accreditationId: accredited.id,
+      log: accreditedLog,
       ledgerAccreditation: {
         kind: 'accredited',
         accreditationNumber: ACCREDITATION_NUMBER
       }
     }
-  ])('a $kind summary log', ({ accreditationId, ledgerAccreditation }) => {
+  ])('a $kind summary log', ({ log, ledgerAccreditation }) => {
     it('is read with the ledger accreditation it was uploaded to, apart from its cover sheet', async () => {
       const { summaryLogId } = await seed(
         {
-          registrationId: accreditedRegistration.id,
-          accreditationId,
+          ...log,
           meta: {
             PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT,
             ACCREDITATION_NUMBER: 'COVER-SHEET-NUMBER'
@@ -270,23 +286,17 @@ describe('summary-log routes by natural key', () => {
 
   it('reads a summary log that holds no accreditation id without a ledger accreditation', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())
-    const { numbers } = numbersFor(partialMock(organisation), {
-      registrationId: accreditedRegistration.id,
-      accreditationId: accredited.id
-    })
     await summaryLogsRepository.insert(
       summaryLogId,
       partialMock(
-        withoutAccreditationId({
-          ...summaryLogFactory.validated({
+        withoutAccreditationId(
+          summaryLogFactory.validated({
             organisationId: organisation.id,
-            registrationId: accreditedRegistration.id,
-            accreditationId: accredited.id,
+            ...accreditedLog,
             year: YEAR,
             meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
-          }),
-          ...numbers
-        })
+          })
+        )
       )
     )
     await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -321,13 +331,7 @@ describe('summary-log routes by natural key', () => {
   })
 
   it('validates a registered-only upload against the prior registered-only submission, not the accredited one', async () => {
-    await seed(
-      {
-        registrationId: accreditedRegistration.id,
-        accreditationId: accredited.id
-      },
-      summaryLogFactory.submitted
-    )
+    await seed(accreditedLog, summaryLogFactory.submitted)
     const summaryLogId = toSummaryLogId(randomUUID())
 
     await server.inject({
@@ -345,11 +349,7 @@ describe('summary-log routes by natural key', () => {
   describe('a summary log', () => {
     /** @param {object} [overrides] */
     const seedOwn = (overrides = {}) =>
-      seedValidated({
-        registrationId: accreditedRegistration.id,
-        accreditationId: accredited.id,
-        ...overrides
-      })
+      seedValidated({ ...accreditedLog, ...overrides })
 
     it('is read under its registration, whatever its year', async () => {
       const summaryLogId = toSummaryLogId(
@@ -427,7 +427,10 @@ describe('summary-log routes by natural key', () => {
       ['another organisation', { organisationId: 'another-organisation' }],
       [
         'another registration',
-        { registrationId: registeredOnlyRegistration.id }
+        {
+          registrationId: registeredOnlyLog.registrationId,
+          registrationNumber: registeredOnlyLog.registrationNumber
+        }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
       const summaryLogId = toSummaryLogId(await seedOwn(overrides))
@@ -545,7 +548,7 @@ describe('summary-log routes by natural key', () => {
     beforeEach(async () => {
       await seed(
         {
-          registrationId: registeredOnlyRegistration.id,
+          ...registeredOnlyLog,
           file: { id: fileId },
           meta: { REGISTRATION_NUMBER: REGISTERED_ONLY_NUMBER }
         },
