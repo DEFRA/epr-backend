@@ -61,17 +61,28 @@ describe('lines naming a database id', () => {
     expect(countsFor(source)[0]).toBe(3)
   })
 
-  it('counts finding by id and reading id from a stored record', () => {
+  it('counts finding an organisation by id and reading id from a stored record', () => {
     const source = [
-      'await repository.findById(id)',
-      'await repository.findByIds(ids)',
+      'await organisationsRepository.findById(id)',
+      'await this.organisationsRepository.findByIds(ids)',
+      'await organisationRepo.findById(id)',
       'const key = registration.id',
       'accreditation.id === id',
       'organisation.idempotencyKey',
       'summaryLog.id'
     ].join('\n')
 
-    expect(countsFor(source)[0]).toBe(4)
+    expect(countsFor(source)[0]).toBe(5)
+  })
+
+  it('leaves out finding anything else by its own id', () => {
+    const source = [
+      'await packagingRecyclingNotesRepository.findById(id)',
+      'await summaryLogsRepository.findById(summaryLogId)',
+      'await overseasSitesRepository.findByIds(siteIds)'
+    ].join('\n')
+
+    expect(countsFor(source)[0]).toBe(0)
   })
 
   it('leaves out route path parameters', () => {
@@ -187,11 +198,39 @@ describe('files using the stored organisation shapes', () => {
   })
 })
 
+describe('files reading every organisation through the legacy repository', () => {
+  it.each([
+    'const organisations = await organisationsRepository.findAll()',
+    'organisationRepo.findAll(),',
+    'await this.organisationsRepository.findAll()'
+  ])('counts a file that reads every organisation: %s', (source) => {
+    expect(countsFor(source)[5]).toBe(1)
+  })
+
+  it.each([
+    'await organisationsRepository.findByOrganisationNumber(number)',
+    'await organisationsRepository.insert(organisation)',
+    'await organisationReadRepository.findAll()',
+    'await overseasSitesRepository.findAll()'
+  ])('leaves out a file that does not: %s', (source) => {
+    expect(countsFor(source)[5]).toBe(0)
+  })
+
+  it('counts a file once however many times it reads every organisation', () => {
+    const source = [
+      'await organisationsRepository.findAll()',
+      'await organisationsRepository.findAll()'
+    ].join('\n')
+
+    expect(countsFor(source)[5]).toBe(1)
+  })
+})
+
 describe('comment', () => {
   const main = MEASURES.map(() => 42)
 
   it('shows each count on both refs and the change against main', () => {
-    const body = comment([40, 43, 42, 42, 42], main, 'main')
+    const body = comment([40, 43, 42, 42, 42, 42], main, 'main')
 
     expect(body).toContain('| Lines naming a database id | 40 | 42 | down 2 |')
     expect(body).toContain(

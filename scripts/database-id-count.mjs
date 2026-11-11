@@ -10,7 +10,9 @@ const REPOSITORY_FILE = /\/repositor(y|ies)\//
 const REPOSITORY_PORT = /\/([^/]*-)?port\.js$/
 
 const DATABASE_ID =
-  /(organisation|registration|accreditation)Id|findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
+  /(organisation|registration|accreditation)Id|\b(organisationsRepository|organisationRepo)\.findByIds?\(|\b(organisation|registration|accreditation)\.id\b/i
+const LEGACY_FIND_ALL =
+  /\b(organisationsRepository|organisationRepo)\.findAll\(/
 const ROUTE_PATH_PARAMETER =
   /\/\{(organisation|registration|accreditation)Id\}/g
 const DIRECT_COLLECTION = /\.collection\(/
@@ -74,7 +76,7 @@ const usesStoredShapes = (source, path) => {
 export const MEASURES = [
   {
     label: 'Lines naming a database id',
-    rule: 'A line counts when it names `organisationId`, `registrationId` or `accreditationId`, in any case, calls `findById(` or `findByIds(`, or reads `.id` from an `organisation`, `registration` or `accreditation`. So `findByRegistrationId` counts and `orgId` does not. Route path parameters such as `{organisationId}` are left out, so a route can still carry an id in its URL.',
+    rule: 'A line counts when it names `organisationId`, `registrationId` or `accreditationId`, in any case, calls `findById(` or `findByIds(` on the organisations repository, or reads `.id` from an `organisation`, `registration` or `accreditation`. So `findByRegistrationId` counts and `orgId` does not, and finding a PRN, summary log or overseas site by its own id is left out. Route path parameters such as `{organisationId}` are left out, so a route can still carry an id in its URL.',
     count: linesWhere((line) =>
       DATABASE_ID.test(line.replace(ROUTE_PATH_PARAMETER, ''))
     )
@@ -98,6 +100,11 @@ export const MEASURES = [
     label: 'Files using the stored organisation shapes',
     rule: 'A file counts when it imports, by any path, the `Organisation`, `Registration` or `Accreditation` type from `src/domain/organisations`, or a variant of one such as `RegistrationApproved` or `RegistrationOrAccreditation`. The three modules that define them are left out.',
     count: (source, path) => (usesStoredShapes(source, path) ? 1 : 0)
+  },
+  {
+    label: 'Files reading every organisation through the legacy repository',
+    rule: 'A file counts when it calls `findAll(` on the organisations repository, as `organisationsRepository.findAll(` or `organisationRepo.findAll(`. Reads of one organisation and writes through the repository are not counted.',
+    count: (source) => (LEGACY_FIND_ALL.test(source) ? 1 : 0)
   }
 ]
 
