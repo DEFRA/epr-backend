@@ -100,13 +100,13 @@ export const testExternalAccreditationsBehaviour = (it) => {
       )
 
       expect(
-        organisation.registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+        organisation.registrations[REPROCESSOR_NUMBER].standingByDate
       ).toStrictEqual({
         2026: {
-          '2026-02-01': { status: 'registeredOnly' },
-          '2026-07-01': { status: 'accredited' }
+          '2026-02-01': { standing: 'registeredOnly' },
+          '2026-07-01': { standing: 'accredited' }
         },
-        2027: { '2027-01-01': { status: 'accredited' } }
+        2027: { '2027-01-01': { standing: 'accredited' } }
       })
     })
 
@@ -126,7 +126,7 @@ export const testExternalAccreditationsBehaviour = (it) => {
 
       expect(
         Object.keys(
-          organisation.registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+          organisation.registrations[REPROCESSOR_NUMBER].standingByDate
         )
       ).toEqual(['2026'])
     })

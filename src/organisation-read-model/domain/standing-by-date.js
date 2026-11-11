@@ -1,19 +1,15 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
-import {
-  HELD_ACCREDITATION_STATUSES,
-  REG_ACC_STATUS,
-  statusOn
-} from './model.js'
+import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
 import { statusRanges } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegAccStatus, Registration, StatusTimeline } from './model.js' */
+/** @import { Standing, Registration, StatusTimeline } from './model.js' */
 
 /**
- * @typedef {Pick<Registration, 'status' | 'accreditations'>} RegAccStatusSource
+ * @typedef {Pick<Registration, 'status' | 'accreditations'>} StandingSource
  */
 
 /**
@@ -38,22 +34,22 @@ const holdsAccreditationOn = (accreditationTimeline, date) => {
  * @param {StatusTimeline} registrationTimeline
  * @param {StatusTimeline} accreditationTimeline
  * @param {CalendarDate} date
- * @returns {RegAccStatus | undefined}
+ * @returns {Standing | undefined}
  */
-const regAccStatusOn = (registrationTimeline, accreditationTimeline, date) => {
+const standingOn = (registrationTimeline, accreditationTimeline, date) => {
   if (!hasBeenApprovedBy(registrationTimeline, date)) {
     return undefined
   }
 
   if (statusOn(registrationTimeline, date) !== REGISTRATION_STATUS.APPROVED) {
-    return REG_ACC_STATUS.CANCELLED
+    return STANDING.CANCELLED
   }
 
   if (holdsAccreditationOn(accreditationTimeline, date)) {
-    return REG_ACC_STATUS.ACCREDITED
+    return STANDING.ACCREDITED
   }
 
-  return REG_ACC_STATUS.REGISTERED_ONLY
+  return STANDING.REGISTERED_ONLY
 }
 
 /**
@@ -80,11 +76,11 @@ const datesToCheck = (timelines, year) => {
  * keyed by the date each value starts. A value holds until the next key, or the
  * end of the year.
  *
- * @param {RegAccStatusSource} registration
+ * @param {StandingSource} registration
  * @param {Year} year
- * @returns {Record<CalendarDate, { status: RegAccStatus }>}
+ * @returns {Record<CalendarDate, { standing: Standing }>}
  */
-export const regAccStatusByDate = (registration, year) => {
+export const standingByDate = (registration, year) => {
   const registrationTimeline = registration.status.timeline
   const accreditationTimeline =
     registration.accreditations[year]?.status.timeline ?? []
@@ -93,21 +89,21 @@ export const regAccStatusByDate = (registration, year) => {
     year
   )
 
-  /** @type {Record<CalendarDate, { status: RegAccStatus }>} */
+  /** @type {Record<CalendarDate, { standing: Standing }>} */
   const byDate = {}
-  /** @type {RegAccStatus | undefined} */
+  /** @type {Standing | undefined} */
   let previous
 
   for (const date of dates) {
-    const status = regAccStatusOn(
+    const standing = standingOn(
       registrationTimeline,
       accreditationTimeline,
       date
     )
 
-    if (status !== undefined && status !== previous) {
-      byDate[date] = { status }
-      previous = status
+    if (standing !== undefined && standing !== previous) {
+      byDate[date] = { standing }
+      previous = standing
     }
   }
 

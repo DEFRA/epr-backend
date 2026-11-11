@@ -380,18 +380,18 @@ describe('GET /organisations/{organisationNumber}', () => {
     )
   })
 
-  describe('regAccStatusByDate', () => {
+  describe('standingByDate', () => {
     const approvedSince = (updatedAt) => [
       { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
       { status: 'approved', updatedAt }
     ]
 
-    const regAccStatusOf = async (organisation, query = '') => {
+    const standingOf = async (organisation, query = '') => {
       await serve(organisation)
       const response = await get(
         `/organisations/${organisation.organisationNumber}${query}`
       )
-      return body(response).registrations[REPROCESSOR_NUMBER].regAccStatusByDate
+      return body(response).registrations[REPROCESSOR_NUMBER].standingByDate
     }
 
     beforeEach(() => {
@@ -412,9 +412,9 @@ describe('GET /organisations/{organisationNumber}', () => {
         ]
       })
 
-      expect(await regAccStatusOf(organisation)).toEqual({
-        2026: { '2026-02-01': { status: 'registeredOnly' } },
-        2027: { '2027-01-01': { status: 'registeredOnly' } }
+      expect(await standingOf(organisation)).toEqual({
+        2026: { '2026-02-01': { standing: 'registeredOnly' } },
+        2027: { '2027-01-01': { standing: 'registeredOnly' } }
       })
     })
 
@@ -429,8 +429,8 @@ describe('GET /organisations/{organisationNumber}', () => {
         ]
       })
 
-      expect(await regAccStatusOf(organisation, '?year=2028')).toEqual({
-        2028: { '2028-01-01': { status: 'registeredOnly' } }
+      expect(await standingOf(organisation, '?year=2028')).toEqual({
+        2028: { '2028-01-01': { standing: 'registeredOnly' } }
       })
     })
 
@@ -444,8 +444,8 @@ describe('GET /organisations/{organisationNumber}', () => {
         ]
       })
 
-      expect(await regAccStatusOf(organisation, '?year=2026')).toEqual({
-        2026: { '2026-02-01': { status: 'registeredOnly' } }
+      expect(await standingOf(organisation, '?year=2026')).toEqual({
+        2026: { '2026-02-01': { standing: 'registeredOnly' } }
       })
     })
 
@@ -470,24 +470,24 @@ describe('GET /organisations/{organisationNumber}', () => {
     it('serves next year accredited from an accreditation approved early, while that year is open', async () => {
       config.set('openNextYear', true)
 
-      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
-        2027: { '2027-01-10': { status: 'registeredOnly' } },
-        2028: { '2028-01-01': { status: 'accredited' } }
+      expect(await standingOf(accreditedEarlyForNextYear())).toEqual({
+        2027: { '2027-01-10': { standing: 'registeredOnly' } },
+        2028: { '2028-01-01': { standing: 'accredited' } }
       })
     })
 
     it('leaves out next year while it is closed, even with an accreditation approved early', async () => {
-      expect(await regAccStatusOf(accreditedEarlyForNextYear())).toEqual({
-        2027: { '2027-01-10': { status: 'registeredOnly' } }
+      expect(await standingOf(accreditedEarlyForNextYear())).toEqual({
+        2027: { '2027-01-10': { standing: 'registeredOnly' } }
       })
     })
 
     it('serves a registration cancelled part way through a year', async () => {
-      expect(await regAccStatusOf(approvedThenCancelled())).toEqual({
-        2025: { '2025-03-01': { status: 'registeredOnly' } },
+      expect(await standingOf(approvedThenCancelled())).toEqual({
+        2025: { '2025-03-01': { standing: 'registeredOnly' } },
         2026: {
-          '2026-01-01': { status: 'registeredOnly' },
-          '2026-03-01': { status: 'cancelled' }
+          '2026-01-01': { standing: 'registeredOnly' },
+          '2026-03-01': { standing: 'cancelled' }
         }
       })
     })
