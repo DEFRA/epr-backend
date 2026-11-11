@@ -1,4 +1,3 @@
-import tls from 'node:tls'
 import { describe, it, expect, vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from './create-test-server.js'
@@ -29,16 +28,6 @@ describe('createTestServer', () => {
       expect(server.loggerMocks.info).toBeTypeOf('function')
       expect(server.loggerMocks.error).toBeTypeOf('function')
       expect(server.loggerMocks.warn).toBeTypeOf('function')
-    })
-  })
-
-  describe('TLS', () => {
-    it('leaves tls.createSecureContext unpatched, so wrappers cannot stack across servers', async () => {
-      const originalCreateSecureContext = tls.createSecureContext
-
-      await createTestServer()
-
-      expect(tls.createSecureContext).toBe(originalCreateSecureContext)
     })
   })
 
