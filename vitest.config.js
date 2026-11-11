@@ -48,8 +48,7 @@ export default defineConfig({
     setupFiles: [
       '.vite/setup-auditing.js',
       '.vite/setup-files.js',
-      '.vite/setup-msw.js',
-      '.vite/setup-tls.js'
+      '.vite/setup-msw.js'
     ]
   }
 })
