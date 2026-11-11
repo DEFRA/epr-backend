@@ -2,24 +2,25 @@ import {
   anchoredPattern,
   escapeRegex,
   normaliseCriteria,
-  parseOrgIdCriterion
+  parseOrgIdCriterion,
+  storedOrgId
 } from './helpers.js'
 
-/** @import { FindParams, SearchCriteria } from './port.js' */
+/** @import { FindParams, SearchCriteria } from './administration-port.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * How organisations are searched in memory. The in-memory organisations
  * repository and the in-memory organisation read repository both search
- * organisations as they are stored, and share this search so they find the
- * same ones.
+ * organisations as the repository returns them, and share this search so
+ * they find the same ones.
  */
 
 /**
- * The fields a search reads. Stored documents and the organisations the
- * repository returns both have them.
+ * The fields a search reads.
  *
  * @typedef {{
- *   orgId: number
+ *   organisationNumber: OrganisationNumber
  *   companyDetails: { name: string }
  *   registrations: Array<{ registrationNumber?: string | null }>
  *   accreditations: Array<{ accreditationNumber?: string | null }>
@@ -45,8 +46,12 @@ const anchoredMatcher = (value) => {
  *   satisfies every criterion
  */
 const buildFindMatcher = (criteria) => {
-  const { search, orgId, registrationNumber, accreditationNumber } =
-    normaliseCriteria(criteria)
+  const {
+    search,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
 
   /** @type {Array<(org: Searchable) => boolean>} */
   const checks = []
@@ -54,9 +59,9 @@ const buildFindMatcher = (criteria) => {
     const pattern = new RegExp(escapeRegex(search), 'i')
     checks.push((org) => pattern.test(org.companyDetails.name))
   }
-  if (orgId !== '') {
-    const wantedOrgId = parseOrgIdCriterion(orgId)
-    checks.push((org) => org.orgId === wantedOrgId)
+  if (organisationNumber !== '') {
+    const wantedOrgId = parseOrgIdCriterion(organisationNumber)
+    checks.push((org) => storedOrgId(org.organisationNumber) === wantedOrgId)
   }
   if (registrationNumber !== '') {
     const matchesNumber = anchoredMatcher(registrationNumber)

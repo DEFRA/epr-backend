@@ -19,8 +19,43 @@ import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.j
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
 const FAILURE_MESSAGE = 'Failure submitting summary log'
+
+/**
+ * Moves the summary log to submitting, unless another submission is in
+ * progress or its waste records have changed since the preview.
+ *
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {SummaryLogId} summaryLogId
+ */
+const startSubmitting = async (summaryLogsRepository, summaryLogId) => {
+  // Atomically transition to submitting - fails if another submission in progress
+  const result =
+    await summaryLogsRepository.transitionToSubmittingExclusive(summaryLogId)
+
+  if (!result.success) {
+    throw Boom.conflict('Another submission is in progress. Please try again.')
+  }
+
+  const { summaryLog, version } = result
+
+  const isStale = await supersedeIfStale({
+    summaryLogsRepository,
+    summaryLog,
+    summaryLogId,
+    version
+  })
+
+  if (isStale) {
+    throw Boom.conflict(
+      'Waste records have changed since preview was generated. Please re-upload.'
+    )
+  }
+
+  return summaryLog
+}
 
 export const summaryLogsSubmit = {
   method: 'POST',
@@ -33,7 +68,7 @@ export const summaryLogsSubmit = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor,
    *   systemLogsRepository: SystemLogsRepository
@@ -43,35 +78,19 @@ export const summaryLogsSubmit = {
   handler: async (request, h) => {
     const { summaryLogsRepository, summaryLogsWorker, params, logger } = request
 
-    const { summaryLogId, organisationId, registrationId } = params
+    const {
+      summaryLogId,
+      organisationId,
+      registrationId,
+      organisationNumber,
+      registrationNumber
+    } = params
 
     try {
-      // Atomically transition to submitting - fails if another submission in progress
-      const result =
-        await summaryLogsRepository.transitionToSubmittingExclusive(
-          summaryLogId
-        )
-
-      if (!result.success) {
-        throw Boom.conflict(
-          'Another submission is in progress. Please try again.'
-        )
-      }
-
-      const { summaryLog, version: newVersion } = result
-
-      const isStale = await supersedeIfStale({
+      const summaryLog = await startSubmitting(
         summaryLogsRepository,
-        summaryLog,
-        summaryLogId,
-        version: newVersion
-      })
-
-      if (isStale) {
-        throw Boom.conflict(
-          'Waste records have changed since preview was generated. Please re-upload.'
-        )
-      }
+        summaryLogId
+      )
 
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId, request)
@@ -85,7 +104,10 @@ export const summaryLogsSubmit = {
       await auditSummaryLogSubmit(request, {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber: summaryLog.accreditationNumber
       })
 
       logger.info({

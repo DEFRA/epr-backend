@@ -37,7 +37,6 @@ import {
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -85,7 +84,7 @@ describe('Repeated uploads of identical data', () => {
       // Set up organisation with registration
       accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -118,9 +117,10 @@ describe('Repeated uploads of identical data', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        { ...testOrg, status: 'active' }
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          { ...testOrg, status: 'active' }
+        ])()
 
       // Define shared metadata and headers
       const sharedMeta = {
@@ -261,7 +261,7 @@ describe('Repeated uploads of identical data', () => {
         createInMemorySummaryLogRowStatesRepository()()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
@@ -279,7 +279,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
         }),
@@ -312,9 +312,10 @@ describe('Repeated uploads of identical data', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         },
         workers: {
           summaryLogsWorker
@@ -398,9 +399,7 @@ describe('Repeated uploads of identical data', () => {
       { timeout: 60000 },
       async () => {
         const ledgerId = {
-          organisationNumber: toOrganisationNumber(
-            String(TEST_ORGANISATION_NUMBER)
-          ),
+          organisationNumber: TEST_ORGANISATION_NUMBER,
           registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
           accreditationNumber: toAccreditationNumber('ACC-2025-001')
         }

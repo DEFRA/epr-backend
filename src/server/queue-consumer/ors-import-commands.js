@@ -16,7 +16,7 @@ import { SYSTEM_USER } from '#root/auditing/helpers.js'
 /** @import {UploadsRepository} from '#domain/uploads/repository/port.js' */
 /** @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SystemLogsRepository, SystemLogHumanActor} from '#repositories/system-logs/port.js' */
 /** @import {CommandHandler} from './summary-log-commands.js' */
 
@@ -33,7 +33,7 @@ const userSchema = Joi.object({
  * @property {OrsImportsRepository} orsImportsRepository
  * @property {UploadsRepository} uploadsRepository
  * @property {OverseasSitesRepository} overseasSitesRepository
- * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @property {SystemLogsRepository} systemLogsRepository
  */
 
@@ -58,7 +58,8 @@ export const importOverseasSitesHandler = {
       orsImportsRepository: deps.orsImportsRepository,
       uploadsRepository: deps.uploadsRepository,
       overseasSitesRepository: deps.overseasSitesRepository,
-      organisationsRepository: deps.organisationsRepository,
+      organisationAdministrationRepository:
+        deps.organisationAdministrationRepository,
       systemLogsRepository: deps.systemLogsRepository,
       logger: deps.logger,
       orsImportMetrics,

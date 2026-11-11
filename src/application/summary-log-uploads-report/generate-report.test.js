@@ -1,19 +1,24 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
-  buildRegistration,
-  createOrganisationBuilders
+  createOrganisationBuilders,
+  getValidDateRange,
+  prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  ORGANISATION_STATUS,
+  REGISTRATION_STATUS,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * @import { Organisation } from '#domain/organisations/model.js'
@@ -21,15 +26,15 @@ import {
  */
 
 const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation, nextOrgId } = organisationBuilders
+const { buildOrganisation, nextOrganisationNumber } = organisationBuilders
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 /**
- * @param {Pick<Organisation, 'orgId'>} organisation
+ * @param {Pick<Organisation, 'organisationNumber'>} organisation
  * @param {Pick<Registration, 'registrationNumber'>} registration
  */
 const numbersOf = (organisation, registration) => ({
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: registration.registrationNumber
 })
 
@@ -44,15 +49,15 @@ describe('generateSummaryLogUploadsReport', () => {
     organisationRepo = createInMemoryOrganisationsRepository()()
     summaryLogsRepo = createInMemorySummaryLogsRepository()(logger)
 
-    const orgId = nextOrgId()
-    org = await buildApprovedOrg(organisationRepo, { orgId })
+    const organisationNumber = nextOrganisationNumber()
+    org = await buildApprovedOrg(organisationRepo, { organisationNumber })
     registration = org.registrations[0]
     accreditation = org.accreditations[0]
   })
 
   it('generates empty report when no SL uploads exist', async () => {
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
@@ -75,7 +80,7 @@ describe('generateSummaryLogUploadsReport', () => {
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
@@ -84,7 +89,7 @@ describe('generateSummaryLogUploadsReport', () => {
         appropriateAgency: registration.submittedToRegulator.toUpperCase(),
         type: 'Reprocessor',
         businessName: org.companyDetails.name,
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         registrationNumber: registration.registrationNumber,
         reprocessingSite: expect.any(String),
         packagingWasteCategory: expect.any(String),
@@ -111,7 +116,7 @@ describe('generateSummaryLogUploadsReport', () => {
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
@@ -132,7 +137,7 @@ describe('generateSummaryLogUploadsReport', () => {
 
     // Create second org
     const org2 = await buildApprovedOrg(organisationRepo, {
-      orgId: nextOrgId()
+      organisationNumber: nextOrganisationNumber()
     })
     const registration2 = org2.registrations[0]
 
@@ -219,14 +224,14 @@ describe('generateSummaryLogUploadsReport', () => {
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
     expect(result.summaryLogUploads).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          orgId: org.orgId,
+          organisationNumber: org.organisationNumber,
           registrationNumber: registration.registrationNumber,
           accreditationNumber: accreditation.accreditationNumber,
           lastSuccessfulUpload: latestSuccessfulAt,
@@ -235,7 +240,7 @@ describe('generateSummaryLogUploadsReport', () => {
           failedUploads: 2
         }),
         expect.objectContaining({
-          orgId: org2.orgId,
+          organisationNumber: org2.organisationNumber,
           registrationNumber: registration2.registrationNumber,
           lastSuccessfulUpload: latestSuccessfulAt,
           lastFailedUpload: latestFailedAt,
@@ -266,27 +271,29 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: new ObjectId().toString(),
         registrationId: new ObjectId().toString(),
-        organisationNumber: toOrganisationNumber(String(nextOrgId())),
+        organisationNumber: nextOrganisationNumber(),
         registrationNumber: toRegistrationNumber('R26ER9999999999PA'),
         createdAt
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
     expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         registrationNumber: registration.registrationNumber
       })
     ])
   })
 
   it('leaves out a registration that carries no number', async () => {
-    const unapprovedOrg = buildOrganisation({ orgId: nextOrgId() })
+    const unapprovedOrg = buildOrganisation({
+      organisationNumber: nextOrganisationNumber()
+    })
     await organisationRepo.insert(unapprovedOrg)
 
     await summaryLogsRepo.insert(
@@ -294,12 +301,12 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: unapprovedOrg.id,
         registrationId: unapprovedOrg.registrations[0].id,
-        organisationNumber: toOrganisationNumber(String(unapprovedOrg.orgId))
+        organisationNumber: unapprovedOrg.organisationNumber
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
@@ -307,29 +314,46 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('gives an empty accreditation number for a registration with no accreditation', async () => {
-    const registrationNumber = toRegistrationNumber('R26ER5000000001PA')
-    const registeredOnly = buildRegistration({ registrationNumber })
+    const { VALID_FROM, VALID_TO } = getValidDateRange()
     const registeredOnlyOrg = buildOrganisation({
-      orgId: nextOrgId(),
-      registrations: [registeredOnly],
-      accreditations: []
+      organisationNumber: nextOrganisationNumber()
     })
+    const { accreditationId: _unlinked, ...registeredOnly } =
+      registeredOnlyOrg.registrations[0]
+    const registrationNumber = toRegistrationNumber('R26ER5000000001PA')
     await organisationRepo.insert(registeredOnlyOrg)
+    await organisationRepo.replace(
+      registeredOnlyOrg.id,
+      1,
+      prepareOrgUpdate(registeredOnlyOrg, {
+        status: ORGANISATION_STATUS.APPROVED,
+        registrations: [
+          {
+            ...registeredOnly,
+            status: REGISTRATION_STATUS.APPROVED,
+            registrationNumber,
+            reprocessingType: REPROCESSING_TYPE.INPUT,
+            cbduNumber: 'CBDU123456',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO
+          }
+        ]
+      })
+    )
+    await waitForVersion(organisationRepo, registeredOnlyOrg.id, 2)
 
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
         organisationId: registeredOnlyOrg.id,
         registrationId: registeredOnly.id,
-        organisationNumber: toOrganisationNumber(
-          String(registeredOnlyOrg.orgId)
-        ),
+        organisationNumber: registeredOnlyOrg.organisationNumber,
         registrationNumber
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationRepo,
+      organisationReadRepositoryOver(organisationRepo),
       summaryLogsRepo
     )
 
@@ -339,5 +363,72 @@ describe('generateSummaryLogUploadsReport', () => {
         accreditationNumber: ''
       })
     ])
+  })
+
+  describe('from a read model holding an exporter with three accreditation years', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-06-01T12:00:00Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("shows no reprocessing site and the current year's accreditation", async () => {
+      const organisationNumber = nextOrganisationNumber()
+      const registrationNumber = toRegistrationNumber('R26EX5000000001PA')
+      const accreditation = (accreditationNumber) => ({
+        accreditationNumber,
+        prnIssuance: { tonnageBand: 'up_to_500' },
+        status: { current: 'approved', timeline: [] },
+        overseasSites: {}
+      })
+      const exporter = {
+        wasteProcessingType: 'exporter',
+        material: 'plastic',
+        submittedToRegulator: { code: 'nrw' },
+        accreditations: {
+          2025: accreditation('ACC-2025'),
+          2026: accreditation('ACC-2026'),
+          2027: accreditation('ACC-2027')
+        }
+      }
+      const readModel = {
+        findAll: async () => [
+          {
+            organisationNumber,
+            name: 'Exporter ltd',
+            registrations: { [registrationNumber]: exporter }
+          }
+        ]
+      }
+
+      await summaryLogsRepo.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationId: new ObjectId().toString(),
+          registrationId: new ObjectId().toString(),
+          organisationNumber,
+          registrationNumber
+        })
+      )
+
+      const result = await generateSummaryLogUploadsReport(
+        /** @type {any} */ (readModel),
+        summaryLogsRepo
+      )
+
+      expect(result.summaryLogUploads).toEqual([
+        expect.objectContaining({
+          appropriateAgency: 'NRW',
+          type: 'Exporter',
+          businessName: 'Exporter ltd',
+          accreditationNumber: 'ACC-2026',
+          reprocessingSite: '',
+          packagingWasteCategory: 'Plastic'
+        })
+      ])
+    })
   })
 })

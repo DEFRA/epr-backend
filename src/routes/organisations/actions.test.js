@@ -14,7 +14,6 @@ import {
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
@@ -34,29 +33,16 @@ describe('organisation actions by organisation number', () => {
   /** @type {TestServer} */
   let server
   /** @type {OrganisationsRepository} */
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        // The organisation the number resolved to is the one acted on, so
-        // only a read of the write's own result reaches findById.
-        organisationsRepository: () => {
-          const repository = organisationsRepositoryFactory()
-          return {
-            ...repository,
-            findById: (id, minimumVersion) =>
-              minimumVersion === undefined
-                ? Promise.reject(new Error('read again'))
-                : repository.findById(id, minimumVersion)
-          }
-        },
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -75,18 +61,21 @@ describe('organisation actions by organisation number', () => {
     })
 
     it('links the organisation', async () => {
-      const organisation = await buildApprovedOrg(organisationsRepository, {
-        submitterContactDetails: {
-          fullName: 'Initial User',
-          email,
-          phone: '1234567890',
-          jobTitle: 'Director'
+      const organisation = await buildApprovedOrg(
+        organisationAdministrationRepository,
+        {
+          submitterContactDetails: {
+            fullName: 'Initial User',
+            email,
+            phone: '1234567890',
+            jobTitle: 'Director'
+          }
         }
-      })
+      )
 
       const response = await server.inject({
         method: 'POST',
-        url: `/organisations/${organisation.orgId}/link`,
+        url: `/organisations/${organisation.organisationNumber}/link`,
         headers: { Authorization: `Bearer ${linkToken}` }
       })
 
@@ -99,7 +88,7 @@ describe('organisation actions by organisation number', () => {
           linkedBy: { email }
         }
       })
-      const linked = await organisationsRepository.findById(
+      const linked = await organisationAdministrationRepository.findById(
         organisation.id,
         organisation.version + 1
       )
@@ -127,17 +116,19 @@ describe('organisation actions by organisation number', () => {
     }
 
     it('adds the user to the organisation', async () => {
-      const organisation = await buildActiveOrg(organisationsRepository)
+      const organisation = await buildActiveOrg(
+        organisationAdministrationRepository
+      )
 
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${organisation.orgId}/user`,
+        url: `/organisations/${organisation.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${generateValidTokenWith(newUser)}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
       expect(response.payload).toBe('')
-      const updated = await organisationsRepository.findById(
+      const updated = await organisationAdministrationRepository.findById(
         organisation.id,
         organisation.version + 1
       )
@@ -147,12 +138,12 @@ describe('organisation actions by organisation number', () => {
     })
 
     it("refuses an operator acting on another organisation's number", async () => {
-      await buildActiveOrg(organisationsRepository)
-      const other = await buildApprovedOrg(organisationsRepository)
+      await buildActiveOrg(organisationAdministrationRepository)
+      const other = await buildApprovedOrg(organisationAdministrationRepository)
 
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${other.orgId}/user`,
+        url: `/organisations/${other.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${defraIdMockAuthTokens.validToken}` }
       })
 

@@ -28,7 +28,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 const findIn = (organisation) =>
   findRegistrationByNumber(
     createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-    toOrganisationNumber(String(organisation.orgId)),
+    organisation.organisationNumber,
     toRegistrationNumber(REPROCESSOR_NUMBER)
   )
 
@@ -38,7 +38,7 @@ describe('findOrganisationByNumber', () => {
 
     const found = await findOrganisationByNumber(
       createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-      toOrganisationNumber(String(organisation.orgId))
+      organisation.organisationNumber
     )
 
     expect(found.id).toBe(organisation.id)
@@ -52,7 +52,7 @@ describe('findOrganisationByNumber', () => {
     await expect(
       findOrganisationByNumber(
         createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-        toOrganisationNumber(String(organisation.orgId))
+        organisation.organisationNumber
       )
     ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
@@ -70,11 +70,12 @@ describe('findRegistrationByNumber', () => {
   })
 
   it('rejects an unknown organisation', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])()
 
     await expect(
       findRegistrationByNumber(
-        organisationsRepository,
+        organisationAdministrationRepository,
         toOrganisationNumber('1'),
         toRegistrationNumber(REPROCESSOR_NUMBER)
       )

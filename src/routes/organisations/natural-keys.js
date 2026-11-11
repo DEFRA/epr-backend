@@ -8,10 +8,11 @@ import {
 } from '#domain/organisations/numbers.js'
 import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
-  servesOrganisation,
+  servesOrganisationOn,
   toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/to-read-model.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
@@ -21,7 +22,7 @@ import {
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  *
  * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
  *
@@ -50,26 +51,28 @@ export const registrationParams = {
 const lookupContext = () => ({
   onDrop: () => {},
   overseasSitesById: new Map(),
-  today: new Date().toISOString().slice(0, 10)
+  today: toCalendarDate(new Date())
 })
 
 /**
  * Finds the stored organisation a route names by its number. Only an
  * organisation the organisation read model serves can be found.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OrganisationNumber} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export async function findOrganisationByNumber(
-  organisationsRepository,
+  organisationAdministrationRepository,
   organisationNumber
 ) {
   const organisation =
-    await organisationsRepository.findByOrganisationNumber(organisationNumber)
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      organisationNumber
+    )
   if (
     !organisation ||
-    !servesOrganisation(organisation, lookupContext().today)
+    !servesOrganisationOn(organisation, lookupContext().today)
   ) {
     throw Boom.notFound('Organisation not found')
   }
@@ -81,18 +84,18 @@ export async function findOrganisationByNumber(
  * registration the organisation read model serves can be found, so a link
  * built from the read model resolves and nothing else does.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OrganisationNumber} organisationNumber
  * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
  */
 export async function findRegistrationByNumber(
-  organisationsRepository,
+  organisationAdministrationRepository,
   organisationNumber,
   registrationNumber
 ) {
   const organisation = await findOrganisationByNumber(
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationNumber
   )
 
@@ -133,7 +136,7 @@ export async function findOrganisationAndRegistrationReadModels(request) {
  * @param {HapiRequest & { params: OrganisationParams }} request
  * @returns {Promise<ReadModelOrganisation>}
  */
-export async function findOrganisationReadModel({
+async function findOrganisationReadModel({
   organisationReadRepository,
   params: { organisationNumber }
 }) {

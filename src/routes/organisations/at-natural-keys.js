@@ -13,7 +13,7 @@ import {
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
  *
  * @typedef {{
@@ -32,9 +32,9 @@ import {
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
  *
- * @typedef {{ organisation: Organisation }} ResolvedRecords
+ * @typedef {{ storedOrganisation: Organisation }} ResolvedRecords
  *
- * @typedef {ResolvedRecords & { registration?: Registration }} ResolvedOrginisationAndRegistration
+ * @typedef {{ organisation: Organisation, registration?: Registration }} ResolvedOrginisationAndRegistration
  *
  * @typedef {KeyedResponse<ResolvedRequest>} NaturalKeyResponse
  *
@@ -61,13 +61,16 @@ import {
  */
 
 /**
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OrganisationParams} params
  * @returns {Promise<ResolvedOrginisationAndRegistration>}
  */
-const resolveOrganisation = async (organisationsRepository, params) => ({
+const resolveOrganisation = async (
+  organisationAdministrationRepository,
+  params
+) => ({
   organisation: await findOrganisationByNumber(
-    organisationsRepository,
+    organisationAdministrationRepository,
     params.organisationNumber
   )
 })
@@ -75,13 +78,13 @@ const resolveOrganisation = async (organisationsRepository, params) => ({
 /**
  * Throws if the path's keys don't resolve to a registration
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {RegistrationParams} params
  * @returns {Promise<ResolvedOrginisationAndRegistration>}
  */
-const resolveRegistration = (organisationsRepository, params) =>
+const resolveRegistration = (organisationAdministrationRepository, params) =>
   findRegistrationByNumber(
-    organisationsRepository,
+    organisationAdministrationRepository,
     params.organisationNumber,
     params.registrationNumber
   )
@@ -161,12 +164,12 @@ export const atNaturalKeys = (
     params,
     async (request) => {
       const { organisation, registration } = await resolveRecords(
-        request.organisationsRepository,
+        request.organisationAdministrationRepository,
         request.params
       )
 
       /** @type {ResolvedRecords} */
-      const resolvedRecords = { organisation }
+      const resolvedRecords = { storedOrganisation: organisation }
       Object.assign(request.app, resolvedRecords)
 
       const accreditation =

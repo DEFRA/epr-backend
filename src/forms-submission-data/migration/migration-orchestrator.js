@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { toMigratedOrganisation } from './organisation-number.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   linkItemsToOrganisations,
@@ -13,7 +14,7 @@ import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 /**
  * @import {createFormsFileUploadsRepository} from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
@@ -21,18 +22,19 @@ import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 export class MigrationOrchestrator {
   /**
    * @param {FormSubmissionsRepository} formsSubmissionRepository
-   * @param {OrganisationsRepository} organisationsRepository
+   * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {SystemLogsRepository} systemLogsRepository
    * @param {ReturnType<typeof createFormsFileUploadsRepository>} formsFileUploadsRepository
    */
   constructor(
     formsSubmissionRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     formsFileUploadsRepository
   ) {
     this.formsSubmissionRepository = formsSubmissionRepository
-    this.organisationsRepository = organisationsRepository
+    this.organisationAdministrationRepository =
+      organisationAdministrationRepository
     this.systemLogsRepository = systemLogsRepository
     this.formsFileUploadsRepository = formsFileUploadsRepository
   }
@@ -75,7 +77,9 @@ export class MigrationOrchestrator {
         async (orgId) =>
           /** @type {const} */ ([
             orgId,
-            await this.organisationsRepository.findById(orgId)
+            toMigratedOrganisation(
+              await this.organisationAdministrationRepository.findById(orgId)
+            )
           ])
       )
     )
@@ -165,7 +169,8 @@ export class MigrationOrchestrator {
       totalCount: 1 + registrations.length + accreditations.length
     }
 
-    const migratedIds = await this.organisationsRepository.findAllIds()
+    const migratedIds =
+      await this.organisationAdministrationRepository.findAllIds()
     const migrated = {
       organisations: migratedIds.organisations,
       registrations: migratedIds.registrations,
@@ -183,7 +188,7 @@ export class MigrationOrchestrator {
     )
 
     const { failed } = await upsertOrganisations(
-      this.organisationsRepository,
+      this.organisationAdministrationRepository,
       this.systemLogsRepository,
       migrationItems
     )
@@ -209,7 +214,7 @@ export class MigrationOrchestrator {
   async migrate() {
     const { migrated, pendingMigration } = await getSubmissionsToMigrate(
       this.formsSubmissionRepository,
-      this.organisationsRepository
+      this.organisationAdministrationRepository
     )
 
     if (pendingMigration.totalCount === 0) {
@@ -230,7 +235,7 @@ export class MigrationOrchestrator {
     )
 
     await upsertOrganisations(
-      this.organisationsRepository,
+      this.organisationAdministrationRepository,
       this.systemLogsRepository,
       migrationItems
     )
@@ -245,20 +250,20 @@ export class MigrationOrchestrator {
 
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SystemLogsRepository} systemLogsRepository
  * @param {object} formsFileUploadsRepository
  * @returns {FormDataMigrator}
  */
 export function createFormDataMigrator(
   formsSubmissionRepository,
-  organisationsRepository,
+  organisationAdministrationRepository,
   systemLogsRepository,
   formsFileUploadsRepository
 ) {
   const orchestrator = new MigrationOrchestrator(
     formsSubmissionRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     formsFileUploadsRepository
   )

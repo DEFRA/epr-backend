@@ -30,7 +30,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const summaryLogId = toSummaryLogId(new ObjectId().toString())
   const organisationId = organisation.id
   const registrationId = registration.id
-  const summaryLogs = `/organisations/${organisation.orgId}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
+  const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
   const meta = {
     PROCESSING_TYPE: 'reprocessor-input',
@@ -95,9 +95,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         summaryLogsRepository: summaryLogsRepositoryFactory,
         ...options.repositories
       }

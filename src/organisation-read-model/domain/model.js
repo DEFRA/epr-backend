@@ -1,10 +1,12 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 
 /**
  * The organisation read model (ADR-0052).
  *
  * @typedef {{
+ *   address?: OrganisationAddress
  *   companiesHouseNumber?: string
  *   linkedDefraOrganisation?: {
  *     defraOrganisation: { id: string, name: string }
@@ -16,7 +18,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   }
  *   name: string
  *   organisationNumber: OrganisationNumber
- *   registeredAddress?: UkAddress
+ *   registeredAddress?: OrganisationAddress
  *   registrations: Record<string, Registration>
  *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
  *   submittedToRegulator: Regulator
@@ -35,7 +37,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   approvedPersons: Contact[]
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
- *   regAccStatusByDate: RegAccStatusByYear
+ *   standingByDate: StandingByYear
  *   status: Status<'approved' | 'cancelled'>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
@@ -45,12 +47,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * @typedef {RegistrationCommon & {
  *   accreditations: Record<string, ReprocessorAccreditation>
  *   reprocessingType: 'input' | 'output'
- *   site: {
- *     address: UkAddress & {
- *       country?: string
- *       region?: string
- *     }
- *   }
+ *   site: { address: UkAddress }
  *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistration
  *
@@ -83,7 +80,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   | { approvedOn: string, status: 'approved' }
  * } AccreditedOverseasSite
  *
- * @typedef {
+ * @typedef {{ country?: string, region?: string } & (
  *   | {
  *       county?: string
  *       fullAddress?: string
@@ -93,7 +90,21 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *       town?: string
  *     }
  *   | { fullAddress: string }
- * } UkAddress
+ * )} UkAddress
+ *
+ * A non-UK organisation may have no postcode.
+ *
+ * @typedef {{ country?: string, region?: string } & (
+ *   | {
+ *       county?: string
+ *       fullAddress?: string
+ *       line1: string
+ *       line2?: string
+ *       postcode?: string
+ *       town?: string
+ *     }
+ *   | { fullAddress: string }
+ * )} OrganisationAddress
  *
  * @typedef {{
  *   country: string
@@ -108,11 +119,12 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  */
 
 /**
- * Every status change, oldest first, each at its ISO 8601 datetime. Nothing
- * requires two changes to happen at different times, so changes that share a
- * time keep the order they were recorded in.
+ * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
+ * effect and `updatedAt` the one it was recorded. Nothing requires two changes
+ * to happen at different times, so changes that share a time keep the order
+ * they were recorded in.
  *
- * @typedef {{ status: string, at: string }[]} StatusTimeline
+ * @typedef {{ status: string, at: string, updatedAt: string }[]} StatusTimeline
  */
 
 /**
@@ -141,17 +153,17 @@ export const ACCREDITATION_STATUSES = Object.freeze([
 ])
 
 /**
- * @typedef {typeof REG_ACC_STATUS[keyof typeof REG_ACC_STATUS]} RegAccStatus
+ * @typedef {typeof STANDING[keyof typeof STANDING]} Standing
  */
 
 /**
- * By year, the date each status starts. A status holds until the next date, or
- * the end of the year.
+ * By year, the date each standing starts. A standing holds until the next date,
+ * or the end of the year.
  *
- * @typedef {Record<string, Record<string, { status: RegAccStatus }>>} RegAccStatusByYear
+ * @typedef {Record<string, Record<string, { standing: Standing }>>} StandingByYear
  */
 
-export const REG_ACC_STATUS = Object.freeze({
+export const STANDING = Object.freeze({
   REGISTERED_ONLY: 'registeredOnly',
   ACCREDITED: 'accredited',
   CANCELLED: 'cancelled'
@@ -168,7 +180,7 @@ export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
  * The status at the end of the latest day on or before `date`.
  *
  * @param {StatusTimeline} timeline
- * @param {string} date - ISO 8601 date
+ * @param {CalendarDate} date - ISO 8601 date
  * @returns {string | undefined}
  */
 export const statusOn = (timeline, date) =>

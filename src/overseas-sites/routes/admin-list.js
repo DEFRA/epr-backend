@@ -1,3 +1,5 @@
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
@@ -78,7 +80,7 @@ const mapMappingToRow = (
   }
 
   return {
-    orgId: nullable(organisation.orgId),
+    orgId: toWireOrgId(organisation.organisationNumber),
     registrationNumber: nullable(registration.registrationNumber),
     accreditationNumber: getAccreditationNumber(organisation, registration),
     orsId,
@@ -89,7 +91,7 @@ const mapMappingToRow = (
 
 /**
  * @typedef {Object} OrganisationsOverseasSitesAdminListItem
- * @property {number} [orgId]
+ * @property {OrganisationNumber} [organisationNumber]
  * @property {Array<{
  *   material?: string,
  *   registrationNumber: string | null,
@@ -173,12 +175,16 @@ export const adminOverseasSitesList = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   organisationAdministrationRepository: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository,
    *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
    * }} request
    */
   handler: async (request, h) => {
-    const { logger, organisationsRepository, overseasSitesRepository } = request
+    const {
+      logger,
+      organisationAdministrationRepository,
+      overseasSitesRepository
+    } = request
     const all = Boolean(request.query.all)
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
@@ -188,7 +194,7 @@ export const adminOverseasSitesList = {
 
     try {
       const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAll(),
+        organisationAdministrationRepository.findAll(),
         overseasSitesRepository.findAll()
       ])
 

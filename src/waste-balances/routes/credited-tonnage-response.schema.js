@@ -15,11 +15,9 @@ export const creditedTonnageResponseSchema = Joi.object({
           .pattern(/^\d{4}-\d{2}$/)
           .required(),
         organisation: Joi.object({
-          id: Joi.string().required(),
           reference: Joi.string().required()
         }).required(),
         accreditation: Joi.object({
-          id: Joi.string().required(),
           accreditationNumber: Joi.string().allow('').required(),
           processingType: Joi.string()
             .valid('reprocessor', 'exporter')

@@ -29,7 +29,9 @@ const run = () =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository: createInMemoryOrganisationsRepository([])(),
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      []
+    )(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),

@@ -1,37 +1,10 @@
 import {
-  MATERIAL,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toNumber } from '#common/helpers/decimal-utils.js'
 import { getMonthRange } from '#common/helpers/date-formatter.js'
 import { capitalize } from '#common/helpers/formatters.js'
-
-export const buildEffectiveMaterialStages = () => [
-  {
-    $addFields: {
-      orgId: { $arrayElemAt: ['$orgData.orgId', 0] },
-      material: { $arrayElemAt: ['$orgData.material', 0] },
-      glassRecyclingProcess: {
-        $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
-      }
-    }
-  },
-  { $match: { orgId: { $nin: [...TEST_ORGANISATION_NUMBERS].map(Number) } } },
-  { $match: { material: { $ne: null } } },
-  {
-    $addFields: {
-      effectiveMaterial: {
-        $cond: {
-          if: { $eq: ['$material', MATERIAL.GLASS] },
-          then: { $arrayElemAt: ['$glassRecyclingProcess', 0] },
-          else: '$material'
-        }
-      }
-    }
-  }
-]
 
 export const formatMaterialResults = (results, valueField) => {
   const materialMap = new Map(

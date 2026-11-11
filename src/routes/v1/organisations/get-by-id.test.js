@@ -26,14 +26,16 @@ describe('GET /v1/organisations/{id}', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
   })
 
@@ -42,8 +44,8 @@ describe('GET /v1/organisations/{id}', () => {
       const org1 = buildOrganisation()
       const org2 = buildOrganisation()
 
-      await organisationsRepository.insert(org1)
-      await organisationsRepository.insert(org2)
+      await organisationAdministrationRepository.insert(org1)
+      await organisationAdministrationRepository.insert(org2)
 
       const response = await server.inject({
         method: 'GET',
@@ -56,19 +58,19 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result.id).toBe(org1.id)
-      expect(result.orgId).toBe(org1.orgId)
+      expect(result.orgId).toBe(Number(org1.organisationNumber))
     })
 
     it('returns the organisation found by its organisation number', async () => {
       const org1 = buildOrganisation()
       const org2 = buildOrganisation()
 
-      await organisationsRepository.insert(org1)
-      await organisationsRepository.insert(org2)
+      await organisationAdministrationRepository.insert(org1)
+      await organisationAdministrationRepository.insert(org2)
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org2.orgId}`,
+        url: `/v1/organisations/${org2.organisationNumber}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -80,7 +82,7 @@ describe('GET /v1/organisations/{id}', () => {
 
     it('includes Cache-Control header in successful response', async () => {
       const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      await organisationAdministrationRepository.insert(org)
 
       const response = await server.inject({
         method: 'GET',
@@ -112,7 +114,9 @@ describe('GET /v1/organisations/{id}', () => {
         org
       ])
       const legacyServer = await createTestServer({
-        repositories: { organisationsRepository: legacyRepositoryFactory }
+        repositories: {
+          organisationAdministrationRepository: legacyRepositoryFactory
+        }
       })
 
       const response = await legacyServer.inject({
@@ -187,7 +191,7 @@ describe('GET /v1/organisations/{id}', () => {
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
+      await organisationAdministrationRepository.insert(org1)
       return {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
@@ -198,7 +202,7 @@ describe('GET /v1/organisations/{id}', () => {
   testOperatorAndServiceMaintainerCanAccess({
     server: () => server,
     makeRequest: async () => {
-      const org1 = await buildActiveOrg(organisationsRepository)
+      const org1 = await buildActiveOrg(organisationAdministrationRepository)
       return {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
@@ -209,7 +213,7 @@ describe('GET /v1/organisations/{id}', () => {
   testRegulatorCanRead({
     server: () => server,
     makeRequest: async () => {
-      const org1 = await buildActiveOrg(organisationsRepository)
+      const org1 = await buildActiveOrg(organisationAdministrationRepository)
       return {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
@@ -237,7 +241,7 @@ describe('GET /v1/organisations/{id}', () => {
               password: 'changeme'
             }
           },
-          repositories: { organisationsRepository: factory }
+          repositories: { organisationAdministrationRepository: factory }
         })
       })
 

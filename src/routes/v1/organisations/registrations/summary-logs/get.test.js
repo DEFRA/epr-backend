@@ -36,9 +36,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         summaryLogsRepository: summaryLogsRepositoryFactory
       }
     })
@@ -49,7 +48,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const makeRequest = (server) =>
     server.inject({
       method: 'GET',
-      url: `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs/${summaryLogId}`,
+      url: `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs/${summaryLogId}`,
       ...asOperator()
     })
 

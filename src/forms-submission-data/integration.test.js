@@ -113,9 +113,9 @@ describe('Migration Integration Tests with Fixtures', () => {
       const allOrgs = await sharedOrganisationsRepo.findAll()
       expect(allOrgs).toHaveLength(8)
 
-      // Create a map of organisations by orgId for easy lookup
-      const orgsByOrgId = allOrgs.reduce(
-        (map, org) => map.set(org.orgId, org),
+      // Create a map of organisations by number for easy lookup
+      const orgsByNumber = allOrgs.reduce(
+        (map, org) => map.set(org.organisationNumber, org),
         new Map()
       )
 
@@ -136,15 +136,15 @@ describe('Migration Integration Tests with Fixtures', () => {
 
       // Verify registrations count by org
       // Glass exporter with "Both" processes is split into remelt + other
-      const org503181 = orgsByOrgId.get(503181)
+      const org503181 = orgsByNumber.get('503181')
       expect(org503181).toBeDefined()
       expect(org503181.registrations).toHaveLength(2)
 
-      const org503176 = orgsByOrgId.get(503176)
+      const org503176 = orgsByNumber.get('503176')
       expect(org503176).toBeDefined()
       expect(org503176.registrations).toHaveLength(2)
 
-      const org503177 = orgsByOrgId.get(503177)
+      const org503177 = orgsByNumber.get('503177')
       expect(org503177).toBeDefined()
     })
 
@@ -176,7 +176,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       // (includes reprocessor-steel-blank-page-titles for org 503176 - PAE-1830)
       expect(totalAccreditations).toBe(7)
 
-      const org503181 = allOrgs.find((o) => o.orgId === 503181)
+      const org503181 = allOrgs.find((o) => o.organisationNumber === '503181')
       expect(org503181.accreditations).toHaveLength(1)
       // Registration is split into remelt + other (source submission selected "Both"),
       // but the accreditation only covers "Glass other", so only that sibling links;
@@ -190,7 +190,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       expect(glassOtherReg.accreditationId).toBe(exporterAccreditation._id.$oid)
       expect(glassRemeltReg.accreditationId).toBeUndefined()
 
-      const org503176 = allOrgs.find((o) => o.orgId === 503176)
+      const org503176 = allOrgs.find((o) => o.organisationNumber === '503176')
       expect(org503176.accreditations).toHaveLength(4)
       const glassReg = org503176.registrations.find(
         (r) => r.material === MATERIAL.GLASS

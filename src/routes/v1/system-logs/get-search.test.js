@@ -1,10 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import {
-  createOrganisationBuilders,
-  numberOf
-} from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -22,26 +19,26 @@ describe('GET /v1/system-logs/search', () => {
   let server
   /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */
   let systemLogsRepository
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  /** @type {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} */
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const systemLogsRepositoryFactory = createSystemLogsRepository()
     systemLogsRepository = systemLogsRepositoryFactory(logger)
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
     server = await createTestServer({
       repositories: {
         systemLogsRepository: systemLogsRepositoryFactory,
-        organisationsRepository: organisationsRepositoryFactory
+        organisationAdministrationRepository: organisationsRepositoryFactory
       }
     })
   })
 
   const addOrganisation = async () => {
     const organisation = buildOrganisation()
-    await organisationsRepository.insert(organisation)
+    await organisationAdministrationRepository.insert(organisation)
     return organisation
   }
 
@@ -140,7 +137,7 @@ describe('GET /v1/system-logs/search', () => {
       await addSystemLog({ organisationId: randomUUID(), id: 2 })
 
       const response = await makeRequest({
-        organisationNumber: numberOf(organisation)
+        organisationNumber: organisation.organisationNumber
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -152,11 +149,14 @@ describe('GET /v1/system-logs/search', () => {
     it('returns the logs recording the organisation by its number', async () => {
       const organisation = await addOrganisation()
       await addSystemLog({ organisationId: organisation.id, id: 1 })
-      await addSystemLog({ organisationNumber: numberOf(organisation), id: 2 })
+      await addSystemLog({
+        organisationNumber: organisation.organisationNumber,
+        id: 2
+      })
       await addSystemLog({ organisationNumber: '999999999', id: 3 })
 
       const response = await makeRequest({
-        organisationNumber: numberOf(organisation)
+        organisationNumber: organisation.organisationNumber
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -195,7 +195,7 @@ describe('GET /v1/system-logs/search', () => {
       })
 
       const response = await makeRequest({
-        organisationNumber: numberOf(organisation),
+        organisationNumber: organisation.organisationNumber,
         userId: 'alice',
         subCategory: 'summary-log'
       })

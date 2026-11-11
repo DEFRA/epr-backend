@@ -39,6 +39,7 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       expect(reportsMarkedStale).toHaveLength(1)
       expect(reportsMarkedStale[0]).toMatchObject({
         reportId,
+        accreditationNumber: buildCreateReportParams().accreditationNumber,
         year: expect.any(Number),
         cadence: expect.any(String),
         period: expect.any(Number),

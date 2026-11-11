@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */

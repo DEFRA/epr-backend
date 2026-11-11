@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
@@ -158,7 +159,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -183,7 +184,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -216,7 +217,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -252,7 +253,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -277,7 +278,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -302,7 +303,7 @@ describe('generateReportCompliance', () => {
     const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -329,8 +330,12 @@ describe('generateReportCompliance', () => {
     const orgRepo = createInMemoryOrganisationsRepository()()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    // orgId 999999 is a test org (see parse-test-organisations config)
-    await buildApprovedOrg(orgRepo, { orgId: 999999 }, FULL_YEAR_RANGE)
+    // 999999 is a test organisation (see parse-test-organisations config)
+    await buildApprovedOrg(
+      orgRepo,
+      { organisationNumber: toOrganisationNumber('999999') },
+      FULL_YEAR_RANGE
+    )
     const normalOrg = await buildApprovedOrg(
       orgRepo,
       undefined,
@@ -339,7 +344,7 @@ describe('generateReportCompliance', () => {
     const normalReg = normalOrg.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -371,7 +376,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -443,7 +448,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -477,7 +482,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -536,12 +541,12 @@ describe('generateReportCompliance', () => {
       externalAccreditations
     ) =>
       generateReportCompliance(
-        (
+        await (
           await organisationReadRepositoryOf([organisation], {
             logger,
             externalAccreditations
           })
-        )(),
+        )().findAll(),
         createInMemoryReportsRepository()()
       )
 
@@ -590,7 +595,13 @@ describe('generateReportCompliance', () => {
           year: toYear(2026),
           status: {
             current: 'approved',
-            timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+            timeline: [
+              {
+                status: 'approved',
+                at: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z'
+              }
+            ]
           }
         })
       ])

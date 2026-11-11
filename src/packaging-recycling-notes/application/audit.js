@@ -17,7 +17,11 @@ import {
  * @param {PackagingRecyclingNote} next
  */
 async function auditPrnStatusTransition(request, prnId, previous, next) {
-  const { organisationNumber } = next.organisation
+  const numbers = {
+    organisationNumber: next.organisation.organisationNumber,
+    registrationNumber: next.registration.registrationNumber,
+    accreditationNumber: next.accreditation.accreditationNumber
+  }
 
   const payload = {
     event: {
@@ -26,7 +30,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
       action: 'status-transition'
     },
     context: {
-      organisationNumber,
+      ...numbers,
       prnId,
       previous,
       next
@@ -38,7 +42,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
     ? payload
     : {
         ...payload,
-        context: { organisationNumber, prnId }
+        context: { ...numbers, prnId }
       }
 
   safeAudit(safeAuditingPayload)

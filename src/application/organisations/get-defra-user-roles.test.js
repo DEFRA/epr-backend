@@ -39,7 +39,7 @@ function createTokenPayload(overrides = {}) {
 describe('#getDefraUserRoles', () => {
   const mockOrganisationsRepository = {}
   const mockRequest = /** @type {any} */ ({
-    organisationsRepository: mockOrganisationsRepository,
+    organisationLinkingRepository: mockOrganisationsRepository,
     path: '/api/v1/organisations',
     method: 'get',
     params: {},
@@ -196,7 +196,7 @@ describe('#getDefraUserRoles', () => {
     test('assigns standard user scope when the request names the linked organisation by its number', async () => {
       mockGetOrgMatchingUsersToken.mockResolvedValue({
         ...mockLinkedEprOrg,
-        orgId: 500123
+        organisationNumber: '500123'
       })
 
       const result = await getDefraUserRoles(tokenPayload, {
@@ -215,7 +215,7 @@ describe('#getDefraUserRoles', () => {
     test('does not assign standard user scope when the request names a different organisation number', async () => {
       mockGetOrgMatchingUsersToken.mockResolvedValue({
         ...mockLinkedEprOrg,
-        orgId: 500123
+        organisationNumber: '500123'
       })
 
       const result = await getDefraUserRoles(tokenPayload, {

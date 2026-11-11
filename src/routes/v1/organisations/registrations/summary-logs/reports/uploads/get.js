@@ -1,3 +1,4 @@
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { generateSummaryLogUploadsReport } from '#application/summary-log-uploads-report/generate-report.js'
@@ -9,7 +10,7 @@ import Boom from '@hapi/boom'
 import { summaryLogUploadsReportResponseSchema } from './response.schema.js'
 
 /**
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
  */
 
@@ -29,14 +30,15 @@ export const getSummaryLogUploadsReport = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationReadRepository: OrganisationReadRepository, summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationsRepository, summaryLogsRepository, logger } = request
+    const { organisationReadRepository, summaryLogsRepository, logger } =
+      request
     try {
       const reportData = await generateSummaryLogUploadsReport(
-        organisationsRepository,
+        organisationReadRepository,
         summaryLogsRepository
       )
 
@@ -48,7 +50,17 @@ export const getSummaryLogUploadsReport = {
         }
       })
 
-      return h.response(reportData).code(StatusCodes.OK)
+      return h
+        .response({
+          ...reportData,
+          summaryLogUploads: reportData.summaryLogUploads.map(
+            ({ organisationNumber, ...row }) => ({
+              ...row,
+              orgId: toWireOrgId(organisationNumber)
+            })
+          )
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,

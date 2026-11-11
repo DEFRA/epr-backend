@@ -11,12 +11,12 @@ import {
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationOther } from '#domain/organisations/registration.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 /**
- * Approves organisations built by the caller's builders, so they draw orgIds
+ * Approves organisations built by the caller's builders, so they draw numbers
  * from the same sequence as the caller's other organisations.
  *
  * @param {OrganisationBuilders} builders
@@ -24,13 +24,13 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 export const createApprovedOrgBuilder =
   ({ buildOrganisation }) =>
   /**
-   * @param {OrganisationsRepository} organisationsRepository
+   * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {object} [overrides]
    * @param {{ VALID_FROM: string, VALID_TO: string }} [dateRange] - Accreditation/registration validity range (defaults to today .. one year on)
    * @returns {Promise<Organisation>}
    */
   async (
-    organisationsRepository,
+    organisationAdministrationRepository,
     overrides,
     dateRange = getValidDateRange()
   ) => {
@@ -38,7 +38,7 @@ export const createApprovedOrgBuilder =
 
     const INITIAL_VERSION = 1
 
-    await organisationsRepository.insert(org)
+    await organisationAdministrationRepository.insert(org)
 
     const { VALID_FROM, VALID_TO } = dateRange
 
@@ -48,7 +48,8 @@ export const createApprovedOrgBuilder =
         ...org.accreditations[0],
         status: ACCREDITATION_STATUS.APPROVED,
         accreditationNumber:
-          org.accreditations[0].accreditationNumber || `ACC${org.orgId}`,
+          org.accreditations[0].accreditationNumber ||
+          `ACC${org.organisationNumber}`,
         validFrom: VALID_FROM,
         reprocessingType: REPROCESSING_TYPE.INPUT,
         validTo: VALID_TO
@@ -61,14 +62,14 @@ export const createApprovedOrgBuilder =
         cbduNumber:
           /** @type {RegistrationOther} */ (org.registrations[0]).cbduNumber ||
           'CBDU123456',
-        registrationNumber: `REG${org.orgId}`,
+        registrationNumber: `REG${org.organisationNumber}`,
         reprocessingType: REPROCESSING_TYPE.INPUT,
         validFrom: VALID_FROM,
         validTo: VALID_TO
       })
     ]
 
-    await organisationsRepository.replace(
+    await organisationAdministrationRepository.replace(
       org.id,
       INITIAL_VERSION,
       prepareOrgUpdate(org, {
@@ -78,5 +79,9 @@ export const createApprovedOrgBuilder =
       })
     )
 
-    return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
+    return waitForVersion(
+      organisationAdministrationRepository,
+      org.id,
+      INITIAL_VERSION + 1
+    )
   }

@@ -69,6 +69,7 @@ export const reportsDelete = {
     await auditReportDelete(request, {
       organisationNumber,
       registrationNumber,
+      accreditationNumber: previous.accreditationNumber,
       year,
       cadence,
       period,

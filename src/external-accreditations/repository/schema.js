@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
+import { accreditedOverseasSitesSchema } from '#common/validation/overseas-site-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
@@ -24,9 +25,11 @@ export const externalAccreditationSchema = Joi.object({
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
+          updatedAt: isoDateTimeString().required(),
           status: accreditationStatusSchema.required()
         })
       )
       .required()
-  }).required()
+  }).required(),
+  overseasSites: accreditedOverseasSitesSchema
 })

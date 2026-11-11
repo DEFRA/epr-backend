@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 import { Decimal128 } from 'mongodb'
 import {
-  buildEffectiveMaterialStages,
   formatMaterialResults,
   formatTonnageMonitoringResults
 } from './material-aggregation.js'
@@ -26,51 +25,6 @@ const findMaterial = (materials, material) => {
 }
 
 describe('material-aggregation', () => {
-  describe('buildEffectiveMaterialStages', () => {
-    it('should return an array of pipeline stages', () => {
-      const stages = buildEffectiveMaterialStages()
-
-      expect(stages).toBeInstanceOf(Array)
-      expect(stages).toHaveLength(4)
-    })
-
-    it('should extract orgData fields in the first stage', () => {
-      const stages = buildEffectiveMaterialStages()
-      const addFieldsStage = stages[0]
-
-      expect(addFieldsStage.$addFields).toEqual({
-        orgId: { $arrayElemAt: ['$orgData.orgId', 0] },
-        material: { $arrayElemAt: ['$orgData.material', 0] },
-        glassRecyclingProcess: {
-          $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
-        }
-      })
-    })
-
-    it('should filter out test organisations', () => {
-      const stages = buildEffectiveMaterialStages()
-      const matchStage = stages[1]
-
-      expect(matchStage?.$match?.orgId).toHaveProperty('$nin')
-    })
-
-    it('should filter out null materials', () => {
-      const stages = buildEffectiveMaterialStages()
-      const matchStage = stages[2]
-
-      expect(matchStage).toEqual({ $match: { material: { $ne: null } } })
-    })
-
-    it('should calculate effective material with glass handling', () => {
-      const stages = buildEffectiveMaterialStages()
-      const effectiveMaterialStage = stages[3]
-
-      expect(
-        effectiveMaterialStage?.$addFields?.effectiveMaterial?.$cond
-      ).toBeDefined()
-    })
-  })
-
   describe('formatMaterialResults', () => {
     it('should map results to all materials with the given value field', () => {
       const results = [

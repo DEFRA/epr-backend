@@ -35,7 +35,8 @@ describe('GET /v1/me/organisations', () => {
   it('returns 403 when credentials lack organisationLinkedRead scope', async () => {
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([])
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([])
       }
     })
 
@@ -51,47 +52,56 @@ describe('GET /v1/me/organisations', () => {
   it('should return current, linked, and unlinked organisations for the user', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     const linkedAt = new Date().toISOString()
 
     // Linked organisation (has linkedDefraOrganisation matching current relationship from token)
-    const linkedOrg = await buildApprovedOrg(organisationsRepository, {
-      users: [
-        {
-          fullName: 'Test User',
-          email,
-          roles: ['initial_user', 'standard_user']
+    const linkedOrg = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ],
+        linkedDefraOrganisation: {
+          orgId: COMPANY_1_ID,
+          orgName: COMPANY_1_NAME,
+          linkedBy: {
+            email,
+            id: '550e8400-e29b-41d4-a716-446655440001'
+          },
+          linkedAt
         }
-      ],
-      linkedDefraOrganisation: {
-        orgId: COMPANY_1_ID,
-        orgName: COMPANY_1_NAME,
-        linkedBy: {
-          email,
-          id: '550e8400-e29b-41d4-a716-446655440001'
-        },
-        linkedAt
       }
-    })
+    )
 
     // Unlinked organisation (no linkedDefraOrganisation but has user in users array)
-    const unlinkedOrg = await buildApprovedOrg(organisationsRepository, {
-      users: [
-        {
-          fullName: 'Test User',
-          email,
-          roles: ['initial_user', 'standard_user']
-        }
-      ]
-    })
+    const unlinkedOrg = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ]
+      }
+    )
 
     // Organisation without the user (should not appear in response)
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Other User',
@@ -121,7 +131,7 @@ describe('GET /v1/me/organisations', () => {
         linked: {
           id: linkedOrg.id,
           name: COMPANY_1_NAME,
-          orgId: linkedOrg.orgId,
+          orgId: Number(linkedOrg.organisationNumber),
           referenceNumber: linkedOrg.id,
           linkedBy: {
             email,
@@ -133,7 +143,7 @@ describe('GET /v1/me/organisations', () => {
           {
             id: unlinkedOrg.id,
             name: unlinkedOrg.companyDetails.name,
-            orgId: unlinkedOrg.orgId,
+            orgId: Number(unlinkedOrg.organisationNumber),
             referenceNumber: unlinkedOrg.id
           }
         ]
@@ -144,14 +154,17 @@ describe('GET /v1/me/organisations', () => {
   it('should return null for linked when user has no linked organisation', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     // Only unlinked organisations (no linkedDefraOrganisation)
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -161,7 +174,7 @@ describe('GET /v1/me/organisations', () => {
       ]
     })
 
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -193,16 +206,19 @@ describe('GET /v1/me/organisations', () => {
   it('should return empty unlinked array when user only has linked organisation', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     const linkedAt = new Date().toISOString()
 
     // Only linked organisation
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -241,7 +257,9 @@ describe('GET /v1/me/organisations', () => {
       createInMemoryOrganisationsRepository([])
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     // No organisations inserted
@@ -268,25 +286,31 @@ describe('GET /v1/me/organisations', () => {
   it('should exclude organisations where user is not an initial user', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     // Organisation where user is initial user (should be included)
-    const initialUserOrg = await buildApprovedOrg(organisationsRepository, {
-      users: [
-        {
-          fullName: 'Test User',
-          email,
-          roles: ['initial_user', 'standard_user']
-        }
-      ]
-    })
+    const initialUserOrg = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ]
+      }
+    )
 
     // Organisation where user is NOT initial user (should be excluded)
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -315,16 +339,19 @@ describe('GET /v1/me/organisations', () => {
   it('should exclude organisations already linked to other Defra organisations', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     const linkedAt = new Date().toISOString()
 
     // Organisation already linked to a different Defra organisation
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -344,15 +371,18 @@ describe('GET /v1/me/organisations', () => {
     })
 
     // Unlinked organisation (control case)
-    const unlinkedOrg = await buildApprovedOrg(organisationsRepository, {
-      users: [
-        {
-          fullName: 'Test User',
-          email,
-          roles: ['initial_user', 'standard_user']
-        }
-      ]
-    })
+    const unlinkedOrg = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ]
+      }
+    )
 
     const response = await server.inject({
       method: 'GET',
@@ -373,13 +403,16 @@ describe('GET /v1/me/organisations', () => {
   it('should exclude organisations that are not approved', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
-    await buildApprovedOrg(organisationsRepository, {
+    await buildApprovedOrg(organisationAdministrationRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -389,7 +422,7 @@ describe('GET /v1/me/organisations', () => {
       ]
     })
 
-    await organisationsRepository.insert(
+    await organisationAdministrationRepository.insert(
       buildOrganisation({
         users: [
           {
@@ -421,7 +454,9 @@ describe('GET /v1/me/organisations', () => {
       createInMemoryOrganisationsRepository([])
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     // Generate token without relationships/organisations
@@ -458,7 +493,9 @@ describe('GET /v1/me/organisations', () => {
       createInMemoryOrganisationsRepository([])
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     const orgId1 = randomUUID()
@@ -501,7 +538,9 @@ describe('GET /v1/me/organisations', () => {
       createInMemoryOrganisationsRepository([])
 
     const server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
 
     const orgId1 = randomUUID()
@@ -549,7 +588,7 @@ describe('GET /v1/me/organisations', () => {
         createInMemoryOrganisationsRepository([])
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
         }
       })
@@ -576,7 +615,7 @@ describe('GET /v1/me/organisations', () => {
         createInMemoryOrganisationsRepository([])
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
         }
       })
@@ -638,7 +677,7 @@ describe('GET /v1/me/organisations', () => {
         createInMemoryOrganisationsRepository([])
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository
         }
       })
@@ -674,7 +713,7 @@ describe('GET /v1/me/organisations', () => {
         createInMemoryOrganisationsRepository([])
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository
         }
       })

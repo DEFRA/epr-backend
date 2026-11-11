@@ -401,7 +401,7 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -415,9 +415,10 @@ describe('Advanced validation scenarios', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        /** @type {Organisation} */ (testOrg)
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          /** @type {Organisation} */ (testOrg)
+        ])()
 
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
@@ -478,7 +479,7 @@ describe('Advanced validation scenarios', () => {
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -493,9 +494,10 @@ describe('Advanced validation scenarios', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -600,7 +602,7 @@ describe('Advanced validation scenarios', () => {
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -613,9 +615,10 @@ describe('Advanced validation scenarios', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        /** @type {Organisation} */ (testOrg)
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          /** @type {Organisation} */ (testOrg)
+        ])()
 
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
@@ -660,7 +663,7 @@ describe('Advanced validation scenarios', () => {
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -675,9 +678,10 @@ describe('Advanced validation scenarios', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -882,27 +886,29 @@ describe('Advanced validation scenarios', () => {
         })
       )
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        /** @type {Organisation} */ (
-          buildOrganisation({
-            id: organisationId,
-            orgId: TEST_ORGANISATION_NUMBER,
-            registrations: [
-              servedTestRegistration({
-                id: registrationId,
-                wasteProcessingType: 'exporter'
-              })
-            ]
-          })
-        )
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          /** @type {Organisation} */ (
+            buildOrganisation({
+              id: organisationId,
+              organisationNumber: TEST_ORGANISATION_NUMBER,
+              registrations: [
+                servedTestRegistration({
+                  id: registrationId,
+                  wasteProcessingType: 'exporter'
+                })
+              ]
+            })
+          )
+        ])()
 
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         }
       })
     })

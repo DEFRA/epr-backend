@@ -18,15 +18,13 @@ import {
   buildCreateReportParams,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
-import {
-  organisationNumberOf,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
+import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
@@ -94,7 +92,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { organisations: import('#repositories/organisations/port.js').OrganisationsRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -223,7 +221,7 @@ const seedDownstreamForOrganisation = async (
   await repositories.prns.create(
     buildDraftPrn({
       organisation: {
-        organisationNumber: organisationNumberOf(organisation),
+        organisationNumber: organisation.organisationNumber,
         name: 'Target',
         tradingName: 'Target Trading'
       }
@@ -232,7 +230,7 @@ const seedDownstreamForOrganisation = async (
 
   await repositories.reports.createReport(
     buildCreateReportParams({
-      organisationNumber: organisationNumberOf(organisation),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: uniqueRegistrationNumber(),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January
@@ -247,13 +245,13 @@ const seedDownstreamForOrganisation = async (
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
   // Report audits record only the organisation number.
   await repositories.systemLogs.insert(
-    buildSystemLog({ organisationNumber: String(organisation.orgId) })
+    buildSystemLog({ organisationNumber: organisation.organisationNumber })
   )
 
   // The ledger and its row states name the organisation by number.
   const ledgerId = {
     ...withNumbers({ organisationId, registrationId, accreditationId }),
-    organisationNumber: organisationNumberOf(organisation)
+    organisationNumber: organisation.organisationNumber
   }
 
   await database
@@ -270,10 +268,10 @@ const seedDownstreamForOrganisation = async (
 // The 'organisation' collection is written by the journey-test apply path and
 // keyed by the numeric orgId, so the cascade step filters by orgId directly.
 // No real adapter exists in this repo, so we raw-insert here.
-const seedOrganisationCollection = async (database, orgId) => {
+const seedOrganisationCollection = async (database, organisationNumber) => {
   await database.collection('organisation').insertOne({
     _id: new ObjectId(),
-    orgId,
+    orgId: storedOrgId(organisationNumber),
     orgName: 'Target',
     email: 'test@example.com'
   })
@@ -282,7 +280,8 @@ const seedOrganisationCollection = async (database, orgId) => {
 // The 'registration' and 'accreditation' staging collections are written by
 // the forms-submission-data migration path and keyed by orgId. No real adapter
 // exists in the cascade module, so we raw-insert here.
-const seedStagingCollections = async (database, orgId) => {
+const seedStagingCollections = async (database, organisationNumber) => {
+  const orgId = storedOrgId(organisationNumber)
   await database.collection('registration').insertOne({
     _id: new ObjectId(),
     orgId,
@@ -319,13 +318,19 @@ describe('non-prod data reset (mongo)', () => {
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(database, repositories, seeded)
-      await seedOrganisationCollection(database, seeded.organisation.orgId)
-      await seedStagingCollections(database, seeded.organisation.orgId)
+      await seedOrganisationCollection(
+        database,
+        seeded.organisation.organisationNumber
+      )
+      await seedStagingCollections(
+        database,
+        seeded.organisation.organisationNumber
+      )
       // A second PRN so the deleteMany semantics get exercised.
       await repositories.prns.create(
         buildDraftPrn({
           organisation: {
-            organisationNumber: organisationNumberOf(seeded.organisation),
+            organisationNumber: seeded.organisation.organisationNumber,
             name: 'Target',
             tradingName: 'Target Trading'
           }
@@ -333,7 +338,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       const counts = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(seeded.organisation)
+        seeded.organisation.organisationNumber
       )
 
       expect(counts).toEqual({
@@ -366,31 +371,44 @@ describe('non-prod data reset (mongo)', () => {
     }) => {
       const target = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(database, repositories, target)
-      await seedOrganisationCollection(database, target.organisation.orgId)
-      await seedStagingCollections(database, target.organisation.orgId)
+      await seedOrganisationCollection(
+        database,
+        target.organisation.organisationNumber
+      )
+      await seedStagingCollections(
+        database,
+        target.organisation.organisationNumber
+      )
 
       const other = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(database, repositories, other)
-      await seedOrganisationCollection(database, other.organisation.orgId)
-      await seedStagingCollections(database, other.organisation.orgId)
+      await seedOrganisationCollection(
+        database,
+        other.organisation.organisationNumber
+      )
+      await seedStagingCollections(
+        database,
+        other.organisation.organisationNumber
+      )
 
       await reset.deleteByOrganisationNumber(
-        organisationNumberOf(target.organisation)
+        target.organisation.organisationNumber
       )
 
       expect(
         await database.collection('packaging-recycling-notes').countDocuments({
-          'organisation.organisationNumber': String(other.organisation.orgId)
+          'organisation.organisationNumber':
+            other.organisation.organisationNumber
         })
       ).toBe(1)
       expect(
         await database.collection('reports').countDocuments({
-          organisationNumber: String(other.organisation.orgId)
+          organisationNumber: other.organisation.organisationNumber
         })
       ).toBe(1)
       expect(
         await database.collection('summary-log-row-states').countDocuments({
-          organisationNumber: organisationNumberOf(other.organisation)
+          organisationNumber: other.organisation.organisationNumber
         })
       ).toBe(1)
       expect(
@@ -413,7 +431,8 @@ describe('non-prod data reset (mongo)', () => {
           $or: [
             { 'context.organisationId': other.organisationId },
             {
-              'context.organisationNumber': String(other.organisation.orgId)
+              'context.organisationNumber':
+                other.organisation.organisationNumber
             }
           ]
         })
@@ -424,24 +443,24 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('registration')
-          .countDocuments({ orgId: other.organisation.orgId })
+        await database.collection('registration').countDocuments({
+          orgId: storedOrgId(other.organisation.organisationNumber)
+        })
       ).toBe(1)
       expect(
-        await database
-          .collection('accreditation')
-          .countDocuments({ orgId: other.organisation.orgId })
+        await database.collection('accreditation').countDocuments({
+          orgId: storedOrgId(other.organisation.organisationNumber)
+        })
       ).toBe(1)
       expect(
-        await database
-          .collection('organisation')
-          .countDocuments({ orgId: other.organisation.orgId })
+        await database.collection('organisation').countDocuments({
+          orgId: storedOrgId(other.organisation.organisationNumber)
+        })
       ).toBe(1)
       expect(
-        await database
-          .collection('organisation')
-          .countDocuments({ orgId: target.organisation.orgId })
+        await database.collection('organisation').countDocuments({
+          orgId: storedOrgId(target.organisation.organisationNumber)
+        })
       ).toBe(0)
       expect(
         await database
@@ -460,7 +479,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual(EMPTY_COUNTS)
     })
 
-    it('logs the refusal with the orgId reference when run in production', async ({
+    it('logs the refusal with the organisation number reference when run in production', async ({
       database,
       repositories
     }) => {
@@ -490,13 +509,13 @@ describe('non-prod data reset (mongo)', () => {
       await seedDownstreamForOrganisation(database, repositories, seeded)
 
       const first = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(seeded.organisation)
+        seeded.organisation.organisationNumber
       )
       expect(first['epr-organisations']).toBe(1)
       expect(first['packaging-recycling-notes']).toBe(1)
 
       const second = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(seeded.organisation)
+        seeded.organisation.organisationNumber
       )
       expect(second).toEqual(EMPTY_COUNTS)
     })
@@ -526,13 +545,13 @@ describe('non-prod data reset (mongo)', () => {
 
       await expect(
         failingReset.deleteByOrganisationNumber(
-          organisationNumberOf(seeded.organisation)
+          seeded.organisation.organisationNumber
         )
       ).rejects.toThrow('reports down')
 
       await expect(
         repositories.organisations.findByOrganisationNumber(
-          organisationNumberOf(seeded.organisation)
+          seeded.organisation.organisationNumber
         )
       ).resolves.toMatchObject({ id: seeded.organisationId })
     })
@@ -555,7 +574,7 @@ describe('non-prod data reset (mongo)', () => {
       })
 
       const counts = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(organisation)
+        organisation.organisationNumber
       )
 
       expect(counts['overseas-sites']).toBe(0)
@@ -578,7 +597,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       const counts = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(organisation)
+        organisation.organisationNumber
       )
 
       expect(counts['external-accreditations']).toBe(0)
@@ -599,7 +618,9 @@ describe('non-prod data reset (mongo)', () => {
       setCdpEnvironment('prod')
 
       const server = {
-        app: { organisationsRepository: repositories.organisations },
+        app: {
+          organisationAdministrationRepository: repositories.organisations
+        },
         logger: mockLogger,
         ext: () => {},
         dependency: (_dependencies, after) => after(server)
@@ -609,7 +630,7 @@ describe('non-prod data reset (mongo)', () => {
 
       await expect(
         server.app.nonProdDataReset.deleteByOrganisationNumber(
-          organisationNumberOf(seeded.organisation)
+          seeded.organisation.organisationNumber
         )
       ).rejects.toThrow('Non-prod data reset is disabled in production.')
 
@@ -620,7 +641,8 @@ describe('non-prod data reset (mongo)', () => {
       ).toBe(1)
       expect(
         await database.collection('packaging-recycling-notes').countDocuments({
-          'organisation.organisationNumber': String(seeded.organisation.orgId)
+          'organisation.organisationNumber':
+            seeded.organisation.organisationNumber
         })
       ).toBe(1)
     })
@@ -639,7 +661,8 @@ describe('non-prod data reset (mongo)', () => {
           plugin: {
             name: 'organisationsRepository',
             register: (/** @type {import('@hapi/hapi').Server} */ s) => {
-              s.app.organisationsRepository = repositories.organisations
+              s.app.organisationAdministrationRepository =
+                repositories.organisations
             }
           }
         }
@@ -649,7 +672,7 @@ describe('non-prod data reset (mongo)', () => {
       const { nonProdDataReset } =
         /** @type {import('#common/hapi-types.js').ServerApp} */ (server.app)
       const counts = await nonProdDataReset.deleteByOrganisationNumber(
-        organisationNumberOf(seeded.organisation)
+        seeded.organisation.organisationNumber
       )
 
       expect(counts['epr-organisations']).toBe(1)
@@ -666,7 +689,7 @@ describe('non-prod data reset (mongo)', () => {
       await repositories.organisations.insert(organisation)
 
       const counts = await reset.deleteByOrganisationNumber(
-        organisationNumberOf(organisation)
+        organisation.organisationNumber
       )
 
       expect(counts['epr-organisations']).toBe(1)

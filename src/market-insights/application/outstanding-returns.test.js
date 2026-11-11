@@ -67,7 +67,7 @@ const makeOperator = ({
     organisation: /** @type {Organisation} */ (
       /** @type {unknown} */ ({
         id,
-        orgId,
+        organisationNumber: toOrganisationNumber(String(orgId)),
         statusHistory: approvedHistory,
         registrations: [
           {

@@ -48,10 +48,10 @@ export const createAccreditedOrganisationBuilder =
 /** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  regAccStatusByDate: {
+  standingByDate: {
     2026: {
-      '2026-02-01': { status: 'registeredOnly' },
-      '2026-07-01': { status: 'accredited' }
+      '2026-02-01': { standing: 'registeredOnly' },
+      '2026-07-01': { standing: 'accredited' }
     }
   },
   validFrom: '2026-02-01',
@@ -89,10 +89,10 @@ const exporterAccreditationResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  regAccStatusByDate: {
+  standingByDate: {
     2026: {
-      '2026-02-01': { status: 'registeredOnly' },
-      '2026-07-01': { status: 'accredited' }
+      '2026-02-01': { standing: 'registeredOnly' },
+      '2026-07-01': { standing: 'accredited' }
     }
   },
   validFrom: '2026-02-01',
@@ -114,17 +114,17 @@ export const useViewServer = () => {
   })
 
   /**
-   * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationsRepository
+   * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationAdministrationRepository
    */
-  const start = async (organisationsRepository) => {
+  const start = async (organisationAdministrationRepository) => {
     const overseasSitesRepository =
       createInMemoryOverseasSitesRepository(overseasSites)
     server = await createTestServer({
       repositories: {
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository,
         organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository(),
+          organisationAdministrationRepository(),
           { overseasSitesRepository: overseasSitesRepository() }
         )
       }
@@ -143,9 +143,12 @@ export const useViewServer = () => {
    * @param {object} organisation
    */
   const serveStored = async (organisation) => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])
-    await organisationsRepository().insert(partialMock(organisation))
-    await start(organisationsRepository)
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])
+    await organisationAdministrationRepository().insert(
+      partialMock(organisation)
+    )
+    await start(organisationAdministrationRepository)
   }
 
   /**

@@ -15,7 +15,7 @@ import {
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -42,14 +42,14 @@ export const summaryLogsList = {
    * @param {HapiRequest & {
    *   params: RegistrationParams,
    *   query: { year: Year },
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLogsRepository,
       params,
       query,
@@ -59,7 +59,7 @@ export const summaryLogsList = {
     const { year } = query
 
     await findRegistrationByNumber(
-      organisationsRepository,
+      organisationAdministrationRepository,
       organisationNumber,
       registrationNumber
     )

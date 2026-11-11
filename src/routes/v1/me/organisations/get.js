@@ -1,3 +1,4 @@
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
 import {
@@ -122,7 +123,7 @@ export const organisationsLinkedGetAll = {
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, auth, logger } = request
+    const { organisationLinkingRepository, auth, logger } = request
 
     const { email } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
@@ -142,15 +143,15 @@ export const organisationsLinkedGetAll = {
     )
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
-      organisationsRepository.findByLinkedDefraOrgId(current.id),
-      organisationsRepository.findAllLinkableForUser(email)
+      organisationLinkingRepository.findByLinkedDefraOrgId(current.id),
+      organisationLinkingRepository.findAllLinkableForUser(email)
     ])
 
     const linked = linkedOrg?.linkedDefraOrganisation
       ? {
           id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,
-          orgId: linkedOrg.orgId,
+          orgId: toWireOrgId(linkedOrg.organisationNumber),
           referenceNumber: linkedOrg.id,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
           linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
@@ -160,7 +161,7 @@ export const organisationsLinkedGetAll = {
     const unlinked = linkableOrgs.map((unlinkedOrg) => ({
       id: unlinkedOrg.id,
       name: unlinkedOrg.companyDetails.name,
-      orgId: unlinkedOrg.orgId,
+      orgId: toWireOrgId(unlinkedOrg.organisationNumber),
       referenceNumber: unlinkedOrg.id
     }))
 

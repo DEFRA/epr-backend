@@ -3,7 +3,6 @@ import {
   LINKABLE_ORGANISATION_STATUSES,
   USER_ROLES
 } from '#domain/organisations/model.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
@@ -11,8 +10,10 @@ import {
   duplicateKeyConflict,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
+  organisationNumberOfStored,
   prepareForReplace,
   storedOrgId,
+  toStoredFields,
   UNIQUE_NUMBER_FIELDS,
   versionConflict
 } from './helpers.js'
@@ -34,7 +35,8 @@ import {
 } from './mongodb-find.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams } from './administration-port.js' */
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
 /** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -72,7 +74,7 @@ async function ensureCollection(db) {
 }
 
 const performInsert = (db) => async (organisation) => {
-  const validated = validateOrganisationInsert(organisation)
+  const validated = validateOrganisationInsert(toStoredFields(organisation))
   const { id, ...orgFields } = validated
 
   const registrations =
@@ -209,15 +211,15 @@ const LINKED_ORG_PROJECTION = {
   linkedDefraOrganisation: 1
 }
 
-/** @returns {import('./port.js').OrganisationSummary} */
+/** @returns {import('./linking-port.js').OrganisationSummary} */
 const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
-  orgId: doc.orgId,
+  organisationNumber: organisationNumberOfStored(doc),
   companyDetails: { name: doc.companyDetails.name },
   status: getCurrentStatus(doc)
 })
 
-/** @returns {import('./port.js').LinkedOrganisationSummary} */
+/** @returns {import('./linking-port.js').LinkedOrganisationSummary} */
 const toLinkedOrganisationSummary = (doc) => ({
   ...toOrganisationSummary(doc),
   linkedDefraOrganisation: {
@@ -371,7 +373,9 @@ const performFindHighestOrganisationNumber = (db) => async () => {
     .sort({ orgId: -1 })
     .limit(1)
     .toArray()
-  return doc ? organisationNumberOf({ orgId: doc.orgId }) : null
+  return doc
+    ? organisationNumberOfStored({ _id: doc._id, orgId: doc.orgId })
+    : null
 }
 
 /**

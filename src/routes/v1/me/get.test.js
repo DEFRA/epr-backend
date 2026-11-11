@@ -85,11 +85,12 @@ describe('GET /v1/me', () => {
       const email = `hello.${randomUUID()}@example.com`
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const organisationsRepository = organisationsRepositoryFactory()
+      const organisationAdministrationRepository =
+        organisationsRepositoryFactory()
 
       // An active, linked organisation, so the operator would hold
       // organisation.read on a route that named it.
-      await buildApprovedOrg(organisationsRepository, {
+      await buildApprovedOrg(organisationAdministrationRepository, {
         users: [
           {
             fullName: 'Test User',
@@ -107,7 +108,7 @@ describe('GET /v1/me', () => {
 
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory
+          organisationAdministrationRepository: organisationsRepositoryFactory
         }
       })
 
@@ -128,9 +129,10 @@ describe('GET /v1/me', () => {
       const email = `hello.${randomUUID()}@example.com`
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const organisationsRepository = organisationsRepositoryFactory()
+      const organisationAdministrationRepository =
+        organisationsRepositoryFactory()
 
-      await buildApprovedOrg(organisationsRepository, {
+      await buildApprovedOrg(organisationAdministrationRepository, {
         users: [
           {
             fullName: 'Test User',
@@ -148,7 +150,7 @@ describe('GET /v1/me', () => {
 
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory
+          organisationAdministrationRepository: organisationsRepositoryFactory
         }
       })
 

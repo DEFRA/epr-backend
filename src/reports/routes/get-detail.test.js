@@ -12,7 +12,6 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { requiredNumbersFor } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -43,17 +42,23 @@ const YEAR = toYear(2026)
  * latest submitted summary log. No records leaves the ledger without a
  * submission, so the report has no source.
  *
- * @param {{ id: string }} org
+ * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
  * @param {Record<string, any>} registration
+ * @param {Record<string, any> | undefined} accredited
  * @param {{ type: string, data: object }[]} wasteRecords
  */
-const seedRepositories = async (org, registration, wasteRecords) => {
-  const accreditationId = registration.accreditationId ?? null
-  const ids = { registrationId: registration.id, accreditationId }
+const seedRepositories = async (
+  org,
+  registration,
+  accredited,
+  wasteRecords
+) => {
   const ledgerId = {
     organisationId: org.id,
-    ...ids,
-    ...requiredNumbersFor(partialMock(org), ids, 'the test ledger')
+    registrationId: registration.id,
+    accreditationId: accredited?.id ?? null,
+    ...reportKeyOf(org, registration),
+    accreditationNumber: accredited?.accreditationNumber ?? null
   }
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
@@ -134,7 +139,7 @@ const createServer = async ({
   })
 
   const { ledgerRepository, summaryLogRowStatesRepository } =
-    await seedRepositories(org, registration, wasteRecords)
+    await seedRepositories(org, registration, accreditations[0], wasteRecords)
 
   const reportsRepositoryFactory = createInMemoryReportsRepository()
 
@@ -151,7 +156,7 @@ const createServer = async ({
     config: { featureFlags: { reportDataValidation } }
   })
 
-  const registrationPath = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+  const registrationPath = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
 
   return {
     server,

@@ -142,7 +142,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -279,6 +279,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
       expect(previousRegistration.status).toBe('created')
       expect(nextRegistration.status).toBe('approved')
+      expect(entry.context.registrationNumber).toBe('REG999999')
 
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
     })
@@ -333,9 +334,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       server = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([fixture]),
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -513,7 +513,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         createInMemoryOrganisationsRepository([fixture])
       server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -632,9 +632,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       server = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([fixture]),
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -792,15 +791,16 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           child: vi.fn()
         })
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        fixture
-      ])
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([fixture])
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository,
+          organisationAdministrationRepository,
           // Read afresh, so the PRN route sees the grant this endpoint writes.
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository()),
+            organisationReadRepositoryOver(
+              organisationAdministrationRepository()
+            ),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
@@ -840,7 +840,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       // create endpoint 404s before considering the payload at all.
       const createResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/organisations/${fixture.orgId}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
+        url: `/organisations/${fixture.organisationNumber}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
         ...asOperator(),
         payload: {
           issuedToOrganisation: { id: 'org-2', name: 'Recipient Org' },
@@ -865,7 +865,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
         }
       })

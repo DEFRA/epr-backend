@@ -32,16 +32,16 @@ vi.mock('@defra/cdp-auditing', () => ({
 describe('PUT /v1/organisations/{id}', () => {
   setupAuthContext()
   let server
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -54,7 +54,7 @@ describe('PUT /v1/organisations/{id}', () => {
   const createOrganisation = async () => {
     const fixture = buildOrganisation()
     const organisationId = fixture.id
-    await organisationsRepository.insert(fixture)
+    await organisationAdministrationRepository.insert(fixture)
 
     const fetchResponse = await server.inject({
       method: 'GET',
@@ -398,6 +398,30 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
+  it.each([0, -1, 12.5, '500001', null])(
+    'rejects an orgId of %j, which is not an organisation number',
+    async (orgId) => {
+      const org = await createOrganisation()
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, orgId }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        'Invalid organisation data: orgId: must be an organisation number'
+      )
+    }
+  )
+
   it('rejects a registration linked to a malformed accreditation id', async () => {
     const org = await createOrganisation()
     const [firstRegistration, ...otherRegistrations] = org.registrations
@@ -464,7 +488,7 @@ describe('PUT /v1/organisations/{id}', () => {
 
       const testServer = await createTestServer({
         repositories: {
-          organisationsRepository: instance,
+          organisationAdministrationRepository: instance,
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -498,14 +522,14 @@ describe('PUT /v1/organisations/{id}', () => {
 describe('PUT /v1/organisations/{id} overseas sites validation', () => {
   setupAuthContext()
   let server
-  let organisationsRepository
+  let organisationAdministrationRepository
   let overseasSitesRepository
 
   const knownSiteId = new ObjectId().toString()
 
   const createOrgWithExporter = async () => {
     const fixture = buildOrganisation()
-    await organisationsRepository.insert(fixture)
+    await organisationAdministrationRepository.insert(fixture)
 
     const fetchResponse = await server.inject({
       method: 'GET',
@@ -520,7 +544,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
   beforeEach(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     const overseasSitesRepoFactory = createInMemoryOverseasSitesRepository([
       {
@@ -539,7 +563,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository(),
         overseasSitesRepository: overseasSitesRepoFactory
       }
@@ -770,16 +794,16 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
 describe('PUT /v1/organisations/{id} status change guard', () => {
   setupAuthContext()
   let server
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -791,7 +815,7 @@ describe('PUT /v1/organisations/{id} status change guard', () => {
 
   const createOrganisation = async () => {
     const fixture = buildOrganisation()
-    await organisationsRepository.insert(fixture)
+    await organisationAdministrationRepository.insert(fixture)
 
     const fetchResponse = await server.inject({
       method: 'GET',
@@ -1032,9 +1056,8 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          fixture
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([fixture]),
         systemLogsRepository: createSystemLogsRepository()
       }
     })

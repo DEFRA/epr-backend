@@ -16,6 +16,8 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 const cancelledAfterApproval = [
@@ -48,11 +50,14 @@ const organisationWith = (
 }
 
 /**
- * @param {{ orgId: number }} organisation
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
  * @param {string} [registrationNumber]
  */
-const eligibilityUrl = ({ orgId }, registrationNumber = REPROCESSOR_NUMBER) =>
-  `/organisations/${orgId}/registrations/${registrationNumber}/accreditations/2026/packaging-recycling-notes/december-prn-eligibility`
+const eligibilityUrl = (
+  { organisationNumber },
+  registrationNumber = REPROCESSOR_NUMBER
+) =>
+  `/organisations/${organisationNumber}/registrations/${registrationNumber}/accreditations/2026/packaging-recycling-notes/december-prn-eligibility`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes/december-prn-eligibility', () => {
   setupAuthContext()

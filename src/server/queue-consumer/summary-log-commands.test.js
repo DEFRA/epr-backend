@@ -41,7 +41,7 @@ describe('summaryLogCommandHandlers', () => {
     deps = {
       logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
       summaryLogsRepository: { findById: vi.fn(), update: vi.fn() },
-      organisationsRepository: {},
+      organisationAdministrationRepository: {},
       wasteBalanceService: {},
       reportsService: {
         hasReportSubmittedSince: vi.fn(),
@@ -103,7 +103,8 @@ describe('summaryLogCommandHandlers', () => {
         expect(createSummaryLogsValidator).toHaveBeenCalledWith({
           logger: deps.logger,
           summaryLogsRepository: deps.summaryLogsRepository,
-          organisationsRepository: deps.organisationsRepository,
+          organisationAdministrationRepository:
+            deps.organisationAdministrationRepository,
           reportsService: deps.reportsService,
           summaryLogExtractor: deps.summaryLogExtractor
         })

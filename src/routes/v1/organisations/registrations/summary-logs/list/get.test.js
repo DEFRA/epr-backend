@@ -34,9 +34,9 @@ const organisation = buildOrganisation({
   registrations: [registration, otherRegistration]
 })
 
-const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+const organisationNumber = organisation.organisationNumber
 const registrationNumber = registration.registrationNumber
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 const year = currentUtcYear()
 const urlForYear = `${url}?year=${year}`
@@ -52,9 +52,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })

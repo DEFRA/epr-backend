@@ -2,7 +2,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   defraIdMockAuthTokens,
@@ -32,19 +31,17 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     mockCdpAuditing.mockReset()
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -54,10 +51,10 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     server: () => server,
     makeRequest: async () => {
       const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      await organisationAdministrationRepository.insert(org)
       return {
         method: 'PUT',
-        url: `/organisations/${org.orgId}/user`
+        url: `/organisations/${org.organisationNumber}/user`
       }
     }
   })
@@ -105,10 +102,10 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     ])(
       'returns $expectedStatus for $description',
       async ({ token, expectedStatus }) => {
-        const org = await buildActiveOrg(organisationsRepository)
+        const org = await buildActiveOrg(organisationAdministrationRepository)
         const response = await server.inject({
           method: 'PUT',
-          url: `/organisations/${org.orgId}/user`,
+          url: `/organisations/${org.organisationNumber}/user`,
           headers: { Authorization: `Bearer ${token}` }
         })
         expect(response.statusCode).toBe(expectedStatus)
@@ -124,8 +121,8 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     let initialUser
 
     beforeEach(async () => {
-      const org = await buildActiveOrg(organisationsRepository)
-      orgBefore = await organisationsRepository.findById(org.id)
+      const org = await buildActiveOrg(organisationAdministrationRepository)
+      orgBefore = await organisationAdministrationRepository.findById(org.id)
       initialUser = orgBefore.users[0]
     })
 
@@ -133,7 +130,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       const newUserToken = generateValidTokenWith(user)
       const response = await server.inject({
         method: 'PUT',
-        url: `/organisations/${orgBefore.orgId}/user`,
+        url: `/organisations/${orgBefore.organisationNumber}/user`,
         headers: { Authorization: `Bearer ${newUserToken}` }
       })
 
@@ -157,7 +154,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         await addUser(newUser)
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -197,6 +194,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -214,7 +212,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -233,6 +231,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -280,7 +279,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         await addUser(updatedUser())
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -320,6 +319,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
@@ -341,7 +341,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 
@@ -360,6 +360,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
@@ -402,7 +403,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       it('does not update the user in the organisation', async () => {
         await addUser(userNotChanged())
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version
         )
@@ -421,7 +422,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${orgBefore.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${orgBefore.organisationNumber}`,
           headers: { Authorization: `Bearer ${serviceMaintainerToken}` }
         })
 

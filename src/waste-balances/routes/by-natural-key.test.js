@@ -10,8 +10,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
-  requiredNumbersFor,
-  toAccreditationNumber
+  toAccreditationNumber,
+  toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
@@ -41,6 +41,8 @@ import {
   exporterAccreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
@@ -92,27 +94,31 @@ const sharedNumberOrganisation = buildOrganisation({
   ]
 })
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const registeredOnlyLedger = (year) =>
   `${registrations}/${REGISTERED_ONLY_NUMBER}/ledger/${year}`
 const accreditationPath = (year) =>
   `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${year}`
 
 /**
- * A ledger of the test organisation, with the numbers its record gives it.
+ * A ledger of the test organisation, under its registration's and
+ * accreditation's ids and numbers.
  *
- * @param {{ registrationId: string, accreditationId: string | null }} ids
+ * @param {Record<string, any>} registration
+ * @param {Record<string, any> | null} accreditation
  */
-const numbered = (ids) => ({
+const numbered = (registration, accreditation) => ({
   organisationId: organisation.id,
-  ...ids,
-  ...requiredNumbersFor(partialMock(organisation), ids, 'the test ledger')
+  registrationId: registration.id,
+  accreditationId: accreditation?.id ?? null,
+  organisationNumber: organisation.organisationNumber,
+  registrationNumber: toRegistrationNumber(registration.registrationNumber),
+  accreditationNumber: accreditation
+    ? toAccreditationNumber(accreditation.accreditationNumber)
+    : null
 })
 
-const accreditedLedgerId = numbered({
-  registrationId: accreditedRegistration.id,
-  accreditationId: accredited.id
-})
+const accreditedLedgerId = numbered(accreditedRegistration, accredited)
 
 const issuedNote = createMockIssuedPrn({
   id: 'prn-numbered',
@@ -133,7 +139,7 @@ const body = (response) => JSON.parse(response.payload)
 /** @param {object} overrides */
 const registeredOnlyEvent = (overrides) =>
   buildLedgerEvent({
-    ...numbered({ registrationId: registeredOnly.id, accreditationId: null }),
+    ...numbered(registeredOnly, null),
     ...overrides
   })
 
@@ -146,10 +152,11 @@ describe('ledger and waste balance routes by natural key', () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation),
-          partialMock(sharedNumberOrganisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([
+            partialMock(organisation),
+            partialMock(sharedNumberOrganisation)
+          ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(sharedNumberOrganisation)
@@ -255,7 +262,7 @@ describe('ledger and waste balance routes by natural key', () => {
     it('returns 404 for a registration that belongs to another organisation', async () => {
       const underItsOwner = await get(registeredOnlyLedger(2026))
       const underAnother = await get(
-        `/organisations/${sharedNumberOrganisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
+        `/organisations/${sharedNumberOrganisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
@@ -450,7 +457,7 @@ describe('ledger and waste balance routes by natural key', () => {
 
   describe('GET /organisations/{organisationNumber}/waste-balances/{year}', () => {
     const wasteBalances = (year) =>
-      `/organisations/${organisation.orgId}/waste-balances/${year}`
+      `/organisations/${organisation.organisationNumber}/waste-balances/${year}`
 
     it('serves a balance for each accreditation in the year, keyed by accreditation number, leaving out a registration with no number', async () => {
       await server.app.ledgerRepository.appendEvents([
@@ -458,10 +465,7 @@ describe('ledger and waste balance routes by natural key', () => {
       ])
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent({
-          ...numbered({
-            registrationId: accreditedExporter.id,
-            accreditationId: accreditedExport.id
-          }),
+          ...numbered(accreditedExporter, accreditedExport),
           closingBalance: {
             amount: 120,
             availableAmount: 100,
@@ -497,7 +501,7 @@ describe('ledger and waste balance routes by natural key', () => {
 
     it('leaves out registrations that share a number', async () => {
       const response = await get(
-        `/organisations/${sharedNumberOrganisation.orgId}/waste-balances/2026`
+        `/organisations/${sharedNumberOrganisation.organisationNumber}/waste-balances/2026`
       )
 
       expect(body(response)).toEqual({
@@ -535,9 +539,9 @@ const buildAccessServer = async () => {
     []
   )
   const repository = organisationsRepositoryFactory()
-  /** @param {{ orgId: number }} org */
-  const accreditationOf = ({ orgId }) =>
-    `/organisations/${orgId}/registrations/REG${orgId}/accreditations/${new Date().getUTCFullYear()}`
+  /** @param {{ organisationNumber: OrganisationNumber }} org */
+  const accreditationOf = ({ organisationNumber }) =>
+    `/organisations/${organisationNumber}/registrations/REG${organisationNumber}/accreditations/${new Date().getUTCFullYear()}`
   const own = accreditationOf(await buildActiveOrg(repository))
   const other = accreditationOf(
     await buildActiveOrg(repository, {
@@ -554,7 +558,7 @@ const buildAccessServer = async () => {
   )
   const server = await createTestServer({
     repositories: {
-      organisationsRepository: organisationsRepositoryFactory,
+      organisationAdministrationRepository: organisationsRepositoryFactory,
       organisationReadRepository:
         await organisationReadRepositoryFrom(repository)
     }
@@ -728,9 +732,8 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
     }
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),

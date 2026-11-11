@@ -1,6 +1,8 @@
-/** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/port.js' */
+/** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/linking-port.js' */
 /** @import {DefraIdRelationship} from '#common/helpers/auth/types.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
@@ -22,6 +24,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 /**
  * @typedef {{
  *   organisationId: string | null
+ *   organisationNumber: OrganisationNumber | null
  *   defraIdOrg: { id: string, name: string }
  *   defraIdRelationships: DefraIdRelationship[]
  *   linked: AuditLinkedOrg | null
@@ -41,7 +44,7 @@ function toAuditLinked(linkedOrg) {
   return {
     id: linkedOrg.id,
     name: linkedOrg.linkedDefraOrganisation.orgName,
-    orgId: linkedOrg.orgId,
+    orgId: toWireOrgId(linkedOrg.organisationNumber),
     status: linkedOrg.status,
     linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
     linkedAt: new Date(linkedOrg.linkedDefraOrganisation.linkedAt).toISOString()
@@ -56,7 +59,7 @@ function toAuditUnlinked(linkableOrgs) {
   return linkableOrgs.map((org) => ({
     id: org.id,
     name: org.companyDetails.name,
-    orgId: org.orgId,
+    orgId: toWireOrgId(org.organisationNumber),
     status: org.status
   }))
 }
@@ -80,6 +83,8 @@ export async function auditOrganisationsDiscovery(
   /** @type {ReconciliationContext} */
   const context = {
     organisationId: linked?.id ?? null,
+    organisationNumber:
+      linked && linkedOrg ? linkedOrg.organisationNumber : null,
     defraIdOrg,
     defraIdRelationships,
     linked,

@@ -57,6 +57,7 @@
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
+ * @property {AccreditationNumber | null | undefined} accreditationNumber - The summary log's accreditation, null when it is registered-only
  */
 
 /**

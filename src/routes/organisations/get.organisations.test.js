@@ -33,9 +33,10 @@ describe('GET /organisations', () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository(
-          [acme, beta].map((organisation) => partialMock(organisation))
-        ),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository(
+            [acme, beta].map((organisation) => partialMock(organisation))
+          ),
         overseasSitesRepository:
           createInMemoryOverseasSitesRepository(overseasSites),
         organisationReadRepository: await organisationReadRepositoryOf(
@@ -59,7 +60,7 @@ describe('GET /organisations', () => {
 
   it('serves each organisation on the page as GET /organisations/{organisationNumber} serves it', async () => {
     const response = await get('/organisations?search=acme')
-    const single = await get(`/organisations/${acme.orgId}`)
+    const single = await get(`/organisations/${acme.organisationNumber}`)
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({
@@ -79,7 +80,7 @@ describe('GET /organisations', () => {
 
   it('finds an organisation by its number', async () => {
     const response = await get(
-      `/organisations?organisationNumber=${beta.orgId}`
+      `/organisations?organisationNumber=${beta.organisationNumber}`
     )
 
     expect(body(response).items.map(({ name }) => name)).toEqual([

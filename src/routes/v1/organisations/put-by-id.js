@@ -1,4 +1,8 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  fromOrganisationWire,
+  toOrganisationWire
+} from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
@@ -18,8 +22,8 @@ import {
  * @typedef {{status: string, updatedAt: Date | string, updatedBy?: string}} StatusHistoryEntry
  */
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
 
@@ -337,7 +341,7 @@ export const makePutOrganisationHandler =
   ({ devSeeding = false } = {}) =>
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
-   *    organisationsRepository: OrganisationsRepository,
+   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
    *    overseasSitesRepository: OverseasSitesRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { id: string }
@@ -345,7 +349,8 @@ export const makePutOrganisationHandler =
    * @param {Object} h - Hapi response toolkit
    */
   async (request, h) => {
-    const { organisationsRepository, overseasSitesRepository } = request
+    const { organisationAdministrationRepository, overseasSitesRepository } =
+      request
 
     const id = request.params.id.trim()
 
@@ -358,9 +363,9 @@ export const makePutOrganisationHandler =
     const { version: _v, id: _, ...sanitisedFragment } = updateFragment
 
     /** @type {OrganisationReplacement} */
-    const updates = sanitisedFragment
+    const updates = fromOrganisationWire(sanitisedFragment)
 
-    const initial = await organisationsRepository.findById(id)
+    const initial = await organisationAdministrationRepository.findById(id)
     if (!devSeeding) {
       validateStatusesUnchanged(initial, updates)
       validateStatusHistoryEdits(initial, updates)
@@ -371,12 +376,15 @@ export const makePutOrganisationHandler =
       updates.registrations
     )
 
-    await organisationsRepository.replace(id, version, updates)
-    const updated = await organisationsRepository.findById(id, version + 1)
+    await organisationAdministrationRepository.replace(id, version, updates)
+    const updated = await organisationAdministrationRepository.findById(
+      id,
+      version + 1
+    )
     if (!devSeeding) {
       await auditOrganisationUpdate(request, id, initial, updated)
     }
-    return h.response(updated).code(StatusCodes.OK)
+    return h.response(toOrganisationWire(updated)).code(StatusCodes.OK)
   }
 
 export const organisationsPutById = {

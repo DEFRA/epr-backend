@@ -3,6 +3,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const mockAudit = vi.fn()
 
@@ -49,10 +50,10 @@ describe('auditOrganisationsDiscovery', () => {
     action: 'organisations-discovered'
   }
 
-  /** @type {import('#repositories/organisations/port.js').LinkedOrganisationSummary} */
+  /** @type {import('#repositories/organisations/linking-port.js').LinkedOrganisationSummary} */
   const linkedOrg = {
     id: 'epr-org-1',
-    orgId: 1001,
+    organisationNumber: toOrganisationNumber('1001'),
     status: 'approved',
     companyDetails: { name: 'Linked Ltd' },
     linkedDefraOrganisation: {
@@ -92,6 +93,7 @@ describe('auditOrganisationsDiscovery', () => {
     })
     expect(storedLog.context).toEqual({
       organisationId: 'epr-org-1',
+      organisationNumber: '1001',
       defraIdOrg: baseParams.defraIdOrg,
       defraIdRelationships,
       linked: {
@@ -111,7 +113,7 @@ describe('auditOrganisationsDiscovery', () => {
     const linkableOrgs = [
       {
         id: 'epr-org-2',
-        orgId: 2002,
+        organisationNumber: toOrganisationNumber('2002'),
         status: 'approved',
         companyDetails: { name: 'Unlinked Corp' }
       }
@@ -126,6 +128,7 @@ describe('auditOrganisationsDiscovery', () => {
     const storedLog = await findStoredLog()
     expect(storedLog.context).toEqual({
       organisationId: null,
+      organisationNumber: null,
       defraIdOrg: baseParams.defraIdOrg,
       defraIdRelationships,
       linked: null,
@@ -150,6 +153,7 @@ describe('auditOrganisationsDiscovery', () => {
     const storedLog = await findStoredLog()
     expect(storedLog.context).toEqual({
       organisationId: null,
+      organisationNumber: null,
       defraIdOrg: baseParams.defraIdOrg,
       defraIdRelationships,
       linked: null,
@@ -163,7 +167,8 @@ describe('auditOrganisationsDiscovery', () => {
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         context: expect.objectContaining({
-          organisationId: 'epr-org-1'
+          organisationId: 'epr-org-1',
+          organisationNumber: '1001'
         })
       })
     )
@@ -197,6 +202,7 @@ describe('auditOrganisationsDiscovery', () => {
     const storedLog = await findStoredLog()
     expect(storedLog.context).toEqual({
       organisationId: 'epr-org-1',
+      organisationNumber: '1001',
       defraIdOrg: baseParams.defraIdOrg,
       defraIdRelationships: oversizedParams.defraIdRelationships,
       linked: {

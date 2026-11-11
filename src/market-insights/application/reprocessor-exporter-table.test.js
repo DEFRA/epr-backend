@@ -76,7 +76,7 @@ const makeOperator = ({
 
   return {
     id,
-    orgId,
+    organisationNumber: toOrganisationNumber(String(orgId)),
     statusHistory: approvedHistory,
     registrations: [
       {
@@ -137,7 +137,7 @@ const prn = (
  * @param {Partial<import('#reports/repository/port.js').CreateReportBase>} figures
  */
 const monthlyReport = (operator, period, figures = {}) => ({
-  organisationNumber: toOrganisationNumber(String(operator.orgId)),
+  organisationNumber: operator.organisationNumber,
   registrationNumber: toRegistrationNumber(
     operator.registrations[0].registrationNumber
   ),
@@ -185,7 +185,7 @@ const run = async ({
 
   const logger = { info: vi.fn(), warn: vi.fn() }
   const table = await buildReprocessorExporterTable({
-    organisationsRepository: createInMemoryOrganisationsRepository(
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
       organisations.map((organisation) => partialMock(organisation))
     )(),
     reportsRepository,
@@ -625,7 +625,7 @@ describe('buildReprocessorExporterTable', () => {
     })
 
     expect(reported(table)).toEqual([])
-    const registrationKey = `${operator.orgId}::${operator.registrations[0].registrationNumber}`
+    const registrationKey = `${operator.organisationNumber}::${operator.registrations[0].registrationNumber}`
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(registrationKey),
@@ -1355,7 +1355,7 @@ describe('buildReprocessorExporterTable', () => {
           plastic.report,
           {
             ...wood.report,
-            organisationNumber: toOrganisationNumber(String(twoMaterials.orgId))
+            organisationNumber: twoMaterials.organisationNumber
           },
           monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) })
         ]

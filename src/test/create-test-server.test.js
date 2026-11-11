@@ -49,12 +49,13 @@ describe('createTestServer', () => {
 
   describe('repository overrides', () => {
     it('uses provided repository override', async () => {
-      const organisationsRepository = createInMemoryOrganisationsRepository()()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository()()
       const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      await organisationAdministrationRepository.insert(org)
 
       const server = await createTestServer({
-        repositories: { organisationsRepository }
+        repositories: { organisationAdministrationRepository }
       })
 
       const response = await server.inject({
@@ -69,13 +70,19 @@ describe('createTestServer', () => {
     })
 
     it('supports mock repositories for behaviour verification', async () => {
-      const mockOrg = { id: '6507f1f77bcf86cd79943901', name: 'Mock Org' }
+      const mockOrg = {
+        id: '6507f1f77bcf86cd79943901',
+        name: 'Mock Org',
+        organisationNumber: '500001'
+      }
       const mockOrganisationsRepository = {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
 
       const server = await createTestServer({
-        repositories: { organisationsRepository: mockOrganisationsRepository }
+        repositories: {
+          organisationAdministrationRepository: mockOrganisationsRepository
+        }
       })
 
       const response = await server.inject({
@@ -85,7 +92,11 @@ describe('createTestServer', () => {
       })
 
       expect(response.statusCode).toBe(200)
-      expect(JSON.parse(response.payload)).toEqual(mockOrg)
+      expect(JSON.parse(response.payload)).toEqual({
+        id: mockOrg.id,
+        name: mockOrg.name,
+        orgId: 500001
+      })
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrg.id
       )

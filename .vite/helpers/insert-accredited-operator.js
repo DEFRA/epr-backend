@@ -47,7 +47,7 @@ export const storedMaterial = (material) =>
 
 /**
  * Inserts accredited operators built by the caller's builders, so they draw
- * orgIds from the same sequence as the caller's other organisations.
+ * numbers from the same sequence as the caller's other organisations.
  *
  * @param {OrganisationBuilders} builders
  */
@@ -59,13 +59,13 @@ export const createAccreditedOperatorInserter = (builders) => {
    * otherwise, written through the organisations fixture so the document read
    * back is one the write schema accepts.
    *
-   * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+   * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
    * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId }>}
    */
   return async (
-    organisationsRepository,
+    organisationAdministrationRepository,
     regulator = REGULATOR.EA,
     { material = MATERIAL.PLASTIC, tonnageBand, validFrom = '2026-01-01' } = {}
   ) => {
@@ -85,7 +85,7 @@ export const createAccreditedOperatorInserter = (builders) => {
       accreditation.prnIssuance = { ...accreditation.prnIssuance, tonnageBand }
     }
     const organisation = await buildApprovedOrg(
-      organisationsRepository,
+      organisationAdministrationRepository,
       { registrations: [registration], accreditations: [accreditation] },
       { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
     )

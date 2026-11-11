@@ -20,7 +20,7 @@ const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/uplo
 
 const buildPostUrl = (summaryLogId) =>
   signedCallback(
-    `/organisations/${organisation.orgId}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+    `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
   )
 
 describe('POST upload-completed validation', () => {
@@ -33,9 +33,8 @@ describe('POST upload-completed validation', () => {
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ])

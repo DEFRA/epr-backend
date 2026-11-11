@@ -29,10 +29,12 @@ const organisationsRepositoryHolding = (overseasSites) =>
 describe('resolveOverseasSites', () => {
   it('returns resolved map keyed by zero-padded string OSR ID', async () => {
     const validFrom = new Date('2024-01-01')
-    const organisationsRepository = organisationsRepositoryHolding({
-      '001': { overseasSiteId: 'site-aaa' },
-      '099': { overseasSiteId: 'site-bbb' }
-    })
+    const organisationAdministrationRepository = organisationsRepositoryHolding(
+      {
+        '001': { overseasSiteId: 'site-aaa' },
+        '099': { overseasSiteId: 'site-bbb' }
+      }
+    )
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([
         { id: 'site-aaa', validFrom },
@@ -41,7 +43,7 @@ describe('resolveOverseasSites', () => {
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER
@@ -52,7 +54,7 @@ describe('resolveOverseasSites', () => {
       '099': { validFrom: new Date('2024-06-01') }
     })
     expect(
-      organisationsRepository.findByOrganisationNumber
+      organisationAdministrationRepository.findByOrganisationNumber
     ).toHaveBeenCalledWith(ORGANISATION_NUMBER)
     expect(overseasSitesRepository.findByIds).toHaveBeenCalledWith([
       'site-aaa',
@@ -61,13 +63,14 @@ describe('resolveOverseasSites', () => {
   })
 
   it('returns empty map when registration has no overseasSites', async () => {
-    const organisationsRepository = organisationsRepositoryHolding(undefined)
+    const organisationAdministrationRepository =
+      organisationsRepositoryHolding(undefined)
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn()
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER
@@ -78,13 +81,15 @@ describe('resolveOverseasSites', () => {
   })
 
   it('returns empty map when overseasSites map is empty', async () => {
-    const organisationsRepository = organisationsRepositoryHolding({})
+    const organisationAdministrationRepository = organisationsRepositoryHolding(
+      {}
+    )
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn()
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER
@@ -95,16 +100,17 @@ describe('resolveOverseasSites', () => {
   })
 
   it('throws when the organisation is not found', async () => {
-    const organisationsRepository = createMockOrganisationsRepository({
-      findByOrganisationNumber: vi.fn().mockResolvedValue(null)
-    })
+    const organisationAdministrationRepository =
+      createMockOrganisationsRepository({
+        findByOrganisationNumber: vi.fn().mockResolvedValue(null)
+      })
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn()
     })
 
     await expect(
       resolveOverseasSites(
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository,
         ORGANISATION_NUMBER,
         REGISTRATION_NUMBER
@@ -115,18 +121,19 @@ describe('resolveOverseasSites', () => {
   })
 
   it('throws when the organisation holds no registration with the number', async () => {
-    const organisationsRepository = createMockOrganisationsRepository({
-      findByOrganisationNumber: vi.fn().mockResolvedValue({
-        registrations: [{ registrationNumber: 'R25SR500010002' }]
+    const organisationAdministrationRepository =
+      createMockOrganisationsRepository({
+        findByOrganisationNumber: vi.fn().mockResolvedValue({
+          registrations: [{ registrationNumber: 'R25SR500010002' }]
+        })
       })
-    })
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn()
     })
 
     await expect(
       resolveOverseasSites(
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository,
         ORGANISATION_NUMBER,
         REGISTRATION_NUMBER
@@ -137,15 +144,17 @@ describe('resolveOverseasSites', () => {
   })
 
   it('omits the key when the referenced overseas site does not resolve', async () => {
-    const organisationsRepository = organisationsRepositoryHolding({
-      '001': { overseasSiteId: 'missing-site' }
-    })
+    const organisationAdministrationRepository = organisationsRepositoryHolding(
+      {
+        '001': { overseasSiteId: 'missing-site' }
+      }
+    )
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([])
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER
@@ -155,17 +164,19 @@ describe('resolveOverseasSites', () => {
   })
 
   it('keeps the keys that do resolve when another does not', async () => {
-    const organisationsRepository = organisationsRepositoryHolding({
-      '001': { overseasSiteId: 'missing-site' },
-      '002': { overseasSiteId: 'site-b' }
-    })
+    const organisationAdministrationRepository = organisationsRepositoryHolding(
+      {
+        '001': { overseasSiteId: 'missing-site' },
+        '002': { overseasSiteId: 'site-b' }
+      }
+    )
     const validFrom = new Date('2026-01-01')
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-b', validFrom }])
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER
@@ -175,9 +186,11 @@ describe('resolveOverseasSites', () => {
   })
 
   it('sets validFrom to null when overseas site has no validFrom', async () => {
-    const organisationsRepository = organisationsRepositoryHolding({
-      '001': { overseasSiteId: 'site-no-date' }
-    })
+    const organisationAdministrationRepository = organisationsRepositoryHolding(
+      {
+        '001': { overseasSiteId: 'site-no-date' }
+      }
+    )
     const overseasSitesRepository = createMockOverseasSitesRepository({
       findByIds: vi
         .fn()
@@ -185,7 +198,7 @@ describe('resolveOverseasSites', () => {
     })
 
     const result = await resolveOverseasSites(
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       ORGANISATION_NUMBER,
       REGISTRATION_NUMBER

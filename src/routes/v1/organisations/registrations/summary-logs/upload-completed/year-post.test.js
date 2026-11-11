@@ -18,6 +18,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { signedCallback } from '#test/upload-callback.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -32,7 +33,7 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 
 const organisationId = '507f1f77bcf86cd799439011'
 const registrationId = '507f1f77bcf86cd799439012'
-const orgId = 500123
+const organisationNumber = toOrganisationNumber('500123')
 const registrationNumber = REPROCESSOR_NUMBER
 
 const uploadedKeyFor = (uploadOrganisationId, uploadRegistrationId) =>
@@ -57,7 +58,7 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
 })
 
 const uploadCompletedPath = (year, summaryLogId) =>
-  `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
+  `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
 
 const uploadCompletedUrl = (year, summaryLogId) =>
   signedCallback(uploadCompletedPath(year, summaryLogId))
@@ -67,7 +68,7 @@ const createTestOrganisationsRepository = () =>
     partialMock(
       buildOrganisation({
         id: organisationId,
-        orgId,
+        organisationNumber,
         registrations: [reprocessor({ id: registrationId })]
       })
     )
@@ -85,7 +86,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     summaryLogsRepository = summaryLogsRepositoryFactory(createMockLogger())
 
-    const organisationsRepository = createTestOrganisationsRepository()
+    const organisationAdministrationRepository =
+      createTestOrganisationsRepository()
 
     summaryLogsWorker = {
       validate: vi.fn()
@@ -94,9 +96,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository
+          organisationAdministrationRepository
         )
       },
       workers: {
@@ -132,7 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId,
       year: 2026,
       accreditationId: null,
-      organisationNumber: String(orgId),
+      organisationNumber,
       registrationNumber,
       accreditationNumber: null
     })
@@ -182,7 +185,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedServer = await createTestServer({
         repositories: {
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
-          organisationsRepository: () => accreditedOrganisationsRepository,
+          organisationAdministrationRepository: () =>
+            accreditedOrganisationsRepository,
           organisationReadRepository: await organisationReadRepositoryFrom(
             accreditedOrganisationsRepository
           )
@@ -203,7 +207,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       const response = await accreditedServer.inject({
         method: 'POST',
         url: signedCallback(
-          `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
         ),
         payload: {
           uploadStatus: 'ready',
@@ -243,7 +247,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       const response = await accreditedServer.inject({
         method: 'POST',
         url: signedCallback(
-          `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+          `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
         ),
         payload: createCompletePayload('file-unnumbered')
       })
@@ -465,7 +469,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const insertError = new Error('Database connection failed')
 
     beforeAll(async () => {
-      const organisationsRepository = createTestOrganisationsRepository()
+      const organisationAdministrationRepository =
+        createTestOrganisationsRepository()
 
       failingServer = await createTestServer({
         repositories: {
@@ -476,9 +481,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               throw insertError
             }
           }),
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: await organisationReadRepositoryFrom(
-            organisationsRepository
+            organisationAdministrationRepository
           )
         },
         workers: {

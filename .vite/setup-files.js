@@ -6,7 +6,7 @@ process.env.NODE_ENV = 'test'
 // Auth
 process.env.ADMIN_UI_ENTRA_CLIENT_ID = 'test'
 process.env.DEFRA_ID_CLIENT_ID = 'test-defra'
-process.env.ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL =
+process.env.ENTRA_OIDC_WELL_KNOWN_URL =
   'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
 process.env.DEFRA_ID_OIDC_WELL_KNOWN_URL =
   'https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0/.well-known/openid-configuration'

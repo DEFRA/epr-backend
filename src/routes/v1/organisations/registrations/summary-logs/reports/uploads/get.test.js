@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
@@ -9,13 +8,14 @@ import { summaryLogUploadsReportPath } from './get.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const organisationBuilders = createOrganisationBuilders()
-const { nextOrgId } = organisationBuilders
+const { nextOrganisationNumber } = organisationBuilders
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`${summaryLogUploadsReportPath} route`, () => {
@@ -31,7 +31,8 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationReadRepository: () =>
+          organisationReadRepositoryOver(organisationsRepository),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -45,8 +46,10 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
   describe('successful requests', () => {
     it('returns 200 with summary log uploads report data', async () => {
-      const orgId = nextOrgId()
-      const org = await buildApprovedOrg(organisationsRepository, { orgId })
+      const organisationNumber = nextOrganisationNumber()
+      const org = await buildApprovedOrg(organisationsRepository, {
+        organisationNumber
+      })
       const registration = org.registrations[0]
 
       const submittedAt = '2026-01-20T14:30:00.000Z'
@@ -56,7 +59,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
         summaryLogFactory.submitted({
           organisationId: org.id,
           registrationId: registration.id,
-          organisationNumber: toOrganisationNumber(String(org.orgId)),
+          organisationNumber: org.organisationNumber,
           registrationNumber: registration.registrationNumber,
           submittedAt
         })
@@ -77,9 +80,9 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
             appropriateAgency: 'EA',
             type: 'Reprocessor',
             businessName: 'ACME ltd',
-            orgId,
-            registrationNumber: `REG${orgId}`,
-            accreditationNumber: `ACC${orgId}`,
+            orgId: Number(organisationNumber),
+            registrationNumber: `REG${organisationNumber}`,
+            accreditationNumber: `ACC${organisationNumber}`,
             reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
             packagingWasteCategory: 'Glass-remelt',
             lastSuccessfulUpload: submittedAt,

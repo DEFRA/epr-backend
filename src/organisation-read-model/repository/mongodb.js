@@ -1,9 +1,7 @@
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import {
-  DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
-  DEFAULT_MAX_CONSISTENCY_RETRIES,
   findAll,
-  findOneAtMinimumVersion,
+  findOne,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
 import {
@@ -25,7 +23,7 @@ export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
  * @param {StoredOrganisation[]} stored
  * @returns {Promise<ExternalAccreditation[]>}
  */
-export const findExternalAccreditations = (db, stored) =>
+const findExternalAccreditations = (db, stored) =>
   /** @type {Collection<ExternalAccreditation>} */ (
     db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
   )
@@ -50,31 +48,17 @@ export const findExternalAccreditations = (db, stored) =>
  * towards `totalItems`, so its page comes back short.
  *
  * @param {Db} db
- * @param {{ maxRetries?: number, retryDelayMs?: number }} [eventualConsistencyConfig]
  * @returns {(dependencies: {
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
-export const createOrganisationReadRepository = (
-  db,
-  eventualConsistencyConfig
-) => {
-  const maxRetries =
-    eventualConsistencyConfig?.maxRetries ?? DEFAULT_MAX_CONSISTENCY_RETRIES
-  const retryDelayMs =
-    eventualConsistencyConfig?.retryDelayMs ??
-    DEFAULT_CONSISTENCY_RETRY_DELAY_MS
-
+export const createOrganisationReadRepository = (db) => {
   return (dependencies) => ({
-    findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-      const stored = await findOneAtMinimumVersion(
-        db,
-        maxRetries,
-        retryDelayMs,
-        { orgId: storedOrgId(organisationNumber) },
-        minimumVersion
-      )
+    findByOrganisationNumber: async (organisationNumber) => {
+      const stored = await findOne(db, {
+        orgId: storedOrgId(organisationNumber)
+      })
       if (!stored) {
         return null
       }
@@ -86,11 +70,8 @@ export const createOrganisationReadRepository = (
       return organisation ?? null
     },
 
-    find: async ({ organisationNumber, ...params }) => {
-      const { items, ...page } = await findPage(db, {
-        ...params,
-        orgId: organisationNumber
-      })
+    find: async (params) => {
+      const { items, ...page } = await findPage(db, params)
       return {
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)

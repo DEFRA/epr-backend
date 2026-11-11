@@ -55,7 +55,7 @@ export const testFindAllLinkedBehaviour = (it) => {
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
         id: linkedOrg.id,
-        orgId: linkedOrg.orgId,
+        organisationNumber: linkedOrg.organisationNumber,
         companyDetails: { name: linkedOrg.companyDetails.name },
         status: 'created',
         linkedDefraOrganisation

@@ -10,7 +10,7 @@ import {
   registrationFactory
 } from '#common/helpers/collections/factories/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { organisationNumberOf } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
@@ -23,7 +23,7 @@ import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 
 /** @import {Db} from 'mongodb' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
@@ -35,20 +35,20 @@ const COLLECTION_ACCREDITATION = 'accreditation'
  * @async
  * @param {Db} db
  * @param {() => boolean} isProduction
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @returns {Promise<void>}
  */
 export async function createSeedData(
   db,
   isProduction,
-  organisationsRepository
+  organisationAdministrationRepository
 ) {
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
     await createOrgRegAccFixtures(db)
-    await createEprOrganisationFixtures(organisationsRepository)
-    await createEprOrganisationScenarios(organisationsRepository)
+    await createEprOrganisationFixtures(organisationAdministrationRepository)
+    await createEprOrganisationScenarios(organisationAdministrationRepository)
   }
 }
 
@@ -96,15 +96,28 @@ async function createOrgRegAccFixtures(db) {
   }
 }
 
-async function createEprOrganisationFixtures(organisationsRepository) {
+/**
+ * The sample organisations, numbered as the domain numbers them. The fixture
+ * files store the number as `orgId`, as the database does.
+ */
+const EPR_ORGANISATION_FIXTURES = [
+  eprOrganisation1,
+  eprOrganisation2,
+  eprOrganisation3,
+  eprOrganisation4
+].map(({ orgId, ...organisation }) => ({
+  ...organisation,
+  organisationNumber: toOrganisationNumber(String(orgId))
+}))
+
+async function createEprOrganisationFixtures(
+  organisationAdministrationRepository
+) {
   const existingFixtures =
-    await organisationsRepository.findByOrganisationNumbers(
-      [
-        eprOrganisation1,
-        eprOrganisation2,
-        eprOrganisation3,
-        eprOrganisation4
-      ].map(organisationNumberOf)
+    await organisationAdministrationRepository.findByOrganisationNumbers(
+      EPR_ORGANISATION_FIXTURES.map(
+        ({ organisationNumber }) => organisationNumber
+      )
     )
 
   if (existingFixtures.length === 0) {
@@ -112,11 +125,10 @@ async function createEprOrganisationFixtures(organisationsRepository) {
       message: 'Create seed data: inserting epr-organisation fixtures'
     })
 
-    await Promise.all([
-      organisationsRepository.insert(eprOrganisation1),
-      organisationsRepository.insert(eprOrganisation2),
-      organisationsRepository.insert(eprOrganisation3),
-      organisationsRepository.insert(eprOrganisation4)
-    ])
+    await Promise.all(
+      EPR_ORGANISATION_FIXTURES.map((organisation) =>
+        organisationAdministrationRepository.insert(organisation)
+      )
+    )
   }
 }

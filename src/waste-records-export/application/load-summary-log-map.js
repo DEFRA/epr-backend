@@ -1,7 +1,4 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 
 /**
@@ -9,28 +6,23 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * keyed by the submission's *file* id — the value the waste balance ledger
  * records and the export looks a row up by, not the summary log document's
  * id. Used by stream-csv-export to populate the "Submitted At" column without
- * N+1 lookups during streaming. Summary logs are found by the registration's
- * number, so a registration without one shows no submission times.
+ * N+1 lookups during streaming.
  *
  * Memory cost is small (count is bounded by submissions per registration —
  * typically dozens at most).
  *
  * @param {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
- * @param {Pick<Organisation, 'orgId'>} organisation
- * @param {Pick<Registration, 'registrationNumber'>} registration
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
+ * @param {{ registrationNumber: RegistrationNumber }} registration
  * @returns {Promise<Map<string, { submittedAt: string }>>}
  */
 export const loadSummaryLogMap = async (
   summaryLogsRepository,
-  { orgId },
+  { organisationNumber },
   { registrationNumber }
 ) => {
-  if (!registrationNumber) {
-    return new Map()
-  }
-
   const summaryLogs = await summaryLogsRepository.findAll({
-    organisationNumber: toOrganisationNumber(String(orgId)),
+    organisationNumber,
     registrationNumber
   })
 

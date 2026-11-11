@@ -5,9 +5,10 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { auditIncrementalFormMigration } from '#auditing/incremental-form-migration.js'
+import { toRepositoryOrganisation } from './organisation-number.js'
 
 /**
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {OrganisationMigrationItem} from '#formsubmission/types.js'
  */
@@ -30,9 +31,13 @@ function partitionResults(results) {
     )
 }
 
-function insertOrganisation(organisationsRepository, item) {
-  return organisationsRepository
-    .insert(removeUndefinedValues(item.value))
+function insertOrganisation(organisationAdministrationRepository, item) {
+  return Promise.resolve()
+    .then(() =>
+      organisationAdministrationRepository.insert(
+        toRepositoryOrganisation(removeUndefinedValues(item.value))
+      )
+    )
     .then(
       () =>
         /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
@@ -60,7 +65,7 @@ function insertOrganisation(organisationsRepository, item) {
 }
 
 async function updateOrganisation(
-  organisationsRepository,
+  organisationAdministrationRepository,
   systemLogsRepository,
   item
 ) {
@@ -69,14 +74,17 @@ async function updateOrganisation(
   )
 
   try {
-    const previous = await organisationsRepository.findById(id)
+    const previous = await organisationAdministrationRepository.findById(id)
 
-    await organisationsRepository.replace(
+    await organisationAdministrationRepository.replace(
       id,
       version,
-      removeUndefinedValues(orgWithoutIdAndVersion)
+      toRepositoryOrganisation(removeUndefinedValues(orgWithoutIdAndVersion))
     )
-    const next = await organisationsRepository.findById(id, version + 1)
+    const next = await organisationAdministrationRepository.findById(
+      id,
+      version + 1
+    )
     await auditIncrementalFormMigration(
       systemLogsRepository,
       id,
@@ -107,13 +115,13 @@ async function updateOrganisation(
 }
 
 /**
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SystemLogsRepository} systemLogsRepository
  * @param {OrganisationMigrationItem[]} organisations
  * @returns {Promise<{successful: import('#formsubmission/types.js').SuccessResult[], failed: import('#formsubmission/types.js').FailureResult[]}>}
  */
 export async function upsertOrganisations(
-  organisationsRepository,
+  organisationAdministrationRepository,
   systemLogsRepository,
   organisations
 ) {
@@ -121,10 +129,14 @@ export async function upsertOrganisations(
   const toUpdate = organisations.filter((item) => item.operation === 'update')
 
   const insertPromises = toInsert.map((item) =>
-    insertOrganisation(organisationsRepository, item)
+    insertOrganisation(organisationAdministrationRepository, item)
   )
   const updatePromises = toUpdate.map((item) =>
-    updateOrganisation(organisationsRepository, systemLogsRepository, item)
+    updateOrganisation(
+      organisationAdministrationRepository,
+      systemLogsRepository,
+      item
+    )
   )
 
   const results = await Promise.allSettled([

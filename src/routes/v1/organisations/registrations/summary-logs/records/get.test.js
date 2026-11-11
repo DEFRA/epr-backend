@@ -18,10 +18,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
@@ -125,7 +122,7 @@ const createServer = async ({
         registrationId: REGISTRATION_ID,
         accreditationId
       }),
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: registration.registrationNumber
     },
     rows,
@@ -137,14 +134,14 @@ const createServer = async ({
   for (const { id, summaryLog } of summaryLogs) {
     await summaryLogsRepository.insert(id, {
       ...summaryLog,
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: registration.registrationNumber
     })
   }
 
   const server = await createTestServer({
     repositories: {
-      organisationsRepository: () => ({
+      organisationAdministrationRepository: () => ({
         findByOrganisationNumber: vi.fn(() =>
           Promise.resolve(keyedOrganisation)
         ),
@@ -156,11 +153,11 @@ const createServer = async ({
     }
   })
 
-  const { orgId } = organisation
+  const { organisationNumber } = organisation
   const { registrationNumber } = registration
   /** @param {string} [fileId] */
   const urlFor = (fileId = FILE_ID) =>
-    `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
+    `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
 
   return { server, organisation, summaryLogRowStatesRepository, urlFor }
 }
@@ -338,8 +335,20 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     )
   })
 
-  it('audits the download', async () => {
-    const { server, urlFor } = await createServer()
+  it('audits the download by the numbers of its organisation, registration and accreditation', async () => {
+    const accredited = submittedLog(FILE_ID, SUBMITTED_AT)
+    const { server, organisation, urlFor } = await createServer({
+      summaryLogs: [
+        {
+          ...accredited,
+          summaryLog: {
+            ...accredited.summaryLog,
+            accreditationId: 'acc-1',
+            accreditationNumber: 'A26ER5000000002PA'
+          }
+        }
+      ]
+    })
 
     await server.inject({
       method: 'GET',
@@ -352,7 +361,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       {
         summaryLogId: FILE_ID,
         organisationId: ORGANISATION_ID,
-        registrationId: REGISTRATION_ID
+        registrationId: REGISTRATION_ID,
+        organisationNumber: organisation.organisationNumber,
+        registrationNumber: 'R26ER5000000002PA',
+        accreditationNumber: 'A26ER5000000002PA'
       }
     )
   })
