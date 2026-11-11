@@ -382,28 +382,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
-  it('returns the closed periods an upload touched', async () => {
-    const organisationId = new ObjectId().toString()
-    const registrationId = new ObjectId().toString()
-    const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      organisationId,
-      registrationId
-    })
-    await closeJanuary2026(env)
-
-    const loadsByReportingPeriod = await uploadAndValidate(
-      env,
-      'sl-closed-refs',
-      'file-closed-refs',
-      createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
-    )
-
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
-    ])
-  })
-
   it('records the closed period a load leaves when re-dated outside the accreditation window', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'

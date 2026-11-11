@@ -98,9 +98,7 @@ export const loadsByReportingPeriodSchema = Joi.object({
   closedPeriods: Joi.array()
     .items(periodRefSchema)
     .default([])
-    .description(
-      'Deprecated: use periodsRequiringResubmission. Every closed period this upload added or adjusted loads in, including those whose reported figures did not change.'
-    )
+    .description('Deprecated: use periodsRequiringResubmission.')
     .meta({ deprecated: true }),
   // No default: the frontend still reads an absent field as not computed and
   // falls back on closed-period counts.
