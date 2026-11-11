@@ -48,10 +48,10 @@ export const createAccreditedOrganisationBuilder =
 /** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  regAccStatusByDate: {
+  standingByDate: {
     2026: {
-      '2026-02-01': { status: 'registeredOnly' },
-      '2026-07-01': { status: 'accredited' }
+      '2026-02-01': { standing: 'registeredOnly' },
+      '2026-07-01': { standing: 'accredited' }
     }
   },
   validFrom: '2026-02-01',
@@ -89,10 +89,10 @@ const exporterAccreditationResponse = {
 /** What `buildAccreditedOrganisation` serves for its exporter. */
 export const exporterResponse = {
   status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  regAccStatusByDate: {
+  standingByDate: {
     2026: {
-      '2026-02-01': { status: 'registeredOnly' },
-      '2026-07-01': { status: 'accredited' }
+      '2026-02-01': { standing: 'registeredOnly' },
+      '2026-07-01': { standing: 'accredited' }
     }
   },
   validFrom: '2026-02-01',

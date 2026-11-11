@@ -13,7 +13,7 @@ import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
-  REG_ACC_STATUS
+  STANDING
 } from '#organisation-read-model/domain/model.js'
 
 /*
@@ -123,22 +123,22 @@ const ukAddressSchema = Joi.alternatives().try(
   Joi.object({ fullAddress: Joi.string().required() })
 )
 
-const regAccStatusByDateSchema = keyedByYear(
+const standingByDateSchema = keyedByYear(
   Joi.object().pattern(
     isoDate,
     Joi.object({
-      status: Joi.string()
-        .valid(...Object.values(REG_ACC_STATUS))
+      standing: Joi.string()
+        .valid(...Object.values(STANDING))
         .required()
     })
   )
 ).description(
-  'By year, the date each status starts. A status holds until the next date, or the end of the year.'
+  'By year, the date each standing starts. A standing holds until the next date, or the end of the year.'
 )
 
 const registrationCommon = {
   material: materialSchema.required(),
-  regAccStatusByDate: regAccStatusByDateSchema,
+  standingByDate: standingByDateSchema,
   status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema,
   validFrom: isoDate.required()
