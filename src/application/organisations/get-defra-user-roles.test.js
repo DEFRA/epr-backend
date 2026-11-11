@@ -39,7 +39,7 @@ function createTokenPayload(overrides = {}) {
 describe('#getDefraUserRoles', () => {
   const mockOrganisationsRepository = {}
   const mockRequest = /** @type {any} */ ({
-    organisationsRepository: mockOrganisationsRepository,
+    organisationLinkingRepository: mockOrganisationsRepository,
     path: '/api/v1/organisations',
     method: 'get',
     params: {},

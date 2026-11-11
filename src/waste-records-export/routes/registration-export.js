@@ -9,7 +9,7 @@ import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
@@ -35,7 +35,7 @@ const registrationWasteRecordsExport = {
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
@@ -53,7 +53,8 @@ const registrationWasteRecordsExport = {
     return h
       .response(
         streamCsvExportToReadable({
-          organisationsRepository: request.organisationsRepository,
+          organisationAdministrationRepository:
+            request.organisationAdministrationRepository,
           summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,

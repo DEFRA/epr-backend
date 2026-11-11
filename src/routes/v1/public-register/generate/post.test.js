@@ -42,7 +42,8 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
     await buildApprovedOrg(inMemoryOrganisationsRepository)
     server = await createTestServer({
       repositories: {
-        organisationsRepository: inMemoryOrganisationsRepositoryFactory,
+        organisationAdministrationRepository:
+          inMemoryOrganisationsRepositoryFactory,
         publicRegisterRepository: inMemoryPublicRegisterRepository
       }
     })
@@ -109,7 +110,8 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
 
       server = await createTestServer({
         repositories: {
-          organisationsRepository: failingOrganisationsRepositoryFactory,
+          organisationAdministrationRepository:
+            failingOrganisationsRepositoryFactory,
           publicRegisterRepository: inMemoryPublicRegisterRepository
         }
       })

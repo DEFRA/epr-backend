@@ -686,9 +686,8 @@ export const createTestInfrastructure = async (
   })
   testOrg.id = organisationId
 
-  const organisationsRepository = createInMemoryOrganisationsRepository([
-    { ...testOrg, status: 'active' }
-  ])()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
   const ledgerRepository = createInMemoryLedgerRepository()()
@@ -697,7 +696,7 @@ export const createTestInfrastructure = async (
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
@@ -711,9 +710,10 @@ export const createTestInfrastructure = async (
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
-      organisationsRepository: () => organisationsRepository,
+      organisationAdministrationRepository: () =>
+        organisationAdministrationRepository,
       organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationsRepository, {
+        organisationReadRepositoryOver(organisationAdministrationRepository, {
           overseasSitesRepository
         }),
       uploadsRepository
@@ -769,9 +769,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   })
   testOrg.id = organisationId
 
-  const organisationsRepository = createInMemoryOrganisationsRepository([
-    { ...testOrg, status: 'active' }
-  ])()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
 
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
@@ -836,7 +835,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
@@ -848,7 +847,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteBalanceService,
-    organisationsRepository,
+    organisationAdministrationRepository,
     overseasSitesRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
@@ -864,9 +863,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       wasteBalanceService: () => wasteBalanceService,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
-      organisationsRepository: () => organisationsRepository,
+      organisationAdministrationRepository: () =>
+        organisationAdministrationRepository,
       organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationsRepository, {
+        organisationReadRepositoryOver(organisationAdministrationRepository, {
           overseasSitesRepository
         })
     },
@@ -884,7 +884,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     wasteBalanceService,
     packagingRecyclingNotesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     overseasSitesRepository,
     organisationId,
     registrationId,

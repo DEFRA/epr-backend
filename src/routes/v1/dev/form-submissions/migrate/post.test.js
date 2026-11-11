@@ -22,12 +22,12 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
-  let organisationsRepository
+  let organisationAdministrationRepository
   let formSubmissionsRepositoryFactory
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
   })
 
   function createFormsRepo(
@@ -67,7 +67,7 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         formSubmissionsRepository: formSubmissionsRepositoryFactory
       },
       config: { featureFlags: { devEndpoints: true } }
@@ -79,7 +79,7 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       const formsRepoFactory = createFormsRepo()
       const testServer = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           formSubmissionsRepository: formsRepoFactory
         },
         config: { featureFlags: { devEndpoints: false } }
@@ -151,7 +151,8 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       expect(body.migrated.accreditations).toBe(0)
 
       // Verify organisation was persisted
-      const migratedOrg = await organisationsRepository.findById(orgId)
+      const migratedOrg =
+        await organisationAdministrationRepository.findById(orgId)
       expect(migratedOrg).toBeDefined()
       expect(migratedOrg.id).toBe(orgId)
     })
@@ -220,7 +221,8 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       // Verify organisation was persisted with registrations
       // The exporter fixture has glass with both remelt and other processes,
       // which is split into 2 separate registrations at migration time
-      const migratedOrg = await organisationsRepository.findById(orgId)
+      const migratedOrg =
+        await organisationAdministrationRepository.findById(orgId)
       expect(migratedOrg).toBeDefined()
       expect(migratedOrg.registrations).toHaveLength(2)
     })
@@ -257,7 +259,8 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       expect(body.migrated.accreditations).toBe(accsToUse.length)
 
       // Verify organisation was persisted with accreditation
-      const migratedOrg = await organisationsRepository.findById(orgId)
+      const migratedOrg =
+        await organisationAdministrationRepository.findById(orgId)
       expect(migratedOrg).toBeDefined()
       expect(migratedOrg.accreditations).toHaveLength(accsToUse.length)
     })

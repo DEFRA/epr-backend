@@ -71,9 +71,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            organisation
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([organisation]),
           organisationReadRepository: await organisationReadRepositoryOf([
             organisation
           ]),
@@ -190,7 +189,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           organisationReadRepository:
             await organisationReadRepositoryFrom(repository),
           uploadsRepository: createInMemoryUploadsRepository()

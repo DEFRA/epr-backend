@@ -80,7 +80,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     summaryLogsRepository = summaryLogsRepositoryFactory(createMockLogger())
 
-    const organisationsRepository = createTestOrganisationsRepository()
+    const organisationAdministrationRepository =
+      createTestOrganisationsRepository()
 
     summaryLogsWorker = {
       validate: vi.fn()
@@ -89,9 +90,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository
+          organisationAdministrationRepository
         )
       },
       workers: {
@@ -177,7 +179,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedServer = await createTestServer({
         repositories: {
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
-          organisationsRepository: () => accreditedOrganisationsRepository,
+          organisationAdministrationRepository: () =>
+            accreditedOrganisationsRepository,
           organisationReadRepository: await organisationReadRepositoryFrom(
             accreditedOrganisationsRepository
           )
@@ -375,7 +378,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const insertError = new Error('Database connection failed')
 
     beforeAll(async () => {
-      const organisationsRepository = createTestOrganisationsRepository()
+      const organisationAdministrationRepository =
+        createTestOrganisationsRepository()
 
       failingServer = await createTestServer({
         repositories: {
@@ -386,9 +390,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               throw insertError
             }
           }),
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: await organisationReadRepositoryFrom(
-            organisationsRepository
+            organisationAdministrationRepository
           )
         },
         workers: {

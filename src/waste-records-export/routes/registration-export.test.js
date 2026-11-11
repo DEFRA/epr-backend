@@ -111,7 +111,7 @@ const createServer = async ({
     repositories: {
       // The export serves the records the path resolved, so nothing reads
       // them again by id.
-      organisationsRepository: () => ({
+      organisationAdministrationRepository: () => ({
         findAll: vi.fn().mockResolvedValue([organisation]),
         findById: vi.fn(() => Promise.reject(new Error('read again'))),
         findByOrganisationNumber: vi.fn((organisationNumber) =>

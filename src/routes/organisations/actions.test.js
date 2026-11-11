@@ -34,18 +34,18 @@ describe('organisation actions by organisation number', () => {
   /** @type {TestServer} */
   let server
   /** @type {OrganisationsRepository} */
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
         // The organisation the number resolved to is the one acted on, so
         // only a read of the write's own result reaches findById.
-        organisationsRepository: () => {
+        organisationAdministrationRepository: () => {
           const repository = organisationsRepositoryFactory()
           return {
             ...repository,
@@ -56,7 +56,7 @@ describe('organisation actions by organisation number', () => {
           }
         },
         organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+          organisationReadRepositoryOver(organisationAdministrationRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -75,14 +75,17 @@ describe('organisation actions by organisation number', () => {
     })
 
     it('links the organisation', async () => {
-      const organisation = await buildApprovedOrg(organisationsRepository, {
-        submitterContactDetails: {
-          fullName: 'Initial User',
-          email,
-          phone: '1234567890',
-          jobTitle: 'Director'
+      const organisation = await buildApprovedOrg(
+        organisationAdministrationRepository,
+        {
+          submitterContactDetails: {
+            fullName: 'Initial User',
+            email,
+            phone: '1234567890',
+            jobTitle: 'Director'
+          }
         }
-      })
+      )
 
       const response = await server.inject({
         method: 'POST',
@@ -99,7 +102,7 @@ describe('organisation actions by organisation number', () => {
           linkedBy: { email }
         }
       })
-      const linked = await organisationsRepository.findById(
+      const linked = await organisationAdministrationRepository.findById(
         organisation.id,
         organisation.version + 1
       )
@@ -127,7 +130,9 @@ describe('organisation actions by organisation number', () => {
     }
 
     it('adds the user to the organisation', async () => {
-      const organisation = await buildActiveOrg(organisationsRepository)
+      const organisation = await buildActiveOrg(
+        organisationAdministrationRepository
+      )
 
       const response = await server.inject({
         method: 'PUT',
@@ -137,7 +142,7 @@ describe('organisation actions by organisation number', () => {
 
       expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
       expect(response.payload).toBe('')
-      const updated = await organisationsRepository.findById(
+      const updated = await organisationAdministrationRepository.findById(
         organisation.id,
         organisation.version + 1
       )
@@ -147,8 +152,8 @@ describe('organisation actions by organisation number', () => {
     })
 
     it("refuses an operator acting on another organisation's number", async () => {
-      await buildActiveOrg(organisationsRepository)
-      const other = await buildApprovedOrg(organisationsRepository)
+      await buildActiveOrg(organisationAdministrationRepository)
+      const other = await buildApprovedOrg(organisationAdministrationRepository)
 
       const response = await server.inject({
         method: 'PUT',

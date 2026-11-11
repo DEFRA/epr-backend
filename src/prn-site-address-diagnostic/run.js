@@ -47,11 +47,11 @@ const summaryLine = (summary) =>
 
 /** @param {StartedServer} server */
 const runDiagnostic = async (server) => {
-  const organisationsRepository = (
+  const organisationAdministrationRepository = (
     await createOrganisationsRepository(server.db)
   )()
 
-  const organisations = await organisationsRepository.findAll()
+  const organisations = await organisationAdministrationRepository.findAll()
   const { rows, summary } = diagnosePrnSiteAddresses(
     organisations,
     await findExternalAccreditations(server.db, organisations),

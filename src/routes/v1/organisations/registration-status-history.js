@@ -5,8 +5,8 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import { assertRegistrationStatusTransitionValid } from '#domain/organisations/status.js'
 import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').RegistrationStatus} RegistrationStatus */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -37,7 +37,7 @@ export const registrationStatusHistory = {
    *      registrationNumber: RegistrationNumber
    *    }
    * > & {
-   *    organisationsRepository: OrganisationsRepository,
+   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string }
    * }} request
@@ -45,7 +45,7 @@ export const registrationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationAdministrationRepository } = request
     const { organisationId, registrationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -54,7 +54,8 @@ export const registrationStatusHistory = {
     // fields; the other arms forbid them.
     const grant = 'registrationNumber' in payload ? payload : undefined
 
-    const initial = await organisationsRepository.findById(organisationId)
+    const initial =
+      await organisationAdministrationRepository.findById(organisationId)
 
     const registration = initial.registrations.find(
       (reg) => reg.id === registrationId
@@ -80,9 +81,10 @@ export const registrationStatusHistory = {
       // in use by any registration in any organisation, whatever its status.
       // The unique index on registrations.registrationNumber also blocks
       // concurrent grants of the same number; this check gives the clear 422.
-      const inUse = await organisationsRepository.isRegistrationNumberInUse(
-        grant.registrationNumber
-      )
+      const inUse =
+        await organisationAdministrationRepository.isRegistrationNumberInUse(
+          grant.registrationNumber
+        )
       if (inUse) {
         throw Boom.badData(
           `Registration number ${grant.registrationNumber} is already in use`
@@ -115,8 +117,11 @@ export const registrationStatusHistory = {
       )
     }
 
-    await organisationsRepository.replace(id, version, updates)
-    const updated = await organisationsRepository.findById(id, version + 1)
+    await organisationAdministrationRepository.replace(id, version, updates)
+    const updated = await organisationAdministrationRepository.findById(
+      id,
+      version + 1
+    )
     await auditOrganisationUpdate(request, id, initial, updated)
 
     return h.response({ status: toStatus }).code(StatusCodes.OK)

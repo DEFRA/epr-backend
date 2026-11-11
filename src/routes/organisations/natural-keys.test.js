@@ -70,11 +70,12 @@ describe('findRegistrationByNumber', () => {
   })
 
   it('rejects an unknown organisation', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])()
 
     await expect(
       findRegistrationByNumber(
-        organisationsRepository,
+        organisationAdministrationRepository,
         toOrganisationNumber('1'),
         toRegistrationNumber(REPROCESSOR_NUMBER)
       )

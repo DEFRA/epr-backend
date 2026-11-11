@@ -50,7 +50,7 @@ describe('addOrUpdateOrganisationUser', () => {
     }
 
     mockRequest = partialMock({
-      organisationsRepository: partialMock(mockOrganisationsRepository)
+      organisationLinkingRepository: partialMock(mockOrganisationsRepository)
     })
 
     mockTokenPayload = partialMock({
@@ -114,7 +114,7 @@ describe('addOrUpdateOrganisationUser', () => {
     test('should update when user exists by email with changed details', async () => {
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const organisationsRepository = organisationsRepositoryFactory()
+      const organisationLinkingRepository = organisationsRepositoryFactory()
 
       const org = buildOrganisation({
         users: [
@@ -132,11 +132,11 @@ describe('addOrUpdateOrganisationUser', () => {
         ]
       })
 
-      await organisationsRepository.insert(org)
-      await waitForVersion(organisationsRepository, org.id, 1)
+      await organisationLinkingRepository.insert(org)
+      await waitForVersion(organisationLinkingRepository, org.id, 1)
 
       /** @type {HapiRequest} */
-      const fakeRequest = partialMock({ organisationsRepository })
+      const fakeRequest = partialMock({ organisationLinkingRepository })
 
       const result = await addOrUpdateOrganisationUser(
         fakeRequest,
@@ -152,7 +152,11 @@ describe('addOrUpdateOrganisationUser', () => {
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
 
       /** @type {Organisation} */
-      const updated = await waitForVersion(organisationsRepository, org.id, 2)
+      const updated = await waitForVersion(
+        organisationLinkingRepository,
+        org.id,
+        2
+      )
 
       expect(
         updated.users.filter((u) => u.email === 'existing.user@example.com')
@@ -179,7 +183,7 @@ describe('addOrUpdateOrganisationUser', () => {
     test('should update when user exists by contact-id with changed details', async () => {
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const organisationsRepository = organisationsRepositoryFactory()
+      const organisationLinkingRepository = organisationsRepositoryFactory()
 
       const org = buildOrganisation({
         users: [
@@ -198,11 +202,11 @@ describe('addOrUpdateOrganisationUser', () => {
         ]
       })
 
-      await organisationsRepository.insert(org)
-      await waitForVersion(organisationsRepository, org.id, 1)
+      await organisationLinkingRepository.insert(org)
+      await waitForVersion(organisationLinkingRepository, org.id, 1)
 
       /** @type {HapiRequest} */
-      const fakeRequest = partialMock({ organisationsRepository })
+      const fakeRequest = partialMock({ organisationLinkingRepository })
 
       const result = await addOrUpdateOrganisationUser(
         fakeRequest,
@@ -218,7 +222,11 @@ describe('addOrUpdateOrganisationUser', () => {
       expect(result.outcome).toBe(ORGANISATION_USER_RESULTS.USER_UPDATED)
 
       /** @type {Organisation} */
-      const updated = await waitForVersion(organisationsRepository, org.id, 2)
+      const updated = await waitForVersion(
+        organisationLinkingRepository,
+        org.id,
+        2
+      )
 
       expect(
         updated.users.filter((u) => u.contactId === 'contact-123')
@@ -245,7 +253,7 @@ describe('addOrUpdateOrganisationUser', () => {
     test('should not update when user exists and details have not changed', async () => {
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const organisationsRepository = organisationsRepositoryFactory()
+      const organisationLinkingRepository = organisationsRepositoryFactory()
 
       const org = buildOrganisation({
         users: [
@@ -258,11 +266,11 @@ describe('addOrUpdateOrganisationUser', () => {
         ]
       })
 
-      await organisationsRepository.insert(org)
-      await waitForVersion(organisationsRepository, org.id, 1)
+      await organisationLinkingRepository.insert(org)
+      await waitForVersion(organisationLinkingRepository, org.id, 1)
 
       /** @type {HapiRequest} */
-      const fakeRequest = partialMock({ organisationsRepository })
+      const fakeRequest = partialMock({ organisationLinkingRepository })
 
       const result = await addOrUpdateOrganisationUser(
         fakeRequest,

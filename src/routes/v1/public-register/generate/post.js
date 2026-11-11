@@ -9,7 +9,7 @@ import Boom from '@hapi/boom'
 import { auditPublicRegisterGenerate } from '#root/auditing/public-register.js'
 
 /**
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository
  * @typedef {import('#domain/public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
  * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
@@ -27,12 +27,12 @@ export const generateLatestPublicRegister = {
     tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository, reportsRepository: ReportsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationAdministrationRepository: OrganisationAdministrationRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository, reportsRepository: ReportsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
-      organisationsRepository,
+      organisationAdministrationRepository,
       organisationReadRepository,
       publicRegisterRepository,
       reportsRepository,
@@ -40,7 +40,7 @@ export const generateLatestPublicRegister = {
     } = request
     try {
       const result = await generatePublicRegister(
-        organisationsRepository,
+        organisationAdministrationRepository,
         organisationReadRepository,
         publicRegisterRepository,
         reportsRepository

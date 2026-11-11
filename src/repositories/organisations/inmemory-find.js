@@ -6,7 +6,7 @@ import {
   storedOrgId
 } from './helpers.js'
 
-/** @import { FindParams, SearchCriteria } from './port.js' */
+/** @import { FindParams, SearchCriteria } from './administration-port.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**

@@ -6,7 +6,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /**
  * @typedef {{
@@ -43,55 +43,62 @@ export const emptyOrganisationReadRepository = () =>
 
 /**
  * An in-memory organisation read repository holding what
- * `organisationsRepository` holds now, for a test server's
+ * `organisationAdministrationRepository` holds now, for a test server's
  * `organisationReadRepository`. Later writes to it are not seen.
  *
- * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findAll'>} organisationAdministrationRepository
  * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
  * @returns {Promise<() => OrganisationReadRepository>}
  */
 export const organisationReadRepositoryFrom = async (
-  organisationsRepository,
+  organisationAdministrationRepository,
   options
 ) => {
   const repository = createInMemoryOrganisationReadRepository(
-    await organisationsRepository.findAll()
+    await organisationAdministrationRepository.findAll()
   )(dependenciesFor(options))
   return () => repository
 }
 
 /**
  * An organisation read repository that takes a fresh snapshot of
- * `organisationsRepository` on every read, for a route that reads the read
+ * `organisationAdministrationRepository` on every read, for a route that reads the read
  * model both before and after it writes, as linking does.
  *
  * The organisations repository is read through `findByOrganisationNumber`, so
  * a read for `minimumVersion` waits for the write to land as it does there.
  *
- * @param {Pick<OrganisationsRepository, 'findAll' | 'findByOrganisationNumber'>} organisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findAll' | 'findByOrganisationNumber'>} organisationAdministrationRepository
  * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
  * @returns {OrganisationReadRepository}
  */
 export const organisationReadRepositoryOver = (
-  organisationsRepository,
+  organisationAdministrationRepository,
   options
 ) => ({
   findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-    const stored = await organisationsRepository.findByOrganisationNumber(
-      organisationNumber,
-      minimumVersion
-    )
+    const stored =
+      await organisationAdministrationRepository.findByOrganisationNumber(
+        organisationNumber,
+        minimumVersion
+      )
     return createInMemoryOrganisationReadRepository(stored ? [stored] : [])(
       dependenciesFor(options)
     ).findByOrganisationNumber(organisationNumber, minimumVersion)
   },
   find: async (params) =>
     (
-      await organisationReadRepositoryFrom(organisationsRepository, options)
+      await organisationReadRepositoryFrom(
+        organisationAdministrationRepository,
+        options
+      )
     )().find(params),
   findAll: async () =>
     (
-      await organisationReadRepositoryFrom(organisationsRepository, options)
+      await organisationReadRepositoryFrom(
+        organisationAdministrationRepository,
+        options
+      )
     )().findAll()
 })
 

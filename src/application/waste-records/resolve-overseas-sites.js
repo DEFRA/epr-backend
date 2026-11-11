@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
@@ -14,20 +14,22 @@ import Boom from '@hapi/boom'
  *
  * Used during waste balance classification to check ORS approval status (VAL014).
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {OrganisationNumber} organisationNumber
  * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<Record<string, { validFrom: Date | null }>>}
  */
 export const resolveOverseasSites = async (
-  organisationsRepository,
+  organisationAdministrationRepository,
   overseasSitesRepository,
   organisationNumber,
   registrationNumber
 ) => {
   const organisation =
-    await organisationsRepository.findByOrganisationNumber(organisationNumber)
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      organisationNumber
+    )
   const registration = organisation?.registrations.find(
     (candidate) => candidate.registrationNumber === registrationNumber
   )

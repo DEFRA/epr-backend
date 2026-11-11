@@ -47,9 +47,9 @@ const requestFor = (params) =>
   partialMock({
     app: {},
     params,
-    organisationsRepository: createInMemoryOrganisationsRepository([
-      partialMock(organisation)
-    ])()
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      [partialMock(organisation)]
+    )()
   })
 
 const h = partialMock({})
@@ -245,7 +245,7 @@ describe('atNaturalKeys', () => {
       server.validator(Joi)
       server.decorate(
         'request',
-        'organisationsRepository',
+        'organisationAdministrationRepository',
         createInMemoryOrganisationsRepository([partialMock(organisation)])()
       )
       server.route(/** @type {ServerRoute} */ (served))

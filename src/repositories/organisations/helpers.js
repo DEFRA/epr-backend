@@ -33,7 +33,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { SearchCriteria } from './port.js' */
+/** @import { SearchCriteria } from './administration-port.js' */
 
 /**
  * A status history entry as it reaches the repository: stored entries carry a

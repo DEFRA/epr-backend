@@ -59,18 +59,18 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeAll(async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+          organisationReadRepositoryOver(organisationAdministrationRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -135,7 +135,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
     })
 
     it('returns 409 when the organisation is not linked', async () => {
-      const org = await buildApprovedOrg(organisationsRepository)
+      const org = await buildApprovedOrg(organisationAdministrationRepository)
 
       const response = await server.inject({
         method: 'DELETE',
@@ -151,12 +151,15 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
     describe('when the request succeeds', () => {
       const performUnlink = async () => {
-        const org = await buildApprovedOrg(organisationsRepository, {
-          linkedDefraOrganisation: buildLinkedDefraOrg(
-            COMPANY_1_ID,
-            COMPANY_1_NAME
-          )
-        })
+        const org = await buildApprovedOrg(
+          organisationAdministrationRepository,
+          {
+            linkedDefraOrganisation: buildLinkedDefraOrg(
+              COMPANY_1_ID,
+              COMPANY_1_NAME
+            )
+          }
+        )
 
         const response = await server.inject({
           method: 'DELETE',
@@ -167,7 +170,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
         // buildApprovedOrg leaves the org at version 2; the unlink replace
         // bumps it to version 3.
         const unlinkedOrg = await waitForVersion(
-          organisationsRepository,
+          organisationAdministrationRepository,
           org.id,
           3
         )

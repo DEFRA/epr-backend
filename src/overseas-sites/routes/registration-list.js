@@ -13,7 +13,7 @@ import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSiteDetail } from '#overseas-sites/application/resolve-overseas-site-details.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 export const registrationOverseasSitesPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/overseas-sites'
@@ -58,22 +58,27 @@ export const registrationOverseasSitesList = {
   },
   /**
    * @param {HapiRequest & {
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
    *   params: { organisationId: string, registrationId: string }
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository, overseasSitesRepository, params, logger } =
-      request
+    const {
+      organisationAdministrationRepository,
+      overseasSitesRepository,
+      params,
+      logger
+    } = request
     const { organisationId, registrationId } = params
 
     try {
-      const registration = await organisationsRepository.findRegistrationById(
-        organisationId,
-        registrationId
-      )
+      const registration =
+        await organisationAdministrationRepository.findRegistrationById(
+          organisationId,
+          registrationId
+        )
 
       const sites = withoutApprovalDate(
         await resolveOverseasSiteDetails(

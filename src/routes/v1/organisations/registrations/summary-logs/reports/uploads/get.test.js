@@ -21,16 +21,18 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
 
   let server
-  let organisationsRepository
+  let organisationAdministrationRepository
   let summaryLogsRepository
 
   beforeAll(async () => {
-    organisationsRepository = createInMemoryOrganisationsRepository()()
+    organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository()()
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => organisationsRepository,
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository,
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -45,7 +47,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   describe('successful requests', () => {
     it('returns 200 with summary log uploads report data', async () => {
       const organisationNumber = nextOrganisationNumber()
-      const org = await buildApprovedOrg(organisationsRepository, {
+      const org = await buildApprovedOrg(organisationAdministrationRepository, {
         organisationNumber
       })
       const registration = org.registrations[0]

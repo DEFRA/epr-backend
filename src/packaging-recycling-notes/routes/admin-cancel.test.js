@@ -63,9 +63,10 @@ const LEDGER = {
   accreditationNumber: toAccreditationNumber('ACC-2026-001')
 }
 
-const organisationsRepository = createInMemoryOrganisationsRepository([
-  partialMock(buildOrganisationHolding(LEDGER))
-])
+const organisationAdministrationRepository =
+  createInMemoryOrganisationsRepository([
+    partialMock(buildOrganisationHolding(LEDGER))
+  ])
 
 const cancelUrl = `/v1/admin/packaging-recycling-notes/${prnId}/cancel`
 
@@ -164,7 +165,7 @@ const startServer = async (
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       reportsRepository: reportsRepositoryFactory
     },
     config: { featureFlags: { prnAdminCancellation: cancellationEnabled } }
@@ -396,7 +397,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       repositories: {
         packagingRecyclingNotesRepository: () => brokenRepository,
         ledgerRepository: () => createInMemoryLedgerRepository([])(),
-        organisationsRepository: () => ({}),
+        organisationAdministrationRepository: () => ({}),
         reportsRepository: () => createInMemoryReportsRepository()()
       },
       config: { featureFlags: { prnAdminCancellation: true } }

@@ -62,7 +62,7 @@ const LEDGER = {
   registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
   accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
 }
-const organisationsRepository = () => ({
+const organisationAdministrationRepository = () => ({
   findById: async () => organisation
 })
 const PRN_ID = '507f1f77bcf86cd799439011'
@@ -150,7 +150,7 @@ const startServer = async ({ currentStatus, events }) => {
           buildPrn(currentStatus)
         ]),
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     }
   })
   return server

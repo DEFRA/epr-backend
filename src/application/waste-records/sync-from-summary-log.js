@@ -172,14 +172,18 @@ const findAccreditation = (organisation, accreditationNumber) => {
  * The accreditation a submission writes to, found by the summary log's
  * numbers, and the ledger it names.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SubmissionNumbers} summaryLog
  * @returns {Promise<{ accreditation: Accreditation | null, ledgerId: WasteBalanceLedgerId }>}
  */
-const resolveSubmissionLedger = async (organisationsRepository, summaryLog) => {
-  const organisation = await organisationsRepository.findByOrganisationNumber(
-    summaryLog.organisationNumber
-  )
+const resolveSubmissionLedger = async (
+  organisationAdministrationRepository,
+  summaryLog
+) => {
+  const organisation =
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      summaryLog.organisationNumber
+    )
   if (!organisation) {
     throw new Error(`Organisation not found: ${summaryLog.organisationNumber}`)
   }
@@ -423,7 +427,7 @@ const commitStateAndBalance = async ({
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} dependencies.wasteBalanceService - The waste balance application service
- * @param {Object} dependencies.organisationsRepository - The organisations repository
+ * @param {Object} dependencies.organisationAdministrationRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} dependencies.summaryLogRowStatesRepository - The summary-log row states repository
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} dependencies.ledgerRepository - The ledger repository, read to classify created/updated against the committed head
@@ -434,7 +438,7 @@ export const syncFromSummaryLog = (dependencies) => {
   const {
     extractor,
     wasteBalanceService,
-    organisationsRepository,
+    organisationAdministrationRepository,
     overseasSitesRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
@@ -460,7 +464,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const preparedData = prepareRowsForTransformation(parsedData)
 
     const { accreditation, ledgerId } = await resolveSubmissionLedger(
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLog
     )
 
@@ -472,7 +476,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const overseasSites =
       processingType === PROCESSING_TYPES.EXPORTER
         ? await resolveOverseasSites(
-            organisationsRepository,
+            organisationAdministrationRepository,
             overseasSitesRepository,
             summaryLog.organisationNumber,
             summaryLog.registrationNumber

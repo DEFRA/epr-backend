@@ -21,7 +21,7 @@ function formatDateYYYYMMDD(date) {
 /**
  * Generates the public register by processing organisation data and storing it
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationRepo - Organisation repository
+ * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationRepo - Organisation repository
  * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model, for the report compliance columns
  * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepo - Public register repository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository - Reports repository

@@ -118,7 +118,7 @@ const createServerWithRepos = async ({
   summaryLogs = [],
   overseasSites = []
 } = {}) => {
-  const organisationsRepository = {
+  const organisationAdministrationRepository = {
     findAll: vi.fn().mockResolvedValue(organisations)
   }
 
@@ -164,7 +164,8 @@ const createServerWithRepos = async ({
 
   return createTestServer({
     repositories: {
-      organisationsRepository: () => organisationsRepository,
+      organisationAdministrationRepository: () =>
+        organisationAdministrationRepository,
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => ledgerRepository,
       summaryLogsRepository: () => summaryLogsRepository,

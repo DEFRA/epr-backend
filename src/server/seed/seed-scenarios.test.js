@@ -22,7 +22,7 @@ import {
 const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('seed-scenarios', () => {
-  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+  /** @type {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} */
   let repository
 
   beforeEach(() => {

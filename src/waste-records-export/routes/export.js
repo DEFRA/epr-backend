@@ -5,7 +5,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -43,7 +43,7 @@ export const wasteRecordsExportRoute = {
   },
   /**
    * @param {HapiRequest & {
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
@@ -52,7 +52,8 @@ export const wasteRecordsExportRoute = {
    */
   handler: (request, h) => {
     const stream = streamCsvExportToReadable({
-      organisationsRepository: request.organisationsRepository,
+      organisationAdministrationRepository:
+        request.organisationAdministrationRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
       ledgerRepository: request.ledgerRepository,
       summaryLogsRepository: request.summaryLogsRepository,

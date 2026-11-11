@@ -20,7 +20,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
@@ -31,7 +31,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<OrganisationAdministrationRepository, 'findAll'>} organisationAdministrationRepository
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
@@ -274,7 +274,7 @@ async function* streamRegistrationRows({
  */
 export async function* streamCsvExport(deps) {
   const {
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository,
@@ -297,7 +297,7 @@ export async function* streamCsvExport(deps) {
 
   const orgsSorted = organisation
     ? [organisation]
-    : await findExportableOrgs(organisationsRepository)
+    : await findExportableOrgs(organisationAdministrationRepository)
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])]
       .filter(
@@ -362,11 +362,11 @@ const groupByRegistration = (entries) => {
 /**
  * Every non-test organisation, sorted by id for deterministic output.
  *
- * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findAll'>} organisationAdministrationRepository
  * @returns {Promise<Organisation[]>}
  */
-async function findExportableOrgs(organisationsRepository) {
-  const orgs = await organisationsRepository.findAll()
+async function findExportableOrgs(organisationAdministrationRepository) {
+  const orgs = await organisationAdministrationRepository.findAll()
   return orgs.filter((org) => !isTestOrganisation(org)).sort(sortById)
 }
 

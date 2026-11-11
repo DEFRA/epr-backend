@@ -219,7 +219,7 @@ const buildDeps = async ({
   }
 
   return {
-    organisationsRepository: {
+    organisationAdministrationRepository: {
       findAll: async () => orgs
     },
     summaryLogRowStatesRepository,
@@ -1149,7 +1149,7 @@ describe('streamCsvExport', () => {
       organisation: org
     })
     const findAll = vi.fn().mockResolvedValue([])
-    deps.organisationsRepository.findAll = findAll
+    deps.organisationAdministrationRepository.findAll = findAll
 
     const out = await collect(streamCsvExport(deps))
 

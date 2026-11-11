@@ -20,14 +20,14 @@ export const organisationsUnlink = {
 
   /**
    * @param {import('#routes/organisations/at-natural-keys.js').ResolvedRequest & {
-   *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *    organisationLinkingRepository: import('#repositories/organisations/linking-port.js').OrganisationLinkingRepository,
    *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
    * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationLinkingRepository } = request
     const { organisationId, organisationNumber } = request.params
     const { version: currentVersion, linkedDefraOrganisation: linkedOrg } =
       await findOrganisationReadModel(request)
@@ -36,7 +36,7 @@ export const organisationsUnlink = {
       throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
-    await organisationsRepository.unlinkDefraOrganisation(
+    await organisationLinkingRepository.unlinkDefraOrganisation(
       organisationNumber,
       currentVersion
     )

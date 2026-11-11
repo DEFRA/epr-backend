@@ -451,14 +451,15 @@ const run = async ({
   const logger = { info: vi.fn(), warn: vi.fn() }
   const readModelLogger = { warn: vi.fn() }
 
-  const organisationsRepository = createInMemoryOrganisationsRepository(
-    organisations.map((organisation) => partialMock(organisation))
-  )()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository(
+      organisations.map((organisation) => partialMock(organisation))
+    )()
 
   const table = await buildWasteBalanceTable({
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository: createInMemoryOrganisationReadRepository(
       await createInMemoryOrganisationsRepository(
         readModelOrganisations.map((organisation) => partialMock(organisation))

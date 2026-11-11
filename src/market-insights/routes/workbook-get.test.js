@@ -184,7 +184,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
 
     beforeAll(async () => {
       const { reportKey } = await insertAccreditedOperator(
-        register.organisationsRepository
+        register.organisationAdministrationRepository
       )
       await buildSubmittedReport(register.reportsRepository, {
         ...reportKey,
@@ -196,7 +196,8 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
         repositories: {
           ledgerRepository: register.ledgerRepository,
           summaryLogRowStatesRepository: register.summaryLogRowStatesRepository,
-          organisationsRepository: register.organisationsRepository,
+          organisationAdministrationRepository:
+            register.organisationAdministrationRepository,
           organisationReadRepository: register.organisationReadRepository,
           reportsRepository: register.reportsRepository
         }

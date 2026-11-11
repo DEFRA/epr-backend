@@ -9,8 +9,8 @@ import {
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').AccreditationStatus} AccreditationStatus */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
@@ -25,20 +25,24 @@ export const accreditationStatusHistoryPath =
  * accreditation in any organisation, whatever its status. The unique index on
  * accreditations.accreditationNumber also blocks concurrent grants of the
  * same number; this check gives the clear 422.
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {{ validFrom: string, validTo: string, accreditationNumber: AccreditationNumber }} grant
  * @returns {Promise<void>}
  */
-const assertGrantAllowed = async (organisationsRepository, grant) => {
+const assertGrantAllowed = async (
+  organisationAdministrationRepository,
+  grant
+) => {
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
     throw Boom.badData(
       `Cannot grant accreditation: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
     )
   }
 
-  const inUse = await organisationsRepository.isAccreditationNumberInUse(
-    grant.accreditationNumber
-  )
+  const inUse =
+    await organisationAdministrationRepository.isAccreditationNumberInUse(
+      grant.accreditationNumber
+    )
   if (inUse) {
     throw Boom.badData(
       `Accreditation number ${grant.accreditationNumber} is already in use`
@@ -70,7 +74,7 @@ export const accreditationStatusHistory = {
    *      accreditationNumber: AccreditationNumber
    *    }
    * > & {
-   *    organisationsRepository: OrganisationsRepository,
+   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
@@ -78,7 +82,7 @@ export const accreditationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationAdministrationRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -87,7 +91,8 @@ export const accreditationStatusHistory = {
     // fields; the other arms forbid them.
     const grant = 'accreditationNumber' in payload ? payload : undefined
 
-    const initial = await organisationsRepository.findById(organisationId)
+    const initial =
+      await organisationAdministrationRepository.findById(organisationId)
 
     const accreditation = initial.accreditations.find(
       (acc) => acc.id === accreditationId
@@ -133,7 +138,7 @@ export const accreditationStatusHistory = {
     assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      await assertGrantAllowed(organisationsRepository, grant)
+      await assertGrantAllowed(organisationAdministrationRepository, grant)
     }
 
     const grantFields = grant
@@ -162,8 +167,11 @@ export const accreditationStatusHistory = {
       )
     }
 
-    await organisationsRepository.replace(id, version, updates)
-    const updated = await organisationsRepository.findById(id, version + 1)
+    await organisationAdministrationRepository.replace(id, version, updates)
+    const updated = await organisationAdministrationRepository.findById(
+      id,
+      version + 1
+    )
     await auditOrganisationUpdate(request, id, initial, updated)
 
     return h.response({ status: toStatus }).code(StatusCodes.OK)

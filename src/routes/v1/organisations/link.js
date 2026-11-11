@@ -39,7 +39,8 @@ export const organisationsLink = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, organisationReadRepository } = request
+    const { organisationLinkingRepository, organisationReadRepository } =
+      request
     const { organisationId, organisationNumber } = request.params
     const { version: currentVersion } = await findOrganisationReadModel(request)
     const {
@@ -66,7 +67,9 @@ export const organisationsLink = {
      * - the organisation is not already linked
      */
     const linkableOrganisations =
-      await organisationsRepository.findAllLinkableForUser(tokenPayload.email)
+      await organisationLinkingRepository.findAllLinkableForUser(
+        tokenPayload.email
+      )
 
     const orgToLink = linkableOrganisations.find(
       (linkableOrganisation) => linkableOrganisation.id === organisationId
@@ -88,7 +91,7 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    await organisationsRepository.linkDefraOrganisation(
+    await organisationLinkingRepository.linkDefraOrganisation(
       organisationNumber,
       currentVersion,
       linkedDefraOrg
