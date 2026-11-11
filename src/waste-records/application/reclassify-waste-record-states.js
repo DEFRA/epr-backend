@@ -6,7 +6,7 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
 
 /**
  * @typedef {Object} ReclassificationContext
- * @property {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+ * @property {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
  * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  */
 

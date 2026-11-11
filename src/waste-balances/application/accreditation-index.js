@@ -1,5 +1,3 @@
-import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-
 /**
  * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
@@ -51,25 +49,18 @@ export const ledgerKey = ({
   JSON.stringify([organisationNumber, registrationNumber, accreditationNumber])
 
 /**
- * Index every non-test organisation's accreditations by the `ledgerKey` of the
+ * Index every organisation's accreditations, test organisations included, by the `ledgerKey` of the
  * ledger they write to, carrying the linked registration and owning
  * organisation. No status filtering: suspended and cancelled accreditations
  * are indexed too. A registered-only registration contributes nothing.
  *
  * @param {Organisation[]} organisations
- * @param {{ includeTestOrganisations?: boolean }} [options]
  * @returns {Map<string, AccreditationContext>}
  */
-export const indexAccreditationsByLedger = (
-  organisations,
-  { includeTestOrganisations = false } = {}
-) => {
+export const indexAccreditationsByLedger = (organisations) => {
   /** @type {Map<string, AccreditationContext>} */
   const index = new Map()
   for (const organisation of organisations) {
-    if (!includeTestOrganisations && isTestOrganisation(organisation)) {
-      continue
-    }
     for (const context of linkedAccreditations(organisation)) {
       index.set(
         ledgerKey({
