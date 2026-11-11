@@ -13,7 +13,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
-import { standingByYear } from '#organisation-read-model/domain/years.js'
+import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
