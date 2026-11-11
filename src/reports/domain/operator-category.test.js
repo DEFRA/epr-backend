@@ -21,7 +21,7 @@ describe('getOperatorCategory', () => {
    */
   const categorisations = [
     {
-      scenario: 'registered-only exporter (no accreditationId)',
+      scenario: 'registered-only exporter (no accreditation)',
       registration: { wasteProcessingType: 'exporter', accreditation: null },
       expected: 'EXPORTER_REGISTERED_ONLY'
     },
@@ -29,7 +29,6 @@ describe('getOperatorCategory', () => {
       scenario: 'accredited exporter (approved)',
       registration: {
         wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
         accreditation: { status: 'approved' }
       },
       expected: 'EXPORTER'
@@ -38,7 +37,6 @@ describe('getOperatorCategory', () => {
       scenario: 'accredited exporter (suspended)',
       registration: {
         wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
         accreditation: { status: 'suspended' }
       },
       expected: 'EXPORTER'
@@ -47,7 +45,6 @@ describe('getOperatorCategory', () => {
       scenario: 'exporter with created accreditation (not yet approved)',
       registration: {
         wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
         accreditation: { status: 'created' }
       },
       expected: 'EXPORTER_REGISTERED_ONLY'
@@ -56,7 +53,6 @@ describe('getOperatorCategory', () => {
       scenario: 'exporter with rejected accreditation',
       registration: {
         wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
         accreditation: { status: 'rejected' }
       },
       expected: 'EXPORTER_REGISTERED_ONLY'
@@ -65,22 +61,12 @@ describe('getOperatorCategory', () => {
       scenario: 'exporter with cancelled accreditation',
       registration: {
         wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
         accreditation: { status: 'cancelled' }
       },
       expected: 'EXPORTER_REGISTERED_ONLY'
     },
     {
-      scenario: 'exporter with accreditationId but no hydrated accreditation',
-      registration: {
-        wasteProcessingType: 'exporter',
-        accreditationId: 'acc-123',
-        accreditation: null
-      },
-      expected: 'EXPORTER_REGISTERED_ONLY'
-    },
-    {
-      scenario: 'registered-only reprocessor (no accreditationId)',
+      scenario: 'registered-only reprocessor (no accreditation)',
       registration: { wasteProcessingType: 'reprocessor', accreditation: null },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
     },
@@ -88,7 +74,6 @@ describe('getOperatorCategory', () => {
       scenario: 'accredited reprocessor (approved)',
       registration: {
         wasteProcessingType: 'reprocessor',
-        accreditationId: 'acc-456',
         accreditation: { status: 'approved' }
       },
       expected: 'REPROCESSOR'
@@ -97,7 +82,6 @@ describe('getOperatorCategory', () => {
       scenario: 'accredited reprocessor (suspended)',
       registration: {
         wasteProcessingType: 'reprocessor',
-        accreditationId: 'acc-456',
         accreditation: { status: 'suspended' }
       },
       expected: 'REPROCESSOR'
@@ -106,7 +90,6 @@ describe('getOperatorCategory', () => {
       scenario: 'reprocessor with created accreditation (not yet approved)',
       registration: {
         wasteProcessingType: 'reprocessor',
-        accreditationId: 'acc-456',
         accreditation: { status: 'created' }
       },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
@@ -115,7 +98,6 @@ describe('getOperatorCategory', () => {
       scenario: 'reprocessor with rejected accreditation',
       registration: {
         wasteProcessingType: 'reprocessor',
-        accreditationId: 'acc-456',
         accreditation: { status: 'rejected' }
       },
       expected: 'REPROCESSOR_REGISTERED_ONLY'
@@ -124,7 +106,6 @@ describe('getOperatorCategory', () => {
       scenario: 'reprocessor with cancelled accreditation',
       registration: {
         wasteProcessingType: 'reprocessor',
-        accreditationId: 'acc-456',
         accreditation: { status: 'cancelled' }
       },
       expected: 'REPROCESSOR_REGISTERED_ONLY'

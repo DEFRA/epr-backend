@@ -232,12 +232,7 @@ export const REPORT_EXPANSION = Object.freeze({ detail: 'detail' })
  * @returns {Record<string, unknown>}
  */
 export const toReportDetail = (body) => {
-  const {
-    id: _id,
-    organisationId: _organisationId,
-    registrationId: _registrationId,
-    ...detail
-  } = /** @type {Record<string, unknown>} */ (body)
+  const { id: _id, ...detail } = /** @type {Record<string, unknown>} */ (body)
   return detail
 }
 
@@ -332,9 +327,7 @@ export const reportResourceSchema = Joi.alternatives().try(
 )
 
 const detailSchema = Joi.object({
-  id: Joi.forbidden(),
-  organisationId: Joi.forbidden(),
-  registrationId: Joi.forbidden()
+  id: Joi.forbidden()
 }).unknown()
 
 /** The report resource a read can expand with `detail`. */

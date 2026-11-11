@@ -23,7 +23,17 @@ describe('mapReport', () => {
   it('returns the report unchanged when there is no stale field', () => {
     const report = buildReport()
 
-    expect(mapReport(report)).toBe(report)
+    expect(mapReport(report)).toStrictEqual(report)
+  })
+
+  it('drops the legacy database ids', () => {
+    const report = {
+      ...buildReport(),
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    expect(mapReport(report)).toStrictEqual(buildReport())
   })
 
   it('normalises the stale field to the nested shape', () => {

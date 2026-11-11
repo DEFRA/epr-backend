@@ -2,9 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  DEFAULT_ORG_ID,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_YEAR,
   DEFAULT_REPORT_PERIOD,
@@ -85,8 +83,6 @@ describe('onSummaryLogUploaded', () => {
     const { id: reportId } = await repo.createReport(buildCreateReportParams())
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -111,8 +107,6 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -144,8 +138,6 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -170,8 +162,6 @@ describe('onSummaryLogUploaded', () => {
     const systemLogsRepository = buildSystemLogsRepository()
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -199,8 +189,6 @@ describe('onSummaryLogUploaded', () => {
 
   it('does nothing when there are no active reports', async () => {
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -218,8 +206,6 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -243,8 +229,6 @@ describe('onSummaryLogUploaded', () => {
     const systemLogsRepository = buildSystemLogsRepository()
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
@@ -280,8 +264,6 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
       organisationNumber: DEFAULT_ORG_NUMBER,
       registrationNumber: DEFAULT_REG_NUMBER,
       summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
