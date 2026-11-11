@@ -25,8 +25,6 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/v1/organisations/registration-status-history.js',
   'src/routes/v1/system-logs/get-search.js',
   'src/server/queue-consumer/ors-import-commands.js',
-  'src/waste-records-export/application/stream-csv-export.js',
-  'src/waste-records-export/routes/export.js',
 
   // Data loading, seeding, resets and diagnostics
   'src/forms-submission-data/migration/migration-delta-calculator.js',
@@ -72,8 +70,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/v1/organisations/registrations/summary-logs/reports/uploads/get.js',
   'src/routes/v1/public-register/generate/post.js',
   'src/server/queue-consumer/summary-log-commands.js',
-  'src/server/queue-consumer/summary-log-handler-deps.js',
-  'src/waste-records-export/routes/registration-export.js'
+  'src/server/queue-consumer/summary-log-handler-deps.js'
 ]
 
 const productionModules = () =>

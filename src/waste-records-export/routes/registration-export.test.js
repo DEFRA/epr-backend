@@ -13,6 +13,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
@@ -53,6 +54,15 @@ const buildRegistration = () => {
     statusHistory: granted('approved'),
     validFrom: '2026-02-01'
   }
+}
+
+// The export reads the organisation read model alone.
+const readsLegacy = () =>
+  Promise.reject(new Error('read the legacy repository'))
+const legacyOrganisationsRepository = {
+  findAll: readsLegacy,
+  findById: readsLegacy,
+  findByOrganisationNumber: readsLegacy
 }
 
 const receivedRowState = () => ({
@@ -109,31 +119,16 @@ const createServer = async ({
 
   return createTestServer({
     repositories: {
-      // The export serves the records the path resolved, so nothing reads
-      // them again by id.
-      organisationAdministrationRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([organisation]),
-        findById: vi.fn(() => Promise.reject(new Error('read again'))),
-        findByOrganisationNumber: vi.fn((organisationNumber) =>
-          Promise.resolve(
-            organisationNumber === organisation.organisationNumber
-              ? organisation
-              : null
-          )
-        ),
-        findRegistrationById: vi.fn(() =>
-          Promise.reject(new Error('read again'))
-        )
-      }),
+      organisationAdministrationRepository: () => legacyOrganisationsRepository,
+      organisationReadRepository: await organisationReadRepositoryOf([
+        organisation
+      ]),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => createInMemoryLedgerRepository(ledgerEvents)(),
       summaryLogsRepository: () => ({
         findAll: vi
           .fn()
           .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
-      }),
-      overseasSitesRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([])
       })
     }
   })

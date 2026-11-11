@@ -1,7 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -10,10 +13,10 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { RegistrationOther } from '#domain/organisations/registration.js' */
+/** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
-/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -22,22 +25,21 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
-import { withNumbersHeldBy } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
+const ORGANISATION_NUMBER = toOrganisationNumber('500123')
+
 /**
- * Vary a complete registration, so a fixture stays one however few of its
- * fields a test cares about. The exporter arm of the contract sample carries no
- * accreditation link, so a fixture built on it inherits no identifier pointing
- * at an accreditation this organisation does not hold. The contract builder
- * leaves a registration unapproved and the export reads nothing that turns on
- * approval, so these stay on that arm of the union rather than inventing an
- * approval.
+ * Vary a complete approved registration, so a fixture stays one however few of
+ * its fields a test cares about and the read model serves it. The exporter arm
+ * of the contract sample carries no accreditation link, so a fixture built on
+ * it inherits no identifier pointing at an accreditation this organisation does
+ * not hold.
  *
- * @param {Partial<RegistrationOther>} [overrides]
- * @returns {RegistrationOther}
+ * @param {Partial<RegistrationApproved>} [overrides]
+ * @returns {RegistrationApproved}
  */
 const buildRegistration = (overrides = {}) => {
   const [, exporterRegistration] = buildReadOrganisation().registrations
@@ -49,7 +51,18 @@ const buildRegistration = (overrides = {}) => {
     submittedToRegulator: 'ea',
     accreditation: null,
     overseasSites: {},
-    status: REGISTRATION_STATUS.CREATED,
+    status: REGISTRATION_STATUS.APPROVED,
+    statusHistory: [
+      {
+        status: REGISTRATION_STATUS.CREATED,
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: REGISTRATION_STATUS.APPROVED,
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      }
+    ],
+    validFrom: '2026-02-01',
     ...overrides
   }
 }
@@ -61,6 +74,7 @@ const buildRegistration = (overrides = {}) => {
 const buildOrganisation = (overrides = {}) =>
   buildReadOrganisation({
     id: 'org-1',
+    organisationNumber: ORGANISATION_NUMBER,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
     registrations: [],
@@ -87,14 +101,11 @@ const receivedRowState = (overrides = {}) => ({
 const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
 
 /**
- * A registration's submitted summary log and the rows committed under it. The
- * identity fields fall back to the single-registration defaults, so a seed that
- * only carries rows still lands on a ledger the export can resolve.
+ * A registration's submitted summary log and the rows committed under it, on
+ * the registered-only ledger of `ORGANISATION_NUMBER`.
  *
  * @typedef {Object} LedgerSeed
- * @property {string} [organisationId]
- * @property {string} [registrationId]
- * @property {string | null} [accreditationId]
+ * @property {string} [registrationNumber] - defaults to `buildRegistration`'s
  * @property {string} [summaryLogId]
  * @property {SummaryLogRowStateEntry[]} [rows]
  */
@@ -108,27 +119,22 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  * @param {{
  *   organisations?: Organisation[],
  *   seeds?: LedgerSeed[],
- *   summaryLogs?: SummaryLogWithId[],
- *   overseasSites?: OverseasSite[]
+ *   summaryLogs?: SummaryLogWithId[]
  * }} [options]
  */
 const createServerWithRepos = async ({
   organisations = [],
   seeds = [],
-  summaryLogs = [],
-  overseasSites = []
+  summaryLogs = []
 } = {}) => {
-  const organisationAdministrationRepository = {
-    findAll: vi.fn().mockResolvedValue(organisations)
-  }
-
   /** @param {LedgerSeed} seed */
-  const ledgerIdOf = (seed) =>
-    withNumbersHeldBy(organisations, {
-      organisationId: seed.organisationId ?? 'org-1',
-      registrationId: seed.registrationId ?? 'reg-1',
-      accreditationId: seed.accreditationId ?? null
-    })
+  const ledgerIdOf = (seed) => ({
+    organisationNumber: ORGANISATION_NUMBER,
+    registrationNumber: toRegistrationNumber(
+      seed.registrationNumber ?? 'REG-reg-1'
+    ),
+    accreditationNumber: null
+  })
 
   const ledgerRepository = createInMemoryLedgerRepository(
     /** @type {LedgerEvent[]} */ (
@@ -158,18 +164,19 @@ const createServerWithRepos = async ({
   const summaryLogsRepository = {
     findAll: vi.fn().mockResolvedValue(summaryLogs)
   }
-  const overseasSitesRepository = {
-    findAll: vi.fn().mockResolvedValue(overseasSites)
-  }
+
+  // The export reads the organisation read model alone.
+  const readsLegacy = () =>
+    Promise.reject(new Error('read the legacy repository'))
 
   return createTestServer({
     repositories: {
-      organisationAdministrationRepository: () =>
-        organisationAdministrationRepository,
+      organisationAdministrationRepository: () => ({ findAll: readsLegacy }),
+      organisationReadRepository:
+        await organisationReadRepositoryOf(organisations),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => ledgerRepository,
-      summaryLogsRepository: () => summaryLogsRepository,
-      overseasSitesRepository: () => overseasSitesRepository
+      summaryLogsRepository: () => summaryLogsRepository
     }
   })
 }
@@ -222,7 +229,12 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       })
       const server = await createServerWithRepos({
         organisations: [organisation],
-        seeds: [{ rows: [receivedRowState()] }],
+        seeds: [
+          {
+            registrationNumber: 'R26ER5000000002PA',
+            rows: [receivedRowState()]
+          }
+        ],
         summaryLogs: [
           {
             // The ledger records the submission by its file id, so the
