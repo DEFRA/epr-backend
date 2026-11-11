@@ -1,14 +1,14 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { dayBefore } from '#common/helpers/dates/calendar-day.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
-import { REG_ACC_STATUS } from './model.js'
+import { STANDING } from './model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegAccStatus, Registration } from './model.js' */
+/** @import { Standing, Registration } from './model.js' */
 /** @import { CalendarDateRange } from './status-timeline.js' */
 
 /**
- * @typedef {CalendarDateRange & { status: RegAccStatus }} Period
+ * @typedef {CalendarDateRange & { standing: Standing }} Period
  */
 
 /**
@@ -18,23 +18,23 @@ import { REG_ACC_STATUS } from './model.js'
  */
 const periodsIn = (registration, year) => {
   const { end } = yearBounds(year)
-  const entries = Object.entries(registration.regAccStatusByDate[year] ?? {})
+  const entries = Object.entries(registration.standingByDate[year] ?? {})
 
-  return entries.map(([date, { status }], index) => {
+  return entries.map(([date, { standing }], index) => {
     const next = entries[index + 1]
     const to = next ? dayBefore(calendarDate(next[0])) : end
 
-    return { status, from: calendarDate(date), to }
+    return { standing, from: calendarDate(date), to }
   })
 }
 
 /**
  * @param {Period[]} periods
- * @param {RegAccStatus} status
+ * @param {Standing} standing
  * @returns {CalendarDateRange[]}
  */
-const rangesWithStatus = (periods, status) => {
-  const matching = periods.filter((period) => period.status === status)
+const rangesWithStanding = (periods, standing) => {
+  const matching = periods.filter((period) => period.standing === standing)
 
   return matching.map(({ from, to }) => ({ from, to }))
 }
@@ -51,7 +51,7 @@ export const registrationStatusWindows = (registration, year) => {
   const periods = periodsIn(registration, year)
 
   return {
-    registeredOnly: rangesWithStatus(periods, REG_ACC_STATUS.REGISTERED_ONLY),
-    accredited: rangesWithStatus(periods, REG_ACC_STATUS.ACCREDITED)
+    registeredOnly: rangesWithStanding(periods, STANDING.REGISTERED_ONLY),
+    accredited: rangesWithStanding(periods, STANDING.ACCREDITED)
   }
 }

@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { regAccStatusByDate } from './reg-acc-status-by-date.js'
+import { standingByDate } from './standing-by-date.js'
 
 /** @import { Registration, StatusTimeline } from './model.js' */
 
@@ -40,16 +40,13 @@ const registrationWith = (registration, accreditations) =>
  * @param {number} [year]
  */
 const byDate = (registration, accreditations = {}, year = 2026) =>
-  regAccStatusByDate(
-    registrationWith(registration, accreditations),
-    toYear(year)
-  )
+  standingByDate(registrationWith(registration, accreditations), toYear(year))
 
-const registeredOnly = { status: 'registeredOnly' }
-const accredited = { status: 'accredited' }
-const cancelled = { status: 'cancelled' }
+const registeredOnly = { standing: 'registeredOnly' }
+const accredited = { standing: 'accredited' }
+const cancelled = { standing: 'cancelled' }
 
-describe('regAccStatusByDate', () => {
+describe('standingByDate', () => {
   it('starts each status on the date it changes', () => {
     expect(
       byDate([approvedOn('2026-02-01'), cancelledOn('2026-11-20')], {

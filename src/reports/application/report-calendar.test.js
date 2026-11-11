@@ -1,6 +1,6 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
+import { standingByYear } from '#organisation-read-model/domain/years.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
@@ -42,14 +42,14 @@ const AFTER_YEAR_END = new Date('2027-01-02T12:00:00Z')
  * @param {object} fields
  * @returns {Registration}
  */
-const withRegAccStatus = (fields) => {
+const withStanding = (fields) => {
   const registration = /** @type {Registration} */ (
     /** @type {unknown} */ (fields)
   )
 
   return {
     ...registration,
-    regAccStatusByDate: regAccStatusByYear(
+    standingByDate: standingByYear(
       registration,
       utcCalendarDate(AFTER_YEAR_END)
     )
@@ -61,7 +61,7 @@ const withRegAccStatus = (fields) => {
  * @returns {Registration}
  */
 const registeredSinceLastYear = (accreditation) =>
-  withRegAccStatus({
+  withStanding({
     status: { timeline: [approvedOn('2025-06-02')] },
     accreditations: accreditation
       ? {
@@ -406,7 +406,7 @@ describe('yearCalendar with mid-year status transition off', () => {
   })
 
   it('lists nothing for a cancelled registration, whatever its accreditation', () => {
-    const registration = withRegAccStatus({
+    const registration = withStanding({
       status: {
         current: 'cancelled',
         timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
@@ -423,7 +423,7 @@ describe('yearCalendar with mid-year status transition off', () => {
   })
 
   it('lists nothing for a cancelled registered-only registration', () => {
-    const registration = withRegAccStatus({
+    const registration = withStanding({
       status: {
         current: 'cancelled',
         timeline: [approvedOn('2025-06-02'), cancelledOn('2026-05-10')]
@@ -450,7 +450,7 @@ describe('yearCalendar with mid-year status transition off', () => {
   })
 
   it('lists whole quarters from the one a registration was approved in', () => {
-    const registration = withRegAccStatus({
+    const registration = withStanding({
       status: { timeline: [approvedOn('2026-05-15')] },
       accreditations: {}
     })

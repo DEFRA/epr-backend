@@ -127,10 +127,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
-            regAccStatusByDate: expect.objectContaining({
+            standingByDate: expect.objectContaining({
               2026: {
-                '2026-02-01': { status: 'registeredOnly' },
-                '2026-07-01': { status: 'accredited' }
+                '2026-02-01': { standing: 'registeredOnly' },
+                '2026-07-01': { standing: 'accredited' }
               }
             }),
             submittedToRegulator: { code: 'ea' },
@@ -182,8 +182,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',
-        regAccStatusByDate: expect.objectContaining({
-          2026: { '2026-02-01': { status: 'registeredOnly' } }
+        standingByDate: expect.objectContaining({
+          2026: { '2026-02-01': { standing: 'registeredOnly' } }
         }),
         submittedToRegulator: { code: 'ea' },
         wasteProcessingType: 'exporter',
