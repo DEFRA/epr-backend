@@ -57,6 +57,7 @@ const readModelAccreditation = ({
   ...(overseasSites && { overseasSites })
 })
 
+/** @param {object} [overrides] */
 const reprocessorRegistration = (overrides = {}) => ({
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
@@ -66,6 +67,7 @@ const reprocessorRegistration = (overrides = {}) => ({
   ...overrides
 })
 
+/** @param {object} [overrides] */
 const exporterRegistration = (overrides = {}) => ({
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
@@ -91,6 +93,9 @@ const accredited = (...accreditations) =>
     )
   })
 
+/**
+ * @param {{ organisationNumber?: string, name?: string, registrations?: Record<string, object> }} [options]
+ */
 const readModelOrg = ({
   organisationNumber = ORGANISATION_NUMBER,
   name = 'Acme Ltd',

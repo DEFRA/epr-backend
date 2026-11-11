@@ -16,7 +16,6 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 /** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -53,7 +52,16 @@ const buildRegistration = (overrides = {}) => {
     accreditation: null,
     overseasSites: {},
     status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: granted('approved'),
+    statusHistory: [
+      {
+        status: REGISTRATION_STATUS.CREATED,
+        updatedAt: '2026-01-01T09:00:00.000Z'
+      },
+      {
+        status: REGISTRATION_STATUS.APPROVED,
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      }
+    ],
     validFrom: '2026-02-01',
     ...overrides
   }
