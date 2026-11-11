@@ -1,10 +1,8 @@
 import {
   signedUploadCallbackPath,
-  toUploadCallbackKey,
-  toUploadCallbackPath
+  toUploadCallbackPath,
+  uploadCallbackKey
 } from '#common/helpers/auth/upload-callback-signature.js'
-
-const TEST_CALLBACK_HMAC_KEY = toUploadCallbackKey('0'.repeat(64))
 
 /**
  * An upload-completed path signed as CDP Uploader would receive it, with the
@@ -14,4 +12,4 @@ const TEST_CALLBACK_HMAC_KEY = toUploadCallbackKey('0'.repeat(64))
  * @returns {string}
  */
 export const signedCallback = (path) =>
-  signedUploadCallbackPath(TEST_CALLBACK_HMAC_KEY, toUploadCallbackPath(path))
+  signedUploadCallbackPath(uploadCallbackKey(), toUploadCallbackPath(path))
