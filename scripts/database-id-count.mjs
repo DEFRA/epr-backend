@@ -103,7 +103,7 @@ export const MEASURES = [
   },
   {
     label: 'Files reading every organisation through the legacy repository',
-    rule: 'A file counts when it calls `findAll(` on the organisations repository, as `organisationsRepository.findAll(` or `organisationRepo.findAll(`. Reads of one organisation and writes through the repository are not counted.',
+    rule: 'A file counts when it calls `findAll(` on the organisations repository, as `organisationsRepository.findAll(` or `organisationRepo.findAll(`. The match is on the variable name, so a read through another name is not counted. That is deliberate for the organisation validation sweep, `src/server/run-organisation-validation-sweep.js`, which checks the stored data itself and so belongs with the write model. Reads of one organisation and writes through the repository are not counted either.',
     count: (source) => (LEGACY_FIND_ALL.test(source) ? 1 : 0)
   }
 ]
@@ -153,7 +153,7 @@ export const comment = (head, base, baseName) =>
   [
     '## Database ids and raw documents outside the repository adapters',
     '',
-    'Advisory only. These count the code that still handles organisations, registrations and accreditations by database id, or works with documents straight from the database. The aim for each is zero.',
+    'Advisory only. These count the code that still handles organisations, registrations and accreditations by database id, works with documents straight from the database, or reads every organisation through the legacy repository instead of the read model. The aim for each is zero.',
     '',
     `| | This pull request | ${baseName} | Change |`,
     '|---|---|---|---|',
