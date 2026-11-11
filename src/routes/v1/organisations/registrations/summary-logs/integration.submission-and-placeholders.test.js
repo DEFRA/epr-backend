@@ -48,7 +48,6 @@ import {
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -95,7 +94,7 @@ describe('Submission and placeholder tests', () => {
 
       accreditationId = new ObjectId().toString()
       const testOrg = buildReadOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,
@@ -485,9 +484,7 @@ describe('Submission and placeholder tests', () => {
 
     it('should commit the submission rows as row states', async () => {
       const rowStates = await summaryLogRowStatesForRegistration({
-        organisationNumber: toOrganisationNumber(
-          String(TEST_ORGANISATION_NUMBER)
-        ),
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
         accreditationNumber: toAccreditationNumber('ACC-2025-001'),
         ledgerRepository,
@@ -752,7 +749,7 @@ describe('Submission and placeholder tests', () => {
 
       const accreditationId = 'acc-placeholder-test'
       const testOrg = buildReadOrganisation({
-        orgId: TEST_ORGANISATION_NUMBER,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
         registrations: [
           servedTestRegistration({
             id: registrationId,

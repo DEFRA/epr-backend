@@ -1,4 +1,4 @@
-import { toYear } from '#common/helpers/dates/year.js'
+import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { randomUUID } from 'node:crypto'
 
@@ -57,7 +57,7 @@ const organisation = buildOrganisation({
   accreditations: [accredited]
 })
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const summaryLogs = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 
 const uploadAddresses = [
@@ -504,6 +504,38 @@ describe('summary-log routes by natural key', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  describe('creating for next year', () => {
+    const nextYearUploads = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${currentUtcYear() + 1}`
+
+    afterEach(() => {
+      config.reset('openNextYear')
+    })
+
+    it('starts the upload while next year is open', async () => {
+      config.set('openNextYear', true)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: nextYearUploads,
+        payload: redirect,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('returns 422 while next year is closed', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: nextYearUploads,
+        payload: redirect,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
   })
 
   describe("a registration's summary-log files", () => {

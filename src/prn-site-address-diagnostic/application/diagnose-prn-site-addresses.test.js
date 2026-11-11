@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
@@ -17,6 +18,8 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnosePrnSiteAddresses } from './diagnose-prn-site-addresses.js'
+
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
@@ -57,7 +60,7 @@ const diagnose = async (organisations, externalAccreditations = []) =>
  *   registrationAddress?: object,
  *   accreditationSite?: object,
  *   accreditationStatus?: 'approved' | 'suspended' | 'cancelled',
- *   orgId?: number
+ *   organisationNumber?: OrganisationNumber
  * }} [options]
  */
 const accreditedReprocessor = ({
@@ -66,7 +69,7 @@ const accreditedReprocessor = ({
     address: { line1: '7 Glass processing site', postcode: 'SW2A 0AA' }
   },
   accreditationStatus = 'approved',
-  orgId
+  organisationNumber
 } = {}) => {
   const held = accreditation({
     site: accreditationSite,
@@ -75,7 +78,7 @@ const accreditedReprocessor = ({
   })
   const registration = reprocessor({ accreditationId: held.id })
   return buildOrganisation({
-    ...(orgId && { orgId }),
+    ...(organisationNumber && { organisationNumber }),
     registrations: [
       {
         ...registration,
@@ -138,7 +141,7 @@ describe('diagnosePrnSiteAddresses', () => {
         {
           finding: 'siteDiffers',
           differs,
-          orgId: organisation.orgId,
+          organisationNumber: organisation.organisationNumber,
           testOrganisation: false,
           registrationNumber: REPROCESSOR_NUMBER,
           accreditationNumber: ACCREDITATION_NUMBER,
@@ -164,7 +167,7 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(rows).toStrictEqual([
       {
         finding: 'noAccreditationSite',
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         registrationNumber: REPROCESSOR_NUMBER,
         accreditationNumber: ACCREDITATION_NUMBER,
@@ -188,7 +191,7 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(rows).toStrictEqual([
       {
         finding: 'fullAddressOnly',
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         registrationNumber: REPROCESSOR_NUMBER,
         hasLine1: true,
@@ -343,7 +346,10 @@ describe('diagnosePrnSiteAddresses', () => {
 
   it('marks findings on a test organisation', async () => {
     const { rows } = await diagnose([
-      accreditedReprocessor({ accreditationSite: {}, orgId: 999999 })
+      accreditedReprocessor({
+        accreditationSite: {},
+        organisationNumber: toOrganisationNumber('999999')
+      })
     ])
 
     expect(rows).toMatchObject([{ testOrganisation: true }])

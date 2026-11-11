@@ -23,11 +23,11 @@ const { buildOrganisation } = createOrganisationBuilders()
 /**
  * The stored organisation's users as the read model shows them.
  *
- * @param {Pick<Organisation, 'orgId' | 'version' | 'users'>} organisation
+ * @param {Pick<Organisation, 'organisationNumber' | 'version' | 'users'>} organisation
  * @returns {OrganisationUsers}
  */
-const asReadModel = ({ orgId, version, users }) => ({
-  organisationNumber: toOrganisationNumber(String(orgId)),
+const asReadModel = ({ organisationNumber, version, users }) => ({
+  organisationNumber,
   version,
   users
 })

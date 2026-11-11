@@ -107,7 +107,7 @@ const makeOperator = ({
   return {
     organisation: {
       id,
-      orgId,
+      organisationNumber: toOrganisationNumber(String(orgId)),
       companyDetails: { name: `Operator ${orgId}` },
       statusHistory: approvedHistory,
       submittedToRegulator: regulator,
@@ -373,7 +373,7 @@ const approvalReverted = ({ organisation }) => ({
  * @returns {MonthlyReportRef}
  */
 const monthlyReport = ({ organisation }, period) => ({
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(
     organisation.registrations[0].registrationNumber
   ),

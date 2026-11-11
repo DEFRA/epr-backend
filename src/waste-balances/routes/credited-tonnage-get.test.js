@@ -96,7 +96,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       partialMock(registration),
       'approved'
     )
-    org.orgId = 500123
+    org.organisationNumber = toOrganisationNumber('500123')
 
     const linkedRegistration = org.registrations[0]
     const linkedAccreditation = org.accreditations[0]
@@ -107,7 +107,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       organisationId: org.id,
       registrationId: linkedRegistration.id,
       accreditationId: linkedAccreditation.id,
-      organisationNumber: toOrganisationNumber(String(org.orgId)),
+      organisationNumber: org.organisationNumber,
       registrationNumber: toRegistrationNumber('REG500123'),
       accreditationNumber: linkedAccreditation.accreditationNumber
     }

@@ -116,7 +116,7 @@ export const withNumbers = (ledgerId) => {
  * The ledger identity with the numbers of the records its ids name among
  * `organisations`, falling back to `withNumbers` for a record they do not hold.
  *
- * @param {Array<{ id: string, orgId: number, registrations: Array<{ id: string, registrationNumber?: string | null }>, accreditations: Array<{ id: string, accreditationNumber?: string | null }> }>} organisations
+ * @param {Array<{ id: string, organisationNumber: OrganisationNumber, registrations: Array<{ id: string, registrationNumber?: string | null }>, accreditations: Array<{ id: string, accreditationNumber?: string | null }> }>} organisations
  * @param {RegistrationOrAccreditationId} ledgerId
  * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
@@ -131,7 +131,7 @@ export const withNumbersHeldBy = (organisations, ledgerId) => {
   )
   return {
     ...derived,
-    ...(org && { organisationNumber: toOrganisationNumber(String(org.orgId)) }),
+    ...(org && { organisationNumber: org.organisationNumber }),
     ...(registration?.registrationNumber && {
       registrationNumber: toRegistrationNumber(registration.registrationNumber)
     }),

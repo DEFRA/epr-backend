@@ -15,6 +15,7 @@ import {
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * The registration's own processing-type fields, the same shape
@@ -32,7 +33,7 @@ import {
  *
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
- * @property {string} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
  * @property {string} material
@@ -93,7 +94,7 @@ const toTonnageColumns = (tonnageByStatus) =>
  */
 const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
-  orgId: Joi.string().required(),
+  organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
   material: Joi.string().required(),
@@ -132,7 +133,7 @@ const aggregatedRowSchema = Joi.object({
  */
 const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
   organisationName: resolved?.organisation.companyDetails.name,
-  orgId: resolved && String(resolved.organisation.orgId),
+  organisationNumber: resolved?.organisation.organisationNumber,
   registrationNumber: resolved && numbers.registrationNumber,
   accreditationNumber: resolved && numbers.accreditationNumber,
   material: resolved?.accreditation.material,
@@ -204,7 +205,7 @@ const buildReportRow = async (
     ledgerId,
     registration,
     organisationName,
-    orgId,
+    organisationNumber,
     registrationNumber,
     accreditationNumber,
     material,
@@ -213,7 +214,7 @@ const buildReportRow = async (
   }
 ) => ({
   organisationName,
-  orgId,
+  organisationNumber,
   registrationNumber,
   registrationType: registrationTypeFor(registration),
   accreditationNumber,

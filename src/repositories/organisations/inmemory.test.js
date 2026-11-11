@@ -34,9 +34,11 @@ describe('In-memory organisations repository', () => {
   })
 
   describe('seeding', () => {
-    it('refuses two seeded organisations with the same orgId', () => {
+    it('refuses two seeded organisations with the same number', () => {
       const first = buildOrganisation()
-      const second = buildOrganisation({ orgId: first.orgId })
+      const second = buildOrganisation({
+        organisationNumber: first.organisationNumber
+      })
 
       expect(() =>
         createInMemoryOrganisationsRepository([

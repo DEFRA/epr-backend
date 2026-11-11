@@ -1,5 +1,5 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
+import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -12,7 +12,6 @@ import {
   statusOn
 } from '#organisation-read-model/domain/model.js'
 import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -154,7 +153,7 @@ function toOrganisation(stored, context, externalByRegistration) {
   const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
-      `Organisation ${stored.orgId} has status ${status} on ${context.today}`
+      `Organisation ${stored.organisationNumber} has status ${status} on ${context.today}`
     )
     return null
   }
@@ -162,7 +161,7 @@ function toOrganisation(stored, context, externalByRegistration) {
   const { companyDetails, linkedDefraOrganisation } = stored
 
   return {
-    organisationNumber: toOrganisationNumber(String(stored.orgId)),
+    organisationNumber: stored.organisationNumber,
     name: companyDetails.name,
     ...omitNullish({
       companiesHouseNumber: companyDetails.companiesHouseNumber,
@@ -272,7 +271,7 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     regAccStatusByDate: regAccStatusByYear(
       { status: registrationStatus, accreditations },
-      calendarDate(today)
+      lastOpenDay(new Date(today))
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },

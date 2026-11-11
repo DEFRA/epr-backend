@@ -17,7 +17,7 @@ const findingLine = (row) =>
     'PRN site address finding:',
     `finding=${row.finding}`,
     ...(row.differs ? [`differs=${row.differs}`] : []),
-    `orgId=${row.orgId}`,
+    `organisationNumber=${row.organisationNumber}`,
     `testOrganisation=${row.testOrganisation}`,
     `registrationNumber=${row.registrationNumber}`,
     ...(row.finding === SITE_FINDING.FULL_ADDRESS_ONLY

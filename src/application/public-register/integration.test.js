@@ -7,6 +7,7 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -36,7 +37,11 @@ describe('generatePublicRegister', () => {
   })
 
   it('generates public register with approved registration and accreditation', async () => {
-    await buildApprovedOrg(organisationRepo, { orgId: 200001 }, FULL_YEAR_RANGE)
+    await buildApprovedOrg(
+      organisationRepo,
+      { organisationNumber: toOrganisationNumber('200001') },
+      FULL_YEAR_RANGE
+    )
 
     const result = await generatePublicRegister(
       organisationRepo,

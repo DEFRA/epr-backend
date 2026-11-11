@@ -103,7 +103,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
       }
     })
 
-    const registrationUrl = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+    const registrationUrl = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
     const reports = accredited
       ? `${registrationUrl}/accreditations/${YEAR}/reports/${cadence}`
       : `${registrationUrl}/reports/${YEAR}/${cadence}`

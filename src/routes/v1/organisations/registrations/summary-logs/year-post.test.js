@@ -24,6 +24,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
@@ -45,7 +46,7 @@ const mockLogger = createMockLogger()
  * @param {number | string} year
  */
 const buildUrl = (organisation, year) =>
-  `/organisations/${organisation.orgId}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/${year}`
+  `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/${year}`
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}', () => {
   setupAuthContext()
@@ -244,7 +245,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('returns 403, not 404, for an organisation number that does not exist', async () => {
-      const response = await uploadTo({ ...linkedOrganisation, orgId: 999999 })
+      const response = await uploadTo({
+        ...linkedOrganisation,
+        organisationNumber: toOrganisationNumber('999999')
+      })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
       expect(JSON.parse(response.payload).message).toBe('Insufficient scope')
