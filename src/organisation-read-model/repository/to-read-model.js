@@ -367,24 +367,33 @@ function withAccreditedSites(
         ...accreditation,
         overseasSites:
           'overseasSites' in accreditation
-            ? Object.fromEntries(
-                Object.entries(accreditation.overseasSites).filter(
-                  ([orsId]) => {
-                    if (
-                      !Object.hasOwn(registration.overseasSites ?? {}, orsId)
-                    ) {
-                      onDrop(
-                        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
-                      )
-                      return false
-                    }
-                    return Object.hasOwn(overseasSites, orsId)
-                  }
-                )
-              )
+            ? ownSites(accreditation, year, registration, overseasSites, onDrop)
             : registrationSites
       }
     ])
+  )
+}
+
+/**
+ * @param {ExporterAccreditation} accreditation
+ * @param {string} year
+ * @param {StoredRegistration} registration
+ * @param {Record<string, StoredOverseasSite>} overseasSites
+ * @param {OnDrop} onDrop
+ * @returns {Record<string, AccreditedOverseasSite>}
+ */
+function ownSites(accreditation, year, registration, overseasSites, onDrop) {
+  Object.keys(accreditation.overseasSites)
+    .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
+    .forEach((orsId) =>
+      onDrop(
+        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+      )
+    )
+  return Object.fromEntries(
+    Object.entries(accreditation.overseasSites).filter(([orsId]) =>
+      Object.hasOwn(overseasSites, orsId)
+    )
   )
 }
 
