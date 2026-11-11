@@ -46,18 +46,12 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
  */
 
 /**
- * @typedef {AccreditationCommon & {
- *   overseasSites?: Record<string, AccreditedOverseasSite>
- * }} HeldAccreditation
- */
-
-/**
- * @typedef {Map<RegistrationNumber, Record<string, HeldAccreditation>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<string, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
  */
 
 /**
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {HeldAccreditation}
+ * @returns {ReprocessorAccreditation | ExporterAccreditation}
  */
 const toAccreditationCommon = ({
   registrationNumber: _registrationNumber,
@@ -255,7 +249,7 @@ export function toRegistrationEntry(
     return null
   }
 
-  /** @type {([string, HeldAccreditation] | null)[]} */
+  /** @type {([string, ReprocessorAccreditation | ExporterAccreditation] | null)[]} */
   const accreditationEntries = [
     ...accreditationsForRegistration(registration, organisation).map(
       (accreditation) => toAccreditationEntry(accreditation, context)
@@ -296,7 +290,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, HeldAccreditation>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -318,7 +312,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, HeldAccreditation>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -353,7 +347,7 @@ function toReprocessorRegistration(
  * accreditation without its own sites lists every registration site with the
  * site's stored approval.
  *
- * @param {Record<string, HeldAccreditation>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
@@ -367,27 +361,30 @@ function withAccreditedSites(
 ) {
   const registrationSites = mapValues(overseasSites, toAccreditedOverseasSite)
   return Object.fromEntries(
-    Object.entries(accreditations).map(
-      ([year, { overseasSites: ownSites, ...accreditation }]) => [
-        year,
-        {
-          ...accreditation,
-          overseasSites: ownSites
+    Object.entries(accreditations).map(([year, accreditation]) => [
+      year,
+      {
+        ...accreditation,
+        overseasSites:
+          'overseasSites' in accreditation
             ? Object.fromEntries(
-                Object.entries(ownSites).filter(([orsId]) => {
-                  if (!Object.hasOwn(registration.overseasSites ?? {}, orsId)) {
-                    onDrop(
-                      `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
-                    )
-                    return false
+                Object.entries(accreditation.overseasSites).filter(
+                  ([orsId]) => {
+                    if (
+                      !Object.hasOwn(registration.overseasSites ?? {}, orsId)
+                    ) {
+                      onDrop(
+                        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+                      )
+                      return false
+                    }
+                    return Object.hasOwn(overseasSites, orsId)
                   }
-                  return Object.hasOwn(overseasSites, orsId)
-                })
+                )
               )
             : registrationSites
-        }
-      ]
-    )
+      }
+    ])
   )
 }
 
