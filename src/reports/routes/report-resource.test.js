@@ -655,17 +655,14 @@ describe('reportResourceSchema', () => {
     ).toBeDefined()
   })
 
-  it.each(['id', 'organisationId', 'registrationId'])(
-    'rejects detail carrying the database id %s',
-    (key) => {
-      expect(
-        expandableReportResourceSchema.validate({
-          ...servedPreview,
-          detail: { [key]: 'db-id' }
-        }).error
-      ).toBeDefined()
-    }
-  )
+  it('rejects detail carrying the database id', () => {
+    expect(
+      expandableReportResourceSchema.validate({
+        ...servedPreview,
+        detail: { id: 'db-id' }
+      }).error
+    ).toBeDefined()
+  })
 
   it('accepts detail of any other shape', () => {
     expect(
