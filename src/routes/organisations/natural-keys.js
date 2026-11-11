@@ -20,7 +20,7 @@ import { toCalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  *
@@ -213,6 +213,28 @@ export function findAccreditationForYear(organisation, registration, year) {
     accreditationsForYear(organisation, registration, year),
     'Accreditation'
   )
+}
+
+/**
+ * Refuses an accredited path whose stored accreditation the read model does
+ * not serve for the year, as when the year is held as an external
+ * accreditation. Without an accreditation number the path is registered-only,
+ * and nothing is refused.
+ *
+ * @param {ReadModelRegistration} registration
+ * @param {{ year: Year, accreditationNumber?: AccreditationNumber | null }} path
+ */
+export function assertReadModelServesAccreditation(
+  registration,
+  { year, accreditationNumber }
+) {
+  if (
+    accreditationNumber &&
+    registration.accreditations[year]?.accreditationNumber !==
+      accreditationNumber
+  ) {
+    throw Boom.notFound('Accreditation not found')
+  }
 }
 
 /**

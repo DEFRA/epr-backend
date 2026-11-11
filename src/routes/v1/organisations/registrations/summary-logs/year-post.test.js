@@ -19,12 +19,20 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import {
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
@@ -160,6 +168,64 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('a year the read model holds as an external accreditation', () => {
+    const stored2027 = accreditation({
+      validFrom: '2027-01-01',
+      validTo: '2027-12-31'
+    })
+    /** @type {Organisation} */
+    const organisation = partialMock(
+      buildOrganisation({
+        registrations: [reprocessor({ accreditationId: stored2027.id })],
+        accreditations: [stored2027]
+      })
+    )
+
+    beforeAll(async () => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
+      uploadsRepository = createInMemoryUploadsRepository()
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () =>
+            createInMemorySummaryLogsRepository()(mockLogger),
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            organisation
+          ]),
+          organisationReadRepository: await organisationReadRepositoryOf(
+            [organisation],
+            {
+              externalAccreditations: [
+                buildExternalAccreditation({
+                  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+                })
+              ]
+            }
+          ),
+          uploadsRepository
+        }
+      })
+
+      await server.initialize()
+    })
+
+    afterAll(async () => {
+      await server.stop()
+      vi.useRealTimers()
+    })
+
+    it('refuses an accredited upload over the stored accreditation', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2027/summary-log`,
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 

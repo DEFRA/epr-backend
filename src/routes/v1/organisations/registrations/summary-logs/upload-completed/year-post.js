@@ -7,7 +7,10 @@ import {
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import {
+  assertReadModelServesAccreditation,
+  findOrganisationAndRegistrationReadModels
+} from '#routes/organisations/natural-keys.js'
 import {
   formatS3Info,
   updateStatusBasedOnUpload
@@ -16,9 +19,8 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
-/** @import { AccreditationCommon } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
@@ -27,7 +29,7 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  *
  * @typedef {HapiRequest<UploadCompletedPayload> & {
- *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
+ *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null, accreditationNumber?: AccreditationNumber },
  *   summaryLogsRepository: SummaryLogsRepository,
  *   summaryLogsWorker: SummaryLogsCommandExecutor
  * }} UploadCompletedRequest
@@ -43,19 +45,16 @@ const FAILURE_MESSAGE = 'Failure completing summary log upload'
  * @returns {Promise<RequiredNumbers>}
  */
 const numbersFromPath = async (request) => {
-  const { organisationNumber, registrationNumber, year, accreditationId } =
+  const { organisationNumber, registrationNumber, accreditationNumber } =
     request.params
   const { registration } =
     await findOrganisationAndRegistrationReadModels(request)
+  assertReadModelServesAccreditation(registration, request.params)
 
   return {
     organisationNumber,
     registrationNumber,
-    accreditationNumber:
-      accreditationId === null
-        ? null
-        : /** @type {AccreditationCommon} */ (registration.accreditations[year])
-            .accreditationNumber
+    accreditationNumber: accreditationNumber ?? null
   }
 }
 

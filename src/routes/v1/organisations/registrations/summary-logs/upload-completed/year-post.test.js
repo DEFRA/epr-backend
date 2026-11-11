@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
+import {
+  organisationReadRepositoryFrom,
+  organisationReadRepositoryOf
+} from '#vite/helpers/organisation-read-model.js'
 
 import { StatusCodes } from 'http-status-codes'
 
@@ -10,6 +13,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -17,7 +21,10 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -236,6 +243,69 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       expect(
         await accreditedSummaryLogsRepository.findById(summaryLogId)
+      ).toBeNull()
+    })
+  })
+
+  describe('when the read model holds the year as an external accreditation', () => {
+    const stored2027 = accreditation({
+      validFrom: '2027-01-01',
+      validTo: '2027-12-31'
+    })
+    const overlaidOrganisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: stored2027.id })],
+      accreditations: [stored2027]
+    })
+
+    let overlaidServer
+    let overlaidSummaryLogsRepository
+
+    beforeAll(async () => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      overlaidSummaryLogsRepository =
+        summaryLogsRepositoryFactory(createMockLogger())
+
+      overlaidServer = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          organisationsRepository: createInMemoryOrganisationsRepository([
+            partialMock(overlaidOrganisation)
+          ]),
+          organisationReadRepository: await organisationReadRepositoryOf(
+            [overlaidOrganisation],
+            {
+              externalAccreditations: [
+                buildExternalAccreditation({
+                  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+                })
+              ]
+            }
+          )
+        },
+        workers: {
+          summaryLogsWorker: { validate: vi.fn() }
+        }
+      })
+    })
+
+    afterAll(async () => {
+      await overlaidServer.stop()
+      vi.useRealTimers()
+    })
+
+    it('refuses the accredited upload over the stored accreditation, and stores nothing', async () => {
+      const summaryLogId = randomUUID()
+
+      const response = await overlaidServer.inject({
+        method: 'POST',
+        url: `/organisations/${overlaidOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2027/summary-log/${summaryLogId}/upload-completed`,
+        payload: createCompletePayload('file-overlaid')
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(
+        await overlaidSummaryLogsRepository.findById(summaryLogId)
       ).toBeNull()
     })
   })

@@ -5,12 +5,16 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import {
+  assertReadModelServesAccreditation,
+  findOrganisationAndRegistrationReadModels
+} from '#routes/organisations/natural-keys.js'
 import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
@@ -33,7 +37,7 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, accreditationNumber?: AccreditationNumber },
    *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository
    * }} request
@@ -46,6 +50,7 @@ export const summaryLogsYearCreate = {
 
     const { registration } =
       await findOrganisationAndRegistrationReadModels(request)
+    assertReadModelServesAccreditation(registration, params)
 
     const eligibility = checkSummaryLogUploadEligibility({
       registration,
