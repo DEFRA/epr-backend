@@ -9,7 +9,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
+import { EXPORTER_TEMPLATES } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -1215,19 +1215,25 @@ describe('SummaryLogsValidator integration', () => {
           RECEIVED_LOADS_FOR_EXPORT: {
             location: { sheet: 'Exported', row: 7, column: 'A' },
             headers:
-              EXPORTER_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
+              EXPORTER_TEMPLATES[2026].tables.RECEIVED_LOADS_FOR_EXPORT
+                .requiredHeaders,
             rows: [
-              rowForTable(EXPORTER_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_EXPORT, 8, {
-                ROW_ID: 1000,
-                DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
-              })
+              rowForTable(
+                EXPORTER_TEMPLATES[2026].tables.RECEIVED_LOADS_FOR_EXPORT,
+                8,
+                {
+                  ROW_ID: 1000,
+                  DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
+                }
+              )
             ]
           },
           SENT_ON_LOADS: {
             location: { sheet: 'Sent on', row: 7, column: 'A' },
-            headers: EXPORTER_TABLE_SCHEMAS.SENT_ON_LOADS.requiredHeaders,
+            headers:
+              EXPORTER_TEMPLATES[2026].tables.SENT_ON_LOADS.requiredHeaders,
             rows: [
-              rowForTable(EXPORTER_TABLE_SCHEMAS.SENT_ON_LOADS, 8, {
+              rowForTable(EXPORTER_TEMPLATES[2026].tables.SENT_ON_LOADS, 8, {
                 ROW_ID: 5000,
                 DATE_LOAD_LEFT_SITE: 'not-a-date'
               })

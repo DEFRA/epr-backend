@@ -437,38 +437,35 @@ describe('validateMetaSyntax', () => {
         }
       })
 
-    it.each([5, 2026.01])(
-      'accepts %s as a 2026 template version',
-      (version) => {
-        expect(validateVersion(version).isValid()).toBe(true)
-      }
-    )
+    it.each([
+      [5, 'REPROCESSOR_INPUT'],
+      [2.1, 'REPROCESSOR_REGISTERED_ONLY']
+    ])('accepts the 2026 template version %s for %s', (version, type) => {
+      expect(validateVersion(version, type).isValid()).toBe(true)
+    })
 
-    it.each([2027.01, 2025.01])(
-      'rejects %s, a year with no template, as TEMPLATE_YEAR_INVALID',
-      (version) => {
-        const fatals = validateVersion(version).getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
+    it('rejects 2027.01, a year with no template yet, as TEMPLATE_YEAR_INVALID', () => {
+      const fatals = validateVersion(2027.01).getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
 
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0]).toMatchObject({
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: VALIDATION_CODE.TEMPLATE_YEAR_INVALID,
-          message:
-            "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
-          context: {
-            actual: version,
-            location: {
-              sheet: 'Cover',
-              row: 3,
-              column: 'C',
-              field: 'TEMPLATE_VERSION'
-            }
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0]).toMatchObject({
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        code: VALIDATION_CODE.TEMPLATE_YEAR_INVALID,
+        message:
+          "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
+        context: {
+          actual: 2027.01,
+          location: {
+            sheet: 'Cover',
+            row: 3,
+            column: 'C',
+            field: 'TEMPLATE_VERSION'
           }
-        })
-      }
-    )
+        }
+      })
+    })
 
     it('rejects a version below the minimum for its processing type as TEMPLATE_VERSION_INVALID', () => {
       const fatals = validateVersion(4).getIssuesBySeverity(

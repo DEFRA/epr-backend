@@ -2,20 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_TEMPLATE_YEAR, templateYear } from './template-year.js'
 
 describe('templateYear', () => {
-  it.each([
-    [2027.01, 2027],
-    [2027.05, 2027],
-    [2026.01, 2026],
-    [2025.01, 2025],
-    [2027, 2027],
-    [1000, 1000],
-    [9999.99, 9999]
-  ])('reads %s as the year %s', (version, year) => {
-    expect(templateYear(version)).toBe(year)
+  it('reads the 2027 template version 2027.01 as 2027', () => {
+    expect(templateYear(2027.01)).toBe(2027)
   })
 
-  it.each([5, 2.1, 999.99, 10000, 0])(
-    'reads %s, which has no year, as the default year',
+  it.each([
+    [5, 'accredited'],
+    [2.1, 'registered-only']
+  ])(
+    'reads %s, the 2026 %s template version, as the default year',
     (version) => {
       expect(templateYear(version)).toBe(DEFAULT_TEMPLATE_YEAR)
     }

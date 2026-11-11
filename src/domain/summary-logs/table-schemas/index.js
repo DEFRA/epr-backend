@@ -1,58 +1,24 @@
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import {
-  TABLE_SCHEMAS as EXPORTER,
-  MIN_TEMPLATE_VERSION as EXPORTER_MIN
-} from './exporter/index.js'
-import {
-  TABLE_SCHEMAS as REPROCESSOR_INPUT,
-  MIN_TEMPLATE_VERSION as REPROCESSOR_INPUT_MIN
-} from './reprocessor-input/index.js'
-import {
-  TABLE_SCHEMAS as REPROCESSOR_OUTPUT,
-  MIN_TEMPLATE_VERSION as REPROCESSOR_OUTPUT_MIN
-} from './reprocessor-output/index.js'
-import {
-  TABLE_SCHEMAS as REPROCESSOR_REGISTERED_ONLY,
-  MIN_TEMPLATE_VERSION as REPROCESSOR_REGISTERED_ONLY_MIN
-} from './reprocessor-registered-only/index.js'
-import {
-  TABLE_SCHEMAS as EXPORTER_REGISTERED_ONLY,
-  MIN_TEMPLATE_VERSION as EXPORTER_REGISTERED_ONLY_MIN
-} from './exporter-registered-only/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
+import { EXPORTER_TEMPLATES } from './exporter/index.js'
+import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'
+import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
+import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
+import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
-
-/**
- * Registry mapping processing types to their table schemas
- *
- * Each table schema defines:
- * - rowIdField: Field name containing the row identifier
- * - wasteRecordType: The waste record type this table maps to (e.g. 'received', 'exported')
- * - sheetName: The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
- * - requiredHeaders: Headers that must be present in the table
- * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
- * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
- * - classifyForWasteBalance: {@link import('./validation-pipeline.js').ClassifyForWasteBalance}|null — classifies a row for waste balance (null if table does not contribute)
- * - rowTransformer: Function to transform a parsed row into waste record metadata
- */
-export const PROCESSING_TYPE_TABLES = {
-  [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,
-  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT,
-  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]: REPROCESSOR_REGISTERED_ONLY,
-  [PROCESSING_TYPES.EXPORTER]: EXPORTER,
-  [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: EXPORTER_REGISTERED_ONLY
-}
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
+/** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /**
  * @typedef {Object} TableSchema
  * @property {string} rowIdField - Field name containing the row identifier
- * @property {string} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
+ * @property {WasteRecordType} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
  * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
- * @property {(rowData: Record<string, any>, rowIndex: number) => {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
+ * @property {(rowData: Record<string, any>, rowIndex?: number) => {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
  * @property {string[]} requiredHeaders - Headers that must be present in the table
  * @property {Record<string, readonly string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
@@ -72,29 +38,37 @@ export const PROCESSING_TYPE_TABLES = {
  * @type {Record<number, Record<string, Template>>}
  */
 export const TEMPLATES = {
-  2026: {
-    [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
-      minVersion: REPROCESSOR_INPUT_MIN,
-      tables: REPROCESSOR_INPUT
-    },
-    [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
-      minVersion: REPROCESSOR_OUTPUT_MIN,
-      tables: REPROCESSOR_OUTPUT
-    },
-    [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]: {
-      minVersion: REPROCESSOR_REGISTERED_ONLY_MIN,
-      tables: REPROCESSOR_REGISTERED_ONLY
-    },
-    [PROCESSING_TYPES.EXPORTER]: {
-      minVersion: EXPORTER_MIN,
-      tables: EXPORTER
-    },
-    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]: {
-      minVersion: EXPORTER_REGISTERED_ONLY_MIN,
-      tables: EXPORTER_REGISTERED_ONLY
-    }
+  [DEFAULT_TEMPLATE_YEAR]: {
+    [PROCESSING_TYPES.REPROCESSOR_INPUT]:
+      REPROCESSOR_INPUT_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
+    [PROCESSING_TYPES.REPROCESSOR_OUTPUT]:
+      REPROCESSOR_OUTPUT_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
+    [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
+      REPROCESSOR_REGISTERED_ONLY_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
+    [PROCESSING_TYPES.EXPORTER]: EXPORTER_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
+    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]:
+      EXPORTER_REGISTERED_ONLY_TEMPLATES[DEFAULT_TEMPLATE_YEAR]
   }
 }
+
+/**
+ * The DEFAULT_TEMPLATE_YEAR table schemas by processing type
+ *
+ * Each table schema defines:
+ * - rowIdField: Field name containing the row identifier
+ * - wasteRecordType: The waste record type this table maps to (e.g. 'received', 'exported')
+ * - sheetName: The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
+ * - requiredHeaders: Headers that must be present in the table
+ * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
+ * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
+ * - classifyForWasteBalance: {@link import('./validation-pipeline.js').ClassifyForWasteBalance}|null — classifies a row for waste balance (null if table does not contribute)
+ * - rowTransformer: Function to transform a parsed row into waste record metadata
+ */
+export const PROCESSING_TYPE_TABLES = Object.fromEntries(
+  Object.entries(TEMPLATES[DEFAULT_TEMPLATE_YEAR]).map(
+    ([processingType, { tables }]) => [processingType, tables]
+  )
+)
 
 /**
  * The template for a year and processing type. Callers must have validated

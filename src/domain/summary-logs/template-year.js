@@ -9,23 +9,18 @@ const FIRST_TEMPLATE_YEAR = 2026
  */
 export const DEFAULT_TEMPLATE_YEAR = toYear(FIRST_TEMPLATE_YEAR)
 
-const FIRST_FOUR_DIGIT_NUMBER = 1000
-const FIRST_FIVE_DIGIT_NUMBER = 10000
+const FIRST_YEAR_VERSIONED_TEMPLATE = 2027
 
 /**
- * The year a template version belongs to (ADR 0055): the integer part of a
- * YYYY.XX version, e.g. 2027.01 is 2027. Any other version is
- * DEFAULT_TEMPLATE_YEAR. Whether a template exists for the year is not
+ * The year a template version belongs to (ADR 0055). Templates are versioned
+ * YYYY.XX from 2027, so 2027.01 is 2027. Any lower version, such as 5 or 2.1,
+ * is DEFAULT_TEMPLATE_YEAR. Whether a template exists for the year is not
  * judged here.
  *
  * @param {number} version
  * @returns {Year}
  */
-export const templateYear = (version) => {
-  const integerPart = Math.trunc(version)
-
-  return integerPart >= FIRST_FOUR_DIGIT_NUMBER &&
-    integerPart < FIRST_FIVE_DIGIT_NUMBER
-    ? toYear(integerPart)
+export const templateYear = (version) =>
+  version >= FIRST_YEAR_VERSIONED_TEMPLATE
+    ? toYear(Math.trunc(version))
     : DEFAULT_TEMPLATE_YEAR
-}

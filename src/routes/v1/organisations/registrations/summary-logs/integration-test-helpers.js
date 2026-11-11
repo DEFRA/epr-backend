@@ -9,7 +9,7 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { MIN_TEMPLATE_VERSION as REGISTERED_ONLY_MIN_TEMPLATE_VERSION } from '#domain/summary-logs/table-schemas/reprocessor-registered-only/index.js'
+import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from '#domain/summary-logs/table-schemas/reprocessor-registered-only/index.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -627,7 +627,7 @@ export const createRegisteredOnlyMeta = (processingType) => {
   return {
     ...meta,
     TEMPLATE_VERSION: {
-      value: REGISTERED_ONLY_MIN_TEMPLATE_VERSION,
+      value: REPROCESSOR_REGISTERED_ONLY_TEMPLATES[2026].minVersion,
       location: { sheet: 'Cover', row: 4, column: 'B' }
     }
   }
