@@ -303,7 +303,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       )
     })
 
-    it('leaves out the trading name, companies house number and registered address when the organisation has none', async ({
+    it('leaves out the trading name, companies house number, registered address and organisation address when the organisation has none', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -322,6 +322,62 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(organisation).not.toHaveProperty('tradingName')
       expect(organisation).not.toHaveProperty('companiesHouseNumber')
       expect(organisation).not.toHaveProperty('registeredAddress')
+      expect(organisation).not.toHaveProperty('address')
+    })
+
+    it('gives the registered and organisation addresses with their country and region', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const registeredAddress = {
+        line1: 'Palace of Westminster',
+        town: 'London',
+        postcode: 'SW1A 0AA',
+        country: 'UK'
+      }
+      const address = {
+        line1: '2 Depot Lane',
+        town: 'Leeds',
+        postcode: 'LS1 1AA',
+        country: 'UK',
+        region: 'Yorkshire'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', registeredAddress, address }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation).toMatchObject({ registeredAddress, address })
+    })
+
+    it('gives the registered address only as submitted, with its country, when ingest could not split it', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const registeredAddress = {
+        fullAddress: 'Palace of Westminster SW1A 0AA',
+        country: 'UK'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', registeredAddress }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation.registeredAddress).toStrictEqual(registeredAddress)
     })
 
     it("lists the organisation's users with their names and roles", async ({
