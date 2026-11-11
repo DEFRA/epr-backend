@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, onTestFinished } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import {
@@ -25,6 +25,7 @@ import {
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -682,6 +683,8 @@ describe('aggregatePrnTonnage - Integration', () => {
   })
 
   it('reports a stored accreditation beside a later one known only by its number', async () => {
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
     const laterLedgerId = {
       ...ledgerId,
       accreditationNumber: toAccreditationNumber('ACC-2027')

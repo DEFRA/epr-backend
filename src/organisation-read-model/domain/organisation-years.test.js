@@ -1,11 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { partialMock } from '#test/type-helpers.js'
-import {
-  organisationInYear,
-  organisationYears,
-  standingByYear
-} from './years.js'
+import { organisationInYear, organisationYears } from './organisation-years.js'
 
 const registration = (timeline) => partialMock({ status: { timeline } })
 
@@ -401,64 +397,5 @@ describe('organisationInYear', () => {
     )
 
     expect(name).toBe('ACME ltd')
-  })
-})
-
-describe('standingByYear', () => {
-  const TODAY = calendarDate('2026-11-03')
-  const registeredOnly = { standing: 'registeredOnly' }
-  const accredited = { standing: 'accredited' }
-
-  it('covers each year from approval up to today', () => {
-    expect(
-      standingByYear(partialMock(approvedFrom('2025-06-02')), TODAY)
-    ).toEqual({
-      2025: { '2025-06-02': registeredOnly },
-      2026: { '2026-01-01': registeredOnly }
-    })
-  })
-
-  it('leaves out a year spent wholly cancelled', () => {
-    const timeline = [
-      { status: 'approved', at: '2024-06-02' },
-      { status: 'cancelled', at: '2024-09-01' },
-      { status: 'approved', at: '2026-03-01' }
-    ]
-
-    expect(
-      Object.keys(
-        standingByYear(
-          partialMock({ ...registration(timeline), accreditations: {} }),
-          TODAY
-        )
-      )
-    ).toEqual(['2024', '2026'])
-  })
-
-  it('covers the year of an accreditation up to the year of the end date', () => {
-    const withAccreditationFor2027 = partialMock(
-      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
-    )
-
-    expect(standingByYear(withAccreditationFor2027, TODAY)).toEqual({
-      2026: { '2026-06-02': registeredOnly }
-    })
-    expect(
-      standingByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
-    ).toEqual({
-      2026: { '2026-06-02': registeredOnly },
-      2027: { '2027-01-01': accredited }
-    })
-  })
-
-  it('is empty for a registration never approved', () => {
-    const timeline = [{ status: 'created', at: '2026-06-02' }]
-
-    expect(
-      standingByYear(
-        partialMock({ ...registration(timeline), accreditations: {} }),
-        TODAY
-      )
-    ).toEqual({})
   })
 })

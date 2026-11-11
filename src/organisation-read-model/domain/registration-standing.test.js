@@ -1,5 +1,7 @@
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { standingByDate } from './standing-by-date.js'
+import { partialMock } from '#test/type-helpers.js'
+import { standingByDate, standingByYear } from './registration-standing.js'
 
 /** @import { Registration, StatusTimeline } from './model.js' */
 
@@ -161,5 +163,72 @@ describe('standingByDate', () => {
     expect(
       byDate([approvedOn('2025-06-02')], { 2025: [approvedOn('2025-07-01')] })
     ).toEqual({ '2026-01-01': registeredOnly })
+  })
+})
+
+describe('standingByYear', () => {
+  const END_DATE = calendarDate('2026-12-31')
+  const registeredOnly = { standing: 'registeredOnly' }
+  const accredited = { standing: 'accredited' }
+  const approvedFrom = (date, accreditations = {}) => ({
+    status: {
+      current: /** @type {const} */ ('approved'),
+      timeline: [approvedOn(date)]
+    },
+    accreditations
+  })
+  const registration = (timeline) => partialMock({ status: { timeline } })
+
+  it('covers each year from approval up to the year of the end date', () => {
+    expect(
+      standingByYear(partialMock(approvedFrom('2025-06-02')), END_DATE)
+    ).toEqual({
+      2025: { '2025-06-02': registeredOnly },
+      2026: { '2026-01-01': registeredOnly }
+    })
+  })
+
+  it('leaves out a year spent wholly cancelled', () => {
+    const timeline = [
+      approvedOn('2024-06-02'),
+      cancelledOn('2024-09-01'),
+      approvedOn('2026-03-01')
+    ]
+
+    expect(
+      Object.keys(
+        standingByYear(
+          partialMock({ ...registration(timeline), accreditations: {} }),
+          END_DATE
+        )
+      )
+    ).toEqual(['2024', '2026'])
+  })
+
+  it('covers the year of an accreditation up to the year of the end date', () => {
+    const withAccreditationFor2027 = partialMock(
+      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+    )
+
+    expect(standingByYear(withAccreditationFor2027, END_DATE)).toEqual({
+      2026: { '2026-06-02': registeredOnly }
+    })
+    expect(
+      standingByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
+    ).toEqual({
+      2026: { '2026-06-02': registeredOnly },
+      2027: { '2027-01-01': accredited }
+    })
+  })
+
+  it('is empty for a registration never approved', () => {
+    const timeline = [createdOn('2026-06-02')]
+
+    expect(
+      standingByYear(
+        partialMock({ ...registration(timeline), accreditations: {} }),
+        END_DATE
+      )
+    ).toEqual({})
   })
 })
