@@ -17,8 +17,8 @@
 
 /**
  * Linking organisations to Defra ID organisations and managing their users.
- * ADR 56 places this in the Manage Organisation service, apart from the
- * registration and accreditation context that owns the administration port.
+ * Kept apart from the administration port, which serves the registration and
+ * accreditation context.
  *
  * @typedef {Object} OrganisationLinkingRepository
  * @property {(organisationNumber: OrganisationNumber, version: number, linkedDefraOrganisation: StoredLinkedDefraOrganisation) => Promise<void>} linkDefraOrganisation - Link the organisation to a Defra organisation and make it active. Throws 409 when the stored version is not `version`

@@ -18,9 +18,7 @@ const ADMINISTRATION_PORT_MODULES = [
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
-  'src/overseas-sites/routes/accreditation-list.js',
   'src/overseas-sites/routes/admin-list.js',
-  'src/overseas-sites/routes/registration-list.js',
   'src/routes/v1/organisations/accreditation-status-history.js',
   'src/routes/v1/organisations/get-by-id.js',
   'src/routes/v1/organisations/put-by-id.js',
@@ -29,7 +27,6 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/server/queue-consumer/ors-import-commands.js',
   'src/waste-records-export/application/stream-csv-export.js',
   'src/waste-records-export/routes/export.js',
-  'src/waste-records-export/routes/registration-export.js',
 
   // Data loading, seeding, resets and diagnostics
   'src/forms-submission-data/migration/migration-delta-calculator.js',
@@ -63,6 +60,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/market-insights/routes/reprocessor-exporter-figures-get.js',
   'src/market-insights/routes/waste-balance-get.js',
   'src/market-insights/routes/workbook-get.js',
+  'src/overseas-sites/routes/accreditation-list.js',
+  'src/overseas-sites/routes/registration-list.js',
   'src/packaging-recycling-notes/routes/list.js',
   'src/routes/organisations/at-natural-keys.js',
   'src/routes/organisations/natural-keys.js',
@@ -71,7 +70,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/v1/organisations/registrations/summary-logs/reports/uploads/get.js',
   'src/routes/v1/public-register/generate/post.js',
   'src/server/queue-consumer/summary-log-commands.js',
-  'src/server/queue-consumer/summary-log-handler-deps.js'
+  'src/server/queue-consumer/summary-log-handler-deps.js',
+  'src/waste-records-export/routes/registration-export.js'
 ]
 
 const productionModules = () =>
