@@ -187,11 +187,11 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
-    const { orgId } = await env.organisationsRepository.findById(
+    const { organisationNumber } = await env.organisationsRepository.findById(
       env.organisationId
     )
     expect(stored?.summaryLog).toMatchObject({
-      organisationNumber: String(orgId),
+      organisationNumber,
       registrationNumber: 'REG-123',
       accreditationNumber: 'ACC-123'
     })

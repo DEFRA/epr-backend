@@ -15,7 +15,6 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
@@ -61,7 +60,7 @@ const organisation = buildOrganisation({
   accreditations: [accredited]
 })
 
-const organisationNumber = toOrganisationNumber(String(organisation.orgId))
+const { organisationNumber } = organisation
 const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
@@ -77,7 +76,7 @@ const accreditedLog = {
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisationNumber}/registrations`
 const summaryLogs = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 
 const uploadAddresses = [

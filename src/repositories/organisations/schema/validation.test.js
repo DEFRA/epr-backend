@@ -20,6 +20,10 @@ import {
   createOrganisationBuilders,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  toStoredFields,
+  toStoredOrganisation
+} from '#repositories/organisations/helpers.js'
 import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
@@ -628,18 +632,20 @@ describe('validateOrganisationUpdate', () => {
     const updateWithUnnumberedAccreditation = (status) => {
       const organisation = buildOrganisation()
 
-      return prepareOrgUpdate(organisation, {
-        accreditations: [
-          {
-            ...organisation.accreditations[0],
-            status,
-            accreditationNumber: null,
-            validFrom: '2026-01-01',
-            validTo: '2026-12-31',
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-        ]
-      })
+      return toStoredFields(
+        prepareOrgUpdate(organisation, {
+          accreditations: [
+            {
+              ...organisation.accreditations[0],
+              status,
+              accreditationNumber: null,
+              validFrom: '2026-01-01',
+              validTo: '2026-12-31',
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ]
+        })
+      )
     }
 
     it.each([
@@ -690,7 +696,7 @@ describe('organisationJSONSchemaOverrides', () => {
     })
     delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-    const { error } = validate(organisation)
+    const { error } = validate(toStoredOrganisation(organisation))
     expect(error).toBeUndefined()
   })
 
@@ -710,7 +716,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
 
@@ -729,7 +735,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
 
@@ -750,7 +756,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
 
@@ -770,7 +776,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
 
@@ -787,7 +793,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
   })
@@ -812,7 +818,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
 
@@ -831,7 +837,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete (/** @type {Record<string, unknown>} */ (organisation).id)
 
-      const { error } = validate(organisation)
+      const { error } = validate(toStoredOrganisation(organisation))
       expect(error).toBeUndefined()
     })
   })
@@ -939,5 +945,18 @@ describe('normaliseOrganisationFromDb', () => {
     const result = normaliseOrganisationFromDb(dbDoc)
 
     expect(result.someFutureField).toBe('should be kept')
+  })
+  it.each([
+    ['missing', undefined],
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 12.5],
+    ['not a number', 'abc'],
+    ['a numeric string', '500001']
+  ])('refuses a document whose orgId is %s', (_description, orgId) => {
+    const _id = new ObjectId()
+    expect(() =>
+      normaliseOrganisationFromDb({ _id, orgId, version: 1 })
+    ).toThrow(`Stored organisation ${_id} is invalid: "orgId"`)
   })
 })

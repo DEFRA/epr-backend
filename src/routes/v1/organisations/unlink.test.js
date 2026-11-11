@@ -139,7 +139,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
       const response = await server.inject({
         method: 'DELETE',
-        url: `/organisations/${org.orgId}/link`,
+        url: `/organisations/${org.organisationNumber}/link`,
         ...asServiceMaintainerWrite()
       })
 
@@ -160,7 +160,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: `/organisations/${org.orgId}/link`,
+          url: `/organisations/${org.organisationNumber}/link`,
           ...asServiceMaintainerWrite()
         })
 
@@ -195,7 +195,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.organisationNumber}`,
           ...asServiceMaintainerWrite()
         })
 

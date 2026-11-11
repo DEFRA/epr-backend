@@ -312,7 +312,7 @@ export async function* streamCsvExport(deps) {
         entries:
           entriesByRegistration.get(
             registrationKey(
-              String(org.orgId),
+              org.organisationNumber,
               String(registration.registrationNumber)
             )
           ) ?? [],

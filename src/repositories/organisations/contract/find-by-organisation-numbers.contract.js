@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
 
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-
 /** @import { OrganisationBuilders } from './test-data.js' */
 
 export const testFindByOrganisationNumbersBehaviour = (it) => {
@@ -36,8 +34,8 @@ export const testFindByOrganisationNumbersBehaviour = (it) => {
       await Promise.all([org1, org2, org3].map((org) => repository.insert(org)))
 
       const result = await repository.findByOrganisationNumbers([
-        toOrganisationNumber(String(org1.orgId)),
-        toOrganisationNumber(String(org2.orgId))
+        org1.organisationNumber,
+        org2.organisationNumber
       ])
 
       expect(result.map((o) => o.id)).toEqual(

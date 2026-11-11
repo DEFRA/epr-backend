@@ -4,7 +4,6 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -53,14 +52,14 @@ const registrationId = new ObjectId().toString()
 const accreditationId = new ObjectId().toString()
 const prnId = '507f1f77bcf86cd799439011'
 
-const { orgId } = buildOrganisation()
+const { organisationNumber } = buildOrganisation()
 // The ledger under test, numbered as the served organisation numbers it.
 const LEDGER = {
-  organisationNumber: toOrganisationNumber(String(orgId)),
+  organisationNumber,
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
-const prns = `/organisations/${orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
+const prns = `/organisations/${organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
 /**
  * The read model serving the organisation with its one accreditation,
@@ -76,7 +75,7 @@ const organisationReadRepositoryWith = async (overrides = {}) => {
   })
   const organisation = buildOrganisation({
     id: organisationId,
-    orgId,
+    organisationNumber,
     statusHistory: [
       { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
     ],

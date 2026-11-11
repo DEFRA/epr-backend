@@ -15,7 +15,6 @@ import {
   PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -100,9 +99,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     organisationsRepository = createInMemoryOrganisationsRepository([
       partialMock(organisation)
     ])()
-    const summaryLogs = `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs`
+    const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs`
     numbersByRegistrationId.set(registration.id, {
-      organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: registration.registrationNumber,
       accreditationNumber: null
     })

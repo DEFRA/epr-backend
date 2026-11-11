@@ -155,6 +155,35 @@ describe('upsertOrganisations', () => {
       })
     })
 
+    it('fails only the insert whose orgId is not an organisation number', async () => {
+      const org1IdStr = org1Id.toString()
+      const org2IdStr = org2Id.toString()
+      /** @type {OrganisationMigrationItem[]} */
+      const organisations = [
+        {
+          value: partialMock({ id: org1IdStr, orgId: 0 }),
+          operation: 'insert'
+        },
+        {
+          value: partialMock({ id: org2IdStr, orgId: 500002 }),
+          operation: 'insert'
+        }
+      ]
+      organisationsRepository.insert.mockResolvedValue()
+
+      const result = await upsertOrganisations(
+        organisationsRepository,
+        systemLogsRepository,
+        organisations
+      )
+
+      expect(result).toEqual({
+        successful: [{ success: true, id: org2IdStr, action: 'inserted' }],
+        failed: [{ success: false, id: org1IdStr, phase: 'insert' }]
+      })
+      expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
+    })
+
     it('should handle update failure and log error', async () => {
       const org1IdStr = org1Id.toString()
       const previousOrg = { id: org1IdStr, version: 1, orgId: 500001 }

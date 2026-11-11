@@ -50,7 +50,7 @@ export const testFindBehaviour = (it) => {
 
         expect(result).toMatchObject({
           id: orgData.id,
-          orgId: orgData.orgId,
+          organisationNumber: orgData.organisationNumber,
           wasteProcessingTypes: orgData.wasteProcessingTypes,
           reprocessingNations: orgData.reprocessingNations,
           businessType: orgData.businessType,
@@ -70,7 +70,7 @@ export const testFindBehaviour = (it) => {
         const result = await repository.findById(org1.id)
 
         expect(result.id).toBe(org1.id)
-        expect(result.orgId).toBe(org1.orgId)
+        expect(result.organisationNumber).toBe(org1.organisationNumber)
       })
 
       it('throws timeout error when minimumVersion never arrives', async () => {
@@ -103,7 +103,7 @@ export const testFindBehaviour = (it) => {
 
         expect(result).toMatchObject({
           id: orgData.id,
-          orgId: orgData.orgId,
+          organisationNumber: orgData.organisationNumber,
           wasteProcessingTypes: ['exporter'],
           version: 2
         })
@@ -143,8 +143,12 @@ export const testFindBehaviour = (it) => {
         const result = await repository.findAll()
 
         expect(result).toHaveLength(3)
-        expect(result.map((o) => o.orgId)).toEqual(
-          expect.arrayContaining([org1.orgId, org2.orgId, org3.orgId])
+        expect(result.map((o) => o.organisationNumber)).toEqual(
+          expect.arrayContaining([
+            org1.organisationNumber,
+            org2.organisationNumber,
+            org3.organisationNumber
+          ])
         )
       })
     })
@@ -281,7 +285,7 @@ export const testFindBehaviour = (it) => {
             {
               ...inserted.registrations[0],
               status: REGISTRATION_STATUS.APPROVED,
-              registrationNumber: `REG${org.orgId}`,
+              registrationNumber: `REG${org.organisationNumber}`,
               validFrom: VALID_FROM,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
@@ -346,7 +350,7 @@ export const testFindBehaviour = (it) => {
         expect(result).toEqual([
           {
             id: matchingOrg.id,
-            orgId: matchingOrg.orgId,
+            organisationNumber: matchingOrg.organisationNumber,
             companyDetails: { name: matchingOrg.companyDetails.name },
             status: ORGANISATION_STATUS.APPROVED
           }

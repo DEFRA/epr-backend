@@ -20,9 +20,9 @@ import {
   reprocessor,
   reprocessorAt
 } from './organisation-read-test-helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
-const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
+const { buildOrganisation, nextOrganisationNumber } =
+  createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -39,9 +39,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
 
       expect(
-        await repository.findByOrganisationNumber(
-          toOrganisationNumber(String(nextOrgId()))
-        )
+        await repository.findByOrganisationNumber(nextOrganisationNumber())
       ).toBeNull()
     })
 
@@ -54,11 +52,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
 
       const organisation = await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(stored.orgId)),
+        stored.organisationNumber,
         3
       )
 
-      expect(organisation?.organisationNumber).toBe(String(stored.orgId))
+      expect(organisation?.organisationNumber).toBe(stored.organisationNumber)
     })
 
     it('throws timeout error when minimumVersion never arrives', async ({
@@ -70,10 +68,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
 
       await expect(
-        repository.findByOrganisationNumber(
-          toOrganisationNumber(String(stored.orgId)),
-          999
-        )
+        repository.findByOrganisationNumber(stored.organisationNumber, 999)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 },
@@ -95,11 +90,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).toEqual({
-        organisationNumber: String(stored.orgId),
+        organisationNumber: stored.organisationNumber,
         name: 'ACME ltd',
         tradingName: 'ACME ltd',
         companiesHouseNumber: 'AC012345',
@@ -174,7 +169,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
@@ -215,7 +210,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -246,7 +241,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -278,7 +273,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
@@ -308,7 +303,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
@@ -329,7 +324,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toHaveProperty(
@@ -351,7 +346,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).not.toHaveProperty('tradingName')
@@ -384,7 +379,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.users).toEqual([
@@ -416,7 +411,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.linkedDefraOrganisation).toEqual({
@@ -443,7 +438,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.linkedDefraOrganisation?.linkedAt).toBe(
@@ -466,7 +461,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(

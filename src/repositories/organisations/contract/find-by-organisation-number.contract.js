@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { prepareOrgUpdate } from './test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 
@@ -9,8 +8,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
     let repository
     /** @type {OrganisationBuilders['buildOrganisation']} */
     let buildOrganisation
-    /** @type {OrganisationBuilders['nextOrgId']} */
-    let nextOrgId
+    /** @type {OrganisationBuilders['nextOrganisationNumber']} */
+    let nextOrganisationNumber
 
     beforeEach(
       async (
@@ -21,7 +20,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       ) => {
         repository = await organisationsRepository()
         buildOrganisation = organisationBuilders.buildOrganisation
-        nextOrgId = organisationBuilders.nextOrgId
+        nextOrganisationNumber = organisationBuilders.nextOrganisationNumber
       }
     )
 
@@ -30,20 +29,18 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       await repository.insert(orgData)
 
       const found = await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(orgData.orgId))
+        orgData.organisationNumber
       )
 
       expect(found).toMatchObject({
         id: orgData.id,
-        orgId: orgData.orgId
+        organisationNumber: orgData.organisationNumber
       })
     })
 
     it('returns null for an unknown number', async () => {
       await expect(
-        repository.findByOrganisationNumber(
-          toOrganisationNumber(String(nextOrgId()))
-        )
+        repository.findByOrganisationNumber(nextOrganisationNumber())
       ).resolves.toBeNull()
     })
 
@@ -52,10 +49,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       await repository.insert(orgData)
 
       await expect(
-        repository.findByOrganisationNumber(
-          toOrganisationNumber(String(orgData.orgId)),
-          999
-        )
+        repository.findByOrganisationNumber(orgData.organisationNumber, 999)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 },
@@ -74,7 +68,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       await repository.replace(orgData.id, 1, updatePayload)
 
       const result = await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(orgData.orgId)),
+        orgData.organisationNumber,
         2
       )
 
@@ -87,10 +81,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
     it('returns null when waiting for a number no organisation holds', async () => {
       await expect(
-        repository.findByOrganisationNumber(
-          toOrganisationNumber(String(nextOrgId())),
-          1
-        )
+        repository.findByOrganisationNumber(nextOrganisationNumber(), 1)
       ).resolves.toBeNull()
     })
   })

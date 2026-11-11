@@ -42,7 +42,7 @@ const YEAR = toYear(2026)
  * latest submitted summary log. No records leaves the ledger without a
  * submission, so the report has no source.
  *
- * @param {{ id: string, orgId: number }} org
+ * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
  * @param {Record<string, any>} registration
  * @param {Record<string, any> | undefined} accredited
  * @param {{ type: string, data: object }[]} wasteRecords
@@ -156,7 +156,7 @@ const createServer = async ({
     config: { featureFlags: { reportDataValidation } }
   })
 
-  const registrationPath = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+  const registrationPath = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
 
   return {
     server,

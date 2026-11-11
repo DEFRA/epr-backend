@@ -49,13 +49,13 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
 /**
  * @param {HapiRequest} request
- * @param {Pick<OrganisationSummary, 'id' | 'orgId'>} usersLinkedOrg
+ * @param {Pick<OrganisationSummary, 'id' | 'organisationNumber'>} usersLinkedOrg
  */
 const requestIsForSameOrganisation = (request, usersLinkedOrg) => {
   const { organisationId, organisationNumber } = request.params
 
   if (organisationNumber) {
-    return Number(organisationNumber) === usersLinkedOrg.orgId
+    return organisationNumber === usersLinkedOrg.organisationNumber
   }
 
   return !!organisationId && organisationId === usersLinkedOrg.id

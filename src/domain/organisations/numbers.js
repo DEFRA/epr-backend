@@ -1,5 +1,4 @@
 /** @import {Brand} from '#common/helpers/brand.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
  * The numbers the domain issues to an organisation, a registration and an
@@ -25,13 +24,6 @@ export const toOrganisationNumber = (value) => {
 }
 
 /**
- * @param {Pick<Organisation, 'orgId'>} organisation
- * @returns {OrganisationNumber}
- */
-export const organisationNumberOf = ({ orgId }) =>
-  toOrganisationNumber(String(orgId))
-
-/**
  * @param {string} value
  * @returns {RegistrationNumber}
  */
@@ -51,7 +43,7 @@ export const toAccreditationNumber = (value) =>
  * id is `null`, and absent where no accreditation id was given.
  *
  * @typedef {{
- *   organisationNumber?: OrganisationNumber,
+ *   organisationNumber: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,
  *   accreditationNumber?: AccreditationNumber | null
  * }} Numbers

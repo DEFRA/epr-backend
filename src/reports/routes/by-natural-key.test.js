@@ -68,7 +68,7 @@ const organisation = buildOrganisation({
   accreditations: [accredited, accreditedExport]
 })
 
-const registrations = `/organisations/${organisation.orgId}/registrations`
+const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 
 /** @param {{ registrationNumber?: string }} registration */
 const numbersOf = (registration) => reportKeyOf(organisation, registration)
@@ -816,7 +816,7 @@ describe('report routes by natural key', () => {
     it('returns 404 for a registration that belongs to another organisation', async () => {
       const underItsOwner = await server.inject({
         ...calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER),
-        url: `/organisations/${otherOrganisation.orgId}/registrations/${OTHER_ORGANISATION_REGISTRATION_NUMBER}/reports/${YEAR}/calendar`
+        url: `/organisations/${otherOrganisation.organisationNumber}/registrations/${OTHER_ORGANISATION_REGISTRATION_NUMBER}/reports/${YEAR}/calendar`
       })
       const underAnother = await server.inject(
         calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER)

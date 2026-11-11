@@ -25,7 +25,6 @@ import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -132,8 +131,11 @@ const buildServedOrgWithAccreditationStatus = (status) => ({
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  * @param {string} prnId
  */
-const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
-  `/organisations/${orgId}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
+const prnStatusUrl = (
+  { organisationNumber, registrations: [registration] },
+  prnId
+) =>
+  `/organisations/${organisationNumber}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
 
 /**
  * The numbers of the organisation's registration and the accreditation it
@@ -141,11 +143,11 @@ const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  */
 const numbersOf = ({
-  orgId,
+  organisationNumber,
   registrations: [registration],
   accreditations: [accreditation]
 }) => ({
-  organisationNumber: toOrganisationNumber(String(orgId)),
+  organisationNumber,
   registrationNumber: toRegistrationNumber(
     /** @type {string} */ (registration.registrationNumber)
   ),

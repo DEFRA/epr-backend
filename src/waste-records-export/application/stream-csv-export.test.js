@@ -44,7 +44,7 @@ const collect = async (gen) => {
 
 const baseOrg = (overrides = {}) => ({
   id: 'org-1',
-  orgId: 500001,
+  organisationNumber: '500001',
   companyDetails: { name: 'Acme Ltd' },
   submittedToRegulator: 'ea',
   registrations: [],
@@ -1102,13 +1102,13 @@ describe('streamCsvExport', () => {
     // out of admin-visible data.
     const testOrg = baseOrg({
       id: 'org-test',
-      orgId: 999999,
+      organisationNumber: '999999',
       companyDetails: { name: 'Test Org' },
       registrations: [baseRegistration({ id: 'reg-test' })]
     })
     const realOrg = baseOrg({
       id: 'org-real',
-      orgId: 123456,
+      organisationNumber: '123456',
       companyDetails: { name: 'Real Org' },
       registrations: [baseRegistration({ id: 'reg-real' })]
     })
@@ -1195,7 +1195,7 @@ describe('streamCsvExport', () => {
   it('includes a test organisation when the export is scoped to it', async () => {
     const testOrg = baseOrg({
       id: 'org-test',
-      orgId: 999999,
+      organisationNumber: '999999',
       companyDetails: { name: 'Test Org' },
       registrations: [baseRegistration({ id: 'reg-test' })]
     })

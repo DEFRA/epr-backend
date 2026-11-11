@@ -27,7 +27,6 @@ import {
   buildAwaitingAcceptancePrn,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -81,7 +80,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   ]
 
   /**
-   * @param {{ id: string, orgId: number }} org
+   * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
    * @param {Record<string, any>} registration
    * @param {{ id: string, accreditationNumber: AccreditationNumber | null } | undefined} accreditationRecord
    * @param {SummaryLogRowStateEntry[]} [rows]
@@ -177,7 +176,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository(
             prns({
-              organisationNumber: toOrganisationNumber(String(org.orgId)),
+              organisationNumber: org.organisationNumber,
               registrationNumber: /** @type {RegistrationNumber} */ (
                 registration.registrationNumber
               ),
@@ -192,7 +191,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       }
     })
 
-    const registrationPath = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}`
+    const registrationPath = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}`
 
     /**
      * @param {{ year?: number, period?: number, submissionNumber?: number }} [submission]

@@ -1,5 +1,6 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Registration | Accreditation} RegistrationOrAccreditation
@@ -314,7 +315,7 @@ export const USER_ROLES = Object.freeze({
  *   formSubmission: { id: string; time: Date };
  *   linkedDefraOrganisation?: StoredLinkedDefraOrganisation;
  *   managementContactDetails?: User;
- *   orgId: number;
+ *   organisationNumber: OrganisationNumber;
  *   partnership?: Partnership;
  *   registrations: Registration[];
  *   reprocessingNations?: NationValue[];

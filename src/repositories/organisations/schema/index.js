@@ -1,5 +1,6 @@
 export {
   normaliseOrganisationFromDb,
+  parseStoredOrgId,
   validateId,
   validateLinkedDefraOrganisation,
   validateOrganisationInsert,

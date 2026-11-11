@@ -127,7 +127,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
-          orgId: 42,
+          organisationNumber: '42',
           registrations: [
             {
               material: TEST_PLASTIC_CATEGORY,
@@ -458,7 +458,7 @@ const defineBlankRegistrationNumberFilterTest = () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
-          orgId: 42,
+          organisationNumber: '42',
           registrations: [
             {
               material: TEST_PLASTIC_CATEGORY,
