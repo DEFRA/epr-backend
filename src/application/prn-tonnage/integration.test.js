@@ -650,7 +650,13 @@ describe('aggregatePrnTonnage - Integration', () => {
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
         status: {
           current: 'approved',
-          timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          timeline: [
+            {
+              status: 'approved',
+              at: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z'
+            }
+          ]
         }
       })
     )
@@ -691,7 +697,13 @@ describe('aggregatePrnTonnage - Integration', () => {
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_10000 },
         status: {
           current: 'approved',
-          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+          timeline: [
+            {
+              status: 'approved',
+              at: '2027-01-01T00:00:00.000Z',
+              updatedAt: '2027-01-01T00:00:00.000Z'
+            }
+          ]
         }
       })
     )

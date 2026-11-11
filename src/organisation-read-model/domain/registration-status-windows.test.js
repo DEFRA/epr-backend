@@ -11,7 +11,10 @@ import { registrationStatusWindows } from './registration-status-windows.js'
  */
 const changeTo =
   (status) =>
-  (date, time = '00:00') => ({ status, at: `${date}T${time}:00.000Z` })
+  (date, time = '00:00') => {
+    const at = `${date}T${time}:00.000Z`
+    return { status, at, updatedAt: at }
+  }
 
 const createdOn = changeTo('created')
 const approvedOn = changeTo('approved')

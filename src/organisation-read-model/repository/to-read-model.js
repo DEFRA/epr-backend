@@ -1,3 +1,4 @@
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -16,6 +17,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
@@ -30,7 +32,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
  * @typedef {{
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
- *   today: string
+ *   today: CalendarDate
  * }} Context
  */
 
@@ -117,7 +119,7 @@ export async function toReadModelOrganisations(
   const context = {
     onDrop: (message) => logger.warn({ message }),
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
-    today: new Date().toISOString().slice(0, 10)
+    today: toCalendarDate(new Date())
   }
   const externalByRegistration = byRegistrationAndYear(externalAccreditations)
   return stored
@@ -129,13 +131,13 @@ export async function toReadModelOrganisations(
 
 /**
  * @param {StoredOrganisation} stored
- * @param {string} today
+ * @param {CalendarDate} date
  * @returns {boolean}
  */
-export function servesOrganisation(stored, today) {
+export function servesOrganisationOn(stored, date) {
   return isOneOf(
     ORGANISATION_STATUSES,
-    statusOn(toStatusTimeline(stored.statusHistory), today)
+    statusOn(toStatusTimeline(stored.statusHistory), date)
   )
 }
 
@@ -164,6 +166,7 @@ function toOrganisation(stored, context, externalByRegistration) {
     organisationNumber: stored.organisationNumber,
     name: companyDetails.name,
     ...omitNullish({
+      address: toUkAddress(companyDetails.address),
       companiesHouseNumber: companyDetails.companiesHouseNumber,
       registeredAddress: toUkAddress(companyDetails.registeredAddress),
       tradingName: companyDetails.tradingName
@@ -202,7 +205,7 @@ function toOrganisation(stored, context, externalByRegistration) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-function toLinkedDefraOrganisation(linked) {
+export function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),
@@ -322,7 +325,6 @@ function toReprocessorRegistration(
     onDrop(`Registration ${registrationNumber} has no reprocessing type`)
     return null
   }
-  const { country, region } = registration.site.address
   const address = toUkAddress(registration.site.address)
   if (!address) {
     onDrop(`Registration ${registrationNumber} has no usable site address`)
@@ -333,7 +335,7 @@ function toReprocessorRegistration(
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
-    site: { address: { ...address, ...omitNullish({ country, region }) } },
+    site: { address },
     accreditations
   }
 }
@@ -398,7 +400,11 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
  */
 export function toStatusTimeline(statusHistory, validFrom) {
   const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: new Date(updatedAt),
+      updatedAt: new Date(updatedAt).toISOString()
+    }))
     .toSorted(byDate)
   const lastCreated = recorded.findLastIndex(
     ({ status }) => status === 'created'
@@ -414,9 +420,11 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  return recorded
-    .toSorted(byDate)
-    .map(({ status, at }) => ({ status, at: at.toISOString() }))
+  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
+    status,
+    at: at.toISOString(),
+    updatedAt
+  }))
 }
 
 /**
@@ -491,17 +499,21 @@ function toUkAddress({
   town,
   county,
   postcode,
-  fullAddress
+  fullAddress,
+  country,
+  region
 } = {}) {
+  const area = omitNullish({ country, region })
   if (line1 && postcode) {
     return {
       line1,
       postcode,
-      ...omitNullish({ town, line2, county, fullAddress })
+      ...omitNullish({ town, line2, county, fullAddress }),
+      ...area
     }
   }
   if (fullAddress) {
-    return { fullAddress }
+    return { fullAddress, ...area }
   }
   return null
 }

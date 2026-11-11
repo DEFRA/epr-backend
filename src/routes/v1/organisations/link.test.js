@@ -9,7 +9,6 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -105,8 +104,6 @@ describe('POST /organisations/{organisationNumber}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationAdministrationRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -550,32 +547,28 @@ describe('POST /organisations/{organisationNumber}/link', () => {
         let unreadableOrganisationsRepository
 
         beforeAll(async () => {
-          const organisationsRepositoryFactory =
-            createInMemoryOrganisationsRepository([])
-          unreadableOrganisationsRepository = organisationsRepositoryFactory()
-
-          const readable = organisationReadRepositoryOver(
-            unreadableOrganisationsRepository
-          )
+          unreadableOrganisationsRepository =
+            createInMemoryOrganisationsRepository([])()
 
           // The organisation reads as it stands, but never as linked.
-          /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
-          const organisationReadRepository = {
-            ...readable,
+          /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+          const organisationsRepository = {
+            ...unreadableOrganisationsRepository,
             findByOrganisationNumber: async (
               organisationNumber,
               minimumVersion
             ) =>
               minimumVersion === undefined
-                ? readable.findByOrganisationNumber(organisationNumber)
+                ? unreadableOrganisationsRepository.findByOrganisationNumber(
+                    organisationNumber
+                  )
                 : null
           }
 
           unreadableServer = await createTestServer({
             repositories: {
-              organisationAdministrationRepository:
-                organisationsRepositoryFactory,
-              organisationReadRepository,
+              organisationAdministrationRepository: () =>
+                organisationsRepository,
               systemLogsRepository: createSystemLogsRepository()
             }
           })
