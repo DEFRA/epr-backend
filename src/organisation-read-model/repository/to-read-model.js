@@ -309,7 +309,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
     accreditations: withAccreditedSites(
       accreditations,
       overseasSites,
-      `Registration ${registration.registrationNumber} accreditation year`,
+      registration,
       context.onDrop
     )
   }
@@ -355,11 +355,16 @@ function toReprocessorRegistration(
  *
  * @param {Record<string, HeldAccreditation>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
- * @param {string} keyName
+ * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
  * @returns {Record<string, ExporterAccreditation>}
  */
-function withAccreditedSites(accreditations, overseasSites, keyName, onDrop) {
+function withAccreditedSites(
+  accreditations,
+  overseasSites,
+  registration,
+  onDrop
+) {
   const registrationSites = mapValues(overseasSites, toAccreditedOverseasSite)
   return Object.fromEntries(
     Object.entries(accreditations).map(
@@ -370,13 +375,13 @@ function withAccreditedSites(accreditations, overseasSites, keyName, onDrop) {
           overseasSites: ownSites
             ? Object.fromEntries(
                 Object.entries(ownSites).filter(([orsId]) => {
-                  const held = Object.hasOwn(overseasSites, orsId)
-                  if (!held) {
+                  if (!Object.hasOwn(registration.overseasSites ?? {}, orsId)) {
                     onDrop(
-                      `${keyName} ${year} lists overseas site ${orsId}, which the registration does not hold`
+                      `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
                     )
+                    return false
                   }
-                  return held
+                  return Object.hasOwn(overseasSites, orsId)
                 })
               )
             : registrationSites
