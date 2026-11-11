@@ -149,12 +149,9 @@ describe('Waste balance arithmetic integration tests', () => {
    */
   const debitTotalBalanceOutOfBand = async (env, prnId, amount) => {
     const { balance, append } =
-      await env.wasteBalanceService.readBalanceForUpdate(
-        await ledgerIdOf(env),
-        {
-          id: 'test-user'
-        }
-      )
+      await env.wasteBalanceService.readBalanceForUpdate(ledgerIdOf(env), {
+        id: 'test-user'
+      })
     const decision = decideIssuePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
@@ -170,12 +167,9 @@ describe('Waste balance arithmetic integration tests', () => {
    */
   const debitAvailableBalanceOutOfBand = async (env, prnId, amount) => {
     const { balance, append } =
-      await env.wasteBalanceService.readBalanceForUpdate(
-        await ledgerIdOf(env),
-        {
-          id: 'test-user'
-        }
-      )
+      await env.wasteBalanceService.readBalanceForUpdate(ledgerIdOf(env), {
+        id: 'test-user'
+      })
     const decision = decideCreatePrn(balance, { prnId, amount })
     if (decision.status === PRN_COMMAND_STATUS.REJECTED) {
       throw new Error(`expected a committed decision, got ${decision.reason}`)
@@ -1231,9 +1225,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
 
       // The document watermark is the event the raise appended, not just any number.
-      const latest = await ledgerRepository.findLatestInLedger(
-        await ledgerIdOf(env)
-      )
+      const latest = await ledgerRepository.findLatestInLedger(ledgerIdOf(env))
       const stored = await packagingRecyclingNotesRepository.findById(prn.id)
       assert(stored)
       expect(stored.lastAppliedEventNumber).toBe(latest?.number)

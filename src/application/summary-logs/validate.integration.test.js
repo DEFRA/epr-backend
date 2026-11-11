@@ -11,7 +11,6 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -99,13 +98,15 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg, accreditationId) => {
-    const registrationId = testOrg.registrations[0].id
+  const createSummaryLog = (testOrg, storedAccreditation) => {
+    const [{ id: registrationId, registrationNumber }] = testOrg.registrations
     return summaryLogFactory.validating({
       organisationId: testOrg.id,
       registrationId,
-      accreditationId,
-      ...numbersFor(testOrg, { registrationId, accreditationId }).numbers
+      accreditationId: storedAccreditation?.id ?? null,
+      organisationNumber: testOrg.organisationNumber,
+      ...(registrationNumber && { registrationNumber }),
+      accreditationNumber: storedAccreditation?.accreditationNumber ?? null
     })
   }
 
@@ -119,7 +120,7 @@ describe('SummaryLogsValidator integration', () => {
    *   data?: Record<string, DataSection>;
    *   summaryLogExtractor?: SummaryLogExtractor;
    *   testOrg?: ReturnType<typeof createTestOrg>;
-   *   storedAccreditationId?: string | null;
+   *   storedAccreditation?: { id: string, accreditationNumber: string | null } | null;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -137,12 +138,12 @@ describe('SummaryLogsValidator integration', () => {
       accreditationNumber,
       reprocessingType
     ),
-    storedAccreditationId = testOrg.registrations[0].accreditationId ?? null
+    storedAccreditation = accreditationNumber ? testOrg.accreditations[0] : null
   }) => {
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
-    const summaryLog = createSummaryLog(testOrg, storedAccreditationId)
+    const summaryLog = createSummaryLog(testOrg, storedAccreditation)
     const summaryLogId = randomUUID()
 
     const extractor =
@@ -809,7 +810,7 @@ describe('SummaryLogsValidator integration', () => {
         testOrg: createTestOrg('exporter', 'REG-456', undefined, 'input', [
           accreditation
         ]),
-        storedAccreditationId: accreditation.id,
+        storedAccreditation: accreditation,
         metadata: exporterMetadata('EXPORTER_REGISTERED_ONLY')
       })
 
@@ -826,7 +827,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
         accreditationNumber: '11111111',
-        storedAccreditationId: null,
+        storedAccreditation: null,
         metadata: exporterMetadata('EXPORTER', '11111111')
       })
 
@@ -843,7 +844,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
         accreditationNumber: '11111111',
-        storedAccreditationId: null,
+        storedAccreditation: null,
         metadata: exporterMetadata('EXPORTER_REGISTERED_ONLY')
       })
 
@@ -858,7 +859,7 @@ describe('SummaryLogsValidator integration', () => {
         testOrg: createTestOrg('exporter', 'REG-456', '11111111', 'input', [
           storedAccreditation
         ]),
-        storedAccreditationId: storedAccreditation.id,
+        storedAccreditation,
         metadata: exporterMetadata('EXPORTER', '11111111')
       })
 
@@ -875,7 +876,10 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
         accreditationNumber: '11111111',
-        storedAccreditationId: randomUUID(),
+        storedAccreditation: {
+          id: randomUUID(),
+          accreditationNumber: '99999999'
+        },
         metadata: exporterMetadata('EXPORTER', '11111111')
       })
 
