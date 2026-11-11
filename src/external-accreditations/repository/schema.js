@@ -1,5 +1,6 @@
 import Joi from 'joi'
 
+import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
@@ -10,6 +11,19 @@ import {
 } from '#repositories/organisations/schema/numbers.js'
 
 const accreditationStatusSchema = Joi.string().valid(...ACCREDITATION_STATUSES)
+
+const accreditedOverseasSiteSchema = Joi.alternatives().try(
+  Joi.object({ status: Joi.string().valid('pending').required() }),
+  Joi.object({
+    approvedOn: isoDateString().required(),
+    status: Joi.string().valid('approved').required()
+  })
+)
+
+export const accreditedOverseasSitesSchema = Joi.object().pattern(
+  Joi.string().pattern(/^\d{3}$/),
+  accreditedOverseasSiteSchema
+)
 
 export const externalAccreditationSchema = Joi.object({
   registrationNumber: normalisedRegistrationNumberSchema.required(),
@@ -29,5 +43,6 @@ export const externalAccreditationSchema = Joi.object({
         })
       )
       .required()
-  }).required()
+  }).required(),
+  overseasSites: accreditedOverseasSitesSchema
 })

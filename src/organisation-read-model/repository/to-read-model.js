@@ -21,7 +21,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -39,19 +39,25 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
 /**
  * A registration's accreditation for a year, held outside the REEX database.
  *
- * @typedef {AccreditationCommon & {
+ * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
  *   registrationNumber: RegistrationNumber
  *   year: Year
  * }} ExternalAccreditation
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
+ * @typedef {AccreditationCommon & {
+ *   overseasSites?: Record<string, AccreditedOverseasSite>
+ * }} HeldAccreditation
+ */
+
+/**
+ * @typedef {Map<RegistrationNumber, Record<string, HeldAccreditation>>} ExternalAccreditationsByRegistration
  */
 
 /**
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {AccreditationCommon}
+ * @returns {HeldAccreditation}
  */
 const toAccreditationCommon = ({
   registrationNumber: _registrationNumber,
@@ -249,22 +255,19 @@ export function toRegistrationEntry(
     return null
   }
 
-  const storedAccreditations = keyedRecords(
-    accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
+  /** @type {([string, HeldAccreditation] | null)[]} */
+  const accreditationEntries = [
+    ...accreditationsForRegistration(registration, organisation).map(
+      (accreditation) => toAccreditationEntry(accreditation, context)
+    ),
+    ...Object.entries(externalByRegistration.get(registrationNumber) ?? {})
+  ]
+  const accreditations = keyedRecords(
+    accreditationEntries,
+    (entry) => entry,
     `Registration ${registrationNumber} accreditation year`,
     onDrop
   )
-  const externalAccreditations =
-    externalByRegistration.get(registrationNumber) ?? {}
-  Object.keys(externalAccreditations)
-    .filter((year) => Object.hasOwn(storedAccreditations, year))
-    .forEach((year) =>
-      onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
-      )
-    )
-  const accreditations = { ...storedAccreditations, ...externalAccreditations }
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
@@ -293,7 +296,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, HeldAccreditation>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -303,14 +306,19 @@ function toExporterRegistration(registration, common, accreditations, context) {
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
     overseasSites: mapValues(overseasSites, toOverseasSite),
-    accreditations: withAccreditedSites(accreditations, overseasSites)
+    accreditations: withAccreditedSites(
+      accreditations,
+      overseasSites,
+      `Registration ${registration.registrationNumber} accreditation year`,
+      context.onDrop
+    )
   }
 }
 
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, HeldAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -342,17 +350,40 @@ function toReprocessorRegistration(
 
 /**
  * Until per-year approvals come from the registration service, an exporter's
- * accreditation lists every registration site with the site's stored approval.
+ * accreditation without its own sites lists every registration site with the
+ * site's stored approval.
  *
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, HeldAccreditation>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
+ * @param {string} keyName
+ * @param {OnDrop} onDrop
  * @returns {Record<string, ExporterAccreditation>}
  */
-function withAccreditedSites(accreditations, overseasSites) {
-  return mapValues(accreditations, (accreditation) => ({
-    ...accreditation,
-    overseasSites: mapValues(overseasSites, toAccreditedOverseasSite)
-  }))
+function withAccreditedSites(accreditations, overseasSites, keyName, onDrop) {
+  const registrationSites = mapValues(overseasSites, toAccreditedOverseasSite)
+  return Object.fromEntries(
+    Object.entries(accreditations).map(
+      ([year, { overseasSites: ownSites, ...accreditation }]) => [
+        year,
+        {
+          ...accreditation,
+          overseasSites: ownSites
+            ? Object.fromEntries(
+                Object.entries(ownSites).filter(([orsId]) => {
+                  const held = Object.hasOwn(overseasSites, orsId)
+                  if (!held) {
+                    onDrop(
+                      `${keyName} ${year} lists overseas site ${orsId}, which the registration does not hold`
+                    )
+                  }
+                  return held
+                })
+              )
+            : registrationSites
+        }
+      ]
+    )
+  )
 }
 
 /**
