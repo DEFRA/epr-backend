@@ -116,6 +116,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
         expect.any(Object),
         {
           ...key,
+          accreditationNumber: null,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

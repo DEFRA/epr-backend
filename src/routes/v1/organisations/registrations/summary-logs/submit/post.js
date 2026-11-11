@@ -19,6 +19,7 @@ import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.j
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 
 const FAILURE_MESSAGE = 'Failure submitting summary log'
 
@@ -33,7 +34,7 @@ export const summaryLogsSubmit = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
+   *   params: RegistrationParams & { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor,
    *   systemLogsRepository: SystemLogsRepository
@@ -43,7 +44,13 @@ export const summaryLogsSubmit = {
   handler: async (request, h) => {
     const { summaryLogsRepository, summaryLogsWorker, params, logger } = request
 
-    const { summaryLogId, organisationId, registrationId } = params
+    const {
+      summaryLogId,
+      organisationId,
+      registrationId,
+      organisationNumber,
+      registrationNumber
+    } = params
 
     try {
       // Atomically transition to submitting - fails if another submission in progress
@@ -85,7 +92,10 @@ export const summaryLogsSubmit = {
       await auditSummaryLogSubmit(request, {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber: summaryLog.accreditationNumber
       })
 
       logger.info({

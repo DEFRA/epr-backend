@@ -41,10 +41,14 @@ export const organisationsUnlink = {
       currentVersion
     )
 
-    await auditOrganisationUnlinking(request, organisationId, {
-      id: linkedOrg.defraOrganisation.id,
-      name: linkedOrg.defraOrganisation.name
-    })
+    await auditOrganisationUnlinking(
+      request,
+      { organisationId, organisationNumber },
+      {
+        id: linkedOrg.defraOrganisation.id,
+        name: linkedOrg.defraOrganisation.name
+      }
+    )
     await organisationLinkingMetrics.organisationUnlinked()
 
     return h.response().code(StatusCodes.NO_CONTENT)

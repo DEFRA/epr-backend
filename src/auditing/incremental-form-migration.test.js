@@ -92,6 +92,7 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
+        organisationNumber,
         previous: { ...previousFields, orgId: 500001 },
         next: { ...nextFields, orgId: 500001 }
       },
@@ -110,6 +111,7 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
+        organisationNumber,
         previous: { ...previousFields, orgId: 500001 },
         next: { ...nextFields, orgId: 500001 }
       }
@@ -155,14 +157,14 @@ describe('auditIncrementalFormMigration', () => {
       next
     )
 
-    // Verify CDP audit receives reduced context (no previous/next, just organisationId)
+    // Verify CDP audit receives reduced context (no previous/next, just the organisation's id and number)
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'entity',
         subCategory: 'epr-organisations',
         action: 'incremental-form-migration'
       },
-      context: { organisationId },
+      context: { organisationId, organisationNumber },
       user: systemUser
     })
 
@@ -178,6 +180,7 @@ describe('auditIncrementalFormMigration', () => {
       },
       context: {
         organisationId,
+        organisationNumber,
         previous: { ...previousFields, orgId: 500001 },
         next: { ...nextFields, orgId: 500001 }
       }

@@ -2,6 +2,16 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js'
+ *
+ * @typedef {{
+ *   summaryLogId: string
+ *   organisationId: string
+ *   registrationId: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationNumber: RegistrationNumber
+ *   accreditationNumber?: AccreditationNumber | null
+ * }} SummaryLogAuditContext
  */
 
 export const SUMMARY_LOG_SUB_CATEGORY = 'summary-log'
@@ -9,7 +19,7 @@ export const SUMMARY_LOG_SUBMIT_ACTION = 'submit'
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ * @param {SummaryLogAuditContext} context
  */
 async function auditSummaryLogSubmit(request, context) {
   await auditSummaryLog(request, context, SUMMARY_LOG_SUBMIT_ACTION)
@@ -17,7 +27,7 @@ async function auditSummaryLogSubmit(request, context) {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ * @param {SummaryLogAuditContext} context
  */
 async function auditSummaryLogDownload(request, context) {
   await auditSummaryLog(request, context, 'download')
@@ -25,7 +35,7 @@ async function auditSummaryLogDownload(request, context) {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ * @param {SummaryLogAuditContext} context
  * @param {'upload' | 'submit' | 'download'} action
  */
 async function auditSummaryLog(request, context, action) {

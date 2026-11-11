@@ -182,6 +182,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         {
           organisationNumber,
           registrationNumber,
+          accreditationNumber: null,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

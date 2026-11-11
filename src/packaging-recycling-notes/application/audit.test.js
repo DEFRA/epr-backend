@@ -73,6 +73,8 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: nextPrn.registration.registrationNumber,
+        accreditationNumber: nextPrn.accreditation.accreditationNumber,
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -105,6 +107,8 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: nextPrn.registration.registrationNumber,
+        accreditationNumber: nextPrn.accreditation.accreditationNumber,
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -112,7 +116,7 @@ describe('auditPrnStatusTransition', () => {
     })
   })
 
-  it('truncates context to just prnId when payload is too large', async () => {
+  it('truncates context to the PRN id and its numbers when payload is too large', async () => {
     const request = createMockRequest()
 
     // Create a large PRN object that exceeds the 1MB audit size limit
@@ -132,6 +136,8 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: nextPrn.registration.registrationNumber,
+        accreditationNumber: nextPrn.accreditation.accreditationNumber,
         prnId
       },
       user: {
@@ -145,6 +151,8 @@ describe('auditPrnStatusTransition', () => {
     const storedLog = await findStoredLog()
     expect(storedLog.context).toEqual({
       organisationNumber: TEST_ORGANISATION_NUMBER,
+      registrationNumber: nextPrn.registration.registrationNumber,
+      accreditationNumber: nextPrn.accreditation.accreditationNumber,
       prnId,
       previous: largePreviousPrn,
       next: nextPrn
