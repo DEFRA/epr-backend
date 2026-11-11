@@ -2,19 +2,11 @@ import convict from 'convict'
 import convictFormatWithValidator from 'convict-format-with-validator'
 
 import { convictValidateMongoUri } from '#common/helpers/convict/validate-mongo-uri.js'
-import { fallBackToDeprecatedEnv } from '#common/helpers/convict/fall-back-to-deprecated-env.js'
 import { convictValidateDecemberWasteWindowBound } from '#common/helpers/convict/validate-december-waste-window-bound.js'
 
 convict.addFormat(convictValidateMongoUri)
 convict.addFormat(convictValidateDecemberWasteWindowBound)
 convict.addFormats(convictFormatWithValidator)
-
-const deprecatedEnvNames = [
-  {
-    deprecated: 'ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
-    replacement: 'ENTRA_OIDC_WELL_KNOWN_URL'
-  }
-]
 
 const isProduction = process.env.NODE_ENV === 'production'
 const isDevelopment = process.env.NODE_ENV !== 'production'
@@ -291,7 +283,7 @@ const baseConfig = {
   oidc: {
     entraId: {
       oidcWellKnownConfigurationUrl: {
-        doc: 'Entra OIDC .well-known configuration URL. Deprecated name ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL is still read as a fallback.',
+        doc: 'Entra OIDC .well-known configuration URL',
         format: String,
         env: 'ENTRA_OIDC_WELL_KNOWN_URL',
         default:
@@ -533,23 +525,12 @@ const baseConfig = {
   }
 }
 
-const { env, used: deprecatedEnvInUse } = fallBackToDeprecatedEnv(
-  process.env,
-  deprecatedEnvNames
-)
-
-deprecatedEnvInUse.forEach(({ deprecated, replacement }) => {
-  process.emitWarning(`${deprecated} is deprecated, use ${replacement}`, {
-    code: 'DEPRECATED_ENV'
-  })
-})
-
-const config = convict(baseConfig, { env })
+const config = convict(baseConfig)
 
 config.validate({ allowed: 'strict' })
 
 function getConfig(overrides = {}) {
-  const cfg = convict(baseConfig, { env })
+  const cfg = convict(baseConfig)
   cfg.load(overrides)
   return cfg
 }
