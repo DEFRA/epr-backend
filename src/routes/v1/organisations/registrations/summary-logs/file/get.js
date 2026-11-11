@@ -9,7 +9,7 @@ import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 /** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
-/** @import { SummaryLogsRepository, SummaryLogVersion } from '#repositories/summary-logs/port.js' */
+/** @import { DownloadUrlResult, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
 const downloadAuth = {
   auth: {
@@ -21,14 +21,13 @@ const downloadAuth = {
 /**
  * @template {string} Id
  * @param {(params: Record<string, string>) => Id} idOf
- * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
- * @param {(repository: SummaryLogsRepository, id: Id) => Promise<SummaryLogVersion | null>} find
+ * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<DownloadUrlResult>} sign
  * @returns {(request: HapiRequest & {
  *   params: Record<string, string> & RegistrationParams,
  *   summaryLogsRepository: SummaryLogsRepository
  * }, h: HapiResponseToolkit) => Promise<HapiResponseObject>}
  */
-const serveFile = (idOf, sign, find) => async (request, h) => {
+const serveFile = (idOf, sign) => async (request, h) => {
   const { summaryLogsRepository, logger } = request
   const {
     organisationId,
@@ -38,8 +37,11 @@ const serveFile = (idOf, sign, find) => async (request, h) => {
   } = request.params
   const id = idOf(request.params)
 
-  const { url } = await sign(summaryLogsRepository, id, registrationNumber)
-  const stored = await find(summaryLogsRepository, id)
+  const { url, accreditationNumber } = await sign(
+    summaryLogsRepository,
+    id,
+    registrationNumber
+  )
 
   await auditSummaryLogDownload(request, {
     summaryLogId: id,
@@ -47,7 +49,7 @@ const serveFile = (idOf, sign, find) => async (request, h) => {
     registrationId,
     organisationNumber,
     registrationNumber,
-    accreditationNumber: stored?.summaryLog.accreditationNumber
+    accreditationNumber
   })
 
   logger.info({
@@ -68,8 +70,7 @@ export const summaryLogFile = {
   handler: serveFile(
     (params) => toSummaryLogId(params.summaryLogId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrl(id, registrationNumber),
-    (repository, id) => repository.findById(id)
+      repository.getDownloadUrl(id, registrationNumber)
   )
 }
 
@@ -83,7 +84,6 @@ export const summaryLogFileByFileId = {
   handler: serveFile(
     (params) => toSummaryLogFileId(params.fileId),
     (repository, id, registrationNumber) =>
-      repository.getDownloadUrlByFileId(id, registrationNumber),
-    (repository, id) => repository.findByFileId(id)
+      repository.getDownloadUrlByFileId(id, registrationNumber)
   )
 }
