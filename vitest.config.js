@@ -30,7 +30,6 @@ export default defineConfig({
         '**/types.js',
         'coverage',
         'src/common/hapi-types.js',
-        'src/common/helpers/secure-context.js',
         'src/config.js',
         'src/domain/**/model.js',
         'src/domain/**/port.js',
