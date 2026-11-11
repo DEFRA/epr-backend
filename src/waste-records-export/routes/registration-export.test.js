@@ -13,6 +13,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
@@ -24,7 +25,7 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const ORGANISATION_ID = 'org-1'
-const ORGANISATION_NUMBER = 500123
+const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 const REGISTRATION_ID = 'reg-1'
 const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
@@ -34,7 +35,7 @@ const REGISTERED_ONLY_LEDGER = {
   organisationId: ORGANISATION_ID,
   registrationId: REGISTRATION_ID,
   accreditationId: null,
-  organisationNumber: toOrganisationNumber(String(ORGANISATION_NUMBER)),
+  organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
   accreditationNumber: null
 }
@@ -53,6 +54,15 @@ const buildRegistration = () => {
     statusHistory: granted('approved'),
     validFrom: '2026-02-01'
   }
+}
+
+// The export reads the organisation read model alone.
+const readsLegacy = () =>
+  Promise.reject(new Error('read the legacy repository'))
+const legacyOrganisationsRepository = {
+  findAll: readsLegacy,
+  findById: readsLegacy,
+  findByOrganisationNumber: readsLegacy
 }
 
 const receivedRowState = () => ({
@@ -93,7 +103,7 @@ const createServer = async ({
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
-    orgId: ORGANISATION_NUMBER,
+    organisationNumber: ORGANISATION_NUMBER,
     companyDetails: { name: 'Acme Ltd' },
     submittedToRegulator: 'ea',
     registrations: [/** @type {any} */ (buildRegistration())]
@@ -109,31 +119,16 @@ const createServer = async ({
 
   return createTestServer({
     repositories: {
-      // The export serves the records the path resolved, so nothing reads
-      // them again by id.
-      organisationsRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([organisation]),
-        findById: vi.fn(() => Promise.reject(new Error('read again'))),
-        findByOrganisationNumber: vi.fn((organisationNumber) =>
-          Promise.resolve(
-            organisationNumber === String(organisation.orgId)
-              ? organisation
-              : null
-          )
-        ),
-        findRegistrationById: vi.fn(() =>
-          Promise.reject(new Error('read again'))
-        )
-      }),
+      organisationsRepository: () => legacyOrganisationsRepository,
+      organisationReadRepository: await organisationReadRepositoryOf([
+        organisation
+      ]),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => createInMemoryLedgerRepository(ledgerEvents)(),
       summaryLogsRepository: () => ({
         findAll: vi
           .fn()
           .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
-      }),
-      overseasSitesRepository: () => ({
-        findAll: vi.fn().mockResolvedValue([])
       })
     }
   })

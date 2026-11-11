@@ -71,7 +71,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       ...reportKeyOf(org, registration),
       reportId,
       reportsRepository,
-      url: `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/1/request-resubmission`
+      url: `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}/reports/${YEAR}/quarterly/1/submissions/1/request-resubmission`
     }
   }
 
@@ -127,6 +127,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect.objectContaining({
           organisationNumber,
           registrationNumber,
+          accreditationNumber: null,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

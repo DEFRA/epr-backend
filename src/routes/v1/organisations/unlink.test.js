@@ -8,7 +8,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import {
   asServiceMaintainerRead,
   asServiceMaintainerWrite,
@@ -69,8 +68,6 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -139,7 +136,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
       const response = await server.inject({
         method: 'DELETE',
-        url: `/organisations/${org.orgId}/link`,
+        url: `/organisations/${org.organisationNumber}/link`,
         ...asServiceMaintainerWrite()
       })
 
@@ -160,7 +157,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: `/organisations/${org.orgId}/link`,
+          url: `/organisations/${org.organisationNumber}/link`,
           ...asServiceMaintainerWrite()
         })
 
@@ -195,7 +192,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         const systemLogsResponse = await server.inject({
           method: 'GET',
-          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.orgId}`,
+          url: `/v1/system-logs/search?organisationNumber=${unlinkedOrg.organisationNumber}`,
           ...asServiceMaintainerWrite()
         })
 
@@ -220,6 +217,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         expect(systemLogPayload.context).toEqual({
           organisationId: unlinkedOrg.id,
+          organisationNumber: unlinkedOrg.organisationNumber,
           unlinkedDefraOrganisation: {
             id: COMPANY_1_ID,
             name: COMPANY_1_NAME
@@ -244,6 +242,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: unlinkedOrg.id,
+          organisationNumber: unlinkedOrg.organisationNumber,
           unlinkedDefraOrganisation: {
             id: COMPANY_1_ID,
             name: COMPANY_1_NAME

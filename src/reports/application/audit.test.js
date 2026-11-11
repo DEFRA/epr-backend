@@ -6,6 +6,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -41,6 +42,10 @@ const {
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
+
+const ORGANISATION_NUMBER = toOrganisationNumber('500001')
+const REGISTRATION_NUMBER = toRegistrationNumber('R25SR500000001PA')
+const ACCREDITATION_NUMBER = toAccreditationNumber('A25SR500010912PL')
 
 let systemLogsRepository
 
@@ -82,6 +87,7 @@ describe('auditReportStatusTransition', () => {
   const params = {
     organisationNumber: '500001',
     registrationNumber: 'R25SR500010912PL',
+    accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -134,6 +140,7 @@ describe('auditReportStatusTransition', () => {
     const oversizedParams = {
       organisationNumber: '500001',
       registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
@@ -165,6 +172,7 @@ describe('auditReportStatusTransition', () => {
         context: {
           organisationNumber: '500001',
           registrationNumber: 'R25SR500010912PL',
+          accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
@@ -190,6 +198,7 @@ describe('auditReportDelete', () => {
   const params = {
     organisationNumber: '500001',
     registrationNumber: 'R25SR500010912PL',
+    accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -237,6 +246,7 @@ describe('auditReportDelete', () => {
     const oversizedParams = {
       organisationNumber: '500001',
       registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2025),
       cadence: CADENCE.quarterly,
       period: 1,
@@ -262,6 +272,7 @@ describe('auditReportDelete', () => {
         context: {
           organisationNumber: '500001',
           registrationNumber: 'R25SR500010912PL',
+          accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2025),
           cadence: CADENCE.quarterly,
           period: 1,
@@ -316,11 +327,9 @@ const resubmissionRequired = {
   }
 }
 
-const ORGANISATION_NUMBER = toOrganisationNumber('500001')
-const REGISTRATION_NUMBER = toRegistrationNumber('R25SR500000001PA')
-
 const flaggedReport = {
   reportId: 'rep-1',
+  accreditationNumber: ACCREDITATION_NUMBER,
   year: toYear(2025),
   cadence: CADENCE.quarterly,
   period: 1,
@@ -418,6 +427,7 @@ describe('auditReportCreate', () => {
   const params = {
     organisationNumber: '500001',
     registrationNumber: 'R25SR500010912PL',
+    accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,
@@ -461,6 +471,7 @@ describe('auditReportRequestResubmission', () => {
   const params = {
     organisationNumber: '500001',
     registrationNumber: 'R25SR500010912PL',
+    accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
     period: 1,

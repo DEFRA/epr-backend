@@ -279,6 +279,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
       expect(previousRegistration.status).toBe('created')
       expect(nextRegistration.status).toBe('approved')
+      expect(entry.context.registrationNumber).toBe('REG999999')
 
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
     })
@@ -840,7 +841,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       // create endpoint 404s before considering the payload at all.
       const createResponse = await integrationServer.inject({
         method: 'POST',
-        url: `/organisations/${fixture.orgId}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
+        url: `/organisations/${fixture.organisationNumber}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
         ...asOperator(),
         payload: {
           issuedToOrganisation: { id: 'org-2', name: 'Recipient Org' },

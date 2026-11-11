@@ -377,6 +377,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_RECONCILE_STALE_PRN_PROJECTIONS'
+    },
+    summaryLogScopeBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the accreditation and year onto summary logs stored without them, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOG_SCOPE_BACKFILL'
     }
   },
   formSubmissionOverrides: {
@@ -508,6 +514,12 @@ const baseConfig = {
       default: '',
       env: 'BASIC_AUTH_PASSWORD'
     }
+  },
+  openNextYear: {
+    doc: 'Serve next year as well as this one, so data for it can be checked before it starts. Lower environments only',
+    format: Boolean,
+    default: false,
+    env: 'OPEN_NEXT_YEAR'
   },
   decemberWaste: {
     windowStart: {

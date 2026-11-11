@@ -1,5 +1,7 @@
+import { onTestFinished } from 'vitest'
+
+import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
@@ -51,16 +53,32 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].status.timeline
       ).toEqual([
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-02-01T00:00:00.000Z' },
-        { status: 'suspended', at: '2026-03-01T09:00:00.000Z' },
-        { status: 'cancelled', at: '2026-03-01T15:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-02-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T09:00:00.000Z'
+        },
+        {
+          status: 'suspended',
+          at: '2026-03-01T09:00:00.000Z',
+          updatedAt: '2026-03-01T09:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-03-01T15:00:00.000Z',
+          updatedAt: '2026-03-01T15:00:00.000Z'
+        }
       ])
     })
 
@@ -86,16 +104,32 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].status.timeline
       ).toEqual([
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-02-01T00:00:00.000Z' },
-        { status: 'suspended', at: '2026-03-01T09:00:00.000Z' },
-        { status: 'cancelled', at: '2026-04-01T09:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-02-01T00:00:00.000Z',
+          updatedAt: '2026-01-20T09:00:00.000Z'
+        },
+        {
+          status: 'suspended',
+          at: '2026-03-01T09:00:00.000Z',
+          updatedAt: '2026-03-01T09:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-04-01T09:00:00.000Z',
+          updatedAt: '2026-04-01T09:00:00.000Z'
+        }
       ])
     })
 
@@ -117,17 +151,33 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .status.timeline
       ).toEqual([
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-07-01T00:00:00.000Z' },
-        { status: 'suspended', at: '2026-08-01T09:00:00.000Z' },
-        { status: 'cancelled', at: '2026-09-01T09:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T09:00:00.000Z'
+        },
+        {
+          status: 'suspended',
+          at: '2026-08-01T09:00:00.000Z',
+          updatedAt: '2026-08-01T09:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-09-01T09:00:00.000Z',
+          updatedAt: '2026-09-01T09:00:00.000Z'
+        }
       ])
     })
 
@@ -149,17 +199,33 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .status.timeline
       ).toEqual([
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-02-01T09:00:00.000Z' },
-        { status: 'created', at: '2026-03-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-07-01T00:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-02-01T09:00:00.000Z',
+          updatedAt: '2026-02-01T09:00:00.000Z'
+        },
+        {
+          status: 'created',
+          at: '2026-03-01T09:00:00.000Z',
+          updatedAt: '2026-03-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-04-01T09:00:00.000Z'
+        }
       ])
     })
 
@@ -179,15 +245,23 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .status.timeline
       ).toEqual([
-        { status: 'created', at: '2026-01-01T00:00:00.000Z' },
-        { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-10-14T14:30:47.171Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-10-14T14:30:47.204Z'
+        }
       ])
     })
 
@@ -208,22 +282,36 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
           .status.timeline
       ).toEqual([
-        { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
-        { status: 'cancelled', at: '2026-03-10T09:00:00.000Z' },
-        { status: 'approved', at: '2026-03-30T09:00:00.000Z' }
+        {
+          status: 'approved',
+          at: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-03-10T09:00:00.000Z',
+          updatedAt: '2026-03-10T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-03-30T09:00:00.000Z',
+          updatedAt: '2026-03-30T09:00:00.000Z'
+        }
       ])
     })
 
     it('serves an accreditation for next year approved today as approved from 1 January', async ({
       organisationReadRepositoryWith
     }) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
       const now = new Date()
       const nextYear = now.getUTCFullYear() + 1
       const stored = organisationAccredited({
@@ -240,7 +328,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -249,8 +337,16 @@ export const testStatusTimelineBehaviour = (it) => {
         status: {
           current: 'approved',
           timeline: [
-            { status: 'created', at: now.toISOString() },
-            { status: 'approved', at: `${nextYear}-01-01T00:00:00.000Z` }
+            {
+              status: 'created',
+              at: now.toISOString(),
+              updatedAt: now.toISOString()
+            },
+            {
+              status: 'approved',
+              at: `${nextYear}-01-01T00:00:00.000Z`,
+              updatedAt: now.toISOString()
+            }
           ]
         }
       })
@@ -272,7 +368,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -281,7 +377,11 @@ export const testStatusTimelineBehaviour = (it) => {
         status: {
           current: 'suspended',
           timeline: expect.arrayContaining([
-            { status: 'suspended', at: '2999-01-01T09:00:00.000Z' }
+            {
+              status: 'suspended',
+              at: '2999-01-01T09:00:00.000Z',
+              updatedAt: '2999-01-01T09:00:00.000Z'
+            }
           ])
         }
       })
@@ -302,15 +402,23 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).toMatchObject({
         status: {
           current: 'approved',
           timeline: [
-            { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-            { status: 'approved', at: '2026-02-01T09:00:00.000Z' }
+            {
+              status: 'created',
+              at: '2026-01-01T09:00:00.000Z',
+              updatedAt: '2026-01-01T09:00:00.000Z'
+            },
+            {
+              status: 'approved',
+              at: '2026-02-01T09:00:00.000Z',
+              updatedAt: '2026-02-01T09:00:00.000Z'
+            }
           ]
         }
       })
@@ -333,14 +441,15 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.status.current).toBe('active')
+      const at = '2026-01-01T09:00:00.000Z'
       expect(organisation.status.timeline).toEqual([
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'active', at: '2026-01-01T09:00:00.000Z' }
+        { status: 'created', at, updatedAt: at },
+        { status: 'approved', at, updatedAt: at },
+        { status: 'active', at, updatedAt: at }
       ])
     })
 
@@ -359,13 +468,11 @@ export const testStatusTimelineBehaviour = (it) => {
       })
 
       expect(
-        await repository.findByOrganisationNumber(
-          toOrganisationNumber(String(stored.orgId))
-        )
+        await repository.findByOrganisationNumber(stored.organisationNumber)
       ).toBeNull()
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
-          `Organisation ${stored.orgId} has status undefined`
+          `Organisation ${stored.organisationNumber} has status undefined`
         )
       })
     })

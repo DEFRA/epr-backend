@@ -5,11 +5,10 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
-import { findOrganisationReadModel } from '#routes/organisations/natural-keys.js'
 
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationParams } from '#routes/organisations/natural-keys.js' */
-/** @import { ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
+/** @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 
 /**
  * Adds the user in the token to the organisation, or updates their details.
@@ -23,12 +22,13 @@ export const organisationsUserPut = {
   },
   /**
    * @param {ResolvedRequest & {
+   *   app: ResolvedRecords,
    *   params: OrganisationParams,
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId } = request.params
+    const { organisationId, organisationNumber } = request.params
     const {
       decoded: { payload: tokenPayload }
     } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
@@ -38,14 +38,18 @@ export const organisationsUserPut = {
     const result = await addOrUpdateOrganisationUser(
       request,
       tokenPayload,
-      await findOrganisationReadModel(request)
+      request.app.storedOrganisation
     )
 
     if (
       result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
       result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
     ) {
-      await auditOrganisationUserAdded(request, organisationId, result)
+      await auditOrganisationUserAdded(
+        request,
+        { organisationId, organisationNumber },
+        result
+      )
     }
 
     return h.response().code(StatusCodes.NO_CONTENT)

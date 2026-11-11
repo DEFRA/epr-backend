@@ -6,6 +6,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
+import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -22,7 +24,7 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 
 /**
  * A real Hapi server whose `request.db`, `request.ledgerRepository`,
- * `request.organisationsRepository` and
+ * `request.organisationsRepository`, `request.organisationReadRepository` and
  * `request.packagingRecyclingNotesRepository` are all backed by one in-memory
  * Mongo, so reporting routes can be exercised end-to-end through
  * `server.inject`. Seed and assert against the same
@@ -50,11 +52,20 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
           )()
           const packagingRecyclingNotesRepository =
             await createPackagingRecyclingNotesRepository(mongoDb, [])
+          const organisationReadRepository = createOrganisationReadRepository(
+            mongoDb
+          )({
+            overseasSitesRepository: (
+              await createOverseasSitesRepository(mongoDb)
+            )(),
+            logger: { warn: () => {} }
+          })
           const server = await createTestServer({
             db: mongoDb,
             repositories: {
               ledgerRepository,
               organisationsRepository,
+              organisationReadRepository,
               packagingRecyclingNotesRepository
             }
           })

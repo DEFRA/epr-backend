@@ -70,7 +70,7 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
 
       expect(result).toMatchObject({
         id: org.id,
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         linkedDefraOrganisation: {
           orgId: defraOrgId,
           orgName: 'Test Defra Org'
@@ -91,7 +91,7 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
 
       expect(result).toEqual({
         id: org.id,
-        orgId: org.orgId,
+        organisationNumber: org.organisationNumber,
         companyDetails: { name: org.companyDetails.name },
         status: 'created',
         linkedDefraOrganisation

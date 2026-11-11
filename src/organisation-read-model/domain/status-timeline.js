@@ -7,6 +7,12 @@ import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
 /** @import { StatusTimeline } from './model.js' */
 
 /**
+ * Each status and when it takes effect.
+ *
+ * @typedef {Pick<StatusTimeline[number], 'status' | 'at'>[]} StatusChanges
+ */
+
+/**
  * A stretch of calendar days, both ends included.
  *
  * @typedef {{ from: CalendarDate, to: CalendarDate }} CalendarDateRange
@@ -47,7 +53,7 @@ const rangeEnd = (nextDate, date) => (nextDate ? dayBefore(nextDate) : date)
 /**
  * The status at the end of each UTC day with a change.
  *
- * @param {StatusTimeline} timeline
+ * @param {StatusChanges} timeline
  * @returns {DailyTimeline}
  */
 export const dailyTimeline = (timeline) =>
@@ -60,7 +66,7 @@ export const dailyTimeline = (timeline) =>
  * is given by the passed `endDate`. Statuses in the timeline after the passed `endDate` are
  * not included in the result.
  *
- * @param {StatusTimeline} timeline
+ * @param {StatusChanges} timeline
  * @param {CalendarDate} endDate
  * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
@@ -87,7 +93,7 @@ export const statusRanges = (timeline, endDate) => {
  * Oldest first, without repeats. The timeline can go approved → cancelled → approved, so years
  * spent wholly cancelled are left out.
  *
- * @param {StatusTimeline} timeline
+ * @param {StatusChanges} timeline
  * @param {CalendarDate} endDate
  * @returns {Year[]}
  */

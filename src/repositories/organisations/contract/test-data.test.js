@@ -29,20 +29,20 @@ describe('test-data', () => {
   })
 
   describe('createOrganisationBuilders', () => {
-    it('should never hand out the same orgId twice from one set of builders', () => {
+    it('should never hand out the same organisation number twice from one set of builders', () => {
       const builders = createOrganisationBuilders()
       const draws = [
-        () => builders.buildOrganisation().orgId,
+        () => builders.buildOrganisation().organisationNumber,
         (/** @type {number} */ index) =>
-          builders.buildOrgWithName(`Org ${index}`).orgId,
-        () => builders.nextOrgId()
+          builders.buildOrgWithName(`Org ${index}`).organisationNumber,
+        () => builders.nextOrganisationNumber()
       ]
 
-      const orgIds = Array.from({ length: 999 }, (_, index) =>
+      const numbers = Array.from({ length: 999 }, (_, index) =>
         draws[index % draws.length](index)
       )
 
-      expect(new Set(orgIds).size).toBe(orgIds.length)
+      expect(new Set(numbers).size).toBe(numbers.length)
     })
   })
 

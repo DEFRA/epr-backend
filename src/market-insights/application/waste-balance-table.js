@@ -2,11 +2,12 @@ import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
-import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import {
-  accreditationYears,
+  indexByLedger,
+  overseasSitesOf,
   validityOf
-} from '#market-insights/application/accreditation-validity.js'
+} from '#waste-balances/application/read-model-accreditations.js'
+import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -27,10 +28,10 @@ import {
   operatorsByFigure
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -52,17 +53,6 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
  * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
- */
-
-/**
- * A ledger's accreditation as the organisation read model serves it, with the
- * registration that holds it and the year it is for.
- *
- * @typedef {Object} LedgerAccreditation
- * @property {OrganisationNumber} organisationNumber
- * @property {RegistrationNumber} registrationNumber
- * @property {ReadModelRegistration} registration
- * @property {Year} year
  */
 
 /**
@@ -220,57 +210,6 @@ const warnAboutUnmatchedPartition = (logger, accreditationNumber) => {
 }
 
 /**
- * Every accreditation the read model serves outside test organisations, stored
- * or held outside re-ex, by the `ledgerKey` of the ledger it writes to.
- *
- * @param {ReadModelOrganisation[]} organisations
- * @returns {Map<string, LedgerAccreditation>}
- */
-const indexByLedger = (organisations) =>
-  new Map(
-    organisations
-      .filter(
-        ({ organisationNumber }) =>
-          !TEST_ORGANISATION_NUMBERS.has(organisationNumber)
-      )
-      .flatMap(({ organisationNumber, registrations }) =>
-        Object.entries(registrations).flatMap(([number, registration]) => {
-          const registrationNumber = toRegistrationNumber(number)
-          return accreditationYears(registration).map((year) => [
-            ledgerKey({
-              organisationNumber,
-              registrationNumber,
-              accreditationNumber:
-                registration.accreditations[year].accreditationNumber
-            }),
-            { organisationNumber, registrationNumber, registration, year }
-          ])
-        })
-      )
-  )
-
-/**
- * The approval date of each overseas site an exporter's accreditation lists,
- * by the site's key, as classification reads it.
- *
- * @param {LedgerAccreditation} ledgerAccreditation
- * @returns {OverseasSitesContext}
- */
-const overseasSitesOf = ({ registration, year }) =>
-  Object.fromEntries(
-    Object.entries(
-      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        ? registration.accreditations[year].overseasSites
-        : {}
-    ).map(([key, site]) => [
-      key,
-      {
-        validFrom: site.status === 'approved' ? new Date(site.approvedOn) : null
-      }
-    ])
-  )
-
-/**
  * @param {LatestSubmittedSummaryLogPerLedger[]} entries
  * @param {Map<string, LedgerAccreditation>} index - by `ledgerKey`
  * @param {import('#common/hapi-types.js').TypedLogger} logger
@@ -293,7 +232,7 @@ const resolvePublishedPartitions = (entries, index, logger) => {
     }
     partitions.set(ledgerKey(ledgerId), {
       summaryLogId,
-      organisationNumber: ledgerAccreditation.organisationNumber,
+      organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
       accreditation: validityOf(ledgerAccreditation),

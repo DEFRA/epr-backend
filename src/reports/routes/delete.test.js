@@ -58,7 +58,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
       }
     })
 
-    const reports = `/organisations/${org.orgId}/registrations/${registration.registrationNumber}/reports/${YEAR}`
+    const reports = `/organisations/${org.organisationNumber}/registrations/${registration.registrationNumber}/reports/${YEAR}`
 
     return {
       server,
@@ -116,6 +116,7 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
         expect.any(Object),
         {
           ...key,
+          accreditationNumber: null,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

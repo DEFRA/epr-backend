@@ -3,6 +3,7 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
@@ -20,6 +21,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import { TestAPI } from 'vitest' */
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -66,7 +68,11 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
         for (const organisation of organisations) {
           await database
             .collection('epr-organisations')
-            .insertOne(toDocument(organisation))
+            .insertOne(
+              toDocument(
+                toStoredOrganisation(/** @type {Organisation} */ (organisation))
+              )
+            )
         }
         for (const site of overseasSites) {
           await database
@@ -118,14 +124,22 @@ describe('organisation read repository over MongoDB repositories', () => {
 
     const organisation = await findOrganisation(
       repository,
-      String(stored.orgId)
+      stored.organisationNumber
     )
 
     expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
       'status.timeline',
       [
-        { status: 'created', at: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', at: '2026-02-01T00:00:00.000Z' }
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-02-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T23:30:00.000Z'
+        }
       ]
     )
   })

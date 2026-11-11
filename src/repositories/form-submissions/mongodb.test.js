@@ -4,6 +4,7 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { createFormSubmissionsRepository } from './mongodb.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { testFormSubmissionsRepositoryContract } from './port.contract.js'
 import {
   buildAccreditation,
@@ -183,17 +184,16 @@ describe('MongoDB form submissions repository', () => {
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      const highestOrgId = 500999
       const organisations = createInMemoryOrganisationsRepository([
         createOrganisationBuilders().buildReadOrganisation({
-          orgId: highestOrgId
+          organisationNumber: toOrganisationNumber('500999')
         })
       ])()
 
       await createFormSubmissionsRepository(db, testLogger, organisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
-      expect(counter?.seq).toBe(highestOrgId)
+      expect(counter?.seq).toBe(500999)
     })
 
     it('does not overwrite counter on subsequent calls', async ({

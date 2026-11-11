@@ -6,7 +6,6 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { numbersFor } from '#domain/organisations/numbers.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -132,6 +131,7 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
+ * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [options.accreditationNumber] - that accreditation's number
  * @param {boolean} [options.accreditationStoredByNumberOnly] - store the accreditation with its number and no database id, as one from 2027 is
  */
 const setupSubmit = async ({
@@ -140,6 +140,7 @@ const setupSubmit = async ({
   data,
   loadsByReportingPeriod,
   accreditationId = 'acc-123',
+  accreditationNumber = toAccreditationNumber('ACC-123'),
   accreditationStoredByNumberOnly = false
 }) => {
   const organisationId = new ObjectId().toString()
@@ -148,10 +149,6 @@ const setupSubmit = async ({
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   const organisation = buildTestOrg(organisationId, registrationId)
-  const { numbers } = numbersFor(organisation, {
-    registrationId,
-    accreditationId
-  })
   if (accreditationStoredByNumberOnly) {
     delete (
       /** @type {Record<string, unknown>} */ (organisation.accreditations[0]).id
@@ -171,7 +168,7 @@ const setupSubmit = async ({
     registrationId,
     ...reportKey,
     accreditationId,
-    ...numbers,
+    accreditationNumber,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
@@ -439,7 +436,10 @@ describe('submitSummaryLog December waste metric', () => {
 
 describe('submitSummaryLog row-state numbers', () => {
   it.each([
-    { accreditationId: 'acc-123', accreditationNumber: 'ACC-123' },
+    {
+      accreditationId: 'acc-123',
+      accreditationNumber: toAccreditationNumber('ACC-123')
+    },
     { accreditationId: null, accreditationNumber: null }
   ])(
     'stores the numbers from the organisation record on each row state, accreditation $accreditationId',
@@ -447,7 +447,8 @@ describe('submitSummaryLog row-state numbers', () => {
       const { deps, summaryLogId, summaryLog, organisation, reportKey } =
         await setupSubmit({
           reportsRepository: createInMemoryReportsRepository()(),
-          accreditationId
+          accreditationId,
+          accreditationNumber
         })
 
       await submitSummaryLog(summaryLogId, deps)
@@ -460,12 +461,12 @@ describe('submitSummaryLog row-state numbers', () => {
         )
       expect(rowStates).toEqual([
         expect.objectContaining({
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: 'REG-123',
           accreditationNumber
         }),
         expect.objectContaining({
-          organisationNumber: String(organisation.orgId),
+          organisationNumber: organisation.organisationNumber,
           registrationNumber: 'REG-123',
           accreditationNumber
         })

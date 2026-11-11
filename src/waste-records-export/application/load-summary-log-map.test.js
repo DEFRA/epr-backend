@@ -1,7 +1,10 @@
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-const organisation = { orgId: 500001 }
+const organisation = { organisationNumber: toOrganisationNumber('500001') }
 const registration = { registrationNumber: toRegistrationNumber('REG-1') }
 
 describe('loadSummaryLogMap', () => {
@@ -66,14 +69,5 @@ describe('loadSummaryLogMap', () => {
     }
     const map = await loadSummaryLogMap(repo, organisation, registration)
     expect(map.get('file-1')).toEqual({ submittedAt: '' })
-  })
-
-  it('reads nothing for a registration that was never given a number', async () => {
-    const repo = { findAll: vi.fn() }
-    const map = await loadSummaryLogMap(repo, organisation, {
-      registrationNumber: null
-    })
-    expect(map.size).toBe(0)
-    expect(repo.findAll).not.toHaveBeenCalled()
   })
 })

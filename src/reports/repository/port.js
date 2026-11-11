@@ -128,6 +128,7 @@
  *
  * @typedef {Object} MarkReportStaleResult
  * @property {string} reportId
+ * @property {AccreditationNumber | null | undefined} accreditationNumber - As the report stores it
  * @property {Year} year
  * @property {string} cadence
  * @property {number} period
@@ -162,6 +163,7 @@
  * Contains the fields needed to audit the resubmission-required transition.
  * @typedef {{
  *   reportId: string,
+ *   accreditationNumber: AccreditationNumber | null | undefined,
  *   year: Year,
  *   cadence: string,
  *   period: number,
@@ -191,6 +193,7 @@
  * {@link MarkSubmittedReportRequiringResubmissionResult}.
  * @typedef {{
  *   reportId: string,
+ *   accreditationNumber: AccreditationNumber | null | undefined,
  *   year: Year,
  *   cadence: string,
  *   period: number,
@@ -205,8 +208,6 @@
  * @property {number} version
  * @property {number} schemaVersion
  * @property {number} submissionNumber
- * @property {string} [organisationId] - only on reports created before they were keyed by number
- * @property {string} [registrationId] - only on reports created before they were keyed by number
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {AccreditationNumber | null} [accreditationNumber] - null for a registered-only report
@@ -293,15 +294,6 @@
  * @property {CalendarDate} dueDate - Bare calendar date (YYYY-MM-DD), no timezone.
  * @property {ReportSummary|null} current
  * @property {ReportSummary[]} previousSubmissions
- */
-
-/**
- * @typedef {Object} ReportPerPeriodKey
- * @property {string} organisationId - MongoDB ObjectId hex string
- * @property {string} registrationId - MongoDB ObjectId hex string
- * @property {Year} year
- * @property {string} cadence
- * @property {number} period
  */
 
 /**

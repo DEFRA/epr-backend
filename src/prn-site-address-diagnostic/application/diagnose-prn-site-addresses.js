@@ -12,6 +12,8 @@ import {
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 
 export const SITE_FINDING = Object.freeze({
   FULL_ADDRESS_ONLY: 'fullAddressOnly',
@@ -24,7 +26,7 @@ export const SITE_FINDING = Object.freeze({
  *
  * @typedef {Object} SiteAddressRow
  * @property {typeof SITE_FINDING[keyof typeof SITE_FINDING]} finding
- * @property {number} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} registrationNumber
  * @property {string} [accreditationNumber]
@@ -149,7 +151,7 @@ const servedReprocessor = (registration, organisation, context) => {
 
 /**
  * @param {ExternalAccreditation[]} externalAccreditations
- * @param {string} today
+ * @param {CalendarDate} today
  */
 const readContext = (externalAccreditations, today) => ({
   onDrop: () => {},
@@ -166,7 +168,7 @@ const readContext = (externalAccreditations, today) => ({
  *
  * @param {Organisation[]} organisations
  * @param {ExternalAccreditation[]} externalAccreditations
- * @param {string} today - ISO 8601 date
+ * @param {CalendarDate} today - ISO 8601 date
  * @returns {{ rows: SiteAddressRow[], summary: SiteAddressSummary }}
  */
 export const diagnosePrnSiteAddresses = (
@@ -222,7 +224,7 @@ const checkRegistration = (organisation, registration, context) => {
   }
   const { registrationNumber, address, accreditations } = served
   const identity = {
-    orgId: organisation.orgId,
+    organisationNumber: organisation.organisationNumber,
     testOrganisation: isTestOrganisation(organisation),
     registrationNumber
   }

@@ -84,7 +84,7 @@ const makeOperator = ({
 
   return {
     organisation: buildReadOrganisation({
-      orgId,
+      organisationNumber: toOrganisationNumber(String(orgId)),
       registrations: [partialMock(registration)],
       accreditations: registeredOnly ? [] : [accreditation]
     }),

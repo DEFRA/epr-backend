@@ -5,11 +5,6 @@ import { createOrganisationReadRepository } from './mongodb.js'
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
- * @typedef {Object} OrganisationReadRepositoryPluginOptions
- * @property {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistency] - Eventual consistency retry configuration
- */
-
-/**
  * Reads exporters' sites through `server.app.overseasSitesRepository`, so it
  * must register before this plugin.
  */
@@ -20,16 +15,12 @@ export const organisationReadRepositoryPlugin = {
 
   /**
    * @param {import('@hapi/hapi').Server & { db: Db }} server
-   * @param {OrganisationReadRepositoryPluginOptions} [options]
    */
-  register: (server, options = {}) => {
+  register: (server) => {
     const overseasSitesRepository = /** @type {OverseasSitesRepository} */ (
       server.app.overseasSitesRepository
     )
-    const createRepository = createOrganisationReadRepository(
-      server.db,
-      options.eventualConsistency
-    )
+    const createRepository = createOrganisationReadRepository(server.db)
     registerDependency(server, 'organisationReadRepository', ({ logger }) =>
       createRepository({ overseasSitesRepository, logger })
     )

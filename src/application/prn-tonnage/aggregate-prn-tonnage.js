@@ -4,17 +4,17 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  indexAccreditationsByLedger,
-  ledgerKey
-} from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
-/** @import { AccreditationContext } from '#waste-balances/application/accreditation-index.js' */
 
 /**
  * The registration's own processing-type fields, the same shape
@@ -32,10 +32,10 @@ import {
  *
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
- * @property {string} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {string} registrationNumber
  * @property {string} accreditationNumber
- * @property {string} material
+ * @property {Material} material
  * @property {string} tonnageBand
  * @property {WasteBalanceLedgerId} ledgerId
  * @property {RegistrationProcessingTypes} registration
@@ -87,13 +87,12 @@ const toTonnageColumns = (tonnageByStatus) =>
   )
 
 /**
- * What a row must carry to be reportable. A row missing its ledger id would be
- * reported as a balance of zero, which a regulator cannot tell apart from an
- * operator holding nothing — so the report fails rather than publishes it.
+ * What a row must carry to be reportable. The read model passes stored fields
+ * such as the tonnage band through unchecked, so the report checks them here.
  */
 const aggregatedRowSchema = Joi.object({
   organisationName: Joi.string().required(),
-  orgId: Joi.string().required(),
+  organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
   material: Joi.string().required(),
@@ -103,18 +102,7 @@ const aggregatedRowSchema = Joi.object({
     registrationNumber: Joi.string().required(),
     accreditationNumber: Joi.string().required()
   }).required(),
-  registration: Joi.object({
-    wasteProcessingType: Joi.string()
-      .valid(...Object.values(WASTE_PROCESSING_TYPE))
-      .required(),
-    reprocessingType: Joi.string()
-      .valid(...Object.values(REPROCESSING_TYPE))
-      .when('wasteProcessingType', {
-        is: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        then: Joi.required(),
-        otherwise: Joi.forbidden()
-      })
-  }).required(),
+  registration: Joi.object().required(),
   awaitingAuthorisationTonnage: Joi.number().required(),
   awaitingAcceptanceTonnage: Joi.number().required(),
   awaitingCancellationTonnage: Joi.number().required(),
@@ -123,27 +111,56 @@ const aggregatedRowSchema = Joi.object({
 })
 
 /**
+ * @param {Registration} registration
+ * @returns {RegistrationProcessingTypes}
+ */
+const processingTypesOf = (registration) =>
+  registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? {
+        wasteProcessingType: registration.wasteProcessingType,
+        reprocessingType: registration.reprocessingType
+      }
+    : { wasteProcessingType: registration.wasteProcessingType }
+
+/**
  * Joins an accreditation's PRN totals to the organisation, registration and
- * accreditation they were raised under. One no organisation holds by those
- * numbers is left unresolved, and the schema refuses to report it.
+ * accreditation they were raised under.
  *
  * @param {AccreditationTonnage} accreditationTonnage
- * @param {AccreditationContext | undefined} resolved
+ * @param {LedgerAccreditation} ledgerAccreditation
  */
-const toAggregatedRow = ({ numbers, tonnageByStatus }, resolved) => ({
-  organisationName: resolved?.organisation.companyDetails.name,
-  orgId: resolved && String(resolved.organisation.orgId),
-  registrationNumber: resolved && numbers.registrationNumber,
-  accreditationNumber: resolved && numbers.accreditationNumber,
-  material: resolved?.accreditation.material,
-  tonnageBand: resolved?.accreditation.prnIssuance?.tonnageBand,
-  ledgerId: resolved && numbers,
-  registration: {
-    wasteProcessingType: resolved?.registration.wasteProcessingType,
-    reprocessingType: resolved?.registration.reprocessingType ?? undefined
-  },
+const toAggregatedRow = (
+  { numbers, tonnageByStatus },
+  { organisation, registration, accreditation }
+) => ({
+  organisationName: organisation.name,
+  organisationNumber: organisation.organisationNumber,
+  registrationNumber: numbers.registrationNumber,
+  accreditationNumber: numbers.accreditationNumber,
+  material: registration.material,
+  tonnageBand: accreditation.prnIssuance.tonnageBand,
+  ledgerId: numbers,
+  registration: processingTypesOf(registration),
   ...toTonnageColumns(tonnageByStatus)
 })
+
+/**
+ * PRN totals the report cannot place would publish a balance of zero, which a
+ * regulator cannot tell apart from an operator holding nothing.
+ *
+ * @param {Map<string, LedgerAccreditation>} index
+ * @param {WasteBalanceLedgerId} numbers
+ * @returns {LedgerAccreditation}
+ */
+const ledgerAccreditationFor = (index, numbers) => {
+  const ledgerAccreditation = index.get(ledgerKey(numbers))
+  if (!ledgerAccreditation) {
+    throw new Error(
+      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber}`
+    )
+  }
+  return ledgerAccreditation
+}
 
 /**
  * @param {AggregatedRow} a
@@ -204,7 +221,7 @@ const buildReportRow = async (
     ledgerId,
     registration,
     organisationName,
-    orgId,
+    organisationNumber,
     registrationNumber,
     accreditationNumber,
     material,
@@ -213,7 +230,7 @@ const buildReportRow = async (
   }
 ) => ({
   organisationName,
-  orgId,
+  organisationNumber,
   registrationNumber,
   registrationType: registrationTypeFor(registration),
   accreditationNumber,
@@ -227,22 +244,22 @@ const buildReportRow = async (
  * Test organisations' PRNs are reported like any other.
  *
  * @param {PackagingRecyclingNotesRepository} prnRepository
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  */
 export const aggregatePrnTonnage = async (
   prnRepository,
-  organisationsRepository,
+  organisationReadRepository,
   ledgerRepository
 ) => {
   const [accreditationTonnages, organisations] = await Promise.all([
     prnRepository.sumTonnageByAccreditation({
       excludeStatuses: EXCLUDED_STATUSES
     }),
-    organisationsRepository.findAll()
+    organisationReadRepository.findAll()
   ])
 
-  const index = indexAccreditationsByLedger(organisations, {
+  const index = indexByLedger(organisations, {
     includeTestOrganisations: true
   })
 
@@ -250,7 +267,7 @@ export const aggregatePrnTonnage = async (
     .map((accreditationTonnage) => {
       const row = toAggregatedRow(
         accreditationTonnage,
-        index.get(ledgerKey(accreditationTonnage.numbers))
+        ledgerAccreditationFor(index, accreditationTonnage.numbers)
       )
       return /** @type {AggregatedRow} */ (
         Joi.attempt(

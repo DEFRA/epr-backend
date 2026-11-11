@@ -3,10 +3,8 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import {
-  accreditationYears,
-  validityOf
-} from '#market-insights/application/accreditation-validity.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
+import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   accreditationWindow,
   getStatusHistoryDateTimes,
@@ -148,7 +146,9 @@ export function* grantedRegistrations(organisations, covers) {
     registrationNumber,
     registration
   } of reportableRegistrations(organisations)) {
-    for (const year of accreditationYears(registration)) {
+    for (const year of Object.keys(registration.accreditations).map((key) =>
+      utcYearOf(key)
+    )) {
       const accreditation = validityOf({ registration, year })
       const candidate = {
         organisationNumber,

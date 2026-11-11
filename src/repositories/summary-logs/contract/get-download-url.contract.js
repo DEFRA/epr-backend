@@ -23,12 +23,17 @@ export const testGetDownloadUrlBehaviour = (it) => {
         summaryLogFactory.submitted({
           organisationId: 'org-1',
           registrationId: 'reg-1',
+          accreditationId: 'acc-1',
           file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
         })
       )
 
       const result = await repository.getDownloadUrl(id)
 
+      expect(result.accreditationNumber).toEqual(expect.any(String))
+      expect(result.accreditationNumber).toBe(
+        (await repository.findById(id)).summaryLog.accreditationNumber
+      )
       expect(result.url).toBeDefined()
       expect(result.expiresAt).toBeDefined()
       expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
@@ -103,12 +108,17 @@ export const testGetDownloadUrlBehaviour = (it) => {
         summaryLogFactory.submitted({
           organisationId: 'org-1',
           registrationId: 'reg-1',
+          accreditationId: 'acc-1',
           file: { id: fileId, uri: 's3://re-ex-summary-logs/uploads/f.xlsx' }
         })
       )
 
       const result = await repository.getDownloadUrlByFileId(fileId)
 
+      expect(result.accreditationNumber).toEqual(expect.any(String))
+      expect(result.accreditationNumber).toBe(
+        (await repository.findById(id)).summaryLog.accreditationNumber
+      )
       expect(result.url).toContain('uploads/f.xlsx')
       expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
     })

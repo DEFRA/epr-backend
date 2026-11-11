@@ -20,9 +20,9 @@ import {
   reprocessor,
   reprocessorAt
 } from './organisation-read-test-helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
-const { buildOrganisation, nextOrgId } = createOrganisationBuilders()
+const { buildOrganisation, nextOrganisationNumber } =
+  createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
@@ -39,46 +39,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
 
       expect(
-        await repository.findByOrganisationNumber(
-          toOrganisationNumber(String(nextOrgId()))
-        )
+        await repository.findByOrganisationNumber(nextOrganisationNumber())
       ).toBeNull()
-    })
-
-    it('returns the organisation once the stored version reaches minimumVersion', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const stored = { ...buildOrganisation(), version: 3 }
-      const repository = await organisationReadRepositoryWith({
-        organisations: [stored]
-      })
-
-      const organisation = await repository.findByOrganisationNumber(
-        toOrganisationNumber(String(stored.orgId)),
-        3
-      )
-
-      expect(organisation?.organisationNumber).toBe(String(stored.orgId))
-    })
-
-    it('throws timeout error when minimumVersion never arrives', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const stored = buildOrganisation()
-      const repository = await organisationReadRepositoryWith({
-        organisations: [stored]
-      })
-
-      await expect(
-        repository.findByOrganisationNumber(
-          toOrganisationNumber(String(stored.orgId)),
-          999
-        )
-      ).rejects.toMatchObject({
-        isBoom: true,
-        output: { statusCode: 500 },
-        message: 'Consistency timeout waiting for minimum version'
-      })
     })
 
     it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({
@@ -95,11 +57,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).toEqual({
-        organisationNumber: String(stored.orgId),
+        organisationNumber: stored.organisationNumber,
         name: 'ACME ltd',
         tradingName: 'ACME ltd',
         companiesHouseNumber: 'AC012345',
@@ -113,7 +75,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           timeline: [
             {
               status: 'created',
-              at: new Date(stored.statusHistory[0].updatedAt).toISOString()
+              at: new Date(stored.statusHistory[0].updatedAt).toISOString(),
+              updatedAt: new Date(
+                stored.statusHistory[0].updatedAt
+              ).toISOString()
             }
           ]
         },
@@ -132,10 +97,10 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
             submitterContactDetails: luke,
             validFrom: '2026-02-01',
             material: 'glass_re_melt',
-            regAccStatusByDate: expect.objectContaining({
+            standingByDate: expect.objectContaining({
               2026: {
-                '2026-02-01': { status: 'registeredOnly' },
-                '2026-07-01': { status: 'accredited' }
+                '2026-02-01': { standing: 'registeredOnly' },
+                '2026-07-01': { standing: 'accredited' }
               }
             }),
             submittedToRegulator: { code: 'ea' },
@@ -174,7 +139,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
@@ -187,8 +152,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         submitterContactDetails: anakin,
         validFrom: '2026-02-01',
         material: 'plastic',
-        regAccStatusByDate: expect.objectContaining({
-          2026: { '2026-02-01': { status: 'registeredOnly' } }
+        standingByDate: expect.objectContaining({
+          2026: { '2026-02-01': { standing: 'registeredOnly' } }
         }),
         submittedToRegulator: { code: 'ea' },
         wasteProcessingType: 'exporter',
@@ -215,7 +180,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -232,13 +197,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
     it('keys an accreditation by the year of its validFrom', async ({
       organisationReadRepositoryWith
     }) => {
-      const granted2027 = accreditation({
-        validFrom: '2027-01-01',
-        validTo: '2027-12-31'
+      const granted2025 = accreditation({
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31'
       })
       const stored = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: granted2027.id })],
-        accreditations: [granted2027]
+        registrations: [reprocessor({ accreditationId: granted2025.id })],
+        accreditations: [granted2025]
       })
       const repository = await organisationReadRepositoryWith({
         organisations: [stored]
@@ -246,14 +211,14 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
         Object.keys(
           organisation.registrations[REPROCESSOR_NUMBER].accreditations
         )
-      ).toEqual(['2027'])
+      ).toEqual(['2025'])
     })
 
     it('gives the site address parts without a town, and as submitted, when ingest could not find its town', async ({
@@ -278,7 +243,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
@@ -308,7 +273,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
@@ -329,7 +294,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.registrations[EXPORTER_NUMBER]).toHaveProperty(
@@ -338,7 +303,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       )
     })
 
-    it('leaves out the trading name, companies house number and registered address when the organisation has none', async ({
+    it('leaves out the trading name, companies house number, registered address and organisation address when the organisation has none', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = buildOrganisation({
@@ -351,12 +316,93 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).not.toHaveProperty('tradingName')
       expect(organisation).not.toHaveProperty('companiesHouseNumber')
       expect(organisation).not.toHaveProperty('registeredAddress')
+      expect(organisation).not.toHaveProperty('address')
+    })
+
+    it('gives the registered and organisation addresses with their country and region', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const registeredAddress = {
+        line1: 'Palace of Westminster',
+        town: 'London',
+        postcode: 'SW1A 0AA',
+        country: 'UK'
+      }
+      const address = {
+        line1: '2 Depot Lane',
+        town: 'Leeds',
+        postcode: 'LS1 1AA',
+        country: 'UK',
+        region: 'Yorkshire'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', registeredAddress, address }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation).toMatchObject({ registeredAddress, address })
+    })
+
+    it('gives a non-UK organisation address that has no postcode', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const address = {
+        line1: '3 Rue de Rivoli',
+        town: 'Paris',
+        region: 'Île-de-France',
+        country: 'France'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', address }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation.address).toStrictEqual(address)
+    })
+
+    it('gives the registered address only as submitted, with its country, when ingest could not split it', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const registeredAddress = {
+        fullAddress: 'Palace of Westminster SW1A 0AA',
+        country: 'UK'
+      }
+      const stored = buildOrganisation({
+        registrations: [reprocessor()],
+        companyDetails: { name: 'ACME ltd', registeredAddress }
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(organisation.registeredAddress).toStrictEqual(registeredAddress)
     })
 
     it("lists the organisation's users with their names and roles", async ({
@@ -384,7 +430,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.users).toEqual([
@@ -416,7 +462,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.linkedDefraOrganisation).toEqual({
@@ -443,7 +489,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.linkedDefraOrganisation?.linkedAt).toBe(
@@ -466,7 +512,7 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(

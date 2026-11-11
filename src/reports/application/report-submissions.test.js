@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -459,7 +460,7 @@ afterEach(() => {
 
 const buildOrg = (overrides = {}) => ({
   id: 'org-1',
-  orgId: 500010,
+  organisationNumber: toOrganisationNumber('500010'),
   companyDetails: { name: 'Acme Ltd' },
   statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
   submittedToRegulator: 'ea',
@@ -699,7 +700,13 @@ describe('generateReportSubmissions (edge cases)', () => {
           accreditationNumber: toAccreditationNumber('ACC-EXT'),
           status: {
             current: 'approved',
-            timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+            timeline: [
+              {
+                status: 'approved',
+                at: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z'
+              }
+            ]
           }
         })
       ]),
@@ -758,13 +765,13 @@ describe('generateReportSubmissions (edge cases)', () => {
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
-      orgId: 999999,
+      organisationNumber: toOrganisationNumber('999999'),
       companyDetails: { name: 'Test Org Ltd' },
       registrations: [buildRegistrationMock({ status: 'approved' })]
     })
     const normalOrg = buildOrg({
       id: 'org-2',
-      orgId: 500001,
+      organisationNumber: toOrganisationNumber('500001'),
       companyDetails: { name: 'Normal Org Ltd' },
       registrations: [buildRegistrationMock({ status: 'approved' })]
     })

@@ -145,6 +145,42 @@ describe('MongoDB reports repository', () => {
         dueDate: '2024-02-21'
       })
     })
+
+    it('omits the database ids from a report created before they were dropped', /** @param {ReportsFixtures} fixture */ async ({
+      mongoClient,
+      reportsRepository
+    }) => {
+      const reportId = randomUUID()
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection('reports').insertOne(
+        /** @type {any} */ ({
+          _id: reportId,
+          id: reportId,
+          version: 1,
+          schemaVersion: 1,
+          organisationId: '507f1f77bcf86cd799439031',
+          registrationId: '507f1f77bcf86cd799439032',
+          year: 2024,
+          cadence: 'monthly',
+          period: 1,
+          submissionNumber: 1,
+          startDate: '2024-01-01T00:00:00.000Z',
+          endDate: '2024-01-31T00:00:00.000Z',
+          dueDate: '2024-02-21T00:00:00.000Z',
+          status: {
+            currentStatus: 'submitted',
+            currentStatusAt: '2024-02-01T00:00:00.000Z',
+            submitted: { at: '2024-02-01T00:00:00.000Z', by: { id: 'u' } },
+            history: []
+          }
+        })
+      )
+
+      const report = await reportsRepository().findReportById(reportId)
+
+      expect(report).not.toHaveProperty('organisationId')
+      expect(report).not.toHaveProperty('registrationId')
+    })
   })
 
   it('keeps one report per slot by number, and drops the id indexes it replaces', /** @param {ReportsFixtures} fixture */ async ({

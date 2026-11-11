@@ -58,7 +58,7 @@ const LEDGER = {
   organisationId: ORG_ID,
   registrationId: REG_ID,
   accreditationId: ACC_ID,
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
   accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
 }

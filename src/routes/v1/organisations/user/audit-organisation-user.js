@@ -6,13 +6,13 @@ import {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest} request
- * @param {string} organisationId
+ * @param {{ organisationId: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} organisation
  * @param {import('./add-or-update-organisation-user.js').OrganisationUserResult} result
  * @returns {Promise<void>}
  */
 export async function auditOrganisationUserAdded(
   request,
-  organisationId,
+  { organisationId, organisationNumber },
   result
 ) {
   const payload = {
@@ -23,6 +23,7 @@ export async function auditOrganisationUserAdded(
     },
     context: {
       organisationId,
+      organisationNumber,
       previous: result.userBefore,
       next: result.userAfter
     },

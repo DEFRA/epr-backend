@@ -36,12 +36,14 @@ import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
 import {
-  requiredNumbersFor,
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
+
+const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -50,40 +52,34 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 export { asOperator } from '#test/inject-auth.js'
 
 /**
- * @typedef {{
- *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & {
  *   organisationId: string,
  *   registrationId: string,
- *   accreditationId: string
+ *   accreditationId: string | null
  * }} LedgerEnvironment
  */
 
 /**
- * The ids and numbers of one of the environment's ledgers: its accreditation's
- * by default, or the registered-only one for a `null` accreditation.
+ * The ids and numbers of the environment's ledger.
  *
  * @param {LedgerEnvironment} env
- * @param {string | null} [accreditationId]
- * @returns {Promise<import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId>}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
-export const ledgerIdOf = async (
-  env,
-  accreditationId = env.accreditationId
-) => {
-  const ids = {
-    organisationId: env.organisationId,
-    registrationId: env.registrationId,
-    accreditationId
-  }
-  return {
-    ...ids,
-    ...requiredNumbersFor(
-      await env.organisationsRepository.findById(env.organisationId),
-      ids,
-      'the test ledger'
-    )
-  }
-}
+export const ledgerIdOf = ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) => ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+})
 
 /**
  * Reads an accreditation's waste balance from the environment's service and
@@ -93,9 +89,7 @@ export const ledgerIdOf = async (
  * @param {LedgerEnvironment & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
  */
 export const getWasteBalance = async (env) => {
-  const balance = await env.wasteBalanceService.currentBalance(
-    await ledgerIdOf(env)
-  )
+  const balance = await env.wasteBalanceService.currentBalance(ledgerIdOf(env))
   assert(balance)
   return balance
 }
@@ -500,7 +494,7 @@ export const createUploadPayload = (
 })
 
 /** The natural keys every organisation these helpers build is served under. */
-export const TEST_ORGANISATION_NUMBER = 500999
+export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
 export const TEST_REGISTRATION_NUMBER = 'REG-123'
 const UPLOAD_YEAR = toYear(2025)
 
@@ -517,7 +511,7 @@ export const buildGetUrl = (summaryLogId) =>
  */
 export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
   uploadCompletedPath({
-    organisationNumber: String(TEST_ORGANISATION_NUMBER),
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     registrationNumber: TEST_REGISTRATION_NUMBER,
     year: UPLOAD_YEAR,
     accredited,
@@ -896,6 +890,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     registrationId,
     reportKey: reportKeyOf(testOrg, testOrg.registrations[0]),
     accreditationId,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+    accreditationNumber: accredited ? TEST_ACCREDITATION_NUMBER : null,
     accredited,
     fileDataMap,
     ledgerRepository,
@@ -1013,7 +1010,7 @@ const buildComplexTestOrg = ({
   }
 
   return buildReadOrganisation({
-    orgId: TEST_ORGANISATION_NUMBER,
+    organisationNumber: TEST_ORGANISATION_NUMBER,
     status: 'active',
     registrations: [servedTestRegistration(registration)],
     accreditations: accredited
@@ -1021,7 +1018,7 @@ const buildComplexTestOrg = ({
           servedTestAccreditation({
             wasteProcessingType: processingType,
             id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-123'),
+            accreditationNumber: TEST_ACCREDITATION_NUMBER,
             validFrom: accreditationValidFrom,
             validTo: VALID_TO,
             material,

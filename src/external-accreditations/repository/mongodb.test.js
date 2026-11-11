@@ -141,6 +141,22 @@ describe('mongodb external accreditations repository', () => {
 
       expect(await held()).toStrictEqual([buildExternalAccreditation()])
     })
+
+    it("holds an exporter accreditation's overseas sites", async ({
+      externalAccreditationsRepository,
+      held
+    }) => {
+      const exporterAccreditation = buildExternalAccreditation({
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2027-01-01' },
+          '002': { status: 'pending' }
+        }
+      })
+
+      await externalAccreditationsRepository.upsert(exporterAccreditation)
+
+      expect(await held()).toStrictEqual([exporterAccreditation])
+    })
   })
 
   describe('remove', () => {
@@ -215,7 +231,13 @@ describe('mongodb external accreditations repository', () => {
         accreditation: buildExternalAccreditation({
           status: {
             current: 'approved',
-            timeline: [{ status: 'banana', at: '2027-01-01T00:00:00.000Z' }]
+            timeline: [
+              {
+                status: 'banana',
+                at: '2027-01-01T00:00:00.000Z',
+                updatedAt: '2026-12-14T10:31:00.000Z'
+              }
+            ]
           }
         })
       },
@@ -224,7 +246,27 @@ describe('mongodb external accreditations repository', () => {
         accreditation: buildExternalAccreditation({
           status: {
             current: 'approved',
-            timeline: [{ status: 'created', at: '2027-01-01T00:00:00.000Z' }]
+            timeline: [
+              {
+                status: 'created',
+                at: '2027-01-01T00:00:00.000Z',
+                updatedAt: '2026-12-14T10:31:00.000Z'
+              }
+            ]
+          }
+        })
+      },
+      {
+        description: 'a change in its timeline with no date it was recorded',
+        accreditation: buildExternalAccreditation({
+          status: {
+            current: 'approved',
+            timeline: [
+              /** @type {any} */ ({
+                status: 'approved',
+                at: '2027-01-01T00:00:00.000Z'
+              })
+            ]
           }
         })
       },
@@ -241,6 +283,20 @@ describe('mongodb external accreditations repository', () => {
         description: 'an unknown tonnage band',
         accreditation: buildExternalAccreditation({
           prnIssuance: { tonnageBand: 'lots' }
+        })
+      },
+      {
+        description: 'an approved overseas site without its approval date',
+        accreditation: buildExternalAccreditation({
+          overseasSites: {
+            '001': /** @type {any} */ ({ status: 'approved' })
+          }
+        })
+      },
+      {
+        description: 'an overseas site keyed by something other than an ORS id',
+        accreditation: buildExternalAccreditation({
+          overseasSites: { abc: { status: 'pending' } }
         })
       }
     ])(

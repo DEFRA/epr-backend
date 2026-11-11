@@ -2,9 +2,10 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { organisationInYear } from '#organisation-read-model/domain/years.js'
+import { organisationInYear } from '#organisation-read-model/domain/organisation-years.js'
 import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
@@ -106,6 +107,10 @@ export const organisationViewGet = {
       )
     if (!organisation) {
       throw Boom.notFound('Organisation not found')
+    }
+    const { year } = request.query
+    if (year !== undefined && year > latestOpenYear(new Date())) {
+      throw Boom.notFound('Year not found')
     }
 
     return h

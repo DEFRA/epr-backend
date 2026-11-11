@@ -93,7 +93,7 @@ const makeOperator = ({
   })
 
   return buildReadOrganisation({
-    orgId,
+    organisationNumber: toOrganisationNumber(String(orgId)),
     registrations: [partialMock(registration)],
     accreditations: [accreditation]
   })
@@ -129,8 +129,10 @@ const prn = (
  * @param {Partial<import('#reports/repository/port.js').CreateReportBase>} figures
  */
 const monthlyReport = (operator, period, figures = {}) => ({
-  organisationNumber: toOrganisationNumber(String(operator.orgId)),
-  registrationNumber: toRegistrationNumber(`REG-${operator.orgId}`),
+  organisationNumber: operator.organisationNumber,
+  registrationNumber: toRegistrationNumber(
+    `REG-${operator.organisationNumber}`
+  ),
   year: toYear(2026),
   cadence: CADENCE.monthly,
   period,
@@ -626,7 +628,7 @@ describe('buildReprocessorExporterTable', () => {
     })
 
     expect(reported(table)).toEqual([])
-    const registrationKey = `${operator.orgId}::${operator.registrations[0].registrationNumber}`
+    const registrationKey = `${operator.organisationNumber}::${operator.registrations[0].registrationNumber}`
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(registrationKey),
@@ -1054,7 +1056,7 @@ describe('buildReprocessorExporterTable', () => {
           {
             ...monthlyReport(twoNations, 1, { prn: prn(20, 0, 2000) }),
             registrationNumber: toRegistrationNumber(
-              `REG-${scottishSite.orgId}`
+              `REG-${scottishSite.organisationNumber}`
             )
           }
         ]
@@ -1338,7 +1340,7 @@ describe('buildReprocessorExporterTable', () => {
           plastic.report,
           {
             ...wood.report,
-            organisationNumber: toOrganisationNumber(String(twoMaterials.orgId))
+            organisationNumber: twoMaterials.organisationNumber
           },
           monthlyReport(issuing, 1, { prn: prn(10, 0, 1000) })
         ]

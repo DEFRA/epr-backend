@@ -5,6 +5,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  */
@@ -100,6 +101,7 @@ export const processImportFile = async (
   await recordImportSystemLog(systemLogsRepository, logger, {
     user,
     organisationId: org.id,
+    organisationNumber: org.organisationNumber,
     registrationId: registration.id,
     registrationNumber: metadata.registrationNumber,
     sitesCreated,
@@ -154,13 +156,13 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
 
 const resolveRegistration = async (organisationsRepository, metadata) => {
   const org = await organisationsRepository.findByOrganisationNumber(
-    metadata.orgId
+    metadata.organisationNumber
   )
   if (!org) {
     return {
       error: {
         field: 'orgId',
-        message: `Organisation with orgId ${metadata.orgId} not found`
+        message: `Organisation with orgId ${metadata.organisationNumber} not found`
       }
     }
   }
@@ -172,7 +174,7 @@ const resolveRegistration = async (organisationsRepository, metadata) => {
     return {
       error: {
         field: 'registrationNumber',
-        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
+        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.organisationNumber}`
       }
     }
   }
@@ -180,12 +182,26 @@ const resolveRegistration = async (organisationsRepository, metadata) => {
   return { org, registration }
 }
 
+/**
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {TypedLogger} logger
+ * @param {{
+ *   user: SystemLogHumanActor
+ *   organisationId: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationId: string
+ *   registrationNumber: string
+ *   sitesCreated: number
+ *   mappingsUpdated: number
+ * }} importCompleted
+ */
 const recordImportSystemLog = async (
   systemLogsRepository,
   logger,
   {
     user,
     organisationId,
+    organisationNumber,
     registrationId,
     registrationNumber,
     sitesCreated,
@@ -203,6 +219,7 @@ const recordImportSystemLog = async (
       },
       context: {
         organisationId,
+        organisationNumber,
         registrationId,
         registrationNumber,
         sitesCreated,

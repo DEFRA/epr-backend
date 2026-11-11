@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
@@ -17,12 +18,15 @@ import {
 import { partialMock } from '#test/type-helpers.js'
 
 import { diagnosePrnSiteAddresses } from './diagnose-prn-site-addresses.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const TODAY = '2026-11-10'
+const TODAY = toCalendarDate(new Date('2026-11-10'))
 
 const REGISTRATION_SITE = {
   line1: '7 Glass processing site',
@@ -57,7 +61,7 @@ const diagnose = async (organisations, externalAccreditations = []) =>
  *   registrationAddress?: object,
  *   accreditationSite?: object,
  *   accreditationStatus?: 'approved' | 'suspended' | 'cancelled',
- *   orgId?: number
+ *   organisationNumber?: OrganisationNumber
  * }} [options]
  */
 const accreditedReprocessor = ({
@@ -66,7 +70,7 @@ const accreditedReprocessor = ({
     address: { line1: '7 Glass processing site', postcode: 'SW2A 0AA' }
   },
   accreditationStatus = 'approved',
-  orgId
+  organisationNumber
 } = {}) => {
   const held = accreditation({
     site: accreditationSite,
@@ -75,7 +79,7 @@ const accreditedReprocessor = ({
   })
   const registration = reprocessor({ accreditationId: held.id })
   return buildOrganisation({
-    ...(orgId && { orgId }),
+    ...(organisationNumber && { organisationNumber }),
     registrations: [
       {
         ...registration,
@@ -138,7 +142,7 @@ describe('diagnosePrnSiteAddresses', () => {
         {
           finding: 'siteDiffers',
           differs,
-          orgId: organisation.orgId,
+          organisationNumber: organisation.organisationNumber,
           testOrganisation: false,
           registrationNumber: REPROCESSOR_NUMBER,
           accreditationNumber: ACCREDITATION_NUMBER,
@@ -164,7 +168,7 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(rows).toStrictEqual([
       {
         finding: 'noAccreditationSite',
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         registrationNumber: REPROCESSOR_NUMBER,
         accreditationNumber: ACCREDITATION_NUMBER,
@@ -173,6 +177,26 @@ describe('diagnosePrnSiteAddresses', () => {
       }
     ])
     expect(summary).toMatchObject({ matched: 0, noAccreditationSite: 1 })
+  })
+
+  it('does not check an accreditation for a year not yet open', async () => {
+    const nextYear = accreditation({
+      validFrom: '2027-01-01',
+      validTo: '2027-12-31',
+      site: {}
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: nextYear.id })],
+      accreditations: [nextYear]
+    })
+
+    const { rows, summary } = await diagnose([organisation])
+
+    expect(rows).toStrictEqual([])
+    expect(summary).toMatchObject({
+      checkedAccreditations: 0,
+      noAccreditationSite: 0
+    })
   })
 
   it('reports a registration whose site the read model holds only as a full address, with the stored fields it has and its accreditations, without comparing them', async () => {
@@ -188,7 +212,7 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(rows).toStrictEqual([
       {
         finding: 'fullAddressOnly',
-        orgId: organisation.orgId,
+        organisationNumber: organisation.organisationNumber,
         testOrganisation: false,
         registrationNumber: REPROCESSOR_NUMBER,
         hasLine1: true,
@@ -261,8 +285,8 @@ describe('diagnosePrnSiteAddresses', () => {
       [
         {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          year: toYear(2027),
-          accreditationNumber: toAccreditationNumber('A27ER5001180999PL'),
+          year: toYear(2025),
+          accreditationNumber: toAccreditationNumber('A25ER5001180999PL'),
           prnIssuance: { tonnageBand: 'up_to_500' },
           status: { current: 'approved', timeline: [] }
         }
@@ -343,7 +367,10 @@ describe('diagnosePrnSiteAddresses', () => {
 
   it('marks findings on a test organisation', async () => {
     const { rows } = await diagnose([
-      accreditedReprocessor({ accreditationSite: {}, orgId: 999999 })
+      accreditedReprocessor({
+        accreditationSite: {},
+        organisationNumber: toOrganisationNumber('999999')
+      })
     ])
 
     expect(rows).toMatchObject([{ testOrganisation: true }])

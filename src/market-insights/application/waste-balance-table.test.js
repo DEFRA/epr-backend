@@ -107,7 +107,7 @@ const makeOperator = ({
   return {
     organisation: {
       id,
-      orgId,
+      organisationNumber: toOrganisationNumber(String(orgId)),
       companyDetails: { name: `Operator ${orgId}` },
       statusHistory: approvedHistory,
       submittedToRegulator: regulator,
@@ -373,7 +373,7 @@ const approvalReverted = ({ organisation }) => ({
  * @returns {MonthlyReportRef}
  */
 const monthlyReport = ({ organisation }, period) => ({
-  organisationNumber: toOrganisationNumber(String(organisation.orgId)),
+  organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(
     organisation.registrations[0].registrationNumber
   ),
@@ -1268,7 +1268,13 @@ describe('buildWasteBalanceTable', () => {
             accreditationNumber,
             status: {
               current: 'approved',
-              timeline: [{ status: 'approved', at: '2026-03-01T00:00:00.000Z' }]
+              timeline: [
+                {
+                  status: 'approved',
+                  at: '2026-03-01T00:00:00.000Z',
+                  updatedAt: '2026-03-01T00:00:00.000Z'
+                }
+              ]
             }
           })
         ],
@@ -1356,7 +1362,13 @@ describe('buildWasteBalanceTable', () => {
             accreditationNumber,
             status: {
               current: 'approved',
-              timeline: [{ status: 'approved', at: '2025-12-01T00:00:00.000Z' }]
+              timeline: [
+                {
+                  status: 'approved',
+                  at: '2025-12-01T00:00:00.000Z',
+                  updatedAt: '2025-12-01T00:00:00.000Z'
+                }
+              ]
             }
           })
         ],

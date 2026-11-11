@@ -14,10 +14,7 @@ import {
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
-import {
-  requiredNumbersFor,
-  toAccreditationNumber
-} from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
@@ -35,6 +32,8 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { AccreditationApproved } from '#domain/organisations/accreditation.js' */
+/** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
@@ -125,28 +124,55 @@ const naming = (error, summaryLogId) => {
  */
 
 /**
+ * Reads every number a summary log is stored with, refusing where the
+ * registration or its live accreditation lacks one.
+ *
+ * @param {OrganisationNumber} organisationNumber
+ * @param {Registration} registration
+ * @returns {RequiredNumbers}
+ */
+const requiredNumbersOf = (organisationNumber, registration) => {
+  const { registrationNumber } = registration
+  if (!registrationNumber) {
+    throw new Error(
+      'Cannot store summary logs without their numbers: the registration has no registration number'
+    )
+  }
+  if (!isRegistrationAccredited(registration)) {
+    return { organisationNumber, registrationNumber, accreditationNumber: null }
+  }
+  const { accreditationNumber } = /** @type {AccreditationApproved} */ (
+    registration.accreditation
+  )
+  if (!accreditationNumber) {
+    throw new Error(
+      'Cannot store summary logs without their numbers: its accreditation has no accreditation number'
+    )
+  }
+  return { organisationNumber, registrationNumber, accreditationNumber }
+}
+
+/**
  * Inserts the document an upload's completion would, validating against the
  * registration's latest submission.
  *
  * @param {SubmitRequest} request
  * @param {SummaryLogId} summaryLogId
  * @param {Year} year
- * @param {string | null} accreditationId
+ * @param {Registration} registration
  */
 const insertValidatingLog = async (
   request,
   summaryLogId,
   year,
-  accreditationId
+  registration
 ) => {
   const { summaryLogsRepository, organisationsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const numbers = requiredNumbersFor(
-    await organisationsRepository.findById(organisationId),
-    { registrationId, accreditationId },
-    'summary logs'
-  )
+  const { organisationNumber } =
+    await organisationsRepository.findById(organisationId)
+  const numbers = requiredNumbersOf(organisationNumber, registration)
   /** @type {SummaryLog} */
   const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -156,7 +182,7 @@ const insertValidatingLog = async (
     organisationId,
     registrationId,
     year,
-    accreditationId,
+    accreditationId: accreditationIdFor(registration),
     ...numbers
   }
   const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
@@ -198,10 +224,15 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     throw Boom.conflict('Waste records have changed since validation.')
   }
 
+  const { organisationNumber, registrationNumber, accreditationNumber } =
+    summaryLogKeyOf(transition.summaryLog)
   await auditSummaryLogSubmit(request, {
     summaryLogId,
     organisationId,
-    registrationId
+    registrationId,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
   })
 
   await waitForVersion(summaryLogsRepository, summaryLogId, transition.version)
@@ -283,12 +314,7 @@ export const devSummaryLogsSubmit = {
       templateFor(payload, registration)
     )
 
-    await insertValidatingLog(
-      request,
-      summaryLogId,
-      year,
-      accreditationIdFor(registration)
-    )
+    await insertValidatingLog(request, summaryLogId, year, registration)
 
     const deps = {
       logger,

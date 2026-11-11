@@ -92,8 +92,9 @@ describe('an operator accredited in July uploading their registered-only summary
       accreditationValidFrom: `${YEAR}-07-01`
     })
     const { server, organisationId, registrationId } = env
-    const { orgId } = await env.organisationsRepository.findById(organisationId)
-    const registration = `/organisations/${orgId}/registrations/REG-123`
+    const { organisationNumber } =
+      await env.organisationsRepository.findById(organisationId)
+    const registration = `/organisations/${organisationNumber}/registrations/REG-123`
 
     // Close Q1, so the quarterly split shows: January to March closed,
     // April to June open.
@@ -167,7 +168,7 @@ describe('an operator accredited in July uploading their registered-only summary
     })
 
     const submittedEvent = await env.ledgerRepository.findLatestInLedgerByKind(
-      await ledgerIdOf(env, null),
+      ledgerIdOf({ ...env, accreditationId: null, accreditationNumber: null }),
       LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
     )
     expect(submittedEvent).toMatchObject({

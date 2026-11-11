@@ -1,5 +1,7 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -11,16 +13,16 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
-import { regAccStatusByYear } from '#organisation-read-model/domain/years.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -31,26 +33,26 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
  * @typedef {{
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
- *   today: string
+ *   today: CalendarDate
  * }} Context
  */
 
 /**
  * A registration's accreditation for a year, held outside the REEX database.
  *
- * @typedef {AccreditationCommon & {
+ * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
  *   registrationNumber: RegistrationNumber
  *   year: Year
  * }} ExternalAccreditation
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<string, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
  */
 
 /**
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {AccreditationCommon}
+ * @returns {ReprocessorAccreditation | ExporterAccreditation}
  */
 const toAccreditationCommon = ({
   registrationNumber: _registrationNumber,
@@ -118,7 +120,7 @@ export async function toReadModelOrganisations(
   const context = {
     onDrop: (message) => logger.warn({ message }),
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
-    today: new Date().toISOString().slice(0, 10)
+    today: toCalendarDate(new Date())
   }
   const externalByRegistration = byRegistrationAndYear(externalAccreditations)
   return stored
@@ -130,13 +132,13 @@ export async function toReadModelOrganisations(
 
 /**
  * @param {StoredOrganisation} stored
- * @param {string} today
+ * @param {CalendarDate} date
  * @returns {boolean}
  */
-export function servesOrganisation(stored, today) {
+export function servesOrganisationOn(stored, date) {
   return isOneOf(
     ORGANISATION_STATUSES,
-    statusOn(toStatusTimeline(stored.statusHistory), today)
+    statusOn(toStatusTimeline(stored.statusHistory), date)
   )
 }
 
@@ -154,7 +156,7 @@ function toOrganisation(stored, context, externalByRegistration) {
   const status = statusOn(timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
-      `Organisation ${stored.orgId} has status ${status} on ${context.today}`
+      `Organisation ${stored.organisationNumber} has status ${status} on ${context.today}`
     )
     return null
   }
@@ -162,11 +164,14 @@ function toOrganisation(stored, context, externalByRegistration) {
   const { companyDetails, linkedDefraOrganisation } = stored
 
   return {
-    organisationNumber: toOrganisationNumber(String(stored.orgId)),
+    organisationNumber: stored.organisationNumber,
     name: companyDetails.name,
     ...omitNullish({
+      address: toOrganisationAddress(companyDetails.address),
       companiesHouseNumber: companyDetails.companiesHouseNumber,
-      registeredAddress: toUkAddress(companyDetails.registeredAddress),
+      registeredAddress: toOrganisationAddress(
+        companyDetails.registeredAddress
+      ),
       tradingName: companyDetails.tradingName
     }),
     status: { current: status, timeline },
@@ -203,7 +208,7 @@ function toOrganisation(stored, context, externalByRegistration) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-function toLinkedDefraOrganisation(linked) {
+export function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),
@@ -262,7 +267,13 @@ export function toRegistrationEntry(
         `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
     )
-  const accreditations = { ...storedAccreditations, ...externalAccreditations }
+  const openYear = latestOpenYear(new Date(today))
+  const accreditations = Object.fromEntries(
+    Object.entries({
+      ...storedAccreditations,
+      ...externalAccreditations
+    }).filter(([year]) => Number(year) <= openYear)
+  )
   const registrationStatus = { current: status, timeline }
 
   /** @type {RegistrationCommon} */
@@ -270,9 +281,9 @@ export function toRegistrationEntry(
     applicationContactDetails: toContact(applicationContactDetails),
     approvedPersons: registration.approvedPersons.map(toContact),
     material: resolveMaterial(registration),
-    regAccStatusByDate: regAccStatusByYear(
+    standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
-      calendarDate(today)
+      yearBounds(openYear).end
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
@@ -291,7 +302,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -301,14 +312,19 @@ function toExporterRegistration(registration, common, accreditations, context) {
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
     overseasSites: mapValues(overseasSites, toOverseasSite),
-    accreditations: withAccreditedSites(accreditations, overseasSites)
+    accreditations: withAccreditedSites(
+      accreditations,
+      overseasSites,
+      registration,
+      context.onDrop
+    )
   }
 }
 
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -323,7 +339,6 @@ function toReprocessorRegistration(
     onDrop(`Registration ${registrationNumber} has no reprocessing type`)
     return null
   }
-  const { country, region } = registration.site.address
   const address = toUkAddress(registration.site.address)
   if (!address) {
     onDrop(`Registration ${registrationNumber} has no usable site address`)
@@ -334,24 +349,90 @@ function toReprocessorRegistration(
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
-    site: { address: { ...address, ...omitNullish({ country, region }) } },
-    accreditations
+    site: { address },
+    accreditations: withoutOverseasSites(
+      accreditations,
+      registrationNumber,
+      onDrop
+    )
   }
 }
 
 /**
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {StoredRegistration['registrationNumber']} registrationNumber
+ * @param {OnDrop} onDrop
+ * @returns {Record<string, ReprocessorAccreditation>}
+ */
+function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
+  return Object.fromEntries(
+    Object.entries(accreditations).map(([year, accreditation]) => {
+      if (!('overseasSites' in accreditation)) {
+        return [year, accreditation]
+      }
+      onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} lists overseas sites, but a reprocessor has none`
+      )
+      const { overseasSites: _overseasSites, ...reprocessorAccreditation } =
+        accreditation
+      return [year, reprocessorAccreditation]
+    })
+  )
+}
+
+/**
  * Until per-year approvals come from the registration service, an exporter's
- * accreditation lists every registration site with the site's stored approval.
+ * accreditation without its own sites lists every registration site with the
+ * site's stored approval.
  *
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
+ * @param {StoredRegistration} registration
+ * @param {OnDrop} onDrop
  * @returns {Record<string, ExporterAccreditation>}
  */
-function withAccreditedSites(accreditations, overseasSites) {
-  return mapValues(accreditations, (accreditation) => ({
-    ...accreditation,
-    overseasSites: mapValues(overseasSites, toAccreditedOverseasSite)
-  }))
+function withAccreditedSites(
+  accreditations,
+  overseasSites,
+  registration,
+  onDrop
+) {
+  const registrationSites = mapValues(overseasSites, toAccreditedOverseasSite)
+  return Object.fromEntries(
+    Object.entries(accreditations).map(([year, accreditation]) => [
+      year,
+      {
+        ...accreditation,
+        overseasSites:
+          'overseasSites' in accreditation
+            ? ownSites(accreditation, year, registration, overseasSites, onDrop)
+            : registrationSites
+      }
+    ])
+  )
+}
+
+/**
+ * @param {ExporterAccreditation} accreditation
+ * @param {string} year
+ * @param {StoredRegistration} registration
+ * @param {Record<string, StoredOverseasSite>} overseasSites
+ * @param {OnDrop} onDrop
+ * @returns {Record<string, AccreditedOverseasSite>}
+ */
+function ownSites(accreditation, year, registration, overseasSites, onDrop) {
+  Object.keys(accreditation.overseasSites)
+    .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
+    .forEach((orsId) =>
+      onDrop(
+        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+      )
+    )
+  return Object.fromEntries(
+    Object.entries(accreditation.overseasSites).filter(([orsId]) =>
+      Object.hasOwn(overseasSites, orsId)
+    )
+  )
 }
 
 /**
@@ -399,7 +480,11 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
  */
 export function toStatusTimeline(statusHistory, validFrom) {
   const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: new Date(updatedAt),
+      updatedAt: new Date(updatedAt).toISOString()
+    }))
     .toSorted(byDate)
   const lastCreated = recorded.findLastIndex(
     ({ status }) => status === 'created'
@@ -415,9 +500,11 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  return recorded
-    .toSorted(byDate)
-    .map(({ status, at }) => ({ status, at: at.toISOString() }))
+  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
+    status,
+    at: at.toISOString(),
+    updatedAt
+  }))
 }
 
 /**
@@ -492,19 +579,48 @@ function toUkAddress({
   town,
   county,
   postcode,
-  fullAddress
+  fullAddress,
+  country,
+  region
 } = {}) {
+  const area = omitNullish({ country, region })
   if (line1 && postcode) {
     return {
       line1,
       postcode,
-      ...omitNullish({ town, line2, county, fullAddress })
+      ...omitNullish({ town, line2, county, fullAddress }),
+      ...area
     }
   }
   if (fullAddress) {
-    return { fullAddress }
+    return { fullAddress, ...area }
   }
   return null
+}
+
+/**
+ * A non-UK organisation may have no postcode.
+ *
+ * @param {Address} [address]
+ * @returns {OrganisationAddress | null}
+ */
+function toOrganisationAddress(address = {}) {
+  const { line1, line2, town, county, postcode, fullAddress, country, region } =
+    address
+  return line1
+    ? {
+        line1,
+        ...omitNullish({
+          town,
+          line2,
+          county,
+          postcode,
+          fullAddress,
+          country,
+          region
+        })
+      }
+    : toUkAddress(address)
 }
 
 /**

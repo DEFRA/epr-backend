@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { describe, it, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
@@ -64,7 +65,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     expect(Object.keys(result[0].companyDetails)).toEqual(['name'])
     expect(result[0]).toEqual({
       id: linkedOrg.id,
-      orgId: linkedOrg.orgId,
+      orgId: Number(linkedOrg.organisationNumber),
       companyDetails: {
         name: linkedOrg.companyDetails.name
       },
@@ -211,9 +212,8 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
   })
 
   it('excludes test organisations from results', async () => {
-    const testOrgId = 999999
     const testOrg = buildOrganisation({
-      orgId: testOrgId,
+      organisationNumber: toOrganisationNumber('999999'),
       linkedDefraOrganisation: buildLinkedDefraOrg(
         crypto.randomUUID(),
         'Test Org'

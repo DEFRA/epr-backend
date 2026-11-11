@@ -65,7 +65,7 @@ describe('atNaturalKeys', () => {
     })
     expect(
       served.options.validate.params.validate({
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REPROCESSOR_NUMBER
       }).error
     ).toBeUndefined()
@@ -86,7 +86,7 @@ describe('atNaturalKeys', () => {
 
     const params = await served.handler(
       requestFor({
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REGISTERED_ONLY_NUMBER
       }),
       h
@@ -106,7 +106,7 @@ describe('atNaturalKeys', () => {
 
     const params = await served.handler(
       requestFor({
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REPROCESSOR_NUMBER,
         year: 2026
       }),
@@ -123,12 +123,12 @@ describe('atNaturalKeys', () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
 
     const params = await served.handler(
-      requestFor({ organisationNumber: String(organisation.orgId) }),
+      requestFor({ organisationNumber: organisation.organisationNumber }),
       h
     )
 
     expect(params).toEqual({
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: organisation.organisationNumber,
       organisationId: organisation.id
     })
   })
@@ -136,14 +136,14 @@ describe('atNaturalKeys', () => {
   it('puts the organisation it resolved on the request', async () => {
     const served = atNaturalKeys(route, '/served', registrationParams)
     const request = requestFor({
-      organisationNumber: String(organisation.orgId),
+      organisationNumber: organisation.organisationNumber,
       registrationNumber: REGISTERED_ONLY_NUMBER
     })
 
     await served.handler(request, h)
 
     expect(request.app).toEqual({
-      organisation: expect.objectContaining({ id: organisation.id })
+      storedOrganisation: expect.objectContaining({ id: organisation.id })
     })
   })
 
@@ -162,7 +162,7 @@ describe('atNaturalKeys', () => {
 
     await served.handler(
       requestFor({
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REGISTERED_ONLY_NUMBER
       }),
       h
@@ -183,7 +183,7 @@ describe('atNaturalKeys', () => {
     [
       'an unknown registration',
       {
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: 'R26XX0000000000PL'
       },
       false
@@ -191,7 +191,7 @@ describe('atNaturalKeys', () => {
     [
       'a year the registration has no accreditation for',
       {
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REPROCESSOR_NUMBER,
         year: 2027
       },
@@ -200,7 +200,7 @@ describe('atNaturalKeys', () => {
     [
       'a registration with no accreditation',
       {
-        organisationNumber: String(organisation.orgId),
+        organisationNumber: organisation.organisationNumber,
         registrationNumber: REGISTERED_ONLY_NUMBER,
         year: 2026
       },
@@ -219,7 +219,7 @@ describe('atNaturalKeys', () => {
   describe('with a respond option', () => {
     const servedPath =
       '/organisations/{organisationNumber}/registrations/{registrationNumber}'
-    const url = `/organisations/${organisation.orgId}/registrations/${REGISTERED_ONLY_NUMBER}`
+    const url = `/organisations/${organisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}`
     const mappedSchema = Joi.object({
       mapped: Joi.string().required(),
       registrationId: Joi.string().required()

@@ -175,12 +175,12 @@ describe('accreditedMonths', () => {
         organisations: await readModelOf([covered, uncovered]),
         months: JANUARY_TO_MARCH_2026,
         covers: ({ organisationNumber }) =>
-          organisationNumber === String(covered.orgId)
+          organisationNumber === covered.organisationNumber
       })
     ]
 
     expect(months.map(({ organisationNumber }) => organisationNumber)).toEqual(
-      JANUARY_TO_MARCH_2026.map(() => String(covered.orgId))
+      JANUARY_TO_MARCH_2026.map(() => covered.organisationNumber)
     )
   })
 })

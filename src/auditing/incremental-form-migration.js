@@ -3,9 +3,11 @@ import {
   safeAudit,
   SYSTEM_USER
 } from './helpers.js'
+import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {OrganisationNumber} from '#domain/organisations/numbers.js'
  */
 
 /**
@@ -15,8 +17,8 @@ import {
  *
  * @param {SystemLogsRepository} systemLogsRepository
  * @param {string} organisationId
- * @param {Object} previous - Organisation state before migration
- * @param {Object} next - Organisation state after migration
+ * @param {{ organisationNumber: OrganisationNumber }} previous - Organisation state before migration
+ * @param {{ organisationNumber: OrganisationNumber }} next - Organisation state after migration
  */
 async function auditIncrementalFormMigration(
   systemLogsRepository,
@@ -32,8 +34,9 @@ async function auditIncrementalFormMigration(
     },
     context: {
       organisationId,
-      previous,
-      next
+      organisationNumber: next.organisationNumber,
+      previous: toOrganisationWire(previous),
+      next: toOrganisationWire(next)
     },
     user: SYSTEM_USER
   }
@@ -43,7 +46,7 @@ async function auditIncrementalFormMigration(
     ? payload
     : {
         ...payload,
-        context: { organisationId }
+        context: { organisationId, organisationNumber: next.organisationNumber }
       }
 
   safeAudit(safeAuditingPayload)

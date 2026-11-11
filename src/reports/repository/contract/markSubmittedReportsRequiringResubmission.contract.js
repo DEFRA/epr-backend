@@ -62,6 +62,7 @@ export const testMarkSubmittedReportsRequiringResubmissionBehaviour = (it) => {
       expect(flagged).toHaveLength(1)
       expect(flagged[0]).toMatchObject({
         reportId,
+        accreditationNumber: buildCreateReportParams().accreditationNumber,
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: MONTHLY_PERIODS.January,

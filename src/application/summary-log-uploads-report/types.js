@@ -1,9 +1,11 @@
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {Object} SummaryLogUploadReportRow
  * @property {string} appropriateAgency - The regulatory agency (EA, NRW, SEPA, NIEA)
  * @property {string} type - Type of registration (Reprocessor/Exporter)
  * @property {string} businessName - Organisation business name
- * @property {number} orgId - Organisation ID
+ * @property {OrganisationNumber} organisationNumber - Organisation number
  * @property {string} registrationNumber - Registration number (empty string if not set)
  * @property {string} accreditationNumber - Accreditation number (empty string if not set)
  * @property {string} reprocessingSite - Registered reprocessing site address (if applicable)

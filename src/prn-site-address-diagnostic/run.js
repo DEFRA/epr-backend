@@ -5,6 +5,7 @@ import {
   SITE_FINDING,
   diagnosePrnSiteAddresses
 } from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { SiteAddressRow, SiteAddressSummary } from '#prn-site-address-diagnostic/application/diagnose-prn-site-addresses.js' */
@@ -17,7 +18,7 @@ const findingLine = (row) =>
     'PRN site address finding:',
     `finding=${row.finding}`,
     ...(row.differs ? [`differs=${row.differs}`] : []),
-    `orgId=${row.orgId}`,
+    `organisationNumber=${row.organisationNumber}`,
     `testOrganisation=${row.testOrganisation}`,
     `registrationNumber=${row.registrationNumber}`,
     ...(row.finding === SITE_FINDING.FULL_ADDRESS_ONLY
@@ -55,7 +56,7 @@ const runDiagnostic = async (server) => {
   const { rows, summary } = diagnosePrnSiteAddresses(
     organisations,
     await findExternalAccreditations(server.db, organisations),
-    new Date().toISOString().slice(0, 10)
+    toCalendarDate(new Date())
   )
 
   for (const row of rows) {
