@@ -150,8 +150,6 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   )
 
   await onSummaryLogUploaded({
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
     organisationNumber: summaryLog.organisationNumber,
     registrationNumber: summaryLog.registrationNumber,
     summaryLogId: fileId,

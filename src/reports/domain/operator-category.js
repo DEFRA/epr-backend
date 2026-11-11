@@ -69,7 +69,6 @@ const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
  * Derives the operator category from a registration.
  *
  * @param {AccreditationLink & {
- *   accreditationId?: string,
  *   wasteProcessingType: string
  * }} registration
  * @returns {OperatorCategory}
