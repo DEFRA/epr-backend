@@ -9,7 +9,7 @@ import {
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -17,42 +17,58 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /**
  * A ledger's accreditation as the organisation read model serves it, with the
- * registration that holds it and the year it is for.
+ * organisation and registration that hold it and the year it is for.
  *
  * @typedef {Object} LedgerAccreditation
+ * @property {ReadModelOrganisation} organisation
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
  * @property {Year} year
+ * @property {ReadModelAccreditation} accreditation
  */
 
 /**
- * Every accreditation the read model serves outside test organisations, stored
- * or held outside re-ex, by the `ledgerKey` of the ledger it writes to.
+ * Every accreditation the read model serves, stored or held outside re-ex, by
+ * the `ledgerKey` of the ledger it writes to. Test organisations are left out
+ * unless asked for.
  *
  * @param {ReadModelOrganisation[]} organisations
+ * @param {{ includeTestOrganisations?: boolean }} [options]
  * @returns {Map<string, LedgerAccreditation>}
  */
-export const indexByLedger = (organisations) =>
+export const indexByLedger = (
+  organisations,
+  { includeTestOrganisations = false } = {}
+) =>
   new Map(
     organisations
       .filter(
         ({ organisationNumber }) =>
+          includeTestOrganisations ||
           !TEST_ORGANISATION_NUMBERS.has(organisationNumber)
       )
-      .flatMap(({ organisationNumber, registrations }) =>
-        Object.entries(registrations).flatMap(([number, registration]) => {
-          const registrationNumber = toRegistrationNumber(number)
-          return Object.entries(registration.accreditations).map(
-            ([year, { accreditationNumber }]) => [
-              ledgerKey({
-                organisationNumber,
-                registrationNumber,
-                accreditationNumber
-              }),
-              { registrationNumber, registration, year: toYear(Number(year)) }
-            ]
-          )
-        })
+      .flatMap((organisation) =>
+        Object.entries(organisation.registrations).flatMap(
+          ([number, registration]) => {
+            const registrationNumber = toRegistrationNumber(number)
+            return Object.entries(registration.accreditations).map(
+              ([year, accreditation]) => [
+                ledgerKey({
+                  organisationNumber: organisation.organisationNumber,
+                  registrationNumber,
+                  accreditationNumber: accreditation.accreditationNumber
+                }),
+                {
+                  organisation,
+                  registrationNumber,
+                  registration,
+                  year: toYear(Number(year)),
+                  accreditation
+                }
+              ]
+            )
+          }
+        )
       )
   )
 
