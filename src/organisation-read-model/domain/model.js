@@ -6,6 +6,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * The organisation read model (ADR-0052).
  *
  * @typedef {{
+ *   address?: UkAddress
  *   companiesHouseNumber?: string
  *   linkedDefraOrganisation?: {
  *     defraOrganisation: { id: string, name: string }
@@ -46,12 +47,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * @typedef {RegistrationCommon & {
  *   accreditations: Record<string, ReprocessorAccreditation>
  *   reprocessingType: 'input' | 'output'
- *   site: {
- *     address: UkAddress & {
- *       country?: string
- *       region?: string
- *     }
- *   }
+ *   site: { address: UkAddress }
  *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistration
  *
@@ -84,7 +80,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   | { approvedOn: string, status: 'approved' }
  * } AccreditedOverseasSite
  *
- * @typedef {
+ * @typedef {{ country?: string, region?: string } & (
  *   | {
  *       county?: string
  *       fullAddress?: string
@@ -94,7 +90,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *       town?: string
  *     }
  *   | { fullAddress: string }
- * } UkAddress
+ * )} UkAddress
  *
  * @typedef {{
  *   country: string
@@ -109,11 +105,12 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  */
 
 /**
- * Every status change, oldest first, each at its ISO 8601 datetime. Nothing
- * requires two changes to happen at different times, so changes that share a
- * time keep the order they were recorded in.
+ * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
+ * effect and `updatedAt` the one it was recorded. Nothing requires two changes
+ * to happen at different times, so changes that share a time keep the order
+ * they were recorded in.
  *
- * @typedef {{ status: string, at: string }[]} StatusTimeline
+ * @typedef {{ status: string, at: string, updatedAt: string }[]} StatusTimeline
  */
 
 /**

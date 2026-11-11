@@ -166,6 +166,7 @@ function toOrganisation(stored, context, externalByRegistration) {
     organisationNumber: stored.organisationNumber,
     name: companyDetails.name,
     ...omitNullish({
+      address: toUkAddress(companyDetails.address),
       companiesHouseNumber: companyDetails.companiesHouseNumber,
       registeredAddress: toUkAddress(companyDetails.registeredAddress),
       tradingName: companyDetails.tradingName
@@ -324,7 +325,6 @@ function toReprocessorRegistration(
     onDrop(`Registration ${registrationNumber} has no reprocessing type`)
     return null
   }
-  const { country, region } = registration.site.address
   const address = toUkAddress(registration.site.address)
   if (!address) {
     onDrop(`Registration ${registrationNumber} has no usable site address`)
@@ -335,7 +335,7 @@ function toReprocessorRegistration(
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
-    site: { address: { ...address, ...omitNullish({ country, region }) } },
+    site: { address },
     accreditations
   }
 }
@@ -400,7 +400,11 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
  */
 export function toStatusTimeline(statusHistory, validFrom) {
   const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: new Date(updatedAt),
+      updatedAt: new Date(updatedAt).toISOString()
+    }))
     .toSorted(byDate)
   const lastCreated = recorded.findLastIndex(
     ({ status }) => status === 'created'
@@ -416,9 +420,11 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  return recorded
-    .toSorted(byDate)
-    .map(({ status, at }) => ({ status, at: at.toISOString() }))
+  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
+    status,
+    at: at.toISOString(),
+    updatedAt
+  }))
 }
 
 /**
@@ -493,17 +499,21 @@ function toUkAddress({
   town,
   county,
   postcode,
-  fullAddress
+  fullAddress,
+  country,
+  region
 } = {}) {
+  const area = omitNullish({ country, region })
   if (line1 && postcode) {
     return {
       line1,
       postcode,
-      ...omitNullish({ town, line2, county, fullAddress })
+      ...omitNullish({ town, line2, county, fullAddress }),
+      ...area
     }
   }
   if (fullAddress) {
-    return { fullAddress }
+    return { fullAddress, ...area }
   }
   return null
 }

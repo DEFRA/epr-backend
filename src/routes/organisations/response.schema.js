@@ -67,7 +67,10 @@ const accreditedOverseasSitesViewSchema = Joi.object()
 const statusTimelineSchema = Joi.array()
   .items(
     Joi.object({
-      at: isoDateTime.required(),
+      at: isoDateTime.required().description('When the change takes effect.'),
+      updatedAt: isoDateTime
+        .required()
+        .description('When the change was recorded.'),
       status: Joi.string().required()
     })
   )

@@ -14,6 +14,7 @@ export const externalAccreditationPayloadSchema = Joi.object({
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
+          updatedAt: isoDateTimeString().required(),
           status: Joi.string()
             .valid(...ACCREDITATION_STATUSES)
             .required()

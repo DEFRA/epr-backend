@@ -19,7 +19,10 @@ import {
  * @param {string} status
  * @returns {(date: string) => StatusTimeline[number]}
  */
-const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
+const changeTo = (status) => (date) => {
+  const at = `${date}T00:00:00.000Z`
+  return { status, at, updatedAt: at }
+}
 
 const approvedOn = changeTo('approved')
 const createdOn = changeTo('created')
