@@ -6,7 +6,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
 import {
   isInUploadLocation,
   summaryLogUploadPath
@@ -40,6 +43,20 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
  */
 
 const FAILURE_MESSAGE = 'Failure completing summary log upload'
+const OUT_OF_LOCATION_MESSAGE =
+  'Upload is not in the upload location for this registration'
+
+/**
+ * The upload as a rejection, keeping none of where the file was said to be.
+ *
+ * @param {SummaryLogUpload} upload
+ * @returns {SummaryLogUpload}
+ */
+const asRejected = ({ fileId, filename }) => ({
+  fileId,
+  filename,
+  fileStatus: UPLOAD_STATUS.REJECTED
+})
 
 /**
  * A registered-only upload has no accreditation number, whatever the
@@ -109,23 +126,27 @@ export const summaryLogsUploadCompletedYear = {
       accreditationId
     } = params
     const { summaryLogUpload } = payload.form
-
-    if (
-      !isUploadedForRegistration(summaryLogUpload, {
-        organisationId,
-        registrationId
-      })
-    ) {
-      throw Boom.badData(
-        'Upload is not in the upload location for this registration'
-      )
-    }
+    const isInLocation = isUploadedForRegistration(summaryLogUpload, {
+      organisationId,
+      registrationId
+    })
 
     try {
+      if (!isInLocation) {
+        logger.error({
+          message: `${OUT_OF_LOCATION_MESSAGE}: summaryLogId=${summaryLogId}${formatS3Info(summaryLogUpload)}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+            reference: summaryLogId
+          }
+        })
+      }
+
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,
-        summaryLogUpload,
+        isInLocation ? summaryLogUpload : asRejected(summaryLogUpload),
         logger,
         {
           organisationId,
@@ -137,6 +158,10 @@ export const summaryLogsUploadCompletedYear = {
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })
+
+      if (!isInLocation) {
+        throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
+      }
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         await summaryLogsWorker.validate(summaryLogId)

@@ -344,7 +344,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
       }
     ])(
-      'refuses $description, and stores nothing',
+      'refuses $description, rejects the summary log without the file, and logs an error',
       async ({ s3Bucket, s3Key }) => {
         const summaryLogId = randomUUID()
 
@@ -360,8 +360,29 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-        expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+        const { summaryLog } = await waitForVersion(
+          summaryLogsRepository,
+          summaryLogId,
+          1
+        )
+        expect(summaryLog).toStrictEqual(
+          expect.objectContaining({
+            status: 'rejected',
+            file: {
+              id: 'file-123',
+              name: 'test.xlsx',
+              status: 'rejected'
+            },
+            validation: { failures: [{ code: 'FILE_REJECTED' }] }
+          })
+        )
         expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
+        expect(server.loggerMocks.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: `Upload is not in the upload location for this registration: summaryLogId=${summaryLogId}, s3Bucket=${s3Bucket}, s3Key=${s3Key}`,
+            event: expect.objectContaining({ reference: summaryLogId })
+          })
+        )
       }
     )
   })
