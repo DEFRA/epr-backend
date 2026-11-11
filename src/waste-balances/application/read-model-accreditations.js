@@ -12,7 +12,7 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 /** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -71,6 +71,29 @@ export const indexByLedger = (
         )
       )
   )
+
+/**
+ * The registration's accreditation with the number, or undefined when it
+ * holds none.
+ *
+ * @param {RegistrationNumber} registrationNumber
+ * @param {ReadModelRegistration} registration
+ * @param {AccreditationNumber | null} accreditationNumber
+ * @returns {LedgerAccreditation | undefined}
+ */
+export const ledgerAccreditationOf = (
+  registrationNumber,
+  registration,
+  accreditationNumber
+) => {
+  const year = Object.entries(registration.accreditations).find(
+    ([, accreditation]) =>
+      accreditation.accreditationNumber === accreditationNumber
+  )?.[0]
+  return year === undefined
+    ? undefined
+    : { registrationNumber, registration, year: toYear(Number(year)) }
+}
 
 /** @type {ReadonlySet<string>} */
 const ACCREDITATION_STATUS_VALUES = new Set(Object.values(ACCREDITATION_STATUS))

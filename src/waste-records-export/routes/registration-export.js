@@ -1,6 +1,8 @@
+import Joi from 'joi'
+
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
+  findOrganisationAndRegistrationReadModels,
   registrationParams,
   registrationPath
 } from '#routes/organisations/natural-keys.js'
@@ -8,13 +10,10 @@ import { buildDownloadDisposition } from '#repositories/summary-logs/download-di
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 const CSV_EXTENSION = 'csv'
 
@@ -22,30 +21,30 @@ const CSV_EXTENSION = 'csv'
  * A registration's waste records as they stand now — the latest submission of
  * every ledger partition, the same output the admin export produces when
  * scoped to one registration, but reachable by a regulator. A registration
- * that has never submitted exports the header row alone, so there is no 404.
+ * that has never submitted exports the header row alone.
  */
-const registrationWasteRecordsExport = {
+export const registrationWasteRecordsExportByNumber = {
   method: 'GET',
+  path: `${registrationPath}/waste-records/export.csv`,
   options: {
     auth: {
       scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
     },
-    tags: ['api']
+    tags: ['api'],
+    validate: { params: Joi.object(registrationParams) }
   },
   /**
    * @param {HapiRequest & {
    *   params: RegistrationParams,
-   *   organisationsRepository: OrganisationsRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
-   *   ledgerRepository: WasteBalanceLedgerRepository,
-   *   overseasSitesRepository: OverseasSitesRepository,
-   *   app: { storedOrganisation: Organisation }
+   *   ledgerRepository: WasteBalanceLedgerRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { storedOrganisation: organisation } = request.app
+    const { organisation } =
+      await findOrganisationAndRegistrationReadModels(request)
     const { registrationNumber } = request.params
 
     // No single submission stands behind this export, so it is stamped with
@@ -53,11 +52,10 @@ const registrationWasteRecordsExport = {
     return h
       .response(
         streamCsvExportToReadable({
-          organisationsRepository: request.organisationsRepository,
+          organisationReadRepository: request.organisationReadRepository,
           summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,
-          overseasSitesRepository: request.overseasSitesRepository,
           organisation,
           registrationNumber
         })
@@ -73,9 +71,3 @@ const registrationWasteRecordsExport = {
       )
   }
 }
-
-export const registrationWasteRecordsExportByNumber = atNaturalKeys(
-  registrationWasteRecordsExport,
-  `${registrationPath}/waste-records/export.csv`,
-  registrationParams
-)

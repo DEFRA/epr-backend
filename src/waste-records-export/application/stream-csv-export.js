@@ -1,46 +1,44 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-import { resolveAccreditationByNumber } from '#domain/organisations/registration-utils.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import {
+  ledgerAccreditationOf,
+  overseasSitesOf,
+  validityOf
+} from '#waste-balances/application/read-model-accreditations.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
   buildHeaderRow,
   buildDataRow,
   buildDataFieldColumns
 } from '../domain/csv-columns.js'
-import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
-/** @import {OverseasSiteContextEntry} from '../domain/overseas-sites-context.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<OrganisationReadRepository, 'findAll'>} organisationReadRepository
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
- * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  * @property {Organisation} [organisation] - When set, export only this organisation.
  * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
  */
-
-const sortById = (a, b) => a.id.localeCompare(b.id)
 
 /**
  * @param {Pick<SummaryLogRowState, 'wasteRecordType' | 'rowId'>} a
@@ -113,54 +111,88 @@ const sortEntriesByAccreditationNumber = (a, b) =>
 const recomputedClassification = (rowState, context) =>
   reclassifyWasteRecordState(rowState, context).classification
 
+/** @type {ReclassificationContext} */
+const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
+
+/**
+ * The partition's own accreditation, held (approved or suspended) as of export
+ * time — not the registration's current link. Rows submitted under a
+ * since-cancelled accreditation or a registered-only period render as not
+ * accredited but are still exported.
+ *
+ * @param {RegistrationNumber} registrationNumber
+ * @param {Registration} registration
+ * @param {AccreditationNumber | null} accreditationNumber
+ * @returns {{ accreditationNumber: AccreditationNumber | null, context: ReclassificationContext }}
+ */
+const heldAccreditation = (
+  registrationNumber,
+  registration,
+  accreditationNumber
+) => {
+  const ledgerAccreditation = ledgerAccreditationOf(
+    registrationNumber,
+    registration,
+    accreditationNumber
+  )
+  if (
+    !ledgerAccreditation ||
+    !HELD_ACCREDITATION_STATUSES.has(
+      registration.accreditations[ledgerAccreditation.year].status.current
+    )
+  ) {
+    return { accreditationNumber: null, context: NOT_ACCREDITED }
+  }
+  return {
+    accreditationNumber,
+    context: {
+      accreditation: validityOf(ledgerAccreditation),
+      overseasSites: overseasSitesOf(ledgerAccreditation)
+    }
+  }
+}
+
 /**
  * Yield one CSV row per row state of a single ledger partition, ordered by
  * `(wasteRecordType, rowId)`.
  *
  * @param {Object} input
  * @param {Organisation} input.org
+ * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
  * @param {WasteBalanceLedgerId} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
- * @param {Record<string, OverseasSiteContextEntry>} input.overseasSites
  * @param {string[]} input.dataFieldColumns
  * @returns {AsyncGenerator<string>}
  */
 async function* streamPartitionRows({
   org,
+  registrationNumber,
   registration,
   ledgerId,
   rowStates,
   summaryLogEntry,
-  overseasSites,
   dataFieldColumns
 }) {
-  // The Accredited columns read the partition's own accreditation, resolved
-  // active-only (approved/suspended) as of export time — not the
-  // registration's current link. Rows submitted under a since-cancelled
-  // accreditation or a registered-only period render as not accredited but are
-  // still exported.
-  const accreditation = resolveAccreditationByNumber(
-    ledgerId.accreditationNumber,
-    org
+  const { accreditationNumber, context } = heldAccreditation(
+    registrationNumber,
+    registration,
+    ledgerId.accreditationNumber
   )
 
   for (const rowState of [...rowStates].sort(sortRowStates)) {
     yield await encodeRow(
       buildDataRow({
         org,
+        registrationNumber,
         registration,
-        accreditation,
+        accreditationNumber,
         data: coerceForExport(rowState),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
-        classification: recomputedClassification(rowState, {
-          accreditation,
-          overseasSites
-        }),
+        classification: recomputedClassification(rowState, context),
         summaryLogEntry,
-        overseasSites,
         dataFieldColumns
       })
     )
@@ -170,9 +202,9 @@ async function* streamPartitionRows({
 /**
  * @typedef {Object} RegistrationRowsContext
  * @property {Organisation} org
+ * @property {RegistrationNumber} registrationNumber
  * @property {Registration} registration
  * @property {Map<string, { submittedAt: string }>} summaryLogMap
- * @property {Record<string, OverseasSiteContextEntry>} overseasSites
  * @property {string[]} dataFieldColumns
  */
 
@@ -219,9 +251,9 @@ async function* streamLatestSubmissionRows({
  *
  * @param {Object} input
  * @param {Organisation} input.org
+ * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
- * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAll'>} input.summaryLogsRepository
@@ -229,9 +261,9 @@ async function* streamLatestSubmissionRows({
  */
 async function* streamRegistrationRows({
   org,
+  registrationNumber,
   registration,
   entries,
-  sitesById,
   dataFieldColumns,
   summaryLogRowStatesRepository,
   summaryLogsRepository
@@ -242,18 +274,36 @@ async function* streamRegistrationRows({
 
   yield* streamLatestSubmissionRows({
     org,
+    registrationNumber,
     registration,
     dataFieldColumns,
-    overseasSites: buildOverseasSitesContext(registration, sitesById),
-    summaryLogMap: await loadSummaryLogMap(
-      summaryLogsRepository,
-      org,
-      registration
-    ),
+    summaryLogMap: await loadSummaryLogMap(summaryLogsRepository, org, {
+      registrationNumber
+    }),
     entries,
     summaryLogRowStatesRepository
   })
 }
+
+/**
+ * The organisation's registrations by number, ascending, narrowed to one when
+ * `only` is given.
+ *
+ * @param {Organisation} org
+ * @param {RegistrationNumber} [only]
+ * @returns {[RegistrationNumber, Registration][]}
+ */
+const registrationsInOrder = (org, only) =>
+  Object.entries(org.registrations)
+    .map(
+      ([number, registration]) =>
+        /** @type {[RegistrationNumber, Registration]} */ ([
+          toRegistrationNumber(number),
+          registration
+        ])
+    )
+    .filter(([number]) => !only || number === only)
+    .sort(([a], [b]) => a.localeCompare(b))
 
 /**
  * Yields CSV-encoded lines (header first, then one per row state).
@@ -274,22 +324,19 @@ async function* streamRegistrationRows({
  */
 export async function* streamCsvExport(deps) {
   const {
-    organisationsRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository,
-    overseasSitesRepository,
     organisation,
-    registrationNumber
+    registrationNumber: onlyRegistration
   } = deps
 
-  const [allSites, observedKeys, latestSubmittedEntries] = await Promise.all([
-    overseasSitesRepository.findAll(),
+  const [observedKeys, latestSubmittedEntries] = await Promise.all([
     summaryLogRowStatesRepository.findDistinctDataKeys(),
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
   ])
 
-  const sitesById = new Map(allSites.map((s) => [s.id, s]))
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
@@ -297,26 +344,20 @@ export async function* streamCsvExport(deps) {
 
   const orgsSorted = organisation
     ? [organisation]
-    : await findExportableOrgs(organisationsRepository)
+    : await findExportableOrgs(organisationReadRepository)
   for (const org of orgsSorted) {
-    const registrations = [...(org.registrations ?? [])]
-      .filter(
-        (reg) =>
-          !registrationNumber || reg.registrationNumber === registrationNumber
-      )
-      .sort(sortById)
-    for (const registration of registrations) {
+    for (const [registrationNumber, registration] of registrationsInOrder(
+      org,
+      onlyRegistration
+    )) {
       yield* streamRegistrationRows({
         org,
+        registrationNumber,
         registration,
         entries:
           entriesByRegistration.get(
-            registrationKey(
-              org.organisationNumber,
-              String(registration.registrationNumber)
-            )
+            registrationKey(org.organisationNumber, registrationNumber)
           ) ?? [],
-        sitesById,
         dataFieldColumns,
         summaryLogRowStatesRepository,
         summaryLogsRepository
@@ -360,14 +401,19 @@ const groupByRegistration = (entries) => {
 }
 
 /**
- * Every non-test organisation, sorted by id for deterministic output.
+ * Every non-test organisation, by organisation number.
  *
- * @param {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationReadRepository, 'findAll'>} organisationReadRepository
  * @returns {Promise<Organisation[]>}
  */
-async function findExportableOrgs(organisationsRepository) {
-  const orgs = await organisationsRepository.findAll()
-  return orgs.filter((org) => !isTestOrganisation(org)).sort(sortById)
+async function findExportableOrgs(organisationReadRepository) {
+  const orgs = await organisationReadRepository.findAll()
+  return orgs
+    .filter(
+      ({ organisationNumber }) =>
+        !TEST_ORGANISATION_NUMBERS.has(organisationNumber)
+    )
+    .sort((a, b) => a.organisationNumber.localeCompare(b.organisationNumber))
 }
 
 /**

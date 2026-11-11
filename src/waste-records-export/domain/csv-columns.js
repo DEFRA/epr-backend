@@ -1,5 +1,5 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   materialFromSpreadsheet,
   metaText
@@ -13,8 +13,9 @@ import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocess
 import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
@@ -176,16 +177,25 @@ const buildDataCells = (data, dataFieldColumns) =>
   })
 
 /**
+ * @param {ReadModelRegistration} registration
+ * @param {string | number | undefined} orsId
+ */
+const overseasSiteOf = (registration, orsId) =>
+  orsId && registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+    ? registration.overseasSites[zeroPadOrsId(orsId)]
+    : undefined
+
+/**
  * @typedef {Object} BuildDataRowInput
- * @property {Organisation} org
- * @property {Registration} registration
- * @property {Accreditation | null} accreditation
+ * @property {Pick<ReadModelOrganisation, 'name'>} org
+ * @property {RegistrationNumber} registrationNumber
+ * @property {ReadModelRegistration} registration
+ * @property {AccreditationNumber | null} accreditationNumber - The partition's held accreditation, if any.
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
  * @property {WasteRecordType} wasteRecordType
  * @property {string} rowId
  * @property {RowClassification} classification - The row's waste-balance classification.
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {Record<string, import('./overseas-sites-context.js').OverseasSiteContextEntry>} [overseasSites]
  * @property {string[]} dataFieldColumns
  */
 
@@ -200,46 +210,40 @@ const buildDataCells = (data, dataFieldColumns) =>
  * derived against current context — is the caller's decision.
  *
  * The derived OSR columns (OSR_COUNTRY_REVISED / OSR_NAME_REVISED) sit at the
- * end of the metadata prefix and are looked up from the approved
- * overseas-sites context by the row's OSR_ID. They are blank when the row has
- * no OSR_ID or no matching approved site is found — which also leaves them
- * blank for reprocessor rows, whose registrations carry no overseas sites.
+ * end of the metadata prefix and are the exporter registration's overseas site
+ * named by the row's OSR_ID; blank when there is none.
  *
  * @param {BuildDataRowInput} input
  * @returns {(string | number)[]}
  */
 export const buildDataRow = ({
   org,
+  registrationNumber,
   registration,
-  accreditation,
+  accreditationNumber,
   data,
   wasteRecordType,
   rowId,
   classification,
   summaryLogEntry,
-  overseasSites,
   dataFieldColumns
 }) => {
-  const accredited = accreditation !== null ? 'Yes' : 'No'
-
-  const orsDetails = data.OSR_ID
-    ? overseasSites?.[zeroPadOrsId(data.OSR_ID)]
-    : undefined
+  const site = overseasSiteOf(registration, data.OSR_ID)
 
   const metadata = [
-    uppercaseString(registration.submittedToRegulator),
-    org.companyDetails.name,
-    registration.registrationNumber ?? '',
-    resolveMaterial(registration),
+    uppercaseString(registration.submittedToRegulator.code),
+    org.name,
+    registrationNumber,
+    registration.material,
     data.processingType,
-    accredited,
-    accreditation?.accreditationNumber ?? '',
+    accreditationNumber === null ? 'No' : 'Yes',
+    accreditationNumber ?? '',
     wasteRecordType,
     summaryLogEntry?.submittedAt ?? '',
     ...buildWasteBalanceCells(classification),
     String(rowId),
-    orsDetails?.country ?? '',
-    orsDetails?.siteName ?? ''
+    site?.address.country ?? '',
+    site?.name ?? ''
   ]
 
   return [...metadata, ...buildDataCells(data, dataFieldColumns)].map(
