@@ -12,6 +12,7 @@ import {
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 export const SITE_FINDING = Object.freeze({
   FULL_ADDRESS_ONLY: 'fullAddressOnly',
@@ -24,7 +25,7 @@ export const SITE_FINDING = Object.freeze({
  *
  * @typedef {Object} SiteAddressRow
  * @property {typeof SITE_FINDING[keyof typeof SITE_FINDING]} finding
- * @property {number} orgId
+ * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} registrationNumber
  * @property {string} [accreditationNumber]
@@ -222,7 +223,7 @@ const checkRegistration = (organisation, registration, context) => {
   }
   const { registrationNumber, address, accreditations } = served
   const identity = {
-    orgId: organisation.orgId,
+    organisationNumber: organisation.organisationNumber,
     testOrganisation: isTestOrganisation(organisation),
     registrationNumber
   }

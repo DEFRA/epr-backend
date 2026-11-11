@@ -16,6 +16,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
@@ -33,7 +34,7 @@ describe('csv-columns', () => {
   /** @type {Organisation} */
   const orgFixture = {
     id: 'org-1',
-    orgId: 500001,
+    organisationNumber: toOrganisationNumber('500001'),
     accreditations: [],
     registrations: [],
     companyDetails: { name: 'Acme Ltd' },

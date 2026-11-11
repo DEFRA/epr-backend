@@ -1,3 +1,4 @@
+import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { generateSummaryLogUploadsReport } from '#application/summary-log-uploads-report/generate-report.js'
@@ -48,7 +49,17 @@ export const getSummaryLogUploadsReport = {
         }
       })
 
-      return h.response(reportData).code(StatusCodes.OK)
+      return h
+        .response({
+          ...reportData,
+          summaryLogUploads: reportData.summaryLogUploads.map(
+            ({ organisationNumber, ...row }) => ({
+              ...row,
+              orgId: toWireOrgId(organisationNumber)
+            })
+          )
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,

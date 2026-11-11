@@ -41,7 +41,7 @@ import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 /**
@@ -237,7 +237,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} */ {
+    /** @type {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} */ {
       accreditation,
       overseasSites
     }

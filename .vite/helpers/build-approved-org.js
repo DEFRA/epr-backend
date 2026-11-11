@@ -16,7 +16,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 /**
- * Approves organisations built by the caller's builders, so they draw orgIds
+ * Approves organisations built by the caller's builders, so they draw numbers
  * from the same sequence as the caller's other organisations.
  *
  * @param {OrganisationBuilders} builders
@@ -48,7 +48,8 @@ export const createApprovedOrgBuilder =
         ...org.accreditations[0],
         status: ACCREDITATION_STATUS.APPROVED,
         accreditationNumber:
-          org.accreditations[0].accreditationNumber || `ACC${org.orgId}`,
+          org.accreditations[0].accreditationNumber ||
+          `ACC${org.organisationNumber}`,
         validFrom: VALID_FROM,
         reprocessingType: REPROCESSING_TYPE.INPUT,
         validTo: VALID_TO
@@ -61,7 +62,7 @@ export const createApprovedOrgBuilder =
         cbduNumber:
           /** @type {RegistrationOther} */ (org.registrations[0]).cbduNumber ||
           'CBDU123456',
-        registrationNumber: `REG${org.orgId}`,
+        registrationNumber: `REG${org.organisationNumber}`,
         reprocessingType: REPROCESSING_TYPE.INPUT,
         validFrom: VALID_FROM,
         validTo: VALID_TO

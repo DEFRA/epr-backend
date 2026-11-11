@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { toMigratedOrganisation } from './organisation-number.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   linkItemsToOrganisations,
@@ -75,7 +76,9 @@ export class MigrationOrchestrator {
         async (orgId) =>
           /** @type {const} */ ([
             orgId,
-            await this.organisationsRepository.findById(orgId)
+            toMigratedOrganisation(
+              await this.organisationsRepository.findById(orgId)
+            )
           ])
       )
     )

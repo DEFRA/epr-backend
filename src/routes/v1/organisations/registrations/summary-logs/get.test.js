@@ -49,7 +49,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const makeRequest = (server) =>
     server.inject({
       method: 'GET',
-      url: `/organisations/${organisation.orgId}/registrations/${registration.registrationNumber}/summary-logs/${summaryLogId}`,
+      url: `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs/${summaryLogId}`,
       ...asOperator()
     })
 

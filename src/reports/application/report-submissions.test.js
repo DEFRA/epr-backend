@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,6 +21,13 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { config } from '#root/config.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
@@ -452,7 +460,7 @@ afterEach(() => {
 
 const buildOrg = (overrides = {}) => ({
   id: 'org-1',
-  orgId: 500010,
+  organisationNumber: toOrganisationNumber('500010'),
   companyDetails: { name: 'Acme Ltd' },
   statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
   submittedToRegulator: 'ea',
@@ -510,9 +518,17 @@ const buildAccreditationMock = (overrides = {}) => ({
  *
  * @param {object[]} orgs
  * @param {{ warn: (...args: any[]) => void }} [logger]
+ * @param {ExternalAccreditation[]} [externalAccreditations]
  */
-const makeOrgsRepo = (orgs, logger = { warn: () => {} }) =>
-  createInMemoryOrganisationReadRepository(/** @type {any[]} */ (orgs))({
+const makeOrgsRepo = (
+  orgs,
+  logger = { warn: () => {} },
+  externalAccreditations = []
+) =>
+  createInMemoryOrganisationReadRepository(
+    /** @type {any[]} */ (orgs),
+    externalAccreditations
+  )({
     overseasSitesRepository: { findByIds: async () => [] },
     logger
   })
@@ -671,6 +687,31 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(row.reportType).toBe('Monthly')
   })
 
+  it('uses monthly cadence and the accreditationNumber of an accreditation held outside re-ex', async () => {
+    const org = buildOrg({
+      registrations: [buildRegistrationMock({ status: 'approved' })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org], undefined, [
+        buildExternalAccreditation({
+          registrationNumber: toRegistrationNumber('REG-001'),
+          year: toYear(2026),
+          accreditationNumber: toAccreditationNumber('ACC-EXT'),
+          status: {
+            current: 'approved',
+            timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          }
+        })
+      ]),
+      makeReportsRepo()
+    )
+
+    const row = result.reportSubmissions[0]
+    expect(row.accreditationNumber).toBe('ACC-EXT')
+    expect(row.reportType).toBe('Monthly')
+  })
+
   it('formats accreditationNumber as empty for registered only operator', async () => {
     const org = buildOrg({
       registrations: [
@@ -718,13 +759,13 @@ describe('generateReportSubmissions (edge cases)', () => {
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
-      orgId: 999999,
+      organisationNumber: toOrganisationNumber('999999'),
       companyDetails: { name: 'Test Org Ltd' },
       registrations: [buildRegistrationMock({ status: 'approved' })]
     })
     const normalOrg = buildOrg({
       id: 'org-2',
-      orgId: 500001,
+      organisationNumber: toOrganisationNumber('500001'),
       companyDetails: { name: 'Normal Org Ltd' },
       registrations: [buildRegistrationMock({ status: 'approved' })]
     })

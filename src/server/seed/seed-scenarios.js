@@ -20,8 +20,8 @@ import {
   USER_ROLES
 } from '#domain/organisations/model.js'
 import {
-  organisationNumberOf,
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -35,17 +35,18 @@ import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 /**
- * Well-known orgIds for seed scenarios.
+ * Well-known organisation numbers for seed scenarios.
  * These are fixed to enable idempotent seeding.
  */
-export const SCENARIO_ORG_IDS = Object.freeze({
-  APPROVED: 50020,
-  ACTIVE: 50030,
-  ACTIVE_WITH_SUSPENDED_ACCREDITATION: 50040
+export const SCENARIO_ORGANISATION_NUMBERS = Object.freeze({
+  APPROVED: toOrganisationNumber('50020'),
+  ACTIVE: toOrganisationNumber('50030'),
+  ACTIVE_WITH_SUSPENDED_ACCREDITATION: toOrganisationNumber('50040')
 })
 
 /**
@@ -65,7 +66,7 @@ const getApprovedTesterEmail = () =>
 
 // Constants for CBDU number formatting
 const CBDU_PREFIX = 'CBDU'
-const CBDU_ORG_ID_DIGITS = 4
+const CBDU_ORGANISATION_NUMBER_DIGITS = 4
 const SUFFIX_LENGTH = 3
 
 /**
@@ -73,12 +74,12 @@ const SUFFIX_LENGTH = 3
  * digits (PAE-2041).
  * @param {'R' | 'A'} prefix
  * @param {string} validFrom
- * @param {number} orgId
+ * @param {OrganisationNumber} organisationNumber
  * @param {number} sequenceNumber
  * @returns {string}
  */
-const seededNumber = (prefix, validFrom, orgId, sequenceNumber) =>
-  `${prefix}${validFrom.slice(2, 4)}${orgId}${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`
+const seededNumber = (prefix, validFrom, organisationNumber, sequenceNumber) =>
+  `${prefix}${validFrom.slice(2, 4)}${organisationNumber}${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`
 
 /**
  * Creates approved registrations with unique numbers for all items
@@ -105,7 +106,9 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
       accreditationId = exporterAcc?.id
     }
 
-    const orgIdSuffix = String(org.orgId).slice(-CBDU_ORG_ID_DIGITS)
+    const organisationNumberSuffix = org.organisationNumber.slice(
+      -CBDU_ORGANISATION_NUMBER_DIGITS
+    )
     const sequenceNumber = index + 1
 
     return {
@@ -113,9 +116,9 @@ function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
       ...(accreditationId && { accreditationId }),
       status: REGISTRATION_STATUS.APPROVED,
       registrationNumber: toRegistrationNumber(
-        seededNumber('R', VALID_FROM, org.orgId, sequenceNumber)
+        seededNumber('R', VALID_FROM, org.organisationNumber, sequenceNumber)
       ),
-      cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
+      cbduNumber: `${CBDU_PREFIX}${organisationNumberSuffix}${sequenceNumber}`,
       ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: VALID_FROM,
       ...(index === 0 && {
@@ -157,7 +160,7 @@ function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
         ? ACCREDITATION_STATUS.APPROVED
         : ACCREDITATION_STATUS.CREATED,
       accreditationNumber: toAccreditationNumber(
-        seededNumber('A', VALID_FROM, org.orgId, index + 1)
+        seededNumber('A', VALID_FROM, org.organisationNumber, index + 1)
       ),
       ...(isReprocessor &&
         isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
@@ -327,36 +330,38 @@ async function buildActiveOrgWithSuspendedAccreditation(
 /**
  * Scenario definitions for seed data
  *
- * @type {Record<string, {orgId: number, description: string, build: (repo: OrganisationsRepository) => Promise<object>}>}
+ * @type {Record<string, {organisationNumber: OrganisationNumber, description: string, build: (repo: OrganisationsRepository) => Promise<object>}>}
  */
 const SEED_SCENARIOS = {
   approved_organisation: {
-    orgId: SCENARIO_ORG_IDS.APPROVED,
+    organisationNumber: SCENARIO_ORGANISATION_NUMBERS.APPROVED,
     description:
       'Approved organisation with approved registration and accreditation',
     build: (repo) =>
       buildApprovedOrgForSeed(repo, {
-        orgId: SCENARIO_ORG_IDS.APPROVED
+        organisationNumber: SCENARIO_ORGANISATION_NUMBERS.APPROVED
       })
   },
 
   active_organisation: {
-    orgId: SCENARIO_ORG_IDS.ACTIVE,
+    organisationNumber: SCENARIO_ORGANISATION_NUMBERS.ACTIVE,
     description:
       'Active organisation linked to DefraId with approved registration/accreditation',
     build: (repo) =>
       buildActiveOrgForSeed(repo, {
-        orgId: SCENARIO_ORG_IDS.ACTIVE
+        organisationNumber: SCENARIO_ORGANISATION_NUMBERS.ACTIVE
       })
   },
 
   active_with_suspended_accreditation: {
-    orgId: SCENARIO_ORG_IDS.ACTIVE_WITH_SUSPENDED_ACCREDITATION,
+    organisationNumber:
+      SCENARIO_ORGANISATION_NUMBERS.ACTIVE_WITH_SUSPENDED_ACCREDITATION,
     description:
       'Active organisation with approved registration but suspended accreditation',
     build: (repo) =>
       buildActiveOrgWithSuspendedAccreditation(repo, {
-        orgId: SCENARIO_ORG_IDS.ACTIVE_WITH_SUSPENDED_ACCREDITATION
+        organisationNumber:
+          SCENARIO_ORGANISATION_NUMBERS.ACTIVE_WITH_SUSPENDED_ACCREDITATION
       })
   }
 }
@@ -365,14 +370,15 @@ const SEED_SCENARIOS = {
  * Seeds EPR organisation state variations programmatically
  *
  * Only seeds if the scenarios don't already exist in the database.
- * Uses fixed orgIds to enable idempotent seeding.
+ * Uses fixed organisation numbers to enable idempotent seeding.
  *
  * @param {OrganisationsRepository} organisationsRepository
  * @returns {Promise<void>}
  */
 export async function createEprOrganisationScenarios(organisationsRepository) {
-  const scenarioOrganisationNumbers =
-    Object.values(SEED_SCENARIOS).map(organisationNumberOf)
+  const scenarioOrganisationNumbers = Object.values(SEED_SCENARIOS).map(
+    ({ organisationNumber }) => organisationNumber
+  )
 
   const existingScenarios =
     await organisationsRepository.findByOrganisationNumbers(
@@ -394,7 +400,7 @@ export async function createEprOrganisationScenarios(organisationsRepository) {
     try {
       await scenario.build(organisationsRepository)
       logger.info({
-        message: `Seed scenarios: created ${name} (orgId: ${scenario.orgId})`
+        message: `Seed scenarios: created ${name} (organisationNumber: ${scenario.organisationNumber})`
       })
     } catch (error) {
       logger.error({

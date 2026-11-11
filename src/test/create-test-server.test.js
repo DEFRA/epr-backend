@@ -69,7 +69,11 @@ describe('createTestServer', () => {
     })
 
     it('supports mock repositories for behaviour verification', async () => {
-      const mockOrg = { id: '6507f1f77bcf86cd79943901', name: 'Mock Org' }
+      const mockOrg = {
+        id: '6507f1f77bcf86cd79943901',
+        name: 'Mock Org',
+        organisationNumber: '500001'
+      }
       const mockOrganisationsRepository = {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
@@ -85,7 +89,11 @@ describe('createTestServer', () => {
       })
 
       expect(response.statusCode).toBe(200)
-      expect(JSON.parse(response.payload)).toEqual(mockOrg)
+      expect(JSON.parse(response.payload)).toEqual({
+        id: mockOrg.id,
+        name: mockOrg.name,
+        orgId: 500001
+      })
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrg.id
       )

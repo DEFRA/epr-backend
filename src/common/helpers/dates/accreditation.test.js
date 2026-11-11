@@ -431,7 +431,6 @@ describe('accreditation date helpers', () => {
       expect(
         isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], {
           ...accreditation,
-          status: 'created',
           validFrom: undefined,
           validTo: undefined
         })

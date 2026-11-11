@@ -56,7 +56,7 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result.id).toBe(org1.id)
-      expect(result.orgId).toBe(org1.orgId)
+      expect(result.orgId).toBe(Number(org1.organisationNumber))
     })
 
     it('returns the organisation found by its organisation number', async () => {
@@ -68,7 +68,7 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org2.orgId}`,
+        url: `/v1/organisations/${org2.organisationNumber}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }

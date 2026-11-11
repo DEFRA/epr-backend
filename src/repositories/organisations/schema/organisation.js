@@ -29,6 +29,13 @@ import {
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
 
+/** The orgId an organisation is stored under, which is its organisation number. */
+export const storedOrgIdSchema = Joi.number()
+  .strict()
+  .integer()
+  .min(1)
+  .required()
+
 export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array()
     .items(accreditationSchema)
@@ -46,7 +53,7 @@ export const organisationInsertSchema = Joi.object({
   id: idSchema,
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional(),
   managementContactDetails: userSchema.optional(),
-  orgId: Joi.number().required(),
+  orgId: storedOrgIdSchema,
   partnership: partnershipSchema.optional(),
   registrations: Joi.array()
     .items(registrationSchema)
@@ -106,12 +113,13 @@ export const organisationReplaceSchema = organisationInsertSchema
   })
 
 /**
- * Schema for normalising organisation documents read from the database.
- * Ensures array fields are never undefined by applying defaults.
- * Allows all other fields through unchanged - full validation is the
- * responsibility of the write path; read path just normalises.
+ * Schema for organisation documents read from the database. Refuses a document
+ * whose orgId is not an organisation number, and ensures array fields are
+ * never undefined by applying defaults. Allows all other fields through
+ * unchanged - full validation is the responsibility of the write path.
  */
 export const organisationReadSchema = Joi.object({
+  orgId: storedOrgIdSchema,
   registrations: Joi.array().default([]),
   accreditations: Joi.array().default([]),
   users: Joi.array().default([])

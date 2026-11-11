@@ -27,7 +27,7 @@ import {
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
  * Table schema for REPROCESSED_LOADS (REPROCESSOR_OUTPUT)
@@ -93,7 +93,9 @@ export const REPROCESSED_LOADS = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
+    /** @type {{ accreditation: AccreditationValidity | null }} */ {
+      accreditation
+    }
   ) => {
     const requiredFields = [
       FIELDS.PRODUCT_TONNAGE,

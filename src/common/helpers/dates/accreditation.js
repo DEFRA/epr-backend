@@ -5,7 +5,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {AccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
@@ -35,7 +35,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * *given date* falls inside the window (see `isSuspendedOrCancelledAtDate`),
  * not whether a window exists at all.
  *
- * @param {Accreditation} accreditation
+ * @param {AccreditationValidity} accreditation
  * @returns {AccreditationWindow | null}
  */
 export function accreditationWindow({ validFrom, validTo }) {
@@ -50,7 +50,7 @@ export function accreditationWindow({ validFrom, validTo }) {
 /**
  * Checks if all dates are accredited
  * @param { (Date|string)[] } dates - The date to check
- * @param { Accreditation | null | undefined } accreditation
+ * @param { AccreditationValidity | null | undefined } accreditation
  * @returns { boolean } True if accredited at date
  */
 export function isAccreditedAtDates(dates, accreditation) {

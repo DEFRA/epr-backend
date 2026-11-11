@@ -106,22 +106,24 @@ describe('runPrnSiteAddressDiagnostic', () => {
     await runPrnSiteAddressDiagnostic(server)
 
     expect(findExternalAccreditations).toHaveBeenCalledWith(server.db, [
-      expect.objectContaining({ orgId: organisation.orgId })
+      expect.objectContaining({
+        organisationNumber: organisation.organisationNumber
+      })
     ])
     expect(vi.mocked(logger.info).mock.calls).toStrictEqual([
       [
         {
-          message: `PRN site address finding: finding=siteDiffers differs=line1 orgId=${organisation.orgId} testOrganisation=false registrationNumber=${REPROCESSOR_NUMBER} accreditationNumber=${ACCREDITATION_NUMBER} year=2026 status=approved`
+          message: `PRN site address finding: finding=siteDiffers differs=line1 organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=${REPROCESSOR_NUMBER} accreditationNumber=${ACCREDITATION_NUMBER} year=2026 status=approved`
         }
       ],
       [
         {
-          message: `PRN site address finding: finding=noAccreditationSite orgId=${organisation.orgId} testOrganisation=false registrationNumber=R26ER5001180043PL accreditationNumber=A27ER5001180114PL year=2027 status=approved`
+          message: `PRN site address finding: finding=noAccreditationSite organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180043PL accreditationNumber=A27ER5001180114PL year=2027 status=approved`
         }
       ],
       [
         {
-          message: `PRN site address finding: finding=fullAddressOnly orgId=${organisation.orgId} testOrganisation=false registrationNumber=R26ER5001180044PL hasLine1=false hasTown=false hasPostcode=false accreditations=0 heldAccreditations=0`
+          message: `PRN site address finding: finding=fullAddressOnly organisationNumber=${organisation.organisationNumber} testOrganisation=false registrationNumber=R26ER5001180044PL hasLine1=false hasTown=false hasPostcode=false accreditations=0 heldAccreditations=0`
         }
       ],
       [

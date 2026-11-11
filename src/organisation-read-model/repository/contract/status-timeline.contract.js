@@ -1,5 +1,4 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,
@@ -51,7 +50,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -86,7 +85,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -117,7 +116,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -149,7 +148,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -179,7 +178,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -208,7 +207,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -240,7 +239,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -272,7 +271,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(
@@ -302,7 +301,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation).toMatchObject({
@@ -333,7 +332,7 @@ export const testStatusTimelineBehaviour = (it) => {
 
       const organisation = await findOrganisation(
         repository,
-        String(stored.orgId)
+        stored.organisationNumber
       )
 
       expect(organisation.status.current).toBe('active')
@@ -359,13 +358,11 @@ export const testStatusTimelineBehaviour = (it) => {
       })
 
       expect(
-        await repository.findByOrganisationNumber(
-          toOrganisationNumber(String(stored.orgId))
-        )
+        await repository.findByOrganisationNumber(stored.organisationNumber)
       ).toBeNull()
       expect(logger.warn).toHaveBeenCalledWith({
         message: expect.stringContaining(
-          `Organisation ${stored.orgId} has status undefined`
+          `Organisation ${stored.organisationNumber} has status undefined`
         )
       })
     })

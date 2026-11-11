@@ -17,6 +17,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -31,7 +32,7 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 
 const organisationId = '507f1f77bcf86cd799439011'
 const registrationId = '507f1f77bcf86cd799439012'
-const orgId = 500123
+const organisationNumber = toOrganisationNumber('500123')
 const registrationNumber = REPROCESSOR_NUMBER
 
 const createFileDetails = (overrides) => ({
@@ -53,14 +54,14 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
 })
 
 const uploadCompletedUrl = (year, summaryLogId) =>
-  `/organisations/${orgId}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
+  `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
     partialMock(
       buildOrganisation({
         id: organisationId,
-        orgId,
+        organisationNumber,
         registrations: [reprocessor({ id: registrationId })]
       })
     )
@@ -126,7 +127,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId,
       year: 2026,
       accreditationId: null,
-      organisationNumber: String(orgId),
+      organisationNumber,
       registrationNumber,
       accreditationNumber: null
     })
@@ -196,7 +197,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${accreditedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -228,7 +229,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${unnumberedOrganisation.orgId}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
         payload: createCompletePayload('file-unnumbered')
       })
 

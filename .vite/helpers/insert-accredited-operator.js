@@ -47,7 +47,7 @@ export const storedMaterial = (material) =>
 
 /**
  * Inserts accredited operators built by the caller's builders, so they draw
- * orgIds from the same sequence as the caller's other organisations.
+ * numbers from the same sequence as the caller's other organisations.
  *
  * @param {OrganisationBuilders} builders
  */

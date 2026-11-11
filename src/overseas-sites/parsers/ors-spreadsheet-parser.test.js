@@ -177,7 +177,7 @@ describe('ORS spreadsheet parser', () => {
 
       expect(result.metadata).toEqual({
         packagingWasteCategory: 'Steel',
-        orgId: '500065',
+        organisationNumber: '500065',
         registrationNumber: 'R26EX5000650066ST',
         accreditationNumber: 'A26EX5000650032ST'
       })
@@ -191,7 +191,7 @@ describe('ORS spreadsheet parser', () => {
 
       const result = await parse(buffer)
 
-      expect(result.metadata.orgId).toBe('500065')
+      expect(result.metadata.organisationNumber).toBe('500065')
     })
   })
 
@@ -784,7 +784,7 @@ describe('ORS spreadsheet parser', () => {
 
       expect(result.metadata).toEqual({
         packagingWasteCategory: 'Steel',
-        orgId: '100001',
+        organisationNumber: '100001',
         registrationNumber: 'R26EX1000010001ST',
         accreditationNumber: 'A26EX1000010001ST'
       })

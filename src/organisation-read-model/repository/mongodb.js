@@ -86,18 +86,21 @@ export const createOrganisationReadRepository = (
       return organisation ?? null
     },
 
-    find: async ({ organisationNumber, ...params }) => {
-      const { items, ...page } = await findPage(db, {
-        ...params,
-        orgId: organisationNumber
-      })
+    find: async (params) => {
+      const { items, ...page } = await findPage(db, params)
       return {
         ...page,
         items: await toReadModelOrganisations(items, [], dependencies)
       }
     },
 
-    findAll: async () =>
-      toReadModelOrganisations(await findAll(db), [], dependencies)
+    findAll: async () => {
+      const stored = await findAll(db)
+      return toReadModelOrganisations(
+        stored,
+        await findExternalAccreditations(db, stored),
+        dependencies
+      )
+    }
   })
 }

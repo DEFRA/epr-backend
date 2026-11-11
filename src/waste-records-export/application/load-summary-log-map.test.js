@@ -1,7 +1,10 @@
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-const organisation = { orgId: 500001 }
+const organisation = { organisationNumber: toOrganisationNumber('500001') }
 const registration = { registrationNumber: toRegistrationNumber('REG-1') }
 
 describe('loadSummaryLogMap', () => {

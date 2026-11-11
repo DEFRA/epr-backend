@@ -3,17 +3,18 @@ import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation, OrganisationStatus} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
-const ORG_ID_START = 500000
+const FIRST_ORGANISATION_NUMBER = 500000
 
 /**
  * Generates date constants for validFrom/validTo in YYYY-MM-DD format
@@ -100,10 +101,19 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 /**
- * @param {number} orgId
+ * The fixture file stores the number as `orgId`, as the database does.
+ *
+ * @template {{ orgId: number }} T
+ * @param {T} fixture
+ * @returns {Omit<T, 'orgId'>}
+ */
+const withoutOrgId = ({ orgId: _, ...rest }) => rest
+
+/**
+ * @param {OrganisationNumber} organisationNumber
  * @returns {Omit<Organisation, 'status'>}
  */
-const buildOrganisationWithOrgId = (orgId, overrides = {}) => {
+const buildNumberedOrganisation = (organisationNumber, overrides = {}) => {
   // Build a mapping from old accreditation IDs to new ones
   // This ensures registration.accreditationId links are preserved
   const accreditationIdMap = new Map()
@@ -138,8 +148,8 @@ const buildOrganisationWithOrgId = (orgId, overrides = {}) => {
   }))
 
   const org = {
-    ...org1,
-    orgId,
+    ...withoutOrgId(org1),
+    organisationNumber,
     id: new ObjectId().toString(),
     formSubmission: {
       id: org1.formSubmission.id,
@@ -241,21 +251,22 @@ const registrationOverrides = (registration, accreditationStatus) => {
 }
 
 /**
- * Builds organisations whose orgIds come from one sequence, which nextOrgId
- * also hands out. Organisations built by one set of builders never share an
- * orgId, so a test that starts from an empty repository can insert them
- * without hitting the repository's unique orgId index.
+ * Builds organisations whose numbers come from one sequence, which
+ * nextOrganisationNumber also hands out. Organisations built by one set of
+ * builders never share a number, so a test that starts from an empty
+ * repository can insert them without hitting the repository's unique index on
+ * the number.
  */
 export const createOrganisationBuilders = () => {
-  let lastOrgId = ORG_ID_START - 1
-  const nextOrgId = () => {
-    lastOrgId += 1
-    return lastOrgId
+  let lastNumber = FIRST_ORGANISATION_NUMBER - 1
+  const nextOrganisationNumber = () => {
+    lastNumber += 1
+    return toOrganisationNumber(String(lastNumber))
   }
 
   /** @returns {Omit<Organisation, 'status'>} */
   const buildOrganisation = (overrides = {}) =>
-    buildOrganisationWithOrgId(nextOrgId(), overrides)
+    buildNumberedOrganisation(nextOrganisationNumber(), overrides)
 
   /**
    * Builds an organisation with a known company name.
@@ -270,20 +281,25 @@ export const createOrganisationBuilders = () => {
    *
    * @param {{
    *   name?: string,
-   *   orgId?: number,
+   *   organisationNumber?: OrganisationNumber,
    *   registrationNumber?: string,
    *   accreditationNumber?: string
    * }} [criteria]
    */
   const buildOrgWithCriteria = ({
     name = 'Criteria Ltd',
-    orgId,
+    organisationNumber,
     ...numbers
   } = {}) =>
-    withCriteria(buildOrganisation(orgId === undefined ? {} : { orgId }), {
-      name,
-      ...numbers
-    })
+    withCriteria(
+      buildOrganisation(
+        organisationNumber === undefined ? {} : { organisationNumber }
+      ),
+      {
+        name,
+        ...numbers
+      }
+    )
 
   /**
    * Builds an organisation as returned from a repository read. Use this for
@@ -334,7 +350,9 @@ export const createOrganisationBuilders = () => {
   }) =>
     buildOrganisation({
       id: organisationId,
-      ...(organisationNumber && { orgId: Number(organisationNumber) }),
+      ...(organisationNumber && {
+        organisationNumber: toOrganisationNumber(organisationNumber)
+      }),
       registrations: [
         buildRegistration({
           id: registrationId,
@@ -351,7 +369,7 @@ export const createOrganisationBuilders = () => {
     })
 
   return {
-    nextOrgId,
+    nextOrganisationNumber,
     buildOrganisation,
     buildOrganisationHolding,
     buildOrgWithName,
@@ -385,13 +403,6 @@ export const buildLinkedDefraOrg = (orgId, orgName) => ({
   },
   linkedAt: new Date().toISOString()
 })
-
-/**
- * The organisation number an organisation is addressed by.
- *
- * @param {{ orgId: number }} organisation
- */
-export const numberOf = ({ orgId }) => toOrganisationNumber(String(orgId))
 
 /**
  * What an update at a stale version rejects with.

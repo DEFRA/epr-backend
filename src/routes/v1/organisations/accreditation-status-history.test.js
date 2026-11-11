@@ -131,8 +131,11 @@ const buildServedOrgWithAccreditationStatus = (status) => ({
  * @param {import('#domain/organisations/model.js').Organisation} organisation
  * @param {string} prnId
  */
-const prnStatusUrl = ({ orgId, registrations: [registration] }, prnId) =>
-  `/organisations/${orgId}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
+const prnStatusUrl = (
+  { organisationNumber, registrations: [registration] },
+  prnId
+) =>
+  `/organisations/${organisationNumber}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
 
 /**
  * A PRN awaiting authorisation under the organisation's accreditation.

@@ -1,3 +1,4 @@
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { describe, test, expect, vi } from 'vitest'
 
 vi.mock('#root/config.js', () => ({
@@ -94,13 +95,11 @@ describe('TEST_ORGANISATION_NUMBERS', () => {
 
 describe('#isTestOrganisation', () => {
   test.each([
-    { orgId: 999999, expected: true },
-    { orgId: 500001, expected: false },
-    { orgId: 0, expected: false },
-    { orgId: 5.5, expected: false }
+    { organisationNumber: '999999', expected: true },
+    { organisationNumber: '500001', expected: false }
   ])(
-    'reads orgId $orgId as a test organisation: $expected',
-    async ({ orgId, expected }) => {
+    'reads organisation $organisationNumber as a test organisation: $expected',
+    async ({ organisationNumber, expected }) => {
       vi.resetModules()
       const { config: freshConfig } = await import('#root/config.js')
       freshConfig.get.mockReturnValue('[999999]')
@@ -108,7 +107,11 @@ describe('#isTestOrganisation', () => {
       const { isTestOrganisation } =
         await import('./parse-test-organisations.js')
 
-      expect(isTestOrganisation({ orgId })).toBe(expected)
+      expect(
+        isTestOrganisation({
+          organisationNumber: toOrganisationNumber(organisationNumber)
+        })
+      ).toBe(expected)
     }
   )
 })
