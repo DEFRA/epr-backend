@@ -2,12 +2,12 @@ import chunk from 'lodash.chunk'
 
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
-import { buildOverseasSitesContext } from '#waste-records-export/domain/overseas-sites-context.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
+import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 import {
-  indexAccreditationsByLedger,
-  ledgerKey
-} from '#waste-balances/application/accreditation-index.js'
+  indexByLedger,
+  overseasSitesOf,
+  validityOf
+} from '#waste-balances/application/read-model-accreditations.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
@@ -16,11 +16,8 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
- * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
@@ -45,8 +42,8 @@ const READ_CONCURRENCY = 10
  *
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
- * @property {{ id: string, reference: string }} organisation - internal id and external reference
- * @property {{ id: string, accreditationNumber: string, processingType: string, material: Material }} accreditation
+ * @property {{ reference: string }} organisation - external reference
+ * @property {{ accreditationNumber: string, processingType: string, material: Material }} accreditation
  * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 
@@ -73,7 +70,9 @@ const compareRows = (a, b) =>
     b.accreditation.processingType
   ) ||
   Number(a.organisation.reference) - Number(b.organisation.reference) ||
-  a.accreditation.id.localeCompare(b.accreditation.id) ||
+  a.accreditation.accreditationNumber.localeCompare(
+    b.accreditation.accreditationNumber
+  ) ||
   a.month.localeCompare(b.month)
 
 /**
@@ -97,8 +96,7 @@ const compareRows = (a, b) =>
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
+ * @param {OrganisationReadRepository} params.organisationReadRepository
  * @param {TypedLogger} params.logger
  * @param {Date} params.now - clock reading supplied by the caller; the report's upper month bound
  * @returns {Promise<CreditedTonnageReport>}
@@ -119,8 +117,7 @@ const describeTonnage = ({ totalCredited, eligibleForWasteBalance }) =>
 export const buildCreditedTonnageReport = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
-  overseasSitesRepository,
+  organisationReadRepository,
   logger,
   now
 }) => {
@@ -129,13 +126,10 @@ export const buildCreditedTonnageReport = async ({
     toMonth: /** @type {string} */ (monthKeyForDate(now, UK_TIME_ZONE))
   }
 
-  const [entries, organisations, allSites] = await Promise.all([
+  const [entries, organisations] = await Promise.all([
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationsRepository.findAll(),
-    overseasSitesRepository.findAll()
+    organisationReadRepository.findAll()
   ])
-
-  const sitesById = new Map(allSites.map((site) => [site.id, site]))
 
   // Credits only exist for accredited partitions; registered-only entries
   // (accreditationNumber null) carry zero-delta submissions and never appear in
@@ -144,7 +138,7 @@ export const buildCreditedTonnageReport = async ({
     (entry) => entry.ledgerId.accreditationNumber !== null
   )
 
-  const index = indexAccreditationsByLedger(organisations)
+  const index = indexByLedger(organisations)
 
   /** @type {CreditedTonnageRow[]} */
   const rows = []
@@ -156,8 +150,8 @@ export const buildCreditedTonnageReport = async ({
   const rowsForEntry = async ({ ledgerId, summaryLogId }) => {
     // creditedEntries holds accredited partitions only.
     const accreditationNumber = String(ledgerId.accreditationNumber)
-    const context = index.get(ledgerKey(ledgerId))
-    if (!context) {
+    const ledgerAccreditation = index.get(ledgerKey(ledgerId))
+    if (!ledgerAccreditation) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         logger.warn({
           message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
@@ -171,7 +165,7 @@ export const buildCreditedTonnageReport = async ({
       return []
     }
 
-    const { organisation, registration, accreditation } = context
+    const { registration } = ledgerAccreditation
 
     const rowStates = reclassifyWasteRecordStates(
       await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
@@ -179,18 +173,18 @@ export const buildCreditedTonnageReport = async ({
         summaryLogId
       ),
       {
-        accreditation,
-        overseasSites: buildOverseasSitesContext(registration, sitesById)
+        accreditation: validityOf(ledgerAccreditation),
+        overseasSites: overseasSitesOf(ledgerAccreditation)
       }
     )
 
     const { months, skippedRows } = creditedTonnageByMonth(
       rowStates,
       {
-        wasteProcessingType: /** @type {WasteProcessingTypeValue} */ (
-          registration.wasteProcessingType
-        ),
-        reprocessingType: registration.reprocessingType
+        wasteProcessingType: registration.wasteProcessingType,
+        ...(registration.wasteProcessingType === 'reprocessor' && {
+          reprocessingType: registration.reprocessingType
+        })
       },
       monthRange
     )
@@ -204,29 +198,25 @@ export const buildCreditedTonnageReport = async ({
     if (skippedTotal > 0) {
       logger.info({
         message:
-          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditation.id}: ` +
+          `Credited tonnage report skipped ${skippedTotal} row(s) for accreditation ${accreditationNumber}: ` +
           `${noUsableDate.rowCount} with no usable date ${describeTonnage(noUsableDate)}, ` +
           `${beforeWindowStart.rowCount} dated before ${monthRange.fromMonth} ${describeTonnage(beforeWindowStart)}, ` +
           `${afterWindowEnd.rowCount} dated after ${monthRange.toMonth} ${describeTonnage(afterWindowEnd)}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: 'credited_tonnage_rows_skipped',
-          reference: accreditation.id
+          reference: accreditationNumber
         }
       })
     }
 
-    const material = resolveMaterial(registration)
-    const reference = organisation.organisationNumber
-
     return months.map((month) => ({
       month: month.month,
-      organisation: { id: organisation.id, reference },
+      organisation: { reference: ledgerId.organisationNumber },
       accreditation: {
-        id: accreditation.id,
         accreditationNumber,
         processingType: registration.wasteProcessingType,
-        material
+        material: registration.material
       },
       tonnage: {
         totalCredited: month.totalCredited,

@@ -4,7 +4,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainerRead } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -99,6 +99,11 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     org.organisationNumber = toOrganisationNumber('500123')
 
     const linkedRegistration = org.registrations[0]
+    linkedRegistration.validFrom = '2026-01-01'
+    linkedRegistration.statusHistory = [
+      { status: 'created', updatedAt: '2025-11-01' },
+      { status: 'approved', updatedAt: '2026-01-01' }
+    ]
     const linkedAccreditation = org.accreditations[0]
     linkedAccreditation.validFrom = '2026-01-01'
     linkedAccreditation.validTo = '2026-12-31'
@@ -160,9 +165,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(org)
-        ]),
+        organisationReadRepository: await organisationReadRepositoryOf([org]),
         ledgerRepository,
         summaryLogRowStatesRepository
       }
@@ -175,13 +178,14 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
 
     const februaryRow = body.data.find(
       (row) =>
-        row.accreditation.id === linkedAccreditation.id &&
+        row.accreditation.accreditationNumber === 'ACC500123' &&
         row.month === '2026-02'
     )
-    expect(februaryRow).toMatchObject({
-      organisation: { id: org.id, reference: '500123' },
+    expect(februaryRow).toEqual({
+      month: '2026-02',
+      organisation: { reference: '500123' },
       accreditation: {
-        id: linkedAccreditation.id,
+        accreditationNumber: 'ACC500123',
         processingType: 'reprocessor',
         material: 'plastic'
       },
