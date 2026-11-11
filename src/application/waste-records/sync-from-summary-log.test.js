@@ -536,6 +536,23 @@ describe('syncFromSummaryLog', () => {
     ).rejects.toThrow('Accreditation not found: ACC-MISSING')
   })
 
+  it('throws when the accreditation belongs to another of the organisation’s registrations', async () => {
+    const fileId = 'file-other-registration'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+
+    await expect(
+      makeSync({ extractor })(
+        summaryLogFor(fileId, toAccreditationNumber('ACC-2')),
+        TEST_USER
+      )
+    ).rejects.toThrow('Accreditation not found: ACC-2')
+  })
+
   describe('return value (created/updated counts against the committed head)', () => {
     const realBalanceSync = (extractor) =>
       makeSync({

@@ -456,8 +456,7 @@ export const syncFromSummaryLog = (dependencies) => {
     // 3. Transform to waste records
     const wasteRecords = transformFromSummaryLog(preparedData)
 
-    // 4. Resolve overseas sites for exporter ORS validation (VAL014). Only an
-    // accredited row is classified against them.
+    // 4. Resolve overseas sites for exporter ORS validation (VAL014)
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
     const overseasSites =
       processingType === PROCESSING_TYPES.EXPORTER && ledgerAccreditation
