@@ -183,6 +183,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         accreditations: [stored2027]
       })
     )
+    const stored2029 = accreditation({
+      validFrom: '2029-01-01',
+      validTo: '2029-12-31'
+    })
+    /** @type {Organisation} */
+    const notYetOpenOrganisation = partialMock(
+      buildOrganisation({
+        registrations: [reprocessor({ accreditationId: stored2029.id })],
+        accreditations: [stored2029]
+      })
+    )
 
     beforeAll(async () => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
@@ -193,10 +204,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationsRepository: createInMemoryOrganisationsRepository([
-            organisation
+            organisation,
+            notYetOpenOrganisation
           ]),
           organisationReadRepository: await organisationReadRepositoryOf(
-            [organisation],
+            [organisation, notYetOpenOrganisation],
             {
               externalAccreditations: [
                 buildExternalAccreditation({
@@ -226,6 +238,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('returns 422 for an accredited upload in a year not yet open', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/organisations/${notYetOpenOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2029/summary-log`,
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
   })
 

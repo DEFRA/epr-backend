@@ -50,7 +50,6 @@ export const summaryLogsYearCreate = {
 
     const { registration } =
       await findOrganisationAndRegistrationReadModels(request)
-    assertReadModelServesAccreditation(registration, params)
 
     const eligibility = checkSummaryLogUploadEligibility({
       registration,
@@ -61,6 +60,8 @@ export const summaryLogsYearCreate = {
     if (!eligibility.eligible) {
       throw Boom.badData(eligibility.reason)
     }
+
+    assertReadModelServesAccreditation(registration, params)
 
     const result = await createSummaryLogUpload({
       uploadsRepository,
