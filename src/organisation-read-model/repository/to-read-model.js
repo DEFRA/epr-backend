@@ -1,9 +1,7 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
-import {
-  lastOpenDay,
-  latestOpenYear
-} from '#common/helpers/dates/latest-open-year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -283,7 +281,7 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
-      lastOpenDay(new Date(today))
+      yearBounds(openYear).end
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
