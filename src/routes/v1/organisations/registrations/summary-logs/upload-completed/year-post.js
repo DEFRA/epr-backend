@@ -23,7 +23,7 @@ import {
 } from './update-status-based-on-upload.js'
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
-/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
@@ -94,6 +94,21 @@ const isUploadedForRegistration = (upload, ids) =>
   })
 
 /**
+ * @param {TypedLogger} logger
+ * @param {SummaryLogId} summaryLogId
+ * @param {SummaryLogUpload} upload
+ */
+const logOutOfLocation = (logger, summaryLogId, upload) =>
+  logger.error({
+    message: `${OUT_OF_LOCATION_MESSAGE}: summaryLogId=${summaryLogId}${formatS3Info(upload)}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+      reference: summaryLogId
+    }
+  })
+
+/**
  * The callback for an upload, under the address it was started at. The path
  * carries the year and names the accreditation (`null` for registered-only).
  */
@@ -133,14 +148,7 @@ export const summaryLogsUploadCompletedYear = {
 
     try {
       if (!isInLocation) {
-        logger.error({
-          message: `${OUT_OF_LOCATION_MESSAGE}: summaryLogId=${summaryLogId}${formatS3Info(summaryLogUpload)}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
-            reference: summaryLogId
-          }
-        })
+        logOutOfLocation(logger, summaryLogId, summaryLogUpload)
       }
 
       const status = await updateStatusBasedOnUpload(
