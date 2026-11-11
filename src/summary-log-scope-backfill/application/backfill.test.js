@@ -53,6 +53,10 @@ const organisation = buildOrganisation({
 })
 
 const ids = { organisationId, registrationId }
+const numbers = {
+  organisationNumber: '500123',
+  registrationNumber: 'R25SR500010912PL'
+}
 
 /**
  * A summary log as stored before summary logs were scoped by accreditation
@@ -62,7 +66,7 @@ const ids = { organisationId, registrationId }
  */
 const unscoped = (overrides = {}) => {
   const { year: _year, ...summaryLog } = withoutAccreditationId(
-    summaryLogFactory.submitted({ ...ids, ...overrides })
+    summaryLogFactory.submitted({ ...ids, ...numbers, ...overrides })
   )
   return summaryLog
 }
@@ -188,6 +192,8 @@ describe('backfillSummaryLogScope (mongo)', () => {
           summaryLogId: 'accredited',
           organisationId,
           registrationId,
+          ...numbers,
+          accreditationNumber: 'ACC500123',
           previous: { version: 1 },
           next: {
             accreditationId,

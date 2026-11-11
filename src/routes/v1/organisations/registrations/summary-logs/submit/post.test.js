@@ -15,6 +15,7 @@ import {
   PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -108,6 +109,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     return {
       organisationId: organisation.id,
       registrationId: registration.id,
+      organisationNumber: organisation.organisationNumber,
+      registrationNumber: registration.registrationNumber,
       summaryLogs,
       /** @param {string} summaryLogId */
       submitUrl: (summaryLogId) => `${summaryLogs}/${summaryLogId}/submit`
@@ -152,8 +155,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('transitions a validated summary log to submitting and records its side-effects', async () => {
-    const { organisationId, registrationId, summaryLogs, submitUrl } =
-      servedRegistration()
+    const {
+      organisationId,
+      registrationId,
+      organisationNumber,
+      registrationNumber,
+      summaryLogs,
+      submitUrl
+    } = servedRegistration()
     const summaryLogId = randomUUID()
 
     const validated = await seedValidatedSummaryLog(
@@ -208,7 +217,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           })
         })
       }),
-      { summaryLogId, organisationId, registrationId }
+      {
+        summaryLogId,
+        organisationId,
+        registrationId,
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber: null
+      }
     )
     expect(mockRecordStatusTransition).toHaveBeenCalledWith({
       status: SUMMARY_LOG_STATUS.SUBMITTING,
@@ -297,6 +313,46 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const stored = await summaryLogsRepository.findById(summaryLogId)
     expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
+  })
+
+  it('audits an accredited submission by its accreditation number', async () => {
+    const {
+      organisationId,
+      registrationId,
+      organisationNumber,
+      registrationNumber,
+      submitUrl
+    } = servedRegistration()
+    const accreditationNumber = toAccreditationNumber('A27SR500030912PA')
+    numbersByRegistrationId.set(registrationId, {
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber
+    })
+    const summaryLogId = randomUUID()
+
+    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, {
+      organisationId,
+      registrationId,
+      accreditationId: randomUUID(),
+      validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url: submitUrl(summaryLogId),
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(mockAuditSummaryLogSubmit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber
+      })
+    )
   })
 
   it('returns 409 without auditing or recording a metric when another submission is in progress', async () => {

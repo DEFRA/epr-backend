@@ -577,7 +577,10 @@ describe('summary-log routes by natural key', () => {
       expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
         summaryLogId: fileId,
         organisationId: organisation.id,
-        registrationId: registeredOnlyRegistration.id
+        registrationId: registeredOnlyRegistration.id,
+        organisationNumber,
+        registrationNumber: registeredOnlyLog.registrationNumber,
+        accreditationNumber: null
       })
     })
 

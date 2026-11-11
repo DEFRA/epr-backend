@@ -103,6 +103,7 @@ export const reportsStatus = {
     await auditReportStatusTransition(request, {
       organisationNumber,
       registrationNumber,
+      accreditationNumber: report.accreditationNumber,
       year,
       cadence,
       period,

@@ -484,6 +484,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
           expect(systemLogPayload.context).toEqual({
             organisationId: finalOrgVersion.id,
+            organisationNumber: finalOrgVersion.organisationNumber,
             linkedDefraOrganisation: {
               id: defraIdOrganisationId,
               name: defraIdOrganisationName
@@ -516,6 +517,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
           expect(auditPayload.context).toEqual({
             organisationId: finalOrgVersion.id,
+            organisationNumber: finalOrgVersion.organisationNumber,
             linkedDefraOrganisation: {
               id: defraIdOrganisationId,
               name: defraIdOrganisationName

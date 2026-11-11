@@ -194,6 +194,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -230,6 +231,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -317,6 +319,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
@@ -357,6 +360,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,

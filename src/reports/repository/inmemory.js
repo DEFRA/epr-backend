@@ -359,6 +359,7 @@ const markActiveReportsStaleForSummaryLog = async (
     .map((r) =>
       structuredClone({
         reportId: r.id,
+        accreditationNumber: r.accreditationNumber,
         year: r.year,
         cadence: r.cadence,
         period: r.period,
@@ -455,6 +456,7 @@ const markActiveReportsStaleForPrnCancellation = async (reports, params) => {
     .map((r) =>
       structuredClone({
         reportId: r.id,
+        accreditationNumber: r.accreditationNumber,
         year: r.year,
         cadence: r.cadence,
         period: r.period,
@@ -515,6 +517,7 @@ const markSubmittedReportsRequiringResubmission = async (
   return toFlag.map((report) =>
     structuredClone({
       reportId: report.id,
+      accreditationNumber: report.accreditationNumber,
       year: report.year,
       cadence: report.cadence,
       period: report.period,
@@ -594,6 +597,7 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
 
   return structuredClone({
     reportId: updated.id,
+    accreditationNumber: updated.accreditationNumber,
     year: updated.year,
     cadence: updated.cadence,
     period: updated.period,
