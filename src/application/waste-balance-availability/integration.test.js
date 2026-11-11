@@ -4,66 +4,130 @@ import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
 import {
   MATERIAL,
-  GLASS_RECYCLING_PROCESS
+  GLASS_RECYCLING_PROCESS,
+  TONNAGE_BAND,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  createMongoLedgerRepository,
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME
+} from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  createOrganisationReadRepository,
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
+} from '#organisation-read-model/repository/mongodb.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
 
-const registrationNumberOf = (registrationId) => `R-${registrationId}`
-const accreditationNumberOf = (accreditationId) => `A-${accreditationId}`
+// Configured as a test organisation in .vite/setup-files.js
+const TEST_ORG_ID = 999999
 
-const createOrganisation = (id, registrations) => ({
+const approvedStatusHistory = [
+  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+]
+
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
+/**
+ * @typedef {Object} RegistrationSeed
+ * @property {string} id
+ * @property {string} [accreditationNumber] - absent for a registered-only registration
+ * @property {string} material
+ * @property {string[]} [glassRecyclingProcess]
+ */
+
+/** @param {RegistrationSeed} registration */
+const materialOf = ({ material, glassRecyclingProcess }) => ({
+  material,
+  ...(glassRecyclingProcess && { glassRecyclingProcess })
+})
+
+/**
+ * @param {string} id
+ * @param {number} orgId
+ * @param {RegistrationSeed[]} registrations
+ */
+const storedOrganisation = (id, orgId, registrations) => ({
   _id: new ObjectId(id),
-  orgId: 12345,
+  orgId,
+  companyDetails: { name: 'Acme Reprocessing' },
+  statusHistory: approvedStatusHistory,
+  submittedToRegulator: 'ea',
+  submitterContactDetails: contact,
+  users: [],
   version: 1,
-  schemaVersion: 1,
-  registrations,
   accreditations: registrations
-    .filter(({ accreditationId }) => accreditationId)
-    .map(({ accreditationId }) => ({
-      id: accreditationId,
-      accreditationNumber: accreditationNumberOf(accreditationId)
-    }))
+    .filter(({ accreditationNumber }) => accreditationNumber)
+    .map((registration) => ({
+      id: `acc-${registration.id}`,
+      accreditationNumber: registration.accreditationNumber,
+      ...materialOf(registration),
+      prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01'
+    })),
+  registrations: registrations.map((registration) => ({
+    id: registration.id,
+    registrationNumber: `REG-${registration.id}`,
+    ...(registration.accreditationNumber && {
+      accreditationId: `acc-${registration.id}`
+    }),
+    wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+    statusHistory: approvedStatusHistory,
+    validFrom: '2026-01-01',
+    ...materialOf(registration),
+    submittedToRegulator: 'ea',
+    applicationContactDetails: contact,
+    submitterContactDetails: contact,
+    approvedPersons: []
+  }))
 })
 
-const createRegistration = (
-  id,
-  material,
-  glassRecyclingProcess,
-  accreditationId
-) => ({
-  id,
-  registrationNumber: registrationNumberOf(id),
-  material,
-  status: 'approved',
-  ...(glassRecyclingProcess && { glassRecyclingProcess }),
-  ...(accreditationId && { accreditationId })
+/**
+ * @param {number} orgId
+ * @param {string} registrationId
+ * @param {string} accreditationNumber
+ */
+const ledgerIdOf = (orgId, registrationId, accreditationNumber) => ({
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber(`REG-${registrationId}`),
+  accreditationNumber: toAccreditationNumber(accreditationNumber)
 })
 
-const createLedgerEvent = (
-  registrationId,
-  accreditationId,
-  number,
-  availableAmount
-) => ({
-  registrationNumber: registrationNumberOf(registrationId),
-  accreditationNumber: accreditationNumberOf(accreditationId),
-  number,
-  closingBalance: { amount: availableAmount, availableAmount }
-})
+/**
+ * @param {ReturnType<typeof ledgerIdOf>} ledgerId
+ * @param {number} number
+ * @param {number} availableAmount
+ */
+const ledgerEvent = (ledgerId, number, availableAmount) =>
+  buildLedgerEvent({
+    ...ledgerId,
+    number,
+    closingBalance: { amount: availableAmount, availableAmount }
+  })
 
 describe('aggregateAvailableBalance - Integration', () => {
-  const orgId1 = '507f1f77bcf86cd799439011'
-  const orgId2 = '507f1f77bcf86cd799439012'
-  const regId1 = 'REG-001'
-  const regId2 = 'REG-002'
-  const regId3 = 'REG-003'
-  const accId1 = 'ACC-001'
-  const accId2 = 'ACC-002'
-  const accId3 = 'ACC-003'
+  const orgId1 = 100001
+  const orgId2 = 100002
 
+  /** @type {import('mongodb').Db} */
   let db
+  /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
+  let ledgerRepository
+  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  let organisationReadRepository
+
+  const aggregate = () =>
+    aggregateAvailableBalance(organisationReadRepository, ledgerRepository)
 
   beforeEach(
     async (
@@ -72,8 +136,16 @@ describe('aggregateAvailableBalance - Integration', () => {
       }
     ) => {
       db = mongoClient.db(DATABASE_NAME)
+      ledgerRepository = (await createMongoLedgerRepository(db))()
+      organisationReadRepository = createOrganisationReadRepository(db)({
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: { warn: () => {} }
+      })
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await db.collection(WASTE_BALANCE_EVENTS_COLLECTION).deleteMany({})
+      await db
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
+      await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
     }
   )
 
@@ -81,108 +153,48 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC }
         ])
       )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+    ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createLedgerEvent(regId1, accId1, 1, 100))
-
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
       availableAmount: 100
     })
-  })
-
-  it('aggregates balance for glass_re_melt', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(
-            regId1,
-            MATERIAL.GLASS,
-            [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
-            accId1
-          )
-        ])
-      )
-
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createLedgerEvent(regId1, accId1, 1, 200))
-
-    const result = await aggregateAvailableBalance(db)
-
-    expect(result.materials).toContainEqual({
-      material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-      availableAmount: 200
-    })
-    expect(result.total).toBe(200)
-  })
-
-  it('aggregates balance for glass_other', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(
-            regId1,
-            MATERIAL.GLASS,
-            [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
-            accId1
-          )
-        ])
-      )
-
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createLedgerEvent(regId1, accId1, 1, 150))
-
-    const result = await aggregateAvailableBalance(db)
-
-    expect(result.materials).toContainEqual({
-      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
-      availableAmount: 150
-    })
-    expect(result.total).toBe(150)
+    expect(result.total).toBe(100)
   })
 
   it('aggregates glass_re_melt and glass_other separately', async () => {
-    const regId4 = 'REG-004'
-    const accId4 = 'ACC-004'
-
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(
-            regId1,
-            MATERIAL.GLASS,
-            [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
-            accId1
-          ),
-          createRegistration(
-            regId4,
-            MATERIAL.GLASS,
-            [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
-            accId4
-          )
-        ])
-      )
-
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createLedgerEvent(regId1, accId1, 1, 100),
-        createLedgerEvent(regId4, accId4, 1, 75)
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+        {
+          id: '1',
+          accreditationNumber: 'ACC-1',
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        },
+        {
+          id: '2',
+          accreditationNumber: 'ACC-2',
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+        }
       ])
+    )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '2', 'ACC-2'), 1, 75)
+    ])
 
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
@@ -196,32 +208,31 @@ describe('aggregateAvailableBalance - Integration', () => {
   })
 
   it('aggregates balances across multiple materials and organisations', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertMany([
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1),
-          createRegistration(
-            regId2,
-            MATERIAL.GLASS,
-            [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
-            accId2
-          )
-        ]),
-        createOrganisation(orgId2, [
-          createRegistration(regId3, MATERIAL.PLASTIC, null, accId3)
-        ])
+    await db.collection(ORGANISATIONS_COLLECTION).insertMany([
+      storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+        { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC },
+        {
+          id: '2',
+          accreditationNumber: 'ACC-2',
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        }
+      ]),
+      storedOrganisation('507f1f77bcf86cd799439012', orgId2, [
+        { id: '3', accreditationNumber: 'ACC-3', material: MATERIAL.PLASTIC }
       ])
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '2', 'ACC-2'), 1, 50)
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId2, '3', 'ACC-3'), 1, 200)
+    ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createLedgerEvent(regId1, accId1, 1, 100),
-        createLedgerEvent(regId2, accId2, 1, 50),
-        createLedgerEvent(regId3, accId3, 1, 200)
-      ])
-
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -234,56 +245,89 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.total).toBe(350)
   })
 
-  it('excludes stream events with no matching registration', async () => {
+  it('includes an accreditation held outside re-ex', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', material: MATERIAL.PLASTIC }
         ])
       )
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+      buildExternalAccreditation({
+        registrationNumber: toRegistrationNumber('REG-1'),
+        year: toYear(2026),
+        accreditationNumber: toAccreditationNumber('ACC-EXTERNAL'),
+        status: {
+          current: 'approved',
+          timeline: [
+            {
+              status: 'approved',
+              at: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z'
+            }
+          ]
+        }
+      })
+    )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), 1, 80)
+    ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createLedgerEvent(regId1, accId1, 1, 100),
-        createLedgerEvent('REG-NO-REG', 'ACC-NO-REG', 1, 999)
-      ])
-
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
-      availableAmount: 100
+      availableAmount: 80
     })
+    expect(result.total).toBe(80)
+  })
+
+  it('excludes ledgers no accreditation in the read model holds', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC }
+        ])
+      )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, 'NO-REG', 'ACC-NO-REG'), 1, 999)
+    ])
+
+    const result = await aggregate()
+
     expect(result.total).toBe(100)
   })
 
   it('excludes registrations with no accreditation', async () => {
-    await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1),
-          createRegistration(regId2, MATERIAL.PLASTIC, null, null)
-        ])
-      )
+    await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+      storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+        { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC },
+        { id: '2', material: MATERIAL.PLASTIC }
+      ])
+    )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+    ])
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerIdOf(orgId1, '2', 'unused'),
+        accreditationNumber: null,
+        closingBalance: { amount: 500, availableAmount: 500 }
+      })
+    ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createLedgerEvent(regId1, accId1, 1, 100))
+    const result = await aggregate()
 
-    const result = await aggregateAvailableBalance(db)
-
-    expect(result.materials).toContainEqual({
-      material: MATERIAL.PLASTIC,
-      availableAmount: 100
-    })
     expect(result.total).toBe(100)
   })
 
   it('returns all materials with zero balance when no data exists', async () => {
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     const expectedMaterials = [
       ...Object.values(MATERIAL).filter((m) => m !== MATERIAL.GLASS),
@@ -299,64 +343,50 @@ describe('aggregateAvailableBalance - Integration', () => {
 
   it('returns generatedAt timestamp', async () => {
     const before = new Date().toISOString()
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
     const after = new Date().toISOString()
 
-    expect(result.generatedAt).toBeDefined()
     expect(result.generatedAt >= before).toBe(true)
     expect(result.generatedAt <= after).toBe(true)
   })
 
   it('excludes accreditations from test organisations', async () => {
-    const testOrgId = '507f1f77bcf86cd799439013'
-    const testRegId = 'REG-TEST'
-    const testAccId = 'ACC-TEST'
-
-    await db.collection(ORGANISATIONS_COLLECTION).insertMany([
-      {
-        ...createOrganisation(testOrgId, [
-          createRegistration(testRegId, MATERIAL.PLASTIC, null, testAccId)
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertMany([
+        storedOrganisation('507f1f77bcf86cd799439013', TEST_ORG_ID, [
+          { id: 'T', accreditationNumber: 'ACC-T', material: MATERIAL.PLASTIC }
         ]),
-        orgId: 999999
-      },
-      createOrganisation(orgId1, [
-        createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC }
+        ])
       ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(TEST_ORG_ID, 'T', 'ACC-T'), 1, 500)
+    ])
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
     ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createLedgerEvent(testRegId, testAccId, 1, 500),
-        createLedgerEvent(regId1, accId1, 1, 100)
-      ])
+    const result = await aggregate()
 
-    const result = await aggregateAvailableBalance(db)
-
-    expect(result.materials).toContainEqual({
-      material: MATERIAL.PLASTIC,
-      availableAmount: 100
-    })
     expect(result.total).toBe(100)
   })
 
-  it('uses the latest stream closing balance', async () => {
+  it('uses the latest ledger closing balance', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC }
         ])
       )
+    await ledgerRepository.appendEvents([
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 250),
+      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 2, 175)
+    ])
 
-    await db
-      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertMany([
-        createLedgerEvent(regId1, accId1, 1, 250),
-        createLedgerEvent(regId1, accId1, 2, 175)
-      ])
-
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -365,16 +395,16 @@ describe('aggregateAvailableBalance - Integration', () => {
     expect(result.total).toBe(175)
   })
 
-  it('reports zero when the stream is empty', async () => {
+  it('reports zero when the ledger is empty', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
-        createOrganisation(orgId1, [
-          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          { id: '1', accreditationNumber: 'ACC-1', material: MATERIAL.PLASTIC }
         ])
       )
 
-    const result = await aggregateAvailableBalance(db)
+    const result = await aggregate()
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,

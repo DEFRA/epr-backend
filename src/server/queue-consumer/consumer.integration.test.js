@@ -66,7 +66,7 @@ const stopConsumerAndWait = (consumer) => {
 describe('SQS command queue consumer integration', () => {
   let logger
   let summaryLogsRepository
-  let organisationsRepository
+  let organisationAdministrationRepository
   let wasteBalanceService
   let summaryLogExtractor
 
@@ -79,7 +79,7 @@ describe('SQS command queue consumer integration', () => {
 
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
-    organisationsRepository = {}
+    organisationAdministrationRepository = {}
     wasteBalanceService = {}
 
     // Mock extractor - not used in these tests but required by consumer
@@ -98,7 +98,7 @@ describe('SQS command queue consumer integration', () => {
         queueName: sqsClient.queueName,
         logger,
         summaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         wasteBalanceService,
         summaryLogExtractor
       },
@@ -143,7 +143,7 @@ describe('SQS command queue consumer integration', () => {
               queueName: 'nonexistent-queue',
               logger,
               summaryLogsRepository,
-              organisationsRepository,
+              organisationAdministrationRepository,
               wasteBalanceService,
               summaryLogExtractor
             },
@@ -217,7 +217,7 @@ describe('SQS command queue consumer integration', () => {
               expect.objectContaining({
                 logger,
                 summaryLogsRepository,
-                organisationsRepository,
+                organisationAdministrationRepository,
                 wasteBalanceService,
                 summaryLogExtractor,
                 user
@@ -611,7 +611,7 @@ describe('SQS command queue consumer integration', () => {
             queueName: longTimeoutQueueName,
             logger,
             summaryLogsRepository,
-            organisationsRepository,
+            organisationAdministrationRepository,
             wasteBalanceService,
             summaryLogExtractor
           },

@@ -23,7 +23,7 @@ import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 
 /** @import {Db} from 'mongodb' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
@@ -35,20 +35,20 @@ const COLLECTION_ACCREDITATION = 'accreditation'
  * @async
  * @param {Db} db
  * @param {() => boolean} isProduction
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @returns {Promise<void>}
  */
 export async function createSeedData(
   db,
   isProduction,
-  organisationsRepository
+  organisationAdministrationRepository
 ) {
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
     await createOrgRegAccFixtures(db)
-    await createEprOrganisationFixtures(organisationsRepository)
-    await createEprOrganisationScenarios(organisationsRepository)
+    await createEprOrganisationFixtures(organisationAdministrationRepository)
+    await createEprOrganisationScenarios(organisationAdministrationRepository)
   }
 }
 
@@ -110,9 +110,11 @@ const EPR_ORGANISATION_FIXTURES = [
   organisationNumber: toOrganisationNumber(String(orgId))
 }))
 
-async function createEprOrganisationFixtures(organisationsRepository) {
+async function createEprOrganisationFixtures(
+  organisationAdministrationRepository
+) {
   const existingFixtures =
-    await organisationsRepository.findByOrganisationNumbers(
+    await organisationAdministrationRepository.findByOrganisationNumbers(
       EPR_ORGANISATION_FIXTURES.map(
         ({ organisationNumber }) => organisationNumber
       )
@@ -125,7 +127,7 @@ async function createEprOrganisationFixtures(organisationsRepository) {
 
     await Promise.all(
       EPR_ORGANISATION_FIXTURES.map((organisation) =>
-        organisationsRepository.insert(organisation)
+        organisationAdministrationRepository.insert(organisation)
       )
     )
   }

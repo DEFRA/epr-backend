@@ -5,45 +5,77 @@ import { ObjectId } from 'mongodb'
 import { it } from '#vite/fixtures/server-with-real-db.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { MATERIAL } from '#domain/organisations/model.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
+import {
+  MATERIAL,
+  TONNAGE_BAND,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
+  createMongoLedgerRepository,
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME
+} from '#waste-balances/repository/ledger-mongodb.js'
+import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { wasteBalanceAvailabilityPath } from './get.js'
 
-/** @import { Db } from 'mongodb' */
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const { validToken } = entraIdMockAuthTokens
 
-const orgId = '507f1f77bcf86cd799439011'
-const regId = 'REG-001'
-const accId = 'ACC-001'
+const orgId = 100987
 
-/** @param {Db} db */
-const seedAccreditedRegistration = (db) =>
-  db.collection(ORGANISATIONS_COLLECTION).insertOne({
-    _id: new ObjectId(orgId),
-    registrations: [
-      {
-        id: regId,
-        material: MATERIAL.PLASTIC,
-        status: 'approved',
-        accreditationId: accId
-      }
-    ]
-  })
+const ledgerId = {
+  organisationNumber: toOrganisationNumber(String(orgId)),
+  registrationNumber: toRegistrationNumber('REG-INTEG'),
+  accreditationNumber: toAccreditationNumber('ACC-INTEG')
+}
 
-/**
- * @param {Db} db
- * @param {number} availableAmount
- */
-const seedLedgerClosingBalance = (db, availableAmount) =>
-  db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertOne({
-    registrationId: regId,
-    accreditationId: accId,
-    number: 1,
-    closingBalance: { amount: availableAmount, availableAmount }
-  })
+const approvedStatusHistory = [
+  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+]
+
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
+const storedOrganisation = {
+  _id: new ObjectId('507f1f77bcf86cd799439011'),
+  orgId,
+  companyDetails: { name: 'Acme Reprocessing' },
+  statusHistory: approvedStatusHistory,
+  submittedToRegulator: 'ea',
+  submitterContactDetails: contact,
+  users: [],
+  version: 1,
+  accreditations: [
+    {
+      id: 'acc-integ',
+      accreditationNumber: ledgerId.accreditationNumber,
+      material: MATERIAL.PLASTIC,
+      prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01'
+    }
+  ],
+  registrations: [
+    {
+      id: 'reg-integ',
+      registrationNumber: ledgerId.registrationNumber,
+      accreditationId: 'acc-integ',
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      statusHistory: approvedStatusHistory,
+      validFrom: '2026-01-01',
+      material: MATERIAL.PLASTIC,
+      submittedToRegulator: 'ea',
+      applicationContactDetails: contact,
+      submitterContactDetails: contact,
+      approvedPersons: []
+    }
+  ]
+}
 
 describe(`GET ${wasteBalanceAvailabilityPath} (integration)`, () => {
   setupAuthContext()
@@ -60,8 +92,16 @@ describe(`GET ${wasteBalanceAvailabilityPath} (integration)`, () => {
   it('aggregates available balance by material via the real db', async ({
     server
   }) => {
-    await seedAccreditedRegistration(server.db)
-    await seedLedgerClosingBalance(server.db, 100)
+    await server.db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(storedOrganisation)
+    const ledgerRepository = (await createMongoLedgerRepository(server.db))()
+    await ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...ledgerId,
+        closingBalance: { amount: 100, availableAmount: 100 }
+      })
+    ])
 
     const response = await server.inject({
       method: 'GET',

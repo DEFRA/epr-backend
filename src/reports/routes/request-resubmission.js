@@ -49,6 +49,7 @@ export const reportsRequestResubmission = {
     await auditReportRequestResubmission(request, {
       organisationNumber,
       registrationNumber,
+      accreditationNumber: result.accreditationNumber,
       year,
       cadence,
       period,

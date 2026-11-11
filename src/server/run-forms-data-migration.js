@@ -26,14 +26,14 @@ export const runFormsDataMigration = async (server) => {
       return
     }
     try {
-      const organisationsRepository = (
+      const organisationAdministrationRepository = (
         await createOrganisationsRepository(server.db)
       )()
       const formSubmissionsRepository = (
         await createFormSubmissionsRepository(
           server.db,
           logger,
-          organisationsRepository
+          organisationAdministrationRepository
         )
       )()
       const systemLogsRepository = (
@@ -51,7 +51,7 @@ export const runFormsDataMigration = async (server) => {
 
       const formsDataMigration = createFormDataMigrator(
         formSubmissionsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         formsFileUploadsRepository
       )

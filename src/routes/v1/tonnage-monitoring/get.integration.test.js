@@ -7,7 +7,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
@@ -26,17 +26,35 @@ const regId = 'REG-001'
 const regNumber = `R-${regId}`
 const summaryLogId = 'sl-REG-001'
 
+const approvedStatusHistory = [
+  { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
+]
+const contact = { email: 'contact@example.com', fullName: 'A Contact' }
+
 /** @param {Db} db */
 const seedOrganisation = (db) =>
   db.collection(ORGANISATIONS_COLLECTION).insertOne({
     _id: new ObjectId(orgId),
     orgId: orgNumber,
+    companyDetails: { name: 'Acme Exporting' },
+    statusHistory: approvedStatusHistory,
+    submittedToRegulator: 'ea',
+    submitterContactDetails: contact,
+    users: [],
+    version: 1,
+    accreditations: [],
     registrations: [
       {
         id: regId,
         registrationNumber: regNumber,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         material: MATERIAL.PLASTIC,
-        status: 'approved'
+        statusHistory: approvedStatusHistory,
+        validFrom: '2026-01-01',
+        submittedToRegulator: 'ea',
+        applicationContactDetails: contact,
+        submitterContactDetails: contact,
+        approvedPersons: []
       }
     ]
   })

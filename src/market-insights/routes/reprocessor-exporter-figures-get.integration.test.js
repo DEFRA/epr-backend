@@ -43,7 +43,7 @@ const januaryToFebruary2026 = januaryToFebruary2026For(
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     organisationAdministrationRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
  * }} TestServerWithRealDb
@@ -63,7 +63,7 @@ const it =
           try {
             const mongoDb = client.db(DATABASE_NAME)
             const repositories = {
-              organisationsRepository: (
+              organisationAdministrationRepository: (
                 await createOrganisationsRepository(mongoDb)
               )(),
               reportsRepository: (await createReportsRepository(mongoDb))()
@@ -96,7 +96,7 @@ const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
  */
 const submitJanuaryTwice = async (repositories) => {
   const { reportKey } = await insertAccreditedOperator(
-    repositories.organisationsRepository
+    repositories.organisationAdministrationRepository
   )
   const january = {
     ...reportKey,
@@ -233,7 +233,7 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath} (integration
   }) => {
     await submitJanuaryTwice(server.repositories)
     const welsh = await insertAccreditedOperator(
-      server.repositories.organisationsRepository,
+      server.repositories.organisationAdministrationRepository,
       REGULATOR.NRW
     )
     await buildSubmittedReport(server.repositories.reportsRepository, {

@@ -72,12 +72,17 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
   it('emits numeric tonnages as numbers through the response schema', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository()
-    const organisationsRepository = organisationsRepositoryFactory()
+    const organisationAdministrationRepository =
+      organisationsRepositoryFactory()
     const year = currentUtcYear()
-    const org = await buildApprovedOrg(organisationsRepository, undefined, {
-      VALID_FROM: `${year}-01-01`,
-      VALID_TO: `${year}-12-31`
-    })
+    const org = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      undefined,
+      {
+        VALID_FROM: `${year}-01-01`,
+        VALID_TO: `${year}-12-31`
+      }
+    )
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -97,7 +102,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
     const server = await createTestServer({
       repositories: {
         organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository
+          organisationAdministrationRepository
         ),
         reportsRepository: reportsRepositoryFactory
       }

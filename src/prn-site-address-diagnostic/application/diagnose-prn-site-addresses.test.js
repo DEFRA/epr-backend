@@ -179,6 +179,26 @@ describe('diagnosePrnSiteAddresses', () => {
     expect(summary).toMatchObject({ matched: 0, noAccreditationSite: 1 })
   })
 
+  it('does not check an accreditation for a year not yet open', async () => {
+    const nextYear = accreditation({
+      validFrom: '2027-01-01',
+      validTo: '2027-12-31',
+      site: {}
+    })
+    const organisation = buildOrganisation({
+      registrations: [reprocessor({ accreditationId: nextYear.id })],
+      accreditations: [nextYear]
+    })
+
+    const { rows, summary } = await diagnose([organisation])
+
+    expect(rows).toStrictEqual([])
+    expect(summary).toMatchObject({
+      checkedAccreditations: 0,
+      noAccreditationSite: 0
+    })
+  })
+
   it('reports a registration whose site the read model holds only as a full address, with the stored fields it has and its accreditations, without comparing them', async () => {
     const organisation = accreditedReprocessor({
       registrationAddress: {
@@ -265,8 +285,8 @@ describe('diagnosePrnSiteAddresses', () => {
       [
         {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          year: toYear(2027),
-          accreditationNumber: toAccreditationNumber('A27ER5001180999PL'),
+          year: toYear(2025),
+          accreditationNumber: toAccreditationNumber('A25ER5001180999PL'),
           prnIssuance: { tonnageBand: 'up_to_500' },
           status: { current: 'approved', timeline: [] }
         }

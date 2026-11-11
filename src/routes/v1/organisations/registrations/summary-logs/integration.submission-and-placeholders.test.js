@@ -125,9 +125,10 @@ describe('Submission and placeholder tests', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        { ...testOrg, status: 'active' }
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          { ...testOrg, status: 'active' }
+        ])()
 
       const sharedMeta = {
         REGISTRATION_NUMBER: {
@@ -373,7 +374,7 @@ describe('Submission and placeholder tests', () => {
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
@@ -389,7 +390,7 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
         }),
@@ -427,9 +428,12 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository),
+            organisationReadRepositoryOver(
+              organisationAdministrationRepository
+            ),
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -777,9 +781,10 @@ describe('Submission and placeholder tests', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        { ...testOrg, status: 'active' }
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          { ...testOrg, status: 'active' }
+        ])()
 
       const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (
         /** @type {unknown} */ (await createExcelWithPlaceholders())
@@ -805,7 +810,7 @@ describe('Submission and placeholder tests', () => {
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -820,9 +825,10 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

@@ -41,7 +41,7 @@ const januaryToFebruary2026 = marketInsightsOutstandingReturnsPath
  * @typedef {TestServer & {
  *   db: Db,
  *   repositories: {
- *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     organisationAdministrationRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
  *   }
  * }} TestServerWithRealDb
@@ -60,7 +60,7 @@ const it =
           try {
             const mongoDb = client.db(DATABASE_NAME)
             const repositories = {
-              organisationsRepository: (
+              organisationAdministrationRepository: (
                 await createOrganisationsRepository(mongoDb)
               )(),
               reportsRepository: (await createReportsRepository(mongoDb))()
@@ -92,7 +92,7 @@ const { regulatorToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
  * @param {TestServerWithRealDb['repositories']} repositories
  */
 const seedOperatorOwingFebruary = async ({
-  organisationsRepository,
+  organisationAdministrationRepository,
   reportsRepository
 }) => {
   const accreditationId = new ObjectId().toString()
@@ -112,7 +112,7 @@ const seedOperatorOwingFebruary = async ({
   })
   accreditation.prnIssuance.tonnageBand = TONNAGE_BAND.OVER_10000
   const organisation = await buildApprovedOrg(
-    organisationsRepository,
+    organisationAdministrationRepository,
     { registrations: [registration], accreditations: [accreditation] },
     { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
   )

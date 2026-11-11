@@ -4,7 +4,7 @@ import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 
 describe('getSubmissionsToMigrate', () => {
   let formsSubmissionRepository
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   const org1Id = new ObjectId()
   const org2Id = new ObjectId()
@@ -17,14 +17,14 @@ describe('getSubmissionsToMigrate', () => {
     formsSubmissionRepository = {
       findAllFormSubmissionIds: vi.fn()
     }
-    organisationsRepository = {
+    organisationAdministrationRepository = {
       findAllIds: vi.fn()
     }
     vi.clearAllMocks()
   })
 
   it('should return all submissions when nothing is migrated yet', async () => {
-    organisationsRepository.findAllIds.mockResolvedValue({
+    organisationAdministrationRepository.findAllIds.mockResolvedValue({
       organisations: new Set(),
       registrations: new Set(),
       accreditations: new Set()
@@ -37,7 +37,7 @@ describe('getSubmissionsToMigrate', () => {
 
     const result = await getSubmissionsToMigrate(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     )
 
     expect(result.migrated.organisations.size).toBe(0)
@@ -51,7 +51,7 @@ describe('getSubmissionsToMigrate', () => {
   })
 
   it('should return only unmigrated submissions for incremental migration', async () => {
-    organisationsRepository.findAllIds.mockResolvedValue({
+    organisationAdministrationRepository.findAllIds.mockResolvedValue({
       organisations: new Set([org1Id.toString()]),
       registrations: new Set([reg1Id.toString()]),
       accreditations: new Set([accr2Id.toString()])
@@ -64,7 +64,7 @@ describe('getSubmissionsToMigrate', () => {
 
     const result = await getSubmissionsToMigrate(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     )
 
     expect(result.migrated.organisations.size).toBe(1)
@@ -88,7 +88,7 @@ describe('getSubmissionsToMigrate', () => {
     const reg1IdStr = reg1Id.toString()
     const accr1IdStr = accr1Id.toString()
 
-    organisationsRepository.findAllIds.mockResolvedValue({
+    organisationAdministrationRepository.findAllIds.mockResolvedValue({
       organisations: new Set([org1IdStr]),
       registrations: new Set([reg1IdStr]),
       accreditations: new Set([accr1IdStr])
@@ -101,7 +101,7 @@ describe('getSubmissionsToMigrate', () => {
 
     const result = await getSubmissionsToMigrate(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     )
 
     expect(result.migrated.totalCount).toBe(3)
@@ -115,7 +115,7 @@ describe('getSubmissionsToMigrate', () => {
     const testOrgId = '697a3c0e0587e4d4d7f3d533'
     const realOrgId = org2Id.toString()
 
-    organisationsRepository.findAllIds.mockResolvedValue({
+    organisationAdministrationRepository.findAllIds.mockResolvedValue({
       organisations: new Set(),
       registrations: new Set(),
       accreditations: new Set()
@@ -128,7 +128,7 @@ describe('getSubmissionsToMigrate', () => {
 
     const result = await getSubmissionsToMigrate(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     )
 
     // Test org should be filtered out, only real org should remain
@@ -141,7 +141,7 @@ describe('getSubmissionsToMigrate', () => {
     const skippedAccrId = '697a10349b947884b8407111'
     const realAccrId = accr1Id.toString()
 
-    organisationsRepository.findAllIds.mockResolvedValue({
+    organisationAdministrationRepository.findAllIds.mockResolvedValue({
       organisations: new Set(),
       registrations: new Set(),
       accreditations: new Set()
@@ -154,7 +154,7 @@ describe('getSubmissionsToMigrate', () => {
 
     const result = await getSubmissionsToMigrate(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     )
 
     expect(result.pendingMigration.accreditations).toEqual(

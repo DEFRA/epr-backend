@@ -53,6 +53,10 @@ const organisation = buildOrganisation({
 })
 
 const ids = { organisationId, registrationId }
+const numbers = {
+  organisationNumber: '500123',
+  registrationNumber: 'R25SR500010912PL'
+}
 
 /**
  * A summary log as stored before summary logs were scoped by accreditation
@@ -62,7 +66,7 @@ const ids = { organisationId, registrationId }
  */
 const unscoped = (overrides = {}) => {
   const { year: _year, ...summaryLog } = withoutAccreditationId(
-    summaryLogFactory.submitted({ ...ids, ...overrides })
+    summaryLogFactory.submitted({ ...ids, ...numbers, ...overrides })
   )
   return summaryLog
 }
@@ -92,7 +96,7 @@ const registeredOnlyMeta = {
  * @property {SystemLogsRepository} systemLogsRepository
  * @property {TypedLogger} logger
  * @property {() => string[]} unmappedLines
- * @property {(isDryRun: boolean, overrides?: { summaryLogs?: Partial<UnscopedSummaryLogs>, organisationsRepository?: OrganisationsRepository }) => ReturnType<typeof backfillSummaryLogScope>} run
+ * @property {(isDryRun: boolean, overrides?: { summaryLogs?: Partial<UnscopedSummaryLogs>, organisationAdministrationRepository?: OrganisationsRepository }) => ReturnType<typeof backfillSummaryLogScope>} run
  */
 
 const it = /** @type {import('vitest').TestAPI<{ backfill: Backfill }>} */ (
@@ -107,9 +111,10 @@ const it = /** @type {import('vitest').TestAPI<{ backfill: Backfill }>} */ (
       const summaryLogs = createUnscopedSummaryLogs(database)
       const logger = createMockLogger()
       const systemLogsRepository = createMockSystemLogsRepository()
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        /** @type {*} */ (organisation)
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          /** @type {*} */ (organisation)
+        ])()
 
       /** @type {Backfill} */
       const backfill = {
@@ -145,8 +150,9 @@ const it = /** @type {import('vitest').TestAPI<{ backfill: Backfill }>} */ (
             {
               summaryLogs: { ...summaryLogs, ...overrides.summaryLogs },
               systemLogsRepository,
-              organisationsRepository:
-                overrides.organisationsRepository ?? organisationsRepository,
+              organisationAdministrationRepository:
+                overrides.organisationAdministrationRepository ??
+                organisationAdministrationRepository,
               logger
             },
             { isDryRun }
@@ -188,6 +194,8 @@ describe('backfillSummaryLogScope (mongo)', () => {
           summaryLogId: 'accredited',
           organisationId,
           registrationId,
+          ...numbers,
+          accreditationNumber: 'ACC500123',
           previous: { version: 1 },
           next: {
             accreditationId,
@@ -377,11 +385,13 @@ describe('backfillSummaryLogScope (mongo)', () => {
     backfill: { store, run, stored }
   }) => {
     await store({ accredited: unscoped(uploadedFor(accreditedMeta)) })
-    const organisationsRepository = partialMock({
+    const organisationAdministrationRepository = partialMock({
       findById: vi.fn().mockRejectedValue(new Error('database unavailable'))
     })
 
-    expect(await run(false, { organisationsRepository })).toMatchObject({
+    expect(
+      await run(false, { organisationAdministrationRepository })
+    ).toMatchObject({
       mapped: 0,
       failed: 1
     })

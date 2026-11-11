@@ -22,7 +22,7 @@ import { toCalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  *
  * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
  *
@@ -58,16 +58,18 @@ const lookupContext = () => ({
  * Finds the stored organisation a route names by its number. Only an
  * organisation the organisation read model serves can be found.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OrganisationNumber} organisationNumber
  * @returns {Promise<Organisation>}
  */
 export async function findOrganisationByNumber(
-  organisationsRepository,
+  organisationAdministrationRepository,
   organisationNumber
 ) {
   const organisation =
-    await organisationsRepository.findByOrganisationNumber(organisationNumber)
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      organisationNumber
+    )
   if (
     !organisation ||
     !servesOrganisationOn(organisation, lookupContext().today)
@@ -82,18 +84,18 @@ export async function findOrganisationByNumber(
  * registration the organisation read model serves can be found, so a link
  * built from the read model resolves and nothing else does.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {OrganisationNumber} organisationNumber
  * @param {RegistrationNumber} registrationNumber
  * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
  */
 export async function findRegistrationByNumber(
-  organisationsRepository,
+  organisationAdministrationRepository,
   organisationNumber,
   registrationNumber
 ) {
   const organisation = await findOrganisationByNumber(
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationNumber
   )
 

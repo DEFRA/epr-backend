@@ -11,7 +11,7 @@ import {
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationOther } from '#domain/organisations/registration.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
@@ -24,13 +24,13 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 export const createApprovedOrgBuilder =
   ({ buildOrganisation }) =>
   /**
-   * @param {OrganisationsRepository} organisationsRepository
+   * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {object} [overrides]
    * @param {{ VALID_FROM: string, VALID_TO: string }} [dateRange] - Accreditation/registration validity range (defaults to today .. one year on)
    * @returns {Promise<Organisation>}
    */
   async (
-    organisationsRepository,
+    organisationAdministrationRepository,
     overrides,
     dateRange = getValidDateRange()
   ) => {
@@ -38,7 +38,7 @@ export const createApprovedOrgBuilder =
 
     const INITIAL_VERSION = 1
 
-    await organisationsRepository.insert(org)
+    await organisationAdministrationRepository.insert(org)
 
     const { VALID_FROM, VALID_TO } = dateRange
 
@@ -69,7 +69,7 @@ export const createApprovedOrgBuilder =
       })
     ]
 
-    await organisationsRepository.replace(
+    await organisationAdministrationRepository.replace(
       org.id,
       INITIAL_VERSION,
       prepareOrgUpdate(org, {
@@ -79,5 +79,9 @@ export const createApprovedOrgBuilder =
       })
     )
 
-    return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
+    return waitForVersion(
+      organisationAdministrationRepository,
+      org.id,
+      INITIAL_VERSION + 1
+    )
   }

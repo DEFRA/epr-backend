@@ -134,6 +134,7 @@ export const reportsPost = {
       await auditReportCreate(request, {
         organisationNumber,
         registrationNumber,
+        accreditationNumber: createdReport.accreditationNumber,
         year,
         cadence,
         period,

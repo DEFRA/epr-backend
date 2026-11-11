@@ -1,6 +1,6 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { standingByYear } from '#organisation-read-model/domain/years.js'
+import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'

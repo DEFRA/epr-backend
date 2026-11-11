@@ -1,14 +1,29 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import {
-  buildEffectiveMaterialStages,
-  formatTonnageMonitoringResults
-} from '#application/common/material-aggregation.js'
+import { formatTonnageMonitoringResults } from '#application/common/material-aggregation.js'
 import { getMonthNames } from '#common/helpers/date-formatter.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 
-const ORGANISATIONS_COLLECTION = 'epr-organisations'
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+
+/**
+ * @typedef {{
+ *   _id: {
+ *     organisationNumber: string
+ *     registrationNumber: string
+ *     year: number
+ *     monthNumber: number
+ *     month: string
+ *     type: string
+ *   }
+ *   totalTonnage: number
+ * }} RegistrationTonnage
+ */
+
 const PROCESSING_TYPE_FIELD = '$processingType'
 const WASTE_RECORD_TYPE_FIELD = '$wasteRecordType'
 const DISPATCH_DATE_FIELD = '$dispatchDate'
@@ -146,35 +161,6 @@ const buildMonthExpression = () => ({
   }
 })
 
-const buildMaterialLookupStage = () => ({
-  $lookup: {
-    from: ORGANISATIONS_COLLECTION,
-    let: {
-      organisationNumber: { $toInt: '$_id.organisationNumber' },
-      registrationNumber: '$_id.registrationNumber'
-    },
-    pipeline: [
-      { $match: { $expr: { $eq: ['$orgId', '$$organisationNumber'] } } },
-      { $unwind: '$registrations' },
-      {
-        $match: {
-          $expr: {
-            $eq: ['$registrations.registrationNumber', '$$registrationNumber']
-          }
-        }
-      },
-      {
-        $project: {
-          orgId: '$orgId',
-          material: '$registrations.material',
-          glassRecyclingProcess: '$registrations.glassRecyclingProcess'
-        }
-      }
-    ],
-    as: 'orgData'
-  }
-})
-
 const buildLatestSubmittedRowStateMatchStage = (
   latestSubmittedSummaryLogIds
 ) => ({
@@ -239,61 +225,109 @@ const buildTonnageGroupStage = () => ({
   }
 })
 
-const buildMaterialGroupStage = () => ({
-  $group: {
-    _id: {
-      material: '$effectiveMaterial',
-      year: '$_id.year',
-      monthNumber: '$_id.monthNumber',
-      month: '$_id.month',
-      type: '$_id.type'
-    },
-    totalTonnage: { $sum: '$totalTonnage' }
-  }
-})
-
-const buildProjectionStage = () => ({
-  $project: {
-    _id: 0,
-    material: '$_id.material',
-    year: '$_id.year',
-    monthNumber: '$_id.monthNumber',
-    month: '$_id.month',
-    type: '$_id.type',
-    totalTonnage: 1
-  }
-})
-
 const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
   buildLatestSubmittedRowStateMatchStage(latestSubmittedSummaryLogIds),
   buildComputedFieldsStage(),
   buildValidRecordMatchStage(),
   buildDateFieldsStage(),
-  buildTonnageGroupStage(),
-  buildMaterialLookupStage(),
-  ...buildEffectiveMaterialStages(),
-  buildMaterialGroupStage(),
-  buildProjectionStage()
+  buildTonnageGroupStage()
 ]
 
 /**
- * @param {import('mongodb').Db} db
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
+ * @param {string} organisationNumber
+ * @param {string} registrationNumber
  */
-export const aggregateTonnageByMaterial = async (db, ledgerRepository) => {
-  const latestSubmitted =
-    await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
+const registrationKey = (organisationNumber, registrationNumber) =>
+  `${organisationNumber}:${registrationNumber}`
+
+/**
+ * Test organisations are left out.
+ *
+ * @param {Organisation[]} organisations
+ * @returns {Map<string, string>}
+ */
+const materialByRegistration = (organisations) =>
+  new Map(
+    organisations
+      .filter(
+        ({ organisationNumber }) =>
+          !TEST_ORGANISATION_NUMBERS.has(organisationNumber)
+      )
+      .flatMap(({ organisationNumber, registrations }) =>
+        Object.entries(registrations).map(
+          ([registrationNumber, { material }]) => [
+            registrationKey(organisationNumber, registrationNumber),
+            material
+          ]
+        )
+      )
+  )
+
+/**
+ * Rows whose registration the read model doesn't serve are left out.
+ *
+ * @param {RegistrationTonnage[]} registrationTonnages
+ * @param {Map<string, string>} materials
+ */
+const sumByMaterial = (registrationTonnages, materials) => {
+  const totals = new Map()
+
+  for (const { _id, totalTonnage } of registrationTonnages) {
+    const material = materials.get(
+      registrationKey(_id.organisationNumber, _id.registrationNumber)
+    )
+    if (material === undefined) {
+      continue
+    }
+    const { year, monthNumber, month, type } = _id
+    const key = `${material}-${year}-${monthNumber}-${type}`
+    const existing = totals.get(key)
+    if (existing) {
+      existing.totalTonnage += totalTonnage
+    } else {
+      totals.set(key, {
+        material,
+        year,
+        monthNumber,
+        month,
+        type,
+        totalTonnage
+      })
+    }
+  }
+
+  return [...totals.values()]
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
+ */
+export const aggregateTonnageByMaterial = async (
+  db,
+  ledgerRepository,
+  organisationReadRepository
+) => {
+  const [latestSubmitted, organisations] = await Promise.all([
+    ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
+    organisationReadRepository.findAll()
+  ])
   const latestSubmittedSummaryLogIds = latestSubmitted.map(
     (entry) => entry.summaryLogId
   )
   const pipeline = buildAggregationPipeline(latestSubmittedSummaryLogIds)
 
-  const results = await db
-    .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
-    .aggregate(pipeline)
-    .toArray()
+  const registrationTonnages = /** @type {RegistrationTonnage[]} */ (
+    await db
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+      .aggregate(pipeline)
+      .toArray()
+  )
 
-  const { materials, total } = formatTonnageMonitoringResults(results)
+  const { materials, total } = formatTonnageMonitoringResults(
+    sumByMaterial(registrationTonnages, materialByRegistration(organisations))
+  )
 
   return {
     generatedAt: new Date().toISOString(),

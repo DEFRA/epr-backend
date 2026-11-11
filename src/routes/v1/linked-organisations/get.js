@@ -5,7 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { linkedOrganisationsResponseSchema } from './response.schema.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organisations/linking-port.js').OrganisationLinkingRepository} OrganisationLinkingRepository */
 
 export const linkedOrganisationsGetAllPath = '/v1/linked-organisations'
 
@@ -28,7 +28,7 @@ export const linkedOrganisationsGetAll = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationLinkingRepository: OrganisationLinkingRepository,
    *   query: { name?: string }
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -37,7 +37,7 @@ export const linkedOrganisationsGetAll = {
     const { name } = request.query
     const filter = name ? { name } : undefined
     const organisations =
-      await request.organisationsRepository.findAllLinked(filter)
+      await request.organisationLinkingRepository.findAllLinked(filter)
     const filtered = organisations
       .filter((org) => !isTestOrganisation(org))
       .map(toOrganisationWire)

@@ -19,8 +19,11 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
+
+const ACCREDITATION_NUMBER = toAccreditationNumber('A25SR500030912PA')
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -46,9 +49,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -62,6 +64,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       summaryLogFactory.submitted({
         organisationId,
         registrationId,
+        accreditationId: new ObjectId().toString(),
+        organisationNumber: organisation.organisationNumber,
+        registrationNumber: REPROCESSOR_NUMBER,
+        accreditationNumber: ACCREDITATION_NUMBER,
         file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
       })
     )
@@ -100,7 +106,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         {
           summaryLogId,
           organisationId,
-          registrationId
+          registrationId,
+          organisationNumber: organisation.organisationNumber,
+          registrationNumber: REPROCESSOR_NUMBER,
+          accreditationNumber: ACCREDITATION_NUMBER
         }
       )
     })

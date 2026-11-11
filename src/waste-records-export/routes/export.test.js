@@ -171,7 +171,7 @@ const createServerWithRepos = async ({
 
   return createTestServer({
     repositories: {
-      organisationsRepository: () => ({ findAll: readsLegacy }),
+      organisationAdministrationRepository: () => ({ findAll: readsLegacy }),
       organisationReadRepository:
         await organisationReadRepositoryOf(organisations),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,

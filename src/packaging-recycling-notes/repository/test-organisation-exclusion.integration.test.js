@@ -98,22 +98,23 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
       },
       repositories: {
         packagingRecyclingNotesRepository: () => repository,
-        organisationsRepository: createInMemoryOrganisationsRepository(
-          [TEST_ORGANISATION_NUMBER, REAL_ORGANISATION_NUMBER].map(
-            (organisationNumber) =>
-              partialMock(
-                buildOrganisation({
-                  organisationNumber,
-                  accreditations: [
-                    buildAccreditation({
-                      accreditationNumber:
-                        buildAccreditationSnapshot().accreditationNumber
-                    })
-                  ]
-                })
-              )
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository(
+            [TEST_ORGANISATION_NUMBER, REAL_ORGANISATION_NUMBER].map(
+              (organisationNumber) =>
+                partialMock(
+                  buildOrganisation({
+                    organisationNumber,
+                    accreditations: [
+                      buildAccreditation({
+                        accreditationNumber:
+                          buildAccreditationSnapshot().accreditationNumber
+                      })
+                    ]
+                  })
+                )
+            )
           )
-        )
       }
     })
   }

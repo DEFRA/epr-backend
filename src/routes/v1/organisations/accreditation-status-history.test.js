@@ -211,7 +211,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -368,6 +368,16 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
       expect(previousAccreditation.status).toBe('approved')
       expect(nextAccreditation.status).toBe('suspended')
+      const nextRegistration = entry.context.next.registrations.find(
+        (reg) => reg.id === ctx.registrationId
+      )
+      expect(entry.context.registrationNumber).toBe(
+        nextRegistration.registrationNumber
+      )
+      expect(entry.context.accreditationNumber).toEqual(expect.any(String))
+      expect(entry.context.accreditationNumber).toBe(
+        nextAccreditation.accreditationNumber
+      )
 
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
     })
@@ -1142,13 +1152,12 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
      * @param {*} fixture
      */
     const servingStored = (fixture) => {
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        fixture
-      ])
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([fixture])
       return {
-        organisationsRepository,
+        organisationAdministrationRepository,
         organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository())
+          organisationReadRepositoryOver(organisationAdministrationRepository())
       }
     }
 

@@ -119,7 +119,7 @@ const createServer = async ({
 
   return createTestServer({
     repositories: {
-      organisationsRepository: () => legacyOrganisationsRepository,
+      organisationAdministrationRepository: () => legacyOrganisationsRepository,
       organisationReadRepository: await organisationReadRepositoryOf([
         organisation
       ]),

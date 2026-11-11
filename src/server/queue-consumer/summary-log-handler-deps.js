@@ -9,7 +9,7 @@ import { createReportsService } from '#reports/application/report-service.js'
  * @typedef {Pick<ServerApp,
  *   | 'uploadsRepository'
  *   | 'summaryLogsRepository'
- *   | 'organisationsRepository'
+ *   | 'organisationAdministrationRepository'
  *   | 'summaryLogRowStatesRepository'
  *   | 'ledgerRepository'
  *   | 'wasteBalanceService'
@@ -30,7 +30,7 @@ import { createReportsService } from '#reports/application/report-service.js'
 export const buildSummaryLogHandlerDeps = ({
   uploadsRepository,
   summaryLogsRepository,
-  organisationsRepository,
+  organisationAdministrationRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,
@@ -39,7 +39,7 @@ export const buildSummaryLogHandlerDeps = ({
   overseasSitesRepository
 }) => ({
   summaryLogsRepository,
-  organisationsRepository,
+  organisationAdministrationRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,

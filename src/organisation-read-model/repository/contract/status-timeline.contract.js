@@ -1,3 +1,6 @@
+import { onTestFinished } from 'vitest'
+
+import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   REPROCESSOR_NUMBER,
@@ -307,6 +310,8 @@ export const testStatusTimelineBehaviour = (it) => {
     it('serves an accreditation for next year approved today as approved from 1 January', async ({
       organisationReadRepositoryWith
     }) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
       const now = new Date()
       const nextYear = now.getUTCFullYear() + 1
       const stored = organisationAccredited({

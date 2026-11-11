@@ -159,7 +159,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -184,7 +184,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -217,7 +217,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -253,7 +253,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -278,7 +278,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -303,7 +303,7 @@ describe('generateReportCompliance', () => {
     const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -344,7 +344,7 @@ describe('generateReportCompliance', () => {
     const normalReg = normalOrg.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -376,7 +376,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -448,7 +448,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -482,7 +482,7 @@ describe('generateReportCompliance', () => {
     const reg = org.registrations[0]
 
     const result = await generateReportCompliance(
-      organisationReadRepositoryOver(orgRepo),
+      await organisationReadRepositoryOver(orgRepo).findAll(),
       reportsRepo
     )
 
@@ -541,12 +541,12 @@ describe('generateReportCompliance', () => {
       externalAccreditations
     ) =>
       generateReportCompliance(
-        (
+        await (
           await organisationReadRepositoryOf([organisation], {
             logger,
             externalAccreditations
           })
-        )(),
+        )().findAll(),
         createInMemoryReportsRepository()()
       )
 
