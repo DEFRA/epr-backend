@@ -32,9 +32,9 @@ import {
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
  *
- * @typedef {{ organisation: Organisation }} ResolvedRecords
+ * @typedef {{ storedOrganisation: Organisation }} ResolvedRecords
  *
- * @typedef {ResolvedRecords & { registration?: Registration }} ResolvedOrginisationAndRegistration
+ * @typedef {{ organisation: Organisation, registration?: Registration }} ResolvedOrginisationAndRegistration
  *
  * @typedef {KeyedResponse<ResolvedRequest>} NaturalKeyResponse
  *
@@ -166,7 +166,7 @@ export const atNaturalKeys = (
       )
 
       /** @type {ResolvedRecords} */
-      const resolvedRecords = { organisation }
+      const resolvedRecords = { storedOrganisation: organisation }
       Object.assign(request.app, resolvedRecords)
 
       const accreditation =
