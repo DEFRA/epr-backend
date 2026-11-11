@@ -123,7 +123,7 @@ export const organisationsLinkedGetAll = {
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, auth, logger } = request
+    const { organisationLinkingRepository, auth, logger } = request
 
     const { email } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
@@ -143,8 +143,8 @@ export const organisationsLinkedGetAll = {
     )
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
-      organisationsRepository.findByLinkedDefraOrgId(current.id),
-      organisationsRepository.findAllLinkableForUser(email)
+      organisationLinkingRepository.findByLinkedDefraOrgId(current.id),
+      organisationLinkingRepository.findAllLinkableForUser(email)
     ])
 
     const linked = linkedOrg?.linkedDefraOrganisation

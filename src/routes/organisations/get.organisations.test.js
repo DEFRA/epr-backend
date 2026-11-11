@@ -33,9 +33,10 @@ describe('GET /organisations', () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository(
-          [acme, beta].map((organisation) => partialMock(organisation))
-        ),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository(
+            [acme, beta].map((organisation) => partialMock(organisation))
+          ),
         overseasSitesRepository:
           createInMemoryOverseasSitesRepository(overseasSites),
         organisationReadRepository: await organisationReadRepositoryOf(

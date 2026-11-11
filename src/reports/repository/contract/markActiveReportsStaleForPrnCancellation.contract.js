@@ -48,6 +48,7 @@ export const testMarkActiveReportsStaleForPrnCancellationBehaviour = (it) => {
       expect(reportsMarkedStale).toHaveLength(1)
       expect(reportsMarkedStale[0]).toMatchObject({
         reportId,
+        accreditationNumber: buildCreateReportParams().accreditationNumber,
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: DEFAULT_REPORT_PERIOD,

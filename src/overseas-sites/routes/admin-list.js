@@ -175,12 +175,16 @@ export const adminOverseasSitesList = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   organisationAdministrationRepository: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository,
    *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
    * }} request
    */
   handler: async (request, h) => {
-    const { logger, organisationsRepository, overseasSitesRepository } = request
+    const {
+      logger,
+      organisationAdministrationRepository,
+      overseasSitesRepository
+    } = request
     const all = Boolean(request.query.all)
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
@@ -190,7 +194,7 @@ export const adminOverseasSitesList = {
 
     try {
       const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAll(),
+        organisationAdministrationRepository.findAll(),
         overseasSitesRepository.findAll()
       ])
 

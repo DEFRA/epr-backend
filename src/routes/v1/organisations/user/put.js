@@ -28,7 +28,7 @@ export const organisationsUserPut = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationId } = request.params
+    const { organisationId, organisationNumber } = request.params
     const {
       decoded: { payload: tokenPayload }
     } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
@@ -45,7 +45,11 @@ export const organisationsUserPut = {
       result.outcome === ORGANISATION_USER_RESULTS.USER_ADDED ||
       result.outcome === ORGANISATION_USER_RESULTS.USER_UPDATED
     ) {
-      await auditOrganisationUserAdded(request, organisationId, result)
+      await auditOrganisationUserAdded(
+        request,
+        { organisationId, organisationNumber },
+        result
+      )
     }
 
     return h.response().code(StatusCodes.NO_CONTENT)

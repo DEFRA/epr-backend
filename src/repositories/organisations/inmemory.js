@@ -1,6 +1,7 @@
 /** @import { ObjectId } from 'mongodb' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams } from './administration-port.js' */
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
 /** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
@@ -245,7 +246,7 @@ const performFind =
       params
     )
 
-/** @returns {import('./port.js').OrganisationSummary} */
+/** @returns {import('./linking-port.js').OrganisationSummary} */
 const toOrganisationSummary = (org) => ({
   id: org._id.toString(),
   organisationNumber: organisationNumberOfStored(org),
@@ -253,7 +254,7 @@ const toOrganisationSummary = (org) => ({
   status: getCurrentStatus(org)
 })
 
-/** @returns {import('./port.js').LinkedOrganisationSummary} */
+/** @returns {import('./linking-port.js').LinkedOrganisationSummary} */
 const toLinkedOrganisationSummary = (org) => ({
   ...toOrganisationSummary(org),
   linkedDefraOrganisation: {

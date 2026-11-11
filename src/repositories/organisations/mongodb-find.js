@@ -10,7 +10,7 @@ import {
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Db, Document, Filter } from 'mongodb' */
-/** @import { FindParams, SearchCriteria } from './port.js' */
+/** @import { FindParams, SearchCriteria } from './administration-port.js' */
 
 /**
  * How organisations are read from MongoDB. The organisations repository and

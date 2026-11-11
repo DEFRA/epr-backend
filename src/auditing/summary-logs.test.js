@@ -1,6 +1,11 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const mockAudit = vi.fn()
 
@@ -10,6 +15,12 @@ vi.mock('@defra/cdp-auditing', () => ({
 
 const { auditSummaryLogSubmit, auditSummaryLogDownload } =
   await import('./summary-logs.js')
+
+const numbers = {
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('R25SR500030912PA'),
+  accreditationNumber: toAccreditationNumber('A25SR500030912PA')
+}
 
 describe('auditSummaryLogSubmit', () => {
   const summaryLogId = 'summary-log-123'
@@ -55,7 +66,8 @@ describe('auditSummaryLogSubmit', () => {
     await auditSummaryLogSubmit(request, {
       summaryLogId,
       organisationId,
-      registrationId
+      registrationId,
+      ...numbers
     })
 
     expect(mockAudit).toHaveBeenCalledWith({
@@ -67,7 +79,8 @@ describe('auditSummaryLogSubmit', () => {
       context: {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        ...numbers
       },
       user: {
         id: userId,
@@ -83,7 +96,8 @@ describe('auditSummaryLogSubmit', () => {
     await auditSummaryLogSubmit(request, {
       summaryLogId,
       organisationId,
-      registrationId
+      registrationId,
+      ...numbers
     })
 
     const storedLog = await findStoredLog()
@@ -102,9 +116,47 @@ describe('auditSummaryLogSubmit', () => {
       context: {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        ...numbers
       }
     })
+  })
+})
+
+describe('auditing a summary log under an accreditation with no database id', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('records the accreditation by its number', async () => {
+    const systemLogsRepository = createSystemLogsRepository()(logger)
+    const request =
+      /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+        auth: {
+          credentials: {
+            id: 'user',
+            email: 'u@example.gov.uk',
+            scope: ['standardUser']
+          }
+        },
+        systemLogsRepository
+      })
+
+    await auditSummaryLogSubmit(request, {
+      summaryLogId: 'summary-log-2027',
+      organisationId: 'org-456',
+      registrationId: 'reg-789',
+      ...numbers
+    })
+
+    const { systemLogs } = await systemLogsRepository.find({
+      organisationNumber: numbers.organisationNumber,
+      limit: 10
+    })
+    expect(systemLogs[0].context).toMatchObject(numbers)
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ context: expect.objectContaining(numbers) })
+    )
   })
 })
 
@@ -152,7 +204,8 @@ describe('auditSummaryLogDownload', () => {
     await auditSummaryLogDownload(request, {
       summaryLogId,
       organisationId,
-      registrationId
+      registrationId,
+      ...numbers
     })
 
     expect(mockAudit).toHaveBeenCalledWith({
@@ -164,7 +217,8 @@ describe('auditSummaryLogDownload', () => {
       context: {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        ...numbers
       },
       user: {
         id: userId,
@@ -180,7 +234,8 @@ describe('auditSummaryLogDownload', () => {
     await auditSummaryLogDownload(request, {
       summaryLogId,
       organisationId,
-      registrationId
+      registrationId,
+      ...numbers
     })
 
     const storedLog = await findStoredLog()
@@ -199,7 +254,8 @@ describe('auditSummaryLogDownload', () => {
       context: {
         summaryLogId,
         organisationId,
-        registrationId
+        registrationId,
+        ...numbers
       }
     })
   })

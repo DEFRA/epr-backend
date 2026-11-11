@@ -1108,12 +1108,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           action: 'status-transition'
         })
         expect(Object.keys(context).sort()).toEqual([
+          'accreditationNumber',
           'next',
           'organisationNumber',
           'previous',
-          'prnId'
+          'prnId',
+          'registrationNumber'
         ])
         expect(context.organisationNumber).toBe(LEDGER.organisationNumber)
+        expect(context.registrationNumber).toBe(LEDGER.registrationNumber)
+        expect(context.accreditationNumber).toBe(LEDGER.accreditationNumber)
         expect(context.prnId).toBe(prnId)
         expect(context.previous.status.currentStatus).toBe(from)
         expect(context.next.status.currentStatus).toBe(to)

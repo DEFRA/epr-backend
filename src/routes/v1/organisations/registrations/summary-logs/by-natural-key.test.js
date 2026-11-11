@@ -127,9 +127,8 @@ describe('summary-log routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),
@@ -577,7 +576,10 @@ describe('summary-log routes by natural key', () => {
       expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
         summaryLogId: fileId,
         organisationId: organisation.id,
-        registrationId: registeredOnlyRegistration.id
+        registrationId: registeredOnlyRegistration.id,
+        organisationNumber,
+        registrationNumber: registeredOnlyLog.registrationNumber,
+        accreditationNumber: null
       })
     })
 

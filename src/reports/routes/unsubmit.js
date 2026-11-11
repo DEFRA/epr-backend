@@ -100,6 +100,7 @@ export const reportsUnsubmit = {
     await auditReportStatusTransition(request, {
       organisationNumber,
       registrationNumber,
+      accreditationNumber: report.accreditationNumber,
       year,
       cadence,
       period,

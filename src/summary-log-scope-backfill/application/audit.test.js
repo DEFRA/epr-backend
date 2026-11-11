@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 
 import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { auditSummaryLogScopeBackfill } from './audit.js'
 
@@ -12,6 +16,9 @@ describe('auditSummaryLogScopeBackfill', () => {
     const systemLogsRepository = createMockSystemLogsRepository()
     const context = {
       summaryLogId: 'sl-1',
+      organisationNumber: toOrganisationNumber('500123'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      accreditationNumber: null,
       previous: { version: 1 },
       next: { year: toYear(2026), version: 2 }
     }

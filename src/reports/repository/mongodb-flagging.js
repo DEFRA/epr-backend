@@ -18,7 +18,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -41,7 +41,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   field: string,
  *   value: object
  * }} params
- * @returns {Promise<Array<{ reportId: string, year: Year, cadence: string, period: number, submissionNumber: number }>>}
+ * @returns {Promise<Array<{ reportId: string, accreditationNumber: AccreditationNumber | null | undefined, year: Year, cadence: string, period: number, submissionNumber: number }>>}
  */
 const flagReportsByIdempotencyKey = async (
   db,
@@ -76,6 +76,7 @@ const flagReportsByIdempotencyKey = async (
         projection: {
           _id: 0,
           id: 1,
+          accreditationNumber: 1,
           year: 1,
           cadence: 1,
           period: 1,
@@ -87,6 +88,7 @@ const flagReportsByIdempotencyKey = async (
 
   return flaggedDocs.map((doc) => ({
     reportId: doc.id,
+    accreditationNumber: doc.accreditationNumber,
     year: doc.year,
     cadence: doc.cadence,
     period: doc.period,
@@ -309,6 +311,7 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
       projection: {
         _id: 0,
         id: 1,
+        accreditationNumber: 1,
         year: 1,
         cadence: 1,
         period: 1,
@@ -324,6 +327,7 @@ export const performMarkSubmittedReportRequiringResubmissionByOperator = async (
 
   return {
     reportId: doc.id,
+    accreditationNumber: doc.accreditationNumber,
     year: doc.year,
     cadence: doc.cadence,
     period: doc.period,

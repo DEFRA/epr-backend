@@ -90,9 +90,8 @@ describe('GET accreditation overseas-sites', () => {
     server = await createTestServer({
       config,
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          organisation
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([organisation]),
         overseasSitesRepository: createInMemoryOverseasSitesRepository(sites)
       }
     })
@@ -528,7 +527,7 @@ describe('GET accreditation overseas-sites', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: () => ({
+        organisationAdministrationRepository: () => ({
           findRegistrationById: () =>
             Promise.reject(new Error('database unavailable')),
           findAccreditationById: () => Promise.resolve({})

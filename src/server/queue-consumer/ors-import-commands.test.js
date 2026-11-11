@@ -27,7 +27,7 @@ describe('orsImportCommandHandlers', () => {
       orsImportsRepository,
       uploadsRepository: {},
       overseasSitesRepository: {},
-      organisationsRepository: {}
+      organisationAdministrationRepository: {}
     }
   })
 
@@ -127,7 +127,8 @@ describe('orsImportCommandHandlers', () => {
           orsImportsRepository: deps.orsImportsRepository,
           uploadsRepository: deps.uploadsRepository,
           overseasSitesRepository: deps.overseasSitesRepository,
-          organisationsRepository: deps.organisationsRepository,
+          organisationAdministrationRepository:
+            deps.organisationAdministrationRepository,
           logger: deps.logger,
           orsImportMetrics,
           user
@@ -141,7 +142,8 @@ describe('orsImportCommandHandlers', () => {
           orsImportsRepository: deps.orsImportsRepository,
           uploadsRepository: deps.uploadsRepository,
           overseasSitesRepository: deps.overseasSitesRepository,
-          organisationsRepository: deps.organisationsRepository,
+          organisationAdministrationRepository:
+            deps.organisationAdministrationRepository,
           logger: deps.logger,
           orsImportMetrics,
           user: { id: 'system', email: 'system', scope: [], role: null }

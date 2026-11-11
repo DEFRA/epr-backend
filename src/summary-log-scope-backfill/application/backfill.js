@@ -10,7 +10,7 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { SummaryLogScope, UnscopedSummaryLogs } from '../mongodb.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
@@ -28,7 +28,7 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
  * @typedef {Object} Repositories
  * @property {UnscopedSummaryLogs} summaryLogs
  * @property {SystemLogsRepository} systemLogsRepository
- * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationAdministrationRepository} organisationAdministrationRepository
  */
 
 /**
@@ -38,12 +38,15 @@ import { auditSummaryLogScopeBackfill } from './audit.js'
 const ONLY_ACCREDITATION_YEAR_BEFORE_SCOPING = utcYearOf('2026-01-01')
 
 /**
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {string} organisationId
  */
-const findOrganisation = async (organisationsRepository, organisationId) => {
+const findOrganisation = async (
+  organisationAdministrationRepository,
+  organisationId
+) => {
   try {
-    return await organisationsRepository.findById(organisationId)
+    return await organisationAdministrationRepository.findById(organisationId)
   } catch (error) {
     if (Boom.isBoom(error, StatusCodes.NOT_FOUND)) {
       return null
@@ -56,12 +59,12 @@ const findOrganisation = async (organisationsRepository, organisationId) => {
  * The accreditation whose number is stored with the summary log, checked
  * against its organisation.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SummaryLog} summaryLog
  * @returns {Promise<{ scope: SummaryLogScope } | { unmapped: string }>}
  */
 const lookUpAccreditation = async (
-  organisationsRepository,
+  organisationAdministrationRepository,
   { organisationId, meta }
 ) => {
   const processingType = meta?.PROCESSING_TYPE
@@ -76,7 +79,10 @@ const lookUpAccreditation = async (
 
   const organisation =
     organisationId &&
-    (await findOrganisation(organisationsRepository, organisationId))
+    (await findOrganisation(
+      organisationAdministrationRepository,
+      organisationId
+    ))
   if (!organisation) {
     return { unmapped: `organisation ${organisationId} not found` }
   }
@@ -102,11 +108,14 @@ const lookUpAccreditation = async (
  * The scope a summary log lacks, and why its accreditation cannot be given
  * when it cannot.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SummaryLog} summaryLog
  * @returns {Promise<{ lacking: SummaryLogScope, unmapped?: string }>}
  */
-const scopeLacking = async (organisationsRepository, summaryLog) => {
+const scopeLacking = async (
+  organisationAdministrationRepository,
+  summaryLog
+) => {
   const year =
     summaryLog.year === undefined
       ? { year: ONLY_ACCREDITATION_YEAR_BEFORE_SCOPING }
@@ -116,7 +125,7 @@ const scopeLacking = async (organisationsRepository, summaryLog) => {
   }
 
   const accreditation = await lookUpAccreditation(
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLog
   )
   if ('unmapped' in accreditation) {
@@ -155,7 +164,7 @@ const reportUnmapped = (
  * @returns {Promise<Omit<BackfillResult, 'missing' | 'failed'> | null>} null if gone
  */
 const backfillOne = async (
-  { summaryLogs, systemLogsRepository, organisationsRepository },
+  { summaryLogs, systemLogsRepository, organisationAdministrationRepository },
   id,
   isDryRun,
   logger
@@ -167,7 +176,7 @@ const backfillOne = async (
   const { summaryLog, version } = before
 
   const { lacking, unmapped } = await scopeLacking(
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLog
   )
   if (unmapped) {
@@ -190,6 +199,12 @@ const backfillOne = async (
       summaryLogId: id,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber,
+      accreditationNumber:
+        'accreditationNumber' in lacking
+          ? lacking.accreditationNumber
+          : summaryLog.accreditationNumber,
       previous: { version },
       next: { ...lacking, version: version + 1 }
     })

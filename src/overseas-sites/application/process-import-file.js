@@ -5,7 +5,8 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  */
 
@@ -30,7 +31,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {Buffer} buffer - Excel file contents
  * @param {object} deps
  * @param {OverseasSitesRepository} deps.overseasSitesRepository
- * @param {OrganisationsRepository} deps.organisationsRepository
+ * @param {OrganisationAdministrationRepository} deps.organisationAdministrationRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {SystemLogHumanActor} deps.user
@@ -40,34 +41,26 @@ export const processImportFile = async (
   buffer,
   {
     overseasSitesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     logger,
     user
   }
 ) => {
-  let metadata
-  let sites
-  let errors
+  const { metadata, sites, errors } = await parseSpreadsheet(buffer, logger)
 
-  try {
-    ;({ metadata, sites, errors } = await parse(buffer))
-  } catch (err) {
-    if (err instanceof SpreadsheetValidationError) {
-      logger.warn({
-        err,
-        message: `Invalid ORS spreadsheet structure: ${err.message}`
-      })
-      return failureResult(null, [{ field: 'file', message: err.message }])
-    }
-    throw err
+  if (!metadata) {
+    return failureResult(null, errors)
   }
 
   if (errors.length > 0) {
     return failureResult(metadata.registrationNumber, errors)
   }
 
-  const resolved = await resolveRegistration(organisationsRepository, metadata)
+  const resolved = await resolveRegistration(
+    organisationAdministrationRepository,
+    metadata
+  )
   if (resolved.error) {
     return failureResult(metadata.registrationNumber, [resolved.error])
   }
@@ -79,7 +72,7 @@ export const processImportFile = async (
   )
 
   const replaced =
-    await organisationsRepository.replaceRegistrationOverseasSites(
+    await organisationAdministrationRepository.replaceRegistrationOverseasSites(
       org.id,
       org.version,
       registration.id,
@@ -100,6 +93,7 @@ export const processImportFile = async (
   await recordImportSystemLog(systemLogsRepository, logger, {
     user,
     organisationId: org.id,
+    organisationNumber: org.organisationNumber,
     registrationId: registration.id,
     registrationNumber: metadata.registrationNumber,
     sitesCreated,
@@ -116,6 +110,32 @@ export const processImportFile = async (
     mappingsUpdated,
     registrationNumber: metadata.registrationNumber,
     errors: []
+  }
+}
+
+/**
+ * Parses the spreadsheet, reporting a file whose structure is invalid as a
+ * file error without metadata.
+ *
+ * @param {Buffer} buffer
+ * @param {TypedLogger} logger
+ */
+const parseSpreadsheet = async (buffer, logger) => {
+  try {
+    return await parse(buffer)
+  } catch (err) {
+    if (err instanceof SpreadsheetValidationError) {
+      logger.warn({
+        err,
+        message: `Invalid ORS spreadsheet structure: ${err.message}`
+      })
+      return {
+        metadata: null,
+        sites: [],
+        errors: [{ field: 'file', message: err.message }]
+      }
+    }
+    throw err
   }
 }
 
@@ -152,10 +172,14 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
   return { overseasSitesMap, sitesCreated }
 }
 
-const resolveRegistration = async (organisationsRepository, metadata) => {
-  const org = await organisationsRepository.findByOrganisationNumber(
-    metadata.organisationNumber
-  )
+const resolveRegistration = async (
+  organisationAdministrationRepository,
+  metadata
+) => {
+  const org =
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      metadata.organisationNumber
+    )
   if (!org) {
     return {
       error: {
@@ -180,12 +204,26 @@ const resolveRegistration = async (organisationsRepository, metadata) => {
   return { org, registration }
 }
 
+/**
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {TypedLogger} logger
+ * @param {{
+ *   user: SystemLogHumanActor
+ *   organisationId: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationId: string
+ *   registrationNumber: string
+ *   sitesCreated: number
+ *   mappingsUpdated: number
+ * }} importCompleted
+ */
 const recordImportSystemLog = async (
   systemLogsRepository,
   logger,
   {
     user,
     organisationId,
+    organisationNumber,
     registrationId,
     registrationNumber,
     sitesCreated,
@@ -203,6 +241,7 @@ const recordImportSystemLog = async (
       },
       context: {
         organisationId,
+        organisationNumber,
         registrationId,
         registrationNumber,
         sitesCreated,

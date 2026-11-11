@@ -14,7 +14,8 @@
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {OrganisationAdministrationRepository} from '#repositories/organisations/administration-port.js'
+ * @import {OrganisationLinkingRepository} from '#repositories/organisations/linking-port.js'
  * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
@@ -71,7 +72,8 @@
  *  db: Db,
  *  locker: LockManager,
  *  logger: TypedLogger,
- *  organisationsRepository: OrganisationsRepository,
+ *  organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *  organisationLinkingRepository: OrganisationLinkingRepository,
  *  organisationReadRepository: OrganisationReadRepository,
  *  systemLogsRepository: SystemLogsRepository,
  *  ledgerRepository: WasteBalanceLedgerRepository,
@@ -137,8 +139,9 @@
  *   formSubmissionsRepository: FormSubmissionsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   nonProdDataReset: NonProdDataReset,
+ *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *   organisationLinkingRepository: OrganisationLinkingRepository,
  *   organisationReadRepository: OrganisationReadRepository,
- *   organisationsRepository: OrganisationsRepository,
  *   orsImportsRepository: OrsImportsRepository,
  *   overseasSitesRepository: OverseasSitesRepository,
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,

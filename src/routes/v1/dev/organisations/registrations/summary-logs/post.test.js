@@ -129,7 +129,12 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(systemLogs).toMatchObject([
       {
         event: { action: 'submit' },
-        context: { summaryLogId: body.summaryLogId }
+        context: {
+          summaryLogId: body.summaryLogId,
+          organisationNumber: env.organisationNumber,
+          registrationNumber: env.registrationNumber,
+          accreditationNumber: env.accreditationNumber
+        }
       }
     ])
   })
@@ -187,9 +192,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
     expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
-    const { organisationNumber } = await env.organisationsRepository.findById(
-      env.organisationId
-    )
+    const { organisationNumber } =
+      await env.organisationAdministrationRepository.findById(
+        env.organisationId
+      )
     expect(stored?.summaryLog).toMatchObject({
       organisationNumber,
       registrationNumber: 'REG-123',
@@ -280,11 +286,12 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     'refuses a summary log, storing nothing, when the $number is missing',
     async ({ number, owner }) => {
       const env = await createEnvironment()
-      const { organisationsRepository } = env
+      const { organisationAdministrationRepository } = env
       const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
-      const findRegistrationById = organisationsRepository.findRegistrationById
+      const findRegistrationById =
+        organisationAdministrationRepository.findRegistrationById
       vi.spyOn(
-        organisationsRepository,
+        organisationAdministrationRepository,
         'findRegistrationById'
       ).mockImplementation(async (...args) => {
         const registration = await findRegistrationById(...args)

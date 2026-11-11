@@ -80,6 +80,7 @@ describe('auditOrganisationUpdate', () => {
           event: expectedEvent,
           context: {
             organisationId,
+            organisationNumber,
             previous: { version: '1', orgId: 500001 },
             next: { version: '2', orgId: 500001 }
           }
@@ -91,6 +92,7 @@ describe('auditOrganisationUpdate', () => {
       expect(storedLogs[0].event).toEqual(expectedEvent)
       expect(storedLogs[0].context).toEqual({
         organisationId,
+        organisationNumber,
         previous: { version: '1', orgId: 500001 },
         next: { version: '2', orgId: 500001 }
       })
@@ -112,7 +114,7 @@ describe('auditOrganisationUpdate', () => {
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           event: expectedEvent,
-          context: { organisationId }
+          context: { organisationId, organisationNumber }
         })
       )
 
@@ -121,6 +123,7 @@ describe('auditOrganisationUpdate', () => {
       expect(storedLogs[0].event).toEqual(expectedEvent)
       expect(storedLogs[0].context).toEqual({
         organisationId,
+        organisationNumber,
         previous: { version: '1', veryLongString, orgId: 500001 },
         next: { version: '2', veryLongString, orgId: 500001 }
       })

@@ -18,7 +18,7 @@ import { processImportFile } from './process-import-file.js'
  * @import { OrsImportFile, OrsImportsRepository } from '#overseas-sites/imports/repository/port.js'
  * @import { OrsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  * @import { OrsFileResult } from './process-import-file.js'
  */
@@ -34,7 +34,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {OrsImportsRepository} deps.orsImportsRepository
  * @param {UploadsRepository} deps.uploadsRepository
  * @param {OverseasSitesRepository} deps.overseasSitesRepository
- * @param {OrganisationsRepository} deps.organisationsRepository
+ * @param {OrganisationAdministrationRepository} deps.organisationAdministrationRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {OrsImportMetrics} deps.orsImportMetrics
@@ -45,7 +45,7 @@ export const processOrsImport = async (importId, deps) => {
     orsImportsRepository,
     uploadsRepository,
     overseasSitesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     logger,
     orsImportMetrics,
@@ -83,7 +83,7 @@ export const processOrsImport = async (importId, deps) => {
       const result = await processFile(file, {
         uploadsRepository,
         overseasSitesRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         logger,
         user
@@ -124,7 +124,7 @@ export const processOrsImport = async (importId, deps) => {
  * @param {object} deps
  * @param {UploadsRepository} deps.uploadsRepository
  * @param {OverseasSitesRepository} deps.overseasSitesRepository
- * @param {OrganisationsRepository} deps.organisationsRepository
+ * @param {OrganisationAdministrationRepository} deps.organisationAdministrationRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {SystemLogHumanActor} deps.user
@@ -134,7 +134,7 @@ const processFile = async (file, deps) => {
   const {
     uploadsRepository,
     overseasSitesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     logger,
     user
@@ -159,7 +159,7 @@ const processFile = async (file, deps) => {
 
     const result = await processImportFile(buffer, {
       overseasSitesRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       systemLogsRepository,
       logger,
       user

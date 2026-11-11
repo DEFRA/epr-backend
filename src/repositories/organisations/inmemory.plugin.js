@@ -14,7 +14,16 @@ export function createInMemoryOrganisationsRepositoryPlugin(
   return {
     name: 'organisationsRepository',
     register: (server) => {
-      registerDependency(server, 'organisationsRepository', () => repository)
+      registerDependency(
+        server,
+        'organisationAdministrationRepository',
+        () => repository
+      )
+      registerDependency(
+        server,
+        'organisationLinkingRepository',
+        () => repository
+      )
     }
   }
 }

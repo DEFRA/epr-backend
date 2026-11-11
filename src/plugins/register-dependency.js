@@ -12,7 +12,7 @@
  *
  * @template {keyof ServerApp} K
  * @param {import('@hapi/hapi').Server} server - Hapi server instance
- * @param {K} name - Property name to register (e.g. 'organisationsRepository')
+ * @param {K} name - Property name to register (e.g. 'summaryLogsRepository')
  * @param {(request: {logger: TypedLogger}) => ServerApp[K]} getInstance - Factory function that returns the dependency instance
  */
 export const registerDependency = (server, name, getInstance) => {

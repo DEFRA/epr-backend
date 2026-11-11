@@ -9,7 +9,7 @@ import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { ResolvedParams } from '#routes/organisations/at-natural-keys.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -49,7 +49,7 @@ export const summaryLogRecordsCsv = {
   /**
    * @param {HapiRequest & {
    *   params: ResolvedParams & { fileId: SummaryLogFileId },
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
@@ -79,8 +79,8 @@ export const summaryLogRecordsCsv = {
     }
 
     const [org, registration, rowStates] = await Promise.all([
-      request.organisationsRepository.findById(organisationId),
-      request.organisationsRepository.findRegistrationById(
+      request.organisationAdministrationRepository.findById(organisationId),
+      request.organisationAdministrationRepository.findRegistrationById(
         organisationId,
         registrationId
       ),
@@ -94,7 +94,10 @@ export const summaryLogRecordsCsv = {
     await auditSummaryLogDownload(request, {
       summaryLogId: fileId,
       organisationId,
-      registrationId
+      registrationId,
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber: summaryLog.accreditationNumber
     })
 
     const response = h

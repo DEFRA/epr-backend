@@ -79,7 +79,7 @@ export const countOutstandingReturns = (params) => {
  * the register and that year's monthly reports as they stand.
  *
  * @param {Object} params
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
+ * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} params.organisationAdministrationRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {Year} params.year - the reporting year the months fall in
  * @param {YearMonth[]} params.months - the reporting months to publish
@@ -87,14 +87,14 @@ export const countOutstandingReturns = (params) => {
  * @returns {Promise<OutstandingReturnsTable>}
  */
 export const buildOutstandingReturnsTable = async ({
-  organisationsRepository,
+  organisationAdministrationRepository,
   reportsRepository,
   year,
   months,
   now
 }) => {
   const [organisations, periodicReports] = await Promise.all([
-    organisationsRepository.findAll(),
+    organisationAdministrationRepository.findAll(),
     reportsRepository.findPeriodicReportsForYear({ year })
   ])
   const outstanding = countOutstandingReturns({

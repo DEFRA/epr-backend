@@ -31,17 +31,17 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
   /** @type {import('#test/create-test-server.js').TestServer} */
   let server
   /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     mockCdpAuditing.mockReset()
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -51,7 +51,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     server: () => server,
     makeRequest: async () => {
       const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      await organisationAdministrationRepository.insert(org)
       return {
         method: 'PUT',
         url: `/organisations/${org.organisationNumber}/user`
@@ -102,7 +102,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     ])(
       'returns $expectedStatus for $description',
       async ({ token, expectedStatus }) => {
-        const org = await buildActiveOrg(organisationsRepository)
+        const org = await buildActiveOrg(organisationAdministrationRepository)
         const response = await server.inject({
           method: 'PUT',
           url: `/organisations/${org.organisationNumber}/user`,
@@ -121,8 +121,8 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     let initialUser
 
     beforeEach(async () => {
-      const org = await buildActiveOrg(organisationsRepository)
-      orgBefore = await organisationsRepository.findById(org.id)
+      const org = await buildActiveOrg(organisationAdministrationRepository)
+      orgBefore = await organisationAdministrationRepository.findById(org.id)
       initialUser = orgBefore.users[0]
     })
 
@@ -154,7 +154,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         await addUser(newUser)
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -194,6 +194,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -230,6 +231,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: null,
           next: {
             contactId: newUser.contactId,
@@ -277,7 +279,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         await addUser(updatedUser())
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version + 1
         )
@@ -317,6 +319,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
@@ -357,6 +360,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
 
         expect(log.context).toEqual({
           organisationId: orgBefore.id,
+          organisationNumber: orgBefore.organisationNumber,
           previous: {
             fullName: initialUser.fullName,
             email: initialUser.email,
@@ -399,7 +403,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       it('does not update the user in the organisation', async () => {
         await addUser(userNotChanged())
 
-        const orgAfter = await organisationsRepository.findById(
+        const orgAfter = await organisationAdministrationRepository.findById(
           orgBefore.id,
           orgBefore.version
         )

@@ -127,6 +127,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         expect.objectContaining({
           organisationNumber,
           registrationNumber,
+          accreditationNumber: null,
           year: YEAR,
           cadence: 'quarterly',
           period: 1,

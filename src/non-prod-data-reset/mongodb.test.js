@@ -92,7 +92,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { organisations: import('#repositories/organisations/port.js').OrganisationsRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -618,7 +618,9 @@ describe('non-prod data reset (mongo)', () => {
       setCdpEnvironment('prod')
 
       const server = {
-        app: { organisationsRepository: repositories.organisations },
+        app: {
+          organisationAdministrationRepository: repositories.organisations
+        },
         logger: mockLogger,
         ext: () => {},
         dependency: (_dependencies, after) => after(server)
@@ -659,7 +661,8 @@ describe('non-prod data reset (mongo)', () => {
           plugin: {
             name: 'organisationsRepository',
             register: (/** @type {import('@hapi/hapi').Server} */ s) => {
-              s.app.organisationsRepository = repositories.organisations
+              s.app.organisationAdministrationRepository =
+                repositories.organisations
             }
           }
         }
