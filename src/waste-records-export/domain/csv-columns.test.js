@@ -20,8 +20,8 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 describe('csv-columns', () => {
@@ -179,35 +179,46 @@ describe('csv-columns', () => {
     const dataCol = (name) =>
       METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
 
-    /** @type {Accreditation} */
-    const accreditationFixture = {
-      id: 'acc-1',
-      statusHistory: [],
-      formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
-      material: 'plastic',
-      orgName: 'Acme Ltd',
-      prnIssuance: {
-        incomeBusinessPlan: [],
-        signatories: [],
-        tonnageBand: 'up_to_500'
-      },
-      samplingInspectionPlanPart2FileUploads: [],
-      submittedToRegulator: 'ea',
-      submitterContactDetails: userFixture,
-      wasteProcessingType: 'reprocessor',
-      accreditationNumber: toAccreditationNumber('ACC-001'),
-      status: 'approved',
-      validFrom: '2026-01-01',
-      validTo: '2026-12-31'
+    const contact = { email: 'test@example.com', fullName: 'Test User' }
+    const readModelStatus = {
+      current: /** @type {const} */ ('approved'),
+      timeline: []
     }
 
-    /** @returns {Registration} */
-    const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
+    /** @type {ReadModelRegistration} */
+    const reprocessorFixture = {
+      applicationContactDetails: contact,
+      approvedPersons: [],
+      material: 'plastic',
+      standingByDate: {},
+      status: readModelStatus,
+      submittedToRegulator: { code: 'ea' },
+      submitterContactDetails: contact,
+      validFrom: '2026-01-01',
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      site: { address: { fullAddress: '1 High St' } },
+      accreditations: {}
+    }
+
+    /** @type {ReadModelRegistration} */
+    const exporterFixture = {
+      ...reprocessorFixture,
+      wasteProcessingType: 'exporter',
+      overseasSites: {
+        '001': {
+          name: 'Acme Recycling',
+          address: { line1: '1 Rue', townOrCity: 'Town', country: 'Germany' }
+        }
+      },
+      accreditations: {}
+    }
 
     const baseInput = {
-      org: orgFixture,
-      registration: regFixture,
-      accreditation: accreditationFixture,
+      org: { name: 'Acme Ltd' },
+      registrationNumber: toRegistrationNumber('REG-001'),
+      registration: reprocessorFixture,
+      accreditationNumber: toAccreditationNumber('ACC-001'),
       data: dataFixture,
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       rowId: '1001',
@@ -248,27 +259,16 @@ describe('csv-columns', () => {
       expect(row[METADATA_COL_INDEX['Row ID']]).toBe('1001')
     })
 
-    it('emits the glass recycling process in place of "glass" for the Material column', () => {
+    it('emits the glass recycling process the read model resolved for the Material column', () => {
       const row = buildDataRow({
         ...baseInput,
-        registration: buildReg({
-          material: 'glass',
-          glassRecyclingProcess: ['glass_re_melt']
-        })
+        registration: { ...reprocessorFixture, material: 'glass_re_melt' }
       })
       expect(row[METADATA_COL_INDEX['Material']]).toBe('glass_re_melt')
     })
 
-    it('emits an empty Registration Number when the registration has none', () => {
-      const row = buildDataRow({
-        ...baseInput,
-        registration: buildReg({ registrationNumber: undefined })
-      })
-      expect(row[METADATA_COL_INDEX['Registration Number']]).toBe('')
-    })
-
     it('emits an empty Accreditation Number when the row has no accreditation', () => {
-      const row = buildDataRow({ ...baseInput, accreditation: null })
+      const row = buildDataRow({ ...baseInput, accreditationNumber: null })
       expect(row[METADATA_COL_INDEX['Accredited']]).toBe('No')
       expect(row[METADATA_COL_INDEX['Accreditation Number']]).toBe('')
     })
@@ -303,10 +303,7 @@ describe('csv-columns', () => {
     )
 
     it('apostrophe-prefixes the organisation name when it begins with a formula trigger', () => {
-      const row = buildDataRow({
-        ...baseInput,
-        org: { ...orgFixture, companyDetails: { name: '=cmd|calc' } }
-      })
+      const row = buildDataRow({ ...baseInput, org: { name: '=cmd|calc' } })
       expect(row[METADATA_COL_INDEX['Organisation Name']]).toBe("'=cmd|calc")
     })
 
@@ -327,14 +324,6 @@ describe('csv-columns', () => {
         METADATA_COLUMNS.length +
         cols.indexOf('BILL_OF_LANDING_REFERENCE_NUMBER')
       expect(row[idx]).toBe('BL-99')
-    })
-
-    it('emits "No" for Accredited when registration is registered-only', () => {
-      const row = buildDataRow({
-        ...baseInput,
-        accreditation: null
-      })
-      expect(row[METADATA_COL_INDEX['Accredited']]).toBe('No')
     })
 
     it('emits empty Submitted At when no summary log entry is found', () => {
@@ -396,51 +385,42 @@ describe('csv-columns', () => {
       const countryIdx = METADATA_COLUMNS.indexOf(OSR_COUNTRY_REVISED)
       const nameIdx = METADATA_COLUMNS.indexOf(OSR_NAME_REVISED)
 
-      const overseasSites = {
-        '001': {
-          validFrom: new Date('2026-01-01'),
-          siteName: 'Acme Recycling',
-          country: 'Germany'
-        }
-      }
+      const exporterInput = { ...baseInput, registration: exporterFixture }
 
       it('populates OSR_COUNTRY_REVISED and OSR_NAME_REVISED from the site matched by OSR_ID', () => {
         const row = buildDataRow({
-          ...baseInput,
-          data: { ...dataFixture, OSR_ID: '001' },
-          overseasSites
+          ...exporterInput,
+          data: { ...dataFixture, OSR_ID: '001' }
         })
         expect(row[countryIdx]).toBe('Germany')
         expect(row[nameIdx]).toBe('Acme Recycling')
       })
 
-      it('zero-pads OSR_ID before looking up the approved site', () => {
+      it('zero-pads OSR_ID before looking up the site', () => {
         const row = buildDataRow({
-          ...baseInput,
-          data: { ...dataFixture, OSR_ID: 1 },
-          overseasSites
+          ...exporterInput,
+          data: { ...dataFixture, OSR_ID: 1 }
         })
         expect(row[countryIdx]).toBe('Germany')
         expect(row[nameIdx]).toBe('Acme Recycling')
       })
 
       it('leaves both derived columns blank when the row has no OSR_ID', () => {
-        const row = buildDataRow({ ...baseInput, overseasSites })
+        const row = buildDataRow(exporterInput)
         expect(row[countryIdx]).toBe('')
         expect(row[nameIdx]).toBe('')
       })
 
-      it('leaves both derived columns blank when OSR_ID has no matching approved site', () => {
+      it('leaves both derived columns blank when OSR_ID names no site of the registration', () => {
         const row = buildDataRow({
-          ...baseInput,
-          data: { ...dataFixture, OSR_ID: '999' },
-          overseasSites
+          ...exporterInput,
+          data: { ...dataFixture, OSR_ID: '999' }
         })
         expect(row[countryIdx]).toBe('')
         expect(row[nameIdx]).toBe('')
       })
 
-      it('leaves both derived columns blank when no overseas-sites context is supplied', () => {
+      it('leaves both derived columns blank for a reprocessor registration', () => {
         const row = buildDataRow({
           ...baseInput,
           data: { ...dataFixture, OSR_ID: '001' }
