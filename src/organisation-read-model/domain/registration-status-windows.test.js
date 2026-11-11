@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { regAccStatusByDate } from './reg-acc-status-by-date.js'
+import { standingByDate } from './standing-by-date.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -47,7 +47,7 @@ const windows = ({
   return registrationStatusWindows(
     {
       ...source,
-      regAccStatusByDate: { [year]: regAccStatusByDate(source, year) }
+      standingByDate: { [year]: standingByDate(source, year) }
     },
     year
   )
@@ -397,7 +397,7 @@ describe('registrationStatusWindows', () => {
 
   it('has no windows for a year with no status dates', () => {
     const registration = /** @type {Registration} */ (
-      /** @type {unknown} */ ({ regAccStatusByDate: {} })
+      /** @type {unknown} */ ({ standingByDate: {} })
     )
 
     expect(registrationStatusWindows(registration, toYear(2026))).toEqual({
