@@ -188,9 +188,7 @@ describe('PRN transition actor on the waste-balance stream', () => {
     })
     expect(response.statusCode).toBe(200)
 
-    const latest = await ledgerRepository.findLatestInLedger(
-      await ledgerIdOf(env)
-    )
+    const latest = await ledgerRepository.findLatestInLedger(ledgerIdOf(env))
     assert(latest)
     expect(latest.kind).toBe(LEDGER_EVENT_KIND.PRN_CREATED)
     // A general raise now records its pool explicitly (PAE-1977).

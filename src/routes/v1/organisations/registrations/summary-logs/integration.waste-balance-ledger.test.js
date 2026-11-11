@@ -125,9 +125,7 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await ledgerRepository.findLatestInLedger(
-      await ledgerIdOf(env)
-    )
+    const latest = await ledgerRepository.findLatestInLedger(ledgerIdOf(env))
     expect(latest).not.toBeNull()
     if (!latest) {
       throw new Error('latest stream event is null')
@@ -143,7 +141,7 @@ describe('Waste balance stream (Exporter)', () => {
     })
 
     const resolvedBalance = await wasteBalanceService.currentBalance(
-      await ledgerIdOf(env)
+      ledgerIdOf(env)
     )
     expect(resolvedBalance?.amount).toBe(300)
     expect(resolvedBalance?.availableAmount).toBe(300)
@@ -156,12 +154,12 @@ describe('Waste balance stream (Exporter)', () => {
 
     await performSubmission(env, 'log-a', 'file-a', data)
     const afterFirst = await ledgerRepository.findLatestInLedger(
-      await ledgerIdOf(env)
+      ledgerIdOf(env)
     )
 
     await performSubmission(env, 'log-b', 'file-b', data)
     const afterSecond = await ledgerRepository.findLatestInLedger(
-      await ledgerIdOf(env)
+      ledgerIdOf(env)
     )
 
     if (!afterSecond) {
@@ -212,9 +210,7 @@ describe('Waste balance stream (Exporter)', () => {
       ])
     )
 
-    const latest = await ledgerRepository.findLatestInLedger(
-      await ledgerIdOf(env)
-    )
+    const latest = await ledgerRepository.findLatestInLedger(ledgerIdOf(env))
     if (!latest) {
       throw new Error('latest stream event is null')
     }
