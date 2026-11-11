@@ -1,116 +1,60 @@
-import {
-  buildEffectiveMaterialStages,
-  formatMaterialResults
-} from '#application/common/material-aggregation.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
+import { formatMaterialResults } from '#application/common/material-aggregation.js'
+import { add } from '#common/helpers/decimal-utils.js'
+import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
-const ORGANISATIONS_COLLECTION = 'epr-organisations'
+/** @import { DecimalValue } from '#common/helpers/decimal-utils.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
-const accreditationNumberOfRegistration = {
-  $let: {
-    vars: {
-      accreditation: {
-        $arrayElemAt: [
-          {
-            $filter: {
-              input: '$accreditations',
-              cond: { $eq: ['$$this.id', '$registrations.accreditationId'] }
-            }
-          },
-          0
-        ]
-      }
-    },
-    in: '$$accreditation.accreditationNumber'
+/**
+ * The available amount at each accreditation's latest ledger event, summed by
+ * material. An accreditation with an empty ledger contributes nothing.
+ *
+ * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ */
+export const aggregateAvailableBalance = async (
+  organisationReadRepository,
+  ledgerRepository
+) => {
+  const accreditations = indexByLedger(
+    await organisationReadRepository.findAll()
+  )
+
+  const latestEvents = await ledgerRepository.findLatestInLedgers(
+    [...accreditations.values()].map(
+      ({ organisation, registrationNumber, accreditation }) => ({
+        organisationNumber: organisation.organisationNumber,
+        registrationNumber,
+        accreditationNumber: accreditation.accreditationNumber
+      })
+    )
+  )
+
+  /** @type {Map<string, DecimalValue>} */
+  const totals = new Map()
+  for (const event of latestEvents) {
+    const { registration } = /** @type {LedgerAccreditation} */ (
+      accreditations.get(ledgerKey(event))
+    )
+    totals.set(
+      registration.material,
+      add(
+        totals.get(registration.material) ?? 0,
+        event.closingBalance.availableAmount
+      )
+    )
   }
-}
 
-const buildAccreditedRegistrationStages = () => [
-  { $unwind: '$registrations' },
-  {
-    $match: {
-      'registrations.accreditationId': { $exists: true, $ne: null }
-    }
-  },
-  {
-    $project: {
-      _id: 0,
-      registrationNumber: '$registrations.registrationNumber',
-      accreditationNumber: accreditationNumberOfRegistration,
-      orgData: [
-        {
-          orgId: '$orgId',
-          material: '$registrations.material',
-          glassRecyclingProcess: '$registrations.glassRecyclingProcess'
-        }
-      ]
-    }
-  }
-]
-
-const buildLatestLedgerEventLookupStage = () => ({
-  $lookup: {
-    from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
-    let: {
-      registrationNumber: '$registrationNumber',
-      accreditationNumber: '$accreditationNumber'
-    },
-    pipeline: [
-      {
-        $match: {
-          $expr: {
-            $and: [
-              { $eq: ['$registrationNumber', '$$registrationNumber'] },
-              { $eq: ['$accreditationNumber', '$$accreditationNumber'] }
-            ]
-          }
-        }
-      },
-      { $sort: { number: -1 } },
-      { $limit: 1 },
-      {
-        $project: { _id: 0, availableAmount: '$closingBalance.availableAmount' }
-      }
-    ],
-    as: 'latestLedgerEvent'
-  }
-})
-
-// Mirrors currentWasteBalance
-// (waste-balances/application/current-waste-balance.js): the latest ledger
-// event's closing balance is the source of truth, resolving to zero when the
-// ledger is empty.
-const buildLedgerAvailableAmountStage = () => ({
-  $addFields: {
-    availableAmount: {
-      $ifNull: [{ $arrayElemAt: ['$latestLedgerEvent.availableAmount', 0] }, 0]
-    }
-  }
-})
-
-const buildAggregationPipeline = () => [
-  ...buildAccreditedRegistrationStages(),
-  ...buildEffectiveMaterialStages(),
-  buildLatestLedgerEventLookupStage(),
-  buildLedgerAvailableAmountStage(),
-  {
-    $group: {
-      _id: '$effectiveMaterial',
-      availableAmount: { $sum: '$availableAmount' }
-    }
-  },
-  { $sort: { _id: 1 } }
-]
-
-export const aggregateAvailableBalance = async (db) => {
-  const pipeline = buildAggregationPipeline()
-
-  const results = await db
-    .collection(ORGANISATIONS_COLLECTION)
-    .aggregate(pipeline)
-    .toArray()
-
-  const { materials, total } = formatMaterialResults(results, 'availableAmount')
+  const { materials, total } = formatMaterialResults(
+    [...totals].map(([material, availableAmount]) => ({
+      _id: material,
+      availableAmount
+    })),
+    'availableAmount'
+  )
 
   return {
     generatedAt: new Date().toISOString(),

@@ -29,10 +29,13 @@ export const getWasteBalanceAvailability = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { db, logger } = request
+    const { organisationReadRepository, ledgerRepository, logger } = request
 
     try {
-      const result = await aggregateAvailableBalance(db)
+      const result = await aggregateAvailableBalance(
+        organisationReadRepository,
+        ledgerRepository
+      )
 
       logger.info({
         message: 'Waste balance availability data retrieved successfully',
