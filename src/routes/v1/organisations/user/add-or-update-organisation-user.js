@@ -2,8 +2,7 @@ import { stringEquals } from '#auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
 import partition from 'lodash.partition'
 
-/** @import {CollatedUser} from '#domain/organisations/model.js' */
-/** @import {Organisation} from '#organisation-read-model/domain/model.js' */
+/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
 /** @import {DefraIdTokenPayload} from '#auth/types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 

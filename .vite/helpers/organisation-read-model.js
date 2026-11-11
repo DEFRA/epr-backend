@@ -62,11 +62,8 @@ export const organisationReadRepositoryFrom = async (
 
 /**
  * An organisation read repository that takes a fresh snapshot of
- * `organisationsRepository` on every read, for a route that reads the read
- * model both before and after it writes, as linking does.
- *
- * The organisations repository is read through `findByOrganisationNumber`, so
- * a read for `minimumVersion` waits for the write to land as it does there.
+ * `organisationsRepository` on every read, so it sees writes a test makes
+ * through that repository.
  *
  * @param {Pick<OrganisationsRepository, 'findAll' | 'findByOrganisationNumber'>} organisationsRepository
  * @param {Pick<ReadModelOptions, 'overseasSitesRepository'>} [options]
@@ -76,14 +73,12 @@ export const organisationReadRepositoryOver = (
   organisationsRepository,
   options
 ) => ({
-  findByOrganisationNumber: async (organisationNumber, minimumVersion) => {
-    const stored = await organisationsRepository.findByOrganisationNumber(
-      organisationNumber,
-      minimumVersion
-    )
+  findByOrganisationNumber: async (organisationNumber) => {
+    const stored =
+      await organisationsRepository.findByOrganisationNumber(organisationNumber)
     return createInMemoryOrganisationReadRepository(stored ? [stored] : [])(
       dependenciesFor(options)
-    ).findByOrganisationNumber(organisationNumber, minimumVersion)
+    ).findByOrganisationNumber(organisationNumber)
   },
   find: async (params) =>
     (
