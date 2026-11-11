@@ -21,7 +21,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -166,9 +166,11 @@ function toOrganisation(stored, context, externalByRegistration) {
     organisationNumber: stored.organisationNumber,
     name: companyDetails.name,
     ...omitNullish({
-      address: toUkAddress(companyDetails.address),
+      address: toOrganisationAddress(companyDetails.address),
       companiesHouseNumber: companyDetails.companiesHouseNumber,
-      registeredAddress: toUkAddress(companyDetails.registeredAddress),
+      registeredAddress: toOrganisationAddress(
+        companyDetails.registeredAddress
+      ),
       tradingName: companyDetails.tradingName
     }),
     status: { current: status, timeline },
@@ -516,6 +518,31 @@ function toUkAddress({
     return { fullAddress, ...area }
   }
   return null
+}
+
+/**
+ * A non-UK organisation may have no postcode.
+ *
+ * @param {Address} [address]
+ * @returns {OrganisationAddress | null}
+ */
+function toOrganisationAddress(address = {}) {
+  const { line1, line2, town, county, postcode, fullAddress, country, region } =
+    address
+  return line1
+    ? {
+        line1,
+        ...omitNullish({
+          town,
+          line2,
+          county,
+          postcode,
+          fullAddress,
+          country,
+          region
+        })
+      }
+    : toUkAddress(address)
 }
 
 /**

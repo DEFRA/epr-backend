@@ -314,6 +314,24 @@ describe('transform', () => {
     )
   })
 
+  it('gives a non-UK registered office that has no postcode', async () => {
+    const [row] = await rowsFor([
+      organisation({
+        registeredAddress: undefined,
+        address: {
+          line1: '3 Rue de Rivoli',
+          town: 'Paris',
+          region: 'Île-de-France',
+          country: 'France'
+        }
+      })
+    ])
+
+    expect(row.registeredOffice).toBe(
+      '3 Rue de Rivoli, Paris, Île-de-France, France'
+    )
+  })
+
   it('leaves the registered office blank when the organisation has no address', async () => {
     const [row] = await rowsFor([
       organisation({ registeredAddress: undefined })
