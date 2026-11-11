@@ -10,8 +10,7 @@ import { reportableRegistrations } from '#reports/application/reportable-registr
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Registration } from '#organisation-read-model/domain/model.js'
- * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
+ * @import { Organisation, Registration } from '#organisation-read-model/domain/model.js'
  */
 
 /**
@@ -72,33 +71,29 @@ export function groupByRegistration(allPeriodicReports) {
 }
 
 /**
- * Builds a map of report compliance data for every registration the
- * organisation read model serves, outside test organisations.
+ * Builds a map of report compliance data for every registration of the
+ * organisations, as the read model serves them, outside test organisations.
  *
  * Each entry in `entries` is keyed by the registration's organisation and
  * registration numbers (see `registrationKey`). Its `submittedDates` has a key,
  * `${year}:${cadence}:${period}`, for each ended period the registration has a
  * reporting obligation for, as the year calendar lists them, holding the
- * original submitted date or null. An absent key is "N/A". A registration the
- * read model does not serve has no entry, and the read model logs why.
+ * original submitted date or null. An absent key is "N/A".
  *
- * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {Organisation[]} organisations
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {Date} [now]
  * @returns {Promise<ReportComplianceData>}
  */
 export async function generateReportCompliance(
-  organisationReadRepository,
+  organisations,
   reportsRepository,
   now = new Date()
 ) {
   const periods = generateComplianceReportingPeriods()
   const years = [...new Set(periods.map((p) => p.year))]
 
-  const [organisations, allPeriodicReports] = await Promise.all([
-    organisationReadRepository.findAll(),
-    reportsRepository.findAllPeriodicReports()
-  ])
+  const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
   const reportsByRegistration = groupByRegistration(allPeriodicReports)
 
   /** @type {Map<string, ReportComplianceEntry>} */

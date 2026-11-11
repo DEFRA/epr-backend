@@ -44,7 +44,6 @@ describe('generatePublicRegister', () => {
     )
 
     const result = await generatePublicRegister(
-      organisationRepo,
       organisationReadRepositoryOver(organisationRepo),
       publicRegisterRepo,
       reportsRepo
