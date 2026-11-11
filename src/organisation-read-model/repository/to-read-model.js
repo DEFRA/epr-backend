@@ -400,7 +400,11 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
  */
 export function toStatusTimeline(statusHistory, validFrom) {
   const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({ status, at: new Date(updatedAt) }))
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: new Date(updatedAt),
+      updatedAt: new Date(updatedAt).toISOString()
+    }))
     .toSorted(byDate)
   const lastCreated = recorded.findLastIndex(
     ({ status }) => status === 'created'
@@ -416,9 +420,11 @@ export function toStatusTimeline(statusHistory, validFrom) {
     recorded[approvalAfterLastCreated].at = approvedFrom
   }
   // A stable sort keeps recorded order among equal times
-  return recorded
-    .toSorted(byDate)
-    .map(({ status, at }) => ({ status, at: at.toISOString() }))
+  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
+    status,
+    at: at.toISOString(),
+    updatedAt
+  }))
 }
 
 /**

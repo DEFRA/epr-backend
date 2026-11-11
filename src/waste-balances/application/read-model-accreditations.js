@@ -77,7 +77,7 @@ const ACCREDITATION_STATUS_VALUES = new Set(Object.values(ACCREDITATION_STATUS))
 
 /**
  * @param {StatusTimeline[number]} change
- * @returns {change is { status: AccreditationStatus, at: string }}
+ * @returns {change is { status: AccreditationStatus, at: string, updatedAt: string }}
  */
 const isAccreditationChange = (change) =>
   ACCREDITATION_STATUS_VALUES.has(change.status)

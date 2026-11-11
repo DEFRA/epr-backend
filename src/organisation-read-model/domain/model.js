@@ -109,11 +109,12 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  */
 
 /**
- * Every status change, oldest first, each at its ISO 8601 datetime. Nothing
- * requires two changes to happen at different times, so changes that share a
- * time keep the order they were recorded in.
+ * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
+ * effect and `updatedAt` the one it was recorded. Nothing requires two changes
+ * to happen at different times, so changes that share a time keep the order
+ * they were recorded in.
  *
- * @typedef {{ status: string, at: string }[]} StatusTimeline
+ * @typedef {{ status: string, at: string, updatedAt: string }[]} StatusTimeline
  */
 
 /**
