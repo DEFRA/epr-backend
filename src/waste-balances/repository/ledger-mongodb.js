@@ -162,6 +162,37 @@ const performFindLatestInLedger = (collection) => async (ledgerId) => {
 
 /**
  * @param {Collection} collection
+ * @returns {(ledgerIds: WasteBalanceLedgerId[]) => Promise<LedgerEvent[]>}
+ */
+const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
+  // $or rejects an empty array
+  if (ledgerIds.length === 0) {
+    return []
+  }
+
+  const docs = await collection
+    .aggregate([
+      { $match: { $or: ledgerIds.map(ledgerFilter) } },
+      { $sort: { number: -1 } },
+      {
+        $group: {
+          _id: {
+            organisationNumber: '$organisationNumber',
+            registrationNumber: '$registrationNumber',
+            accreditationNumber: '$accreditationNumber'
+          },
+          latest: { $first: '$$ROOT' }
+        }
+      },
+      { $replaceRoot: { newRoot: '$latest' } }
+    ])
+    .toArray()
+
+  return docs.map(toLedgerEvent)
+}
+
+/**
+ * @param {Collection} collection
  * @returns {(ledgerId: WasteBalanceLedgerId, kind: string) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedgerByKind =
@@ -317,6 +348,7 @@ export const createMongoLedgerRepository = async (db) => {
 
   return () => ({
     findLatestInLedger: performFindLatestInLedger(collection),
+    findLatestInLedgers: performFindLatestInLedgers(collection),
     findLatestInLedgerByKind: performFindLatestInLedgerByKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
     findAllInLedger: performFindAllInLedger(collection),
