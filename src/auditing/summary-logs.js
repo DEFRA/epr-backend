@@ -10,7 +10,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  *   registrationId: string
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
- *   accreditationNumber?: AccreditationNumber | null
+ *   accreditationNumber: AccreditationNumber | null | undefined
  * }} SummaryLogAuditContext
  */
 

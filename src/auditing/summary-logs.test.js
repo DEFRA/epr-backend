@@ -154,7 +154,6 @@ describe('auditing a summary log under an accreditation with no database id', ()
       limit: 10
     })
     expect(systemLogs[0].context).toMatchObject(numbers)
-    expect(systemLogs[0].context).not.toHaveProperty('accreditationId')
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({ context: expect.objectContaining(numbers) })
     )

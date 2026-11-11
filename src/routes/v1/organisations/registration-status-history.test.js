@@ -279,6 +279,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
       expect(previousRegistration.status).toBe('created')
       expect(nextRegistration.status).toBe('approved')
+      expect(entry.context.registrationNumber).toBe('REG999999')
 
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
     })
