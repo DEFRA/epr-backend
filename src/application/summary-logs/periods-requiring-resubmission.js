@@ -335,5 +335,9 @@ export const withPeriodsRequiringResubmission = async ({
       ledgerId: ledgerIdFor(summaryLog)
     })
 
-  return { ...loadsByReportingPeriod, periodsRequiringResubmission }
+  return {
+    ...loadsByReportingPeriod,
+    closedPeriods: [],
+    periodsRequiringResubmission
+  }
 }

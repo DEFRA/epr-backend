@@ -357,6 +357,18 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         .map(([entry]) => /** @type {{ message?: string }} */ (entry).message)
   }
 
+  // A test that expects no flag must also show the period was compared, or it
+  // would pass when the period never reached the gate.
+  const periodsFoundUnchanged = (
+    /** @type {(string | undefined)[]} */ messages
+  ) =>
+    messages.flatMap(
+      (message) =>
+        message?.match(
+          /^Closed period (\d+ \w+ \d+) .* does not require resubmission: reported data unchanged$/
+        )?.[1] ?? []
+    )
+
   // Weights are capped at 1000 in the reprocessor received template
   // (grossWeight = tonnage + 150), so tonnages stay well under that.
   const FIRST_UPLOAD = [
@@ -374,6 +386,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     // Same figures, only the non-figure free-text reference changes: the row is
     // an adjustment touching closed January, but its reported figures are
     // identical.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-nonfigure',
@@ -384,7 +397,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.nonBalanceAffecting
         .count
@@ -413,7 +426,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       JANUARY_2026
     ])
     // The closed-period display still reflects the balance-affecting adjustment.
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting.count
     ).toBe(1)
@@ -437,7 +449,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2026
     ])
@@ -529,6 +540,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // Both rows adjust, so both closed periods are restated, but only
     // February's reported figures change.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-both',
@@ -539,10 +551,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      JANUARY_2026,
-      FEBRUARY_2026
-    ])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       FEBRUARY_2026
     ])
@@ -573,6 +582,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await generateAndSubmitReport(env, JANUARY_2026)
     await generateAndSubmitReport(env, FEBRUARY_2026)
 
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-repatriated',
@@ -583,10 +593,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       exporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      JANUARY_2026,
-      FEBRUARY_2026
-    ])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       FEBRUARY_2026
     ])
@@ -638,6 +645,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       async (dateRepatriated) => {
         const env = await setupWithJanuaryAndFebruarySubmitted()
 
+        const infoMessages = captureInfoMessages(env)
         const loadsByReportingPeriod = await uploadAndValidate(
           env,
           'sl-bad-date',
@@ -648,7 +656,9 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
           exporterMeta
         )
 
-        expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+        expect(periodsFoundUnchanged(infoMessages())).toEqual([
+          '2026 monthly 1'
+        ])
         expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
       }
     )
@@ -669,6 +679,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         data: { DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: 46063 }
       })
 
+      const infoMessages = captureInfoMessages(env)
       const loadsByReportingPeriod = await uploadAndValidate(
         env,
         'sl-corrected',
@@ -679,10 +690,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         exporterMeta
       )
 
-      expect(loadsByReportingPeriod.closedPeriods).toEqual([
-        JANUARY_2026,
-        FEBRUARY_2026
-      ])
+      expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
       expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
         FEBRUARY_2026
       ])
@@ -710,6 +718,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // The aggregation now splits Supplier A into two entries (the phone number
     // differs), but the report presents the same supplier and tonnage.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-split',
@@ -725,7 +734,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -753,6 +762,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, JANUARY_2026)
 
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-window',
@@ -763,7 +773,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -788,6 +798,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // Each row swaps which supplier and tonnage it carries: both rows adjust,
     // but the aggregated supplier set is identical, only reordered.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-reordered',
@@ -799,7 +810,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     )
 
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
   })
 
   it('does not flag a closed period when only supplier email and phone changed', async () => {
@@ -813,6 +824,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     // Supplier telephone and email are stored on the report, but by agreement a
     // change to them alone is not a reported-data change. Name, address and
     // tonnage are unchanged, so the report is identical.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-contact',
@@ -827,7 +839,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -841,6 +853,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // The frozen report's supplier name is 'Supplier A'. Re-uploading it with
     // different casing and internal whitespace is not a reported-data change.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-casing',
@@ -850,7 +863,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -878,7 +891,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       sentOnMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2026
     ])
@@ -920,7 +932,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       sentOnMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
     expect(infoMessages()).toContainEqual(
       expect.stringMatching(
@@ -952,6 +963,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     // OSR name and country are resolved from the ORS registry by OSR_ID, so the
     // sheet cells are pass-through: changing them does not change the report.
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-osr',
@@ -963,7 +975,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       registeredOnlyExporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 quarterly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -1000,6 +1012,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         )
     )
 
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-after-rename',
@@ -1011,7 +1024,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       registeredOnlyExporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([Q1_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 quarterly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -1038,6 +1051,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     // today's registry on both sides, the upload changes nothing.
     await env.overseasSitesRepository.remove(TEST_OVERSEAS_SITE_ID)
 
+    const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-after-removal',
@@ -1046,7 +1060,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       exporterMeta
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
@@ -1095,7 +1109,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([
       JANUARY_2026
     ])
@@ -1215,6 +1228,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(afterFailure?.summaryLog.loadsByReportingPeriod).toBeUndefined()
 
     // As the queue would on redelivery.
+    const infoMessages = captureInfoMessages(env)
     await env.validateSummaryLog(toSummaryLogId('sl-retry'))
     await pollForValidation(env.server, 'sl-retry')
 
@@ -1222,7 +1236,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       env,
       'sl-retry'
     )
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([JANUARY_2026])
+    expect(periodsFoundUnchanged(infoMessages())).toEqual(['2026 monthly 1'])
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 

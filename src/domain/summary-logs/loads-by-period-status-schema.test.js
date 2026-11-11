@@ -7,7 +7,7 @@ describe('loadsByReportingPeriodSchema', () => {
     ).toMatchObject({
       flags: {
         description: expect.stringMatching(
-          /^Deprecated: use periodsRequiringResubmission\./
+          /^Deprecated and no longer populated: use periodsRequiringResubmission\./
         )
       },
       metas: [{ deprecated: true }]

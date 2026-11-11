@@ -94,11 +94,13 @@ const periodStatusByChangeSchema = Joi.object({
 export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
   closedPeriodLoads: periodStatusByChangeSchema.required(),
-  // Default so logs written before this field existed still validate on read.
+  // Kept so older logs that carry it still validate on read.
   closedPeriods: Joi.array()
     .items(periodRefSchema)
     .default([])
-    .description('Deprecated: use periodsRequiringResubmission.')
+    .description(
+      'Deprecated and no longer populated: use periodsRequiringResubmission.'
+    )
     .meta({ deprecated: true }),
   // No default: the frontend still reads an absent field as not computed and
   // falls back on closed-period counts.
