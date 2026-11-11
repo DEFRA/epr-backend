@@ -7,15 +7,22 @@ import {
   REGISTRATION_STATUS,
   REPROCESSING_TYPE,
   TONNAGE_BAND,
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
+  TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { partialMock } from '#test/type-helpers.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -32,23 +39,19 @@ const approvedHistory = [
   { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
 ]
 
-/**
- * A 24-hex id the reports store accepts, distinct per prefix and operator.
- *
- * @param {string} prefix - one hex character
- * @param {number} orgId
- */
-const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
+const { buildReadOrganisation } = createOrganisationBuilders()
 
 /**
- * An operator accredited for the whole of 2026, holding one registration.
+ * An operator accredited for the whole of 2026, holding one registration. With
+ * `registeredOnly` it holds only the registration, so it reports quarterly.
  *
  * @param {{
  *   orgId: number,
  *   material?: AppliedForMaterial,
  *   tonnageBand?: TonnageBand,
  *   statusHistory?: StatusHistoryEntry[],
- *   validity?: { validFrom?: string, validTo?: string }
+ *   validity?: { validFrom?: string, validTo?: string },
+ *   registeredOnly?: boolean
  * }} options
  */
 const makeOperator = ({
@@ -56,64 +59,41 @@ const makeOperator = ({
   material = MATERIAL.PLASTIC,
   tonnageBand = TONNAGE_BAND.UP_TO_500,
   statusHistory = approvedHistory,
-  validity = { validFrom: '2026-01-01', validTo: '2026-12-31' }
+  validity = { validFrom: '2026-01-01', validTo: '2026-12-31' },
+  registeredOnly = false
 }) => {
-  const id = objectIdFor('a', orgId)
-  const registrationId = objectIdFor('b', orgId)
-  const accreditationId = `acc-${orgId}`
+  const accreditation = buildAccreditation({
+    ...validity,
+    accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
+    material,
+    glassRecyclingProcess: null,
+    statusHistory,
+    prnIssuance: { ...buildAccreditation().prnIssuance, tonnageBand }
+  })
+  const registration = buildRegistration({
+    registrationNumber: `REG-${orgId}`,
+    material,
+    glassRecyclingProcess: null,
+    reprocessingType: REPROCESSING_TYPE.INPUT,
+    statusHistory: [
+      { status: REGISTRATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
+    ],
+    validFrom: '2025-12-01',
+    ...(!registeredOnly && { accreditationId: accreditation.id })
+  })
 
   return {
-    // Deeply partial, so partialMock's shallow check cannot stand it in.
-    organisation: /** @type {Organisation} */ (
-      /** @type {unknown} */ ({
-        id,
-        orgId,
-        statusHistory: approvedHistory,
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: `REG-${orgId}`,
-            accreditationId,
-            status: REGISTRATION_STATUS.APPROVED,
-            statusHistory: approvedHistory,
-            material,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-        ],
-        accreditations: [
-          {
-            id: accreditationId,
-            status: statusHistory.at(-1)?.status,
-            statusHistory,
-            ...validity,
-            material,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            reprocessingType: REPROCESSING_TYPE.INPUT,
-            prnIssuance: { tonnageBand }
-          }
-        ]
-      })
-    ),
+    organisation: buildReadOrganisation({
+      orgId,
+      registrations: [partialMock(registration)],
+      accreditations: registeredOnly ? [] : [accreditation]
+    }),
     reportRef: {
       organisationNumber: toOrganisationNumber(String(orgId)),
-      registrationNumber: toRegistrationNumber(`REG-${orgId}`)
+      registrationNumber: toRegistrationNumber(registration.registrationNumber)
     }
   }
 }
-
-/**
- * The same operator holding only a registration, so it reports quarterly.
- *
- * @param {ReturnType<typeof makeOperator>} operator
- */
-const registeredOnly = ({ organisation }) => ({
-  ...organisation,
-  registrations: organisation.registrations.map(
-    ({ accreditationId: _accreditationId, ...registration }) => registration
-  ),
-  accreditations: []
-})
 
 /**
  * @typedef {{ operator: ReturnType<typeof makeOperator>, period: number, submissionNumber?: number }} MonthlyReportRef
@@ -159,7 +139,9 @@ const count = async ({
     await buildUnsubmittedReport(reportsRepository, reportParams(ref))
   }
   return countOutstandingReturns({
-    organisations: operators,
+    organisations: await (
+      await organisationReadRepositoryOf(operators)
+    )().findAll(),
     periodicReports: await reportsRepository.findAllPeriodicReports(),
     months: JANUARY_TO_MARCH_2026
   })
@@ -292,7 +274,7 @@ describe('countOutstandingReturns', () => {
       orgId: 500033,
       statusHistory: [
         ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2025-12-15' }
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-01-01' }
       ]
     })
 
@@ -323,6 +305,21 @@ describe('countOutstandingReturns', () => {
         { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
       ],
       validity: {}
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts nothing for an accreditation reverted to draft, then cancelled with its registration', async () => {
+    const operator = makeOperator({
+      orgId: 500050,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' },
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' }
+      ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
@@ -418,21 +415,6 @@ describe('countOutstandingReturns', () => {
     ])
   })
 
-  it('counts nothing for an accreditation cancelled before the window it was granted for began', async () => {
-    const operator = makeOperator({
-      orgId: 500049,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' }
-      ],
-      validity: { validFrom: '2026-02-15', validTo: '2026-12-31' }
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual([])
-  })
-
   it('still counts a month whose cancellation was reversed before the month ended', async () => {
     const operator = makeOperator({
       orgId: 500048,
@@ -453,9 +435,9 @@ describe('countOutstandingReturns', () => {
   })
 
   it('counts nothing for a registered-only operator, which reports quarterly', async () => {
-    const operator = makeOperator({ orgId: 500034 })
+    const operator = makeOperator({ orgId: 500034, registeredOnly: true })
 
-    const counts = await count({ operators: [registeredOnly(operator)] })
+    const counts = await count({ operators: [operator.organisation] })
 
     expect(outstanding(counts)).toEqual([])
   })

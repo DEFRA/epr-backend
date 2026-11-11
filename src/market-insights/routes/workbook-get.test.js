@@ -183,9 +183,14 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     let seededServer
 
     beforeAll(async () => {
+      // The route runs at the extraction date, before today, so the register
+      // has to have been created by then for the read model to serve it.
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
       const { reportKey } = await insertAccreditedOperator(
         register.organisationsRepository
       )
+      vi.useRealTimers()
       await buildSubmittedReport(register.reportsRepository, {
         ...reportKey,
         year: toYear(2026),

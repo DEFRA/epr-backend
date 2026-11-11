@@ -3,11 +3,11 @@ import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toYear, yearBounds } from '#common/helpers/dates/year.js'
 import {
-  ACCREDITATION_STATUS,
+  accreditationYears,
+  validityOf
+} from '#market-insights/application/accreditation-validity.js'
+import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -30,17 +30,15 @@ import { recordOf } from '#common/helpers/record-of.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
@@ -51,7 +49,6 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
  * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
@@ -62,6 +59,7 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
  * registration that holds it and the year it is for.
  *
  * @typedef {Object} LedgerAccreditation
+ * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
  * @property {Year} year
@@ -70,6 +68,7 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 /**
  * @typedef {Object} PublishedPartition
  * @property {string} summaryLogId - the partition's latest submission
+ * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
  * @property {AccreditationValidity} accreditation
@@ -142,7 +141,7 @@ const periodKey = ({ material, accreditationType }) =>
  */
 const figuresOf = ({ month, registration }) => {
   const row = {
-    material: resolveMaterial(registration),
+    material: registration.material,
     accreditationType: registration.wasteProcessingType
   }
   return [cellKey({ ...row, month }), periodKey(row)]
@@ -237,64 +236,18 @@ const indexByLedger = (organisations) =>
       .flatMap(({ organisationNumber, registrations }) =>
         Object.entries(registrations).flatMap(([number, registration]) => {
           const registrationNumber = toRegistrationNumber(number)
-          return Object.entries(registration.accreditations).map(
-            ([year, { accreditationNumber }]) => [
-              ledgerKey({
-                organisationNumber,
-                registrationNumber,
-                accreditationNumber
-              }),
-              { registrationNumber, registration, year: toYear(Number(year)) }
-            ]
-          )
+          return accreditationYears(registration).map((year) => [
+            ledgerKey({
+              organisationNumber,
+              registrationNumber,
+              accreditationNumber:
+                registration.accreditations[year].accreditationNumber
+            }),
+            { organisationNumber, registrationNumber, registration, year }
+          ])
         })
       )
   )
-
-/** @type {ReadonlySet<string>} */
-const ACCREDITATION_STATUS_VALUES = new Set(Object.values(ACCREDITATION_STATUS))
-
-/**
- * @param {StatusTimeline[number]} change
- * @returns {change is { status: AccreditationStatus, at: string }}
- */
-const isAccreditationChange = (change) =>
-  ACCREDITATION_STATUS_VALUES.has(change.status)
-
-/**
- * The validity window and status history that classification reads, taken
- * from the read model's accreditation for its year. ADR-0044 has an
- * accreditation valid from its approval to the end of its scheme year.
- *
- * @param {LedgerAccreditation} ledgerAccreditation
- * @returns {AccreditationValidity}
- */
-const validityOf = ({ registration, year }) => {
-  const { start, end } = yearBounds(year)
-  const timeline = registration.accreditations[year].status.timeline.filter(
-    isAccreditationChange
-  )
-  const lastCreated = timeline.findLastIndex(
-    ({ status }) => status === ACCREDITATION_STATUS.CREATED
-  )
-  const approvedAt = timeline.find(
-    ({ status }, index) =>
-      index > lastCreated && status === ACCREDITATION_STATUS.APPROVED
-  )?.at
-  return {
-    statusHistory: timeline.map(({ status, at }) => ({
-      status,
-      updatedAt: at
-    })),
-    ...(approvedAt && {
-      validFrom:
-        calendarDate(approvedAt).localeCompare(start) < 0
-          ? start
-          : calendarDate(approvedAt),
-      validTo: end
-    })
-  }
-}
 
 /**
  * The approval date of each overseas site an exporter's accreditation lists,
@@ -340,6 +293,7 @@ const resolvePublishedPartitions = (entries, index, logger) => {
     }
     partitions.set(ledgerKey(ledgerId), {
       summaryLogId,
+      organisationNumber: ledgerAccreditation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
       accreditation: validityOf(ledgerAccreditation),
@@ -383,6 +337,7 @@ const publishedContribution = (rowState, partitions) => {
   return contribution === null
     ? null
     : {
+        organisationNumber: partition.organisationNumber,
         registrationNumber: partition.registrationNumber,
         registration,
         contribution
@@ -391,6 +346,7 @@ const publishedContribution = (rowState, partitions) => {
 
 /**
  * @typedef {Object} PublishedRow
+ * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
  * @property {MonthlyContribution} contribution
@@ -449,29 +405,9 @@ const movesNetCredit = ({ eligibleForWasteBalance, sentOnDeductions }) =>
   eligibleForWasteBalance !== 0 || sentOnDeductions !== 0
 
 /**
- * @typedef {Map<string, Omit<Contribution, 'month'>>} StoredRegistrations
- */
-
-/**
- * @param {Organisation[]} organisations
- * @returns {StoredRegistrations}
- */
-const storedRegistrationsByNumber = (organisations) =>
-  new Map(
-    organisations.flatMap((org) =>
-      org.registrations.map((registration) => [
-        String(registration.registrationNumber),
-        { org, registration }
-      ])
-    )
-  )
-
-/**
  * @typedef {Object} Aggregate
  * @property {Map<string, WasteBalanceCell>} cells
  * @property {Map<string, Contribution>} contributions - one per registration and month whose tonnage the net credit includes
- * @property {StoredRegistrations} storedRegistrations
- * @property {Set<string>} uncountedRegistrations - registration numbers whose operator no submitting count includes, as the stored organisations do not hold them
  * @property {UndatedTally} undated
  * @property {(month: string) => month is YearMonth} isPublishedMonth
  */
@@ -481,15 +417,8 @@ const storedRegistrationsByNumber = (organisations) =>
  * @param {PublishedRow} published
  */
 const recordRow = (
-  {
-    cells,
-    contributions,
-    storedRegistrations,
-    uncountedRegistrations,
-    undated,
-    isPublishedMonth
-  },
-  { registrationNumber, registration, contribution }
+  { cells, contributions, undated, isPublishedMonth },
+  { organisationNumber, registrationNumber, registration, contribution }
 ) => {
   const { month, figures } = contribution
   if (month === null) {
@@ -500,30 +429,12 @@ const recordRow = (
     return
   }
   foldIntoCell(cells, registration, month, figures)
-  if (!movesNetCredit(figures)) {
-    return
-  }
-  const stored = storedRegistrations.get(registrationNumber)
-  if (stored === undefined) {
-    uncountedRegistrations.add(registrationNumber)
-    return
-  }
-  contributions.set(`${registrationNumber}::${month}`, { month, ...stored })
-}
-
-/**
- * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {Set<string>} registrationNumbers
- */
-const warnAboutUncountedRegistrations = (logger, registrationNumbers) => {
-  for (const registrationNumber of registrationNumbers) {
-    logger.warn({
-      message: `Market insights waste balance published figures for registration ${registrationNumber} without counting its operator as submitting, as the stored organisations do not hold the registration.`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: 'market_insights_registration_uncounted',
-        reference: registrationNumber
-      }
+  if (movesNetCredit(figures)) {
+    contributions.set(`${registrationNumber}::${month}`, {
+      month,
+      organisationNumber,
+      registrationNumber,
+      registration
     })
   }
 }
@@ -559,8 +470,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {OrganisationsRepository} params.organisationsRepository - for the reports owed and the operator counts
- * @param {OrganisationReadRepository} params.organisationReadRepository - for the figures
+ * @param {OrganisationReadRepository} params.organisationReadRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {Year} params.year - the reporting year
@@ -571,7 +481,6 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
 export const buildWasteBalanceTable = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
   organisationReadRepository,
   reportsRepository,
   logger,
@@ -579,17 +488,15 @@ export const buildWasteBalanceTable = async ({
   months,
   now
 }) => {
-  const [entries, organisations, readModelOrganisations, periodicReports] =
-    await Promise.all([
-      ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-      organisationsRepository.findAll(),
-      organisationReadRepository.findAll(),
-      reportsRepository.findPeriodicReportsForYear({ year })
-    ])
+  const [entries, organisations, periodicReports] = await Promise.all([
+    ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
+    organisationReadRepository.findAll(),
+    reportsRepository.findPeriodicReportsForYear({ year })
+  ])
 
   const partitions = resolvePublishedPartitions(
     entries,
-    indexByLedger(readModelOrganisations),
+    indexByLedger(organisations),
     logger
   )
 
@@ -603,8 +510,6 @@ export const buildWasteBalanceTable = async ({
   const into = {
     cells: new Map(),
     contributions: new Map(),
-    storedRegistrations: storedRegistrationsByNumber(organisations),
-    uncountedRegistrations: new Set(),
     undated: newUndatedTally(),
     isPublishedMonth: /** @returns {month is YearMonth} */ (month) =>
       publishedMonths.has(month)
@@ -621,7 +526,6 @@ export const buildWasteBalanceTable = async ({
   }
 
   warnAboutUndatedRows(logger, into.undated)
-  warnAboutUncountedRegistrations(logger, into.uncountedRegistrations)
 
   const owedReports = [
     ...owedMonthlyReports({ organisations, periodicReports, months })

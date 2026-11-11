@@ -10,6 +10,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import {
@@ -22,6 +23,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import {
   reportKeyOf,
   uniqueRegistrationNumber
@@ -45,6 +47,7 @@ const insertAccreditedOperator =
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
@@ -83,15 +86,18 @@ const accreditedExporter = ({
     submittedToRegulator: regulator,
     statusHistory
   }
+  const registrationNumber = uniqueRegistrationNumber()
   const accreditation = buildAccreditation({
     ...accredited,
+    accreditationNumber: toAccreditationNumber(`ACC-${registrationNumber}`),
     validFrom,
     validTo: '2026-12-31'
   })
   const registration = buildRegistration({
     ...accredited,
     accreditationId: accreditation.id,
-    registrationNumber: uniqueRegistrationNumber()
+    registrationNumber,
+    validFrom: '2025-12-01'
   })
   const organisation = buildOrganisation({
     registrations: [registration],
@@ -106,6 +112,7 @@ const accreditedExporter = ({
 /**
  * @typedef {Object} Register
  * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationReadRepository} organisationReadRepository
  * @property {ReportsRepository} reportsRepository
  */
 
@@ -115,12 +122,18 @@ const accreditedExporter = ({
  * @param {ReturnType<typeof accreditedExporter>[]} [exporters]
  * @returns {Register}
  */
-const newRegister = (exporters = []) => ({
-  organisationsRepository: createInMemoryOrganisationsRepository(
+const newRegister = (exporters = []) => {
+  const organisationsRepository = createInMemoryOrganisationsRepository(
     exporters.map(({ organisation }) => partialMock(organisation))
-  )(),
-  reportsRepository: createInMemoryReportsRepository()()
-})
+  )()
+  return {
+    organisationsRepository,
+    organisationReadRepository: organisationReadRepositoryOver(
+      organisationsRepository
+    ),
+    reportsRepository: createInMemoryReportsRepository()()
+  }
+}
 
 /**
  * Seeds an accredited reprocessor.

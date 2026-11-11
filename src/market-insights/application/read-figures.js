@@ -24,7 +24,6 @@ const SCOPES = Object.freeze([
  * @typedef {Object} ReadMarketInsightsFiguresParams
  * @property {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @property {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
- * @property {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
  * @property {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
  * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @property {import('#common/hapi-types.js').TypedLogger} logger
@@ -71,13 +70,16 @@ const readOnce = (read) => {
  * The memo is scoped to one call, and every builder here is given the same
  * `year`, so the ignored argument cannot hide a different question.
  *
- * @param {Pick<ReadMarketInsightsFiguresParams, 'organisationsRepository' | 'reportsRepository'>} repositories
+ * @param {Pick<ReadMarketInsightsFiguresParams, 'organisationReadRepository' | 'reportsRepository'>} repositories
  * @param {Year} year
  */
-const asReadOnce = ({ organisationsRepository, reportsRepository }, year) => ({
-  organisationsRepository: {
-    ...organisationsRepository,
-    findAll: readOnce(() => organisationsRepository.findAll())
+const asReadOnce = (
+  { organisationReadRepository, reportsRepository },
+  year
+) => ({
+  organisationReadRepository: {
+    ...organisationReadRepository,
+    findAll: readOnce(() => organisationReadRepository.findAll())
   },
   reportsRepository: {
     ...reportsRepository,
@@ -101,7 +103,6 @@ const asReadOnce = ({ organisationsRepository, reportsRepository }, year) => ({
 export const readMarketInsightsFigures = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
   organisationReadRepository,
   reportsRepository,
   logger,
@@ -110,7 +111,7 @@ export const readMarketInsightsFigures = async ({
   now
 }) => {
   const shared = asReadOnce(
-    { organisationsRepository, reportsRepository },
+    { organisationReadRepository, reportsRepository },
     year
   )
   const common = { ...shared, logger, year, months, now }
@@ -119,8 +120,7 @@ export const readMarketInsightsFigures = async ({
     buildWasteBalanceTable({
       ...common,
       ledgerRepository,
-      summaryLogRowStatesRepository,
-      organisationReadRepository
+      summaryLogRowStatesRepository
     }),
     Promise.all(
       SCOPES.map(async ({ name, regulator }) => ({

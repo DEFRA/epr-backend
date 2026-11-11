@@ -36,7 +36,7 @@ export const operatorsByKey = (contributions, keysOf) => {
     for (const key of keysOf(contribution)) {
       operators.set(
         key,
-        (operators.get(key) ?? new Set()).add(contribution.org.id)
+        (operators.get(key) ?? new Set()).add(contribution.organisationNumber)
       )
     }
   }

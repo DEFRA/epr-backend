@@ -48,7 +48,6 @@ export const marketInsightsWorkbookGet = {
    *   query: { unredacted: boolean },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
@@ -67,7 +66,6 @@ export const marketInsightsWorkbookGet = {
     const workbook = await buildMarketInsightsWorkbook({
       ledgerRepository: request.ledgerRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
-      organisationsRepository: request.organisationsRepository,
       organisationReadRepository: request.organisationReadRepository,
       reportsRepository: request.reportsRepository,
       logger,

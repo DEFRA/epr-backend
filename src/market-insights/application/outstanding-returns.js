@@ -2,7 +2,6 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { recordOf } from '#common/helpers/record-of.js'
 import { owedMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
@@ -21,7 +20,7 @@ const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
 /**
  * @param {YearMonth} month
  * @param {Material} material
- * @param {TonnageBand} tonnageBand
+ * @param {string} tonnageBand
  */
 const cellKey = (month, material, tonnageBand) =>
   `${month}::${material}::${tonnageBand}`
@@ -41,19 +40,16 @@ const cellKey = (month, material, tonnageBand) =>
 export const countOutstandingReturns = (params) => {
   /** @type {Map<string, number>} */
   const outstanding = new Map()
-  for (const {
-    month,
-    registration,
-    accreditation,
-    submitted
-  } of owedMonthlyReports(params)) {
+  for (const { month, registration, year, submitted } of owedMonthlyReports(
+    params
+  )) {
     if (submitted) {
       continue
     }
     const key = cellKey(
       month,
-      resolveMaterial(registration),
-      accreditation.prnIssuance.tonnageBand
+      registration.material,
+      registration.accreditations[year].prnIssuance.tonnageBand
     )
     outstanding.set(key, (outstanding.get(key) ?? 0) + 1)
   }
@@ -79,7 +75,7 @@ export const countOutstandingReturns = (params) => {
  * the register and that year's monthly reports as they stand.
  *
  * @param {Object} params
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
+ * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} params.organisationReadRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {Year} params.year - the reporting year the months fall in
  * @param {YearMonth[]} params.months - the reporting months to publish
@@ -87,14 +83,14 @@ export const countOutstandingReturns = (params) => {
  * @returns {Promise<OutstandingReturnsTable>}
  */
 export const buildOutstandingReturnsTable = async ({
-  organisationsRepository,
+  organisationReadRepository,
   reportsRepository,
   year,
   months,
   now
 }) => {
   const [organisations, periodicReports] = await Promise.all([
-    organisationsRepository.findAll(),
+    organisationReadRepository.findAll(),
     reportsRepository.findPeriodicReportsForYear({ year })
   ])
   const outstanding = countOutstandingReturns({

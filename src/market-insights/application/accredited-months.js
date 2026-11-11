@@ -1,10 +1,12 @@
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
-  accreditationsForRegistration,
-  getReportableRegistrations
-} from '#domain/organisations/registration-utils.js'
+  accreditationYears,
+  validityOf
+} from '#market-insights/application/accreditation-validity.js'
 import {
   accreditationWindow,
   getStatusHistoryDateTimes,
@@ -16,9 +18,10 @@ import {
   ACTIVE_ACCREDITATION_STATUSES
 } from '#domain/organisations/model.js'
 
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { Registration } from '#domain/organisations/registration.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Organisation, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { AccreditationWindow, StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
@@ -28,34 +31,38 @@ import {
  */
 
 /**
- * A registration and the organisation that holds it.
+ * A registration and the organisation that holds it, by their numbers.
  *
  * @typedef {Object} RegistrationOfOrganisation
- * @property {Organisation} org
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {Registration} registration
  */
 
 /**
- * Whether a caller's publication covers a registration. A caller publishing
- * figures over part of the register passes one so its counts describe the
- * same operators its figures do.
+ * A registration and the year of the accreditation it holds.
  *
- * @typedef {(candidate: RegistrationOfOrganisation) => boolean} CoversRegistration
+ * @typedef {RegistrationOfOrganisation & { year: Year }} AccreditationOfRegistration
  */
 
 /**
- * A registration whose accreditation has been granted.
+ * Whether a caller's publication covers a registration's accreditation for a
+ * year. A caller publishing figures over part of the register passes one so
+ * its counts describe the same operators its figures do.
  *
- * @typedef {RegistrationOfOrganisation & { accreditation: Accreditation }} GrantedRegistration
+ * @typedef {(candidate: AccreditationOfRegistration) => boolean} CoversRegistration
+ */
+
+/**
+ * A registration whose accreditation for a year has been granted.
+ *
+ * @typedef {AccreditationOfRegistration & { accreditation: AccreditationValidity }} GrantedRegistration
  */
 
 /**
  * A month in which a registration was accredited for its material.
  *
- * @typedef {Object} AccreditedMonth
- * @property {YearMonth} month
- * @property {Organisation} org
- * @property {Registration} registration
+ * @typedef {RegistrationOfOrganisation & { month: YearMonth }} AccreditedMonth
  */
 
 /**
@@ -67,7 +74,7 @@ import {
  * and a cancellation, on the months they held, which the validity window and
  * the status on each day then bound.
  *
- * @param {Accreditation} accreditation
+ * @param {AccreditationValidity} accreditation
  */
 const hasBeenGranted = ({ statusHistory }) =>
   statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
@@ -126,25 +133,32 @@ const isAccreditedDuring = (period, window, history) =>
   )
 
 /**
- * Every registration of the register whose accreditation has been granted,
- * among those the caller's publication covers. Only an accredited registration
- * reports monthly, so a registered-only operator yields nothing.
+ * Every accreditation the read model serves, outside test organisations, that
+ * has been granted, among those the caller's publication covers. Only an
+ * accredited registration reports monthly, so a registered-only operator
+ * yields nothing.
  *
  * @param {Organisation[]} organisations
  * @param {CoversRegistration} covers
  * @returns {Generator<GrantedRegistration>}
  */
 export function* grantedRegistrations(organisations, covers) {
-  for (const { org, registration } of getReportableRegistrations(
-    organisations
-  )) {
-    const [accreditation] = accreditationsForRegistration(registration, org)
-    if (
-      accreditation !== undefined &&
-      hasBeenGranted(accreditation) &&
-      covers({ org, registration })
-    ) {
-      yield { org, registration, accreditation }
+  for (const {
+    organisation: { organisationNumber },
+    registrationNumber,
+    registration
+  } of reportableRegistrations(organisations)) {
+    for (const year of accreditationYears(registration)) {
+      const accreditation = validityOf({ registration, year })
+      const candidate = {
+        organisationNumber,
+        registrationNumber: toRegistrationNumber(registrationNumber),
+        registration,
+        year
+      }
+      if (hasBeenGranted(accreditation) && covers(candidate)) {
+        yield { ...candidate, accreditation }
+      }
     }
   }
 }
@@ -156,7 +170,7 @@ export function* grantedRegistrations(organisations, covers) {
  * its validity window, does not.
  *
  * @param {Object} params
- * @param {Organisation[]} params.organisations
+ * @param {Organisation[]} params.organisations - as the organisation read model serves them
  * @param {YearMonth[]} params.months - the reporting months served
  * @param {CoversRegistration} [params.covers] - narrows the walk to the registrations a caller publishes
  * @returns {Generator<AccreditedMonth>}
@@ -171,10 +185,12 @@ export function* accreditedMonths({
     .flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year))
     .filter((period) => served.has(toYearMonth(period.startDate)))
 
-  for (const { org, registration, accreditation } of grantedRegistrations(
-    organisations,
-    covers
-  )) {
+  for (const {
+    organisationNumber,
+    registrationNumber,
+    registration,
+    accreditation
+  } of grantedRegistrations(organisations, covers)) {
     const window = accreditationWindow(accreditation)
     if (window === null) {
       continue
@@ -182,7 +198,12 @@ export function* accreditedMonths({
     const history = getStatusHistoryDateTimes(accreditation.statusHistory)
     for (const period of periods) {
       if (isAccreditedDuring(period, window, history)) {
-        yield { month: toYearMonth(period.startDate), org, registration }
+        yield {
+          month: toYearMonth(period.startDate),
+          organisationNumber,
+          registrationNumber,
+          registration
+        }
       }
     }
   }

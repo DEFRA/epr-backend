@@ -35,7 +35,6 @@ export const marketInsightsExportZipGet = {
    *   params: { year: Year, cadence: 'monthly', period: number },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
    *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
@@ -51,7 +50,6 @@ export const marketInsightsExportZipGet = {
     const archive = await buildMarketInsightsExportArchive({
       ledgerRepository: request.ledgerRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
-      organisationsRepository: request.organisationsRepository,
       organisationReadRepository: request.organisationReadRepository,
       reportsRepository: request.reportsRepository,
       logger,

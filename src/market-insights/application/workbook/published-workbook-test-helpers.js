@@ -15,6 +15,7 @@ import { frameOf } from './cells.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { TabContents } from './cells.js' */
 
 const PUBLISHED_WORKBOOK = path.join(
@@ -36,10 +37,11 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
 /**
  * What the shared read is given for a period, over an empty register, taken
- * when the published figures were.
+ * when the published figures were. Tests seed the register through
+ * `organisationsRepository`, which the read model reads back on every read.
  *
  * @param {YearMonth[]} months
- * @returns {ReadMarketInsightsFiguresParams}
+ * @returns {ReadMarketInsightsFiguresParams & { organisationsRepository: OrganisationsRepository }}
  */
 export const readParamsFor = (months) => {
   const organisationsRepository = createInMemoryOrganisationsRepository([])()

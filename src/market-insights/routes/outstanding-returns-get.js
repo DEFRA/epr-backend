@@ -31,18 +31,18 @@ export const marketInsightsOutstandingReturnsGet = {
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number },
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, reportsRepository, params } = request
+    const { organisationReadRepository, reportsRepository, params } = request
 
     const now = new Date()
     const table = await buildOutstandingReturnsTable({
-      organisationsRepository,
+      organisationReadRepository,
       reportsRepository,
       year: params.year,
       months: publishedMonthsThrough(

@@ -26,6 +26,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import {
@@ -300,7 +301,13 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
       )
     }
     server = await createTestServer({
-      repositories: { organisationsRepository, reportsRepository }
+      repositories: {
+        organisationsRepository,
+        organisationReadRepository: organisationReadRepositoryOver(
+          organisationsRepository
+        ),
+        reportsRepository
+      }
     })
   })
 

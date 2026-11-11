@@ -3,7 +3,6 @@ import unzipper from 'unzipper'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -62,7 +61,6 @@ const run = async (months = JANUARY_TO_MARCH_2026, overrides = {}) =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository: createInMemoryOrganisationsRepository([])(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
@@ -138,9 +136,9 @@ describe('building the market insights export archive', () => {
   })
 
   it('reads the register once and gives every builder the same reading', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const organisationReadRepository = emptyOrganisationReadRepository()
     const reportsRepository = createInMemoryReportsRepository()()
-    const findAll = vi.spyOn(organisationsRepository, 'findAll')
+    const findAll = vi.spyOn(organisationReadRepository, 'findAll')
     const findReports = vi.spyOn(
       reportsRepository,
       'findPeriodicReportsForYear'
@@ -148,7 +146,7 @@ describe('building the market insights export archive', () => {
 
     await collect(
       await run(JANUARY_TO_MARCH_2026, {
-        organisationsRepository,
+        organisationReadRepository,
         reportsRepository
       })
     )

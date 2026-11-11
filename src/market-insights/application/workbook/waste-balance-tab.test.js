@@ -33,7 +33,6 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
@@ -42,7 +41,7 @@ const HEADING_ROW = 9
 const FIRST_FIGURE_COLUMN = 3
 
 /**
- * @typedef {Pick<ReadMarketInsightsFiguresParams,
+ * @typedef {Pick<ReturnType<typeof readParamsFor>,
  *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'organisationReadRepository' | 'reportsRepository'
  * >} Register
  */

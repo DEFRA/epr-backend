@@ -9,6 +9,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
@@ -33,6 +34,7 @@ const insertAccreditedOperator =
 /** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
@@ -66,15 +68,22 @@ const BAND_LABELLED = {
 /**
  * @typedef {{
  *   organisationsRepository: OrganisationsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   reportsRepository: ReportsRepository
  * }} Register
  */
 
 /** @returns {Register} */
-const emptyRegister = () => ({
-  organisationsRepository: createInMemoryOrganisationsRepository()(),
-  reportsRepository: createInMemoryReportsRepository()()
-})
+const emptyRegister = () => {
+  const organisationsRepository = createInMemoryOrganisationsRepository()()
+  return {
+    organisationsRepository,
+    organisationReadRepository: organisationReadRepositoryOver(
+      organisationsRepository
+    ),
+    reportsRepository: createInMemoryReportsRepository()()
+  }
+}
 
 /**
  * An operator accredited for the whole of 2026, which has submitted the
