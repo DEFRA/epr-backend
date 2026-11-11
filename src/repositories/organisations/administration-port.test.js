@@ -41,6 +41,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/server/run-forms-data-migration.js',
   'src/server/seed/create-seed-data.js',
   'src/server/seed/seed-scenarios.js',
+  'src/summary-log-scope-backfill/application/backfill.js',
+  'src/summary-log-scope-backfill/run.js',
 
   // Domain code that still reads the legacy organisation shape. Each leaves
   // this list once it reads through the organisation read repository.
