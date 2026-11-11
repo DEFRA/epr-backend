@@ -205,7 +205,7 @@ function toOrganisation(stored, context, externalByRegistration) {
  * @param {StoredLinkedDefraOrganisation} linked
  * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
  */
-function toLinkedDefraOrganisation(linked) {
+export function toLinkedDefraOrganisation(linked) {
   return {
     defraOrganisation: { id: linked.orgId, name: linked.orgName },
     linkedAt: new Date(linked.linkedAt).toISOString(),

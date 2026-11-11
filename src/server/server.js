@@ -137,10 +137,7 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    {
-      plugin: organisationReadRepositoryPlugin,
-      options: { eventualConsistency }
-    },
+    organisationReadRepositoryPlugin,
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
