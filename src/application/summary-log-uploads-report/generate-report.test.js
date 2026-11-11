@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -318,7 +318,8 @@ describe('generateSummaryLogUploadsReport', () => {
     const registeredOnlyOrg = buildOrganisation({
       organisationNumber: nextOrganisationNumber()
     })
-    const registeredOnly = registeredOnlyOrg.registrations[0]
+    const { accreditationId: _unlinked, ...registeredOnly } =
+      registeredOnlyOrg.registrations[0]
     const registrationNumber = toRegistrationNumber('R26ER5000000001PA')
     await organisationRepo.insert(registeredOnlyOrg)
     await organisationRepo.replace(
@@ -326,12 +327,6 @@ describe('generateSummaryLogUploadsReport', () => {
       1,
       prepareOrgUpdate(registeredOnlyOrg, {
         status: ORGANISATION_STATUS.APPROVED,
-        accreditations: [
-          {
-            ...registeredOnlyOrg.accreditations[0],
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-        ],
         registrations: [
           {
             ...registeredOnly,
@@ -370,8 +365,17 @@ describe('generateSummaryLogUploadsReport', () => {
     ])
   })
 
-  describe('from a read model holding an exporter with two accreditation years', () => {
-    it('shows no reprocessing site and the 2026 accreditation', async () => {
+  describe('from a read model holding an exporter with three accreditation years', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-06-01T12:00:00Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it("shows no reprocessing site and the current year's accreditation", async () => {
       const organisationNumber = nextOrganisationNumber()
       const registrationNumber = toRegistrationNumber('R26EX5000000001PA')
       const accreditation = (accreditationNumber) => ({

@@ -12,6 +12,7 @@ import {
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -56,15 +57,12 @@ function transformRow(formattedInfo, summaryLogStats) {
   }
 }
 
-// TODO: make this year aware before 1 January 2027, or the accreditation column goes blank
-const REPORT_YEAR = '2026'
-
 /**
  * @param {Registration['accreditations']} accreditations
  * @returns {string}
  */
 function accreditationNumberOf(accreditations) {
-  return accreditations[REPORT_YEAR]?.accreditationNumber ?? ''
+  return accreditations[currentUtcYear()]?.accreditationNumber ?? ''
 }
 
 /**
