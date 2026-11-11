@@ -57,8 +57,16 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
-    const approved = { status: 'approved', at: '2027-01-01T00:00:00.000Z' }
-    const suspended = { status: 'suspended', at: '2027-03-01T00:00:00.000Z' }
+    const approved = {
+      status: 'approved',
+      at: '2027-01-01T00:00:00.000Z',
+      updatedAt: '2026-12-14T10:31:00.000Z'
+    }
+    const suspended = {
+      status: 'suspended',
+      at: '2027-03-01T00:00:00.000Z',
+      updatedAt: '2027-03-01T00:00:00.000Z'
+    }
 
     await server.inject({
       method: 'PUT',
@@ -81,6 +89,12 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     {
       description: 'a current status alongside the timeline',
       status: { current: 'approved', timeline }
+    },
+    {
+      description: 'a status change with no date it was recorded',
+      status: {
+        timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+      }
     }
   ])('refuses $description', async ({ status }) => {
     const { server, externalAccreditationsRepository } = await serverWith({
@@ -139,7 +153,15 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       url,
       payload: {
         ...payload,
-        status: { timeline: [{ status: 'approved', at: '2027' }] }
+        status: {
+          timeline: [
+            {
+              status: 'approved',
+              at: '2027',
+              updatedAt: '2026-12-14T10:31:00.000Z'
+            }
+          ]
+        }
       }
     })
 
