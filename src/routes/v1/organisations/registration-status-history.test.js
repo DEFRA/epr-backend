@@ -142,7 +142,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
     server = await createTestServer({
       repositories: {
-        organisationsRepository: organisationsRepositoryFactory,
+        organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
       }
     })
@@ -334,9 +334,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       server = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([fixture]),
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -514,7 +513,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         createInMemoryOrganisationsRepository([fixture])
       server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -633,9 +632,8 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       server = await createTestServer({
         repositories: {
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            fixture
-          ]),
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([fixture]),
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -793,15 +791,16 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           child: vi.fn()
         })
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        fixture
-      ])
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([fixture])
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository,
+          organisationAdministrationRepository,
           // Read afresh, so the PRN route sees the grant this endpoint writes.
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository()),
+            organisationReadRepositoryOver(
+              organisationAdministrationRepository()
+            ),
           systemLogsRepository: createSystemLogsRepository(),
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository
@@ -866,7 +865,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       const integrationServer = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory,
+          organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: createSystemLogsRepository()
         }
       })

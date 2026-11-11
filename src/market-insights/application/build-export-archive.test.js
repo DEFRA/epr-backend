@@ -62,7 +62,9 @@ const run = async (months = JANUARY_TO_MARCH_2026, overrides = {}) =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository: createInMemoryOrganisationsRepository([])(),
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      []
+    )(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),
@@ -138,9 +140,10 @@ describe('building the market insights export archive', () => {
   })
 
   it('reads the register once and gives every builder the same reading', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])()
     const reportsRepository = createInMemoryReportsRepository()()
-    const findAll = vi.spyOn(organisationsRepository, 'findAll')
+    const findAll = vi.spyOn(organisationAdministrationRepository, 'findAll')
     const findReports = vi.spyOn(
       reportsRepository,
       'findPeriodicReportsForYear'
@@ -148,7 +151,7 @@ describe('building the market insights export archive', () => {
 
     await collect(
       await run(JANUARY_TO_MARCH_2026, {
-        organisationsRepository,
+        organisationAdministrationRepository,
         reportsRepository
       })
     )

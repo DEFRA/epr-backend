@@ -29,9 +29,8 @@ describe('POST upload-completed validation', () => {
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ])

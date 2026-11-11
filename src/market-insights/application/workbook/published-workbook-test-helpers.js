@@ -42,14 +42,15 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
  * @returns {ReadMarketInsightsFiguresParams}
  */
 export const readParamsFor = (months) => {
-  const organisationsRepository = createInMemoryOrganisationsRepository([])()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository([])()
   return {
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository: organisationReadRepositoryOver(
-      organisationsRepository
+      organisationAdministrationRepository
     ),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),

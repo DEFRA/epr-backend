@@ -19,6 +19,15 @@ export const mongoOrganisationsRepositoryPlugin = {
     )
     const repository = factory()
 
-    registerDependency(server, 'organisationsRepository', () => repository)
+    registerDependency(
+      server,
+      'organisationAdministrationRepository',
+      () => repository
+    )
+    registerDependency(
+      server,
+      'organisationLinkingRepository',
+      () => repository
+    )
   }
 }

@@ -43,7 +43,7 @@ const FIRST_FIGURE_COLUMN = 3
 
 /**
  * @typedef {Pick<ReadMarketInsightsFiguresParams,
- *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationsRepository' | 'organisationReadRepository' | 'reportsRepository'
+ *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationAdministrationRepository' | 'organisationReadRepository' | 'reportsRepository'
  * >} Register
  */
 
@@ -52,14 +52,14 @@ const emptyRegister = () => {
   const {
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository,
     reportsRepository
   } = readParamsFor([])
   return {
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     organisationReadRepository,
     reportsRepository
   }
@@ -127,11 +127,15 @@ const sentOnRow = (rowId, date, tonnage) => ({
  * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, rows?: SummaryLogRowStateEntry[] }} operator
  */
 const seedOperator = async (
-  { organisationsRepository, summaryLogRowStatesRepository, ledgerRepository },
+  {
+    organisationAdministrationRepository,
+    summaryLogRowStatesRepository,
+    ledgerRepository
+  },
   { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
   const { ledgerId } = await insertAccreditedOperator(
-    organisationsRepository,
+    organisationAdministrationRepository,
     regulator,
     { material, validFrom }
   )

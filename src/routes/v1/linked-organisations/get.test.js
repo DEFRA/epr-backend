@@ -22,14 +22,16 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
+    organisationAdministrationRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory }
+      repositories: {
+        organisationAdministrationRepository: organisationsRepositoryFactory
+      }
     })
   })
 
@@ -41,8 +43,8 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     const linkedOrg = buildOrganisation({ linkedDefraOrganisation })
     const unlinkedOrg = buildOrganisation()
 
-    await organisationsRepository.insert(linkedOrg)
-    await organisationsRepository.insert(unlinkedOrg)
+    await organisationAdministrationRepository.insert(linkedOrg)
+    await organisationAdministrationRepository.insert(unlinkedOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -86,7 +88,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
         'Defra Org'
       )
     })
-    await organisationsRepository.insert(linkedOrg)
+    await organisationAdministrationRepository.insert(linkedOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -108,7 +110,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
 
   it('returns 200 with empty array when no organisations are linked', async () => {
     const unlinkedOrg = buildOrganisation()
-    await organisationsRepository.insert(unlinkedOrg)
+    await organisationAdministrationRepository.insert(unlinkedOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -137,8 +139,8 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
       )
     })
 
-    await organisationsRepository.insert(linkedOrg1)
-    await organisationsRepository.insert(linkedOrg2)
+    await organisationAdministrationRepository.insert(linkedOrg1)
+    await organisationAdministrationRepository.insert(linkedOrg2)
 
     const response = await server.inject({
       method: 'GET',
@@ -172,8 +174,8 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
       )
     })
 
-    await organisationsRepository.insert(acmeOrg)
-    await organisationsRepository.insert(betaOrg)
+    await organisationAdministrationRepository.insert(acmeOrg)
+    await organisationAdministrationRepository.insert(betaOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -196,7 +198,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
         'Defra Org'
       )
     })
-    await organisationsRepository.insert(linkedOrg)
+    await organisationAdministrationRepository.insert(linkedOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -226,8 +228,8 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
       )
     })
 
-    await organisationsRepository.insert(testOrg)
-    await organisationsRepository.insert(realOrg)
+    await organisationAdministrationRepository.insert(testOrg)
+    await organisationAdministrationRepository.insert(realOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -251,7 +253,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
         'Defra Org'
       )
     })
-    await organisationsRepository.insert(org)
+    await organisationAdministrationRepository.insert(org)
 
     const response = await server.inject({
       method: 'GET',

@@ -52,7 +52,7 @@ const januaryToFebruary2026 = marketInsightsWasteBalancePath
  *   db: Db,
  *   repositories: {
  *     ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
- *     organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *     organisationAdministrationRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *     organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
  *     summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
  *     reportsRepository: import('#reports/repository/port.js').ReportsRepository
@@ -77,7 +77,7 @@ const it =
             const mongoDb = client.db(DATABASE_NAME)
             const repositories = {
               ledgerRepository: (await createMongoLedgerRepository(mongoDb))(),
-              organisationsRepository: (
+              organisationAdministrationRepository: (
                 await createOrganisationsRepository(mongoDb)
               )(),
               organisationReadRepository: createOrganisationReadRepository(
@@ -120,9 +120,11 @@ const summaryLogId = 'sl-REG-001'
  * organisations fixture so the document the route reads back is one the write
  * schema accepts.
  *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationAdministrationRepository
  */
-const insertAccreditedOperator = async (organisationsRepository) => {
+const insertAccreditedOperator = async (
+  organisationAdministrationRepository
+) => {
   const accreditationId = new ObjectId().toString()
   const registration = buildRegistration({
     accreditationId,
@@ -139,7 +141,7 @@ const insertAccreditedOperator = async (organisationsRepository) => {
     glassRecyclingProcess: null
   })
   const organisation = await buildApprovedOrg(
-    organisationsRepository,
+    organisationAdministrationRepository,
     { registrations: [registration], accreditations: [accreditation] },
     { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
   )
@@ -211,7 +213,7 @@ const sentOnRow = (rowId, tonnage) => ({
  */
 const submit = async (repositories, rows) => {
   const { reportKey, ...ledgerId } = await insertAccreditedOperator(
-    repositories.organisationsRepository
+    repositories.organisationAdministrationRepository
   )
 
   await buildSubmittedReport(repositories.reportsRepository, {

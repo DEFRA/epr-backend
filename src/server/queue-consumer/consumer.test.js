@@ -53,7 +53,7 @@ describe('createCommandQueueConsumer', () => {
   let sqsClient
   let logger
   let summaryLogsRepository
-  let organisationsRepository
+  let organisationAdministrationRepository
   let wasteBalanceService
   let reportsRepository
   let summaryLogExtractor
@@ -83,7 +83,7 @@ describe('createCommandQueueConsumer', () => {
 
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
-    organisationsRepository = {}
+    organisationAdministrationRepository = {}
     wasteBalanceService = {}
     reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
@@ -130,7 +130,7 @@ describe('createCommandQueueConsumer', () => {
         queueName: 'test-queue',
         logger,
         summaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         summaryLogExtractor,
@@ -148,7 +148,7 @@ describe('createCommandQueueConsumer', () => {
             queueName: 'test-queue',
             logger,
             summaryLogsRepository,
-            organisationsRepository,
+            organisationAdministrationRepository,
             wasteBalanceService,
             summaryLogExtractor
           },

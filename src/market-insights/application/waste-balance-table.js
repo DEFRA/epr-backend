@@ -41,7 +41,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#market-insights/application/monthly-reports.js').ReportCount} ReportCount
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
@@ -453,7 +453,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {OrganisationsRepository} params.organisationsRepository - for the reports owed and the operator counts
+ * @param {OrganisationAdministrationRepository} params.organisationAdministrationRepository - for the reports owed and the operator counts
  * @param {OrganisationReadRepository} params.organisationReadRepository - for the figures
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
@@ -465,7 +465,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
 export const buildWasteBalanceTable = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
-  organisationsRepository,
+  organisationAdministrationRepository,
   organisationReadRepository,
   reportsRepository,
   logger,
@@ -476,7 +476,7 @@ export const buildWasteBalanceTable = async ({
   const [entries, organisations, readModelOrganisations, periodicReports] =
     await Promise.all([
       ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-      organisationsRepository.findAll(),
+      organisationAdministrationRepository.findAll(),
       organisationReadRepository.findAll(),
       reportsRepository.findPeriodicReportsForYear({ year })
     ])

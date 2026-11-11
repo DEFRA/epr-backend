@@ -80,9 +80,10 @@ describe('GET /v1/packaging-recycling-notes', () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           wasteBalanceService: () => ({}),
-          organisationsRepository: createInMemoryOrganisationsRepository([
-            partialMock(issuingOrganisation)
-          ])
+          organisationAdministrationRepository:
+            createInMemoryOrganisationsRepository([
+              partialMock(issuingOrganisation)
+            ])
         }
       })
     })

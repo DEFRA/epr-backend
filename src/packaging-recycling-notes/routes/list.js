@@ -13,7 +13,7 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {PackagingRecyclingNote, PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  * @import {ExternalPrnIds} from '#packaging-recycling-notes/application/external-prn-mapper.js'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  */
 
 /**
@@ -21,17 +21,20 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
  * organisation and accreditation, which PRNs no longer store, so they are
  * looked up by number, in one read for the page.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {PackagingRecyclingNote[]} prns
  * @returns {Promise<(prn: PackagingRecyclingNote) => ExternalPrnIds>}
  */
-const lookUpExternalIds = async (organisationsRepository, prns) => {
+const lookUpExternalIds = async (
+  organisationAdministrationRepository,
+  prns
+) => {
   const organisationNumbers = [
     ...new Set(prns.map((prn) => prn.organisation.organisationNumber))
   ]
   const organisations = new Map(
     (
-      await organisationsRepository.findByOrganisationNumbers(
+      await organisationAdministrationRepository.findByOrganisationNumbers(
         organisationNumbers
       )
     ).map((organisation) => [organisation.organisationNumber, organisation])
@@ -84,7 +87,7 @@ export const packagingRecyclingNotesList = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   query: {
    *     statuses: PrnStatus[],
    *     dateFrom?: string,
@@ -97,7 +100,7 @@ export const packagingRecyclingNotesList = {
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       logger
     } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
@@ -114,7 +117,7 @@ export const packagingRecyclingNotesList = {
       })
 
       const externalIdsOf = await lookUpExternalIds(
-        organisationsRepository,
+        organisationAdministrationRepository,
         result.items
       )
       const response = {

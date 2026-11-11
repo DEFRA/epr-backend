@@ -66,13 +66,14 @@ describe('lines naming a database id', () => {
       'await organisationsRepository.findById(id)',
       'await this.organisationsRepository.findByIds(ids)',
       'await organisationRepo.findById(id)',
+      'await organisationAdministrationRepository.findById(id)',
       'const key = registration.id',
       'accreditation.id === id',
       'organisation.idempotencyKey',
       'summaryLog.id'
     ].join('\n')
 
-    expect(countsFor(source)[0]).toBe(5)
+    expect(countsFor(source)[0]).toBe(6)
   })
 
   it('leaves out finding anything else by its own id', () => {
@@ -202,7 +203,9 @@ describe('files reading every organisation through the legacy repository', () =>
   it.each([
     'const organisations = await organisationsRepository.findAll()',
     'organisationRepo.findAll(),',
-    'await this.organisationsRepository.findAll()'
+    'await this.organisationsRepository.findAll()',
+    'await organisationAdministrationRepository.findAll()',
+    'await organisationLinkingRepository.findAll()'
   ])('counts a file that reads every organisation: %s', (source) => {
     expect(countsFor(source)[5]).toBe(1)
   })

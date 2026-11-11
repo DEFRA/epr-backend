@@ -117,7 +117,7 @@ const receivedRow = (rowNumber, rowId, date, weight) => ({
 
 describe('syncFromSummaryLog', () => {
   let wasteBalanceService
-  let organisationsRepository
+  let organisationAdministrationRepository
   let overseasSitesRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
@@ -130,7 +130,7 @@ describe('syncFromSummaryLog', () => {
       submitSummaryLog: vi.fn(),
       commitSummaryLogSubmittedEvent: vi.fn()
     }
-    organisationsRepository = {
+    organisationAdministrationRepository = {
       findByOrganisationNumber: vi.fn().mockResolvedValue(organisationWith())
     }
     overseasSitesRepository = {
@@ -141,7 +141,7 @@ describe('syncFromSummaryLog', () => {
   const makeSync = (overrides = {}) =>
     /** @type {any} */ (syncFromSummaryLog)({
       wasteBalanceService,
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
@@ -421,7 +421,7 @@ describe('syncFromSummaryLog', () => {
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
     }
-    organisationsRepository.findByOrganisationNumber.mockResolvedValue(
+    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
           overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
@@ -468,7 +468,9 @@ describe('syncFromSummaryLog', () => {
   it('throws when no organisation holds the organisation number', async () => {
     const fileId = 'file-no-org'
     const extractor = extractorFor(fileId, reprocessorInput([]))
-    organisationsRepository.findByOrganisationNumber.mockResolvedValue(null)
+    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
+      null
+    )
 
     await expect(
       makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)

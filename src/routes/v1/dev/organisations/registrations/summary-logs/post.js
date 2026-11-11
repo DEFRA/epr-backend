@@ -167,11 +167,12 @@ const insertValidatingLog = async (
   year,
   registration
 ) => {
-  const { summaryLogsRepository, organisationsRepository } = request
+  const { summaryLogsRepository, organisationAdministrationRepository } =
+    request
   const { organisationId, registrationId } = request.params
 
   const { organisationNumber } =
-    await organisationsRepository.findById(organisationId)
+    await organisationAdministrationRepository.findById(organisationId)
   const numbers = requiredNumbersOf(organisationNumber, registration)
   /** @type {SummaryLog} */
   const summaryLog = {
@@ -299,16 +300,21 @@ export const devSummaryLogsSubmit = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, organisationsRepository, payload, logger } =
-      request
+    const {
+      summaryLogsRepository,
+      organisationAdministrationRepository,
+      payload,
+      logger
+    } = request
     const { organisationId, registrationId, year } = request.params
     const user = extractUser(request)
     const summaryLogId = toSummaryLogId(randomUUID())
 
-    const registration = await organisationsRepository.findRegistrationById(
-      organisationId,
-      registrationId
-    )
+    const registration =
+      await organisationAdministrationRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      )
     const parsed = toParsedSummaryLog(
       payload,
       templateFor(payload, registration)

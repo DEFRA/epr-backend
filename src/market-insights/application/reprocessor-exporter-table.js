@@ -41,7 +41,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
- * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').Material} Material
@@ -396,7 +396,7 @@ const measuresByCell = ({
  * something into each of its figures.
  *
  * @param {Object} params
- * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {OrganisationAdministrationRepository} params.organisationAdministrationRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {Year} params.year - the reporting year
@@ -406,7 +406,7 @@ const measuresByCell = ({
  * @returns {Promise<ReprocessorExporterTable>}
  */
 export const buildReprocessorExporterTable = async ({
-  organisationsRepository,
+  organisationAdministrationRepository,
   reportsRepository,
   logger,
   year,
@@ -415,7 +415,7 @@ export const buildReprocessorExporterTable = async ({
   now
 }) => {
   const [organisations, periodicReports] = await Promise.all([
-    organisationsRepository.findAll(),
+    organisationAdministrationRepository.findAll(),
     reportsRepository.findPeriodicReportsForYear({ year })
   ])
 

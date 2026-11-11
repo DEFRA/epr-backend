@@ -6,7 +6,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  */
 
@@ -31,7 +31,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {Buffer} buffer - Excel file contents
  * @param {object} deps
  * @param {OverseasSitesRepository} deps.overseasSitesRepository
- * @param {OrganisationsRepository} deps.organisationsRepository
+ * @param {OrganisationAdministrationRepository} deps.organisationAdministrationRepository
  * @param {SystemLogsRepository} deps.systemLogsRepository
  * @param {TypedLogger} deps.logger
  * @param {SystemLogHumanActor} deps.user
@@ -41,7 +41,7 @@ export const processImportFile = async (
   buffer,
   {
     overseasSitesRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     systemLogsRepository,
     logger,
     user
@@ -68,7 +68,10 @@ export const processImportFile = async (
     return failureResult(metadata.registrationNumber, errors)
   }
 
-  const resolved = await resolveRegistration(organisationsRepository, metadata)
+  const resolved = await resolveRegistration(
+    organisationAdministrationRepository,
+    metadata
+  )
   if (resolved.error) {
     return failureResult(metadata.registrationNumber, [resolved.error])
   }
@@ -80,7 +83,7 @@ export const processImportFile = async (
   )
 
   const replaced =
-    await organisationsRepository.replaceRegistrationOverseasSites(
+    await organisationAdministrationRepository.replaceRegistrationOverseasSites(
       org.id,
       org.version,
       registration.id,
@@ -154,10 +157,14 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
   return { overseasSitesMap, sitesCreated }
 }
 
-const resolveRegistration = async (organisationsRepository, metadata) => {
-  const org = await organisationsRepository.findByOrganisationNumber(
-    metadata.organisationNumber
-  )
+const resolveRegistration = async (
+  organisationAdministrationRepository,
+  metadata
+) => {
+  const org =
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      metadata.organisationNumber
+    )
   if (!org) {
     return {
       error: {

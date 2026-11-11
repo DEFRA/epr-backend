@@ -16,7 +16,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository */
 /** @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository */
 /** @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService */
@@ -28,7 +28,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @typedef {object} SummaryLogHandlerDeps
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {OrganisationsRepository} organisationsRepository
+ * @property {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {WasteBalanceService} wasteBalanceService
@@ -83,7 +83,7 @@ export const validateSummaryLogCommand = {
     const {
       logger,
       summaryLogsRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService,
@@ -94,7 +94,7 @@ export const validateSummaryLogCommand = {
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService,

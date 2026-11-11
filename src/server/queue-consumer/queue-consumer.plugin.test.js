@@ -42,7 +42,7 @@ describe('commandQueueConsumerPlugin', () => {
       },
       app: {
         summaryLogsRepository: {},
-        organisationsRepository: {},
+        organisationAdministrationRepository: {},
         wasteBalanceService: {},
         uploadsRepository: {},
         reportsRepository: {},
@@ -172,7 +172,8 @@ describe('commandQueueConsumerPlugin', () => {
           queueName: 'test-queue',
           logger: server.logger,
           summaryLogsRepository: server.app.summaryLogsRepository,
-          organisationsRepository: server.app.organisationsRepository,
+          organisationAdministrationRepository:
+            server.app.organisationAdministrationRepository,
           wasteBalanceService: server.app.wasteBalanceService,
           reportsService: expect.objectContaining({
             hasReportSubmittedSince: expect.any(Function),

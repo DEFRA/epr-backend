@@ -8,7 +8,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { partialMock } from '#test/type-helpers.js'
 
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
