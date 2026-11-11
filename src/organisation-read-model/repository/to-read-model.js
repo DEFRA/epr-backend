@@ -1,3 +1,4 @@
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -16,6 +17,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
@@ -30,7 +32,7 @@ import { standingByYear } from '#organisation-read-model/domain/years.js'
  * @typedef {{
  *   onDrop: OnDrop
  *   overseasSitesById: Map<string, StoredOverseasSite>
- *   today: string
+ *   today: CalendarDate
  * }} Context
  */
 
@@ -117,7 +119,7 @@ export async function toReadModelOrganisations(
   const context = {
     onDrop: (message) => logger.warn({ message }),
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
-    today: new Date().toISOString().slice(0, 10)
+    today: toCalendarDate(new Date())
   }
   const externalByRegistration = byRegistrationAndYear(externalAccreditations)
   return stored
@@ -129,13 +131,13 @@ export async function toReadModelOrganisations(
 
 /**
  * @param {StoredOrganisation} stored
- * @param {string} today
+ * @param {CalendarDate} date
  * @returns {boolean}
  */
-export function servesOrganisation(stored, today) {
+export function servesOrganisationOn(stored, date) {
   return isOneOf(
     ORGANISATION_STATUSES,
-    statusOn(toStatusTimeline(stored.statusHistory), today)
+    statusOn(toStatusTimeline(stored.statusHistory), date)
   )
 }
 

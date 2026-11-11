@@ -1,5 +1,6 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -168,7 +169,7 @@ export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
  * The status at the end of the latest day on or before `date`.
  *
  * @param {StatusTimeline} timeline
- * @param {string} date - ISO 8601 date
+ * @param {CalendarDate} date - ISO 8601 date
  * @returns {string | undefined}
  */
 export const statusOn = (timeline, date) =>
