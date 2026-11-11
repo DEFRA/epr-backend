@@ -531,36 +531,25 @@ const baseConfig = {
   }
 }
 
-const config = convict(baseConfig)
-
-config.validate({ allowed: 'strict' })
-
 /**
- * @param {{ cdpEnvironment: string, openNextYear: boolean }} settings
+ * @param {string} cdpEnvironment
  */
-const assertNextYearClosedInProd = ({ cdpEnvironment, openNextYear }) => {
-  if (cdpEnvironment === 'prod' && openNextYear) {
-    throw new Error('openNextYear must not be set in prod')
-  }
-}
-
-assertNextYearClosedInProd({
-  cdpEnvironment: config.get('cdpEnvironment'),
-  openNextYear: config.get('openNextYear')
-})
+const isProd = (cdpEnvironment) => cdpEnvironment === 'prod'
 
 function getConfig(overrides = {}) {
   const cfg = convict(baseConfig)
   cfg.load(overrides)
+  cfg.validate({ allowed: 'strict' })
+
+  if (isProd(cfg.get('cdpEnvironment')) && cfg.get('openNextYear')) {
+    throw new Error('OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod')
+  }
+
   return cfg
 }
 
-const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
+const config = getConfig()
+
+const isProductionEnvironment = () => isProd(config.get('cdpEnvironment'))
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
-export {
-  assertNextYearClosedInProd,
-  config,
-  getConfig,
-  isLocalEnvironment,
-  isProductionEnvironment
-}
+export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
