@@ -52,6 +52,7 @@ export const testMarkSubmittedReportRequiringResubmissionByOperatorBehaviour = (
 
       expect(result).toEqual({
         reportId,
+        accreditationNumber: buildCreateReportParams().accreditationNumber,
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: DEFAULT_REPORT_PERIOD,

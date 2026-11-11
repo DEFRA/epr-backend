@@ -282,7 +282,11 @@ const signDownload = (doc, reference) => {
   const url = `https://${Bucket}.test/${Key}/download`
   const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
 
-  return { url, expiresAt }
+  return {
+    url,
+    expiresAt,
+    accreditationNumber: doc.summaryLog.accreditationNumber
+  }
 }
 
 const getDownloadUrl = (staleCache) => async (summaryLogId) => {

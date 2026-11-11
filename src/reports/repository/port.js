@@ -128,6 +128,7 @@
  *
  * @typedef {Object} MarkReportStaleResult
  * @property {string} reportId
+ * @property {AccreditationNumber | null | undefined} accreditationNumber - As the report stores it
  * @property {Year} year
  * @property {string} cadence
  * @property {number} period
@@ -162,6 +163,7 @@
  * Contains the fields needed to audit the resubmission-required transition.
  * @typedef {{
  *   reportId: string,
+ *   accreditationNumber: AccreditationNumber | null | undefined,
  *   year: Year,
  *   cadence: string,
  *   period: number,
@@ -191,6 +193,7 @@
  * {@link MarkSubmittedReportRequiringResubmissionResult}.
  * @typedef {{
  *   reportId: string,
+ *   accreditationNumber: AccreditationNumber | null | undefined,
  *   year: Year,
  *   cadence: string,
  *   period: number,

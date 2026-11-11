@@ -2,14 +2,21 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {OrganisationNumber} from '#domain/organisations/numbers.js'
+ *
+ * @typedef {{ organisationId: string, organisationNumber: OrganisationNumber }} AuditedOrganisation
  */
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {string} organisationId
+ * @param {AuditedOrganisation} organisation
  * @param {{ id: string, name: string }} linkedDefraOrganisation
  */
-async function auditOrganisationLinking(request, organisationId, { id, name }) {
+async function auditOrganisationLinking(
+  request,
+  { organisationId, organisationNumber },
+  { id, name }
+) {
   const payload = {
     event: {
       category: 'entity',
@@ -18,6 +25,7 @@ async function auditOrganisationLinking(request, organisationId, { id, name }) {
     },
     context: {
       organisationId,
+      organisationNumber,
       linkedDefraOrganisation: { id, name }
     },
     user: extractUserDetails(request)
@@ -29,12 +37,12 @@ async function auditOrganisationLinking(request, organisationId, { id, name }) {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {string} organisationId
+ * @param {AuditedOrganisation} organisation
  * @param {{ id: string, name: string }} unlinkedDefraOrganisation
  */
 async function auditOrganisationUnlinking(
   request,
-  organisationId,
+  { organisationId, organisationNumber },
   { id, name }
 ) {
   const payload = {
@@ -45,6 +53,7 @@ async function auditOrganisationUnlinking(
     },
     context: {
       organisationId,
+      organisationNumber,
       unlinkedDefraOrganisation: { id, name }
     },
     user: extractUserDetails(request)

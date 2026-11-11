@@ -9,7 +9,7 @@ import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 /** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
-/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { DownloadUrlResult, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
 const downloadAuth = {
   auth: {
@@ -21,7 +21,7 @@ const downloadAuth = {
 /**
  * @template {string} Id
  * @param {(params: Record<string, string>) => Id} idOf
- * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<{ url: string }>} sign
+ * @param {(repository: SummaryLogsRepository, id: Id, registrationNumber: RegistrationNumber) => Promise<DownloadUrlResult>} sign
  * @returns {(request: HapiRequest & {
  *   params: Record<string, string> & RegistrationParams,
  *   summaryLogsRepository: SummaryLogsRepository
@@ -29,15 +29,27 @@ const downloadAuth = {
  */
 const serveFile = (idOf, sign) => async (request, h) => {
   const { summaryLogsRepository, logger } = request
-  const { organisationId, registrationId, registrationNumber } = request.params
+  const {
+    organisationId,
+    registrationId,
+    organisationNumber,
+    registrationNumber
+  } = request.params
   const id = idOf(request.params)
 
-  const { url } = await sign(summaryLogsRepository, id, registrationNumber)
+  const { url, accreditationNumber } = await sign(
+    summaryLogsRepository,
+    id,
+    registrationNumber
+  )
 
   await auditSummaryLogDownload(request, {
     summaryLogId: id,
     organisationId,
-    registrationId
+    registrationId,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
   })
 
   logger.info({

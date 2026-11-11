@@ -3,6 +3,7 @@ import { SUMMARY_LOG_SUB_CATEGORY } from '#auditing/summary-logs.js'
 
 /** @import { SummaryLogScope } from '../mongodb.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 export const SCOPE_BACKFILL_ACTION = 'scope-backfill-migration'
 
@@ -16,6 +17,9 @@ export const SCOPE_BACKFILL_ACTION = 'scope-backfill-migration'
  *   summaryLogId: string,
  *   organisationId?: string,
  *   registrationId?: string,
+ *   organisationNumber: OrganisationNumber | undefined,
+ *   registrationNumber: RegistrationNumber | undefined,
+ *   accreditationNumber: AccreditationNumber | null | undefined,
  *   previous: { version: number },
  *   next: SummaryLogScope & { version: number }
  * }} context

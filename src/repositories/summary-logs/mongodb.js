@@ -447,7 +447,7 @@ const signDownload =
       Date.now() + preSignedUrlExpiry * 1000
     ).toISOString()
 
-    return { url, expiresAt }
+    return { url, expiresAt, accreditationNumber: doc.accreditationNumber }
   }
 
 const getDownloadUrl =

@@ -579,6 +579,7 @@ describe('processImportFile', () => {
       },
       context: {
         organisationId: 'org-id',
+        organisationNumber: '500001',
         registrationId: 'reg-id',
         registrationNumber: 'EPR/AB1234CD/R1',
         sitesCreated: 1,

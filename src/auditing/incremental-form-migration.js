@@ -34,6 +34,7 @@ async function auditIncrementalFormMigration(
     },
     context: {
       organisationId,
+      organisationNumber: next.organisationNumber,
       previous: toOrganisationWire(previous),
       next: toOrganisationWire(next)
     },
@@ -45,7 +46,7 @@ async function auditIncrementalFormMigration(
     ? payload
     : {
         ...payload,
-        context: { organisationId }
+        context: { organisationId, organisationNumber: next.organisationNumber }
       }
 
   safeAudit(safeAuditingPayload)

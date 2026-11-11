@@ -217,6 +217,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         expect(systemLogPayload.context).toEqual({
           organisationId: unlinkedOrg.id,
+          organisationNumber: unlinkedOrg.organisationNumber,
           unlinkedDefraOrganisation: {
             id: COMPANY_1_ID,
             name: COMPANY_1_NAME
@@ -241,6 +242,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
 
         expect(auditPayload.context).toEqual({
           organisationId: unlinkedOrg.id,
+          organisationNumber: unlinkedOrg.organisationNumber,
           unlinkedDefraOrganisation: {
             id: COMPANY_1_ID,
             name: COMPANY_1_NAME
