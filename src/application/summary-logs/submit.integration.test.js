@@ -158,9 +158,8 @@ const setupSubmit = async ({
         .accreditationId
     )
   }
-  const organisationsRepository = createInMemoryOrganisationsRepository([
-    organisation
-  ])()
+  const organisationAdministrationRepository =
+    createInMemoryOrganisationsRepository([organisation])()
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
   const summaryLog = summaryLogFactory.submitting({
@@ -192,7 +191,7 @@ const setupSubmit = async ({
   const deps = {
     logger,
     summaryLogsRepository,
-    organisationsRepository,
+    organisationAdministrationRepository,
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     ledgerRepository,

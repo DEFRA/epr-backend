@@ -19,7 +19,9 @@ const read = (overrides = {}) =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationsRepository: createInMemoryOrganisationsRepository([])(),
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      []
+    )(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
@@ -31,15 +33,16 @@ const read = (overrides = {}) =>
 
 describe('reading the market insights figures', () => {
   it('reads the register once and gives every builder the same reading', async () => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([])()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([])()
     const reportsRepository = createInMemoryReportsRepository()()
-    const findAll = vi.spyOn(organisationsRepository, 'findAll')
+    const findAll = vi.spyOn(organisationAdministrationRepository, 'findAll')
     const findReports = vi.spyOn(
       reportsRepository,
       'findPeriodicReportsForYear'
     )
 
-    await read({ organisationsRepository, reportsRepository })
+    await read({ organisationAdministrationRepository, reportsRepository })
 
     expect(findAll).toHaveBeenCalledOnce()
     expect(findReports).toHaveBeenCalledOnce()

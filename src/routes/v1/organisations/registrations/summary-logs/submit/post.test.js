@@ -89,7 +89,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let server
   let summaryLogsRepository
   let summaryLogsWorker
-  let organisationsRepository
+  let organisationAdministrationRepository
 
   /**
    * A registration of its own, so no test sees another's summary logs.
@@ -97,9 +97,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   const servedRegistration = () => {
     const registration = reprocessor()
     const organisation = buildOrganisation({ registrations: [registration] })
-    organisationsRepository = createInMemoryOrganisationsRepository([
-      partialMock(organisation)
-    ])()
+    organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([partialMock(organisation)])()
     const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs`
     numbersByRegistrationId.set(registration.id, {
       organisationNumber: organisation.organisationNumber,
@@ -128,7 +127,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationsRepository: () => organisationsRepository
+        organisationAdministrationRepository: () =>
+          organisationAdministrationRepository
       },
       workers: {
         summaryLogsWorker

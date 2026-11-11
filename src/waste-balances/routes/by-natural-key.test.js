@@ -152,10 +152,11 @@ describe('ledger and waste balance routes by natural key', () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation),
-          partialMock(sharedNumberOrganisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([
+            partialMock(organisation),
+            partialMock(sharedNumberOrganisation)
+          ]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation),
           partialMock(sharedNumberOrganisation)
@@ -557,7 +558,7 @@ const buildAccessServer = async () => {
   )
   const server = await createTestServer({
     repositories: {
-      organisationsRepository: organisationsRepositoryFactory,
+      organisationAdministrationRepository: organisationsRepositoryFactory,
       organisationReadRepository:
         await organisationReadRepositoryFrom(repository)
     }
@@ -731,9 +732,8 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
     }
     const server = await createTestServer({
       repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([
-          partialMock(organisation)
-        ]),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(organisation)
         ]),

@@ -75,7 +75,7 @@ export const addOrUpdateOrganisationUser = async (
   tokenPayload,
   organisation
 ) => {
-  const { organisationsRepository } = request
+  const { organisationLinkingRepository } = request
   const { email, firstName, lastName, contactId } = tokenPayload
 
   const { user, otherUsers } = extractUserAndOthers(organisation, tokenPayload)
@@ -88,7 +88,7 @@ export const addOrUpdateOrganisationUser = async (
       fullName: getDisplayName({ firstName, lastName }),
       roles: user?.roles ?? [USER_ROLES.STANDARD]
     }
-    await organisationsRepository.replaceUsers(
+    await organisationLinkingRepository.replaceUsers(
       organisation.organisationNumber,
       organisation.version,
       [newUser, ...otherUsers]

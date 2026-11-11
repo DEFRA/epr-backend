@@ -16,7 +16,7 @@ import {
 
 /**
  * @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Organisation, Registration, Accreditation } from '#formsubmission/types.js'
  */
@@ -56,7 +56,7 @@ vi.mock('#formsubmission/data-migration-config.js', () => ({
 
 describe('MigrationOrchestrator', () => {
   let formsSubmissionRepository
-  let organisationsRepository
+  let organisationAdministrationRepository
   let systemLogsRepository
   let formsFileUploadsRepository
   let migrator
@@ -127,7 +127,7 @@ describe('MigrationOrchestrator', () => {
       findAllFormSubmissionIds: vi.fn()
     }
 
-    organisationsRepository = {
+    organisationAdministrationRepository = {
       insert: vi.fn(),
       update: vi.fn(),
       findAllIds: vi.fn(),
@@ -146,8 +146,8 @@ describe('MigrationOrchestrator', () => {
       /** @type {FormSubmissionsRepository} */ (
         /** @type {unknown} */ (formsSubmissionRepository)
       ),
-      /** @type {OrganisationsRepository} */ (
-        /** @type {unknown} */ (organisationsRepository)
+      /** @type {OrganisationAdministrationRepository} */ (
+        /** @type {unknown} */ (organisationAdministrationRepository)
       ),
       /** @type {SystemLogsRepository} */ (
         /** @type {unknown} */ (systemLogsRepository)
@@ -210,7 +210,7 @@ describe('MigrationOrchestrator', () => {
       })
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         [
           {
@@ -244,12 +244,14 @@ describe('MigrationOrchestrator', () => {
       })
 
       const existingOrg = { ...createOrg(orgId), version: 1 }
-      organisationsRepository.findById.mockResolvedValue(existingOrg)
+      organisationAdministrationRepository.findById.mockResolvedValue(
+        existingOrg
+      )
 
       await migrator.migrate()
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         [
           {
@@ -286,12 +288,14 @@ describe('MigrationOrchestrator', () => {
       })
 
       const existingOrg = { ...createOrg(existingOrgId, 500002), version: 1 }
-      organisationsRepository.findById.mockResolvedValue(existingOrg)
+      organisationAdministrationRepository.findById.mockResolvedValue(
+        existingOrg
+      )
 
       await migrator.migrate()
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         expect.arrayContaining([
           {
@@ -360,7 +364,7 @@ describe('MigrationOrchestrator', () => {
 
       orchestrator = new MigrationOrchestrator(
         formsSubmissionRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         formsFileUploadsRepository
       )
@@ -389,7 +393,7 @@ describe('MigrationOrchestrator', () => {
       formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
         []
       )
-      organisationsRepository.findAllIds.mockResolvedValue({
+      organisationAdministrationRepository.findAllIds.mockResolvedValue({
         organisations: new Set(),
         registrations: new Set(),
         accreditations: new Set()
@@ -410,7 +414,7 @@ describe('MigrationOrchestrator', () => {
       })
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         [{ value: expect.objectContaining({ id: orgId }), operation: 'insert' }]
       )
@@ -438,7 +442,7 @@ describe('MigrationOrchestrator', () => {
       formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
         []
       )
-      organisationsRepository.findAllIds.mockResolvedValue({
+      organisationAdministrationRepository.findAllIds.mockResolvedValue({
         organisations: new Set(),
         registrations: new Set(),
         accreditations: new Set()
@@ -482,7 +486,7 @@ describe('MigrationOrchestrator', () => {
       formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
         [{ id: accrId }]
       )
-      organisationsRepository.findAllIds.mockResolvedValue({
+      organisationAdministrationRepository.findAllIds.mockResolvedValue({
         organisations: new Set(),
         registrations: new Set(),
         accreditations: new Set()
@@ -524,7 +528,7 @@ describe('MigrationOrchestrator', () => {
       formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
         []
       )
-      organisationsRepository.findAllIds.mockResolvedValue({
+      organisationAdministrationRepository.findAllIds.mockResolvedValue({
         organisations: new Set(),
         registrations: new Set(),
         accreditations: new Set()
@@ -563,7 +567,7 @@ describe('MigrationOrchestrator', () => {
       formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
         [{ id: accrId }]
       )
-      organisationsRepository.findAllIds.mockResolvedValue({
+      organisationAdministrationRepository.findAllIds.mockResolvedValue({
         organisations: new Set(),
         registrations: new Set(),
         accreditations: new Set()
@@ -584,7 +588,7 @@ describe('MigrationOrchestrator', () => {
       })
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         [
           {

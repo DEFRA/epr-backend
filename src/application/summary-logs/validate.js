@@ -48,7 +48,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
-/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
@@ -91,17 +91,17 @@ const extractSummaryLog = async ({
  * The accreditation a summary log is validated against: the one it stored,
  * or none for a registered-only summary log.
  *
- * @param {OrganisationsRepository} organisationsRepository
+ * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SubmittedSummaryLog} summaryLog
  * @returns {Promise<Registration['accreditation']>}
  */
 const accreditationFor = async (
-  organisationsRepository,
+  organisationAdministrationRepository,
   { organisationId, accreditationId }
 ) => {
   return accreditationId === null
     ? null
-    : organisationsRepository.findAccreditationById(
+    : organisationAdministrationRepository.findAccreditationById(
         organisationId,
         accreditationId
       )
@@ -109,7 +109,7 @@ const accreditationFor = async (
 
 /**
  * @param {{
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger
@@ -117,19 +117,22 @@ const accreditationFor = async (
  * @returns {Promise<Registration>}
  */
 const fetchRegistration = async ({
-  organisationsRepository,
+  organisationAdministrationRepository,
   summaryLog,
   loggingContext,
   logger
 }) => {
   const currentRegistration =
-    await organisationsRepository.findRegistrationById(
+    await organisationAdministrationRepository.findRegistrationById(
       summaryLog.organisationId,
       summaryLog.registrationId
     )
   const registration = {
     ...currentRegistration,
-    accreditation: await accreditationFor(organisationsRepository, summaryLog)
+    accreditation: await accreditationFor(
+      organisationAdministrationRepository,
+      summaryLog
+    )
   }
 
   logger.info({
@@ -256,7 +259,7 @@ const markIgnoredByDateRange = (
  *   loggingContext: string,
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
@@ -268,7 +271,7 @@ const performValidationChecks = async ({
   loggingContext,
   logger,
   summaryLogExtractor,
-  organisationsRepository,
+  organisationAdministrationRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   validateDataSyntax
@@ -298,7 +301,7 @@ const performValidationChecks = async ({
     }
 
     registration = await fetchRegistration({
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLog,
       loggingContext,
       logger
@@ -561,7 +564,7 @@ const classifyAndPersistResult = async ({
   ledgerRepository,
   version,
   reportsService,
-  organisationsRepository,
+  organisationAdministrationRepository,
   overseasSitesRepository,
   logger
 }) => {
@@ -575,7 +578,7 @@ const classifyAndPersistResult = async ({
   const overseasSites = await resolveOverseasSitesContext({
     processingType,
     summaryLog,
-    organisationsRepository,
+    organisationAdministrationRepository,
     overseasSitesRepository
   })
 
@@ -627,7 +630,7 @@ const classifyAndPersistResult = async ({
  * @param {{
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
- *   organisationsRepository: OrganisationsRepository,
+ *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
@@ -639,7 +642,7 @@ const classifyAndPersistResult = async ({
 export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
-  organisationsRepository,
+  organisationAdministrationRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   reportsService,
@@ -673,7 +676,7 @@ export const createSummaryLogsValidator = ({
         loggingContext,
         logger,
         summaryLogExtractor,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         validateDataSyntax
@@ -713,7 +716,7 @@ export const createSummaryLogsValidator = ({
       ledgerRepository,
       version,
       reportsService,
-      organisationsRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       logger
     })

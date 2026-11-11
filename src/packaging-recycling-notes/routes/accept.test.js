@@ -55,7 +55,7 @@ const organisation = buildOrganisationHolding({
   accreditationId,
   ...PRN_NUMBERS
 })
-const organisationsRepository = () => ({
+const organisationAdministrationRepository = () => ({
   findById: async () => organisation
 })
 const externalApiClientId = randomUUID()
@@ -110,7 +110,7 @@ const startServer = async (prn) => {
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
-      organisationsRepository
+      organisationAdministrationRepository
     }
   })
   return server
@@ -336,7 +336,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
             throw new Error('Database connection lost')
           }
         }),
-        organisationsRepository: () => ({})
+        organisationAdministrationRepository: () => ({})
       }
     })
 

@@ -15,7 +15,7 @@ import {
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  *
  * @typedef {{
@@ -58,13 +58,17 @@ export const systemLogsGetSearch = {
   /**
    * @param {HapiRequest<unknown> & {
    *   query: SystemLogsSearchQuery,
-   *   organisationsRepository: OrganisationsRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository, systemLogsRepository, logger } = request
+    const {
+      organisationAdministrationRepository,
+      systemLogsRepository,
+      logger
+    } = request
     const {
       organisationNumber,
       userId,
@@ -79,7 +83,7 @@ export const systemLogsGetSearch = {
 
       // Older logs record only the organisation's id; report logs only its number
       const organisation = organisationNumber
-        ? await organisationsRepository.findByOrganisationNumber(
+        ? await organisationAdministrationRepository.findByOrganisationNumber(
             toOrganisationNumber(organisationNumber)
           )
         : null

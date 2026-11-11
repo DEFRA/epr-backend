@@ -33,7 +33,7 @@ export const marketInsightsWasteBalanceGet = {
    *   params: { year: Year, cadence: 'monthly', period: number },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   organisationAdministrationRepository: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository,
    *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
@@ -44,7 +44,7 @@ export const marketInsightsWasteBalanceGet = {
     const {
       ledgerRepository,
       summaryLogRowStatesRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       organisationReadRepository,
       reportsRepository,
       logger,
@@ -55,7 +55,7 @@ export const marketInsightsWasteBalanceGet = {
     const table = await buildWasteBalanceTable({
       ledgerRepository,
       summaryLogRowStatesRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       organisationReadRepository,
       reportsRepository,
       logger,

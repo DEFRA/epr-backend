@@ -29,14 +29,14 @@ vi.mock('#auditing/incremental-form-migration.js', () => ({
 }))
 
 describe('upsertOrganisations', () => {
-  let organisationsRepository
+  let organisationAdministrationRepository
   let systemLogsRepository
 
   const org1Id = new ObjectId()
   const org2Id = new ObjectId()
 
   beforeEach(() => {
-    organisationsRepository = {
+    organisationAdministrationRepository = {
       insert: vi.fn(),
       replace: vi.fn(),
       findById: vi.fn()
@@ -69,21 +69,27 @@ describe('upsertOrganisations', () => {
           operation: 'update'
         }
       ]
-      organisationsRepository.insert.mockResolvedValue()
-      organisationsRepository.replace.mockResolvedValue()
-      organisationsRepository.findById
+      organisationAdministrationRepository.insert.mockResolvedValue()
+      organisationAdministrationRepository.replace.mockResolvedValue()
+      organisationAdministrationRepository.findById
         .mockResolvedValueOnce(previousOrg) // Before update
         .mockResolvedValueOnce(updatedOrg) // After update
 
       const result = await upsertOrganisations(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         organisations
       )
 
-      expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
-      expect(organisationsRepository.replace).toHaveBeenCalledTimes(1)
-      expect(organisationsRepository.findById).toHaveBeenCalledTimes(2)
+      expect(organisationAdministrationRepository.insert).toHaveBeenCalledTimes(
+        1
+      )
+      expect(
+        organisationAdministrationRepository.replace
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenCalledTimes(2)
       expect(result).toEqual({
         successful: [
           { success: true, id: org1Id.toString(), action: 'inserted' },
@@ -97,16 +103,15 @@ describe('upsertOrganisations', () => {
       })
 
       // Verify findById was called correctly
-      expect(organisationsRepository.findById).toHaveBeenCalledTimes(2)
-      expect(organisationsRepository.findById).toHaveBeenNthCalledWith(
-        1,
-        org2IdStr
-      ) // Before update
-      expect(organisationsRepository.findById).toHaveBeenNthCalledWith(
-        2,
-        org2IdStr,
-        3
-      ) // After update with version+1 (2+1=3)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenCalledTimes(2)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenNthCalledWith(1, org2IdStr) // Before update
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenNthCalledWith(2, org2IdStr, 3) // After update with version+1 (2+1=3)
 
       // Verify audit was called for the update
       expect(mockAuditIncrementalFormMigration).toHaveBeenCalledTimes(1)
@@ -128,10 +133,10 @@ describe('upsertOrganisations', () => {
         }
       ]
       const error = new Error('Insert failed')
-      organisationsRepository.insert.mockRejectedValue(error)
+      organisationAdministrationRepository.insert.mockRejectedValue(error)
 
       const result = await upsertOrganisations(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         organisations
       )
@@ -169,10 +174,10 @@ describe('upsertOrganisations', () => {
           operation: 'insert'
         }
       ]
-      organisationsRepository.insert.mockResolvedValue()
+      organisationAdministrationRepository.insert.mockResolvedValue()
 
       const result = await upsertOrganisations(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         organisations
       )
@@ -181,7 +186,9 @@ describe('upsertOrganisations', () => {
         successful: [{ success: true, id: org2IdStr, action: 'inserted' }],
         failed: [{ success: false, id: org1IdStr, phase: 'insert' }]
       })
-      expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
+      expect(organisationAdministrationRepository.insert).toHaveBeenCalledTimes(
+        1
+      )
     })
 
     it('should handle update failure and log error', async () => {
@@ -195,11 +202,13 @@ describe('upsertOrganisations', () => {
         }
       ]
       const error = new Error('Version conflict')
-      organisationsRepository.findById.mockResolvedValue(previousOrg)
-      organisationsRepository.replace.mockRejectedValue(error)
+      organisationAdministrationRepository.findById.mockResolvedValue(
+        previousOrg
+      )
+      organisationAdministrationRepository.replace.mockRejectedValue(error)
 
       const result = await upsertOrganisations(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         organisations
       )
@@ -222,8 +231,12 @@ describe('upsertOrganisations', () => {
           'Persisted transformed submissions: 0/1 organisations processed (0 inserted, 0 updated, 1 failed)'
       })
 
-      expect(organisationsRepository.findById).toHaveBeenCalledTimes(1)
-      expect(organisationsRepository.findById).toHaveBeenCalledWith(org1IdStr)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenCalledWith(org1IdStr)
 
       // Verify audit was NOT called on failure
       expect(mockAuditIncrementalFormMigration).not.toHaveBeenCalled()
@@ -246,14 +259,16 @@ describe('upsertOrganisations', () => {
           operation: 'update'
         }
       ]
-      organisationsRepository.insert.mockRejectedValue(new Error('Failed'))
-      organisationsRepository.replace.mockResolvedValue()
-      organisationsRepository.findById
+      organisationAdministrationRepository.insert.mockRejectedValue(
+        new Error('Failed')
+      )
+      organisationAdministrationRepository.replace.mockResolvedValue()
+      organisationAdministrationRepository.findById
         .mockResolvedValueOnce(previousOrg)
         .mockResolvedValueOnce(updatedOrg)
 
       const result = await upsertOrganisations(
-        organisationsRepository,
+        organisationAdministrationRepository,
         systemLogsRepository,
         organisations
       )
@@ -268,16 +283,15 @@ describe('upsertOrganisations', () => {
       })
 
       // Verify findById was called twice for the successful update only
-      expect(organisationsRepository.findById).toHaveBeenCalledTimes(2)
-      expect(organisationsRepository.findById).toHaveBeenNthCalledWith(
-        1,
-        org2IdStr
-      ) // Before update
-      expect(organisationsRepository.findById).toHaveBeenNthCalledWith(
-        2,
-        org2IdStr,
-        3
-      ) // After update with version+1 (2+1=3)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenCalledTimes(2)
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenNthCalledWith(1, org2IdStr) // Before update
+      expect(
+        organisationAdministrationRepository.findById
+      ).toHaveBeenNthCalledWith(2, org2IdStr, 3) // After update with version+1 (2+1=3)
 
       // Verify audit was called once for the successful update
       expect(mockAuditIncrementalFormMigration).toHaveBeenCalledTimes(1)

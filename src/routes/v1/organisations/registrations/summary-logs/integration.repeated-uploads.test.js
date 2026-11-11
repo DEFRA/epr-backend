@@ -117,9 +117,10 @@ describe('Repeated uploads of identical data', () => {
       })
       testOrg.id = organisationId
 
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        { ...testOrg, status: 'active' }
-      ])()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([
+          { ...testOrg, status: 'active' }
+        ])()
 
       // Define shared metadata and headers
       const sharedMeta = {
@@ -260,7 +261,7 @@ describe('Repeated uploads of identical data', () => {
         createInMemorySummaryLogRowStatesRepository()()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
@@ -278,7 +279,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationsRepository,
+        organisationAdministrationRepository,
         overseasSitesRepository: createMockOverseasSitesRepository({
           findByIds: vi.fn().mockResolvedValue([])
         }),
@@ -311,9 +312,10 @@ describe('Repeated uploads of identical data', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationsRepository: () => organisationsRepository,
+          organisationAdministrationRepository: () =>
+            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationsRepository)
+            organisationReadRepositoryOver(organisationAdministrationRepository)
         },
         workers: {
           summaryLogsWorker

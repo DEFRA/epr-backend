@@ -10,18 +10,24 @@ import {
 } from './create-defra-id-test-tokens.js'
 
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /** @param {OrganisationBuilders} builders */
 export const createActiveOrgBuilder = (builders) => {
   const buildApprovedOrg = createApprovedOrgBuilder(builders)
 
   /**
-   * @param {OrganisationsRepository} organisationsRepository
+   * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {object} [overrides]
    */
-  return async function buildActiveOrg(organisationsRepository, overrides) {
-    const org = await buildApprovedOrg(organisationsRepository, overrides)
+  return async function buildActiveOrg(
+    organisationAdministrationRepository,
+    overrides
+  ) {
+    const org = await buildApprovedOrg(
+      organisationAdministrationRepository,
+      overrides
+    )
     const INITIAL_VERSION = org.version
 
     const linkedDefraOrg = {
@@ -34,7 +40,7 @@ export const createActiveOrgBuilder = (builders) => {
       linkedAt: new Date().toISOString()
     }
 
-    await organisationsRepository.replace(
+    await organisationAdministrationRepository.replace(
       org.id,
       INITIAL_VERSION,
       prepareOrgUpdate(org, {
@@ -43,6 +49,10 @@ export const createActiveOrgBuilder = (builders) => {
       })
     )
 
-    return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
+    return waitForVersion(
+      organisationAdministrationRepository,
+      org.id,
+      INITIAL_VERSION + 1
+    )
   }
 }

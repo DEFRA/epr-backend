@@ -49,12 +49,13 @@ describe('createTestServer', () => {
 
   describe('repository overrides', () => {
     it('uses provided repository override', async () => {
-      const organisationsRepository = createInMemoryOrganisationsRepository()()
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository()()
       const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      await organisationAdministrationRepository.insert(org)
 
       const server = await createTestServer({
-        repositories: { organisationsRepository }
+        repositories: { organisationAdministrationRepository }
       })
 
       const response = await server.inject({
@@ -79,7 +80,9 @@ describe('createTestServer', () => {
       }
 
       const server = await createTestServer({
-        repositories: { organisationsRepository: mockOrganisationsRepository }
+        repositories: {
+          organisationAdministrationRepository: mockOrganisationsRepository
+        }
       })
 
       const response = await server.inject({

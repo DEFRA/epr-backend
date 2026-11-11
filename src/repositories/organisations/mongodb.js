@@ -35,7 +35,8 @@ import {
 } from './mongodb-find.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { FindParams, OrganisationsRepositoryFactory } from './port.js' */
+/** @import { FindParams } from './administration-port.js' */
+/** @import { OrganisationsRepositoryFactory } from './port.js' */
 /** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -210,7 +211,7 @@ const LINKED_ORG_PROJECTION = {
   linkedDefraOrganisation: 1
 }
 
-/** @returns {import('./port.js').OrganisationSummary} */
+/** @returns {import('./linking-port.js').OrganisationSummary} */
 const toOrganisationSummary = (doc) => ({
   id: doc._id.toString(),
   organisationNumber: organisationNumberOfStored(doc),
@@ -218,7 +219,7 @@ const toOrganisationSummary = (doc) => ({
   status: getCurrentStatus(doc)
 })
 
-/** @returns {import('./port.js').LinkedOrganisationSummary} */
+/** @returns {import('./linking-port.js').LinkedOrganisationSummary} */
 const toLinkedOrganisationSummary = (doc) => ({
   ...toOrganisationSummary(doc),
   linkedDefraOrganisation: {

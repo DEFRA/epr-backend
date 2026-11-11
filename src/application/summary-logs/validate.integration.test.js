@@ -140,9 +140,8 @@ describe('SummaryLogsValidator integration', () => {
     ),
     storedAccreditation = accreditationNumber ? testOrg.accreditations[0] : null
   }) => {
-    const organisationsRepository = createInMemoryOrganisationsRepository([
-      testOrg
-    ])()
+    const organisationAdministrationRepository =
+      createInMemoryOrganisationsRepository([testOrg])()
     const summaryLog = createSummaryLog(testOrg, storedAccreditation)
     const summaryLogId = randomUUID()
 
@@ -156,7 +155,7 @@ describe('SummaryLogsValidator integration', () => {
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
-      organisationsRepository,
+      organisationAdministrationRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
