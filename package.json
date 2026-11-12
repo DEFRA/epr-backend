@@ -38,6 +38,11 @@
   "engines": {
     "node": "^26.13.0"
   },
+  "config": {
+    "mongodbMemoryServer": {
+      "version": "7.0.28"
+    }
+  },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
     "dev": "NODE_ENV=development npm run server:watch",
@@ -127,6 +132,7 @@
     "husky": "9.1.7",
     "knip": "6.44.1",
     "lint-staged": "17.6.0",
+    "mongodb-memory-server": "10.3.0",
     "msw": "3.0.3",
     "neostandard": "0.14.1",
     "nodemon": "3.1.14",

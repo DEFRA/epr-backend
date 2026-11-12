@@ -44,6 +44,7 @@ export default defineConfig({
         functions: 100
       }
     },
+    globalSetup: ['.vite/global-setup-mongo-binary.js'],
     setupFiles: [
       '.vite/setup-auditing.js',
       '.vite/setup-files.js',
